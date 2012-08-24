@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class WillGroupValuesUsingComplexValues : LocalClientTest
+	public class WillGroupValuesUsingComplexValues : RavenTest
 	{
 		[Fact]
 		public void CanGroupByComplexObject()
@@ -32,6 +32,7 @@ namespace Raven.Tests.Bugs.Indexing
 				{
 					var objects = session.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count, "Address")
+						.OrderBy("-Address")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(1))
 						.ToArray();
 

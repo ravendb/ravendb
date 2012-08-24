@@ -100,6 +100,7 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -204,6 +205,7 @@
     <Compile Include="Bugs\MultiMap\MultiMapReduce.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapWithCustomProperties.cs" />
     <Compile Include="Bugs\MultiMap\SimpleMultiMap.cs" />
+    <Compile Include="Bugs\MultiOutputReduce.cs" />
     <Compile Include="Bugs\NestedProjection.cs" />
     <Compile Include="Bugs\NestedTransactions.cs" />
     <Compile Include="Bugs\NGramSearch.cs" />
@@ -555,7 +557,7 @@
     <Compile Include="Bundles\Versioning\Versioning.cs" />
     <Compile Include="Bundles\Versioning\VersioningTest.cs" />
     <Compile Include="ConcurrentPatching.cs" />
-    <Compile Include="Confclits\ConflictResolverTests.cs" />
+    <Compile Include="Conflicts\ConflictResolverTests.cs" />
     <Compile Include="ConnectionStrings.cs" />
     <Compile Include="CriticalCulturesAttribute.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
@@ -577,6 +579,7 @@
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\WhenUsingMultipleUnshardedServers.cs" />
     <Compile Include="Document\ZoneCountResult.cs" />
+    <Compile Include="Faceted\FacetedIndexLimit.cs" />
     <Compile Include="Faceted\FacetAdvancedAPI.cs" />
     <Compile Include="IISExpressTestClient.cs" />
     <Compile Include="Bugs\IndexDefinitions.cs" />
@@ -622,9 +625,11 @@
     <Compile Include="Issues\Raven_410.cs" />
     <Compile Include="Issues\ReplicationBehavior.cs" />
     <Compile Include="Linq\LongCount.cs" />
+    <Compile Include="MailingList\AaronSt.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
     <Compile Include="MailingList\Algirdas.cs" />
     <Compile Include="MailingList\Arun.cs" />
+    <Compile Include="MailingList\Bassler.cs" />
     <Compile Include="MailingList\Ben.cs" />
     <Compile Include="MailingList\Brett.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />
@@ -659,7 +664,6 @@
     <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
-    <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\AddMapForAllTest.cs" />
     <Compile Include="MailingList\Asger2.cs" />
     <Compile Include="MailingList\AttachmentContentType.cs" />
@@ -692,6 +696,7 @@
     <Compile Include="MailingList\Maverix.cs" />
     <Compile Include="MailingList\Maverix2.cs" />
     <Compile Include="MailingList\MissingIncludes.cs" />
+    <Compile Include="MailingList\MultiMapIndexWithDynamicFieldsTests.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
     <Compile Include="MailingList\NoBuiltinDuplicates.cs" />
@@ -714,6 +719,7 @@
     <Compile Include="MailingList\RecreatingIndexes.cs" />
     <Compile Include="MailingList\RobinM\AttachmentsStatic.cs" />
     <Compile Include="MailingList\RyanD.cs" />
+    <Compile Include="MailingList\PatchingWithDTC.cs" />
     <Compile Include="MailingList\Samina2.cs" />
     <Compile Include="MailingList\Samina3.cs" />
     <Compile Include="MailingList\Scott.cs" />
@@ -726,9 +732,11 @@
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
+    <Compile Include="MailingList\SubObjectProperty.cs" />
     <Compile Include="MailingList\Tobias.cs" />
     <Compile Include="MailingList\SortOnNullableTests.cs" />
     <Compile Include="MailingList\Vicente.cs" />
+    <Compile Include="MailingList\ZNS.cs" />
     <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
@@ -742,14 +750,14 @@
     <Compile Include="Notifications\MultiTenant.cs" />
     <Compile Include="Notifications\Security_Windows.cs" />
     <Compile Include="Notifications\WithIIS.cs" />
+    <Compile Include="Queries\CanQueryOnCustomClass.cs" />
     <Compile Include="Queries\CanQueryOnLargeXml.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />
     <Compile Include="Querying\UsingStronglyTypedDocumentQuery.cs" />
     <Compile Include="Shard\ShardingFailure.cs" />
-    <Compile Include="Storage\Lists\Munin.cs" />
-    <Compile Include="Storage\Lists\Esent.cs" />
+    <Compile Include="Storage\Lists.cs" />
     <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
@@ -823,31 +831,28 @@
     <Compile Include="MailingList\Vlad.cs" />
     <Compile Include="MailingList\Wallace.cs" />
     <Compile Include="MailingList\Weave.cs" />
-    <Compile Include="ManagedStorage\Attachments.cs">
+    <Compile Include="Storage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\Bugs\OpenAfterCompaction.cs" />
-    <Compile Include="ManagedStorage\DocEtag.cs">
+    <Compile Include="Storage\Bugs\OpenAfterCompaction.cs" />
+    <Compile Include="Storage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\DocumentKeys.cs">
+    <Compile Include="Storage\DocumentKeys.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\Documents.cs">
+    <Compile Include="Storage\Documents.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\General.cs">
+    <Compile Include="Storage\General.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\Indexes.cs" />
-    <Compile Include="ManagedStorage\MappedResults.cs" />
-    <Compile Include="ManagedStorage\Queues.cs" />
-    <Compile Include="ManagedStorage\Storage.cs" />
-    <Compile Include="ManagedStorage\Tasks.cs" />
-    <Compile Include="ManagedStorage\Transactions.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ManagedStorage\TxStorageTest.cs">
+    <Compile Include="Storage\Indexes.cs" />
+    <Compile Include="Storage\MappedResults.cs" />
+    <Compile Include="Storage\Queues.cs" />
+    <Compile Include="Storage\Storage.cs" />
+    <Compile Include="Storage\Tasks.cs" />
+    <Compile Include="Storage\Transactions.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MultiGet\Bugs.cs" />
@@ -929,7 +934,6 @@
     </Compile>
     <Compile Include="Spatial\SpatialIndexTestHelper.cs" />
     <Compile Include="Spatial\SpatialSearch.cs" />
-    <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
     <Compile Include="Storage\BackupRestore.cs" />
     <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
     <Compile Include="Storage\CreateIndexes.cs" />

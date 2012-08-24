@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Database.Json;
 using Raven.Database.Storage;
-using Raven.Database.Tasks;
 using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
@@ -20,81 +20,109 @@ namespace Raven.Database.Indexing
 
 		protected void HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
 		{
-			TimeSpan reduceDuration= TimeSpan.Zero;
-			List<MappedResultInfo> reduceKeyAndEtags = null;
+			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexToWorkOn.IndexName);
+			if (viewGenerator == null)
+				return;
+			TimeSpan reduceDuration = TimeSpan.Zero;
+			int totalCount = 0;
+			int totalSize = 0;
 			bool operationCanceled = false;
+			var itemsToDelete = new List<object>();
 			try
 			{
-				transactionalStorage.Batch(actions =>
+				var sw = Stopwatch.StartNew();
+				for (int i = 0; i < 3; i++)
 				{
-					context.CancellationToken.ThrowIfCancellationRequested();
-					reduceKeyAndEtags = actions.MappedResults.GetMappedResultsReduceKeysAfter
-						(
-							indexToWorkOn.IndexName,
-							indexToWorkOn.LastIndexedEtag,
-							loadData: false,
-							take: autoTuner.NumberOfItemsToIndexInSingleBatch
-						)
-						.ToList();
-
-					if(log.IsDebugEnabled)
+					var level = i;
+					transactionalStorage.Batch(actions =>
 					{
-						if (reduceKeyAndEtags.Count > 0)
-							log.Debug(() => string.Format("Found {0} mapped results for keys [{1}] for index {2}", reduceKeyAndEtags.Count, string.Join(", ", reduceKeyAndEtags.Select(x => x.ReduceKey).Distinct()), indexToWorkOn.IndexName));
-						else
-							log.Debug("No reduce keys found for {0}", indexToWorkOn.IndexName);
-					}
+						context.CancellationToken.ThrowIfCancellationRequested();
 
-					var sw = Stopwatch.StartNew();
-					new ReduceTask
-					{
-						Index = indexToWorkOn.IndexName,
-						ReduceKeys = reduceKeyAndEtags.Select(x => x.ReduceKey).Distinct().ToArray(),
-					}.Execute(context);
-					reduceDuration = sw.Elapsed;
-				});
+						var sp = Stopwatch.StartNew();
+						var persistedResults = actions.MapReduce.GetItemsToReduce
+							(
+								take: context.CurrentNumberOfItemsToReduceInSingleBatch,
+								level: level,
+								index: indexToWorkOn.IndexName,
+								itemsToDelete: itemsToDelete
+							)
+							.ToList();
 
+						totalCount += persistedResults.Count;
+						totalSize += persistedResults.Sum(x => x.Size);
+
+						if (log.IsDebugEnabled)
+						{
+							if (persistedResults.Count > 0)
+								log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
+								persistedResults.Count, string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()), indexToWorkOn.IndexName, level, sp.Elapsed));
+							else
+								log.Debug("No reduce keys found for {0}", indexToWorkOn.IndexName);
+						}
+
+						context.CancellationToken.ThrowIfCancellationRequested();
+
+						var requiredReduceNextTime = persistedResults.Select(x => new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)).Distinct().ToArray();
+						foreach (var mappedResultInfo in requiredReduceNextTime)
+						{
+							actions.MapReduce.RemoveReduceResults(indexToWorkOn.IndexName, level + 1, mappedResultInfo.ReduceKey, mappedResultInfo.Bucket);
+						}
+						if (level != 2)
+						{
+							var reduceKeysAndBukcets = requiredReduceNextTime
+								.Select(x => new ReduceKeyAndBucket(x.Bucket / 1024, x.ReduceKey))
+								.Distinct()
+								.ToArray();
+							actions.MapReduce.ScheduleReductions(indexToWorkOn.IndexName, level + 1, reduceKeysAndBukcets);
+						}
+
+						var results = persistedResults
+							.Where(x => x.Data != null)
+							.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
+							.ToArray();
+						var reduceKeys = new HashSet<string>(persistedResults.Select(x => x.ReduceKey),
+															 StringComparer.InvariantCultureIgnoreCase);
+						context.ReducedPerSecIncreaseBy(results.Length);
+
+						context.CancellationToken.ThrowIfCancellationRequested();
+						sp = Stopwatch.StartNew();
+						context.IndexStorage.Reduce(indexToWorkOn.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
+						log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4}", reduceKeys.Count, sp.Elapsed,
+										results.Length, indexToWorkOn.IndexName, sp.Elapsed);
+					});
+				}
+				reduceDuration = sw.Elapsed;
 			}
-			catch(OperationCanceledException)
+			catch (OperationCanceledException)
 			{
 				operationCanceled = true;
 			}
 			finally
 			{
-				if (operationCanceled == false && reduceKeyAndEtags != null && reduceKeyAndEtags.Count > 0)
+				if (operationCanceled == false)
 				{
-					var lastByEtag = GetLastByEtag(reduceKeyAndEtags);
-					var lastEtag = lastByEtag.Etag;
-
-					var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed mapped results
 					transactionalStorage.Batch(actions =>
 					{
-						if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) <= 0)
-						{
-							actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, lastByEtag.Etag, lastByEtag.Timestamp);
-						}
-					});
+						var latest= actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
 
-					autoTuner.AutoThrottleBatchSize(reduceKeyAndEtags.Count, reduceKeyAndEtags.Sum(x => x.Size), reduceDuration);
+						if(latest == null)
+							return;
+						actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, latest.Etag, latest.Timestamp);
+					});
+					autoTuner.AutoThrottleBatchSize(totalCount, totalSize, reduceDuration);
 				}
 			}
 		}
 
 
-// ReSharper disable ParameterTypeCanBeEnumerable.Local
-		private static MappedResultInfo GetLastByEtag(List<MappedResultInfo> reduceKeyAndEtags)
-// ReSharper restore ParameterTypeCanBeEnumerable.Local
+		private static MappedResultInfo GetLastByTimestamp(ICollection<MappedResultInfo> reduceKeyAndEtags)
 		{
-			// the last item is either the first or the last
+			if (reduceKeyAndEtags == null || reduceKeyAndEtags.Count == 0)
+				return null;
 
-			var first = reduceKeyAndEtags.First();
-			var last = reduceKeyAndEtags.Last();
-
-			if (new ComparableByteArray(first.Etag.ToByteArray()).CompareTo(new ComparableByteArray(last.Etag.ToByteArray())) < 0)
-				return last;
-			return first;
+			return reduceKeyAndEtags.OrderByDescending(x => x.Timestamp).First();
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
@@ -104,7 +132,8 @@ namespace Raven.Database.Indexing
 
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
 		{
-			return actions.Tasks.GetMergedTask<ReduceTask>();
+			return null;
+			//return actions.Tasks.GetMergedTask<ReduceTask>();
 		}
 
 		protected override void FlushAllIndexes()
@@ -117,7 +146,7 @@ namespace Raven.Database.Indexing
 			return new IndexToWorkOn
 			{
 				IndexName = indexesStat.Name,
-				LastIndexedEtag = indexesStat.LastReducedEtag ?? Guid.Empty
+				LastIndexedEtag = Guid.Empty
 			};
 		}
 

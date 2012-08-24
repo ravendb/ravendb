@@ -8,7 +8,7 @@ using Raven.Database.Indexing;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class RangeQueries : LocalClientTest
+	public class RangeQueries : RavenTest
 	{
 		[Fact]
 		public void LinqTranslateCorrectly()

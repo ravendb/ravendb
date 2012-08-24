@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class LinqOnDictionary : LocalClientTest
+	public class LinqOnDictionary : RavenTest
 	{
 		[Fact]
 		public void CanHandleQueriesOnDictionaries()

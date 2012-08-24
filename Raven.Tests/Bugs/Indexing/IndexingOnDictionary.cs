@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class IndexingOnDictionary : LocalClientTest
+	public class IndexingOnDictionary : RavenTest
 	{
 		[Fact]
 		public void CanIndexValuesForDictionary()

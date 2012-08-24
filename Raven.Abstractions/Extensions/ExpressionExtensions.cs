@@ -52,6 +52,11 @@ namespace Raven.Abstractions.Extensions
 		{
 			var expression = expr.Body;
 
+			return expression.ToPropertyPath(propertySeparator, collectionSeparator);
+		}
+
+		public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', char collectionSeparator = ',')
+		{
 			var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(CultureInfo.InvariantCulture), collectionSeparator.ToString(CultureInfo.InvariantCulture));
 			propertyPathExpressionVisitor.Visit(expression);
 

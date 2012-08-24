@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class SearchOperator : LocalClientTest
+	public class SearchOperator : RavenTest
 	{
 		public class Something
 		{

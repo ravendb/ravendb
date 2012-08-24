@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class ProjectionFromDynamicQuery : LocalClientTest
+	public class ProjectionFromDynamicQuery : RavenTest
 	{
 		[Fact]
 		public void ProjectNameFromDynamicQueryUsingLucene()

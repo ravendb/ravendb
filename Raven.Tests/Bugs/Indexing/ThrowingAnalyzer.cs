@@ -13,7 +13,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class ThrowingAnalyzer : LocalClientTest
+	public class ThrowingAnalyzer : RavenTest
 	{
 		[Fact]
 		public void Should_give_clear_error()

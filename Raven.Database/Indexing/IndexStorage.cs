@@ -43,7 +43,7 @@ namespace Raven.Database.Indexing
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
 		private readonly DocumentDatabase documentDatabase;
-		private const string IndexVersion = "1.2.17";
+		private const string IndexVersion = "1.2.18";
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -339,7 +339,7 @@ namespace Raven.Database.Indexing
 			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => index.Dispose()));
 
 			exceptionAggregator.Execute(() => dummyAnalyzer.Close());
-			
+
 			exceptionAggregator.Execute(() =>
 			{
 				if (crashMarker != null)
@@ -354,15 +354,15 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(name, out value) == false)
 			{
-				log.Info("Ignoring delete for non existing index {0}", name);
+				log.Debug("Ignoring delete for non existing index {0}", name);
 				return;
 			}
-			log.Info("Deleting index {0}", name);
+			log.Debug("Deleting index {0}", name);
 			value.Dispose();
 			Index ignored;
 			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(name));
 
-			documentDatabase.TransactionalStorage.Batch(accessor => 
+			documentDatabase.TransactionalStorage.Batch(accessor =>
 				accessor.Lists.Remove("Raven/Indexes/QueryTime", name));
 
 			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk))
@@ -374,7 +374,7 @@ namespace Raven.Database.Indexing
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
 			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
-			log.Info("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
+			log.Debug("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
 
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
 			AssertAnalyzersValid(indexDefinition);
@@ -427,6 +427,23 @@ namespace Raven.Database.Indexing
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeperator))
 				return indexQueryOperation.IntersectionQuery();
 			return indexQueryOperation.Query();
+		}
+
+		public IEnumerable<RavenJObject> IndexEntires(
+			string index,
+			IndexQuery query,
+			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers,
+			Reference<int> totalResults)
+		{
+			Index value;
+			if (indexes.TryGetValue(index, out value) == false)
+			{
+				log.Debug("Query on non existing index '{0}'", index);
+				throw new InvalidOperationException("Index '" + index + "' does not exists");
+			}
+
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null,AggregationOperation.None, null), indexQueryTriggers);
+			return indexQueryOperation.IndexEntries(totalResults);
 		}
 
 		protected internal static IDisposable EnsureInvariantCulture()
@@ -487,8 +504,14 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults,
-						   WorkContext context, IStorageActionsAccessor actions, string[] reduceKeys)
+		public void Reduce(
+			string index, 
+			AbstractViewGenerator viewGenerator, 
+			IEnumerable<IGrouping<int, object>> mappedResults,
+			int level,
+			WorkContext context, 
+			IStorageActionsAccessor actions,
+			HashSet<string> reduceKeys)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -504,7 +527,8 @@ namespace Raven.Database.Indexing
 			}
 			using (EnsureInvariantCulture())
 			{
-				mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
+				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys);
+				reduceDocuments.ExecuteReduction();
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,

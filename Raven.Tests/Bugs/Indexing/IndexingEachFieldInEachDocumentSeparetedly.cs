@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class IndexingEachFieldInEachDocumentSeparetedly : LocalClientTest
+	public class IndexingEachFieldInEachDocumentSeparetedly : RavenTest
 	{
 		[Fact]
 		public void ForIndexing()

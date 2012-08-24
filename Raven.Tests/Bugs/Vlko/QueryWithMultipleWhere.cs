@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Vlko
 {
-	public class QueryWithMultipleWhere : LocalClientTest
+	public class QueryWithMultipleWhere : RavenTest
 	{
 		[Fact]
 		public void ShouldGenerateProperPrecedance()

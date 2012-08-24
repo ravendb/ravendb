@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class UsingCustomLuceneAnalyzer : LocalClientTest
+	public class UsingCustomLuceneAnalyzer : RavenTest
 	{
 		public class Entity
 		{

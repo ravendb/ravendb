@@ -307,7 +307,7 @@ namespace Raven.Database.Server
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
-				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
+				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 5)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
@@ -380,8 +380,9 @@ namespace Raven.Database.Server
 				}
 				var eventsTransport = new EventsTransport(context);
 				eventsTransport.Disconnected += onDisconnect;
+				var handleChangesRequest = eventsTransport.ProcessAsync();
 				CurrentDatabase.TransportState.Register(eventsTransport);
-				return eventsTransport.ProcessAsync();
+				return handleChangesRequest;
 			}
 			catch (Exception e)
 			{

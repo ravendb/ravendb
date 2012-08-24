@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class DynamicQueriesOnMetadata : LocalClientTest
+	public class DynamicQueriesOnMetadata : RavenTest
 	{
 		[Fact]
 		public void CanQueryOnMetadataUsingDynamicQueries()

@@ -7,6 +7,7 @@ using System;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -16,14 +17,15 @@ using System.Linq;
 
 namespace Raven.Tests.Indexes
 {
-	public class Statistics : AbstractDocumentStorageTest
+	public class Statistics : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public Statistics()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
-			db.SpinBackgroundWorkers();
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 
 			db.PutIndex("pagesByTitle2",
 			            new IndexDefinition
@@ -38,7 +40,7 @@ namespace Raven.Tests.Indexes
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

@@ -55,7 +55,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanUpdateSuggestions_AfterRestart()
 		{
-			using (var store = NewDocumentStore("esent"))
+			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -78,7 +78,7 @@ namespace Raven.Tests.Issues
 				});
 				Assert.NotEmpty(suggestionQueryResult.Suggestions);
 			}
-			using (var store = NewDocumentStore("esent", deleteExisting: false))
+			using (var store = NewDocumentStoreRestart())
 			{
 				using (var session = store.OpenSession())
 				{

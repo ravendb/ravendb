@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -72,9 +73,14 @@ namespace Raven.Client.Document
 		private KeyValuePair<string, string> lastEquality;
 
 		/// <summary>
-		///   The list of fields to project directly from the index
+		///   The list of fields to project directly from the results
 		/// </summary>
 		protected readonly string[] projectionFields;
+
+		/// <summary>
+		///   The list of fields to project directly from the index on the server
+		/// </summary>
+		protected readonly string[] fieldsToFetch;
 
 		/// <summary>
 		/// The query listeners for this query
@@ -224,9 +230,10 @@ namespace Raven.Client.Document
 		protected AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 									 IDatabaseCommands databaseCommands,
 									 string indexName,
+									 string[] fieldsToFetch,
 									 string[] projectionFields,
 									 IDocumentQueryListener[] queryListeners)
-			: this(theSession, databaseCommands, null, indexName, projectionFields, queryListeners)
+			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners)
 		{
 		}
 #endif
@@ -242,6 +249,7 @@ namespace Raven.Client.Document
 									 IAsyncDatabaseCommands asyncDatabaseCommands,
 #endif
 									 string indexName,
+									 string [] fieldsToFetch,
 									 string[] projectionFields,
 									 IDocumentQueryListener[] queryListeners)
 		{
@@ -249,6 +257,7 @@ namespace Raven.Client.Document
 			this.theDatabaseCommands = databaseCommands;
 #endif
 			this.projectionFields = projectionFields;
+			this.fieldsToFetch = fieldsToFetch;
 			this.queryListeners = queryListeners;
 			this.indexName = indexName;
 			this.theSession = theSession;
@@ -1436,7 +1445,7 @@ If you really want to do in memory filtering on the data returned from the query
 					Cutoff = cutoff,
 					CutoffEtag = cutoffEtag,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-					FieldsToFetch = projectionFields,
+					FieldsToFetch = fieldsToFetch,
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,
@@ -1455,7 +1464,7 @@ If you really want to do in memory filtering on the data returned from the query
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-				FieldsToFetch = projectionFields,
+				FieldsToFetch = fieldsToFetch,
 				DefaultField = defaultField,
 				DefaultOperator = defaultOperator
 			};
@@ -1543,13 +1552,25 @@ If you really want to do in memory filtering on the data returned from the query
 				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
 			}
 
-			var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-											whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+			if (whereParams.Value is string || whereParams.Value is ValueType)
+			{
+				var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+												whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
-			if (whereParams.Value is string == false)
-				return escaped;
+				if (whereParams.Value is string == false)
+					return escaped;
+				return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+			}
 
-			return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+			var stringWriter = new StringWriter();
+			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
+			var sb = stringWriter.GetStringBuilder();
+			if (sb.Length > 1 && sb[0] == '"' && sb[sb.Length - 1] == '"')
+			{
+				sb.Remove(sb.Length - 1, 1);
+				sb.Remove(0, 1);
+			}
+			return RavenQuery.Escape(sb.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 		}
 
 		private string TransformToRangeValue(WhereParams whereParams)
@@ -1578,9 +1599,23 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((double)whereParams.Value);
 			if (whereParams.Value is float)
 				return NumberUtil.NumberToString((float)whereParams.Value);
-		   
+		   if(whereParams.Value is string)
+				return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+			if(whereParams.Value is ValueType)
+				return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+				                         false, true);
 
-			return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+			var stringWriter = new StringWriter();
+			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
+
+			var sb = stringWriter.GetStringBuilder();
+			if (sb.Length > 1 && sb[0] == '"' && sb[sb.Length - 1] == '"')
+			{
+				sb.Remove(sb.Length - 1, 1);
+				sb.Remove(0, 1);
+			}
+		
+			return RavenQuery.Escape(sb.ToString(), false, true);
 		}
 
 		/// <summary>

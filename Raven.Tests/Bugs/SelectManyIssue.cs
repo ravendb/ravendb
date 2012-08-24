@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class SelectManyIssue : LocalClientTest
+	public class SelectManyIssue : RavenTest
 	{
 		[Fact]
 		public void CanQueryProperly()

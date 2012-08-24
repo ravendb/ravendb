@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexingRavenDocuments : LocalClientTest
+	public class IndexingRavenDocuments : RavenTest
 	{
 		[Fact]
 		public void WillNotIndexRavenDocuments()

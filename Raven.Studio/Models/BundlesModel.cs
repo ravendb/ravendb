@@ -37,7 +37,11 @@ namespace Raven.Studio.Models
 				.Query<VersioningConfiguration>().ToListAsync().ContinueOnSuccessInTheUIThread(
 					list =>
 					{
-						VersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list);
+						VersioningConfigurations.Clear();
+						foreach (var versioningConfiguration in list)
+						{
+							VersioningConfigurations.Add(versioningConfiguration);
+						}
 						OriginalVersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list);
 					});
 
@@ -95,7 +99,7 @@ namespace Raven.Studio.Models
 
 		public override bool HasQuotas
 		{
-			get{return DatabaseDocument != null && DatabaseDocument.Settings["Raven/ActiveBundles"].Contains("Quotas");}
+			get { return ActiveBundles.Contains("Quotas"); }
 		}
 
 		private int maxSize;
@@ -105,7 +109,7 @@ namespace Raven.Studio.Models
 			{
 				if (maxSize == 0)
 				{
-					if (HasQuotas)
+					if (HasQuotas && DatabaseDocument.Settings.ContainsKey(Constants.SizeHardLimitInKB))
 						int.TryParse(DatabaseDocument.Settings[Constants.SizeHardLimitInKB], out maxSize);
 					maxSize /= 1024;
 				}
@@ -121,7 +125,7 @@ namespace Raven.Studio.Models
 			{
 				if (warnSize == 0)
 				{
-					if (HasQuotas)
+					if (HasQuotas && DatabaseDocument.Settings.ContainsKey(Constants.SizeSoftLimitInKB))
 						int.TryParse(DatabaseDocument.Settings[Constants.SizeSoftLimitInKB], out warnSize);
 					warnSize /= 1024;
 				}
@@ -137,7 +141,7 @@ namespace Raven.Studio.Models
 			{
 				if (maxDocs == 0)
 				{
-					if (HasQuotas)
+					if (HasQuotas && DatabaseDocument.Settings.ContainsKey(Constants.DocsHardLimit))
 						int.TryParse(DatabaseDocument.Settings[Constants.DocsHardLimit], out maxDocs);
 				}
 				return maxDocs;
@@ -152,7 +156,7 @@ namespace Raven.Studio.Models
 			{
 				if (warnDocs == 0)
 				{
-					if (HasQuotas)
+					if (HasQuotas && DatabaseDocument.Settings.ContainsKey(Constants.DocsSoftLimit))
 						int.TryParse(DatabaseDocument.Settings[Constants.DocsSoftLimit], out warnDocs);
 				}
 				return warnDocs;
@@ -162,12 +166,26 @@ namespace Raven.Studio.Models
 
 		public override bool HasReplication
 		{
-			get{return DatabaseDocument != null && DatabaseDocument.Settings["Raven/ActiveBundles"].Contains("Replication");}
+			get { return ActiveBundles.Contains("Replication"); }
+		}
+
+		private string ActiveBundles
+		{
+			get
+			{
+				if (DatabaseDocument == null || DatabaseDocument.Settings == null)
+					return string.Empty;
+
+				string value;
+				if (DatabaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out value))
+					return value;
+				return string.Empty;
+			}
 		}
 
 		public override bool HasVersioning
 		{
-			get{return DatabaseDocument != null && DatabaseDocument.Settings["Raven/ActiveBundles"].Contains("Versioning");}
+			get { return ActiveBundles.Contains("Versioning"); }
 		}
 
 		public ICommand SaveBundles { get { return new SaveBundlesCommand(this); } }

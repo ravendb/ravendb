@@ -1366,7 +1366,7 @@ namespace Raven.Client.Connection
 		/// <param name="query"></param>
 		/// <param name="facetSetupDoc"></param>
 		/// <returns></returns>
-		public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc)
+		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc)
 		{
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
@@ -1380,7 +1380,7 @@ namespace Raven.Client.Connection
 						.AddOperationHeaders(OperationsHeaders));
 				
 				var json = (RavenJObject)request.ReadResponseJson();
-				return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+				return json.JsonDeserialization<FacetResults>();
 			});
 		}
 

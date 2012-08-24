@@ -152,6 +152,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\ConflictsResolver.cs">
+      <Link>Infrastructure\ConflictsResolver.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Bundles\Replication\Data\SourceReplicationInformation.cs">
       <Link>Features\Bundles\SourceReplicationInformation.cs</Link>
     </Compile>
@@ -180,7 +183,6 @@
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
-    <Compile Include="Commands\AddDefaultVersioningCommand.cs" />
     <Compile Include="Commands\AddReplicationCommand.cs" />
     <Compile Include="Commands\AddVersioningCommand.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
@@ -323,6 +325,7 @@
     <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\DisableIfDefaultVersioning.cs" />
     <Compile Include="Infrastructure\Converters\StringToBooleanConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />

@@ -111,6 +111,8 @@ namespace Raven.Studio.Features.Query
 			{
 				q.FieldsToFetch = new[] { Constants.AllFields };
 			}
+
+			q.DebugOptionGetIndexEntries = model.ShowEntries;
 			
 			q.SkipTransformResults = model.SkipTransformResults;
 			if (model.IsSpatialQuerySupported &&

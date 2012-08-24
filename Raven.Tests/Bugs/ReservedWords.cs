@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs
 		}
 	}
 
-	public class ReservedWords : LocalClientTest
+	public class ReservedWords : RavenTest
 	{
 		[Fact]
 		public void WillOutputCorrectly()

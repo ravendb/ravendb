@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
 {
-	public class Querying : LocalClientTest
+	public class Querying : RavenTest
 	{
 		[Fact]
 		public void Can_query_metadata()

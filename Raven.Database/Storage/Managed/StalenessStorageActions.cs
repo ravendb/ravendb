@@ -67,21 +67,12 @@ namespace Raven.Storage.Managed
 
 		public bool IsReduceStale(string name)
 		{
-			var readResult = storage.IndexingStats.Read(name);
-
-			if (readResult == null)
-				return false;// index does not exists
-
-			var lastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag") ;
-
-			var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
-			if (mostRecentReducedEtag == null)
-				return false;// there are no mapped results, maybe there are documents to be indexed, not stale
-
-			if (lastReducedEtag == null)
-				return true; // first reduce did not happen
-
-			return Buffers.Compare(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
+			return storage.ScheduleReductions["ByView"].SkipTo(new RavenJObject
+			{
+				{ "view", name }
+			})
+			.TakeWhile(token => string.Equals(name, token.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase))
+			.Any();
 		}
 
 		public bool IsMapStale(string name)

@@ -8,7 +8,7 @@ namespace Raven.Tests.Json
 	using System.Collections.Generic;
 	using Xunit;
 
-	public class JsonNetBugsTests : LocalClientTest
+	public class JsonNetBugsTests : RavenTest
 	{
 		class ObjectyWithByteArray
 		{

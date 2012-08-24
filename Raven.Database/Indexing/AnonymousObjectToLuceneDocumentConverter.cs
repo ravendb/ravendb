@@ -210,13 +210,13 @@ namespace Raven.Database.Indexing
 			{
 				var inner = ((IDynamicJsonObject)value).Inner;
 				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				yield return CreateFieldWithCaching(name, inner.ToString(), storage,
+				yield return CreateFieldWithCaching(name, inner.ToString(Formatting.None), storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else 
 			{
 				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(), storage,
+				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(Formatting.None), storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 

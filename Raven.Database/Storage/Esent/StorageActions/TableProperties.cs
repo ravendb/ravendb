@@ -75,10 +75,22 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
+		private Table scheduledReductions;
+		protected Table ScheduledReductions
+		{
+			get { return scheduledReductions ?? (scheduledReductions = new Table(session, dbid, "scheduled_reductions", OpenTableGrbit.None)); }
+		}
+
 		private Table mappedResults;
 		protected Table MappedResults
 		{
 			get { return mappedResults ?? (mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None)); }
+		}
+
+		private Table reducedResults;
+		protected Table ReducedResults
+		{
+			get { return reducedResults ?? (reducedResults = new Table(session, dbid, "reduce_results", OpenTableGrbit.None)); }
 		}
 
 		private Table tasks;

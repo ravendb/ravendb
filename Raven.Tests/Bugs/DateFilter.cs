@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DateFilter : LocalClientTest
+	public class DateFilter : RavenTest
 	{
 		[Fact]
 		public void WhenDefiningIndexWithSystemType_IndexShouldGetDefined()

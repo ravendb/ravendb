@@ -36,20 +36,17 @@ namespace Raven.Studio.Commands
 
 					AssertValidName(databaseName);
 
-					new BundlesSelect().ShowAsync()
-						.ContinueOnSuccessInTheUIThread(bundles =>
-						{
 							var bundlesModel = new CreateBundlesModel();
 							var bundlesSettings = new List<ChildWindow>();
-							if (bundles.Encryption.IsChecked == true)
+							if (newDatabase.Encryption.IsChecked == true)
 								bundlesSettings.Add(new EncryptionSettings());
-							if (bundles.Quotas.IsChecked == true || bundles.Replication.IsChecked == true || bundles.Versioning.IsChecked == true)
+							if (newDatabase.Quotas.IsChecked == true || newDatabase.Replication.IsChecked == true || newDatabase.Versioning.IsChecked == true)
 							{
 								bundlesModel = new CreateBundlesModel()
 									{
-										HasQuotas = bundles.Quotas.IsChecked == true,
-										HasReplication = bundles.Replication.IsChecked == true,
-										HasVersioning = bundles.Versioning.IsChecked == true
+										HasQuotas = newDatabase.Quotas.IsChecked == true,
+										HasReplication = newDatabase.Replication.IsChecked == true,
+										HasVersioning = newDatabase.Versioning.IsChecked == true
 									};
 								if (bundlesModel.HasQuotas)
 								{
@@ -85,7 +82,7 @@ namespace Raven.Studio.Commands
 								.ContinueOnSuccessInTheUIThread(bundlesData =>
 								{
 									ApplicationModel.Current.AddNotification(new Notification("Creating database: " + databaseName));
-									var settings = UpdateSettings(newDatabase, bundles, bundlesModel);
+									var settings = UpdateSettings(newDatabase, newDatabase, bundlesModel);
 									var securedSettings = UpdateSecuredSettings(bundlesData);
 
 									var databaseDocuemnt = new DatabaseDocument
@@ -116,7 +113,6 @@ namespace Raven.Studio.Commands
 										})
 										.Catch();
 								});
-						});
 				})
 				.Catch();
 		}
@@ -143,10 +139,13 @@ namespace Raven.Studio.Commands
 
 			if (bundlesModel.HasReplication)
 			{
-				var replicationDocument = new ReplicationDocument
+				var replicationDocument = new ReplicationDocument();
+				foreach (var replicationDestination in bundlesModel.ReplicationDestinations
+					.Where(replicationDestination => !string.IsNullOrWhiteSpace(replicationDestination.Url) || !string.IsNullOrWhiteSpace(replicationDestination.ConnectionStringName)))
 				{
-					Destinations = new List<ReplicationDestination>(bundlesModel.ReplicationDestinations)
-				};
+					replicationDocument.Destinations.Add(replicationDestination);
+				}
+				
 				session.Store(replicationDocument);
 			}
 
@@ -165,7 +164,7 @@ namespace Raven.Studio.Commands
 			}
 		}
 
-		private static Dictionary<string, string> UpdateSettings(NewDatabase newDatabase, BundlesSelect bundles, CreateBundlesModel bundlesData)
+		private static Dictionary<string, string> UpdateSettings(NewDatabase newDatabase, NewDatabase bundles, CreateBundlesModel bundlesData)
 		{
 			var settings = new Dictionary<string, string>
 			{

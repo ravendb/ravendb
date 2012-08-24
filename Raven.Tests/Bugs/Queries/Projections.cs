@@ -16,7 +16,7 @@ namespace Raven.Tests.Bugs.Queries
 {
 	using Document;
 
-	public class Projections : LocalClientTest
+	public class Projections : RavenTest
 	{
 		[Fact]
 		public void Can_project_value_from_collection()

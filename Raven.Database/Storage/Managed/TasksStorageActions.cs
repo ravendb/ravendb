@@ -34,7 +34,6 @@ namespace Raven.Storage.Managed
 				{"id", generator.CreateSequentialUuid().ToByteArray()},
 				{"time", addedAt},
 				{"type", task.GetType().FullName},
-				{"mergable", task.SupportsMerging}
 			}, task.AsBytes());
 		}
 
@@ -77,9 +76,6 @@ namespace Raven.Storage.Managed
 
 		private void MergeSimilarTasks(Task task, byte [] taskId)
 		{
-			if (task.SupportsMerging == false)
-				return;
-
 			var taskType = task.GetType().FullName;
 			var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
 			{
@@ -111,13 +107,9 @@ namespace Raven.Storage.Managed
 					continue;
 				}
 
-				if (task.TryMerge(existingTask) == false)
-					continue;
+				task.Merge(existingTask);
 
 				storage.Tasks.Remove(keyForTaskToTryMerging);
-
-				if (task.SupportsMerging == false)
-					return;
 			}
 		}
 

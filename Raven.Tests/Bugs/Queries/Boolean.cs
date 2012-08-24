@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class Boolean : LocalClientTest
+	public class Boolean : RavenTest
 	{
 		[Fact]
 		public void CanQueryOnNegation()

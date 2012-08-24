@@ -133,14 +133,33 @@ task Compile -depends Init {
 	}
 }
 
+task FullStorageTest {
+	
+	$global:full_storage_test = $true
+}
+
 task Test -depends Compile {
+	Clear-Host
+	
 	Write-Host $test_prjs
 	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	
 	
 	$test_prjs | ForEach-Object { 
-		Write-Host "Testing $build_dir\$_"
-		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+		if($global:full_storage_test ) {
+			$env:raventest_storage_engine = 'munin';
+			Write-Host "Testing $build_dir\$_ (munin)"
+			exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+
+			$env:raventest_storage_engine = 'esent';
+			Write-Host "Testing $build_dir\$_ (esent)"
+			exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+		}
+		else {
+			$env:raventest_storage_engine = $null;
+			Write-Host "Testing $build_dir\$_ (default)"
+			exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+		}
 	}
 }
 
@@ -193,7 +212,7 @@ task Stable {
 
 task RunTests -depends Test,TestSilverlight
 
-task RunAllTests -depends Test,TestSilverlight,StressTest
+task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
 
 task Release -depends RunTests,DoRelease
 

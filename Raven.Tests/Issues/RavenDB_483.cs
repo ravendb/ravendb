@@ -17,9 +17,10 @@ namespace Raven.Tests.Issues
 				Map = persons => from p in persons select new {DateTime = (DateTime?) null}
 			}.ToIndexDefinition(new DocumentConvention());
 
-			Assert.Equal(@"docs.People.Select(p => new {
+			const string expected = @"docs.People.Select(p => new {
     DateTime = ((System.DateTime ? )(null))
-}", indexDefinition.Map);
+})";
+			Assert.Equal(expected, indexDefinition.Map);
 		}
 	}
 }

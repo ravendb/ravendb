@@ -32,7 +32,7 @@ namespace Raven.Tests.Queries
 		[Fact]
 		public void CanPeformIntersectionQuery_Embedded()
 		{
-			using (var store = NewDocumentStore(inMemory:false))
+			using (var store = NewDocumentStore())
 			{
 				ExecuteTest(store);
 			}
@@ -41,7 +41,7 @@ namespace Raven.Tests.Queries
 		[Fact]
 		public void CanPerformIntersectionQuery_Linq()
 		{
-			using (var store = NewDocumentStore(inMemory: false))
+			using (var store = NewDocumentStore())
 			{
 				CreateIndexAndSampleData(store);
 

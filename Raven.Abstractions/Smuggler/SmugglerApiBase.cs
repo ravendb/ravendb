@@ -247,6 +247,8 @@ namespace Raven.Abstractions.Smuggler
 				var indexName = index.Value<string>("name");
 				if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
 					continue;
+				if (index.Value<RavenJObject>("definition").Value<bool>("IsCompiled"))
+					continue; // can't import compiled indexes
 				PutIndex(indexName, index);
 			}
 

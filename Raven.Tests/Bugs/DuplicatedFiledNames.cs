@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class DuplicatedFiledNames : LocalClientTest
+	public class DuplicatedFiledNames : RavenTest
 	{
 		[Fact]
 		public void ShouldNotDoThat()

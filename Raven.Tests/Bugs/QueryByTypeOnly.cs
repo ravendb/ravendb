@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryByTypeOnly : LocalClientTest
+	public class QueryByTypeOnly : RavenTest
 	{
 		[Fact]
 		public void QueryOnlyByType()

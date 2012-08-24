@@ -166,6 +166,16 @@ namespace Raven.Abstractions.Linq
 			return Enumerate().Sum(aggregator);
 		}
 
+		public IEnumerable<dynamic> OrderBy(Func<dynamic, dynamic> comparable)
+		{
+			return new DynamicList(Enumerate().OrderBy(comparable));
+		}
+
+		public IEnumerable<dynamic> OrderByDescending(Func<dynamic, dynamic> comparable)
+		{
+			return new DynamicList(Enumerate().OrderByDescending(comparable));
+		}
+
 		public dynamic Last()
 		{
 			return Enumerate().Last();

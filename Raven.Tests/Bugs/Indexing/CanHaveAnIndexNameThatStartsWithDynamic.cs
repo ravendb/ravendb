@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class CanHaveAnIndexNameThatStartsWithDynamic : LocalClientTest
+	public class CanHaveAnIndexNameThatStartsWithDynamic : RavenTest
 	{
 		public class SomeDoc
 		{

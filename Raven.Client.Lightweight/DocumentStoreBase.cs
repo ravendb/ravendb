@@ -146,7 +146,7 @@ namespace Raven.Client
 				{
 					if (lastEtag == null)
 					{
-						lastEtag = new DocumentStore.EtagHolder
+						lastEtag = new EtagHolder
 						{
 							Bytes = newEtag,
 							Etag = etag.Value
@@ -170,7 +170,7 @@ namespace Raven.Client
 					return;
 				}
 
-				lastEtag = new DocumentStore.EtagHolder
+				lastEtag = new EtagHolder
 				{
 					Etag = etag.Value,
 					Bytes = newEtag

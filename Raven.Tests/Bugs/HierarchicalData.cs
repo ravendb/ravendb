@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -13,22 +14,20 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class HierarchicalData : AbstractDocumentStorageTest
+	public class HierarchicalData : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public HierarchicalData()
 		{
-			db =
-				new DocumentDatabase(new RavenConfiguration
-				{
-					DataDirectory = DataDir,
-				});
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

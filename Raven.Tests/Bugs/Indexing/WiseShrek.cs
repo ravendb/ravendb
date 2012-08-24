@@ -19,7 +19,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class WiseShrek : LocalClientTest
+	public class WiseShrek : RavenTest
 	{
 
 		public class Soft

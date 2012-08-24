@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class DynamicMapReduce : LocalClientTest
+	public class DynamicMapReduce : RavenTest
 	{
 		[Fact]
 		public void CanDynamicallyQueryOverItemCount()

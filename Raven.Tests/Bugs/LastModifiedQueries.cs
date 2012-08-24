@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class LastModifiedQueries : LocalClientTest
+	public class LastModifiedQueries : RavenTest
 	{
 		[Fact]
 		public void LastModifiedIsQueryable()

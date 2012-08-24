@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.MultiMap
 {
-	public class SimpleMultiMap : LocalClientTest
+	public class SimpleMultiMap : RavenTest
 	{
 		[Fact]
 		public void CanCreateMultiMapIndex()

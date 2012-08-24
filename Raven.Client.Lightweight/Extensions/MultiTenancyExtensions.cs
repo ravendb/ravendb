@@ -119,7 +119,7 @@ namespace Raven.Client.Extensions
 			var doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
 
-			var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
+			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
 			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
 		}
 #else

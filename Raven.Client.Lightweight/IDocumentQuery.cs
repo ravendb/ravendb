@@ -27,6 +27,12 @@ namespace Raven.Client
 		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
 		/// <summary>
+		/// Selects the specified fields directly from the index
+		/// </summary>
+		/// <typeparam name="TProjection">The type of the projection.</typeparam>
+		IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections);
+
+		/// <summary>
 		/// Selects the projection fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>

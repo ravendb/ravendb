@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Chripede
 {
-	public class IndexOnList : LocalClientTest
+	public class IndexOnList : RavenTest
 	{
 		[Fact]
 		public void CanIndexAndQueryOnList()

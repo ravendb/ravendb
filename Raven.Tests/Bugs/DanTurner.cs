@@ -9,7 +9,7 @@ using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class DanTurner : LocalClientTest, IDisposable
+	public class DanTurner : RavenTest, IDisposable
 	{
 		private IDocumentStore _store;
 

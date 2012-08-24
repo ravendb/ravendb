@@ -16,7 +16,6 @@ namespace Raven.Tests.MailingList
 			public string Id { get; set; }
 			public bool Deleted { get; set; }
 			public int Order { get; set; }
-
 		}
 
 		public class Car : Mutator
@@ -25,56 +24,23 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void ShouldNotChange_Munin()
+		public void ShouldNotChange()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Car
 					{
 						Id = "Bmw_z3_2009",
-						Brand =
-							"Test"
+						Brand = "Test"
 					});
+
 					session.SaveChanges();
 
 					var car = session.Load<Car>("BMW_z3_2009");
 					Assert.True(String.CompareOrdinal(car.Id, "Bmw_z3_2009") == 0);
-				}
 
-				using (var session = store.OpenSession())
-				{
-					var car = session.Load<Car>("BMW_z3_2009");
-					Assert.True(String.CompareOrdinal(car.Id,"Bmw_z3_2009") == 0);
-					session.SaveChanges();
-				}
-
-				using (var session = store.OpenSession())
-				{
-					var car = session.Load<Car>("BMW_z3_2009");
-					Assert.True(String.CompareOrdinal(car.Id, "Bmw_z3_2009") == 0);
-				}
-			}
-		}
-
-		[Fact]
-		public void ShouldNotChange_Esent()
-		{
-			using (var store = NewDocumentStore("esent"))
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Car
-					{
-						Id = "Bmw_z3_2009",
-						Brand =
-							"Test"
-					});
-					session.SaveChanges();
-
-					var car = session.Load<Car>("BMW_z3_2009");
-					Assert.True(String.CompareOrdinal(car.Id, "Bmw_z3_2009") == 0);
 				}
 
 				using (var session = store.OpenSession())
@@ -95,7 +61,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void ShouldNotChange_remote()
 		{
-			using(GetNewServer())
+			using (GetNewServer())
 			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -106,9 +72,9 @@ namespace Raven.Tests.MailingList
 					session.Store(new Car
 					{
 						Id = "Bmw_z3_2009",
-						Brand =
-							"Test"
+						Brand = "Test"
 					});
+
 					session.SaveChanges();
 
 					var car = session.Load<Car>("BMW_z3_2009");

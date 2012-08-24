@@ -253,7 +253,9 @@ namespace Raven.Client.Linq
 
 		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{
-			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch, FieldsToRename);
+			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName,
+				FieldsToFetch, 
+				FieldsToRename);
 		}
 
 		/// <summary>

@@ -45,18 +45,20 @@ namespace Raven.Storage.Managed
 				if(readResult == null)
 					yield break;
 
-				if (readResult.Key.Value<int>("reads") > 5) //      // read too much, probably poison message, remove it
+				var ravenJToken = readResult.Key;
+				if (ravenJToken.Value<int>("reads") > 5) //      // read too much, probably poison message, remove it
 				{
-					storage.Queues.Remove(readResult.Key);
+					storage.Queues.Remove(ravenJToken);
 					continue;
 				}
+				ravenJToken = ravenJToken.CloneToken();
 
-				((RavenJObject)readResult.Key)["reads"] = readResult.Key.Value<int>("reads") + 1;
-				storage.Queues.UpdateKey(readResult.Key);
+				((RavenJObject)ravenJToken)["reads"] = ravenJToken.Value<int>("reads") + 1;
+				storage.Queues.UpdateKey(ravenJToken);
 
 				yield return new Tuple<byte[], object>(
 					readResult.Data(),
-					readResult.Key.Value<byte[]>("id")
+					ravenJToken.Value<byte[]>("id")
 					);
 			}
 		}

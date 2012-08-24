@@ -12,7 +12,7 @@ using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class WhereEntityIs : LocalClientTest
+	public class WhereEntityIs : RavenTest
 	{
 		[Fact]
 		public void Can_query_using_multiple_entities()

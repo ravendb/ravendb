@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DateTimeInLocalTime : LocalClientTest
+	public class DateTimeInLocalTime : RavenTest
 	{
 		[Fact]
 		public void CanSaveAndLoadSameTimeLocal()

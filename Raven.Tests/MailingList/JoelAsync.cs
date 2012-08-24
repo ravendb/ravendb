@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class JoelAsync : LocalClientTest
+	public class JoelAsync : RavenTest
 	{
 		public class Dummy
 		{

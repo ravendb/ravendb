@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryIdGreaterThan : LocalClientTest
+	public class QueryIdGreaterThan : RavenTest
 	{
 		[Fact]
 		public void CanQueryForIdGreaterThan()
