@@ -735,6 +735,7 @@
     <Compile Include="MailingList\SubObjectProperty.cs" />
     <Compile Include="MailingList\Tobias.cs" />
     <Compile Include="MailingList\SortOnNullableTests.cs" />
+    <Compile Include="MailingList\VacancyCampaignsTests.cs" />
     <Compile Include="MailingList\Vicente.cs" />
     <Compile Include="MailingList\ZNS.cs" />
     <Compile Include="Patching\AdvancedPatching.cs" />
