@@ -531,6 +531,11 @@ namespace Raven.Database.Indexing
 			return currentIndexSearcherHolder.GetSearcher(out searcher);
 		}
 
+		internal IDisposable GetSearcherAndTermsDocs(out IndexSearcher searcher, out RavenJObject[] termsDocs)
+		{
+			return currentIndexSearcherHolder.GetSearcherAndTermDocs(out searcher, out termsDocs);
+		}
+
 		private void RecreateSearcher()
 		{
 			if (indexWriter == null)
@@ -708,7 +713,8 @@ namespace Raven.Database.Indexing
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
 					IndexSearcher indexSearcher;
-					using (parent.GetSearcher(out indexSearcher))
+					RavenJObject[] termsDocs;
+					using (parent.GetSearcherAndTermsDocs(out indexSearcher, out termsDocs))
 					{
 						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
 
@@ -717,82 +723,13 @@ namespace Raven.Database.Indexing
 
 						var indexReader = indexSearcher.GetIndexReader();
 
-						var ids = search.ScoreDocs.Select(x => x.doc).ToArray();
-						foreach (var result in ReadEntriesFromIndex(indexReader, ids))
+						foreach (var scoreDoc in search.ScoreDocs)
 						{
-							yield return result;
+							yield return termsDocs[scoreDoc.doc];
 						}
 					}
 				}
 			}
-
-			public IEnumerable<RavenJObject> ReadEntriesFromIndex(IndexReader reader, int[] ids)
-			{
-				var results = ids.ToDictionary(i => i, i => new RavenJObject());
-				var termDocs = reader.TermDocs();
-				try
-				{
-					var termEnum = reader.Terms();
-					try
-					{
-						while (termEnum.Next())
-						{
-							var term = termEnum.Term();
-							if (term == null)
-								break;
-
-							var text = term.Text();
-
-							termDocs.Seek(termEnum);
-							while (termDocs.Next())
-							{
-								RavenJObject result;
-								if (results.TryGetValue(termDocs.Doc(), out result) == false)
-									continue;
-								var propertyName = term.Field();
-								if (propertyName.EndsWith("_Range") ||
-									propertyName.EndsWith("_ConvertToJson") ||
-									propertyName.EndsWith("_IsArray"))
-									continue;
-
-								if (result.ContainsKey(propertyName))
-								{
-									switch (result[propertyName].Type)
-									{
-										case JTokenType.Array:
-											((RavenJArray)result[propertyName]).Add(text);
-											break;
-										case JTokenType.String:
-											result[propertyName] = new RavenJArray
-										{
-											result[propertyName],
-											text
-										};
-											break;
-										default:
-											throw new ArgumentException("No idea how to hanlde " + result[propertyName].Type);
-									}
-								}
-								else
-								{
-									result[propertyName] = text;
-								}
-							}
-						} 
-					}
-					finally
-					{
-						termEnum.Close();
-					}
-				}
-				finally
-				{
-					termDocs.Close();
-				}
-
-				return ids.Select(i => results[i]);
-			}
-
 
 			public IEnumerable<IndexQueryResult> Query()
 			{

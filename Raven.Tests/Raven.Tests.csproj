@@ -642,6 +642,7 @@
     <Compile Include="MailingList\HiloWithMultiTenancy.cs" />
     <Compile Include="MailingList\Jon.cs" />
     <Compile Include="MailingList\Jonas.cs" />
+    <Compile Include="MailingList\JustFacetSearch.cs" />
     <Compile Include="MailingList\kendaleiv.cs" />
     <Compile Include="MailingList\Lars.cs" />
     <Compile Include="MailingList\Daniel.cs" />
