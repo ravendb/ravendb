@@ -5,9 +5,10 @@ namespace Raven.Client.Linq
 	[Flags]
 	public enum SearchOptions
 	{
-		Or = 0,
-		And = 1,
-		Not = 4
+		Or = 1,
+		And = 2,
+		Not = 4,
+		Guess = 8
 	}
 
 	public enum EscapeQueryOptions
