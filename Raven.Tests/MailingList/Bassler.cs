@@ -41,6 +41,8 @@ namespace Raven.Tests.MailingList
 					var list = session.Query<App_WaiverWaitlistItemSearch.IndexResult, App_WaiverWaitlistItemSearch>()
 						.AsProjection<App_WaiverWaitlistItemSearch.IndexResult>()
 						.ToList();
+					Assert.False(list.Any(result => result.GroupNumber == null));
+					Assert.False(list.Any(result => result.ScreeningDate == DateTime.MinValue));
 					Assert.False(list.Any(result => result.LastName == null));
 				}
 			}
@@ -151,13 +153,15 @@ namespace Raven.Tests.MailingList
 					from result in results
 					group result by result.ClientId into g
 					let lastName = g.FirstOrDefault(x => x.LastName != null).LastName
+					let groupNumber = g.FirstOrDefault(x => x.GroupNumber != null).GroupNumber
+					let screeningDate = g.FirstOrDefault(x => x.ScreeningDate != DateTime.MinValue).ScreeningDate
 					from item in g
 					select new
 					{
 						Id = item.Id,
-						ScreeningDate = item.ScreeningDate,
+						ScreeningDate = screeningDate,
 						ClientId = g.Key,
-						GroupNumber = item.GroupNumber,
+						GroupNumber = groupNumber,
 						LastName = lastName,
 					};
 
