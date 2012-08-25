@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Connections
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private readonly IHttpContext context;
-		
+
 		public string Id { get; private set; }
 		public bool Connected { get; set; }
 
@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Connections
 				throw new ArgumentException("Id is mandatory");
 
 			heartbeat = new Timer(Heartbeat);
-	
+
 		}
 
 		public Task ProcessAsync()
@@ -60,59 +60,84 @@ namespace Raven.Database.Server.Connections
 
 		public Task SendAsync(object data)
 		{
-			if (initTask != null && // may be the very first time? 
-				initTask.IsCompleted == false) // still pending on this...
-				return initTask.ContinueWith(_ => SendAsync(data)).Unwrap();
+			try
+			{
+				if (initTask != null && // may be the very first time? 
+					initTask.IsCompleted == false) // still pending on this...
+					return initTask.ContinueWith(_ => SendAsync(data)).Unwrap();
 
 
-			return context.Response.WriteAsync("data: " + JsonConvert.SerializeObject(data,Formatting.None) + "\r\n\r\n")
-				.ContinueWith(DisconnectOnError);
+				return context.Response.WriteAsync("data: " + JsonConvert.SerializeObject(data, Formatting.None) + "\r\n\r\n")
+					.ContinueWith(DisconnectOnError);
+			}
+			catch (Exception e)
+			{
+				DisconnectBecauseOfAnError(e);
+				throw;
+			}
 		}
 
 		public Task SendManyAsync(IEnumerable<object> data)
 		{
-			if (initTask.IsCompleted == false)
-				return initTask.ContinueWith(_ => SendManyAsync(data)).Unwrap();
-
-			var sb = new StringBuilder();
-
-			foreach (var o in data)
+			try
 			{
-				sb.Append("data: ")
-					.Append(JsonConvert.SerializeObject(o))
-					.Append("\r\n\r\n");
-			}
+				if (initTask.IsCompleted == false)
+					return initTask.ContinueWith(_ => SendManyAsync(data)).Unwrap();
 
-			return context.Response.WriteAsync(sb.ToString())
-				.ContinueWith(DisconnectOnError);
+				var sb = new StringBuilder();
+
+				foreach (var o in data)
+				{
+					sb.Append("data: ")
+						.Append(JsonConvert.SerializeObject(o))
+						.Append("\r\n\r\n");
+				}
+
+				return context.Response.WriteAsync(sb.ToString())
+					.ContinueWith(DisconnectOnError);
+			}
+			catch (Exception e)
+			{
+				DisconnectBecauseOfAnError(e);
+				throw;
+			}
 		}
 
 		private void DisconnectOnError(Task prev)
 		{
 			prev.ContinueWith(task =>
-			                  	{
-			                  		if (task.IsFaulted == false) 
-										return;
-									log.DebugException("Error when using events transport", task.Exception);
-									
-			                  		Connected = false;
-			                  		Disconnected();
-			                  		try
-			                  		{
-										context.FinalizeResonse();
-			                  		}
-			                  		catch (Exception e)
-			                  		{
-			                  			log.DebugException("Could not close transport", e);
-			                  		}
-			                  	});
+			{
+				if (task.IsFaulted == false)
+					return;
+				DisconnectBecauseOfAnError(task.Exception);
+			});
+		}
+
+		private void DisconnectBecauseOfAnError(Exception exception)
+		{
+			log.DebugException("Error when using events transport", exception);
+
+			Connected = false;
+			Disconnected();
+			try
+			{
+				context.FinalizeResonse();
+			}
+			catch (ObjectDisposedException)
+			{
+				// already closed?
+			}
+			catch (Exception e)
+			{
+				log.DebugException("Could not close transport", e);
+			}
 		}
 
 		public void Disconnect()
 		{
 			if (heartbeat != null)
 				heartbeat.Dispose();
-			
+
 			Connected = false;
 			Disconnected();
 			context.FinalizeResonse();
