@@ -429,6 +429,8 @@ namespace Raven.Database
 			workContext.StopWork();
 			indexingBackgroundTask.Wait();
 			reducingBackgroundTask.Wait();
+
+			backgroundWorkersSpun = false;
 		}
 
 		public WorkContext WorkContext
@@ -436,8 +438,15 @@ namespace Raven.Database
 			get { return workContext; }
 		}
 
+		private volatile bool backgroundWorkersSpun;
+
 		public void SpinBackgroundWorkers()
 		{
+			if (backgroundWorkersSpun)
+				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
+			
+			backgroundWorkersSpun = true;
+
 			workContext.StartWork();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
