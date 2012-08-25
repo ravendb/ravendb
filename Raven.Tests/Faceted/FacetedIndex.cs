@@ -22,7 +22,7 @@ namespace Raven.Tests.Faceted
 		private readonly IList<Camera> _data;
 		private readonly List<Facet> _originalFacets;
 		private readonly List<Facet> _stronglyTypedFacets;
-		private const int NumCameras = 1000;
+		private const int NumCameras = 1;
 
 		public FacetedIndex()
 		{
@@ -263,14 +263,9 @@ namespace Raven.Tests.Faceted
                                                         }"
 												});
 
-				var counter = 0;
 				foreach (var camera in _data)
 				{
 					s.Store(camera);
-					counter++;
-
-					if (counter % (NumCameras / 25) == 0)
-						s.SaveChanges();
 				}
 				s.SaveChanges();
 

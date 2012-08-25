@@ -542,6 +542,11 @@ namespace Raven.Database.Indexing
 			return GetIndexByName(indexName).GetSearcher(out searcher);
 		}
 
+		public IDisposable GetCurrentIndexSearcherAndTermDocs(string indexName, out IndexSearcher searcher, out RavenJObject[] termsDocs)
+		{
+			return GetIndexByName(indexName).GetSearcherAndTermsDocs(out searcher, out termsDocs);
+		}
+
 		private Index GetIndexByName(string indexName)
 		{
 			var result = indexes.Where(index => System.String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)

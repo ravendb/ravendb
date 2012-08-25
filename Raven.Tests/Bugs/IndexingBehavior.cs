@@ -61,11 +61,11 @@ namespace Raven.Tests.Bugs
 				db.Put("a" + i, null, new RavenJObject(), new RavenJObject(), null);
 			}
 
-			Assert.Empty(db.Statistics.Errors); 
+			Assert.Empty(db.Statistics.Errors);
 
+			bool isIndexStale = false;
 			for (int i = 0; i < 50; i++)
 			{
-				bool isIndexStale = false;
 				db.TransactionalStorage.Batch(actions =>
 				{
 					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
@@ -74,7 +74,7 @@ namespace Raven.Tests.Bugs
 					break;
 				Thread.Sleep(100);
 			}
-
+			Assert.False(isIndexStale);
 			Assert.NotEmpty(db.Statistics.Errors);
 		}
 

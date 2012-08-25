@@ -642,6 +642,7 @@
     <Compile Include="MailingList\HiloWithMultiTenancy.cs" />
     <Compile Include="MailingList\Jon.cs" />
     <Compile Include="MailingList\Jonas.cs" />
+    <Compile Include="MailingList\JustFacetSearch.cs" />
     <Compile Include="MailingList\kendaleiv.cs" />
     <Compile Include="MailingList\Lars.cs" />
     <Compile Include="MailingList\Daniel.cs" />
@@ -735,6 +736,7 @@
     <Compile Include="MailingList\SubObjectProperty.cs" />
     <Compile Include="MailingList\Tobias.cs" />
     <Compile Include="MailingList\SortOnNullableTests.cs" />
+    <Compile Include="MailingList\VacancyCampaignsTests.cs" />
     <Compile Include="MailingList\Vicente.cs" />
     <Compile Include="MailingList\ZNS.cs" />
     <Compile Include="Patching\AdvancedPatching.cs" />

@@ -7,6 +7,7 @@ using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Client.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Faceted;
 
 namespace Raven.Tryouts
 {
@@ -14,10 +15,9 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
-			IOExtensions.DeleteDirectory("Logs");
-			using (var x = new MultiOutputReduce())
+			using(var x = new FacetedIndex())
 			{
-				x.CanGetCorrectResultsFromAllItems();
+				x.CanPerformFacetedSearch_Embedded();
 			}
 
 		}
