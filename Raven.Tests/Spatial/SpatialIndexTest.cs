@@ -26,7 +26,6 @@ namespace Raven.Tests.Spatial
 			{
 				RunInMemory = true
 			});
-			db.SpinBackgroundWorkers();
 		}
 
 		public override void Dispose()

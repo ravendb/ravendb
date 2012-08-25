@@ -49,7 +49,6 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void WillGetNonStaleResultWhenAskingWithCutoffDate()
 		{
-			db.SpinBackgroundWorkers();
 			db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
 			for (int i = 0; i < 500; i++)
