@@ -28,7 +28,6 @@ namespace Raven.Tests.Indexes
 				NewDocumentStore(new AggregateCatalog
 				{Catalogs = {new TypeCatalog(typeof (ShoppingCartEventsToShopingCart), typeof (MapOnlyView))}});
 			db = store.DocumentDatabase;
-			db.SpinBackgroundWorkers();
 		}
 
 		public override void Dispose()

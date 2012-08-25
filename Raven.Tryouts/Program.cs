@@ -2,12 +2,16 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Client.Linq;
+using Raven.Json.Linq;
 using Raven.Tests.Bugs;
 using Raven.Tests.Faceted;
+using Raven.Abstractions.Extensions;
+using Raven.Tests.Indexes;
 
 namespace Raven.Tryouts
 {
@@ -15,11 +19,10 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
-			using(var x = new FacetedIndex())
+			using(var x = new CompiledIndex())
 			{
-				x.CanPerformFacetedSearch_Embedded();
+				x.CompileIndexWillTurnEventsToAggregate();
 			}
-
 		}
 
 		public class Person
