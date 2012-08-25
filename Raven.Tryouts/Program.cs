@@ -12,6 +12,7 @@ using Raven.Tests.Bugs;
 using Raven.Tests.Faceted;
 using Raven.Abstractions.Extensions;
 using Raven.Tests.Indexes;
+using Raven.Tests.MailingList;
 
 namespace Raven.Tryouts
 {
@@ -19,9 +20,12 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
-			using(var x = new CompiledIndex())
+			for (int i = 0; i < 100; i++)
 			{
-				x.CompileIndexWillTurnEventsToAggregate();
+				using (var x = new ZNS2())
+				{
+					x.Can_SortAndPageMultipleDates();
+				}
 			}
 		}
 
