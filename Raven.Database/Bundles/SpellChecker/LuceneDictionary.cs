@@ -22,98 +22,98 @@ using Term = Lucene.Net.Index.Term;
 
 namespace SpellChecker.Net.Search.Spell
 {
-    /// <summary> Lucene Dictionary
-    /// 
-    /// </summary>
-    public class LuceneDictionary : Dictionary
-    {
-        internal IndexReader reader;
-        internal System.String field;
-		
-        public LuceneDictionary(IndexReader reader, System.String field)
-        {
-            this.reader = reader;
-            this.field = field;
-        }
+	/// <summary> Lucene Dictionary
+	/// 
+	/// </summary>
+	public class LuceneDictionary : Dictionary
+	{
+		internal IndexReader reader;
+		internal System.String field;
 
-        virtual public System.Collections.IEnumerator GetWordsIterator()
-        {
-            return new LuceneIterator(this);
-        }
+		public LuceneDictionary(IndexReader reader, System.String field)
+		{
+			this.reader = reader;
+			this.field = field;
+		}
 
-        public System.Collections.IEnumerator GetEnumerator()
-        {
-            return GetWordsIterator();
-        }
-		
-		
-        internal sealed class LuceneIterator : System.Collections.IEnumerator
-        {
-            private TermEnum termEnum;
-            private Term actualTerm;
-            private bool hasNextCalled;
+		virtual public System.Collections.IEnumerator GetWordsIterator()
+		{
+			return new LuceneIterator(this);
+		}
 
-            private LuceneDictionary enclosingInstance;
-			
-            public LuceneIterator(LuceneDictionary enclosingInstance)
-            {
-                this.enclosingInstance = enclosingInstance;
-                try
-                {
-                    termEnum = enclosingInstance.reader.Terms(new Term(enclosingInstance.field, ""));
-                }
-                catch (System.IO.IOException ex)
-                {
-                    System.Console.Error.WriteLine(ex.StackTrace);
-                }
-            }
+		public System.Collections.IEnumerator GetEnumerator()
+		{
+			return GetWordsIterator();
+		}
 
-            //next()
-            public System.Object Current
-            {
-                get
-                {
-                    if (!hasNextCalled)
-                    {
-                        MoveNext();
-                    }
-                    hasNextCalled = false;
-                    return (actualTerm != null) ? actualTerm.Text() : null;
-                }
 
-            }
-			
-            //hasNext()
-            public bool MoveNext()
-            {
-                hasNextCalled = true;
-                
-                actualTerm = termEnum.Term();
+		internal sealed class LuceneIterator : System.Collections.IEnumerator
+		{
+			private TermEnum termEnum;
+			private Term actualTerm;
+			private bool hasNextCalled;
 
-                // if there are no words return false
-                if (actualTerm == null) return false;
+			private LuceneDictionary enclosingInstance;
 
-                System.String fieldt = actualTerm.Field();
-                termEnum.Next();
+			public LuceneIterator(LuceneDictionary enclosingInstance)
+			{
+				this.enclosingInstance = enclosingInstance;
+				try
+				{
+					termEnum = enclosingInstance.reader.Terms(new Term(enclosingInstance.field, ""));
+				}
+				catch (System.IO.IOException ex)
+				{
+					System.Console.Error.WriteLine(ex.StackTrace);
+				}
+			}
 
-                // if the next word doesn't have the same field return false
-                if (fieldt != enclosingInstance.field)
-                {
-                    actualTerm = null;
-                    return false;
-                }
-                return true;
-            }
+			//next()
+			public System.Object Current
+			{
+				get
+				{
+					if (!hasNextCalled)
+					{
+						MoveNext();
+					}
+					hasNextCalled = false;
+					return (actualTerm != null) ? actualTerm.Text() : null;
+				}
 
-            public void Remove()
-            {
-                throw new NotImplementedException();
-            }
+			}
 
-            public void Reset()
-            {
-                throw new NotImplementedException();
-            }
-        }
-    }
+			//hasNext()
+			public bool MoveNext()
+			{
+				hasNextCalled = true;
+
+				actualTerm = termEnum.Term();
+
+				// if there are no words return false
+				if (actualTerm == null) return false;
+
+				System.String fieldt = actualTerm.Field();
+				termEnum.Next();
+
+				// if the next word doesn't have the same field return false
+				if (fieldt != enclosingInstance.field)
+				{
+					actualTerm = null;
+					return false;
+				}
+				return true;
+			}
+
+			public void Remove()
+			{
+				throw new NotImplementedException();
+			}
+
+			public void Reset()
+			{
+				throw new NotImplementedException();
+			}
+		}
+	}
 }

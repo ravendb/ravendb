@@ -23,13 +23,13 @@ using System;
 
 namespace SpellChecker.Net.Search.Spell
 {
-	
-    /// <summary> A simple interface representing a Dictionary</summary>
-    public interface Dictionary
-    {
-        /// <summary> return all the words present in the dictionary</summary>
-        /// <returns> Iterator
-        /// </returns>
-        System.Collections.IEnumerator GetWordsIterator();
-    }
+
+	/// <summary> A simple interface representing a Dictionary</summary>
+	public interface Dictionary
+	{
+		/// <summary> return all the words present in the dictionary</summary>
+		/// <returns> Iterator
+		/// </returns>
+		System.Collections.IEnumerator GetWordsIterator();
+	}
 }
