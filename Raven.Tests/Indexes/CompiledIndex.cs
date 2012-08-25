@@ -11,8 +11,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Indexes
@@ -25,6 +23,7 @@ namespace Raven.Tests.Indexes
 		public CompiledIndex()
 		{
 			store =
+
 				NewDocumentStore(new AggregateCatalog
 				{Catalogs = {new TypeCatalog(typeof (ShoppingCartEventsToShopingCart), typeof (MapOnlyView))}});
 			db = store.DocumentDatabase;
