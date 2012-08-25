@@ -36,7 +36,7 @@ namespace SpellChecker.Net.Search.Spell
 		
 		
         /// <summary> the suggested word</summary>
-        public System.String string_Renamed;
+        public System.String term;
 		
 		
         public int CompareTo(SuggestWord a)

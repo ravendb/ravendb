@@ -43,5 +43,9 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The accuracy.</value>
 		public float Accuracy { get; set; }
+		/// <summary>
+		/// Whatever to return the terms in order of popularity
+		/// </summary>
+		public bool Popularity { get; set; }
 	}
 }
