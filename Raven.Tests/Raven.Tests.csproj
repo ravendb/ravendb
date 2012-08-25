@@ -739,6 +739,7 @@
     <Compile Include="MailingList\VacancyCampaignsTests.cs" />
     <Compile Include="MailingList\Vicente.cs" />
     <Compile Include="MailingList\ZNS.cs" />
+    <Compile Include="MailingList\ZNS2.cs" />
     <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
