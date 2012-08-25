@@ -724,7 +724,12 @@ namespace Raven.Database.Indexing
 
 						foreach (var scoreDoc in search.ScoreDocs)
 						{
-							yield return termsDocs[scoreDoc.doc];
+							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.doc].CloneToken();
+							foreach (var prop in ravenJObject.Where(x=>x.Key.EndsWith("_Range")).ToArray())
+							{
+								ravenJObject.Remove(prop.Key);
+							}
+							yield return ravenJObject;
 						}
 					}
 				}
