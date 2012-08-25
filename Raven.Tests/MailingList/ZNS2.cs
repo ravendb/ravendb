@@ -59,9 +59,10 @@ namespace Raven.Tests.MailingList
 				}, true);
 
 				//Insert some events at random dates
+				var size = 50;
 				using (var session = store.OpenSession())
 				{
-					for (int i = 0; i < 50; i++)
+					for (int i = 0; i < size; i++)
 					{
 						var r = new System.Random();
 						session.Store(new TestItem()
@@ -76,9 +77,9 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					for (int i = 1; i <= 50; i++)
+					for (int i = 1; i <= size; i++)
 					{
-						var r = new System.Random(Guid.NewGuid().ToString().GetHashCode());
+						var r = new System.Random(i);
 						var dates = new List<DateTime>();
 						for (var j = 0; j < 5; j++)
 						{
@@ -137,12 +138,7 @@ namespace Raven.Tests.MailingList
 				}
 
 
-				var e1 = result.GetEnumerator();
-				var e2 = paged.GetEnumerator();
-				while (e1.MoveNext() && e2.MoveNext())
-				{
-					Assert.Equal(e1.Current, e2.Current);
-				}
+				Assert.Equal(result.Select(x=>x.Id),paged.Select(x=>x.Id));
 			}
 		}
 	}
