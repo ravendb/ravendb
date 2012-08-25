@@ -161,7 +161,9 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				return DatabaseDocument != null &&
+				return DatabaseDocument != null && 
+					   DatabaseDocument.Value.Settings != null && 
+					   DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
 					   DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Contains("Replication");
 			}
 		}
