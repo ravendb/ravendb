@@ -49,7 +49,7 @@ namespace Raven.Database.Queries
 			spellChecker.IndexDictionary(new LuceneDictionary(reader, field));
 		}
 
-		public SuggestionQueryResult Query(SuggestionQuery suggestionQuery)
+		public SuggestionQueryResult Query(SuggestionQuery suggestionQuery, IndexReader indexReader)
 		{
 			if(suggestionQuery.Term.StartsWith("<<") && suggestionQuery.Term.EndsWith(">>"))
 			{
@@ -60,9 +60,9 @@ namespace Raven.Database.Queries
 				{
 					result.AddRange(spellChecker.SuggestSimilar(term,
 					                                            suggestionQuery.MaxSuggestions,
-					                                            null,
+					                                            indexReader,
 					                                            suggestionQuery.Field,
-					                                            true));
+					                                            suggestionQuery.Popularity));
 				}
 
 				return new SuggestionQueryResult
@@ -72,7 +72,7 @@ namespace Raven.Database.Queries
 			}
 			string[] suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term,
 			                                                   suggestionQuery.MaxSuggestions,
-			                                                   null,
+			                                                   indexReader, 
 			                                                   suggestionQuery.Field,
 			                                                   true);
 

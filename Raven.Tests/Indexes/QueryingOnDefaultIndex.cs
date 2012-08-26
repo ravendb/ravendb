@@ -24,7 +24,6 @@ namespace Raven.Tests.Indexes
 			store = NewDocumentStore();
 			db = store.DocumentDatabase;
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-			db.SpinBackgroundWorkers();
 		}
 
 		public override void Dispose()

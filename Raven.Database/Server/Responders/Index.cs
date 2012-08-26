@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Database.Data;
@@ -109,6 +110,9 @@ namespace Raven.Database.Server.Responders
 				case "reduce":
 					GetIndexReducedResult(context, index);
 					break;
+				case "entries":
+					GetIndexEntries(context, index);
+					break;
 				default:
 					context.WriteJson(new
 					{
@@ -117,6 +121,41 @@ namespace Raven.Database.Server.Responders
 					context.SetStatusToBadRequest();
 					break;
 			}
+		}
+
+		private void GetIndexEntries(IHttpContext context, string index)
+		{
+			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			var totalResults = new Reference<int>();
+			var results = Database.IndexStorage
+								.IndexEntires(index, indexQuery,Database.IndexQueryTriggers, totalResults )
+								.ToArray();
+
+
+			Tuple<DateTime, Guid> indexTimestamp = null;
+			bool isIndexStale = false;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				isIndexStale = accessor.Staleness.IsIndexStale(index, indexQuery.Cutoff, indexQuery.CutoffEtag);
+				indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);
+			});
+			var indexEtag = Database.GetIndexEtag(index, null);
+			context.WriteETag(indexEtag);
+			context.WriteJson(new
+			{
+				Count = results.Length,
+				Results = results,
+				Includes = new string[0],
+				IndexTimestamp = indexTimestamp.Item1,
+				IndexEtag = indexTimestamp.Item2,
+				TotalResults = totalResults.Value,
+				SkippedResults = 0,
+				NonAuthoritativeInformation = false,
+				ResultEtag = indexEtag,
+				IsStale = isIndexStale,
+				IndexName = index,
+				LastQueryTime = Database.IndexStorage.GetLastQueryTime(index)
+			});
 		}
 
 		private void GetExplanation(IHttpContext context, string index)

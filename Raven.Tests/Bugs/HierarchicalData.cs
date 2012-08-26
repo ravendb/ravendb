@@ -51,8 +51,6 @@ select new { comment.Text }"
 }
 "), RavenJObject.Parse("{'Raven-Entity-Name': 'Posts'}"), null);
 
-			db.SpinBackgroundWorkers();
-
 			QueryResult queryResult;
 			do
 			{

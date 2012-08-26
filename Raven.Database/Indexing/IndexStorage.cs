@@ -429,6 +429,23 @@ namespace Raven.Database.Indexing
 			return indexQueryOperation.Query();
 		}
 
+		public IEnumerable<RavenJObject> IndexEntires(
+			string index,
+			IndexQuery query,
+			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers,
+			Reference<int> totalResults)
+		{
+			Index value;
+			if (indexes.TryGetValue(index, out value) == false)
+			{
+				log.Debug("Query on non existing index '{0}'", index);
+				throw new InvalidOperationException("Index '" + index + "' does not exists");
+			}
+
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null,AggregationOperation.None, null), indexQueryTriggers);
+			return indexQueryOperation.IndexEntries(totalResults);
+		}
+
 		protected internal static IDisposable EnsureInvariantCulture()
 		{
 			if (Thread.CurrentThread.CurrentCulture == CultureInfo.InvariantCulture)
@@ -523,6 +540,11 @@ namespace Raven.Database.Indexing
 		public IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
 		{
 			return GetIndexByName(indexName).GetSearcher(out searcher);
+		}
+
+		public IDisposable GetCurrentIndexSearcherAndTermDocs(string indexName, out IndexSearcher searcher, out RavenJObject[] termsDocs)
+		{
+			return GetIndexByName(indexName).GetSearcherAndTermsDocs(out searcher, out termsDocs);
 		}
 
 		private Index GetIndexByName(string indexName)

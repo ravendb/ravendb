@@ -11,7 +11,7 @@ namespace Raven.Bundles.Quotas.Documents.Triggers
 	{
 		public override void AfterDelete(string key, Abstractions.Data.TransactionInformation transactionInformation)
 		{
-			SizeQuotaConfiguration.GetConfiguration(Database).AfterDelete();
+			DocQuotaConfiguration.GetConfiguration(Database).AfterDelete();
 		}
 	}
 }

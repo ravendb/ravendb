@@ -89,7 +89,7 @@
 				</Grid.ColumnDefinitions>
 
 				<Image Grid.Column="3"
-					   ToolTipService.ToolTip="{Binding Server.Value.SelectedDatabase.Value.Status.Value, StringFormat='Server stauts: {0}'}"
+					   ToolTipService.ToolTip="{Binding Server.Value.SelectedDatabase.Value.Status.Value, StringFormat='Server status: {0}'}"
 					   Source="{Binding StatusImage}"
 					   VerticalAlignment="Center"
 					   />

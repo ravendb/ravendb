@@ -175,6 +175,17 @@ namespace Raven.Studio.Models
             }
 	    }
 
+		private bool showEntries;
+		public bool ShowEntries
+		{
+			get { return showEntries; }
+			set
+			{
+				showEntries = value;
+				OnPropertyChanged(() => ShowEntries);
+			}
+		}
+
 	    public bool SkipTransformResults
 	    {
 	        get { return skipTransformResults; }

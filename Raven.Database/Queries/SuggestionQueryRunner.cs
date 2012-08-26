@@ -38,14 +38,15 @@ namespace Raven.Database.Queries
 
 			var indexExtension = _database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
-			if (indexExtension != null)
-				return indexExtension.Query(suggestionQuery);
-
 
 			IndexSearcher currentSearcher;
 			using(_database.IndexStorage.GetCurrentIndexSearcher(indexName,out currentSearcher))
 			{
 				var indexReader = currentSearcher.GetIndexReader();
+
+				if (indexExtension != null)
+					return indexExtension.Query(suggestionQuery, indexReader);
+
 
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					Path.Combine(_database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
@@ -53,11 +54,11 @@ namespace Raven.Database.Queries
 					GetStringDistance(suggestionQuery.Distance), 
 					suggestionQuery.Field, 
 					suggestionQuery.Accuracy);
-				suggestionQueryIndexExtension.Init(indexReader); // TODO: This is completely innefficient, need to use distance matching on terms instead of re-indexing using grams
+				suggestionQueryIndexExtension.Init(indexReader);
 
 				_database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 
-				return suggestionQueryIndexExtension.Query(suggestionQuery);
+				return suggestionQueryIndexExtension.Query(suggestionQuery, indexReader);
 			}
 		}
 

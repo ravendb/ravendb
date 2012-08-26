@@ -2,11 +2,17 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Client.Linq;
+using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Faceted;
+using Raven.Abstractions.Extensions;
+using Raven.Tests.Indexes;
+using Raven.Tests.MailingList;
 
 namespace Raven.Tryouts
 {
@@ -14,12 +20,13 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
-			IOExtensions.DeleteDirectory("Logs");
-			using (var x = new MultiOutputReduce())
+			for (int i = 0; i < 100; i++)
 			{
-				x.CanGetCorrectResultsFromAllItems();
+				using (var x = new ZNS2())
+				{
+					x.Can_SortAndPageMultipleDates();
+				}
 			}
-
 		}
 
 		public class Person

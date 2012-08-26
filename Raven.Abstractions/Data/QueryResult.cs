@@ -75,7 +75,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// The timestamp of the last time the index was queried
 		/// </summary>
-		public bool LastQueryTime { get; set; }
+		public DateTime LastQueryTime { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.

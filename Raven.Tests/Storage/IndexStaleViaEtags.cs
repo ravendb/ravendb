@@ -44,8 +44,6 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanIndexDocuments()
 		{
-			db.SpinBackgroundWorkers();
-
 			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 
 			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);

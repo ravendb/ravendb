@@ -122,6 +122,11 @@ namespace Raven.Abstractions.Data
 		public Reference<int> SkippedResults { get; set; }
 
 		/// <summary>
+		/// Whatever we should get the raw index queries
+		/// </summary>
+		public bool DebugOptionGetIndexEntries { get; set; }
+
+		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
@@ -140,6 +145,8 @@ namespace Raven.Abstractions.Data
 				.Append(index);
 
 			AppendQueryString(path);
+
+
 
 			return path.ToString();
 		}
@@ -194,6 +201,9 @@ namespace Raven.Abstractions.Data
 			{
 				path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
 			}
+
+			if(DebugOptionGetIndexEntries)
+				path.Append("&debug=entries");
 		}
 
 		/// <summary>

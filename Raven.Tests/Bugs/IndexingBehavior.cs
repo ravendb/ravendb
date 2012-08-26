@@ -61,13 +61,11 @@ namespace Raven.Tests.Bugs
 				db.Put("a" + i, null, new RavenJObject(), new RavenJObject(), null);
 			}
 
-			Assert.Empty(db.Statistics.Errors); 
+			Assert.Empty(db.Statistics.Errors);
 
-			db.SpinBackgroundWorkers();
-
+			bool isIndexStale = false;
 			for (int i = 0; i < 50; i++)
 			{
-				bool isIndexStale = false;
 				db.TransactionalStorage.Batch(actions =>
 				{
 					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
@@ -76,7 +74,7 @@ namespace Raven.Tests.Bugs
 					break;
 				Thread.Sleep(100);
 			}
-
+			Assert.False(isIndexStale);
 			Assert.NotEmpty(db.Statistics.Errors);
 		}
 
@@ -92,8 +90,6 @@ namespace Raven.Tests.Bugs
 			{
 				db.Put("a"+i, null, new RavenJObject(), new RavenJObject(),null);
 			}
-
-			db.SpinBackgroundWorkers();
 
 			for (int i = 0; i < 50; i++)
 			{
@@ -129,8 +125,6 @@ namespace Raven.Tests.Bugs
 
 			db.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
 			RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
-
-			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do

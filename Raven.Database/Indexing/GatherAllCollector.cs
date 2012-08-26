@@ -36,6 +36,11 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
+		public HashSet<int> Documents
+		{
+			get { return documents; }
+		}
+
 		public TopDocs ToTopDocs()
 		{
 			return new TopDocs(documents.Count, documents.Select(i => new ScoreDoc(i, 0)).ToArray(), 0);

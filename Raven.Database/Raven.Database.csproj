@@ -90,9 +90,6 @@
     <Reference Include="Lucene.Net.Contrib.Spatial">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.SpellChecker">
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.SpellChecker.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Mono.Cecil">
@@ -157,11 +154,23 @@
     <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
+    <Compile Include="Bundles\SpellChecker\Dictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\JaroWinklerDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\LevenshteinDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\LuceneDictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\NGramDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\PlainTextDictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\SpellChecker.cs" />
+    <Compile Include="Bundles\SpellChecker\StringDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\SuggestWord.cs" />
+    <Compile Include="Bundles\SpellChecker\SuggestWordQueue.cs" />
+    <Compile Include="Bundles\SpellChecker\TRStringDistance.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
     <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />

@@ -20,6 +20,7 @@ using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
@@ -29,6 +30,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Version = Lucene.Net.Util.Version;
 
@@ -104,13 +106,13 @@ namespace Raven.Database.Indexing
 			try
 			{
 				// this is here so we can give good logs in the case of a long shutdown process
-				if(Monitor.TryEnter(writeLock, 100) == false)
+				if (Monitor.TryEnter(writeLock, 100) == false)
 				{
 					var localReason = waitReason;
-					if(localReason !=null)
+					if (localReason != null)
 						logIndexing.Warn("Waiting for {0} to complete before disposing of index {1}, that might take a while if the server is very busy",
 						 localReason, name);
-					
+
 					Monitor.Enter(writeLock);
 				}
 
@@ -171,10 +173,10 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter == null)
 					return;
-				
+
 				try
 				{
-					
+
 					waitReason = "Flush";
 					indexWriter.Commit();
 				}
@@ -529,6 +531,11 @@ namespace Raven.Database.Indexing
 			return currentIndexSearcherHolder.GetSearcher(out searcher);
 		}
 
+		internal IDisposable GetSearcherAndTermsDocs(out IndexSearcher searcher, out RavenJObject[] termsDocs)
+		{
+			return currentIndexSearcherHolder.GetSearcherAndTermDocs(out searcher, out termsDocs);
+		}
+
 		private void RecreateSearcher()
 		{
 			if (indexWriter == null)
@@ -698,6 +705,36 @@ namespace Raven.Database.Indexing
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
 			}
 
+			public IEnumerable<RavenJObject> IndexEntries(Reference<int> totalResults)
+			{
+				parent.MarkQueried();
+				using (IndexStorage.EnsureInvariantCulture())
+				{
+					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+					IndexSearcher indexSearcher;
+					RavenJObject[] termsDocs;
+					using (parent.GetSearcherAndTermsDocs(out indexSearcher, out termsDocs))
+					{
+						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
+
+						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
+						totalResults.Value = search.TotalHits;
+
+						var indexReader = indexSearcher.GetIndexReader();
+
+						foreach (var scoreDoc in search.ScoreDocs)
+						{
+							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.doc].CloneToken();
+							foreach (var prop in ravenJObject.Where(x=>x.Key.EndsWith("_Range")).ToArray())
+							{
+								ravenJObject.Remove(prop.Key);
+							}
+							yield return ravenJObject;
+						}
+					}
+				}
+			}
+
 			public IEnumerable<IndexQueryResult> Query()
 			{
 				parent.MarkQueried();
@@ -709,24 +746,41 @@ namespace Raven.Database.Indexing
 					{
 						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
 
+
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
 						int returnedResults = 0;
 						int skippedResultsInCurrentLoop = 0;
+						bool readAll;
+						bool adjustStart = true;
+
+						var recorder = new DuplicateDocumentRecorder(indexSearcher,
+													  parent,
+													  documentsAlreadySeenInPreviousPage,
+													  alreadyReturned,
+													  fieldsToFetch,
+													  parent.IsMapReduce || fieldsToFetch.IsProjection);
+
 						do
 						{
 							if (skippedResultsInCurrentLoop > 0)
 							{
-								start = start + pageSize;
+								start = start + pageSize - (start - indexQuery.Start); // need to "undo" the index adjustment
 								// trying to guesstimate how many results we will need to read from the index
 								// to get enough unique documents to match the page size
 								pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
 								skippedResultsInCurrentLoop = 0;
 							}
-							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
+							TopDocs search;
+							int moreRequired;
+							do
+							{
+								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
+								moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, ref start);
+								pageSize += moreRequired*2;
+							} while (moreRequired > 0);
 							indexQuery.TotalSize.Value = search.TotalHits;
-
-							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
+							adjustStart = false;
 
 							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
@@ -744,7 +798,8 @@ namespace Raven.Database.Indexing
 								if (returnedResults == indexQuery.PageSize)
 									yield break;
 							}
-						} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
+							readAll = search.TotalHits == search.ScoreDocs.Length;
+						} while (returnedResults < indexQuery.PageSize && readAll == false);
 					}
 				}
 			}
@@ -845,33 +900,6 @@ namespace Raven.Database.Indexing
 				if (fieldsToFetch.IsDistinctQuery && alreadyReturned.Add(indexQueryResult.Projection) == false)
 					return false;
 				return true;
-			}
-
-			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
-			{
-				var min = Math.Min(start, search.TotalHits);
-
-				// we are paging, we need to check that we don't have duplicates in the previous page
-				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
-				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits)
-				{
-					for (int i = start - pageSize; i < min; i++)
-					{
-						var document = indexSearcher.Doc(search.ScoreDocs[i].doc);
-						documentsAlreadySeenInPreviousPage.Add(document.Get(Constants.DocumentIdFieldName));
-					}
-				}
-
-				if (fieldsToFetch.IsDistinctQuery == false)
-					return;
-
-				// add results that were already there in previous pages
-				for (int i = 0; i < min; i++)
-				{
-					Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
-					alreadyReturned.Add(indexQueryResult.Projection);
-				}
 			}
 
 			private void AssertQueryDoesNotContainFieldsThatAreNotIndexes()
@@ -994,5 +1022,82 @@ namespace Raven.Database.Indexing
 		}
 
 		#endregion
+
+		public class DuplicateDocumentRecorder
+		{
+			private int min = -1;
+			private readonly bool isProjectionOrMapReduce;
+			private readonly Searchable indexSearcher;
+			private readonly Index parent;
+			private int alreadyScannedPositions;
+			private readonly HashSet<string> documentsAlreadySeenInPreviousPage;
+			private readonly HashSet<RavenJObject> alreadyReturned;
+			private readonly FieldsToFetch fieldsToFetch;
+			private int itemsSkipped;
+
+			public DuplicateDocumentRecorder(Searchable indexSearcher,
+				Index parent,
+				HashSet<string> documentsAlreadySeenInPreviousPage,
+				HashSet<RavenJObject> alreadyReturned,
+				FieldsToFetch fieldsToFetch,
+				bool isProjectionOrMapReduce)
+			{
+				this.indexSearcher = indexSearcher;
+				this.parent = parent;
+				this.isProjectionOrMapReduce = isProjectionOrMapReduce;
+				this.alreadyReturned = alreadyReturned;
+				this.fieldsToFetch = fieldsToFetch;
+				this.documentsAlreadySeenInPreviousPage = documentsAlreadySeenInPreviousPage;
+			}
+
+
+			public int RecordResultsAlreadySeenForDistinctQuery(TopDocs search, bool adjustStart, ref int start)
+			{
+				if(min == -1)
+					min = start;
+				min = Math.Min(min, search.TotalHits);
+
+				// we are paging, we need to check that we don't have duplicates in the previous pages
+				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
+				if (isProjectionOrMapReduce == false)
+				{
+					for (int i = alreadyScannedPositions; i < min; i++)
+					{
+						if (i >= search.ScoreDocs.Length)
+						{
+							alreadyScannedPositions = i;
+							var pageSizeIncreaseSize = min - search.ScoreDocs.Length;
+							return pageSizeIncreaseSize;
+						}
+						var document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+						var id = document.Get(Constants.DocumentIdFieldName);
+						if (documentsAlreadySeenInPreviousPage.Add(id) == false)
+						{
+							// already seen this, need to expand the range we are scanning because the user
+							// didn't take this into account
+							min = Math.Min(min + 1, search.TotalHits);
+							itemsSkipped++;
+						}
+					}
+					alreadyScannedPositions = min;
+				}
+				if (adjustStart)
+				{
+					start += itemsSkipped;
+				}
+
+				if (fieldsToFetch.IsDistinctQuery == false)
+					return 0;
+
+				// add results that were already there in previous pages
+				for (int i = 0; i < min; i++)
+				{
+					Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
+					alreadyReturned.Add(indexQueryResult.Projection);
+				}
+				return 0;
+			}
+		}
 	}
 }
