@@ -30,7 +30,11 @@ namespace Raven.Studio.Models
 					if (document == null)
 						return;
 					ReplicationData = document;
-					ReplicationDestinations = new ObservableCollection<ReplicationDestination>(ReplicationData.Destinations);
+					ReplicationDestinations.Clear();
+					foreach (var replicationDestination in ReplicationData.Destinations)
+					{
+						ReplicationDestinations.Add(replicationDestination);
+					}
 				});
 
 			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName)
