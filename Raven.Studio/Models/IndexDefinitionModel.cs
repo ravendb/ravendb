@@ -19,8 +19,8 @@ namespace Raven.Studio.Models
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
 		private string originalIndex;
-	    private bool isNewIndex;
-	    private bool hasUnsavedChanges;
+		private bool isNewIndex;
+		private bool hasUnsavedChanges;
 
 		public IndexDefinitionModel()
 		{
@@ -31,35 +31,35 @@ namespace Raven.Studio.Models
 				new MapItem()
 			};
 
-		    Maps.CollectionChanged += HandleChildCollectionChanged;
+			Maps.CollectionChanged += HandleChildCollectionChanged;
 
 			Fields = new BindableCollection<FieldProperties>(field => field.Name);
-		    Fields.CollectionChanged += HandleChildCollectionChanged;
+			Fields.CollectionChanged += HandleChildCollectionChanged;
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => ErrorsCount);
 		}
 
-	    private void HandleChildCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-	    {
-	        MarkAsDirty();
+		private void HandleChildCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			MarkAsDirty();
 
-            if (e.Action == NotifyCollectionChangedAction.Add)
-            {
-                var newItem = e.NewItems[0] as INotifyPropertyChanged;
-                if (newItem != null)
-                {
-                    newItem.PropertyChanged += HandleChildItemChanged;
-                }
-            }
-	    }
+			if (e.Action == NotifyCollectionChangedAction.Add)
+			{
+				var newItem = e.NewItems[0] as INotifyPropertyChanged;
+				if (newItem != null)
+				{
+					newItem.PropertyChanged += HandleChildItemChanged;
+				}
+			}
+		}
 
-	    private void HandleChildItemChanged(object sender, PropertyChangedEventArgs e)
-	    {
-	        MarkAsDirty();
-	    }
+		private void HandleChildItemChanged(object sender, PropertyChangedEventArgs e)
+		{
+			MarkAsDirty();
+		}
 
-	    private void UpdateFromIndex(IndexDefinition indexDefinition)
+		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
 			index = indexDefinition;
 
@@ -68,7 +68,7 @@ namespace Raven.Studio.Models
 				index.Maps.Add("");
 			}
 
-			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
+			Maps.Set(index.Maps.Select(x => new MapItem { Text = x }));
 
 			ShowReduce = Reduce != null;
 			ShowTransformResults = TransformResults != null;
@@ -78,7 +78,7 @@ namespace Raven.Studio.Models
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
 
-	        hasUnsavedChanges = false;
+			hasUnsavedChanges = false;
 
 			OnEverythingChanged();
 		}
@@ -103,31 +103,31 @@ namespace Raven.Studio.Models
 			Header = name;
 			IsNewIndex = false;
 
-		    DatabaseCommands.GetIndexAsync(name)
-		        .ContinueOnUIThread(task =>
-		                                {
-		                                    if (task.IsFaulted || task.Result == null)
-		                                    {
-		                                        HandleIndexNotFound(name);
-		                                        return;
-		                                    }
-		                                    originalIndex = JsonConvert.SerializeObject(task.Result);
-		                                    UpdateFromIndex(task.Result);
-		                                }).Catch();
+			DatabaseCommands.GetIndexAsync(name)
+				.ContinueOnUIThread(task =>
+										{
+											if (task.IsFaulted || task.Result == null)
+											{
+												HandleIndexNotFound(name);
+												return;
+											}
+											originalIndex = JsonConvert.SerializeObject(task.Result);
+											UpdateFromIndex(task.Result);
+										}).Catch();
 		}
 
-        public override bool CanLeavePage()
-        {
-            if (hasUnsavedChanges)
-            {
-                return AskUser.Confirmation("Edit Index",
-                                            "There are unsaved changes to this index. Are you sure you want to continue?");
-            }
-            else
-            {
-                return true;
-            }
-        }
+		public override bool CanLeavePage()
+		{
+			if (hasUnsavedChanges)
+			{
+				return AskUser.Confirmation("Edit Index",
+											"There are unsaved changes to this index. Are you sure you want to continue?");
+			}
+			else
+			{
+				return true;
+			}
+		}
 
 		public static void HandleIndexNotFound(string name)
 		{
@@ -184,31 +184,31 @@ namespace Raven.Studio.Models
 				}
 				setter(field, localItem.Value);
 			}
-		}	
+		}
 
 		public string Name
 		{
 			get { return index.Name; }
 			set
 			{
-			    if (index.Name != value)
-			    {
-                    MarkAsDirtyIfSignificant(index.Name, value);
-			        index.Name = value;
-			        OnPropertyChanged(() => Name);
-			    }
+				if (index.Name != value)
+				{
+					MarkAsDirtyIfSignificant(index.Name, value);
+					index.Name = value;
+					OnPropertyChanged(() => Name);
+				}
 			}
 		}
 
-	    private void MarkAsDirtyIfSignificant(string oldValue, string newValue)
-	    {
-	        if (!(string.IsNullOrEmpty(oldValue) && string.IsNullOrEmpty(newValue)))
-	        {
-	            MarkAsDirty();
-	        }
-	    }
+		private void MarkAsDirtyIfSignificant(string oldValue, string newValue)
+		{
+			if (!(string.IsNullOrEmpty(oldValue) && string.IsNullOrEmpty(newValue)))
+			{
+				MarkAsDirty();
+			}
+		}
 
-	    //public string MapUrl
+		//public string MapUrl
 		//{
 		//    get{return }
 		//}
@@ -240,21 +240,44 @@ namespace Raven.Studio.Models
 			get { return index.Reduce; }
 			set
 			{
-			    if (index.Reduce != value)
-			    {
-			        MarkAsDirtyIfSignificant(index.Reduce, value);
-			        index.Reduce = value;
-			        OnPropertyChanged(() => Reduce);
-			    }
+				if (index.Reduce != value)
+				{
+					MarkAsDirtyIfSignificant(index.Reduce, value);
+					index.Reduce = value;
+					OnPropertyChanged(() => Reduce);
+					OnPropertyChanged(() => ReduceHeight);
+				}
 			}
 		}
 
-	    private void MarkAsDirty()
-	    {
-	        hasUnsavedChanges = true;
-	    }
+		public double ReduceHeight
+		{
+			get
+			{
+				return TextHeight(Reduce);
+			}
+		}
 
-	    private bool showTransformResults;
+		private double TextHeight(string text)
+		{
+			if (text == null)
+				return 100;
+			var len = text.Count(ch => ch == '\n');
+			if (len < 4)
+				return 100;
+			if (len < 8)
+				return 180;
+			if (len < 12)
+				return 230;
+			return 300;
+		}
+
+		private void MarkAsDirty()
+		{
+			hasUnsavedChanges = true;
+		}
+
+		private bool showTransformResults;
 		public bool ShowTransformResults
 		{
 			get { return showTransformResults; }
@@ -270,12 +293,21 @@ namespace Raven.Studio.Models
 			get { return index.TransformResults; }
 			set
 			{
-			    if (index.TransformResults != value)
-			    {
-			        MarkAsDirtyIfSignificant(index.TransformResults, value);
-			        index.TransformResults = value;
-			        OnPropertyChanged(() => TransformResults);
-			    }
+				if (index.TransformResults != value)
+				{
+					MarkAsDirtyIfSignificant(index.TransformResults, value);
+					index.TransformResults = value;
+					OnPropertyChanged(() => TransformResults);
+					OnPropertyChanged(() => TransformHeight);
+				}
+			}
+		}
+
+		public double TransformHeight
+		{
+			get
+			{
+				return TextHeight(TransformResults);
 			}
 		}
 
@@ -291,7 +323,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-#region Commands
+		#region Commands
 
 		public ICommand AddMap
 		{
@@ -424,15 +456,15 @@ namespace Raven.Studio.Models
 					index.Maps.RemoveAt(mapIndexes[i]);
 				}
 
-					ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
+				ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
 				DatabaseCommands.PutIndexAsync(index.Name, index.index, true)
 					.ContinueOnSuccess(() =>
-					                       {
-					                           ApplicationModel.Current.AddNotification(
-					                               new Notification("index " + index.Name + " saved"));
-					                           index.hasUnsavedChanges = false;
-					                           PutIndexNameInUrl(index.Name);
-					                       })
+										   {
+											   ApplicationModel.Current.AddNotification(
+												   new Notification("index " + index.Name + " saved"));
+											   index.hasUnsavedChanges = false;
+											   PutIndexNameInUrl(index.Name);
+										   })
 					.Catch();
 			}
 
@@ -486,18 +518,18 @@ namespace Raven.Studio.Models
 			{
 				DatabaseCommands
 					.DeleteIndexAsync(index.Name)
-			        .ContinueOnUIThread(t =>
-					                                	{
-			                                    if (t.IsFaulted)
-			                                    {
-					                                		ApplicationModel.Current.AddErrorNotification(t.Exception,"index " + index.Name +" could not be deleted");
-			                                    }
-			                                    else
-			                                    {
-			                                        ApplicationModel.Current.AddInfoNotification("index " + index.Name +" successfully deleted");
-					                                		UrlUtil.Navigate("/indexes");
-			                                    }
-					                                	});
+					.ContinueOnUIThread(t =>
+														{
+															if (t.IsFaulted)
+															{
+																ApplicationModel.Current.AddErrorNotification(t.Exception, "index " + index.Name + " could not be deleted");
+															}
+															else
+															{
+																ApplicationModel.Current.AddInfoNotification("index " + index.Name + " successfully deleted");
+																UrlUtil.Navigate("/indexes");
+															}
+														});
 			}
 		}
 
@@ -505,92 +537,117 @@ namespace Raven.Studio.Models
 
 		public class MapItem : NotifyPropertyChangedBase
 		{
-		    private string text;
+			public MapItem()
+			{
+				text = string.Empty;
+			}
+			private string text;
 
-		    public string Text
-		    {
-		        get { return text; }
-                set
-                {
-                    if (text != value)
-                    {
-                        text = value;
-                        OnPropertyChanged(() => Text);
-                    }
-                }
-		    }
+			public string Text
+			{
+				get { return text; }
+				set
+				{
+					if (text != value)
+					{
+						text = value;
+						OnPropertyChanged(() => Text);
+						OnPropertyChanged(() => TextHeight);
+					}
+				}
+			}
+
+			public double TextHeight
+			{
+				get
+				{
+					var len = text.Count(ch => ch == '\n');
+					if (len < 4)
+						return 100;
+					if (len < 8)
+						return 180;
+					if (len < 12)
+						return 230;
+					return 300;
+				}
+			}
 		}
+
+
 
 		public class FieldProperties : NotifyPropertyChangedBase
 		{
-		    private string name;
-		    public string Name
-		    {
-		        get { return name; }
-                set
-                {
-                    if (name != value)
-                    {
-                        name = value;
-                        OnPropertyChanged(() => Name);
-                    }
-                }
-		    }
+			private string name;
+			public string Name
+			{
+				get { return name; }
+				set
+				{
+					if (name != value)
+					{
+						name = value;
+						OnPropertyChanged(() => Name);
+					}
+				}
+			}
 
-		    private FieldStorage storage;
-		    public FieldStorage Storage
-		    {
-		        get { return storage; }
-		        set {
-		            if (storage != value)
-		            {
-		                storage = value;
-		                OnPropertyChanged(() => Storage);
-		            }
-                }
-		    }
+			private FieldStorage storage;
+			public FieldStorage Storage
+			{
+				get { return storage; }
+				set
+				{
+					if (storage != value)
+					{
+						storage = value;
+						OnPropertyChanged(() => Storage);
+					}
+				}
+			}
 
-		    private FieldIndexing indexing;
-		    public FieldIndexing Indexing
-		    {
-		        get { return indexing; }
-		        set {
-		            if (indexing != value)
-		            {
-		                indexing = value;
-		                OnPropertyChanged(() => Indexing);
-		            }
-                }
-		    }
+			private FieldIndexing indexing;
+			public FieldIndexing Indexing
+			{
+				get { return indexing; }
+				set
+				{
+					if (indexing != value)
+					{
+						indexing = value;
+						OnPropertyChanged(() => Indexing);
+					}
+				}
+			}
 
-		    private SortOptions sort;
-		    public SortOptions Sort
-		    {
-		        get { return sort; }
-                set
-                {
-                    if (sort != value)
-                    {
-                        sort = value;
-                        OnPropertyChanged(() => Sort);
-                    }
-                }
-		    }
+			private SortOptions sort;
+			public SortOptions Sort
+			{
+				get { return sort; }
+				set
+				{
+					if (sort != value)
+					{
+						sort = value;
+						OnPropertyChanged(() => Sort);
+					}
+				}
+			}
 
-		    private string analyzer;
-		    public string Analyzer
-		    {
-		        get { return analyzer; }
-		        set {
-		            if (analyzer != value)
-		            {
-		                analyzer = value;
-		                OnPropertyChanged(() => Analyzer);
-		            }
-		        }
-		    }
+			private string analyzer;
+			public string Analyzer
+			{
+				get { return analyzer; }
+				set
+				{
+					if (analyzer != value)
+					{
+						analyzer = value;
+						OnPropertyChanged(() => Analyzer);
+					}
+				}
+			}
 
-		    public static FieldProperties Defualt
+			public static FieldProperties Defualt
 			{
 				get
 				{
