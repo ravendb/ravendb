@@ -278,16 +278,6 @@ namespace Raven.Client.Linq
 				return;
 			}
 
-			if (constantExpression != null && false.Equals(constantExpression.Value))
-			{
-				luceneQuery.OpenSubclause();
-				luceneQuery.Where("*:*");
-				luceneQuery.NegateNext();
-				VisitExpression(expression.Left);
-				luceneQuery.CloseSubclause();
-				return;
-			}
-
 			var methodCallExpression = expression.Left as MethodCallExpression;
 			// checking for VB.NET string equality
 			if (methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" &&
