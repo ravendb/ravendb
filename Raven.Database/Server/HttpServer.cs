@@ -16,6 +16,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -49,8 +50,8 @@ namespace Raven.Database.Server
 		private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
 		private readonly ThreadLocal<InMemoryRavenConfiguration> currentConfiguration = new ThreadLocal<InMemoryRavenConfiguration>();
 
-		protected readonly ConcurrentDictionary<string, DocumentDatabase> ResourcesStoresCache =
-			new ConcurrentDictionary<string, DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
+		protected readonly ConcurrentDictionary<string, Task<DocumentDatabase>> ResourcesStoresCache =
+			new ConcurrentDictionary<string, Task<DocumentDatabase>>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -173,8 +174,28 @@ namespace Raven.Database.Server
 					{
 						foreach (var documentDatabase in ResourcesStoresCache)
 						{
-							var database = documentDatabase.Value;
-							exceptionAggregator.Execute(database.Dispose);
+							var dbTask = documentDatabase.Value;
+							if(dbTask.IsCompleted == false)
+							{
+								dbTask.ContinueWith(task =>
+									{
+										if ((!task.IsFaulted && !task.IsCanceled)) 
+											return;
+
+										try
+										{
+											task.Result.Dispose();
+										}
+										catch (Exception e)
+										{
+											logger.WarnException("Failure in deferred disosal of database", e);
+										}
+									});
+							}
+							else if(dbTask.Status == TaskStatus.RanToCompletion)
+							{
+								exceptionAggregator.Execute(dbTask.Result.Dispose);
+							}
 						}
 						ResourcesStoresCache.Clear();
 					}
@@ -239,12 +260,25 @@ namespace Raven.Database.Server
 			lock (ResourcesStoresCache)
 			{
 				DateTime time;
-				DocumentDatabase database;
-				if (ResourcesStoresCache.TryGetValue(db, out database) == false)
+				Task<DocumentDatabase> databaseTask;
+				if (ResourcesStoresCache.TryGetValue(db, out databaseTask) == false)
 				{
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
+				if(databaseTask.IsFaulted || databaseTask.IsCanceled)
+				{
+					databaseLastRecentlyUsed.TryRemove(db, out time);
+					ResourcesStoresCache.TryRemove(db, out databaseTask);
+					return;
+				}
+
+				if (databaseTask.IsCompleted == false)
+				{
+					return;// startup isn't done yet
+				}
+
+				var database = databaseTask.Result;
 				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
@@ -263,7 +297,7 @@ namespace Raven.Database.Server
 					return;
 				}
 				databaseLastRecentlyUsed.TryRemove(db, out time);
-				ResourcesStoresCache.TryRemove(db, out database);
+				ResourcesStoresCache.TryRemove(db, out databaseTask);
 			}
 		}
 
@@ -622,8 +656,8 @@ namespace Raven.Database.Server
 			else
 			{
 				var tenantId = match.Groups[1].Value;
-				DocumentDatabase resourceStore;
-				if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
+				Task<DocumentDatabase> resourceStoreTask;
+				if (TryGetOrCreateResourceStore(tenantId, out resourceStoreTask))
 				{
 					databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
 
@@ -635,6 +669,13 @@ namespace Raven.Database.Server
 					{
 						ctx.AdjustUrl(match.Value);
 					}
+
+					if(resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
+					{
+						throw new BadRequestException("The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.");
+					}
+					var resourceStore = resourceStoreTask.Result;
+
 					currentTenantId.Value = tenantId;
 					currentDatabase.Value = resourceStore;
 					currentConfiguration.Value = resourceStore.Configuration;
@@ -646,7 +687,7 @@ namespace Raven.Database.Server
 			}
 		}
 
-		protected bool TryGetOrCreateResourceStore(string tenantId, out DocumentDatabase database)
+		protected bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
 				return true;
@@ -664,43 +705,45 @@ namespace Raven.Database.Server
 
 			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
-			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
-			{
-				var config = new InMemoryRavenConfiguration
+			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s => new Task<DocumentDatabase>(() =>
 				{
-					Settings = new NameValueCollection(DefaultConfiguration.Settings),
-				};
+					var config = new InMemoryRavenConfiguration
+						{
+							Settings = new NameValueCollection(DefaultConfiguration.Settings),
+						};
 
-				SetupTenantDatabaseConfiguration(config);
+					SetupTenantDatabaseConfiguration(config);
 
-				config.CustomizeValuesForTenant(tenantId);
+					config.CustomizeValuesForTenant(tenantId);
 
-				var dataDir = document.Settings["Raven/DataDir"];
-				if (dataDir == null)
-					throw new InvalidOperationException("Could not find Raven/DataDir");
-				
-				foreach (var setting in document.Settings)
-				{
-					config.Settings[setting.Key] = setting.Value;
-				}
+					var dataDir = document.Settings["Raven/DataDir"];
+					if (dataDir == null)
+						throw new InvalidOperationException("Could not find Raven/DataDir");
 
-				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
-				{
-					var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);
-					if (baseDataPath == null)
-						throw new InvalidOperationException("Could not find root data path");
-					config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
-				}
-				config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+					foreach (var setting in document.Settings)
+					{
+						config.Settings[setting.Key] = setting.Value;
+					}
 
-				config.DatabaseName = tenantId;
+					if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
+					{
+						var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);
+						if (baseDataPath == null)
+							throw new InvalidOperationException("Could not find root data path");
+						config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
+					}
+					config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
-				config.Initialize();
-				config.CopyParentSettings(DefaultConfiguration);
-				var documentDatabase = new DocumentDatabase(config);
-				documentDatabase.SpinBackgroundWorkers();
-				return documentDatabase;
-			});
+					config.DatabaseName = tenantId;
+
+					config.Initialize();
+					config.CopyParentSettings(DefaultConfiguration);
+					var documentDatabase = new DocumentDatabase(config);
+					documentDatabase.SpinBackgroundWorkers();
+					return documentDatabase;
+				}));
+			if (database.Status == TaskStatus.Created)
+				database.Start();
 			return true;
 		}
 
