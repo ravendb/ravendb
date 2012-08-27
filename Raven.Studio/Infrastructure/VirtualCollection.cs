@@ -52,12 +52,6 @@ namespace Raven.Studio.Infrastructure
 
         private readonly SortDescriptionCollection _sortDescriptions = new SortDescriptionCollection();
 
-        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages)
-            : this(source, pageSize, cachedPages, EqualityComparer<T>.Default)
-        {
-
-        }
-
         public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages, IEqualityComparer<T> equalityComparer)
         {
             if (pageSize < 1)
