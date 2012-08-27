@@ -115,7 +115,7 @@ namespace Raven.Database
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
 		private readonly TaskScheduler backgroundTaskScheduler;
-		private object idleLocker = new object();
+		private readonly object idleLocker = new object();
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
