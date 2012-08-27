@@ -60,8 +60,8 @@ namespace Raven.Database.Server
 		protected readonly ConcurrentSet<string> LockedDatabases =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-		protected readonly ConcurrentDictionary<string, DocumentDatabase> ResourcesStoresCache =
-			new ConcurrentDictionary<string, DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
+		protected readonly AtomicDictionary<DocumentDatabase> ResourcesStoresCache =
+			new AtomicDictionary<DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
@@ -209,7 +209,7 @@ namespace Raven.Database.Server
 
 				exceptionAggregator.Execute(() =>
 				{
-					lock (ResourcesStoresCache)
+					using(ResourcesStoresCache.WithAllLocks())
 					{
 						// shut down all databases in parallel, avoid having to wait for each one
 						Parallel.ForEach(ResourcesStoresCache, val => val.Value.Dispose());
@@ -298,7 +298,7 @@ namespace Raven.Database.Server
 
 		protected void CleanupDatabase(string db, bool skipIfActive)
 		{
-			lock (ResourcesStoresCache)
+			using(ResourcesStoresCache.WithAllLocks())
 			{
 				DateTime time;
 				DocumentDatabase database;
