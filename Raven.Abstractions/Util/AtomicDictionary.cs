@@ -14,11 +14,7 @@ namespace Raven.Abstractions.Util
 	{
 		private readonly ConcurrentDictionary<string, object> locks;
 		private readonly ConcurrentDictionary<string, TVal> items;
-		#if !SILVERLIGHT
-		private readonly ReaderWriterLockSlim globalLocker = new ReaderWriterLockSlim();
-		#else
-		private readonly SimpleReaderWriterLock globalLocker = new SimpleReaderWriterLock();
-		#endif
+		private readonly EasyReaderWriterLock globalLocker = new EasyReaderWriterLock();
 		private static readonly string NullValue = "Null Replacement: " + Guid.NewGuid();
 
 		public AtomicDictionary()
@@ -41,8 +37,7 @@ namespace Raven.Abstractions.Util
 
 		public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
 		{
-			globalLocker.EnterReadLock();
-			try
+			using(globalLocker.EnterReadLock())
 			{
 				var actualGenerator = valueGenerator;
 				if (key == null)
@@ -56,32 +51,22 @@ namespace Raven.Abstractions.Util
 					return items.GetOrAdd(key, actualGenerator);
 				}
 			}
-			finally
-			{
-				globalLocker.ExitReadLock();
-			}
 		}
 
 		public IDisposable WithLockFor(string key)
 		{
-			globalLocker.EnterReadLock();
-			try
+			using(globalLocker.EnterReadLock())
 			{
 				var locker = locks.GetOrAdd(key, new object());
 				var release = new DisposableAction(() => Monitor.Exit(locker));
 				Monitor.Enter(locker);
 				return release;
 			}
-			finally
-			{
-				globalLocker.ExitReadLock();
-			}
 		}
 
 		public void Remove(string key)
 		{
-			globalLocker.EnterReadLock();
-			try
+			using(globalLocker.EnterReadLock())
 			{
 				key = key ?? NullValue;
 				object value;
@@ -98,10 +83,6 @@ namespace Raven.Abstractions.Util
 					TVal val;
 					items.TryRemove(key, out val);
 				}
-			}
-			finally
-			{
-				globalLocker.ExitReadLock();
 			}
 		}
 
@@ -128,25 +109,18 @@ namespace Raven.Abstractions.Util
 
 		public bool TryRemove(string key, out TVal val)
 		{
-			globalLocker.EnterReadLock();
-			try
+			using(globalLocker.EnterReadLock())
 			{
 				var result = items.TryRemove(key, out val);
 				object value;
 				locks.TryRemove(key, out value);
 				return result;
 			}
-			finally
-			{
-				globalLocker.ExitReadLock();
-			}
 		}
 
 		public IDisposable WithAllLocks()
 		{
-			var release = new DisposableAction(() => globalLocker.ExitWriteLock());
-			globalLocker.EnterWriteLock();
-			return release;
+			return globalLocker.EnterWriteLock();
 		}
 	}
 }

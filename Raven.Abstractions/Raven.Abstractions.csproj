@@ -676,6 +676,7 @@
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\EasyReaderWriterLock.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
   </ItemGroup>
