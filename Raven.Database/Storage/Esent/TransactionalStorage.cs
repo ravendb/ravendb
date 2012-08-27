@@ -99,7 +99,7 @@ namespace Raven.Storage.Esent
 
 		public Guid Id { get; private set; }
 
-		
+
 
 		public void Dispose()
 		{
@@ -108,7 +108,7 @@ namespace Raven.Storage.Esent
 			{
 				if (disposed)
 					return;
-				
+
 				var exceptionAggregator = new ExceptionAggregator(log, "Could not close database properly");
 				disposed = true;
 				exceptionAggregator.Execute(current.Dispose);
@@ -116,11 +116,16 @@ namespace Raven.Storage.Esent
 					exceptionAggregator.Execute(documentCacher.Dispose);
 				exceptionAggregator.Execute(() =>
 					{
-				Api.JetTerm2(instance, TermGrbit.Complete);
+						Api.JetTerm2(instance, TermGrbit.Complete);
 						GC.SuppressFinalize(this);
 					});
 
 				exceptionAggregator.ThrowIfNeeded();
+			}
+			catch(Exception e)
+			{
+				log.FatalException("Could not dispose of the transactional storage for " + path, e);
+				throw;
 			}
 			finally
 			{
@@ -193,8 +198,8 @@ namespace Raven.Storage.Esent
 		{
 			var src = Path.Combine(ravenConfiguration.DataDirectory, "Data");
 			var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Data.Compact");
-			
-			if(File.Exists(compactPath))
+
+			if (File.Exists(compactPath))
 				File.Delete(compactPath);
 			RecoverFromFailedCompact(src);
 
@@ -205,7 +210,7 @@ namespace Raven.Storage.Esent
 				new TransactionalStorageConfigurator(ravenConfiguration)
 					.ConfigureInstance(compactInstance, ravenConfiguration.DataDirectory);
 				Api.JetInit(ref compactInstance);
-				using(var session = new Session(compactInstance))
+				using (var session = new Session(compactInstance))
 				{
 					Api.JetAttachDatabase(session, src, AttachDatabaseGrbit.None);
 					try
@@ -224,7 +229,7 @@ namespace Raven.Storage.Esent
 				Api.JetTerm2(compactInstance, TermGrbit.Complete);
 			}
 
-			File.Move(src, src +".RenameOp");
+			File.Move(src, src + ".RenameOp");
 			File.Move(compactPath, src);
 			File.Delete(src + ".RenameOp");
 
@@ -409,7 +414,7 @@ namespace Raven.Storage.Esent
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
-			
+
 				switch (e.Error)
 				{
 					case JET_err.WriteConflict:
@@ -423,7 +428,7 @@ namespace Raven.Storage.Esent
 			finally
 			{
 				disposerLock.ExitReadLock();
-				if(disposed == false)
+				if (disposed == false)
 					current.Value = null;
 			}
 			onCommit(); // call user code after we exit the lock
