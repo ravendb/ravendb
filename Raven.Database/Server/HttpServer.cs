@@ -51,7 +51,7 @@ namespace Raven.Database.Server
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
-		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { };
+		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { }; 
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
 		private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
@@ -245,7 +245,7 @@ namespace Raven.Database.Server
 
 			Init();
 			listener.Start();
-
+	
 
 			listener.BeginGetContext(GetContext, null);
 		}
@@ -268,7 +268,7 @@ namespace Raven.Database.Server
 			catch (Exception e)
 			{
 				logger.ErrorException("Error during idle operation run for system database", e);
-			}
+		}
 
 			foreach (var documentDatabase in ResourcesStoresCache)
 			{
@@ -277,7 +277,7 @@ namespace Raven.Database.Server
 					documentDatabase.Value.RunIdleOperations();
 				}
 				catch (Exception e)
-				{
+		{
 					logger.WarnException("Error during idle operation run for " + documentDatabase.Key, e);
 				}
 			}
@@ -316,7 +316,7 @@ namespace Raven.Database.Server
 				}
 				try
 				{
-
+					
 					database.Dispose();
 				}
 				catch (Exception e)
@@ -357,7 +357,7 @@ namespace Raven.Database.Server
 				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
 					HandleChangesRequest(ctx, () => { });
 				else
-					HandleActualRequest(ctx);
+				HandleActualRequest(ctx);
 			}
 			finally
 			{
@@ -656,7 +656,7 @@ namespace Raven.Database.Server
 			{
 
 				if (!SetThreadLocalState(ctx))
-					return false;
+				return false;
 
 				OnDispatchingRequest(ctx);
 
@@ -722,18 +722,18 @@ namespace Raven.Database.Server
 
 		private void ResetThreadLocalState()
 		{
-			try
-			{
-				CurrentOperationContext.Headers.Value = new NameValueCollection();
-				CurrentOperationContext.User.Value = null;
+				try
+				{
+					CurrentOperationContext.Headers.Value = new NameValueCollection();
+					CurrentOperationContext.User.Value = null;
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
+				}
+				catch
+				{
+					// this can happen during system shutdown
+				}
 			}
-			catch
-			{
-				// this can happen during system shutdown
-			}
-		}
 
 		public Func<IHttpContext, Action> BeforeDispatchingRequest { get; set; }
 
@@ -776,29 +776,29 @@ namespace Raven.Database.Server
 				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 				return;
 			}
-			var tenantId = match.Groups[1].Value;
-			DocumentDatabase resourceStore;
-			if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
-			{
+				var tenantId = match.Groups[1].Value;
+				DocumentDatabase resourceStore;
+				if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
+				{
 				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 
-				if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
-				{
-					ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
+					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
+					{
+						ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
+					}
+					else
+					{
+						ctx.AdjustUrl(match.Value);
+					}
+					currentTenantId.Value = tenantId;
+					currentDatabase.Value = resourceStore;
+					currentConfiguration.Value = resourceStore.Configuration;
 				}
 				else
 				{
-					ctx.AdjustUrl(match.Value);
+					throw new BadRequestException("Could not find a database named: " + tenantId);
 				}
-				currentTenantId.Value = tenantId;
-				currentDatabase.Value = resourceStore;
-				currentConfiguration.Value = resourceStore.Configuration;
 			}
-			else
-			{
-				throw new BadRequestException("Could not find a database named: " + tenantId);
-			}
-		}
 
 		public void LockDatabase(string tenantId, Action actionToTake)
 		{
@@ -808,7 +808,7 @@ namespace Raven.Database.Server
 			{
 				CleanupDatabase(tenantId, false);
 				actionToTake();
-			}
+		}
 			finally
 			{
 				LockedDatabases.TryRemove(tenantId);
@@ -848,25 +848,25 @@ namespace Raven.Database.Server
 		}
 
 		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
-		{
+			{
 			var document = GetTenantDatabaseDocument(tenantId);
 			if (document == null)
 				return null;
 
-			var config = new InMemoryRavenConfiguration
-			{
+				var config = new InMemoryRavenConfiguration
+				{
 				Settings = new NameValueCollection(SystemConfiguration.Settings),
-			};
+				};
 
-			SetupTenantDatabaseConfiguration(config);
+				SetupTenantDatabaseConfiguration(config);
 
-			config.CustomizeValuesForTenant(tenantId);
+				config.CustomizeValuesForTenant(tenantId);
 
-
-			foreach (var setting in document.Settings)
-			{
-				config.Settings[setting.Key] = setting.Value;
-			}
+				
+				foreach (var setting in document.Settings)
+				{
+					config.Settings[setting.Key] = setting.Value;
+				}
 			Unprotect(document);
 
 			foreach (var securedSetting in document.SecuredSettings)
@@ -875,18 +875,18 @@ namespace Raven.Database.Server
 			}
 
 			var dataDir = document.Settings["Raven/DataDir"];
-			if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
-			{
+				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
+				{
 				var baseDataPath = Path.GetDirectoryName(SystemDatabase.Configuration.DataDirectory);
-				if (baseDataPath == null)
-					throw new InvalidOperationException("Could not find root data path");
-				config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
-			}
-			config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+					if (baseDataPath == null)
+						throw new InvalidOperationException("Could not find root data path");
+					config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
+				}
+				config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
-			config.DatabaseName = tenantId;
+				config.DatabaseName = tenantId;
 
-			config.Initialize();
+				config.Initialize();
 			config.CopyParentSettings(SystemConfiguration);
 			return config;
 		}

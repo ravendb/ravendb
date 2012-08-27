@@ -109,12 +109,18 @@ namespace Raven.Storage.Esent
 				if (disposed)
 					return;
 				
+				var exceptionAggregator = new ExceptionAggregator(log, "Could not close database properly");
 				disposed = true;
-				GC.SuppressFinalize(this);
-				current.Dispose();
+				exceptionAggregator.Execute(current.Dispose);
 				if (documentCacher != null)
-					documentCacher.Dispose();
+					exceptionAggregator.Execute(documentCacher.Dispose);
+				exceptionAggregator.Execute(() =>
+					{
 				Api.JetTerm2(instance, TermGrbit.Complete);
+						GC.SuppressFinalize(this);
+					});
+
+				exceptionAggregator.ThrowIfNeeded();
 			}
 			finally
 			{
