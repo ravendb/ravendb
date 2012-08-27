@@ -4,6 +4,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Extensions;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 
 namespace Raven.Abstractions.Util
 {
@@ -11,7 +14,11 @@ namespace Raven.Abstractions.Util
 	{
 		private readonly ConcurrentDictionary<string, object> locks;
 		private readonly ConcurrentDictionary<string, TVal> items;
+		#if !SILVERLIGHT
 		private readonly ReaderWriterLockSlim globalLocker = new ReaderWriterLockSlim();
+		#else
+		private readonly SimpleReaderWriterLock globalLocker = new SimpleReaderWriterLock();
+		#endif
 		private static readonly string NullValue = "Null Replacement: " + Guid.NewGuid();
 
 		public AtomicDictionary()
