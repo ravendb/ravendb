@@ -171,7 +171,6 @@ namespace Raven.Database
 				workContext.TransactionaStorage = TransactionalStorage;
 				workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
-
 				InitializeTriggers();
 				ExecuteStartupTasks();
 			}
@@ -308,7 +307,16 @@ namespace Raven.Database
 
 			var onDisposing = Disposing;
 			if (onDisposing != null)
-				onDisposing(this, EventArgs.Empty);
+			{
+				try
+				{
+					onDisposing(this, EventArgs.Empty);
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Error when notifying about database disposal", e);
+				}
+			}
 
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
 
@@ -322,6 +330,8 @@ namespace Raven.Database
 
 			exceptionAggregator.Execute(() =>
 			{
+				if (ExtensionsState == null)
+					return;
 				foreach (var value in ExtensionsState.Values.OfType<IDisposable>())
 				{
 					exceptionAggregator.Execute(value.Dispose);
@@ -330,6 +340,8 @@ namespace Raven.Database
 
 			exceptionAggregator.Execute(() =>
 			{
+				if (toDispose == null)
+					return;
 				foreach (var shouldDispose in toDispose)
 				{
 					exceptionAggregator.Execute(shouldDispose.Dispose);
