@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Abstractions.Util;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
@@ -107,7 +108,7 @@ namespace Raven.Database
 		/// <summary>
 		/// This is used to hold state associated with this instance by external extensions
 		/// </summary>
-		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
+		public AtomicDictionary<object> ExtensionsState { get; private set; }
 
 		public TaskScheduler BackgroundTaskScheduler { get { return backgroundTaskScheduler; } }
 
@@ -143,7 +144,7 @@ namespace Raven.Database
 				backgroundTaskScheduler = TaskScheduler.Current;
 			}
 
-			ExtensionsState = new ConcurrentDictionary<object, object>();
+			ExtensionsState = new AtomicDictionary<object>();
 			Configuration = configuration;
 
 			ExecuteAlterConfiguration();

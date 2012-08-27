@@ -9,7 +9,8 @@ namespace Raven.Abstractions.Util
 	{
 		private readonly ConcurrentDictionary<string, object> locks;
 		private readonly ConcurrentDictionary<string, TVal> items;
-		private static string NullValue = "Null Replacement: " + Guid.NewGuid();
+		private static readonly string NullValue = "Null Replacement: " + Guid.NewGuid();
+
 		public AtomicDictionary()
 		{
 			items = new ConcurrentDictionary<string, TVal>();
@@ -21,6 +22,11 @@ namespace Raven.Abstractions.Util
 			items = new ConcurrentDictionary<string, TVal>(comparer);
 			locks = new ConcurrentDictionary<string, object>(comparer);
 	
+		}
+
+		public IEnumerable<TVal>  Values
+		{
+			get { return items.Values; }
 		}
 
 		public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
@@ -71,6 +77,19 @@ namespace Raven.Abstractions.Util
 		{
 			items.Clear();
 			locks.Clear();
+		}
+
+		public bool TryGetValue(string key, out TVal val)
+		{
+			return items.TryGetValue(key, out val);
+		}
+
+		public bool TryRemove(string key, out TVal val)
+		{
+			var result = items.TryRemove(key, out val);
+			object value;
+			locks.TryRemove(key, out value);
+			return result;
 		}
 	}
 }

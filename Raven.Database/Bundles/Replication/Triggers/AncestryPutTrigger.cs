@@ -21,7 +21,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			get
 			{
-				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof (ReplicationHiLo), o => new ReplicationHiLo
+				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof (ReplicationHiLo).AssemblyQualifiedName, o => new ReplicationHiLo
 				{
 					Database = Database
 				});

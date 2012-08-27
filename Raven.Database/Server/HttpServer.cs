@@ -837,7 +837,7 @@ namespace Raven.Database.Server
 			if (config == null)
 				return false;
 
-			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
+			database = ResourcesStoresCache.GetOrAdd(tenantId, s =>
 			{
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();

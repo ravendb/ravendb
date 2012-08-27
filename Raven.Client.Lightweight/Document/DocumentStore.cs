@@ -622,7 +622,7 @@ namespace Raven.Client.Document
 				return result;
 			}
 #else
-			return replicationInformers.GetOrAddAtomically(key, Conventions.ReplicationInformerFactory);
+			return replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
 #endif
 		}
 
