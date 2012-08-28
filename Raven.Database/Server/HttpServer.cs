@@ -217,7 +217,31 @@ namespace Raven.Database.Server
 					using (ResourcesStoresCache.WithAllLocks())
 					{
 						// shut down all databases in parallel, avoid having to wait for each one
-						Parallel.ForEach(ResourcesStoresCache, val => val.Value.Dispose());
+						Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
+						{
+							if (dbTask.IsCompleted == false)
+							{
+								dbTask.ContinueWith(task =>
+								{
+									if (task.Status != TaskStatus.RanToCompletion)
+										return;
+
+									try
+									{
+										task.Result.Dispose();
+									}
+									catch (Exception e)
+									{
+										logger.WarnException("Failure in deferred disosal of a database", e);
+									}
+								});
+							}
+							else if (dbTask.Status == TaskStatus.RanToCompletion)
+							{
+								exceptionAggregator.Execute(dbTask.Result.Dispose);
+							}
+							// there is no else, the db is probably faulted
+						});
 						ResourcesStoresCache.Clear();
 					}
 				});
@@ -899,7 +923,19 @@ namespace Raven.Database.Server
 		protected bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
-				return true;
+			{
+				if(database.IsFaulted || database.IsCanceled)
+				{
+					ResourcesStoresCache.TryRemove(tenantId, out database);
+					DateTime time;
+					databaseLastRecentlyUsed.TryRemove(tenantId, out time);
+					// and now we will try creating it again
+				}
+				else
+				{
+					return true;
+				}
+			}
 
 			if (LockedDatabases.Contains(tenantId))
 				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed");
@@ -920,7 +956,9 @@ namespace Raven.Database.Server
 			}).ContinueWith(task =>
 			{
 				if (task.Status == TaskStatus.Faulted) // this observes the task exception
+				{
 					logger.WarnException("Failed to create database " + tenantId, task.Exception);
+				}
 				return task;
 			}).Unwrap());
 			return true;
