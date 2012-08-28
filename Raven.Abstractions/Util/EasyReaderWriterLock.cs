@@ -27,7 +27,20 @@ namespace Raven.Abstractions.Util
 			return new DisposableAction(inner.ExitWriteLock);
 		}
 #else
+		readonly object inner = new object();
+		public IDisposable EnterReadLock()
+		{
+			var release = new DisposableAction(() => Monitor.Exit(inner));
+			Monitor.Enter(inner);
+			return release;
+		}
 
+		public IDisposable EnterWriteLock()
+		{
+			var release = new DisposableAction(() => Monitor.Exit(inner));
+			Monitor.Enter(inner);
+			return release;
+		}
 #endif
 
 	}
