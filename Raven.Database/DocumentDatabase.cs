@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -116,7 +117,7 @@ namespace Raven.Database
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
 		private readonly TaskScheduler backgroundTaskScheduler;
-		private object idleLocker = new object();
+		private readonly object idleLocker = new object();
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
@@ -546,16 +547,7 @@ namespace Raven.Database
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			workContext.DocsPerSecIncreaseBy(1);
-			if (string.IsNullOrWhiteSpace(key))
-			{
-				// we no longer sort by the key, so it doesn't matter
-				// that the key is no longer sequential
-				key = Guid.NewGuid().ToString();
-			}
-			else
-			{
-				key = key.Trim();
-			}
+			key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
@@ -569,13 +561,13 @@ namespace Raven.Database
 					}
 					if (transactionInformation == null)
 					{
-						AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
+						AssertPutOperationNotVetoed(key, metadata, document, null);
 
-						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
+						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
 						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
 
-						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, transactionInformation));
+						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
@@ -717,7 +709,7 @@ namespace Raven.Database
 							});
 							task.Keys.Add(key);
 						}
-						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
+						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 					}
 
 					TransactionalStorage
@@ -991,7 +983,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName), IndexQueryTriggers)
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constants.DocumentIdFieldName), IndexQueryTriggers)
 													select queryResult.Key);
 				});
 			stale = isStale;
@@ -1067,7 +1059,7 @@ namespace Raven.Database
 		private Attachment ProcessAttachmentReadVetoes(string name, Attachment attachment)
 		{
 			if (attachment == null)
-				return attachment;
+				return null;
 
 			var foundResult = false;
 			foreach (var attachmentReadTriggerLazy in AttachmentReadTriggers)
@@ -1257,11 +1249,9 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				IEnumerable<JsonDocument> documents;
-				if (etag == null)
-					documents = actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize);
-				else
-					documents = actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
+				var documents = etag == null ? 
+					actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) : 
+					actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents)
 				{
@@ -1336,10 +1326,7 @@ namespace Raven.Database
 
 			if (docId == null)
 				throw new ArgumentNullException("docId");
-			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
-			{
-				return new JsonPatcher(jsonDoc).Apply(patchDoc);
-			});
+			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc => new JsonPatcher(jsonDoc).Apply(patchDoc));
 		}
 
 		private PatchResult ApplyPatchInternal(string docId, Guid? etag,
@@ -1350,7 +1337,7 @@ namespace Raven.Database
 			docId = docId.Trim();
 			var result = PatchResult.Patched;
 			bool shouldRetry = false;
-			int retries = 128;
+			int[] retries = {128};
 			do
 			{
 				TransactionalStorage.Batch(actions =>
@@ -1378,7 +1365,7 @@ namespace Raven.Database
 						}
 						catch (ConcurrencyException)
 						{
-							if (retries-- > 0)
+							if (retries[0]-- > 0)
 							{
 								shouldRetry = true;
 								return;
@@ -1535,11 +1522,9 @@ namespace Raven.Database
 		static string buildVersion;
 		public static string BuildVersion
 		{
-			get
-			{
-				if (buildVersion == null)
-					buildVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).FileBuildPart.ToString();
-				return buildVersion;
+			get {
+				return buildVersion ??
+				       (buildVersion = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location).FileBuildPart.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1560,11 +1545,9 @@ namespace Raven.Database
 
 		public static string ProductVersion
 		{
-			get
-			{
-				if (productVersion == null)
-					productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion;
-				return productVersion;
+			get {
+				return productVersion ??
+				       (productVersion = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location).ProductVersion);
 			}
 		}
 

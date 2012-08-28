@@ -60,8 +60,8 @@ namespace Raven.Database.Server
 		protected readonly ConcurrentSet<string> LockedDatabases =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-		protected readonly AtomicDictionary<DocumentDatabase> ResourcesStoresCache =
-			new AtomicDictionary<DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
+		protected readonly AtomicDictionary<Task<DocumentDatabase>> ResourcesStoresCache =
+			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
@@ -163,26 +163,31 @@ namespace Raven.Database.Server
 		{
 			get
 			{
+				var activeDatbases = ResourcesStoresCache.Where(x => x.Value.Status == TaskStatus.RanToCompletion).Select(x => new
+				{
+					Name = x.Key,
+					Database =  x.Value.Result
+				});
 				return new
 				{
 					TotalNumberOfRequests = NumberOfRequests,
 					Uptime = SystemTime.UtcNow - startUpTime,
 					LoadedDatabases =
-						from documentDatabase in ResourcesStoresCache
-								.Concat(new[] { new KeyValuePair<string, DocumentDatabase>("System", SystemDatabase), })
-						let totalSizeOnDisk = documentDatabase.Value.GetTotalSizeOnDisk()
-						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Key)
+						from documentDatabase in activeDatbases
+								.Concat(new[] { new { Name  = "System", Database = SystemDatabase} })
+						let totalSizeOnDisk = documentDatabase.Database.GetTotalSizeOnDisk()
+						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
 						select new
 						{
-							Name = documentDatabase.Key,
+							documentDatabase.Name,
 							LastActivity = new[]
 							{
 								lastUsed, 
-								documentDatabase.Value.WorkContext.LastWorkTime,
+								documentDatabase.Database.WorkContext.LastWorkTime
 							}.Max(),
 							Size = totalSizeOnDisk,
 							HumaneSize = DatabaseSize.Humane(totalSizeOnDisk),
-							documentDatabase.Value.Statistics.CountOfDocuments,
+							documentDatabase.Database.Statistics.CountOfDocuments,
 						}
 				};
 			}
@@ -274,7 +279,9 @@ namespace Raven.Database.Server
 			{
 				try
 				{
-					documentDatabase.Value.RunIdleOperations();
+					if (documentDatabase.Value.Status != TaskStatus.RanToCompletion)
+						continue;
+					documentDatabase.Value.Result.RunIdleOperations();
 				}
 				catch (Exception e)
 				{
@@ -301,12 +308,24 @@ namespace Raven.Database.Server
 			using (ResourcesStoresCache.WithAllLocks())
 			{
 				DateTime time;
-				DocumentDatabase database;
-				if (ResourcesStoresCache.TryGetValue(db, out database) == false)
+				Task<DocumentDatabase> databaseTask;
+				if (ResourcesStoresCache.TryGetValue(db, out databaseTask) == false)
 				{
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
+				if (databaseTask.Status == TaskStatus.Faulted || databaseTask.Status == TaskStatus.Canceled)
+				{
+					databaseLastRecentlyUsed.TryRemove(db, out time);
+					ResourcesStoresCache.TryRemove(db, out databaseTask);
+					return;
+				}
+				if (databaseTask.Status != TaskStatus.RanToCompletion)
+				{
+					return; // still starting up
+				}
+
+				var database = databaseTask.Result;
 				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 5)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
@@ -316,7 +335,6 @@ namespace Raven.Database.Server
 				}
 				try
 				{
-
 					database.Dispose();
 				}
 				catch (Exception e)
@@ -325,7 +343,7 @@ namespace Raven.Database.Server
 					return;
 				}
 				databaseLastRecentlyUsed.TryRemove(db, out time);
-				ResourcesStoresCache.TryRemove(db, out database);
+				ResourcesStoresCache.TryRemove(db, out databaseTask);
 			}
 		}
 
@@ -371,7 +389,7 @@ namespace Raven.Database.Server
 			var sw = Stopwatch.StartNew();
 			try
 			{
-				if(SetupRequestToProperDatabase(context) == false)
+				if (SetupRequestToProperDatabase(context) == false)
 				{
 					return new CompletedTask();
 				}
@@ -543,9 +561,7 @@ namespace Raven.Database.Server
 					HandleBadRequest(ctx, (BadRequestException)e);
 				else if (e is ConcurrencyException)
 					HandleConcurrencyException(ctx, (ConcurrencyException)e);
-				else if (TryHandleException(ctx, e))
-					return;
-				else
+				else if (TryHandleException(ctx, e) == false)
 					HandleGenericException(ctx, e);
 			}
 			catch (Exception)
@@ -784,26 +800,37 @@ namespace Raven.Database.Server
 				return true;
 			}
 			var tenantId = match.Groups[1].Value;
-			DocumentDatabase resourceStore;
+			Task<DocumentDatabase> resourceStoreTask;
 			bool hasDb;
 			try
 			{
-				hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStore);
+				hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
 			}
 			catch (Exception e)
 			{
-				var msg = "Could open database named: " + tenantId;
-				logger.WarnException(msg, e);
-				ctx.SetStatusToUnauthorized();
-				ctx.WriteJson(new
-				{
-					Error = msg,
-					Reason = e.ToString()
-				});
+				OutputDatabaseOpenFailure(ctx, tenantId, e);
 				return false;
 			}
 			if (hasDb)
 			{
+				try
+				{
+					if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
+					{
+						ctx.SetStatusToNotAvailable();
+						ctx.WriteJson(new
+						{
+							Error = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.",
+						});
+					}
+				}
+				catch (Exception e)
+				{
+					OutputDatabaseOpenFailure(ctx, tenantId, e);
+					return false;
+				}
+				var resourceStore = resourceStoreTask.Result;
+
 				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 
 				if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
@@ -820,7 +847,7 @@ namespace Raven.Database.Server
 			}
 			else
 			{
-				ctx.SetStatusToUnauthorized();
+				ctx.SetStatusToNotAvailable();
 				ctx.WriteJson(new
 				{
 					Error = "Could not find a database named: " + tenantId
@@ -828,6 +855,18 @@ namespace Raven.Database.Server
 				return false;
 			}
 			return true;
+		}
+
+		private static void OutputDatabaseOpenFailure(IHttpContext ctx, string tenantId, Exception e)
+		{
+			var msg = "Could open database named: " + tenantId;
+			logger.WarnException(msg, e);
+			ctx.SetStatusToNotAvailable();
+			ctx.WriteJson(new
+			{
+				Error = msg,
+				Reason = e.ToString()
+			});
 		}
 
 		public void LockDatabase(string tenantId, Action actionToTake)
@@ -849,13 +888,15 @@ namespace Raven.Database.Server
 		public void ForAllDatabases(Action<DocumentDatabase> action)
 		{
 			action(SystemDatabase);
-			foreach (var db in ResourcesStoresCache)
+			foreach (var value in ResourcesStoresCache
+				.Select(db => db.Value)
+				.Where(value => value.Status == TaskStatus.RanToCompletion))
 			{
-				action(db.Value);
+				action(value.Result);
 			}
 		}
 
-		protected bool TryGetOrCreateResourceStore(string tenantId, out DocumentDatabase database)
+		protected bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
 				return true;
@@ -867,13 +908,21 @@ namespace Raven.Database.Server
 			if (config == null)
 				return false;
 
-			database = ResourcesStoresCache.GetOrAdd(tenantId, s =>
+			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
 				InitializeRequestResponders(documentDatabase);
+
+				// if we have a very long init process, make sure that we reset the last idle time for this db.
+				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
 				return documentDatabase;
-			});
+			}).ContinueWith(task =>
+			{
+				if (task.Status == TaskStatus.Faulted) // this observes the task exception
+					logger.WarnException("Failed to create database " + tenantId, task.Exception);
+				return task;
+			}).Unwrap());
 			return true;
 		}
 
@@ -997,11 +1046,10 @@ namespace Raven.Database.Server
 			if (string.Equals("System", name, StringComparison.InvariantCultureIgnoreCase))
 				return SystemDatabase;
 
-			DocumentDatabase db;
-			if (TryGetOrCreateResourceStore(name, out db))
-				return db;
-
-			throw new BadRequestException("Could not find a database named: " + name);
+			Task<DocumentDatabase> db;
+			if (TryGetOrCreateResourceStore(name, out db) && db.Status == TaskStatus.RanToCompletion)
+				return db.Result;
+			return null;
 		}
 
 		public void Protect(DatabaseDocument databaseDocument)
