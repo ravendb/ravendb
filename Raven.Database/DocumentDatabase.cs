@@ -1465,17 +1465,7 @@ namespace Raven.Database
 
 		public void StartBackup(string backupDestinationDirectory, bool incrementalBackup)
 		{
-			var document = Get(PeriodicBackupSetup.RavenDocumentKey, null);
-			if (document != null)
-			{
-				if (incrementalBackup)
-					throw new InvalidOperationException("Can only perform full backups when periodic backups is set up");
-
-				// TODO: preempt if we have periodic backup setup
-				throw new InvalidOperationException("Backup is running on periodic mode");
-			}
-
-			document = Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+			var document = Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 			if (document != null)
 			{
 				var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
