@@ -97,7 +97,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 		private void DoUpload(string backupPath, PeriodicBackupSetup backupConfigs)
 		{
-			var AWSRegion = RegionEndpoint.USEast1; // TODO make configurable
+			var AWSRegion = RegionEndpoint.GetBySystemName(backupConfigs.AwsRegionEndpoint) ?? RegionEndpoint.USEast1;
+
 			var desc = string.Format("Raven.Database.Backup {0} {1}", Database.Name,
 			                     DateTimeOffset.UtcNow.ToString("u"));
 
