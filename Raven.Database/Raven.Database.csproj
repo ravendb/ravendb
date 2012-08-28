@@ -668,6 +668,8 @@
     <Compile Include="Util\BoundedMemoryTarget.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\PortUtil.cs" />
+    <Compile Include="Util\Streams\BufferPool.cs" />
+    <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>

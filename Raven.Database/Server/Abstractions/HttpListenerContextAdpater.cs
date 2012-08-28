@@ -12,22 +12,25 @@ using System.Security.Principal;
 using System.Text.RegularExpressions;
 using NLog;
 using Raven.Database.Config;
+using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.Abstractions
 {
-	public class HttpListenerContextAdpater : IHttpContext
+	public class HttpListenerContextAdpater : IHttpContext, IDisposable
 	{
 		private readonly HttpListenerContext ctx;
 		private readonly InMemoryRavenConfiguration configuration;
+		private readonly IBufferPool bufferPool;
 		private static readonly Regex maxAgeFinder = new Regex(@"max-age \s* = \s* (\d+)",
 														   RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase |
 														   RegexOptions.Compiled);
 
-		public HttpListenerContextAdpater(HttpListenerContext ctx, InMemoryRavenConfiguration configuration)
+		public HttpListenerContextAdpater(HttpListenerContext ctx, InMemoryRavenConfiguration configuration, IBufferPool bufferPool)
 		{
 			this.ctx = ctx;
 			this.configuration = configuration;
-			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response);
+			this.bufferPool = bufferPool;
+			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response, bufferPool);
 			RequestInternal = new HttpListenerRequestAdapter(ctx.Request);
 
 			SetMaxAge();
@@ -87,9 +90,7 @@ namespace Raven.Database.Server.Abstractions
 		{
 			try
 			{
-				ResponseInternal.OutputStream.Flush();
-				ResponseInternal.OutputStream.Dispose(); // this is required when using compressing stream
-				ctx.Response.Close();
+				Response.Close();
 			}
 			catch
 			{
@@ -98,6 +99,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void SetResponseFilter(Func<Stream, Stream> responseFilter)
 		{
+			ResponseInternal.StreamsToDispose.Add(ResponseInternal.OutputStream);
 			ResponseInternal.OutputStream = responseFilter(ResponseInternal.OutputStream);
 		}
 
@@ -124,6 +126,13 @@ namespace Raven.Database.Server.Abstractions
 		public string GetRequestUrlForTenantSelection()
 		{
 			return this.GetRequestUrl();
+		}
+
+		public void Dispose()
+		{
+			if (ResponseInternal != null)
+				ResponseInternal.Dispose();
+
 		}
 	}
 }

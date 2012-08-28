@@ -23,6 +23,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
 using Raven.Database.Util;
+using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -50,6 +51,8 @@ namespace Raven.Database.Server
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
+
+		private IBufferPool bufferPool = new BufferPool(BufferPoolStream.MaxBufferSize * 512, BufferPoolStream.MaxBufferSize);
 
 		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { };
 
@@ -249,7 +252,7 @@ namespace Raven.Database.Server
 				exceptionAggregator.Execute(currentConfiguration.Dispose);
 				exceptionAggregator.Execute(currentDatabase.Dispose);
 				exceptionAggregator.Execute(currentTenantId.Dispose);
-
+				exceptionAggregator.Execute(bufferPool.Dispose);
 				exceptionAggregator.ThrowIfNeeded();
 			}
 			finally
@@ -373,37 +376,40 @@ namespace Raven.Database.Server
 
 		private void GetContext(IAsyncResult ar)
 		{
-			IHttpContext ctx;
-			try
+			HttpListenerContextAdpater ctx = null;
+			using (ctx)
 			{
-				HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
-				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration);
-				//setup waiting for the next request
-				listener.BeginGetContext(GetContext, null);
-			}
-			catch (Exception)
-			{
-				// can't get current request / end new one, probably
-				// listener shutdown
-				return;
-			}
+				try
+				{
+					HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
+					ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration, bufferPool);
+					//setup waiting for the next request
+					listener.BeginGetContext(GetContext, null);
+				}
+				catch (Exception)
+				{
+					// can't get current request / end new one, probably
+					// listener shutdown
+					return;
+				}
 
-			if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
-			{
-				HandleTooBusyError(ctx);
-				return;
-			}
-			try
-			{
-				Interlocked.Increment(ref physicalRequestsCount);
-				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleChangesRequest(ctx, () => { });
-				else
-					HandleActualRequest(ctx);
-			}
-			finally
-			{
-				concurretRequestSemaphore.Release();
+				if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+				{
+					HandleTooBusyError(ctx);
+					return;
+				}
+				try
+				{
+					Interlocked.Increment(ref physicalRequestsCount);
+					if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
+						HandleChangesRequest(ctx, () => { });
+					else
+						HandleActualRequest(ctx);
+				}
+				finally
+				{
+					concurretRequestSemaphore.Release();
+				}
 			}
 		}
 
