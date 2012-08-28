@@ -21,6 +21,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 	{
 		public DocumentDatabase Database { get; set; }
 		private Timer timer;
+		private int interval;
 
 		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 		private volatile bool executing;
@@ -38,9 +39,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			if (backupConfigs.Interval <= 0)
 				return;
 
-			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(backupConfigs.Interval),
-			                  TimeSpan.FromSeconds(backupConfigs.Interval));
-			// TODO: enable changing intervals
+			interval = backupConfigs.Interval;
+			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(interval), TimeSpan.FromMinutes(interval));
 		}
 
 		private void TimerCallback(object state)
@@ -84,6 +84,12 @@ namespace Raven.Database.Bundles.PeriodicBackups
 				backupConfigs.LastDocsEtag = options.LastDocsEtag;
 				Database.Put(PeriodicBackupSetup.RavenDocumentKey, Guid.Empty, RavenJObject.FromObject(backupConfigs),
 				             new RavenJObject(), null);
+
+				if (backupConfigs.Interval != interval)
+				{
+					interval = backupConfigs.Interval;
+					timer.Change(TimeSpan.FromMinutes(backupConfigs.Interval), TimeSpan.FromMinutes(backupConfigs.Interval));
+				}
 			}
 			catch (Exception e)
 			{
