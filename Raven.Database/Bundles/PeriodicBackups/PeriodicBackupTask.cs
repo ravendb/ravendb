@@ -39,6 +39,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			if (backupConfigs.Interval <= 0)
 				return;
 
+			logger.Info("Periodic backups started, will backup every" + interval + "minutes");
+
 			interval = backupConfigs.Interval;
 			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(interval), TimeSpan.FromMinutes(interval));
 		}
