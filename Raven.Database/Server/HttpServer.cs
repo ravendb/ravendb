@@ -689,8 +689,21 @@ namespace Raven.Database.Server
 
 		protected bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
-			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
-				return true;
+			if (ResourcesStoresCache.TryGetValue(tenantId, out database) )
+			{
+				if(database.IsFaulted || database.IsCanceled)
+				{
+					Task<DocumentDatabase> ignored;
+					ResourcesStoresCache.TryRemove(tenantId, out ignored);
+					DateTime time;
+					databaseLastRecentlyUsed.TryRemove(tenantId, out time);
+					//now go and re-create it.
+				}
+				else
+				{
+					return true;
+				}
+			}
 
 			JsonDocument jsonDocument;
 
@@ -705,7 +718,7 @@ namespace Raven.Database.Server
 
 			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
-			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s => new Task<DocumentDatabase>(() =>
+			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s => Task.Factory.StartNew(() =>
 				{
 					var config = new InMemoryRavenConfiguration
 						{
@@ -741,9 +754,13 @@ namespace Raven.Database.Server
 					var documentDatabase = new DocumentDatabase(config);
 					documentDatabase.SpinBackgroundWorkers();
 					return documentDatabase;
-				}));
-			if (database.Status == TaskStatus.Created)
-				database.Start();
+				})
+				.ContinueWith(task =>
+					{
+						if (task.Status == TaskStatus.Faulted) // this observes the task exception
+							logger.WarnException("Failed to create database " + tenantId, task.Exception);
+						return task;
+					}).Unwrap());
 			return true;
 		}
 

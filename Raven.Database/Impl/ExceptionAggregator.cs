@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NLog;
+using Raven.Database.Util;
 
 namespace Raven.Database.Impl
 {
@@ -8,7 +9,7 @@ namespace Raven.Database.Impl
 	{
 		private readonly Logger log;
 		private readonly string errorMsg;
-		readonly List<Exception> list = new List<Exception>();
+		readonly ConcurrentSet<Exception> list = new ConcurrentSet<Exception>();
 
 		public ExceptionAggregator(Logger log, string errorMsg)
 		{
