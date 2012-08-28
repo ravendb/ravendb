@@ -12,7 +12,8 @@ namespace Raven.Abstractions.Data
 	{
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Setup";
 
-		public string VaultName { get; set; }
+		public string GlacierVaultName { get; set; }
+		public string S3BucketName { get; set; }
 		public int Interval { get; set; }
 
 		public Guid LastDocsEtag { get; set; }

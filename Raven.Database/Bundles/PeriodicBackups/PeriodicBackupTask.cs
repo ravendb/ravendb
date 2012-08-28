@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using Amazon;
 using Amazon.Glacier.Transfer;
+using Amazon.S3.Model;
 using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -14,7 +15,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.PeriodicBackups
 {
-	[InheritedExport(typeof(IStartupTask))]
+	[InheritedExport(typeof (IStartupTask))]
 	[ExportMetadata("Bundle", "PeriodicBackups")]
 	public class PeriodicBackupTask : IStartupTask, IDisposable
 	{
@@ -37,7 +38,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			if (backupConfigs.Interval <= 0)
 				return;
 
-			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(backupConfigs.Interval), TimeSpan.FromSeconds(backupConfigs.Interval));
+			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(backupConfigs.Interval),
+			                  TimeSpan.FromSeconds(backupConfigs.Interval));
 			// TODO: enable changing intervals
 		}
 
@@ -74,9 +76,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 				};
 				var dd = new DataDumper(Database, options);
 				var filePath = dd.ExportData(null, true);
-				var archiveId = UploadToGlacierVault(filePath, backupConfigs);
-
-				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(filePath), archiveId));
+				DoUpload(filePath, backupConfigs);
 
 				// Remember the current position only once we are successful, this allows for compensatory backups
 				// in case of failures
@@ -95,16 +95,45 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			}
 		}
 
-		private string UploadToGlacierVault(string backupPath, PeriodicBackupSetup backupConfigs)
+		private void DoUpload(string backupPath, PeriodicBackupSetup backupConfigs)
 		{
 			var AWSRegion = RegionEndpoint.USEast1; // TODO make configurable
-			var manager = new ArchiveTransferManager(AWSRegion);
-			return manager.Upload(backupConfigs.VaultName,
-				string.Format("Raven.Database.Backup {0} {1}", Database.Name, DateTimeOffset.UtcNow.ToString("u"))
-				, backupPath).ArchiveId;
+			var desc = string.Format("Raven.Database.Backup {0} {1}", Database.Name,
+			                     DateTimeOffset.UtcNow.ToString("u"));
+
+			if (!string.IsNullOrWhiteSpace(backupConfigs.GlacierVaultName))
+			{
+				var manager = new ArchiveTransferManager(AWSRegion);
+				var archiveId = manager.Upload(backupConfigs.GlacierVaultName, desc, backupPath).ArchiveId;
+				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath),
+										  archiveId));
+				return;
+			}
+
+			if (!string.IsNullOrWhiteSpace(backupConfigs.S3BucketName))
+			{
+				var client = new Amazon.S3.AmazonS3Client(AWSRegion);
+
+				using (var fileStream = File.OpenRead(backupPath))
+				{
+					var key = Path.GetFileName(backupPath);
+					var request = new PutObjectRequest();
+					request.WithMetaData("Description", desc);
+					request.WithInputStream(fileStream);
+					request.WithBucketName(backupConfigs.S3BucketName);
+					request.WithKey(key);
+
+					using (S3Response _ = client.PutObject(request))
+					{
+						logger.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, with key {2}",
+							Path.GetFileName(backupPath), backupConfigs.S3BucketName, key));
+						return;
+					}
+				}
+			}
 		}
 
-		public void Dispose()
+	public void Dispose()
 		{
 			if (timer != null)
 				timer.Dispose();
