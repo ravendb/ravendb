@@ -358,7 +358,16 @@ namespace Raven.Database
 
 			var onDisposing = Disposing;
 			if (onDisposing != null)
-				onDisposing(this, EventArgs.Empty);
+			{
+				try
+				{
+					onDisposing(this, EventArgs.Empty);
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Error when notifying about db disposal, ignoring error and continuing with disposal", e);
+				}
+			}
 
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
 
@@ -385,6 +394,8 @@ namespace Raven.Database
 
 			exceptionAggregator.Execute(() =>
 			{
+				if (toDispose == null)
+					return;
 				foreach (var shouldDispose in toDispose)
 				{
 					exceptionAggregator.Execute(shouldDispose.Dispose);
