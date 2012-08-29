@@ -37,22 +37,11 @@ namespace Raven.Database.Indexing
 			return null;
 		}
 
-		/// <summary>
-		/// Make a spatial query
-		/// </summary>
-		/// <param name="spatialStrategy"> </param>
-		/// <param name="lat"></param>
-		/// <param name="lng"></param>
-		/// <param name="radius">Radius, in miles</param>
-		/// <returns></returns>
-		public static Query MakeQuery(SpatialStrategy spatialStrategy, double lat, double lng, double radius)
+		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025)
 		{
-			return spatialStrategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(lng, lat, radius)));
-		}
-
-		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation)
-		{
-			return spatialStrategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(shapeWKT)));
+			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(shapeWKT));
+			args.SetDistPrecision(distanceErrorPct);
+			return spatialStrategy.MakeQuery(args);
 		}
 
 		public static Filter MakeFilter(SpatialStrategy spatialStrategy, IndexQuery indexQuery)
