@@ -721,11 +721,11 @@ namespace Raven.Database.Indexing
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 						totalResults.Value = search.TotalHits;
 
-						var indexReader = indexSearcher.GetIndexReader();
+						var indexReader = indexSearcher.IndexReader;
 
 						foreach (var scoreDoc in search.ScoreDocs)
 						{
-							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.doc].CloneToken();
+							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.Doc].CloneToken();
 							foreach (var prop in ravenJObject.Where(x=>x.Key.EndsWith("_Range")).ToArray())
 							{
 								ravenJObject.Remove(prop.Key);
@@ -1104,7 +1104,7 @@ namespace Raven.Database.Indexing
 							var pageSizeIncreaseSize = min - search.ScoreDocs.Length;
 							return pageSizeIncreaseSize;
 						}
-						var document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+						var document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
 						var id = document.Get(Constants.DocumentIdFieldName);
 						if (documentsAlreadySeenInPreviousPage.Add(id) == false)
 						{
@@ -1127,8 +1127,8 @@ namespace Raven.Database.Indexing
 				// add results that were already there in previous pages
 				for (int i = 0; i < min; i++)
 				{
-					Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
+					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 				return 0;
