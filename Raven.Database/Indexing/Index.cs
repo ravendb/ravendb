@@ -721,8 +721,6 @@ namespace Raven.Database.Indexing
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 						totalResults.Value = search.TotalHits;
 
-						var indexReader = indexSearcher.IndexReader;
-
 						foreach (var scoreDoc in search.ScoreDocs)
 						{
 							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.Doc].CloneToken();
