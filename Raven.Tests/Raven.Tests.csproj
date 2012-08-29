@@ -448,6 +448,7 @@
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
+    <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
     <Compile Include="Spatial\Spatial.cs" />
     <Compile Include="Spatial\SpatialTest2.cs" />
