@@ -757,6 +757,9 @@
     <Compile Include="..\Raven.Abstractions\Util\ConcurrentSet.cs">
       <Link>Imports\Util\ConcurrentSet.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\EasyReaderWriterLock.cs">
+      <Link>Imports\Util\EasyReaderWriterLock.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
       <Link>Imports\Util\IncludesUtil.cs</Link>
     </Compile>

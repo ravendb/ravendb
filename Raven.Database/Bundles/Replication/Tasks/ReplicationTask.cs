@@ -59,8 +59,9 @@ namespace Raven.Bundles.Replication.Tasks
 				IsBackground = true,
 				Name = "Replication Thread"
 			};
+			var disposableAction = new DisposableAction(thread.Join);
 			// make sure that the doc db waits for the replication thread shutdown
-			docDb.ExtensionsState.TryAdd(thread, new DisposableAction(thread.Join));
+			docDb.ExtensionsState.GetOrAdd(Guid.NewGuid().ToString(), s => disposableAction);
 			thread.Start();
 		}
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Util;
@@ -24,12 +25,12 @@ namespace Raven.Database.Indexing
 				.ToList();
 		}
 
-		private readonly ConcurrentDictionary<TimeSpan, Tuple<Timer, ConcurrentSet<IRepeatedAction>>> timers =
-			new ConcurrentDictionary<TimeSpan, Tuple<Timer, ConcurrentSet<IRepeatedAction>>>();
+		private readonly AtomicDictionary<Tuple<Timer, ConcurrentSet<IRepeatedAction>>> timers =
+			new AtomicDictionary<Tuple<Timer, ConcurrentSet<IRepeatedAction>>>();
 
 		public void Repeat(IRepeatedAction action)
 		{
-			var tuple = timers.GetOrAddAtomically(action.RepeatDuration,
+			var tuple = timers.GetOrAdd(action.RepeatDuration.ToString(),
 			                                      span =>
 			                                      {
 			                                      	var repeatedActions = new ConcurrentSet<IRepeatedAction>
@@ -46,7 +47,7 @@ namespace Raven.Database.Indexing
 
 		private void ExecuteTimer(object state)
 		{
-			var span = (TimeSpan) state;
+			var span = state.ToString();
 			Tuple<Timer, ConcurrentSet<IRepeatedAction>> tuple;
 			if (timers.TryGetValue(span, out tuple) == false)
 				return;

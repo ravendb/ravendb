@@ -284,6 +284,12 @@ namespace Raven.Database.Extensions
 			context.Response.StatusDescription = "Unauthorized";
 		}
 
+		public static void SetStatusToNotAvailable(this IHttpContext context)
+		{
+			context.Response.StatusCode = 503;
+			context.Response.StatusDescription = "Service Unavailable";
+		}
+
 		public static void SetStatusToForbidden(this IHttpContext context)
 		{
 			context.Response.StatusCode = 403;
