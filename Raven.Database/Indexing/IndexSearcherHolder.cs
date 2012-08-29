@@ -1,8 +1,10 @@
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Search;
 using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -27,6 +29,37 @@ namespace Raven.Database.Indexing
 
 		public IDisposable GetSearcher(out IndexSearcher searcher)
 		{
+			var indexSearcherHoldingState = GetCurrentStateHolder();
+			try
+			{
+				searcher = indexSearcherHoldingState.IndexSearcher;
+				return indexSearcherHoldingState;
+			}
+			catch (Exception)
+			{
+				indexSearcherHoldingState.Dispose();
+				throw;
+			}
+		}
+
+		public IDisposable GetSearcherAndTermDocs(out IndexSearcher searcher, out RavenJObject[] termDocs)
+		{
+			var indexSearcherHoldingState = GetCurrentStateHolder();
+			try
+			{
+				searcher = indexSearcherHoldingState.IndexSearcher;
+				termDocs = indexSearcherHoldingState.GetOrCreateTerms();
+				return indexSearcherHoldingState;
+			}
+			catch (Exception)
+			{
+				indexSearcherHoldingState.Dispose();
+				throw;
+			}
+		}
+
+		private IndexSearcherHoldingState GetCurrentStateHolder()
+		{
 			while (true)
 			{
 				var state = current;
@@ -37,10 +70,10 @@ namespace Raven.Database.Indexing
 					continue;
 				}
 
-				searcher = state.IndexSearcher;
 				return state;
 			}
 		}
+
 
 		private class IndexSearcherHoldingState : IDisposable
 		{
@@ -48,6 +81,7 @@ namespace Raven.Database.Indexing
 
 			public volatile bool ShouldDispose;
 			public int Usage;
+			private RavenJObject[] readEntriesFromIndex;
 
 			public IndexSearcherHoldingState(IndexSearcher indexSearcher)
 			{
@@ -77,6 +111,17 @@ namespace Raven.Database.Indexing
 						indexReader.Close();
 					IndexSearcher.Close();
 				}
+			}
+
+			[MethodImpl(MethodImplOptions.Synchronized)]
+			public RavenJObject[] GetOrCreateTerms()
+			{
+				if (readEntriesFromIndex != null)
+					return readEntriesFromIndex;
+
+				var indexReader = IndexSearcher.GetIndexReader();
+				readEntriesFromIndex = IndexedTerms.ReadEntriesFromIndex(indexReader);
+				return readEntriesFromIndex;
 			}
 		}
 	}

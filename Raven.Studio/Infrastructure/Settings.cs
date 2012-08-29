@@ -39,6 +39,12 @@ namespace Raven.Studio.Infrastructure
 			set { currentSettings["DocumentSize"] = value; }
 		}
 
+		public string LastUrl
+		{
+			get { return GetSettingAsString("LastUrl"); }
+			set { currentSettings["LastUrl"] = value; }
+		}
+
 		public string SelectedDatabase
 		{
 			get { return GetSettingAsString("SelectedDatabase"); }

@@ -467,7 +467,7 @@ namespace Raven.Client.Shard
 
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
-			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null,
+			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null,
 			                                   listeners.QueryListeners);
 		}
 

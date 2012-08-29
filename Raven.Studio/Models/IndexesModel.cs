@@ -12,17 +12,17 @@ namespace Raven.Studio.Models
 {
 	public class IndexesModel : PageViewModel
 	{
-	    private ICommand promoteIndex;
-	    private ICommand deleteIndex;
-	    private ICommand resetIndex;
-	    public ObservableCollection<IndexListItem> GroupedIndexes { get; private set; }
+		private ICommand promoteIndex;
+		private ICommand deleteIndex;
+		private ICommand resetIndex;
+		public ObservableCollection<IndexListItem> GroupedIndexes { get; private set; }
 
 		public IndexesModel()
 		{
-            ModelUrl = "/indexes";
-		    GroupedIndexes =
-                new ObservableCollection<IndexListItem>();
-            ItemSelection = new ItemSelection<IndexItem>();
+			ModelUrl = "/indexes";
+			GroupedIndexes =
+				new ObservableCollection<IndexListItem>();
+			ItemSelection = new ItemSelection<IndexItem>();
 		}
 
 		public override Task TimerTickedAsync()
@@ -32,15 +32,16 @@ namespace Raven.Studio.Models
 				.ContinueOnSuccessInTheUIThread(UpdateGroupedIndexList);
 		}
 
-        public ItemSelection<IndexItem> ItemSelection { get; private set; }
+		public ItemSelection<IndexItem> ItemSelection { get; private set; }
 
-        public ICommand PromoteIndex { get { return promoteIndex ?? (promoteIndex = new PromoteToAutoIndexCommand(this)); } }
-        public ICommand DeleteIndex { get { return deleteIndex ?? (deleteIndex = new DeleteIndexCommand(this)); } }
-        public ICommand ResetIndex { get { return resetIndex ?? (resetIndex = new ResetIndexCommand(this)); } }
+		public ICommand PromoteIndex { get { return promoteIndex ?? (promoteIndex = new PromoteToAutoIndexCommand(this)); } }
+		public ICommand DeleteIndex { get { return deleteIndex ?? (deleteIndex = new DeleteIndexCommand(this)); } }
+		public ICommand ResetIndex { get { return resetIndex ?? (resetIndex = new ResetIndexCommand(this)); } }
+		public ICommand DeleteAllIndexes { get { return new DeleteAllIndexsCommand(this); } }
 
 		private void UpdateGroupedIndexList(IList<string> indexes)
 		{
-		    var currentSelection = ItemSelection.GetSelectedItems().Select(i => i.Name).ToHashSet();
+			var currentSelection = ItemSelection.GetSelectedItems().Select(i => i.Name).ToHashSet();
 
 			var indexGroups = from index in indexes
 							  let groupDetails = GetIndexGroup(index)
@@ -49,16 +50,16 @@ namespace Raven.Studio.Models
 							  orderby indexOrder
 							  group index by indexGroup;
 
-		    var indexesAndGroupHeaders =
-		        indexGroups.SelectMany(group => new IndexListItem[] {new IndexGroupHeader {Name = group.Key}}
-		                                            .Concat(group.Select(index => new IndexItem {Name = index})));
+			var indexesAndGroupHeaders =
+				indexGroups.SelectMany(group => new IndexListItem[] {new IndexGroupHeader {Name = group.Key}}
+													.Concat(group.Select(index => new IndexItem {Name = index})));
 
-            GroupedIndexes.Clear();
+			GroupedIndexes.Clear();
 			GroupedIndexes.AddRange(indexesAndGroupHeaders.ToList());
 
-            var selection = GroupedIndexes.OfType<IndexItem>().Where(i => currentSelection.Contains(i.Name));
+			var selection = GroupedIndexes.OfType<IndexItem>().Where(i => currentSelection.Contains(i.Name));
 
-            ItemSelection.SetDesiredSelection(selection);
+			ItemSelection.SetDesiredSelection(selection);
 		}
 
 		private Tuple<string, int> GetIndexGroup(string indexName)

@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryWithReservedCharacters : LocalClientTest
+	public class QueryWithReservedCharacters : RavenTest
 	{
 		[Fact]
 		public void WhenQueryingByGenericClrTypes_ThenAutoQuotedLuceneQueryFails()

@@ -85,8 +85,9 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 				{
 					szIndexName = "by_name_and_key",
 					szKey = "+name\0+key\0\0",
-					grbit = CreateIndexGrbit.IndexDisallowNull
+					grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique
 				});
+		
 		}
 
 	}

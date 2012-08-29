@@ -11,7 +11,7 @@ using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class ProjectingDocumentId : LocalClientTest
+	public class ProjectingDocumentId : RavenTest
 	{
 		[Fact]
 		public void WillUseConventionsToSetProjection()

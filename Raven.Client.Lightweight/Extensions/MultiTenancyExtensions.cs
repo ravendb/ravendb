@@ -118,25 +118,9 @@ namespace Raven.Client.Extensions
 
 			var doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
-		var docId = "Raven/Databases/" + databaseDocument.Id;
 
-			return self.GetAsync(docId)
-				.ContinueWith(get =>
-				{
-					if (get.Result != null)
-						return get;
-
-					return (Task)serverClient.PutAsync(docId, null, doc, new RavenJObject());
-				})
-				.Unwrap()
-				.ContinueWith(x =>
-				{
-					if (ignoreFailures == false)
-						x.Wait(); // will throw on error
-
-					var observedException = x.Exception;
-					GC.KeepAlive(observedException);
-				});
+			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
+			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
 		}
 #else
 		///<summary>
@@ -183,26 +167,9 @@ namespace Raven.Client.Extensions
 
 			var doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
-			var docId = "Raven/Databases/" + databaseDocument.Id;
 
-			return self.GetAsync(docId)
-				.ContinueWith(get =>
-				{
-					if (get.Result != null)
-						return get;
-					var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
-					req.Write(doc.ToString(Formatting.Indented));
-					return req.ExecuteRequestAsync();
-				})
-				.Unwrap()
-				.ContinueWith(x =>
-				{
-					if (ignoreFailures == false)
-						x.Wait(); // will throw on error
-
-					var observedException = x.Exception;
-					GC.KeepAlive(observedException);
-				});
+			var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
+			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
 		}
 
 #endif

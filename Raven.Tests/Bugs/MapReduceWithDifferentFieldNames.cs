@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MapReduceWithDifferentFieldNames : LocalClientTest
+	public class MapReduceWithDifferentFieldNames : RavenTest
 	{
 		[Fact]
 		public void WhenTheAnonymousTypeResultIsNotTheSame_ShouldThrowAnException()

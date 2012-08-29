@@ -188,7 +188,7 @@ namespace Raven.Client.Connection
 
 			public FailureCounter()
 			{
-				LastCheck = DateTime.UtcNow;
+				LastCheck = SystemTime.UtcNow;
 			}
 		}
 
@@ -486,11 +486,11 @@ namespace Raven.Client.Connection
 		/// Resets the failure count for the specified URL
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
-		public void ResetFailureCount(string operationUrl)
+		public virtual void ResetFailureCount(string operationUrl)
 		{
 			var value = GetHolder(operationUrl);
 			var oldVal = Interlocked.Exchange(ref value.Value, 0);
-			value.LastCheck = DateTime.UtcNow;
+			value.LastCheck = SystemTime.UtcNow;
 			if (oldVal != 0)
 			{
 				FailoverStatusChanged(this,
@@ -565,7 +565,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				ResetFailureCount(operationUrl);
 				return true;
 			}
-			catch (WebException e)
+			catch (Exception e)
 			{
 				if (avoidThrowing == false)
 					throw;
@@ -677,6 +677,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				switch (task.Status)
 				{
 					case TaskStatus.RanToCompletion:
+						ResetFailureCount(url);
 						var tcs = new TaskCompletionSource<T>();
 						tcs.SetResult(task.Result);
 						return tcs.Task;

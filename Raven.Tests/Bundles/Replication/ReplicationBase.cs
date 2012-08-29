@@ -17,6 +17,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests;
 using Xunit;
 using IOExtensions = Raven.Database.Extensions.IOExtensions;
 using System.Linq;
@@ -48,6 +49,7 @@ namespace Raven.Bundles.Tests.Replication
 			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			                          	RunInMemory = true,
 			                          	Port = port,
+										DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
 			                          };
 			ConfigureServer(serverConfiguration);
 			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);

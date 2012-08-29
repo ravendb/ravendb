@@ -66,7 +66,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 				null,
 #endif
-				AsyncDatabaseCommands, index, new string[0], listeners.QueryListeners);
+				AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -83,7 +83,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 				null,
 #endif
-				AsyncDatabaseCommands, indexName, new string[0], listeners.QueryListeners);
+				AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>

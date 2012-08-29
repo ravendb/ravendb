@@ -59,7 +59,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// The timestamp of the last time the index was queried
 		/// </summary>
-		public bool LastQueryTime { get; set; }
+		public DateTime LastQueryTime { get; set; }
 
 		/// <summary>
 		/// Update the query stats from the query results

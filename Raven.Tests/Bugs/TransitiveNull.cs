@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class TransitiveNull : LocalClientTest
+	public class TransitiveNull : RavenTest
 	{
 		[Fact]
 		public void WillNotError()

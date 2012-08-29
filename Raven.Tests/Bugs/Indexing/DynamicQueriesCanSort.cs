@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class DynamicQueriesCanSort : LocalClientTest
+	public class DynamicQueriesCanSort : RavenTest
 	{
 		[Fact]
 		public void CanSortOnDynamicIndexOnFieldWhichWeDontQuery()

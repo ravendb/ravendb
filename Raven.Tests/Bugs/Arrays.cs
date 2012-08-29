@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Arrays : LocalClientTest
+	public class Arrays : RavenTest
 	{
 		[Fact]
 		public void CanRetrieveMultiDimensionalArray()

@@ -9,7 +9,7 @@ using RavenQueryStatistics = Raven.Client.Linq.RavenQueryStatistics;
 
 namespace Raven.Tests.Bugs.QueryOptimizer
 {
-	public class QueryOptimizeTests : LocalClientTest
+	public class QueryOptimizeTests : RavenTest
 	{
 		[Fact]
 		public void WillNotError()

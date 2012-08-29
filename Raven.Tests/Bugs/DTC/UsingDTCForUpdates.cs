@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.DTC
 {
-	public class UsingDTCForUpdates : LocalClientTest
+	public class UsingDTCForUpdates : RavenTest
 	{
 		[Fact]
 		public void can_update_a_doc_within_transaction_scope()

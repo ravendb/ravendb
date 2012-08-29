@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class TempIndexScore : LocalClientTest
+	public class TempIndexScore : RavenTest
 	{
 		public class Blog
 		{

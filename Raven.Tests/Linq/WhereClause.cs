@@ -45,6 +45,22 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void HandlesNegative()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => !x.IsActive);
+			Assert.Equal("IsActive:false", q.ToString());
+		}
+
+		[Fact]
+		public void HandlesNegativeEquality()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.IsActive == false);
+			Assert.Equal("IsActive:false", q.ToString());
+		}
+
+		[Fact]
 		public void StartsWith()
 		{
 			var indexedUsers = GetRavenQueryInspector();
@@ -359,7 +375,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void NegatingSubClauses()
 		{
-			var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null)).Not
+			var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null, null)).Not
 				.OpenSubclause()
 				.WhereEquals("IsPublished", true)
 				.AndAlso()
@@ -506,6 +522,7 @@ namespace Raven.Tests.Linq
 			public string Name { get; set; }
 			public string Email { get; set; }
 			public UserProperty[] Properties { get; set; }
+			public bool IsActive { get; set; }
 		}
 
 		public class UserProperty

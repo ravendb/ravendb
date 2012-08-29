@@ -28,7 +28,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document
 		/// </summary>
-		public static IDictionary<string, IEnumerable<FacetValue>> ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
+		public static FacetResults ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
@@ -40,7 +40,7 @@ namespace Raven.Client.Linq
 #endif
 
 #if !NET35 && !SILVERLIGHT
-		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
+		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
@@ -48,7 +48,7 @@ namespace Raven.Client.Linq
 			var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery { Query = query });
 
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-			return documentSession.AddLazyOperation<IDictionary<string, IEnumerable<FacetValue>>>(lazyOperation, null);
+			return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
 		}
 #endif
 
@@ -59,7 +59,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document
 		/// </summary>
-		public static Task<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
 			var query = ravenQueryInspector.ToString();
@@ -188,7 +188,10 @@ namespace Raven.Client.Linq
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms, decimal boost = 1, SearchOptions options = SearchOptions.Or, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
+		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms,
+				decimal boost = 1, 
+				SearchOptions options = SearchOptions.Guess, 
+				EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			Expression expression = self.Expression;
@@ -265,7 +268,7 @@ namespace Raven.Client.Linq
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
 		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
-		/// <param name="source">The source for querying</param>
+        /// <param name="source">The source for querying</param>
 		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
 		/// <returns></returns>
 		public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)

@@ -9,7 +9,7 @@ using Raven.Database.Queries;
 
 namespace Raven.Tests.Bugs
 {
-	public class DynamicQuerySorting : LocalClientTest
+	public class DynamicQuerySorting : RavenTest
 	{
 		public class GameServer
 		{

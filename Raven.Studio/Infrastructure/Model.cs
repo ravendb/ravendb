@@ -1,8 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Studio.Commands;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -26,6 +28,12 @@ namespace Raven.Studio.Infrastructure
 
 		internal void TimerTicked()
 		{
+			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
+			{
+				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
+				Command.ExecuteCommand(new CreateDatabaseCommand());
+			}
+
 			if (currentTask != null)
 				return;
 
@@ -34,7 +42,7 @@ namespace Raven.Studio.Infrastructure
 				if (currentTask != null)
 					return;
 
-				var timeFromLastRefresh = DateTime.Now - lastRefresh;
+				var timeFromLastRefresh = SystemTime.UtcNow - lastRefresh;
 				var refreshRate = GetRefreshRate();
 				if (timeFromLastRefresh < refreshRate)
 					return;
@@ -49,7 +57,7 @@ namespace Raven.Studio.Infrastructure
 					.Catch()
 					.Finally(() =>
 					{
-						lastRefresh = DateTime.Now;
+						lastRefresh = SystemTime.UtcNow;
 						IsForced = false;
 						currentTask = null;
 					});

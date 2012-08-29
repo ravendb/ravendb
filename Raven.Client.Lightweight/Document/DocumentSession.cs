@@ -489,7 +489,7 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 #if !NET35
-			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, listeners.QueryListeners);
+			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners);
 #else
 			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null, listeners.QueryListeners);
 #endif

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class QueryProvider : LocalClientTest
+	public class QueryProvider : RavenTest
 	{
 		[Fact]
 		public void CanCreateQuery()

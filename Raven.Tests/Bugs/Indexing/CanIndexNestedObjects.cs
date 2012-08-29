@@ -9,7 +9,7 @@ using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class CanIndexNestedObjects : LocalClientTest
+	public class CanIndexNestedObjects : RavenTest
 	{
 		public class NestedObject
 		{

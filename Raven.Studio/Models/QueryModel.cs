@@ -116,6 +116,19 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		private string address;
+		public string Address
+		{
+			get { return address; }
+			set
+			{
+				address = value;
+				OnPropertyChanged(() => Address);
+			}
+		}
+
+		public ICommand CalculateFromAddress { get { return new CalculateGeocodeFromAddressCommand(this); } }
+
 		#endregion
 
 		private int exceptionLine;
@@ -174,6 +187,17 @@ namespace Raven.Studio.Models
                 OnPropertyChanged(() => ShowFields);
             }
 	    }
+
+		private bool showEntries;
+		public bool ShowEntries
+		{
+			get { return showEntries; }
+			set
+			{
+				showEntries = value;
+				OnPropertyChanged(() => ShowEntries);
+			}
+		}
 
 	    public bool SkipTransformResults
 	    {

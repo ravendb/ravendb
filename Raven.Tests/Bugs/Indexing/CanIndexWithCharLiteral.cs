@@ -7,7 +7,7 @@ using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class CanIndexWithCharLiteral : LocalClientTest
+	public class CanIndexWithCharLiteral : RavenTest
 	{
 		[Fact]
 		public void CanQueryDocumentsIndexWithCharLiteral()

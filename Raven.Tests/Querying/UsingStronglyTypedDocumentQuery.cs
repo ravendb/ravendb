@@ -10,7 +10,7 @@ namespace Raven.Tests.Querying
 	{
 		private IDocumentQuery<IndexedUser> CreateUserQuery()
 		{
-			return new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null);
+			return new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null);
 		}
 
 		[Fact]

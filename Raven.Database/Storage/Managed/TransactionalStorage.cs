@@ -123,7 +123,7 @@ namespace Raven.Storage.Managed
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
-			Interlocked.Exchange(ref lastUsageTime, SystemTime.Now.ToBinary());
+			Interlocked.Exchange(ref lastUsageTime, SystemTime.UtcNow.ToBinary());
 			using (tableStroage.BeginTransaction())
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
@@ -213,11 +213,23 @@ namespace Raven.Storage.Managed
 
 		}
 
+		public Guid ChangeId()
+		{
+			Guid newId = Guid.NewGuid();
+			Batch(accessor =>
+			{
+				tableStroage.Details.Remove("id");
+				tableStroage.Details.Put("id", newId.ToByteArray());
+			});
+			Id = newId;
+			return newId;
+		}
+
 		private void MaybeOnIdle(object _)
 		{
 			var ticks = Interlocked.Read(ref lastUsageTime);
 			var lastUsage = DateTime.FromBinary(ticks);
-			if ((SystemTime.Now - lastUsage).TotalSeconds < 30)
+			if ((SystemTime.UtcNow - lastUsage).TotalSeconds < 30)
 				return;
 
 			tableStroage.PerformIdleTasks();

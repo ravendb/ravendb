@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
 
@@ -50,8 +51,14 @@ namespace Raven.Storage.Managed.Impl
 				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
 				{"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))},
 				{"ByViewAndEtagDesc", x => Tuple.Create(x.Value<string>("view"), new ReverseComparableByteArrayWhichIgnoresNull(x.Value<byte[]>("etag")))},
-				{"ByViewAndEtag", x => Tuple.Create(x.Value<string>("view"), new ComparableByteArray(x.Value<byte[]>("etag")))}
-	
+				{"ByViewAndEtag", x => Tuple.Create(x.Value<string>("view"), new ComparableByteArray(x.Value<byte[]>("etag")))},
+				{"ByViewReduceKeyAndBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"), x.Value<int>("bucket"))}
+			});
+
+			ReduceResults = Add(new Table("ReducedResults")
+			{
+				{"ByViewReduceKeyAndSourceBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"), x.Value<int>("sourceBucket"))},
+				{"ByViewReduceKeyLevelAndBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"), x.Value<int>("level"), x.Value<int>("bucket"))}
 			});
 
 			Queues = Add(new Table(x => new RavenJObject
@@ -81,6 +88,13 @@ namespace Raven.Storage.Managed.Impl
 			{
 				{"ByNameAndEtag", x => Tuple.Create(x.Value<string>("name"), new ComparableByteArray(x.Value<byte[]>("etag")))},
 			});
+
+			ScheduleReductions = Add(new Table("ScheduleReductions")
+			{
+				{"ByView", x=> x.Value<string>("view")},
+				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
+				{"ByViewLevelReduceKeyAndBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<int>("level"), x.Value<string>("reduceKey"), x.Value<int>("bucket"))},
+			});
 		}
 
 		public Table Lists { get; private set; }
@@ -92,6 +106,10 @@ namespace Raven.Storage.Managed.Impl
 		public Table Queues { get; private set; }
 
 		public Table MappedResults { get; private set; }
+
+		public Table ReduceResults { get; private set; }
+
+		public Table ScheduleReductions { get; private set; }
 
 		public Table IndexingStats { get; private set; }
 

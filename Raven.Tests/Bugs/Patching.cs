@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Patching : LocalClientTest
+	public class Patching : RavenTest
 	{
 		public class Post
 		{

@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -16,10 +17,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Abstractions.Util;
+using Raven.Database.Server;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.SignalR;
 using Raven.Database.Util;
-using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -27,10 +28,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
-using Raven.Database.Backup;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -51,6 +50,9 @@ namespace Raven.Database
 {
 	public class DocumentDatabase : IUuidGenerator, IDisposable
 	{
+		[ImportMany]
+		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
+
 		[ImportMany]
 		public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
 
@@ -107,7 +109,7 @@ namespace Raven.Database
 		/// <summary>
 		/// This is used to hold state associated with this instance by external extensions
 		/// </summary>
-		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
+		public AtomicDictionary<object> ExtensionsState { get; private set; }
 
 		public TaskScheduler BackgroundTaskScheduler { get { return backgroundTaskScheduler; } }
 
@@ -115,6 +117,7 @@ namespace Raven.Database
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
 		private readonly TaskScheduler backgroundTaskScheduler;
+		private readonly object idleLocker = new object();
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
@@ -142,7 +145,7 @@ namespace Raven.Database
 				backgroundTaskScheduler = TaskScheduler.Current;
 			}
 
-			ExtensionsState = new ConcurrentDictionary<object, object>();
+			ExtensionsState = new AtomicDictionary<object>();
 			Configuration = configuration;
 
 			ExecuteAlterConfiguration();
@@ -273,7 +276,7 @@ namespace Raven.Database
 		{
 			foreach (var task in StartupTasks)
 			{
-				var disposable = task as IDisposable;
+				var disposable = task.Value as IDisposable;
 				if (disposable != null)
 					toDispose.Add(disposable);
 				task.Value.Execute(this);
@@ -356,7 +359,16 @@ namespace Raven.Database
 
 			var onDisposing = Disposing;
 			if (onDisposing != null)
-				onDisposing(this, EventArgs.Empty);
+			{
+				try
+				{
+					onDisposing(this, EventArgs.Empty);
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Error when notifying about db disposal, ignoring error and continuing with disposal", e);
+				}
+			}
 
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
 
@@ -367,7 +379,7 @@ namespace Raven.Database
 				disposed = true;
 
 				if (workContext != null)
-					workContext.StopWork();
+					workContext.StopWorkRude();
 			});
 
 			exceptionAggregator.Execute(() =>
@@ -383,6 +395,8 @@ namespace Raven.Database
 
 			exceptionAggregator.Execute(() =>
 			{
+				if (toDispose == null)
+					return;
 				foreach (var shouldDispose in toDispose)
 				{
 					exceptionAggregator.Execute(shouldDispose.Dispose);
@@ -428,6 +442,8 @@ namespace Raven.Database
 			workContext.StopWork();
 			indexingBackgroundTask.Wait();
 			reducingBackgroundTask.Wait();
+
+			backgroundWorkersSpun = false;
 		}
 
 		public WorkContext WorkContext
@@ -435,8 +451,15 @@ namespace Raven.Database
 			get { return workContext; }
 		}
 
+		private volatile bool backgroundWorkersSpun;
+
 		public void SpinBackgroundWorkers()
 		{
+			if (backgroundWorkersSpun)
+				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
+			
+			backgroundWorkersSpun = true;
+
 			workContext.StartWork();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
@@ -458,8 +481,19 @@ namespace Raven.Database
 
 		public void RunIdleOperations()
 		{
-			TransportState.OnIdle();
-			workContext.IndexStorage.RunIdleOperations();
+			var tryEnter = Monitor.TryEnter(idleLocker);
+			try
+			{
+				if (tryEnter == false)
+					return;
+				TransportState.OnIdle();
+				IndexStorage.RunIdleOperations();
+			}
+			finally
+			{
+				if(tryEnter)
+					Monitor.Exit(idleLocker);
+			}
 		}
 
 		private long sequentialUuidCounter;
@@ -513,16 +547,7 @@ namespace Raven.Database
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			workContext.DocsPerSecIncreaseBy(1);
-			if (string.IsNullOrWhiteSpace(key))
-			{
-				// we no longer sort by the key, so it doesn't matter
-				// that the key is no longer sequential
-				key = Guid.NewGuid().ToString();
-			}
-			else
-			{
-				key = key.Trim();
-			}
+			key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
@@ -536,13 +561,25 @@ namespace Raven.Database
 					}
 					if (transactionInformation == null)
 					{
-						AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
+						AssertPutOperationNotVetoed(key, metadata, document, null);
 
-						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
+						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
 						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
 
-						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, transactionInformation));
+						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
+
+						TransactionalStorage
+							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+							{
+								PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
+								RaiseNotifications(new DocumentChangeNotification
+								{
+									Name = key,
+									Type = DocumentChangeTypes.Put,
+									Etag = newEtag
+								});
+							});
 					}
 					else
 					{
@@ -552,17 +589,6 @@ namespace Raven.Database
 					workContext.ShouldNotifyAboutWork(() => "PUT " + key);
 				});
 			}
-			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
-				{
-					PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-					RaiseNotifications(new DocumentChangeNotification
-					{
-						Name = key,
-						Type = DocumentChangeTypes.Put,
-						Etag = newEtag
-					});
-				});
 
 			log.Debug("Put document {0} with etag {1}", key, newEtag);
 			return new PutResult
@@ -677,14 +703,26 @@ namespace Raven.Database
 							}
 
 							string indexNameCopy = indexName;
-							var task = actions.GetTask<RemoveFromIndexTask>(x => x.Index == indexNameCopy, new RemoveFromIndexTask
+							var task = actions.GetTask(x => x.Index == indexNameCopy, new RemoveFromIndexTask
 							{
 								Index = indexNameCopy
 							});
 							task.Keys.Add(key);
 						}
-						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
+						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 					}
+
+					TransactionalStorage
+						.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+						{
+							DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
+							RaiseNotifications(new DocumentChangeNotification
+							{
+								Name = key,
+								Type = DocumentChangeTypes.Delete,
+							});
+						});
+
 				}
 				else
 				{
@@ -692,17 +730,7 @@ namespace Raven.Database
 				}
 				workContext.ShouldNotifyAboutWork(() => "DEL " + key);
 			});
-			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
-				{
-					DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-					RaiseNotifications(new DocumentChangeNotification
-					{
-						Name = key,
-						Type = DocumentChangeTypes.Delete,
-					});
-				});
-
+			
 			metadata = metadataVar;
 			return deleted;
 		}
@@ -899,7 +927,7 @@ namespace Raven.Database
 						viewGenerator.TransformResultsDefinition != null)
 					{
 						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
-						var robustEnumerator = new RobustEnumerator(dynamicJsonObjects.Length)
+						var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
 						{
 							OnError =
 								(exception, o) =>
@@ -935,7 +963,8 @@ namespace Raven.Database
 				IndexTimestamp = indexTimestamp.Item1,
 				IndexEtag = indexTimestamp.Item2,
 				ResultEtag = resultEtag,
-				IdsToInclude = idsToLoad
+				IdsToInclude = idsToLoad,
+				LastQueryTime = SystemTime.UtcNow
 			};
 		}
 
@@ -954,7 +983,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Raven.Abstractions.Data.Constants.DocumentIdFieldName), IndexQueryTriggers)
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constants.DocumentIdFieldName), IndexQueryTriggers)
 													select queryResult.Key);
 				});
 			stale = isStale;
@@ -1030,7 +1059,7 @@ namespace Raven.Database
 		private Attachment ProcessAttachmentReadVetoes(string name, Attachment attachment)
 		{
 			if (attachment == null)
-				return attachment;
+				return null;
 
 			var foundResult = false;
 			foreach (var attachmentReadTriggerLazy in AttachmentReadTriggers)
@@ -1220,11 +1249,9 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				IEnumerable<JsonDocument> documents;
-				if (etag == null)
-					documents = actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize);
-				else
-					documents = actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
+				var documents = etag == null ? 
+					actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) : 
+					actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents)
 				{
@@ -1240,7 +1267,7 @@ namespace Raven.Database
 			return list;
 		}
 
-		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag, string startsWith)
+		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag, string startsWith, long maxSize)
 		{
 			AttachmentInformation[] attachments = null;
 
@@ -1249,7 +1276,7 @@ namespace Raven.Database
 				if (string.IsNullOrEmpty(startsWith) == false)
 					attachments = actions.Attachments.GetAttachmentsStartingWith(startsWith, start, pageSize).ToArray();
 				else if (etag != null)
-					attachments = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize).ToArray();
+					attachments = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize, maxSize).ToArray();
 				else
 					attachments = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
 
@@ -1299,10 +1326,7 @@ namespace Raven.Database
 
 			if (docId == null)
 				throw new ArgumentNullException("docId");
-			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
-			{
-				return new JsonPatcher(jsonDoc).Apply(patchDoc);
-			});
+			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc => new JsonPatcher(jsonDoc).Apply(patchDoc));
 		}
 
 		private PatchResult ApplyPatchInternal(string docId, Guid? etag,
@@ -1313,7 +1337,7 @@ namespace Raven.Database
 			docId = docId.Trim();
 			var result = PatchResult.Patched;
 			bool shouldRetry = false;
-			int retries = 128;
+			int[] retries = {128};
 			do
 			{
 				TransactionalStorage.Batch(actions =>
@@ -1341,7 +1365,7 @@ namespace Raven.Database
 						}
 						catch (ConcurrencyException)
 						{
-							if (retries-- > 0)
+							if (retries[0]-- > 0)
 							{
 								shouldRetry = true;
 								return;
@@ -1498,24 +1522,32 @@ namespace Raven.Database
 		static string buildVersion;
 		public static string BuildVersion
 		{
-			get
-			{
-				if (buildVersion == null)
-					buildVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).FileBuildPart.ToString();
-				return buildVersion;
+			get {
+				return buildVersion ??
+				       (buildVersion = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location).FileBuildPart.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
 		static string productVersion;
 		private volatile bool disposed;
-
-		public static string ProductVersion
+		public string ServerUrl
 		{
 			get
 			{
-				if (productVersion == null)
-					productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion;
-				return productVersion;
+				var serverUrl = Configuration.ServerUrl;
+				if (string.IsNullOrEmpty(Name))
+					return serverUrl;
+				if(serverUrl.EndsWith("/"))
+					return serverUrl + "databases/" + Name;
+				return serverUrl + "/databases/" + Name;
+			}
+		}
+
+		public static string ProductVersion
+		{
+			get {
+				return productVersion ??
+				       (productVersion = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location).ProductVersion);
 			}
 		}
 

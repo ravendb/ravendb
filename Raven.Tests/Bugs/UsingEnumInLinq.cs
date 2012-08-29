@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class UsingEnumInLinq : LocalClientTest
+	public class UsingEnumInLinq : RavenTest
 	{
 		[Fact]
 		public void Query()

@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class AnalyzerPerField : LocalClientTest
+	public class AnalyzerPerField : RavenTest
 	{
 		[Fact]
 		public void CanUseAnalyzerPerField()

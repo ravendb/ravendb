@@ -19,7 +19,7 @@ using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class Translators : LocalClientTest
+	public class Translators : RavenTest
 	{
 		public class Users : AbstractIndexCreationTask<User>
 		{

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class Fetching : LocalClientTest
+	public class Fetching : RavenTest
 	{
 		[Fact]
 		public void CanFetchMultiplePropertiesFromCollection()

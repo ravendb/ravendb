@@ -6,12 +6,12 @@ using System.Linq;
 
 namespace Raven.Tests.Indexes
 {
-	public class MapReduceIndexOnLargeDataSet : LocalClientTest
+	public class MapReduceIndexOnLargeDataSet : RavenTest
 	{
 		[Fact]
 		public void WillNotProduceAnyErrors()
 		{
-			using(var store = NewDocumentStore("esent", false))
+			using(var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
@@ -33,9 +33,12 @@ namespace Raven.Tests.Indexes
 
 				using (var s = store.OpenSession())
 				{
-					s.Query<dynamic>("test")
+					var ret = s.Query<dynamic>("test")
 						.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
 						.ToArray();
+					Assert.Equal(25, ret.Length);
+					foreach(var x in ret)
+						Assert.Equal("200", x.Count);
 				}
 
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);

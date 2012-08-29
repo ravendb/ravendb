@@ -130,8 +130,15 @@ namespace Raven.Database.Backup
 				if (success == false)
 					throw new Win32Exception();
 
-				var fileInfo = new FileInfo(destFileName);
-				fileToSize[fileInfo.FullName] = fileInfo.Length;
+				try
+				{
+					var fileInfo = new FileInfo(destFileName);
+					fileToSize[fileInfo.FullName] = fileInfo.Length;
+				}
+				catch (IOException)
+				{
+					// something happened to this file, probably was removed somehow
+				}
 			}
 
 			// we have to do this outside the main loop because we mustn't

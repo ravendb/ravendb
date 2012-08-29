@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 		public string Version { get; set; }
 	}
 
-	public class EntitiesWithAttributes : LocalClientTest
+	public class EntitiesWithAttributes : RavenTest
 	{
 		public void EntitiesSerializeCorrectlyWithAttributes()
 		{

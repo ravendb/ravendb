@@ -3,7 +3,7 @@
 		   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
 		   xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
 					  xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Width="400" Height="Auto" 
-		   Title="BundlesSelect">
+		   Title="BundlesSelect" Style="{StaticResource ChildWindowNoAnimationStyle}">
 	<Grid x:Name="LayoutRoot" Margin="2">
 		<Grid.RowDefinitions>
 			<RowDefinition />
@@ -30,7 +30,8 @@
 					  Margin="5"/>
 			<TextBlock Grid.Column="1"
 					   Text="Compression Bundle"
-					   Margin="5"/>
+					   Margin="5"
+					   MouseLeftButtonDown="Toggle"/>
 
 			<CheckBox x:Name="Encryption"
 					  Checked="Checked"
@@ -40,7 +41,8 @@
 			<TextBlock Grid.Column="1"
 					   Grid.Row="1"
 					   Text="Encryption Bundle"
-					   Margin="5"/>			
+					   Margin="5"
+					   MouseLeftButtonDown="Toggle"/>			
 
 			<CheckBox x:Name="Expiration"
 					  Checked="Checked"
@@ -50,7 +52,8 @@
 			<TextBlock Grid.Column="1"
 					   Grid.Row="2"
 					   Text="Expiration Bundle"
-					   Margin="5"/>
+					   Margin="5"
+					   MouseLeftButtonDown="Toggle"/>
 
 			<CheckBox x:Name="Quotas"
 					  Checked="Checked"
@@ -60,7 +63,8 @@
 			<TextBlock Grid.Column="1"
 					   Grid.Row="3"
 					   Text="Quotas Bundle"
-					   Margin="5"/>
+					   Margin="5"
+					   MouseLeftButtonDown="Toggle"/>
 
 			<CheckBox x:Name="Replication"
 					  Checked="Checked"
@@ -70,7 +74,8 @@
 			<TextBlock Grid.Column="1"
 					   Grid.Row="4"
 					   Text="Replication Bundle"
-					   Margin="5"/>
+					   Margin="5"
+					   MouseLeftButtonDown="Toggle"/>
 			<CheckBox x:Name="Versioning"
 					  Checked="Checked"
 					  Unchecked="UnChecked"
@@ -79,7 +84,8 @@
 			<TextBlock Grid.Column="1"
 					   Grid.Row="5"
 					   Text="Versioning Bundle"
-					   Margin="5"/>
+					   Margin="5"
+					   MouseLeftButtonDown="Toggle"/>
 
 		</Grid>
 		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="1" />

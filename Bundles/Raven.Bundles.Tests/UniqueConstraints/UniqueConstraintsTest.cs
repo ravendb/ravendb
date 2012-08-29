@@ -1,4 +1,6 @@
-﻿namespace Raven.Bundles.Tests.UniqueConstraints
+﻿using System.ComponentModel.Composition.Hosting;
+
+namespace Raven.Bundles.Tests.UniqueConstraints
 {
 	using System;
 	using System.IO;
@@ -11,8 +13,16 @@
 	{
 		protected UniqueConstraintsTest()
 		{
-			this.DocumentStore = new EmbeddableDocumentStore {RunInMemory = true};
-			this.DocumentStore.Configuration.PluginsDirectory = Path.GetDirectoryName(typeof(UniqueConstraintsPutTrigger).Assembly.Location);
+			this.DocumentStore = new EmbeddableDocumentStore
+				{
+					RunInMemory = true, 
+					UseEmbeddedHttpServer = true,
+					Configuration =
+						{
+							Port = 8079
+						}
+				};
+			this.DocumentStore.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
 			this.DocumentStore.RegisterListener(new UniqueConstraintsStoreListener());
 
 			this.DocumentStore.Initialize();

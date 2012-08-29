@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Reactive.Linq;
@@ -20,15 +21,45 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/databases";
 			changeDatabase = new ChangeDatabaseCommand();
+			DatabasesWithEditableBundles = new List<string>();
 			Databases = new BindableCollection<DatabaseListItemModel>(m => m.Name);
-			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => OnPropertyChanged(() => SelectedDatabase);
+			Databases.CollectionChanged += (sender, args) => UpdateBundlesList();
+			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) =>
+			{
+				OnPropertyChanged(() => SelectedDatabase);
+				OnPropertyChanged(() => ShowEditBundles);
+			};
+		}
+
+		private void UpdateBundlesList()
+		{
+			foreach (var databaseListItemModel in Databases)
+			{
+				ApplicationModel.Current.Server.Value.DocumentStore
+					.AsyncDatabaseCommands
+					.ForDefaultDatabase()
+					.GetAsync("Raven/Databases/" + databaseListItemModel.Name)
+					.ContinueOnSuccessInTheUIThread(doc =>
+					{
+						if (doc == null || doc.DataAsJson["Settings"].SelectToken("Raven/ActiveBundles", false) == null || DatabasesWithEditableBundles.Contains(doc.Key.Split('/')[2])) 
+							return;
+
+						var bundles = doc.DataAsJson["Settings"].SelectToken("Raven/ActiveBundles", false).ToString();
+						if (!bundles.Contains("Quotas") && !bundles.Contains("Replication") && !bundles.Contains("Versioning")) 
+							return;
+
+						DatabasesWithEditableBundles.Add(doc.Key.Split('/')[2]);
+						OnPropertyChanged(() => ShowEditBundles);
+					});
+			}
 		}
 
 		public BindableCollection<DatabaseListItemModel> Databases { get; private set; }
+		public List<string> DatabasesWithEditableBundles { get; set; }
 
 		public DatabaseListItemModel SelectedDatabase
 		{
-			get { return  ApplicationModel.Database.Value != null ? Databases.FirstOrDefault(m => m.Name.Equals(ApplicationModel.Database.Value.Name, StringComparison.InvariantCulture)) : null; }
+			get { return ApplicationModel.Database.Value != null ? Databases.FirstOrDefault(m => m.Name.Equals(ApplicationModel.Database.Value.Name, StringComparison.InvariantCulture)) : null; }
 			set
 			{
 				if (value == null)
@@ -38,6 +69,14 @@ namespace Raven.Studio.Models
 
 				if (changeDatabase.CanExecute(value.Name))
 					changeDatabase.Execute(value.Name);
+			}
+		}
+
+		public bool ShowEditBundles
+		{
+			get
+			{
+				return SelectedDatabase != null && DatabasesWithEditableBundles.Contains(SelectedDatabase.Name);
 			}
 		}
 

@@ -22,36 +22,36 @@ namespace Raven.Tests.Faceted
 		private readonly IList<Camera> _data;
 		private readonly List<Facet> _originalFacets;
 		private readonly List<Facet> _stronglyTypedFacets;
-		private const int NumCameras = 1000;
+		private const int NumCameras = 1;
 
 		public FacetedIndex()
 		{
 			_data = FacetedIndexTestHelper.GetCameras(NumCameras);
 
 			_originalFacets = new List<Facet>
-			            {
-			                new Facet {Name = "Manufacturer"},
-			                //default is term query	
-			                //In Lucene [ is inclusive, { is exclusive
-			                new Facet
-			                    {
-			                        Name = "Cost_Range",
-			                        Mode = FacetMode.Ranges,
-			                        Ranges =
-			                            {
+			          	{
+			          		new Facet {Name = "Manufacturer"},
+			          		//default is term query		                         
+			          		//In Lucene [ is inclusive, { is exclusive
+			          		new Facet
+			          			{
+			          				Name = "Cost_Range",
+			          				Mode = FacetMode.Ranges,
+			          				Ranges =
+			          					{
 			                                "[NULL TO Dx200]",
 			                                "[Dx200 TO Dx400]",
 			                                "[Dx400 TO Dx600]",
 			                                "[Dx600 TO Dx800]",
 			                                "[Dx800 TO NULL]",
-			                            }
-			                    },
-			                new Facet
-			                    {
-			                        Name = "Megapixels_Range",
-			                        Mode = FacetMode.Ranges,
-			                        Ranges =
-			                            {
+			          					}
+			          			},
+			          		new Facet
+			          			{
+			          				Name = "Megapixels_Range",
+			          				Mode = FacetMode.Ranges,
+			          				Ranges =
+			          					{
 			                                "[NULL TO Dx3]",
 			                                "[Dx3 TO Dx7]",
 			                                "[Dx7 TO Dx10]",
@@ -84,9 +84,9 @@ namespace Raven.Tests.Faceted
 							x => x.Megapixels > 3.0m && x.Megapixels < 7.0m,
 							x => x.Megapixels > 7.0m && x.Megapixels < 10.0m,
 							x => x.Megapixels > 10.0m
-						}
-				}
-			};
+			          					}
+			          			}
+			          	};
 		}
 
 		[Fact]
@@ -253,24 +253,19 @@ namespace Raven.Tests.Faceted
 												{
 													Map =
 														@"from camera in docs 
-														select new 
-														{ 
-															camera.Manufacturer, 
-															camera.Model, 
-															camera.Cost,
-															camera.DateOfListing,
-															camera.Megapixels
-														}"
+                                                        select new 
+                                                        { 
+                                                            camera.Manufacturer, 
+                                                            camera.Model, 
+                                                            camera.Cost,
+                                                            camera.DateOfListing,
+                                                            camera.Megapixels
+                                                        }"
 												});
 
-				var counter = 0;
 				foreach (var camera in _data)
 				{
 					s.Store(camera);
-					counter++;
-
-					if (counter % (NumCameras / 25) == 0)
-						s.SaveChanges();
 				}
 				s.SaveChanges();
 
@@ -280,16 +275,16 @@ namespace Raven.Tests.Faceted
 			}
 		}
 
-		private void PrintFacetResults(IDictionary<string, IEnumerable<FacetValue>> facetResults)
+		private void PrintFacetResults(FacetResults facetResults)
 		{
-			foreach (var kvp in facetResults)
+			foreach (var kvp in facetResults.Results)
 			{
-				if (kvp.Value.Count() > 0)
+				if (kvp.Value.Values.Count() > 0)
 				{
 					Console.WriteLine(kvp.Key + ":");
-					foreach (var facet in kvp.Value)
+					foreach (var facet in kvp.Value.Values)
 					{
-						Console.WriteLine("    {0}: {1}", facet.Range, facet.Count);
+						Console.WriteLine("    {0}: {1}", facet.Range, facet.Hits);
 					}
 					Console.WriteLine();
 				}
@@ -297,33 +292,35 @@ namespace Raven.Tests.Faceted
 		}
 
 		private void CheckFacetResultsMatchInMemoryData(
-					IDictionary<string, IEnumerable<FacetValue>> facetResults,
+					FacetResults facetResults,
 					List<Camera> filteredData)
 		{
+			//Make sure we get all range values
 			Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
-						facetResults["Manufacturer"].Count());
-			foreach (var facet in facetResults["Manufacturer"])
+						facetResults.Results["Manufacturer"].Values.Count());
+
+			foreach (var facet in facetResults.Results["Manufacturer"].Values)
 			{
-				var inMemoryCount = filteredData.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-				Assert.Equal(inMemoryCount, facet.Count);
+				var inMemoryCount = filteredData.Count(x => x.Manufacturer.ToLower() == facet.Range);
+				Assert.Equal(inMemoryCount, facet.Hits);
 			}
 
 			//Go through the expected (in-memory) results and check that there is a corresponding facet result
 			//Not the prettiest of code, but it works!!!
-			var costFacets = facetResults["Cost_Range"];
-			CheckFacetCount(filteredData.Where(x => x.Cost <= 200.0m).Count(),
+			var costFacets = facetResults.Results["Cost_Range"].Values;
+			CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m),
 							costFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx200]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 200.0m && x.Cost <= 400).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400),
 							costFacets.FirstOrDefault(x => x.Range == "[Dx200 TO Dx400]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 400.0m && x.Cost <= 600.0m).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 400.0m && x.Cost <= 600.0m),
 							costFacets.FirstOrDefault(x => x.Range == "[Dx400 TO Dx600]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 600.0m && x.Cost <= 800.0m).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 600.0m && x.Cost <= 800.0m),
 							costFacets.FirstOrDefault(x => x.Range == "[Dx600 TO Dx800]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 800.0m).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 800.0m),
 							costFacets.FirstOrDefault(x => x.Range == "[Dx800 TO NULL]"));
 
 			//Test the Megapixels_Range facets using the same method
-			var megapixelsFacets = facetResults["Megapixels_Range"];
+			var megapixelsFacets = facetResults.Results["Megapixels_Range"].Values;
 			CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
 							megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx3]"));
 			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),
@@ -339,7 +336,7 @@ namespace Raven.Tests.Faceted
 			if (expectedCount > 0)
 			{
 				Assert.NotNull(facets);
-				Assert.Equal(expectedCount, facets.Count);
+				Assert.Equal(expectedCount, facets.Hits);
 			}
 		}
 	}

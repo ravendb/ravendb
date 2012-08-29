@@ -21,7 +21,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			get
 			{
-				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof(ReplicationHiLo), o => new ReplicationHiLo
+				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof(ReplicationHiLo).AssemblyQualifiedName, o => new ReplicationHiLo
 				{
 					Database = Database
 				});
@@ -34,17 +34,17 @@ namespace Raven.Bundles.Replication.Triggers
 				return;
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var attachment = Database.GetStatic(key);
-				if (attachment != null)
+				var attachmentMetadata = GetAttachmentMetadata(key);
+				if (attachmentMetadata != null)
 				{
-					var history = attachment.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
+					var history = attachmentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
 					              new RavenJArray();
 					metadata[Constants.RavenReplicationHistory] = history;
 
 					history.Add(new RavenJObject
 					{
-						{Constants.RavenReplicationVersion, attachment.Metadata[Constants.RavenReplicationVersion]},
-						{Constants.RavenReplicationSource, attachment.Metadata[Constants.RavenReplicationSource]}
+						{Constants.RavenReplicationVersion, attachmentMetadata[Constants.RavenReplicationVersion]},
+						{Constants.RavenReplicationSource, attachmentMetadata[Constants.RavenReplicationSource]}
 
 					});
 
@@ -56,6 +56,25 @@ namespace Raven.Bundles.Replication.Triggers
 				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
 				metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
 			}
+		}
+
+		private RavenJObject GetAttachmentMetadata(string key)
+		{
+			var attachment = Database.GetStatic(key);
+			if(attachment != null)
+				return attachment.Metadata;
+
+			RavenJObject result = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				var tombstone = accessor.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, key);
+				if (tombstone == null)
+					return;
+				result = tombstone.Data;
+				accessor.Lists.Remove(Constants.RavenReplicationAttachmentsTombstones, key);
+			});
+
+			return result;
 		}
 	}
 }

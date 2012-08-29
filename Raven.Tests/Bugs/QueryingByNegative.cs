@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingByNegative : LocalClientTest
+	public class QueryingByNegative : RavenTest
 	{
 		[Fact]
 		public void CanQueryByNullUsingLinq()

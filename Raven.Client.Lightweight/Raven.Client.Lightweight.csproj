@@ -205,6 +205,7 @@
     <Compile Include="Shard\ShardRequestData.cs" />
     <Compile Include="Shard\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
+    <Compile Include="Util\JSBeautify.cs" />
     <Compile Include="Util\ConcatObservable.cs" />
     <Compile Include="Changes\TaskObservable.cs" />
     <Compile Include="Util\Inflector.cs" />

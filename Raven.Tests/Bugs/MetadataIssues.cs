@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MetadataIssues : LocalClientTest
+	public class MetadataIssues : RavenTest
 	{
 		public class RavenA
 		{

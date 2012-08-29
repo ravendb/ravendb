@@ -46,7 +46,7 @@ namespace Raven.Client
 		/// Subscribe to change notifications from the server
 		/// </summary>
 
-		public abstract IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
+		public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
 
 		public abstract IDatabaseChanges Changes(string database = null);
 
@@ -146,7 +146,7 @@ namespace Raven.Client
 				{
 					if (lastEtag == null)
 					{
-						lastEtag = new DocumentStore.EtagHolder
+						lastEtag = new EtagHolder
 						{
 							Bytes = newEtag,
 							Etag = etag.Value
@@ -170,7 +170,7 @@ namespace Raven.Client
 					return;
 				}
 
-				lastEtag = new DocumentStore.EtagHolder
+				lastEtag = new EtagHolder
 				{
 					Etag = etag.Value,
 					Bytes = newEtag

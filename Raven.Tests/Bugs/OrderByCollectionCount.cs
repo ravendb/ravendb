@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OrderByCollectionCount : LocalClientTest
+	public class OrderByCollectionCount : RavenTest
 	{
 		[Fact]
 		public void CanOrderByTheCountOfASubSollection() {

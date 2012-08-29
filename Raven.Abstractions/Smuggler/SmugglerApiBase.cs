@@ -46,14 +46,14 @@ namespace Raven.Abstractions.Smuggler
 					Directory.CreateDirectory(folder);
 				}
 
-				options.File = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
+				options.File = Path.Combine(folder, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(options.File))
 				{
 					var counter = 1;
 					var found = false;
 					while (found == false)
 					{
-						options.File = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
+						options.File = Path.Combine(folder, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
 
 						if (File.Exists(options.File) == false)
 							found = true;
@@ -247,6 +247,8 @@ namespace Raven.Abstractions.Smuggler
 				var indexName = index.Value<string>("name");
 				if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
 					continue;
+				if (index.Value<RavenJObject>("definition").Value<bool>("IsCompiled"))
+					continue; // can't import compiled indexes
 				PutIndex(indexName, index);
 			}
 

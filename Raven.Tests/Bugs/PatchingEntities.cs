@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class PatchingEntities : LocalClientTest
+	public class PatchingEntities : RavenTest
 	{
 
 		[Fact]

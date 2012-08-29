@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class FindPropertyNameForIndex :  LocalClientTest
+	public class FindPropertyNameForIndex : RavenTest
 	{
 		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
 		{

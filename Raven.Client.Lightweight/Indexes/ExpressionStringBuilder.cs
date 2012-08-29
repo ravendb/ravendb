@@ -1344,10 +1344,51 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
+		private static readonly Dictionary<Type, string> wellKnownTypes = new Dictionary<Type, string>
+		{
+			{typeof (object), "object"},
+			{typeof (string), "string"},
+			{typeof (int), "int"},
+			{typeof (long), "long"},
+			{typeof (float), "float"},
+			{typeof (double), "double"},
+			{typeof (decimal), "decimal"},
+			{typeof (bool), "bool"},
+			{typeof (char), "char"},
+			{typeof (byte), "byte"},
+			{typeof (Guid), "Guid"},
+			{typeof (DateTime), "DateTime"},
+			{typeof (DateTimeOffset), "DateTimeOffset"},
+			{typeof (TimeSpan), "TimeSpan"},
+		};
 		private void VisitType(Type type)
 		{
 			if (type.IsGenericType == false || CheckIfAnonymousType(type))
 			{
+				if(type.IsArray)
+				{
+					VisitType(type.GetElementType());
+					Out("[");
+					for (int i = 0; i < type.GetArrayRank()-1; i++)
+					{
+						Out(",");
+					}
+					Out("]");
+					return;
+				}
+				var nonNullableType = Nullable.GetUnderlyingType(type);
+				if(nonNullableType != null)
+				{
+					VisitType(nonNullableType);
+					Out("?");
+					return;
+				}
+				string value;
+				if(wellKnownTypes.TryGetValue(type, out value))
+				{
+					Out(value);
+					return;
+				}
 				Out(type.Name);
 				return;
 			}
@@ -1671,13 +1712,16 @@ namespace Raven.Client.Indexes
 					// we only cast enums and types is mscorlib), we don't support anything else
 					// because the VB compiler like to put converts all over the place, and include
 					// types that we can't really support (only exists on the client)
-					if ((node.Type.IsEnum ||
-						 node.Type.Assembly == typeof(string).Assembly) &&
-						node.Type.IsGenericType == false)
+					var nonNullableType = Nullable.GetUnderlyingType(node.Type) ?? node.Type;
+					if ((nonNullableType.IsEnum ||
+						 nonNullableType.Assembly == typeof(string).Assembly) &&
+						 (nonNullableType.IsGenericType == false))
 					{
 						Out("(");
 						Out("(");
-						Out(node.Type.FullName);
+						Out(nonNullableType.FullName);
+						if (Nullable.GetUnderlyingType(node.Type) != null)
+							Out("?");
 						Out(")");
 					}
 					Out("(");
@@ -1716,9 +1760,10 @@ namespace Raven.Client.Indexes
 					// we only cast enums and types is mscorlib), we don't support anything else
 					// because the VB compiler like to put converts all over the place, and include
 					// types that we can't really support (only exists on the client)
-					if ((node.Type.IsEnum ||
-						 node.Type.Assembly == typeof(string).Assembly) &&
-						node.Type.IsGenericType == false)
+					var nonNullableType = Nullable.GetUnderlyingType(node.Type) ?? node.Type;
+					if ((nonNullableType.IsEnum ||
+						 nonNullableType.Assembly == typeof(string).Assembly) &&
+						nonNullableType.IsGenericType == false)
 					{
 						Out(")");
 					}

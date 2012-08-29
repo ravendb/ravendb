@@ -140,7 +140,7 @@ namespace Raven.Storage.Esent.StorageActions
 		
 		}
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag, int take)
+		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag, int take, long maxTotalSize)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
 			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -153,7 +153,16 @@ namespace Raven.Storage.Esent.StorageActions
 				optimizer.Add();
 			} while (Api.TryMoveNext(session, Files) && optimizer.Count < take);
 
-			return optimizer.Select(ReadCurrentAttachmentInformation);
+			long totalSize = 0;
+
+			return optimizer
+				.Where(_ => totalSize <= maxTotalSize)
+				.Select(o => ReadCurrentAttachmentInformation())
+				.Select(x=>
+				{
+					totalSize += x.Size;
+					return x;
+				});
 		}
 
 		private AttachmentInformation ReadCurrentAttachmentInformation()

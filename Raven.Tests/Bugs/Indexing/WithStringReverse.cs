@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class WithStringReverse : LocalClientTest
+	public class WithStringReverse : RavenTest
 	{
 		[Fact]
 		public void GivenSomeUsers_QueryWithAnIndex_ReturnsUsersWithNamesReversed()

@@ -9,7 +9,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Spatial
 {
-	public class SpatialSearch : LocalClientTest
+	public class SpatialSearch : RavenTest
 	{
 		private class SpatialIdx : AbstractIndexCreationTask<Event>
 		{

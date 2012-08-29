@@ -21,7 +21,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			get
 			{
-				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof (ReplicationHiLo), o => new ReplicationHiLo
+				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof (ReplicationHiLo).AssemblyQualifiedName, o => new ReplicationHiLo
 				{
 					Database = Database
 				});
@@ -35,19 +35,19 @@ namespace Raven.Bundles.Replication.Triggers
 				return;
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var doc = Database.Get(key, null);
-				if (doc != null)
+				var documentMetadata = GetDocumentMetadata(key);
+				if (documentMetadata != null)
 				{
-					var history = doc.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+					var history = documentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
 					metadata[Constants.RavenReplicationHistory] = history;
 
-					if (doc.Metadata.ContainsKey(Constants.RavenReplicationVersion) && 
-						doc.Metadata.ContainsKey(Constants.RavenReplicationSource))
+					if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 
+						documentMetadata.ContainsKey(Constants.RavenReplicationSource))
 					{
 						history.Add(new RavenJObject
 						{
-							{Constants.RavenReplicationVersion, doc.Metadata[Constants.RavenReplicationVersion]},
-							{Constants.RavenReplicationSource, doc.Metadata[Constants.RavenReplicationSource]}
+							{Constants.RavenReplicationVersion, documentMetadata[Constants.RavenReplicationVersion]},
+							{Constants.RavenReplicationSource, documentMetadata[Constants.RavenReplicationSource]}
 						});
 					}
 
@@ -56,9 +56,28 @@ namespace Raven.Bundles.Replication.Triggers
 						history.RemoveAt(0);
 					}
 				}
+
 				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
 				metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
 			}
+		}
+
+		private RavenJObject GetDocumentMetadata(string key)
+		{
+			var doc = Database.GetDocumentMetadata(key, null);
+			if (doc != null)
+				return doc.Metadata;
+
+			RavenJObject result = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				var tombstone = accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, key);
+				if (tombstone == null)
+					return;
+				result = tombstone.Data;
+				accessor.Lists.Remove(Constants.RavenReplicationDocsTombstones, key);
+			});
+			return result;
 		}
 	}
 }

@@ -96,6 +96,9 @@ namespace Raven.Studio.Models
 			if (singleTenant)
 				return null;
 
+			if (SelectedDatabase.Value.HasReplication)
+				SelectedDatabase.Value.UpdateReplicationOnlineStatus();
+
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>
 				                   	{
@@ -109,12 +112,17 @@ namespace Raven.Studio.Models
 				                   			CreateNewDatabase = true;
 				                   		}
 
-				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase))
-				                   			return;
+				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase)) 
+											return;
 
-				                   	    var url = new UrlParser(UrlUtil.Url);
-                                        url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
-                                        SetCurrentDatabase(url);
+				                   		var url = new UrlParser(UrlUtil.Url);
+
+										if (Settings.Instance.SelectedDatabase != null && names.Contains(Settings.Instance.SelectedDatabase))
+										{
+											url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
+											SetCurrentDatabase(url);
+											UrlUtil.Navigate(Settings.Instance.LastUrl);
+										}
 				                   	})
 				.Catch();
 		}
@@ -187,20 +195,20 @@ namespace Raven.Studio.Models
             SelectedDatabase.Value.AsyncDatabaseCommands
                 .EnsureSilverlightStartUpAsync()
                 .Catch();
-
-            Settings.Instance.SelectedDatabase = databaseName;
+			if(databaseName != null && databaseName != Constants.SystemDatabase)
+				Settings.Instance.SelectedDatabase = databaseName;
 		}
 
 		private void DisplayBuildNumber()
 		{
-			SelectedDatabase.Value.AsyncDatabaseCommands.GetBuildNumber()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetBuildNumberAsync()
 				.ContinueOnSuccessInTheUIThread(x => BuildNumber = x.BuildVersion)
 				.Catch();
 		}
 
 		private void DisplyaLicenseStatus()
 		{
-			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatus()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatusAsync()
 				.ContinueOnSuccessInTheUIThread(x =>
 				{
 					License.Value = x;

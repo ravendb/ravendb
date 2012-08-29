@@ -7,7 +7,9 @@
 	<BitmapImage x:Key="Image_Online" UriSource="online.png"/>
 	<BitmapImage x:Key="Image_Offline" UriSource="offline.png"/>
     <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="index_tiny.png"/>
-    <BitmapImage x:Key="Image_DocumentIndex_Small" UriSource="index_small.png"/>
+	<BitmapImage x:Key="Image_DocumentIndex_Small" UriSource="index_small.png"/>
+	<BitmapImage x:Key="Image_DeleteIndex_Small" UriSource="index_delete_small.png"/>
+	<BitmapImage x:Key="Image_DeleteIndex_Tiny" UriSource="index_delete_Tiny.png"/>
     <BitmapImage x:Key="Image_Document_Tiny" UriSource="document_tiny.png"/>
     <BitmapImage x:Key="Image_Document_Small" UriSource="document_small.png"/>
     <BitmapImage x:Key="Image_Add_Tiny" UriSource="add_tiny.png"/>
@@ -32,7 +34,8 @@
     <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="previous_tiny.png"/>
     <BitmapImage x:Key="Image_LastPage_Tiny" UriSource="navigate_last_tiny.png"/>
     <BitmapImage x:Key="Image_FirstPage_Tiny" UriSource="navigate_first_tiny.png"/>
-    <BitmapImage x:Key="Image_Database_Tiny" UriSource="database_tiny.png"/>
+	<BitmapImage x:Key="Image_Database_Tiny" UriSource="database_tiny.png"/>
+	<BitmapImage x:Key="Image_Database_System_Tiny" UriSource="database_system_tiny.png"/>
     <BitmapImage x:Key="Image_AddDatabase_Tiny" UriSource="database_add_tiny.png"/>
     <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="index_add_tiny.png"/>
     <BitmapImage x:Key="Image_ExecuteQuery_Small" UriSource="execute_query_tiny.png"/>

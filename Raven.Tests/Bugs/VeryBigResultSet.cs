@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class VeryBigResultSet : LocalClientTest
+	public class VeryBigResultSet : RavenTest
 	{
 		[Fact]
 		public void CanGetVeryBigResultSetsEvenThoughItIsBadForYou()

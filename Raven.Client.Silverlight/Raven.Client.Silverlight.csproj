@@ -601,8 +601,17 @@
     <Compile Include="..\Raven.Abstractions\Data\FacetMode.cs">
       <Link>Imports\Data\FacetMode.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetResult.cs">
+      <Link>Imports\Data\FacetResult.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetResults.cs">
+      <Link>Imports\Data\FacetResults.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\FacetSetup.cs">
       <Link>Imports\Data\FacetSetup.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetTermSortMode.cs">
+      <Link>Imports\Data\FacetTermSortMode.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\FacetValue.cs">
       <Link>Imports\Data\FacetValue.cs</Link>
@@ -747,6 +756,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\ConcurrentSet.cs">
       <Link>Imports\Util\ConcurrentSet.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\EasyReaderWriterLock.cs">
+      <Link>Imports\Util\EasyReaderWriterLock.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
       <Link>Imports\Util\IncludesUtil.cs</Link>
@@ -931,6 +943,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\JSBeautify.cs">
+      <Link>Imports\Util\JSBeautify.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
     </Compile>
@@ -979,6 +994,9 @@
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
+      <Link>Imports\Imports\Newtonsoft.Json\Dynamic.snk</Link>
+    </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>Imports\RavenDB.snk</Link>
     </None>

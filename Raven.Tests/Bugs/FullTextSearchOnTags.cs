@@ -123,7 +123,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void SearchCanUseOr()
+		public void StandardSearchWillProduceExpectedResult()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -135,7 +135,7 @@ namespace Raven.Tests.Bugs
 						.Where(x => x.Name == "User");
 
 
-					Assert.Equal("Tags:<<i love cats>> Name:User", ravenQueryable.ToString());
+					Assert.Equal("Tags:<<i love cats>> AND (Name:User)", ravenQueryable.ToString());
 				}
 			}
 		}
@@ -172,6 +172,43 @@ namespace Raven.Tests.Bugs
 
 
 					Assert.Equal("Tags:<<i love cats>> AND (Name:User)", ravenQueryable.ToString());
+				}
+			}
+		}
+
+		[Fact]
+		public void SearchCanUseOr()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var ravenQueryable = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.Search(x => x.Tags, "i love cats", options: SearchOptions.Or)
+						.Where(x => x.Name == "User");
+
+
+					Assert.Equal("Tags:<<i love cats>> Name:User", ravenQueryable.ToString());
+				}
+			}
+		}
+
+		[Fact]
+		public void SearchWillUseGuessByDefault()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var ravenQueryable = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.Search(x => x.Tags, "i love cats")
+						.Search(x => x.Users, "i love cats")
+						.Where(x => x.Name == "User");
+
+
+					Assert.Equal("( Tags:<<i love cats>> Users:<<i love cats>>) AND (Name:User)", ravenQueryable.ToString());
 				}
 			}
 		}
@@ -282,7 +319,7 @@ namespace Raven.Tests.Bugs
 						.Search(x => x.Tags, "canine love", boost: 13);
 					var s = ravenQueryable
 						.ToString();
-					Assert.Equal("Tags:<<i love cats>>^3 Tags:<<canine love>>^13", s);
+					Assert.Equal("( Tags:<<i love cats>>^3 Tags:<<canine love>>^13)", s);
 
 					var images = ravenQueryable.ToList();
 
@@ -320,7 +357,7 @@ namespace Raven.Tests.Bugs
 						.Search(x => x.Tags, "i love cats")
 						.Search(x => x.Users, "oren")
 						.ToString();
-					Assert.Equal("Tags:<<i love cats>> Users:<<oren>>", query.Trim());
+					Assert.Equal("( Tags:<<i love cats>> Users:<<oren>>)", query.Trim());
 				}
 			}
 		}

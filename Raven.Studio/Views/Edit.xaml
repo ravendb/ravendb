@@ -142,8 +142,14 @@
                 <TextBlock Text="{Binding DisplayId}"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
-            </StackPanel>
-        </toolkit:HeaderedContentControl.Header>
+				<TextBlock Text="    "/>
+				<TextBlock Text="A Conflict was detected and must be resolved." 
+						   Style="{StaticResource Style_TextBlock_GroupHeader}"
+						   Visibility="{Binding ResolvingConflict, Converter={StaticResource BooleanToVisibility}}"
+						   VerticalAlignment="Center"/>
+
+			</StackPanel>
+		</toolkit:HeaderedContentControl.Header>
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.8*" />

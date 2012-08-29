@@ -91,7 +91,7 @@ namespace Raven.Storage.Managed
 
 		public void UpdateIndexingStats(string index, IndexingWorkStats stats)
 		{
-			var indexStats = GetCurrentIndex(index);
+			var indexStats = (RavenJObject)GetCurrentIndex(index).CloneToken();
 			indexStats["attempts"] = indexStats.Value<int>("attempts") + stats.IndexingAttempts;
 			indexStats["successes"] = indexStats.Value<int>("successes") + stats.IndexingSuccesses;
 			indexStats["failures"] = indexStats.Value<int>("failures") + stats.IndexingErrors;
@@ -137,7 +137,7 @@ namespace Raven.Storage.Managed
 			var readResult = storage.IndexingStats.Read(index);
 			if (readResult == null)
 				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
-			var key = (RavenJObject)readResult.Key;
+			var key = (RavenJObject)readResult.Key.CloneToken();
 			key["touches"] = key.Value<int>("touches") + 1;
 			storage.IndexingStats.UpdateKey(key);
 		}
@@ -148,7 +148,7 @@ namespace Raven.Storage.Managed
 			if (readResult == null)
 				throw new ArgumentException("There is no index with the name: " + index);
 
-			var ravenJObject = (RavenJObject)readResult.Key;
+			var ravenJObject = (RavenJObject)readResult.Key.CloneToken();
 			ravenJObject["lastEtag"] = etag.ToByteArray();
 			ravenJObject["lastTimestamp"] = timestamp;
 
@@ -161,7 +161,7 @@ namespace Raven.Storage.Managed
 			if (readResult == null)
 				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
 
-			var ravenJObject = (RavenJObject)readResult.Key;
+			var ravenJObject = (RavenJObject)readResult.Key.CloneToken();
 			ravenJObject["lastReducedEtag"] = etag.ToByteArray();
 			ravenJObject["lastReducedTimestamp"] = timestamp;
 

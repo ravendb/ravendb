@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class MissingAnalyzer : LocalClientTest
+	public class MissingAnalyzer : RavenTest
 	{
 		[Fact]
 		public void Should_give_clear_error_when_starting()

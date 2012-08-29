@@ -10,7 +10,7 @@ namespace Raven.Tests.Linq
 	using System.Linq;
 	using Xunit;
 
-	public class LongCount : LocalClientTest
+	public class LongCount : RavenTest
 	{
 		private class TestDoc
 		{

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Suggestions
 {
-	public class SuggestionsLazy : LocalClientTest
+	public class SuggestionsLazy : RavenTest
 	{
 		[Fact]
 		public void UsingLinq()

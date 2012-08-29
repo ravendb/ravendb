@@ -45,7 +45,10 @@ namespace Raven.Tests.MailingList
 				new Index_ByDescriptionAndTitle().Execute(store);
 
 				var indexDefinition = store.DatabaseCommands.GetIndex("Index/ByDescriptionAndTitle");
-				Assert.Equal("docs.Documents\r\n\t.Where(doc => doc.Title == \"dfsdfsfd\")\r\n\t.Select(doc => new {Description = doc.Description, Title = doc.Title})", indexDefinition.Map);
+				Assert.Equal(@"docs.Documents.Where(doc => doc.Title == ""dfsdfsfd"").Select(doc => new {
+    Description = doc.Description,
+    Title = doc.Title
+})", indexDefinition.Map);
 			}	
 		}
 
@@ -57,7 +60,10 @@ namespace Raven.Tests.MailingList
 				new Index_ByDescriptionAndTitle2().Execute(store);
 
 				var indexDefinition = store.DatabaseCommands.GetIndex("Index/ByDescriptionAndTitle2");
-				Assert.Equal("docs.Documents\r\n\t.Where(doc => doc.IsDeleted == false)\r\n\t.Select(doc => new {Description = doc.Description, Title = doc.Title})", indexDefinition.Map);
+				Assert.Equal(@"docs.Documents.Where(doc => doc.IsDeleted == false).Select(doc => new {
+    Description = doc.Description,
+    Title = doc.Title
+})", indexDefinition.Map);
 			}
 		}	 
 	}

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests
 {
-	public class ConnectionStrings : LocalClientTest
+	public class ConnectionStrings : RavenTest
 	{
 		[Fact]
 		public void WillNotAffectResourceManagerId()

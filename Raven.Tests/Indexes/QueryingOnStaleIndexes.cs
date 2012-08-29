@@ -6,6 +6,7 @@
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -15,21 +16,21 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class QueryingOnStaleIndexes: AbstractDocumentStorageTest
+	public class QueryingOnStaleIndexes: RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public QueryingOnStaleIndexes()
 		{
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-		
-
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
@@ -48,7 +49,6 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void WillGetNonStaleResultWhenAskingWithCutoffDate()
 		{
-			db.SpinBackgroundWorkers();
 			db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
 			for (int i = 0; i < 500; i++)

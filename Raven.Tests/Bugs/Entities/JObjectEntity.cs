@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Entities
 {
-	public class JObjectEntity : LocalClientTest
+	public class JObjectEntity : RavenTest
 	{
 		[Fact]
 		public void CanUseJObjectAsEntityDirectly()

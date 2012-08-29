@@ -42,7 +42,7 @@ namespace Raven.Database.Config
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
-			MaxIndexingRunLatency = TimeSpan.FromMinutes(1);
+			MaxIndexingRunLatency = TimeSpan.FromMinutes(5);
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
 
@@ -160,7 +160,8 @@ namespace Raven.Database.Config
 
 			// Data settings
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
-			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
+			if(string.IsNullOrEmpty(DefaultStorageTypeName))
+				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded =
 				GetConfigurationValue<bool>("Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded") ?? true;
@@ -582,7 +583,12 @@ namespace Raven.Database.Config
 		/// Allowed values: esent, munin
 		/// Default: esent
 		/// </summary>
-		public string DefaultStorageTypeName { get; set; }
+		public string DefaultStorageTypeName
+		{
+			get { return defaultStorageTypeName; }
+			set { if(!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
+		}
+		private string defaultStorageTypeName;
 
 		private bool runInMemory;
 

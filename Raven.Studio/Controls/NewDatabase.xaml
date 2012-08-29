@@ -2,69 +2,168 @@
 		   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
 		   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
 		   xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
-		   Width="400" Height="Auto" 
-		   Title="NewDatabase">
-	<Grid x:Name="LayoutRoot" Margin="2">
+		   Width="Auto" Height="Auto" 
+		   Title="NewDatabase" Style="{StaticResource ChildWindowNoAnimationStyle}">
+	<Grid x:Name="LayoutRoot" >
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="25"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition />
-			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
-
-		<Grid>
+		<Grid Margin="2">
 			<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto"/>
+				<RowDefinition />
 			</Grid.RowDefinitions>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="*"/>
-			</Grid.ColumnDefinitions>
-			
-			<TextBlock Text="Name: "
+
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
+
+				<TextBlock Text="Name: "
 					   Margin="10"/>
-			<TextBox x:Name="DbName"
+				<TextBox x:Name="DbName"
 					 Grid.Column="1"
-					 Margin="5"/>
-			<CheckBox Grid.Row="1" HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvanded"/>
-			<TextBlock Text="Advanced Settings"
+					 Margin="5" KeyDown="DbName_KeyDown" Width="200"/>
+				<CheckBox Grid.Row="1" HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvanced"/>
+				<TextBlock Text="Advanced Settings"
 					   Grid.Column="1"
-					   Grid.Row="1"/>	
-		</Grid>
-		<Grid Grid.Row="1" x:Name="AdvancedSettings" Visibility="Collapsed">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-			</Grid.RowDefinitions>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="*"/>
-			</Grid.ColumnDefinitions>
+					   Grid.Row="1"
+						   Margin="6,0,0,0"
+					   MouseLeftButtonDown="Toggle"/>
+			</Grid>
+			<Grid Grid.Row="1" x:Name="AdvancedSettings" Visibility="Collapsed">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
 
 
-			<TextBlock x:Name="DbPath" Text="Path: "
+				<TextBlock x:Name="DbPath" Text="Path: "
 					   Margin="10"/>
-			<TextBox Grid.Column="1"
+				<TextBox Grid.Column="1"
 					 Margin="5"/>
-			<TextBlock Text="Logs: "
+				<TextBlock Text="Logs: "
 					   Grid.Row="1"
 					   Margin="10"/>
-			<TextBox x:Name="LogsPath" Grid.Column="1"
+				<TextBox x:Name="LogsPath" Grid.Column="1"
 					 Grid.Row="1"
 					 Margin="5"/>
-			<TextBlock Text="Indexes: "
+				<TextBlock Text="Indexes: "
 					   Grid.Row="2"
 					   Margin="10"/>
-			<TextBox x:Name="IndexPath" Grid.Column="1"
+				<TextBox x:Name="IndexPath" Grid.Column="1"
 					 Grid.Row="2"
 					 Margin="5"/>
+			</Grid>
 		</Grid>
 
-		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="2" />
-		<Button x:Name="OKButton" Content="Next" Click="OKButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="2" />
+		
+		<Grid Grid.Column="2" Margin="2">
+			<Grid.RowDefinitions>
+				<RowDefinition />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
+
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+
+				<CheckBox x:Name="Compression"
+					  Checked="Checked"
+					  Unchecked="UnChecked"
+					  Margin="5"/>
+				<TextBlock Grid.Column="1"
+					   Text="Compression Bundle"
+					   Margin="5"
+					   MouseLeftButtonDown="ToggleBundles"/>
+
+				<CheckBox x:Name="Encryption"
+					  Checked="Checked"
+					  Unchecked="UnChecked"
+					  Grid.Row="1"
+					  Margin="5"/>
+				<TextBlock Grid.Column="1"
+					   Grid.Row="1"
+					   Text="Encryption Bundle"
+					   Margin="5"
+					   MouseLeftButtonDown="ToggleBundles"/>
+
+				<CheckBox x:Name="Expiration"
+					  Checked="Checked"
+					  Unchecked="UnChecked"
+					  Grid.Row="2"
+					  Margin="5"/>
+				<TextBlock Grid.Column="1"
+					   Grid.Row="2"
+					   Text="Expiration Bundle"
+					   Margin="5"
+					   MouseLeftButtonDown="ToggleBundles"/>
+
+				<CheckBox x:Name="Quotas"
+					  Checked="Checked"
+					  Unchecked="UnChecked"
+					  Grid.Row="3"
+					  Margin="5"/>
+				<TextBlock Grid.Column="1"
+					   Grid.Row="3"
+					   Text="Quotas Bundle"
+					   Margin="5"
+					   MouseLeftButtonDown="ToggleBundles"/>
+
+				<CheckBox x:Name="Replication"
+					  Checked="Checked"
+					  Unchecked="UnChecked"
+					  Grid.Row="4"
+					  Margin="5"/>
+				<TextBlock Grid.Column="1"
+					   Grid.Row="4"
+					   Text="Replication Bundle"
+					   Margin="5"
+					   MouseLeftButtonDown="ToggleBundles"/>
+				<CheckBox x:Name="Versioning"
+					  Checked="Checked"
+					  Unchecked="UnChecked"
+					  Grid.Row="5"
+					  Margin="5"/>
+				<TextBlock Grid.Column="1"
+					   Grid.Row="5"
+					   Text="Versioning Bundle"
+					   Margin="5"
+					   MouseLeftButtonDown="ToggleBundles"/>
+
+			</Grid>
+		</Grid>
+		
+		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="2" Grid.ColumnSpan="3"/>
+		<Button x:Name="OKButton" Content="Next" Click="OKButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="2" IsEnabled="{Binding Path=Text, ElementName=DbName,Converter={StaticResource StringToBoolean}}" Grid.ColumnSpan="3"/>
 	</Grid>
 </controls:ChildWindow>

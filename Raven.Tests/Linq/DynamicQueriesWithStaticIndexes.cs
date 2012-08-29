@@ -7,7 +7,7 @@ using System.Linq;
 namespace Raven.Tests.Linq
 {
 
-	public class DynamicQueriesWithStaticIndexes : LocalClientTest
+	public class DynamicQueriesWithStaticIndexes : RavenTest
 	{
 
 		[Fact]

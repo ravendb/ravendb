@@ -6,8 +6,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using Raven.Abstractions;
 
-namespace Raven.Database.Server.SignalR
+namespace Raven.Database.Server.Connections
 {
 	public class TimeSensitiveStore<T>
 	{
@@ -28,13 +29,13 @@ namespace Raven.Database.Server.SignalR
 
 		public void Missing(T item)
 		{
-			var now = DateTime.UtcNow;
+			var now = SystemTime.UtcNow;
 			lastSeen.AddOrUpdate(item, now, (arg1, time) => now);
 		}
 
 		public void ForAllExpired(Action<T> action)
 		{
-			var now = DateTime.UtcNow;
+			var now = SystemTime.UtcNow;
 			foreach (var kvp in from kvp in lastSeen 
 								let durationNotSeen = now - kvp.Value 
 								where durationNotSeen >= timeout 

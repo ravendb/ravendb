@@ -28,8 +28,7 @@ namespace Raven.Storage.Managed
 				return 1;
 			}
 			var val = result.Key.Value<int>("id") + 1;
-			((RavenJObject)result.Key)["id"] = val;
-			storage.Identity.UpdateKey(result.Key);
+			storage.Identity.UpdateKey(new RavenJObject { { "name", name }, { "id", val } });
 			return val;
 		}
 	}

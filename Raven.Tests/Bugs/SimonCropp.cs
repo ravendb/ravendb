@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SimonCropp : LocalClientTest
+	public class SimonCropp : RavenTest
 	{
 		public class WorkflowItem
 		{

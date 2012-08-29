@@ -90,9 +90,6 @@
     <Reference Include="Lucene.Net.Contrib.Spatial">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.SpellChecker">
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.SpellChecker.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Mono.Cecil">
@@ -110,6 +107,8 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
@@ -151,12 +150,32 @@
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Bundles\Replication\Responders\AttachmentReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\DocumentReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\SingleItemReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
+    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
+    <Compile Include="Bundles\SpellChecker\Dictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\JaroWinklerDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\LevenshteinDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\LuceneDictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\NGramDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\PlainTextDictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\SpellChecker.cs" />
+    <Compile Include="Bundles\SpellChecker\StringDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\SuggestWord.cs" />
+    <Compile Include="Bundles\SpellChecker\SuggestWordQueue.cs" />
+    <Compile Include="Bundles\SpellChecker\TRStringDistance.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
     <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Extensions\AdminFinder.cs" />
+    <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
+    <Compile Include="Indexing\IndexingUtil.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
     <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
@@ -168,6 +187,7 @@
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
+    <Compile Include="Server\Responders\Admin\AdminChangeDbId.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
@@ -573,6 +593,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From36To37.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From37To38.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
@@ -589,7 +610,6 @@
     <Compile Include="Storage\Esent\TableColumnsCache.cs" />
     <Compile Include="Storage\Esent\TransactionalStorage.cs" />
     <Compile Include="Storage\Esent\TransactionalStorageConfigurator.cs" />
-    <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />
@@ -617,7 +637,6 @@
     <Compile Include="Storage\Managed\Munin\AbstractPersistentSource.cs" />
     <Compile Include="Storage\Managed\Munin\Command.cs" />
     <Compile Include="Storage\Managed\Munin\CommandType.cs" />
-    <Compile Include="Storage\Managed\Munin\ComparableByteArray.cs" />
     <Compile Include="Storage\Managed\Munin\Database.cs" />
     <Compile Include="Storage\Managed\Munin\FileBasedPersistentSource.cs" />
     <Compile Include="Storage\Managed\Munin\IComparerAndEquality.cs" />
@@ -647,12 +666,14 @@
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
     <Compile Include="Storage\Managed\TransactionStorageActions.cs" />
-    <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\BoundedMemoryTarget.cs" />
+    <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\PortUtil.cs" />
+    <Compile Include="Util\Streams\BufferPool.cs" />
+    <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -68,7 +68,7 @@ namespace Raven.Tests.Silverlight
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
 
-			var now = SystemTime.Now;
+			var now = SystemTime.UtcNow;
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 

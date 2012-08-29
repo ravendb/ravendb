@@ -127,19 +127,22 @@ namespace Raven.Storage.Managed
 			       };
 		}
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value, int take)
+		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value, int take, long maxTotalSize)
 		{
-			return from key in storage.Attachments["ByEtag"]
-			       	.SkipAfter(new RavenJObject {{"etag", value.ToByteArray()}})
-			       	.Take(take)
-			       let attachment = GetAttachment(key.Value<string>("key"))
-			       select new AttachmentInformation
-			       {
-			       	Key = key.Value<string>("key"),
-			       	Etag = new Guid(key.Value<byte[]>("etag")),
-			       	Metadata = attachment.Metadata,
-			       	Size = attachment.Size
-			       };
+			long totalSize = 0;
+			return (from key in storage.Attachments["ByEtag"]
+				        .SkipAfter(new RavenJObject {{"etag", value.ToByteArray()}})
+				        .Take(take)
+			        let attachment = GetAttachment(key.Value<string>("key"))
+					let _ = totalSize += attachment.Size
+					where totalSize <= maxTotalSize
+			        select new AttachmentInformation
+			        {
+				        Key = key.Value<string>("key"),
+				        Etag = new Guid(key.Value<byte[]>("etag")),
+				        Metadata = attachment.Metadata,
+				        Size = attachment.Size
+			        });
 		}
 	}
 }

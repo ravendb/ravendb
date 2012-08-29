@@ -8,32 +8,30 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class CompiledIndex : AbstractDocumentStorageTest
+	public class CompiledIndex : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public CompiledIndex()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				Catalog = { Catalogs = { new TypeCatalog(typeof(ShoppingCartEventsToShopingCart), typeof(MapOnlyView)) } }
-			});
-			db.SpinBackgroundWorkers();
+			store =
+
+				NewDocumentStore(new AggregateCatalog
+				{Catalogs = {new TypeCatalog(typeof (ShoppingCartEventsToShopingCart), typeof (MapOnlyView))}});
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

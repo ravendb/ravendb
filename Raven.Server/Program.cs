@@ -224,7 +224,7 @@ Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
 Configuration options:
 ",
-				SystemTime.Now.Year);
+				SystemTime.UtcNow.Year);
 
 			foreach (var configOptionDoc in ConfigOptionDocs.OptionsDocs)
 			{
@@ -353,14 +353,14 @@ Configuration options:
 			bool? done = null;
 			var actions = new Dictionary<string,Action>
 			{
-				{"cls", () => Console.Clear()},
+				{"cls", TryClearingConsole},
 				{
 					"reset", () =>
 					{
-						Console.Clear();
+						TryClearingConsole();
 						done = true;
 					}
-					},
+				},
 				{
 					"gc", () =>
 					{
@@ -396,6 +396,18 @@ Configuration options:
 			}
 		}
 
+		private static void TryClearingConsole()
+		{
+			try
+			{
+				Console.Clear();
+			}
+			catch (IOException)
+			{
+				// redirected output, probably, ignoring
+			}
+		}
+
 		private static void WriteInteractiveOptions(Dictionary<string, Action> actions)
 		{
 			Console.WriteLine("Available commands: {0}", string.Join(", ", actions.Select(x => x.Key)));
@@ -411,7 +423,7 @@ Document Database for the .Net Platform
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
 Command line ptions:",
-				SystemTime.Now.Year);
+				SystemTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);
 

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Distinct : LocalClientTest
+	public class Distinct : RavenTest
 	{
 		[Fact]
 		public void CanQueryForDistinctItems()

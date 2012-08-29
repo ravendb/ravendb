@@ -23,11 +23,11 @@ namespace Raven.Database.Linq
 		public IEnumerable<object> Execute()
 		{
 			if (item == null)
-				return Enumerable.Empty<object>();
+				return new DynamicList(Enumerable.Empty<object>());
 
 			var current = NullIfEmptyEnumerable(func(item));
 			if (current == null)
-				return Enumerable.Empty<object>();
+				return new DynamicList(Enumerable.Empty<object>());
 
 			queue.Enqueue(item);
 			while (queue.Count > 0)

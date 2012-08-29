@@ -15,7 +15,7 @@ namespace Raven.Bundles.Encryption.Settings
 {
 	internal static class EncryptionSettingsManager
 	{
-		private static readonly object EncryptionSettingsKeyInExtensionsState = new object();
+		private static readonly string EncryptionSettingsKeyInExtensionsState = Guid.NewGuid().ToString();
 
 		public static EncryptionSettings GetEncryptionSettingsForDatabase(DocumentDatabase database)
 		{

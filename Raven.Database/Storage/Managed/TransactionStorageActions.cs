@@ -43,7 +43,8 @@ namespace Raven.Storage.Managed
 				StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
 				AssertValidEtag(key, readResult, storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } }), etag);
 
-				((RavenJObject)readResult.Key)["txId"] = transactionInformation.Id.ToByteArray();
+				var ravenJObject = ((RavenJObject) readResult.Key.CloneToken());
+				ravenJObject["txId"] = transactionInformation.Id.ToByteArray();
 				if (storage.Documents.UpdateKey(readResult.Key) == false)
 					throw new ConcurrencyException("PUT attempted on document '" + key +
 												   "' that is currently being modified by another transaction");
@@ -114,7 +115,8 @@ namespace Raven.Storage.Managed
 
 			if (readResult != null)
 			{
-				((RavenJObject)readResult.Key)["txId"] = transactionInformation.Id.ToByteArray();
+				var ravenJObject = ((RavenJObject) readResult.Key.CloneToken());
+				ravenJObject["txId"] = transactionInformation.Id.ToByteArray();
 				if (storage.Documents.UpdateKey(readResult.Key) == false)
 					throw new ConcurrencyException("DELETE attempted on document '" + key +
 												   "' that is currently being modified by another transaction");
@@ -146,7 +148,8 @@ namespace Raven.Storage.Managed
 				var readResult = storage.Documents.Read(new RavenJObject { { "key", data.Key } });
 				if (readResult == null)
 					return;
-				((RavenJObject)readResult.Key).Remove("txId");
+				var ravenJObject = ((RavenJObject) readResult.Key.CloneToken());
+				ravenJObject.Remove("txId");
 				storage.Documents.UpdateKey(readResult.Key);
 			});
 		}
@@ -165,7 +168,8 @@ namespace Raven.Storage.Managed
 				var readResult = storage.Documents.Read(new RavenJObject { { "key", data.Key } });
 				if (readResult != null)
 				{
-					((RavenJObject)readResult.Key)["txId"] = toTxId.ToByteArray();
+					var ravenJObject = ((RavenJObject) readResult.Key.CloneToken());
+					ravenJObject["txId"] = toTxId.ToByteArray();
 					storage.Documents.UpdateKey(readResult.Key);
 				}
 

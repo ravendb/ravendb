@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class BatchPatching : LocalClientTest
+	public class BatchPatching : RavenTest
 	{
 		[Fact]
 		public void CanSuccessulyPatchInBatches()

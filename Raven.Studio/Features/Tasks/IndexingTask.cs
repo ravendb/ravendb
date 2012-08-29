@@ -30,7 +30,7 @@ namespace Raven.Studio.Features.Tasks
 
 		public override System.Threading.Tasks.Task TimerTickedAsync()
 		{
-			return ApplicationModel.DatabaseCommands.GetIndexingStatus()
+			return ApplicationModel.DatabaseCommands.GetIndexingStatusAsync()
 				.ContinueOnSuccessInTheUIThread(item =>
 													{
 														IndexingStatus = item;

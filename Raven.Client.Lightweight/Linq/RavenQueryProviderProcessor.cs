@@ -16,6 +16,7 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Linq
 {
@@ -277,7 +278,9 @@ namespace Raven.Client.Linq
 				return;
 			}
 
-			if (constantExpression != null && false.Equals(constantExpression.Value))
+
+			if (constantExpression != null && false.Equals(constantExpression.Value) && 
+				expression.Left.NodeType != ExpressionType.MemberAccess)
 			{
 				luceneQuery.OpenSubclause();
 				luceneQuery.Where("*:*");
@@ -635,45 +638,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			switch (expression.Method.Name)
 			{
 				case "Search":
-					VisitExpression(expression.Arguments[0]);
-					var expressionInfo = GetMember(expression.Arguments[1]);
-					object value;
-					if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
-					{
-						throw new InvalidOperationException("Could not extract value from " + expression);
-					}
-					var searchTerms = (string) value;
-					if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
-					{
-						throw new InvalidOperationException("Could not extract value from " + expression);
-					}
-					var boost = (decimal) value;
-					if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[4], out value) == false)
-					{
-						throw new InvalidOperationException("Could not extract value from " + expression);
-					}
-					var options = (SearchOptions) value;
-					if (chainedWhere && (options & SearchOptions.And) == SearchOptions.And)
-					{
-						luceneQuery.AndAlso();
-					}
-					if ((options & SearchOptions.Not) == SearchOptions.Not)
-					{
-						luceneQuery.NegateNext();
-					}
-
-					if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out value) == false)
-					{
-						throw new InvalidOperationException("Could not extract value from " + expression);
-					}
-					var queryOptions = (EscapeQueryOptions) value;
-					luceneQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
-					luceneQuery.Boost(boost);
-
-					if ((options & SearchOptions.And) == SearchOptions.And)
-					{
-						chainedWhere = true;
-					}
+					VisitSearch(expression);
 
 					break;
 				case "Intersect":
@@ -692,6 +657,97 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						throw new NotSupportedException("Method not supported: " + expression.Method.Name);
 					}
 			}
+		}
+
+		private void VisitSearch(MethodCallExpression searchExpression)
+		{
+			var expressions = new List<MethodCallExpression>();
+
+			var search = searchExpression;
+			var target = searchExpression.Arguments[0];
+			object value;
+			while (true)
+			{
+
+				expressions.Add(search);
+
+				if (LinqPathProvider.GetValueFromExpressionWithoutConversion(search.Arguments[4], out value) == false)
+				{
+					throw new InvalidOperationException("Could not extract value from " + searchExpression);
+				}
+				var queryOptions = (SearchOptions)value;
+				if (queryOptions.HasFlag(SearchOptions.Guess) == false)
+					break;
+
+				search = search.Arguments[0] as MethodCallExpression;
+				if (search == null ||
+					searchExpression.Method.Name != "Search" ||
+					searchExpression.Method.DeclaringType != typeof(LinqExtensions))
+					break;
+
+				target = search.Arguments[0];
+			}
+
+			VisitExpression(target);
+
+			if(expressions.Count > 1)
+			{
+				luceneQuery.OpenSubclause();
+			}
+
+			foreach (var expression in Enumerable.Reverse(expressions))
+			{
+				var expressionInfo = GetMember(expression.Arguments[1]);
+				if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out value) == false)
+				{
+					throw new InvalidOperationException("Could not extract value from " + expression);
+				}
+				var searchTerms = (string)value;
+				if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
+				{
+					throw new InvalidOperationException("Could not extract value from " + expression);
+				}
+				var boost = (decimal)value;
+				if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[4], out value) == false)
+				{
+					throw new InvalidOperationException("Could not extract value from " + expression);
+				}
+				var options = (SearchOptions)value;
+				if (chainedWhere && (options & SearchOptions.And) == SearchOptions.And)
+				{
+					luceneQuery.AndAlso();
+				}
+				if ((options & SearchOptions.Not) == SearchOptions.Not)
+				{
+					luceneQuery.NegateNext();
+				}
+
+				if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out value) == false)
+				{
+					throw new InvalidOperationException("Could not extract value from " + expression);
+				}
+				var queryOptions = (EscapeQueryOptions)value;
+				luceneQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
+				luceneQuery.Boost(boost);
+
+				if ((options & SearchOptions.And) == SearchOptions.And)
+				{
+					chainedWhere = true;
+				}
+			}
+
+			if(expressions.Count > 1)
+			{
+				luceneQuery.CloseSubclause();
+			}
+
+			if (LinqPathProvider.GetValueFromExpressionWithoutConversion(searchExpression.Arguments[4], out value) == false)
+			{
+				throw new InvalidOperationException("Could not extract value from " + searchExpression);
+			}
+
+			if (((SearchOptions)value).HasFlag(SearchOptions.Guess))
+				chainedWhere = true;
 		}
 
 		private void VisitEnumerableMethodCall(MethodCallExpression expression)
@@ -921,7 +977,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression memberExpression = ((MemberExpression)body);
-					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name);
+					AddToFieldsToFetch(memberExpression.ToPropertyPath('_'), memberExpression.Member.Name);
 					if(insideSelect == false)
 					{
 						FieldsToRename[memberExpression.Member.Name] = null;
@@ -1139,7 +1195,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 #if !SILVERLIGHT
 		private object ExecuteQuery<TProjection>()
 		{
-			var finalQuery = ((IDocumentQuery<T>)luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray());
+			var renamedFields = FieldsToFetch.Select(field =>
+			{
+				string value;
+				if (FieldsToRename.TryGetValue(field, out value) && value != null)
+					return value;
+				return field;
+			}).ToArray();
+
+			var finalQuery = ((IDocumentQuery<T>) luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
 
 
 			if (FieldsToRename.Count > 0)

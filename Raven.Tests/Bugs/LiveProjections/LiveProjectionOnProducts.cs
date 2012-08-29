@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 
 	using Xunit;
 
-	public class LiveProjectionOnProducts : LocalClientTest
+	public class LiveProjectionOnProducts : RavenTest
 	{
 		[Fact]
 		public void SimpleLiveProjection()

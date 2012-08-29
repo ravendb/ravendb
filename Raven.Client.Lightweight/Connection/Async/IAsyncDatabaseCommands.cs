@@ -219,21 +219,21 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
-		Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
+		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
 
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
 
-		Task<LicensingStatus> GetLicenseStatus();
+		Task<LicensingStatus> GetLicenseStatusAsync();
 
-		Task<BuildNumber> GetBuildNumber();
+		Task<BuildNumber> GetBuildNumberAsync();
 
 		Task StartBackupAsync(string backupLocation);
 
-		Task StartIndexing();
+		Task StartIndexingAsync();
 
-		Task StopIndexing();
+		Task StopIndexingAsync();
 
-		Task<string> GetIndexingStatus();
+		Task<string> GetIndexingStatusAsync();
 
 		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false);
 

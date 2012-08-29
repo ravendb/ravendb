@@ -120,24 +120,47 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) != false)
+			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ))
 			{
 				Api.JetDelete(session, IndexesStats);
 			}
 
 			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
 			Api.MakeKey(session, IndexesEtags, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) != false)
+			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ))
 			{
 				Api.JetDelete(session, IndexesEtags);
 			}
 
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
 			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) != false)
+			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ))
 			{
 				Api.JetDelete(session, IndexesStatsReduce);
 			}
+
+			foreach (var table in new[]{MappedResults, ReducedResults, ScheduledReductions})
+			{
+				Api.JetSetCurrentIndex(session, table, "by_view");
+				Api.MakeKey(session, table, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				if (!Api.TrySeek(session, table, SeekGrbit.SeekEQ))
+					continue;
+
+				Api.MakeKey(session, table, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.JetSetIndexRange(session, table, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+				var count = 0;
+				do
+				{
+					if(count++ > 1000)
+					{
+						PulseTransaction();
+						count = 0;
+					}
+						
+					Api.JetDelete(session, table);
+				} while (Api.TryMoveNext(session, table));
+			}
+
 		}
 
 		public IndexFailureInformation GetFailureRate(string index)

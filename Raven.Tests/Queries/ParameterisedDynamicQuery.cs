@@ -6,6 +6,7 @@
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Client.Embedded;
 using Raven.Database.Config;
 using Raven.Database.Queries;
 using Raven.Tests.Storage;
@@ -15,22 +16,20 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.Queries
 {
-	public class ParameterisedDynamicQuery : AbstractDocumentStorageTest
+	public class ParameterisedDynamicQuery : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public ParameterisedDynamicQuery()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-				{
-					DataDirectory = DataDir,
-				});
-			db.SpinBackgroundWorkers();
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

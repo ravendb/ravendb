@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class ComplexLinq : LocalClientTest
+	public class ComplexLinq : RavenTest
 	{
 		[Fact]
 		public void QueryOnNegation()

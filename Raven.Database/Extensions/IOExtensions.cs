@@ -36,18 +36,27 @@ namespace Raven.Database.Extensions
 				}
 				catch (IOException)
 				{
-					foreach (var childDir in Directory.GetDirectories(directory))
+					try
 					{
-						try
+						foreach (var childDir in Directory.GetDirectories(directory, "*", SearchOption.AllDirectories))
 						{
-							File.SetAttributes(childDir, FileAttributes.Normal);
+							try
+							{
+								File.SetAttributes(childDir, FileAttributes.Normal);
+							}
+							catch (IOException)
+							{
+							}
+							catch (UnauthorizedAccessException)
+							{
+							}
 						}
-						catch (IOException)
-						{
-						}
-						catch (UnauthorizedAccessException)
-						{
-						}
+					}
+					catch (IOException)
+					{
+					}
+					catch (UnauthorizedAccessException)
+					{
 					}
 					if (i == retries-1)// last try also failed
 						throw;

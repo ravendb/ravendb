@@ -48,6 +48,7 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -567,6 +568,9 @@
     <Compile Include="Data\ChangeNotification.cs" />
     <Compile Include="Data\ConnectionStringParser.cs" />
     <Compile Include="Data\Constants.cs" />
+    <Compile Include="Data\FacetTermSortMode.cs" />
+    <Compile Include="Data\FacetResults.cs" />
+    <Compile Include="Data\FacetResult.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Commands\ICommandData.cs" />
@@ -609,6 +613,7 @@
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
+    <Compile Include="Json\ConflictsResolver.cs" />
     <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
     <Compile Include="Json\JsonFloatConverter.cs" />
@@ -672,10 +677,14 @@
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\EasyReaderWriterLock.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
+      <Link>Imports\Newtonsoft.Json\Dynamic.snk</Link>
+    </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
