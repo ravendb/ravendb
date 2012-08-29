@@ -715,6 +715,7 @@
     <Compile Include="MailingList\PhilJones_SelectMany_NoResults.cs" />
     <Compile Include="MailingList\ProjectionTests.cs" />
     <Compile Include="MailingList\QueryNotAnyTest.cs" />
+    <Compile Include="MailingList\RateTests.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RavenDB252.cs" />
     <Compile Include="MailingList\RavenProjectionGuid.cs" />
