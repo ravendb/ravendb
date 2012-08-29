@@ -14,6 +14,11 @@ namespace Raven.Studio.Controls
 			InitializeComponent();
 			DataContext = this;
 			Bundles = new List<string>();
+			KeyDown += (sender, args) =>
+			{
+				if (args.Key == Key.Escape)
+					DialogResult = false;
+			};
 		}
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)

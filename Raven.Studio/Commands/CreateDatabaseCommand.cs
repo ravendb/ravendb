@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
@@ -70,12 +71,19 @@ namespace Raven.Studio.Commands
 								{
 									DataContext = bundlesModel
 								};
-
-								bundlesSettings.Add(new ChildWindow()
+								var bundlesSettingsWindow = new ChildWindow()
 								{
 									Title = "Setup bundles",
-									Content = bundleView
-								});
+									Content = bundleView,
+								};
+
+								bundlesSettingsWindow.KeyDown += (sender, args) =>
+								{
+									if (args.Key == Key.Escape)
+										bundlesSettingsWindow.DialogResult = false;
+								};
+
+								bundlesSettings.Add(bundlesSettingsWindow);
 							}
 
 							new Wizard(bundlesSettings).StartAsync()
