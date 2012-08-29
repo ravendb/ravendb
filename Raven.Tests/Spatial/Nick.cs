@@ -1,4 +1,6 @@
 ﻿using System.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Xunit;
 
@@ -63,8 +65,9 @@ namespace Raven.Tests.Spatial
 
 					Assert.Null(result); // No result should be returned.
 
+					var shape = SpatialIndexQuery.GetQueryShapeFromLatLon(48.6003516, 2.4632387000000335, 33);
 					result = session.Advanced.LuceneQuery<MySpatialDocument, MySpatialIndex>()
-						.WithinRadiusOf(radius: 33, latitude: 48.6003516, longitude: 2.4632387000000335)
+						.RelatesToShape(Constants.DefaultSpatialFieldName, shape, SpatialRelation.Intersects, 0)
 						.SingleOrDefault();
 
 					Assert.Null(result); // No result should be returned.
