@@ -311,7 +311,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name = "radius">The radius.</param>
+		/// <param name = "radius">The radius in KM.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
 		TSelf WithinRadiusOf(double radius, double latitude, double longitude);
@@ -319,7 +319,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name = "radius">The radius.</param>
+		/// <param name = "radius">The radius in KM.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
 		TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
