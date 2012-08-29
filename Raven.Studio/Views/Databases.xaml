@@ -124,9 +124,9 @@
 
 				<Controls:ContextMenuService.ContextMenu>
 					<Controls:ContextMenu>
-						<Controls:MenuItem Header="Edit Bundles"
+						<Controls:MenuItem Header="Edit Settings"
 											Command="{StaticResource NavigateToCommand}" 
-										 CommandParameter="/bundles"
+										 CommandParameter="/settings"
 										   Visibility="{Binding ShowEditBundles, Converter={StaticResource BooleanToVisibility}}"/>
 						<Controls:MenuItem Header="Delete"
 											Command="{Binding DeleteSelectedDatabase}">

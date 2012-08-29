@@ -10,11 +10,11 @@ using Raven.Client.Linq;
 
 namespace Raven.Studio.Models
 {
-	public class BundlesModel : BaseBundlesModel
+	public class SettingsModel : BaseSettingsModel
 	{
 		private string databaseName;
 
-		public BundlesModel()
+		public SettingsModel()
 		{
 			VersioningConfigurations.CollectionChanged += (sender, args) => OnPropertyChanged(() => HasDefaultVersioning);
 			InitializeFromServer();

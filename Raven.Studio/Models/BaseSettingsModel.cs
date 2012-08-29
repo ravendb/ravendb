@@ -10,12 +10,12 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class BaseBundlesModel : ViewModel
+	public class BaseSettingsModel : ViewModel
 	{
 		public bool Creation { get; set; }
 		public DatabaseDocument DatabaseDocument { get; set; }
 
-		public BaseBundlesModel() 
+		public BaseSettingsModel() 
 		{
 			Bundles = new ObservableCollection<string>();
 			ReplicationDestinations = new ObservableCollection<ReplicationDestination>();

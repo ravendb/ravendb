@@ -6,11 +6,11 @@ namespace Raven.Studio.Commands
 {
 	public class DeleteReplicationCommand : Command
 	{
-		private readonly BaseBundlesModel bundlesModel;
+		private readonly BaseSettingsModel settingsModel;
 
-		public DeleteReplicationCommand(BaseBundlesModel bundlesModel)
+		public DeleteReplicationCommand(BaseSettingsModel settingsModel)
 		{
-			this.bundlesModel = bundlesModel;
+			this.settingsModel = settingsModel;
 		}
 
 		public override void Execute(object parameter)
@@ -18,8 +18,8 @@ namespace Raven.Studio.Commands
 			var destination = parameter as ReplicationDestination;
 			if (destination == null)
 				return;
-			bundlesModel.ReplicationDestinations.Remove(destination);
-			bundlesModel.SelectedReplication = null;
+			settingsModel.ReplicationDestinations.Remove(destination);
+			settingsModel.SelectedReplication = null;
 		}
 	}
 }

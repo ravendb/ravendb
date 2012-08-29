@@ -6,16 +6,16 @@ namespace Raven.Studio.Commands
 {
 	public class AddReplicationCommand : Command
 	{
-		private readonly BaseBundlesModel bundlesModel;
+		private readonly BaseSettingsModel settingsModel;
 
-		public AddReplicationCommand(BaseBundlesModel bundlesModel)
+		public AddReplicationCommand(BaseSettingsModel settingsModel)
 		{
-			this.bundlesModel = bundlesModel;
+			this.settingsModel = settingsModel;
 		}
 
 		public override void Execute(object parameter)
 		{
-			bundlesModel.ReplicationDestinations.Add(new ReplicationDestination());
+			settingsModel.ReplicationDestinations.Add(new ReplicationDestination());
 		}
 	}
 }

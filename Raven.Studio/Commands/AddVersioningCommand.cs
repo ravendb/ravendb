@@ -6,16 +6,16 @@ namespace Raven.Studio.Commands
 {
 	public class AddVersioningCommand: Command
 	{
-		private BaseBundlesModel bundlesModel;
+		private BaseSettingsModel settingsModel;
 
-		public AddVersioningCommand(BaseBundlesModel bundlesModel)
+		public AddVersioningCommand(BaseSettingsModel settingsModel)
 		{
-			this.bundlesModel = bundlesModel;
+			this.settingsModel = settingsModel;
 		}
 
 		public override void Execute(object parameter)
 		{
-			bundlesModel.VersioningConfigurations.Add(new VersioningConfiguration());
+			settingsModel.VersioningConfigurations.Add(new VersioningConfiguration());
 		}
 	}
 }

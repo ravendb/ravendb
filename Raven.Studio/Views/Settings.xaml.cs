@@ -3,9 +3,9 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Views
 {
-	public partial class Bundles : PageView
+	public partial class Settings : PageView
 	{
-		public Bundles()
+		public Settings()
 		{
 			InitializeComponent();
 		}
