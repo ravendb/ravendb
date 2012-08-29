@@ -623,6 +623,7 @@
     <Compile Include="MailingList\NSB.cs" />
     <Compile Include="MailingList\OrderByValueTypeCast.cs" />
     <Compile Include="MailingList\Oregon.cs" />
+    <Compile Include="MailingList\ParallelTxDelete.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\LazyWithIncludes.cs" />
