@@ -8,7 +8,8 @@
 						 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 						 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 						 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Controls="clr-namespace:System.Windows.Controls"
-						 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity" d:DesignWidth="640" d:DesignHeight="480"
+						 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                         xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors" d:DesignWidth="640" d:DesignHeight="480"
 		   Title="SettingsView Page">
 
 	<UserControl.Resources>
@@ -136,19 +137,29 @@
 		<Grid Grid.Row="1">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="*"/>
 			</Grid.ColumnDefinitions>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="Auto"/>
 			</Grid.RowDefinitions>
 
-			<ListBox ItemsSource="{Binding Bundles, Mode=OneWay}" SelectedValue="{Binding SelectedBundle.Value, Mode=TwoWay}"
+			<ListBox ItemsSource="{Binding Settings, Mode=OneWay}" SelectedValue="{Binding SelectedSetting.Value, Mode=TwoWay}"
 						 Style="{StaticResource Style_ListBox_TabStrip}"
 						 Margin="5,10,10,0">
 			</ListBox>
 
+			<Border MinWidth="600" MinHeight="400" Grid.Row="1" Background="White" BorderThickness="5" BorderBrush="Gray" CornerRadius="10" Visibility="{Binding DatabaseSettingsSelected, Converter={StaticResource BooleanToVisibility}}">
+				<Grid >
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition/>
+					</Grid.RowDefinitions>
+					<HyperlinkButton Content="Edit"
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="{Binding CurrentDatabase, StringFormat='/edit?databaseid=\{0\}'}"/>
+					<Editors:JsonEditor BoundDocument="{Binding DatabaseEditor}" Height="Auto" IsEnabled="False" Grid.Row="1"/>
+				</Grid>
+			</Border>
 			<Border Grid.Row="1" Background="White" BorderThickness="5" BorderBrush="Gray" CornerRadius="10" Visibility="{Binding QuotasSelected, Converter={StaticResource BooleanToVisibility}}">
 				<Grid>
 					<Grid.RowDefinitions>

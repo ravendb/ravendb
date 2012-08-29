@@ -122,7 +122,8 @@
 								 VerticalAlignment="Center"
 								 Margin="0,5,5,1"
 								  Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/settings">
+								 CommandParameter="/settings"
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenDifferent}, ConverterParameter='&lt;system&gt;'}">
 					<Image Source="{StaticResource Image_Settings_Tiny}"/>
 				</HyperlinkButton>
 

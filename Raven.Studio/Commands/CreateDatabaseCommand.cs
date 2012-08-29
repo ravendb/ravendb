@@ -51,20 +51,20 @@ namespace Raven.Studio.Commands
 									};
 								if (bundlesModel.HasQuotas)
 								{
-									bundlesModel.Bundles.Add("Quotas");
-									bundlesModel.SelectedBundle.Value = "Quotas";
+									bundlesModel.Settings.Add("Quotas");
+									bundlesModel.SelectedSetting.Value = "Quotas";
 								}
 								if (bundlesModel.HasReplication)
 								{ 
-									bundlesModel.Bundles.Add("Replication");
-									if(bundlesModel.SelectedBundle.Value == null)
-										bundlesModel.SelectedBundle.Value = "Replication";
+									bundlesModel.Settings.Add("Replication");
+									if(bundlesModel.SelectedSetting.Value == null)
+										bundlesModel.SelectedSetting.Value = "Replication";
 								}
 								if (bundlesModel.HasVersioning)
 								{
-									bundlesModel.Bundles.Add("Versioning");
-									if (bundlesModel.SelectedBundle.Value == null)
-										bundlesModel.SelectedBundle.Value = "Versioning";
+									bundlesModel.Settings.Add("Versioning");
+									if (bundlesModel.SelectedSetting.Value == null)
+										bundlesModel.SelectedSetting.Value = "Versioning";
 								}
 
 								var bundleView = new SettingsView()

@@ -2,32 +2,53 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
+using ActiproSoftware.Text;
+using ActiproSoftware.Text.Implementation;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
 using Raven.Studio.Commands;
+using Raven.Studio.Features.JsonEditor;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
 	public class BaseSettingsModel : ViewModel
 	{
+		protected static JsonSyntaxLanguageExtended JsonLanguage;
+		private IEditorDocument databaseEditor;
+
+		static BaseSettingsModel()
+		{
+			JsonLanguage = new JsonSyntaxLanguageExtended();
+		}
+
 		public bool Creation { get; set; }
 		public DatabaseDocument DatabaseDocument { get; set; }
+		public IEditorDocument DatabaseEditor
+		{
+			get { return databaseEditor; }
+			set { databaseEditor = value; }
+		}
 
 		public BaseSettingsModel() 
 		{
-			Bundles = new ObservableCollection<string>();
+			Settings = new ObservableCollection<string>();
 			ReplicationDestinations = new ObservableCollection<ReplicationDestination>();
 			VersioningConfigurations = new ObservableCollection<VersioningConfiguration>();
-			SelectedBundle = new Observable<string>();
+			SelectedSetting = new Observable<string>();
+			DatabaseEditor = new EditorDocument
+			{
+				Language = JsonLanguage
+			};
 
 			VersioningConfigurations.CollectionChanged += (sender, args) => OnPropertyChanged(() => HasDefaultVersioning);
-			SelectedBundle.PropertyChanged += (sender, args) =>
+			SelectedSetting.PropertyChanged += (sender, args) =>
 			{
 				OnPropertyChanged(() => QuotasSelected);
 				OnPropertyChanged(() => ReplicationSelected);
 				OnPropertyChanged(() => VersioningSelected);
+				OnPropertyChanged(() => DatabaseSettingsSelected);
 			};
 		}
 
@@ -38,8 +59,8 @@ namespace Raven.Studio.Models
 		public ReplicationDestination SelectedReplication { get; set; }
 		public VersioningConfiguration SeletedVersioning { get; set; }
 		public ObservableCollection<ReplicationDestination> ReplicationDestinations { get; set; }
-		public ObservableCollection<string> Bundles { get; set; }
-		public Observable<string> SelectedBundle { get; set; }
+		public ObservableCollection<string> Settings { get; set; }
+		public Observable<string> SelectedSetting { get; set; }
 
 		public virtual bool HasQuotas { get; set; }
 		public virtual bool HasReplication { get; set; }
@@ -49,19 +70,24 @@ namespace Raven.Studio.Models
 			get { return VersioningConfigurations.Any(configuration => configuration.Id == "Raven/Versioning/DefaultConfiguration"); }
 		}
 
+		public bool DatabaseSettingsSelected
+		{
+			get { return SelectedSetting.Value == "Database Settings"; }
+		}
+
 		public bool QuotasSelected
 		{
-			get { return SelectedBundle.Value == "Quotas"; }
+			get { return SelectedSetting.Value == "Quotas"; }
 		}
 
 		public bool ReplicationSelected
 		{
-			get { return SelectedBundle.Value == "Replication"; }
+			get { return SelectedSetting.Value == "Replication"; }
 		}
 
 		public bool VersioningSelected
 		{
-			get { return SelectedBundle.Value == "Versioning"; }
+			get { return SelectedSetting.Value == "Versioning"; }
 		}
 
 		public virtual int MaxSize { get; set; }

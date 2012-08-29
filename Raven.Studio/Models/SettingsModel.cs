@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
+using ActiproSoftware.Text.Implementation;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
@@ -22,6 +23,7 @@ namespace Raven.Studio.Models
 
 		private void InitializeFromServer()
 		{
+			OriginalVersioningConfigurations = new ObservableCollection<VersioningConfiguration>();
 			databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName)
 				.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
@@ -46,18 +48,28 @@ namespace Raven.Studio.Models
 						{
 							VersioningConfigurations.Add(versioningConfiguration);
 						}
-						OriginalVersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list);
+						foreach (var versioningConfiguration in list)
+						{
+							OriginalVersioningConfigurations.Add(versioningConfiguration);							
+						}
 					});
 
 			ApplicationModel.Current.Server.Value.DocumentStore
 				.AsyncDatabaseCommands
 				.ForDefaultDatabase()
-				.GetAsync("Raven/Databases/" + ApplicationModel.Database.Value.Name)
+				.CreateRequest("/admin/databases/" + ApplicationModel.Database.Value.Name, "GET")
+				.ReadResponseJsonAsync()
 				.ContinueOnSuccessInTheUIThread(doc =>
 				{
+					if (doc == null)
+						return;
+					DatabaseEditor = new EditorDocument
+					{
+						Text = doc.ToString(),
+						Language = JsonLanguage
+					};
 					DatabaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer().Deserialize
-						<DatabaseDocument>(
-							new RavenJTokenReader(doc.DataAsJson));
+						<DatabaseDocument>(new RavenJTokenReader(doc));
 					OnPropertyChanged(() => HasQuotas);
 					OnPropertyChanged(() => HasReplication);
 					OnPropertyChanged(() => HasVersioning);
@@ -65,6 +77,7 @@ namespace Raven.Studio.Models
 					OnPropertyChanged(() => WarnSize);
 					OnPropertyChanged(() => MaxDocs);
 					OnPropertyChanged(() => WarnDocs);
+					OnPropertyChanged(() => DatabaseEditor);
 
 					if (HasVersioning)
 					{
@@ -81,23 +94,20 @@ namespace Raven.Studio.Models
 							});
 					}
 
+					Settings.Add("Database Settings");
+					SelectedSetting.Value = "Database Settings";
+
 					if (HasQuotas)
-					{
-						Bundles.Add("Quotas");
-						SelectedBundle.Value = "Quotas";
-					}
-					if (HasReplication)
-					{
-						Bundles.Add("Replication");
-						if (SelectedBundle.Value == null)
-							SelectedBundle.Value = "Replication";
-					}
+						Settings.Add("Quotas");
+
+					if (HasReplication)			
+						Settings.Add("Replication");
+
 					if (HasVersioning)
-					{
-						Bundles.Add("Versioning");
-						if (SelectedBundle.Value == null)
-							SelectedBundle.Value = "Versioning";
-					}
+						Settings.Add("Versioning");
+
+					OnPropertyChanged(() => Settings);
+					OnPropertyChanged(() => SelectedSetting);
 				});
 		}
 
