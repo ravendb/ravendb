@@ -25,6 +25,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 		private volatile bool executing;
+		private string awsAccessKey;
+		private string awsSecretKey;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -39,6 +41,9 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			if (backupConfigs.Interval <= 0)
 				return;
 
+			awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
+			awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
+
 			logger.Info("Periodic backups started, will backup every" + interval + "minutes");
 
 			interval = backupConfigs.Interval;
@@ -51,20 +56,30 @@ namespace Raven.Database.Bundles.PeriodicBackups
 				return;
 			executing = true;
 
-			// Setup doc might be deleted or changed by the user
-			var document = Database.Get(PeriodicBackupSetup.RavenDocumentKey, null);
-			if (document == null)
+			PeriodicBackupSetup backupConfigs;
+			try
 			{
-				timer.Dispose();
-				timer = null;
-				return;
-			}
+				// Setup doc might be deleted or changed by the user
+				var document = Database.Get(PeriodicBackupSetup.RavenDocumentKey, null);
+				if (document == null)
+				{
+					timer.Dispose();
+					timer = null;
+					return;
+				}
 
-			var backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
-			if (backupConfigs.Interval <= 0)
+				backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
+				if (backupConfigs.Interval <= 0)
+				{
+					timer.Dispose();
+					timer = null;
+					return;
+				}
+			}
+			catch (Exception ex)
 			{
-				timer.Dispose();
-				timer = null;
+				logger.Warn(ex);
+				executing = false;
 				return;
 			}
 
@@ -72,7 +87,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			{
 				var options = new SmugglerOptions
 				{
-					BackupPath = Path.GetTempPath(),
+					BackupPath = Path.GetTempPath(), //TODO temp path in data folder instead
 					LastDocsEtag = backupConfigs.LastDocsEtag,
 					LastAttachmentEtag = backupConfigs.LastAttachmentsEtag
 				};
@@ -82,9 +97,10 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 				// Remember the current position only once we are successful, this allows for compensatory backups
 				// in case of failures
+				//TODO
 				backupConfigs.LastAttachmentsEtag = options.LastAttachmentEtag;
 				backupConfigs.LastDocsEtag = options.LastDocsEtag;
-				Database.Put(PeriodicBackupSetup.RavenDocumentKey, Guid.Empty, RavenJObject.FromObject(backupConfigs),
+				Database.Put(PeriodicBackupSetup.RavenDocumentKey, null, RavenJObject.FromObject(backupConfigs),
 				             new RavenJObject(), null);
 
 				if (backupConfigs.Interval != interval)
@@ -112,7 +128,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 			if (!string.IsNullOrWhiteSpace(backupConfigs.GlacierVaultName))
 			{
-				var manager = new ArchiveTransferManager(AWSRegion);
+				var manager = new ArchiveTransferManager(awsAccessKey, awsSecretKey, AWSRegion);
 				var archiveId = manager.Upload(backupConfigs.GlacierVaultName, desc, backupPath).ArchiveId;
 				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath),
 										  archiveId));
@@ -121,7 +137,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 			if (!string.IsNullOrWhiteSpace(backupConfigs.S3BucketName))
 			{
-				var client = new Amazon.S3.AmazonS3Client(AWSRegion);
+				var client = new Amazon.S3.AmazonS3Client(awsAccessKey, awsSecretKey, AWSRegion);
 
 				using (var fileStream = File.OpenRead(backupPath))
 				{
