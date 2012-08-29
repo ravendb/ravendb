@@ -1463,6 +1463,7 @@ If you really want to do in memory filtering on the data returned from the query
 					FieldsToFetch = fieldsToFetch,
 					SpatialFieldName = spatialFieldName,
 					QueryShape = queryShape,
+					SpatialRelation =  spatialRelation,
 					DefaultField = defaultField,
 					DefaultOperator = defaultOperator
 				};
