@@ -210,12 +210,27 @@ namespace Raven.Abstractions.Linq
 			return new DynamicList(parent, inner.Select(func));
 		}
 
+		public IEnumerable<object> Select(Func<object, int, object> func)
+		{
+			return new DynamicList(parent, inner.Select(func));
+		}
+
 		public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
 		{
 			return new DynamicList(parent, inner.SelectMany(func));
 		}
 
+		public IEnumerable<object> SelectMany(Func<object, int, IEnumerable<object>> func)
+		{
+			return new DynamicList(parent, inner.SelectMany(func));
+		}
+
 		public IEnumerable<object> Where(Func<object, bool> func)
+		{
+			return new DynamicList(parent, inner.Where(func));
+		}
+
+		public IEnumerable<object> Where(Func<object, int, bool> func)
 		{
 			return new DynamicList(parent, inner.Where(func));
 		}

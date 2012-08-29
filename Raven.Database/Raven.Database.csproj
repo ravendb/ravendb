@@ -107,6 +107,8 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
@@ -170,6 +172,7 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Extensions\AdminFinder.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
@@ -184,6 +187,7 @@
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
+    <Compile Include="Server\Responders\Admin\AdminChangeDbId.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />

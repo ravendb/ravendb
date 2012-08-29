@@ -1085,14 +1085,14 @@ namespace Raven.Database.Server
 			Interlocked.Exchange(ref physicalRequestsCount, 0);
 		}
 
-		public DocumentDatabase GetDatabaseInternal(string name)
+		public Task<DocumentDatabase> GetDatabaseInternal(string name)
 		{
 			if (string.Equals("System", name, StringComparison.InvariantCultureIgnoreCase))
-				return SystemDatabase;
+				return new CompletedTask<DocumentDatabase>(SystemDatabase);
 
 			Task<DocumentDatabase> db;
-			if (TryGetOrCreateResourceStore(name, out db) && db.Status == TaskStatus.RanToCompletion)
-				return db.Result;
+			if (TryGetOrCreateResourceStore(name, out db))
+				return db;
 			return null;
 		}
 
