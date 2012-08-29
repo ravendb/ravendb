@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO.IsolatedStorage;
-using System.Linq;
-using Raven.Abstractions.Extensions;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -11,6 +6,17 @@ namespace Raven.Studio.Commands
 	public class ChangeDatabaseCommand : Command
 	{
 		private string databaseName;
+		private readonly bool navigateAfter;
+
+		public ChangeDatabaseCommand(bool navigateAfter = false)
+		{
+			this.navigateAfter = navigateAfter;
+		}
+
+		public ChangeDatabaseCommand()
+		{
+			
+		}
 
 		public override bool CanExecute(object parameter)
 		{
@@ -25,12 +31,14 @@ namespace Raven.Studio.Commands
 			{
 			    return;
 			}
+			if (!navigateAfter) 
+				return;
 
 			urlParser = new UrlParser("/documents");
 
 			urlParser.SetQueryParam("database", databaseName);
-            // MainPage.ContentFrame_Navigated takes care of actually responding to the db name change
-		    UrlUtil.Navigate(urlParser.BuildUrl());
+			// MainPage.ContentFrame_Navigated takes care of actually responding to the db name change
+			UrlUtil.Navigate(urlParser.BuildUrl());
 		}
 	}
 }
