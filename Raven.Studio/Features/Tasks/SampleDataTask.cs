@@ -12,7 +12,7 @@ namespace Raven.Studio.Features.Tasks
 		public SampleDataTask()
 		{
 			Name = "Create Sample Data";
-            IconResource = "Image_Import_Tiny";
+			IconResource = "Image_EditColumns_Tiny";
 			Description = "Create sample data for this database.\nThis will only work if you don't have any documents in the database.";       
 		}
 
