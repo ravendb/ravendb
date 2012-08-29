@@ -1091,7 +1091,7 @@ namespace Raven.Database.Server
 				return new CompletedTask<DocumentDatabase>(SystemDatabase);
 
 			Task<DocumentDatabase> db;
-			if (TryGetOrCreateResourceStore(name, out db) && db.Status == TaskStatus.RanToCompletion)
+			if (TryGetOrCreateResourceStore(name, out db))
 				return db;
 			return null;
 		}
