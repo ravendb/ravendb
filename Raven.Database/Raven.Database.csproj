@@ -90,10 +90,6 @@
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.SpellChecker, Version=2.9.2.1, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.SpellChecker.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Mono.Cecil">
@@ -163,7 +159,7 @@
     <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
-    <Compile Include="Bundles\SpellChecker\Dictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\IDictionary.cs" />
     <Compile Include="Bundles\SpellChecker\JaroWinklerDistance.cs" />
     <Compile Include="Bundles\SpellChecker\LevenshteinDistance.cs" />
     <Compile Include="Bundles\SpellChecker\LuceneDictionary.cs" />
