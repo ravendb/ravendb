@@ -15,7 +15,7 @@
 
 				<i:Interaction.Behaviors>
 					<Behaviors:DoubleClickBehavior Command="{StaticResource NavigateToCommand}"
-												   CommandParameter="/home" />
+												   CommandParameter="/documents" />
 				</i:Interaction.Behaviors>
 				<i:Interaction.Triggers>
 					<i:EventTrigger EventName="MouseLeftButtonDown">

@@ -126,7 +126,7 @@
 						Margin="{StaticResource Margin_MainPageLeftRight}">
 
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				<HyperlinkButton x:Name="SummaryLink"
+				<!--<HyperlinkButton x:Name="SummaryLink"
 								 Content="Summary"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/home"
@@ -134,6 +134,17 @@
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
 							<System:String>/statistics</System:String>
+						</Behaviors:StringCollection>
+					</Behaviors:LinkHighlighter.AlternativeUris>
+				</HyperlinkButton>-->
+				
+				<HyperlinkButton Content="Documents"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/documents"
+								 Style="{StaticResource Style_Text_HeaderLink}">
+					<Behaviors:LinkHighlighter.AlternativeUris>
+						<Behaviors:StringCollection>
+							<System:String>/Edit</System:String>
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
@@ -155,16 +166,7 @@
 				</HyperlinkButton>
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
-				<HyperlinkButton Content="Documents"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/documents"
-								 Style="{StaticResource Style_Text_HeaderLink}">
-					<Behaviors:LinkHighlighter.AlternativeUris>
-						<Behaviors:StringCollection>
-							<System:String>/Edit</System:String>
-						</Behaviors:StringCollection>
-					</Behaviors:LinkHighlighter.AlternativeUris>
-				</HyperlinkButton>
+				
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"

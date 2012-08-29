@@ -26,7 +26,7 @@ namespace Raven.Studio.Commands
 			    return;
 			}
 
-			urlParser = new UrlParser("/home");
+			urlParser = new UrlParser("/documents");
 
 			urlParser.SetQueryParam("database", databaseName);
             // MainPage.ContentFrame_Navigated takes care of actually responding to the db name change

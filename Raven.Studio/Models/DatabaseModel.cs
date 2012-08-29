@@ -44,7 +44,8 @@ namespace Raven.Studio.Models
 				new ImportTask(),
 				new ExportTask(),
 				new StartBackupTask(),
-				new IndexingTask()
+				new IndexingTask(),
+				new SampleDataTask()
 			};
 
 			SelectedTask = new Observable<TaskModel> { Value = Tasks.FirstOrDefault() };
