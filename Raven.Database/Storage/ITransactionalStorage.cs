@@ -28,5 +28,6 @@ namespace Raven.Database.Storage
 		bool HandleException(Exception exception);
 
 		void Compact(InMemoryRavenConfiguration configuration);
+		Guid ChangeId();
 	}
 }
