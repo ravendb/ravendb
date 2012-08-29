@@ -62,6 +62,12 @@ namespace Raven.Tests.Spatial
 						.SingleOrDefault();
 
 					Assert.Null(result); // No result should be returned.
+
+					result = session.Advanced.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+						.WithinRadiusOf(radius: 33, latitude: 48.6003516, longitude: 2.4632387000000335)
+						.SingleOrDefault();
+
+					Assert.Null(result); // No result should be returned.
 				}
 			}
 		}
