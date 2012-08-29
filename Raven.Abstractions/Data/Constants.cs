@@ -14,6 +14,7 @@ namespace Raven.Abstractions.Data
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string DefaultSpatialFieldName = "__spatial";
 		public const string SpatialShapeFieldName = "__spatialShape";
+		public const double DefaultSpatialDistanceErrorPct = 0.025d;
 		public const string DistanceFieldName = "__distance";
 		public const string RandomFieldName = "__random";
 		public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";

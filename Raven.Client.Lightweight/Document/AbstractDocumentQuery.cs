@@ -43,6 +43,7 @@ namespace Raven.Client.Document
 		protected bool isSpatialQuery;
 		protected string spatialFieldName, queryShape;
 		protected SpatialRelation spatialRelation;
+		protected double distanceErrorPct;
 		private readonly LinqPathProvider linqPathProvider;
 		/// <summary>
 		/// Whatever to negate the next operation
@@ -373,9 +374,9 @@ namespace Raven.Client.Document
 		/// <param name = "radius">The radius.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
-		protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+		protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025);
 
-		protected abstract object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation);
+		protected abstract object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025);
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -1464,6 +1465,7 @@ If you really want to do in memory filtering on the data returned from the query
 					SpatialFieldName = spatialFieldName,
 					QueryShape = queryShape,
 					SpatialRelation =  spatialRelation,
+					DistanceErrorPercentage = distanceErrorPct,
 					DefaultField = defaultField,
 					DefaultOperator = defaultOperator
 				};

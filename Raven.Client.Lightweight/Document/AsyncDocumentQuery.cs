@@ -445,22 +445,23 @@ namespace Raven.Client.Document
 			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
 		}
 
-		public IAsyncDocumentQuery<T> RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel)
+		public IAsyncDocumentQuery<T> RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025)
 		{
-			return (IAsyncDocumentQuery<T>)GenerateSpatialQueryData(fieldName, shapeWKT, rel);
+			return (IAsyncDocumentQuery<T>)GenerateSpatialQueryData(fieldName, shapeWKT, rel, distanceErrorPct);
 		}
 
-		protected override object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		protected override object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025)
 		{
-			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within);
+			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within, distanceErrorPct);
 		}
 
-		protected override object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation)
+		protected override object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct)
 		{
 			isSpatialQuery = true;
 			spatialFieldName = fieldName;
 			queryShape = shapeWKT;
 			spatialRelation = relation;
+			this.distanceErrorPct = distanceErrorPct;
 			return this;
 		}
 

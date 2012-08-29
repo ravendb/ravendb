@@ -85,6 +85,9 @@ namespace Raven.Database.Extensions
 
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
 			var queryShape = context.Request.QueryString["queryShape"];
+			double distanceErrorPct;
+			if (!double.TryParse(context.Request.QueryString["distErrPrc"], out distanceErrorPct))
+				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
 			SpatialRelation spatialRelation;
 			if (Enum.TryParse(context.Request.QueryString["spatialRelation"], false, out spatialRelation)
 				&& !string.IsNullOrWhiteSpace(queryShape))
@@ -94,6 +97,7 @@ namespace Raven.Database.Extensions
 					SpatialFieldName = spatialFieldName,
 					QueryShape = queryShape,
 					SpatialRelation = spatialRelation,
+					DistanceErrorPercentage = distanceErrorPct,
 				};
 			}
 			return query;

@@ -976,7 +976,7 @@ namespace Raven.Database.Indexing
 					SpatialRelation rel;
 					if (!Enum.TryParse(spatialIndexQuery.SpatialRelation.ToString(), true, out rel))
 						return MatchNoDocsQuery.INSTANCE;
-					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, rel);
+					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, rel, spatialIndexQuery.DistanceErrorPercentage);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery {{q, Occur.MUST}, {dq, Occur.MUST}};

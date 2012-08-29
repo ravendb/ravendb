@@ -25,6 +25,7 @@ namespace Raven.Abstractions.Data
 
 		public string QueryShape { get; set; }
 		public SpatialRelation SpatialRelation { get; set; }
+		public double DistanceErrorPercentage { get; set; }
 
 		private string spatialFieldName = Constants.DefaultSpatialFieldName;
 		public string SpatialFieldName
@@ -36,15 +37,8 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
 		/// </summary>
-		public SpatialIndexQuery()
-		{
-		}
-
-		/// <summary>
-		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
-		/// </summary>
 		/// <param name="query">The query.</param>
-		public SpatialIndexQuery(IndexQuery query)
+		public SpatialIndexQuery(IndexQuery query) : this()
 		{
 			Query = query.Query;
 			Start = query.Start;
@@ -55,15 +49,24 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
+		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
+		/// </summary>
+		public SpatialIndexQuery()
+		{
+			DistanceErrorPercentage = Constants.DefaultSpatialDistanceErrorPct;
+		}
+
+		/// <summary>
 		/// Gets the custom query string variables.
 		/// </summary>
 		/// <returns></returns>
 		protected override string GetCustomQueryStringVariables()
 		{
-			return string.Format("queryShape={0}&spatialRelation={1}&spatialField={2}",
+			return string.Format("queryShape={0}&spatialRelation={1}&spatialField={2}&distErrPrc={3}",
 				Uri.EscapeDataString(QueryShape),
 				SpatialRelation,
-				spatialFieldName);
+				spatialFieldName,
+				DistanceErrorPercentage);
 		}
 	}
 }

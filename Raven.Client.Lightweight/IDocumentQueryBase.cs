@@ -332,7 +332,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="shapeWKT">The query shape</param>
 		/// <param name="rel">Spatial relation to check</param>
 		/// <returns></returns>
-		TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel);
+		TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025);
 
 		/// <summary>
 		///   Sorts the query results by distance.
