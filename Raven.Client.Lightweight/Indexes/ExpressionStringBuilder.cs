@@ -770,7 +770,7 @@ namespace Raven.Client.Indexes
 					var enumType = node.Value.GetType();
 					if (TypeExistsOnServer(enumType))
 					{
-						Out(enumType.FullName);
+						Out(enumType.FullName.Replace("+", "."));
 						Out('.');
 						Out(s);
 						return node;
@@ -799,6 +799,10 @@ namespace Raven.Client.Indexes
 				return true;
 
 			if (type.Assembly == typeof(RavenJObject).Assembly)
+				return true;
+
+			if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
+				type.Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181")) 
 				return true;
 
 			return false;
