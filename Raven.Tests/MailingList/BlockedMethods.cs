@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanUseNowProp()
 		{
- 			Compile("from doc in docs select new { doc.Now }");
+			Compile("from doc in docs select new { doc.Now }");
 		}
 
 		[Fact]
