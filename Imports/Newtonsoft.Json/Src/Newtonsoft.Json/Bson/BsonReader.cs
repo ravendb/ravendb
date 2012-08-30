@@ -816,7 +816,18 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
 	private decimal ReadDecimal()
 	{
 		MovePosition(16);
+#if !SILVERLIGHT
 		return _reader.ReadDecimal();
+#else
+		var parts = new[]
+		{
+			_reader.ReadInt32(),
+			_reader.ReadInt32(),
+			_reader.ReadInt32(),
+			_reader.ReadInt32()
+		};
+		return new decimal(parts);
+#endif
 	}
 
 
