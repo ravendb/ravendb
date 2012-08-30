@@ -96,8 +96,18 @@ namespace Raven.Database.Bundles.PeriodicBackups
 				DoUpload(filePath, backupConfigs);
 
 				// Remember the current position only once we are successful, this allows for compensatory backups
-				// in case of failures
-				//TODO
+				// in case of failures. We reload the setup document to make sure we don't override changes made by
+				// the user.
+				// Setup doc might be deleted or changed by the user
+				var document = Database.Get(PeriodicBackupSetup.RavenDocumentKey, null);
+				if (document == null)
+				{
+					timer.Dispose();
+					timer = null;
+					return;
+				}
+
+				backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
 				backupConfigs.LastAttachmentsEtag = options.LastAttachmentEtag;
 				backupConfigs.LastDocsEtag = options.LastDocsEtag;
 				Database.Put(PeriodicBackupSetup.RavenDocumentKey, null, RavenJObject.FromObject(backupConfigs),
@@ -105,8 +115,16 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 				if (backupConfigs.Interval != interval)
 				{
-					interval = backupConfigs.Interval;
-					timer.Change(TimeSpan.FromMinutes(backupConfigs.Interval), TimeSpan.FromMinutes(backupConfigs.Interval));
+					if (backupConfigs.Interval <= 0)
+					{
+						timer.Dispose();
+						timer = null;
+					}
+					else
+					{
+						interval = backupConfigs.Interval;
+						timer.Change(TimeSpan.FromMinutes(backupConfigs.Interval), TimeSpan.FromMinutes(backupConfigs.Interval));
+					}
 				}
 			}
 			catch (Exception e)
