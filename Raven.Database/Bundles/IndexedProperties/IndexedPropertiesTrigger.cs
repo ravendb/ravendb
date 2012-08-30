@@ -86,7 +86,7 @@ namespace Raven.Bundles.IndexedProperties
 					return;
 				}
 
-				var documentId = resultDocId.StringValue();
+				var documentId = resultDocId.StringValue;
 
 				itemsToRemove.Remove(documentId);
 
@@ -124,11 +124,11 @@ namespace Raven.Bundles.IndexedProperties
 					var numericField = field as NumericField;
 					if (numericField != null)
 					{
-						resultDoc.DataAsJson[mapping.Value] = new RavenJValue(numericField.GetNumericValue());
+						resultDoc.DataAsJson[mapping.Value] = new RavenJValue(numericField.NumericValue);
 					}
 					else
 					{
-						resultDoc.DataAsJson[mapping.Value] = field.StringValue();
+						resultDoc.DataAsJson[mapping.Value] = field.StringValue;
 					}
 					changesMade = true;
 				}

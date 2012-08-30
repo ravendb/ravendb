@@ -7,6 +7,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
@@ -105,9 +106,10 @@ namespace Raven.Client.Document
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				isSpatialQuery = isSpatialQuery,
-				lat = lat,
-				lng = lng,
-				radius = radius,
+				spatialFieldName = spatialFieldName,
+				queryShape = queryShape,
+				spatialRelation = spatialRelation,
+				distanceErrorPct = distanceErrorPct,
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -660,7 +662,17 @@ namespace Raven.Client.Document
 		/// <param name="longitude">The longitude.</param>
 		public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude)
 		{
-			return (IDocumentQuery<T>) GenerateQueryWithinRadiusOf(radius, latitude, longitude);
+			return (IDocumentQuery<T>) GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
+		}
+
+		public IDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		{
+			return (IDocumentQuery<T>)GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
+		}
+
+		public IDocumentQuery<T> RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025)
+		{
+			return (IDocumentQuery<T>)GenerateSpatialQueryData(fieldName, shapeWKT, rel, distanceErrorPct);
 		}
 
 		/// <summary>
@@ -669,12 +681,18 @@ namespace Raven.Client.Document
 		/// <param name = "radius">The radius.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
-		protected override object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude)
+		protected override object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025)
+		{
+			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within, distanceErrorPct);
+		}
+
+		protected override object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct)
 		{
 			isSpatialQuery = true;
-			this.radius = radius;
-			lat = latitude;
-			lng = longitude;
+			spatialFieldName = fieldName;
+			queryShape = shapeWKT;
+			spatialRelation = relation;
+			this.distanceErrorPct = distanceErrorPct;
 			return this;
 		}
 
@@ -810,7 +828,7 @@ namespace Raven.Client.Document
 		{
 			var trim = QueryText.ToString().Trim();
 			if(isSpatialQuery)
-				return string.Format(CultureInfo.InvariantCulture, "{0} Lat: {1} Lng: {2} Radius: {3}", trim, lat, lng, radius);
+				return string.Format(CultureInfo.InvariantCulture, "{0} SpatialField: {1} QueryShape: {2} Relation: {3}", trim, spatialFieldName, queryShape, spatialRelation);
 			return trim;
 		}
 	}

@@ -1,16 +1,8 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Studio.Features.Query
 {
@@ -59,9 +51,9 @@ namespace Raven.Studio.Features.Query
             {
                 return new SpatialIndexQuery(query)
                 {
-                    Latitude = lat,
-                    Longitude = lng,
-                    Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+                    SpatialRelation = SpatialRelation.Within, /* TODO */
+					SpatialFieldName = Constants.DefaultSpatialFieldName, /* TODO */
                 };
             }
             return query;

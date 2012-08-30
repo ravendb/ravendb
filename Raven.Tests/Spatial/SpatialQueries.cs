@@ -9,27 +9,31 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.Spatial
 {
 	public class SpatialQueries
 	{
+		public class SpatialQueriesInMemoryTestIdx : AbstractIndexCreationTask<Listing>
+		{
+			public SpatialQueriesInMemoryTestIdx()
+			{
+				Map = listings => from listingItem in listings
+				                  select new
+				                  {
+				                  	listingItem.ClassCodes,
+				                  	listingItem.Latitude,
+				                  	listingItem.Longitude,
+				                  	_ = SpatialGenerate(listingItem.Latitude, listingItem.Longitude)
+				                  };
+			}
+		}
+
 		[Fact]
 		public void CanRunSpatialQueriesInMemory()
 		{
 			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
 			{
-				var def = new IndexDefinitionBuilder<Listing>
-				          	{
-				          		Map = listings => from listingItem in listings
-				          		                  select new
-				          		                         	{
-				          		                         		listingItem.ClassCodes,
-				          		                         		listingItem.Latitude,
-				          		                         		listingItem.Longitude,
-				          		                         		_ = SpatialIndex.Generate(listingItem.Latitude, listingItem.Longitude)
-				          		                         	}
-				          	};
-				documentStore.DatabaseCommands.PutIndex("RadiusClassifiedSearch", def);
+				new SpatialQueriesInMemoryTestIdx().Execute(documentStore);
 			}
 		}
 
@@ -68,7 +72,7 @@ namespace Raven.Tests.Bugs
 
 				var indexDefinition = new IndexDefinition
 				                      	{
-				                      		Map = "from doc in docs select new { _ = SpatialIndex.Generate(doc.Latitude, doc.Longitude) }"
+				                      		Map = "from doc in docs select new { _ = SpatialGenerate(doc.Latitude, doc.Longitude) }"
 				                      	};
 
 				documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);

@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.Tests.Spatial
 {
 	public class JamesCrowley
 	{
@@ -157,7 +156,7 @@ namespace Raven.Tests.MailingList
 											EventName = g.Select(x => x.EventName).FirstOrDefault(x => x != null),
 											Lat = latitude,
 											Long = longitude,
-											_ = SpatialIndex.Generate(latitude, longitude) 
+											_ = SpatialGenerate(latitude, longitude) 
 										};
 			}
 		}

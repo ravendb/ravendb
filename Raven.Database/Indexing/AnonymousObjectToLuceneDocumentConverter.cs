@@ -119,8 +119,8 @@ namespace Raven.Database.Indexing
 			{
 				foreach (var field in CreateFields(name, boostedValue.Value, storage))
 				{
-					field.SetBoost(boostedValue.Boost);
-					field.SetOmitNorms(false);
+					field.Boost = boostedValue.Boost;
+					field.OmitNorms = false;
 					yield return field;
 				}
 				yield break;
@@ -298,19 +298,19 @@ namespace Raven.Database.Indexing
 				fieldsCache[cacheKey] = field = new Field(name, value, store);
 			}
 			field.SetValue(value);
-			field.SetBoost(1);
-			field.SetOmitNorms(true);
+			field.Boost = 1;
+			field.OmitNorms = true;
 			return field;
 		}
 
 		public class FieldCacheKey
 		{
 			private readonly string name;
-			private readonly Field.Index index;
+			private readonly Field.Index? index;
 			private readonly Field.Store store;
 			private readonly int[] multipleItemsSameField;
 
-			public FieldCacheKey(string name, Field.Index index, Field.Store store, int[] multipleItemsSameField)
+			public FieldCacheKey(string name, Field.Index? index, Field.Store store, int[] multipleItemsSameField)
 			{
 				this.name = name;
 				this.index = index;
@@ -355,8 +355,8 @@ namespace Raven.Database.Indexing
 				fieldsCache[cacheKey] = field = new Field(name, value, store, index);
 			}
 			field.SetValue(value);
-			field.SetBoost(1);
-			field.SetOmitNorms(true);
+			field.Boost = 1;
+			field.OmitNorms = true;
 			return field;
 		}
 

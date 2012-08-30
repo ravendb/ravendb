@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using FizzWare.NBuilder;
 using Raven.Abstractions.Data;
-using Raven.Client;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.Tests.Spatial
 {
 	public class Afif
 	{
@@ -22,7 +22,7 @@ namespace Raven.Tests.MailingList
 								  {
 									  vehicle.Model,
 									  vehicle.Make,
-									  _ = SpatialIndex.Generate(vehicle.Latitude, vehicle.Longitude)
+									  _ = SpatialGenerate(vehicle.Latitude, vehicle.Longitude)
 								  };
 			}
 		}
@@ -77,9 +77,9 @@ namespace Raven.Tests.MailingList
 						index: index,
 						query: new SpatialIndexQuery()
 						{
-							Radius = 5,
-							Latitude = new Darwin().Latitude,
-							Longitude = new Darwin().Longitude
+							QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(new Darwin().Latitude, new Darwin().Longitude, 5),
+							SpatialRelation = SpatialRelation.Within,
+							SpatialFieldName = Constants.DefaultSpatialFieldName,
 						},
 						facetSetupDoc: "facets/Vehicle");
 				}

@@ -41,7 +41,7 @@ namespace Raven.Tests.Spatial
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialGenerate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -66,9 +66,9 @@ namespace Raven.Tests.Spatial
 				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
 					Query = "Tag:[[Event]]",
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					SpatialRelation = SpatialRelation.Within,
+					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[] { new SortedField("__distance"), }
 				});
 				if (queryResult.IsStale)
@@ -97,7 +97,7 @@ namespace Raven.Tests.Spatial
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialGenerate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -116,9 +116,9 @@ namespace Raven.Tests.Spatial
 				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
 					Query = "Tag:[[Event]]",
-					Latitude = 0,
-					Longitude = 0,
-					Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(0, 0, radius),
+					SpatialRelation =  SpatialRelation.Within,
+					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[] { new SortedField("__distance"), }
 				});
 				if (queryResult.IsStale)
@@ -133,7 +133,7 @@ namespace Raven.Tests.Spatial
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Map = "from e in docs.Events select new { e.Venue, _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Map = "from e in docs.Events select new { e.Venue, _ = SpatialGenerate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -168,9 +168,9 @@ namespace Raven.Tests.Spatial
 			{
 				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					SpatialRelation = SpatialRelation.Within,
+					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[]
 					{
 						new SortedField("__distance"), 
@@ -197,7 +197,7 @@ namespace Raven.Tests.Spatial
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Map = "from e in docs.Events select new { e.Venue, _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Map = "from e in docs.Events select new { e.Venue, _ = SpatialGenerate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -231,9 +231,9 @@ namespace Raven.Tests.Spatial
 			{
 				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					SpatialRelation = SpatialRelation.Within,
+					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[]
 					{
 						new SortedField("Venue"),

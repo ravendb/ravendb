@@ -109,16 +109,16 @@ namespace Raven.Bundles.IndexReplication
 						if (numericfield != null)
 							field = numericfield;
 
-						if (field == null || field.StringValue() == Constants.NullValue)
+						if (field == null || field.StringValue == Constants.NullValue)
 							parameter.Value = DBNull.Value;
 						else if (field is NumericField)
 						{
 							var numField = (NumericField)field;
-							parameter.Value = numField.GetNumericValue();
+							parameter.Value = numField.NumericValue;
 						}
 						else
 						{
-							var stringValue = field.StringValue();
+							var stringValue = field.StringValue;
 							if (datePattern.IsMatch(stringValue))
 							{
 								try

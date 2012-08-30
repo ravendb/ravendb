@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Linq;
@@ -430,15 +431,37 @@ namespace Raven.Client.Document
 		/// <param name="longitude">The longitude.</param>
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(double radius, double latitude, double longitude)
 		{
-			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(radius, latitude, longitude);
+			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
 		}
 
-		protected override object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude)
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		/// <param name="radius">The radius.</param>
+		/// <param name="latitude">The latitude.</param>
+		/// <param name="longitude">The longitude.</param>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		{
+			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
+		}
+
+		public IAsyncDocumentQuery<T> RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025)
+		{
+			return (IAsyncDocumentQuery<T>)GenerateSpatialQueryData(fieldName, shapeWKT, rel, distanceErrorPct);
+		}
+
+		protected override object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025)
+		{
+			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within, distanceErrorPct);
+		}
+
+		protected override object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct)
 		{
 			isSpatialQuery = true;
-			this.radius = radius;
-			lat = latitude;
-			lng = longitude;
+			spatialFieldName = fieldName;
+			queryShape = shapeWKT;
+			spatialRelation = relation;
+			this.distanceErrorPct = distanceErrorPct;
 			return this;
 		}
 

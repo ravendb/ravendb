@@ -15,27 +15,23 @@
  * limitations under the License.
  */
 
-using System;
-using PriorityQueue = Lucene.Net.Util.PriorityQueue;
 
 namespace SpellChecker.Net.Search.Spell
 {
+    using PriorityQueue = Lucene.Net.Util.PriorityQueue<SuggestWord>;
 
-
-	sealed class SuggestWordQueue : PriorityQueue
-	{
-
-		internal SuggestWordQueue(int size)
-		{
-			Initialize(size);
-		}
-
-		override public bool LessThan(System.Object a, System.Object b)
-		{
-			SuggestWord wa = (SuggestWord)a;
-			SuggestWord wb = (SuggestWord)b;
-			int val = wa.CompareTo(wb);
-			return val < 0;
-		}
-	}
+    sealed class SuggestWordQueue : PriorityQueue
+    {
+		
+        internal SuggestWordQueue(int size)
+        {
+            Initialize(size);
+        }
+		
+        override public bool LessThan(SuggestWord a, SuggestWord b)
+        {
+            var val = a.CompareTo(b);
+            return val < 0;
+        }
+    }
 }

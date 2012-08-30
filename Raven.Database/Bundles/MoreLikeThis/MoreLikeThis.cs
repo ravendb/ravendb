@@ -15,19 +15,17 @@
  * limitations under the License.
  */
 
-using System;
 using Lucene.Net.Analysis.Tokenattributes;
-using PriorityQueue = Lucene.Net.Util.PriorityQueue;
+using Lucene.Net.Index;
+using Lucene.Net.Search;
+using Lucene.Net.Util;
 using IndexReader = Lucene.Net.Index.IndexReader;
 using Term = Lucene.Net.Index.Term;
-using TermFreqVector = Lucene.Net.Index.TermFreqVector;
 using BooleanClause = Lucene.Net.Search.BooleanClause;
 using DefaultSimilarity = Lucene.Net.Search.DefaultSimilarity;
 using TermQuery = Lucene.Net.Search.TermQuery;
 using BooleanQuery = Lucene.Net.Search.BooleanQuery;
-using IndexSearcher = Lucene.Net.Search.IndexSearcher;
 using Query = Lucene.Net.Search.Query;
-using Hits = Lucene.Net.Search.Hits;
 using Analyzer = Lucene.Net.Analysis.Analyzer;
 using TokenStream = Lucene.Net.Analysis.TokenStream;
 using StandardAnalyzer = Lucene.Net.Analysis.Standard.StandardAnalyzer;
@@ -561,7 +559,7 @@ namespace Similarity.Net
 		}
 
 		/// <summary> Create the More like query from a PriorityQueue</summary>
-		private Query CreateQuery(PriorityQueue q)
+		private Query CreateQuery(PriorityQueue<object[]> q)
 		{
 			BooleanQuery query = new BooleanQuery();
 			System.Object cur;
@@ -581,12 +579,12 @@ namespace Similarity.Net
 					}
 					float myScore = (float)((System.Single)ar[2]);
 
-					tq.SetBoost(myScore / bestScore);
+					tq.Boost = myScore / bestScore;
 				}
 
 				try
 				{
-					query.Add(tq, BooleanClause.Occur.SHOULD);
+					query.Add(tq, Occur.SHOULD);
 				}
 				catch (BooleanQuery.TooManyClauses)
 				{
@@ -608,7 +606,7 @@ namespace Similarity.Net
 		/// </summary>
 		/// <param name="words">a map of words keyed on the word(String) with Int objects as the values.
 		/// </param>
-		protected PriorityQueue CreateQueue(System.Collections.IDictionary words)
+		protected PriorityQueue<object[]> CreateQueue(System.Collections.IDictionary words)
 		{
 			// have collected all words in doc and their freqs
 			int numDocs = ir.NumDocs();
@@ -682,13 +680,13 @@ namespace Similarity.Net
 		/// </summary>
 		/// <param name="docNum">the id of the lucene document from which to find terms
 		/// </param>
-		protected virtual PriorityQueue RetrieveTerms(int docNum)
+		protected virtual PriorityQueue<object[]> RetrieveTerms(int docNum)
 		{
 			System.Collections.IDictionary termFreqMap = new System.Collections.Hashtable();
 			for (int i = 0; i < fieldNames.Length; i++)
 			{
 				System.String fieldName = fieldNames[i];
-				TermFreqVector vector = ir.GetTermFreqVector(docNum, fieldName);
+				var vector = ir.GetTermFreqVector(docNum, fieldName);
 
 				// field does not store term vector info
 				if (vector == null)
@@ -718,7 +716,7 @@ namespace Similarity.Net
 		/// </param>
 		/// <param name="vector">List of terms and their frequencies for a doc/field
 		/// </param>
-		protected void AddTermFrequencies(System.Collections.IDictionary termFreqMap, TermFreqVector vector)
+		protected void AddTermFrequencies(System.Collections.IDictionary termFreqMap, ITermFreqVector vector)
 		{
 			System.String[] terms = vector.GetTerms();
 			int[] freqs = vector.GetTermFrequencies();
@@ -754,12 +752,12 @@ namespace Similarity.Net
 		protected void AddTermFrequencies(System.IO.TextReader r, System.Collections.IDictionary termFreqMap, System.String fieldName)
 		{
 			TokenStream ts = analyzer.TokenStream(fieldName, r);
-			TermAttribute termAtt = (TermAttribute)ts.AddAttribute(typeof(TermAttribute));
+			var termAtt = ts.AddAttribute<ITermAttribute>();
 			int tokenCount = 0;
 			while (ts.IncrementToken())
 			{
 				// for every token
-				System.String word = termAtt.Term();
+				System.String word = termAtt.Term;
 				tokenCount++;
 				if (tokenCount > maxNumTokensParsed)
 				{
@@ -834,7 +832,7 @@ namespace Similarity.Net
 		/// </returns>
 		/// <seealso cref="#retrieveInterestingTerms">
 		/// </seealso>
-		public PriorityQueue RetrieveTerms(System.IO.StreamReader r)
+		public PriorityQueue<object[]> RetrieveTerms(System.IO.StreamReader r)
 		{
 			System.Collections.IDictionary words = new System.Collections.Hashtable();
 			for (int i = 0; i < fieldNames.Length; i++)
@@ -860,7 +858,7 @@ namespace Similarity.Net
 		public System.String[] RetrieveInterestingTerms(System.IO.StreamReader r)
 		{
 			System.Collections.ArrayList al = new System.Collections.ArrayList(maxQueryTerms);
-			PriorityQueue pq = RetrieveTerms(r);
+			var pq = RetrieveTerms(r);
 			System.Object cur;
 			int lim = maxQueryTerms; // have to be careful, retrieveTerms returns all words but that's probably not useful to our caller...
 			// we just want to return the top words
@@ -875,14 +873,14 @@ namespace Similarity.Net
 		}
 
 		/// <summary> PriorityQueue that orders words by score.</summary>
-		private class FreqQ : PriorityQueue
+		private class FreqQ : PriorityQueue<object[]>
 		{
 			internal FreqQ(int s)
 			{
 				Initialize(s);
 			}
 
-			override public bool LessThan(System.Object a, System.Object b)
+			public override bool LessThan(object[] a, object[] b)
 			{
 				System.Object[] aa = (System.Object[])a;
 				System.Object[] bb = (System.Object[])b;

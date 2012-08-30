@@ -3,62 +3,54 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections.Generic;
-using System.Linq;
-using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix;
 using Lucene.Net.Spatial.Prefix.Tree;
+using Lucene.Net.Spatial.Queries;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Spatial4n.Core.Context;
-using Spatial4n.Core.Distance;
-using Spatial4n.Core.Query;
 using Spatial4n.Core.Shapes;
-
+using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
 
 namespace Raven.Database.Indexing
 {
 	public static class SpatialIndex
 	{
-		internal static readonly SpatialContext Context = new SpatialContext(DistanceUnits.MILES);
-		internal static readonly SpatialStrategy<SimpleSpatialFieldInfo> Strategy;
-		private static readonly SimpleSpatialFieldInfo fieldInfo;
-		private static readonly int maxLength;
+		// TODO: Support new SpatialContext(DistanceUnits.MILES) for backward compatibility through config
+		internal static readonly SpatialContext Context = SpatialContext.GEO_KM;
 
 		static SpatialIndex()
 		{
-			maxLength = GeohashPrefixTree.GetMaxLevelsPossible();
-			fieldInfo = new SimpleSpatialFieldInfo(Constants.SpatialFieldName);
-			Strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxLength));
 		}
 
-		public static IEnumerable<Fieldable> Generate(double? lat, double? lng)
+		public static SpatialStrategy CreateStrategy(string fieldName, SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel)
 		{
-			Shape shape = Context.MakePoint(lng ?? 0, lat ?? 0);
-			return Strategy.CreateFields(fieldInfo, shape, true, false).Where(f => f != null)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, Context.ToString(shape), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS), });
+			switch (spatialSearchStrategy)
+			{
+				case SpatialSearchStrategy.GeohashPrefixTree:
+					return new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxTreeLevel), fieldName);
+				case SpatialSearchStrategy.QuadPrefixTree:
+					return new RecursivePrefixTreeStrategy(new QuadPrefixTree(Context, maxTreeLevel), fieldName);
+			}
+			return null;
 		}
 
-		/// <summary>
-		/// Make a spatial query
-		/// </summary>
-		/// <param name="lat"></param>
-		/// <param name="lng"></param>
-		/// <param name="radius">Radius, in miles</param>
-		/// <returns></returns>
-		public static Query MakeQuery(double lat, double lng, double radius)
+		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025)
 		{
-			return Strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(lng, lat, radius)), fieldInfo);
+			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(shapeWKT));
+			args.SetDistPrecision(distanceErrorPct);
+			return spatialStrategy.MakeQuery(args);
 		}
 
-		public static Filter MakeFilter(IndexQuery indexQuery)
+		public static Filter MakeFilter(SpatialStrategy spatialStrategy, IndexQuery indexQuery)
 		{
 			var spatialQry = indexQuery as SpatialIndexQuery;
 			if (spatialQry == null) return null;
 
-			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(spatialQry.Longitude, spatialQry.Latitude, spatialQry.Radius));
-			return Strategy.MakeFilter(args, fieldInfo);
+			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(spatialQry.QueryShape));
+			return spatialStrategy.MakeFilter(args);
 		}
 
 		public static double GetDistance(double fromLat, double fromLng, double toLat, double toLng)

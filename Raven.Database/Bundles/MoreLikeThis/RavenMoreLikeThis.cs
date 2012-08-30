@@ -14,7 +14,7 @@ namespace Raven.Database.Bundles.MoreLikeThis
 			_ir = ir;
 		}
 
-		protected override PriorityQueue RetrieveTerms(int docNum)
+		protected override PriorityQueue<object[]> RetrieveTerms(int docNum)
 		{
 			var fieldNames = GetFieldNames();
 
