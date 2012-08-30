@@ -25,8 +25,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 		private volatile bool executing;
-		private string awsAccessKey;
-		private string awsSecretKey;
+		private string awsAccessKey, awsSecretKey;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -93,6 +92,14 @@ namespace Raven.Database.Bundles.PeriodicBackups
 				};
 				var dd = new DataDumper(Database, options);
 				var filePath = dd.ExportData(null, true);
+				
+				// No-op if nothing has changed
+				if (options.LastDocsEtag == backupConfigs.LastDocsEtag && options.LastAttachmentEtag == backupConfigs.LastAttachmentsEtag)
+				{
+					logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
+					return;
+				}
+
 				DoUpload(filePath, backupConfigs);
 
 				// Remember the current position only once we are successful, this allows for compensatory backups
