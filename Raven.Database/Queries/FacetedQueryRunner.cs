@@ -30,31 +30,33 @@ namespace Raven.Database.Queries
 
 			var facets = facetSetup.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
 
+
+
 			var results = new FacetResults();
 			var defaultFacets = new List<Facet>();
 			var rangeFacets = new List<ParsedRange>();
-			IndexSearcher currentIndexSearcher;
 
+			foreach (var facet in facets)
+			{
+				switch (facet.Mode)
+				{
+					case FacetMode.Default:
+						//Remember the facet, so we can run them all under one query
+						defaultFacets.Add(facet);
+						break;
+					case FacetMode.Ranges:
+						rangeFacets.AddRange(facet.Ranges.Select(range => ParseRange(facet.Name, range)));
+						break;
+					default:
+						throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
+				}
+			}
+
+			IndexSearcher currentIndexSearcher;
 			using (database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
-				foreach (var facet in facets)
-				{
-					switch (facet.Mode)
-					{
-						case FacetMode.Default:
-							//Remember the facet, so we can run them all under one query
-							defaultFacets.Add(facet);
-							break;
-						case FacetMode.Ranges:
-							rangeFacets.AddRange(facet.Ranges.Select(range => ParseRange(facet.Name, range)));
-							break;
-						default:
-							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
-					}
-				}
 				//We only want to run the base query once, so we capture all of the facet-ing terms then run the query
 				//	once through the collector and pull out all of the terms in one shot
-					
 				QueryForFacets(index, defaultFacets, rangeFacets, indexQuery, currentIndexSearcher, results);
 			}
 
