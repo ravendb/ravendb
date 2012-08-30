@@ -12,9 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
-using Raven.Database;
 using Raven.Database.Impl;
-using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -195,7 +193,7 @@ namespace Raven.Storage.Managed
 
 			RavenJObject result;
 			Stream docDataStream = stream.Item1;
-			if (documentCodecs.Count() > 0)
+			if (documentCodecs.Any())
 			{
 				var metadataCopy = (RavenJObject)metadata.Metadata.CloneToken() ;
 				using (docDataStream = documentCodecs
