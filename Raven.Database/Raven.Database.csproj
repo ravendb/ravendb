@@ -114,6 +114,8 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
@@ -178,6 +180,7 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Extensions\AdminFinder.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
@@ -676,6 +679,8 @@
     <Compile Include="Util\BoundedMemoryTarget.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\PortUtil.cs" />
+    <Compile Include="Util\Streams\BufferPool.cs" />
+    <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>

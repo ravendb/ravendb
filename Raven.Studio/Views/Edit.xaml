@@ -89,10 +89,6 @@
             </Controls:ContextMenu>
         </Controls:ContextMenuService.ContextMenu>
         <toolkit:HeaderedContentControl.Header>
-			<StackPanel>
-				<TextBlock Text="A Conflict was detected. Resolve it before continuing" 
-						   Style="{StaticResource Style_TextBlock_GroupHeader}"
-						   Visibility="{Binding ResolvingConflict, Converter={StaticResource BooleanToVisibility}}"/>
             <StackPanel Orientation="Horizontal">
                 <Infrastructure:FlexibleTemplateItemsControl ItemsSource="{Binding ParentPathSegments}" VerticalAlignment="Center" VerticalContentAlignment="Center">
                     <Infrastructure:FlexibleTemplateItemsControl.ItemsPanel>
@@ -146,7 +142,12 @@
                 <TextBlock Text="{Binding DisplayId}"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
-            </StackPanel>
+				<TextBlock Text="    "/>
+				<TextBlock Text="A Conflict was detected and must be resolved." 
+						   Style="{StaticResource Style_TextBlock_GroupHeader}"
+						   Visibility="{Binding ResolvingConflict, Converter={StaticResource BooleanToVisibility}}"
+						   VerticalAlignment="Center"/>
+
 			</StackPanel>
 		</toolkit:HeaderedContentControl.Header>
         <Grid>

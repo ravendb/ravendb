@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
-using Raven.Database.Server.SignalR;
 
 namespace Raven.Database.Server.Connections
 {

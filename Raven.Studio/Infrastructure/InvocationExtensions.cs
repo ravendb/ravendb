@@ -120,17 +120,28 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task Catch(this Task parent, Action<AggregateException> action)
 		{
+			return parent.Catch(e =>
+			{
+				action(e);
+				return false;
+			});
+		}
+
+		public static Task Catch(this Task parent, Func<AggregateException, bool> func)
+		{
 			var stackTrace = new StackTrace();
 			return parent.ContinueWith(task =>
 			{
-			    if (task.IsFaulted == false)
-			        return;
+				if (task.IsFaulted == false)
+					return;
 
-			    var ex = task.Exception.ExtractSingleInnerException();
-			    Execute.OnTheUI(() => ApplicationModel.Current.AddErrorNotification(ex, null, stackTrace))
-			        .ContinueWith(_ => action(task.Exception));
+				var ex = task.Exception.ExtractSingleInnerException();
+				Execute.OnTheUI(() =>
+				{
+					if(func(task.Exception) == false)
+						ApplicationModel.Current.AddErrorNotification(ex, null, stackTrace);
+				});
 			});
-
 		}
 
 		public static Task CatchIgnore<TException>(this Task parent, Action<TException> action) where TException : Exception

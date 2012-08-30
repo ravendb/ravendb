@@ -39,22 +39,22 @@ namespace Raven.Studio.Models
 		private int totalItems;
 		public string DocumentKey { get; private set; }
 		private readonly string currentDatabase;
-        private DocumentNavigator navigator;
-        private ICommand navigateNext;
-        private ICommand navigatePrevious;
-        private string urlForFirst;
-        private string urlForPrevious;
-        private string urlForNext;
-        private string urlForLast;
-        private DocumentSection dataSection;
-        private DocumentSection metaDataSection;
-        private ICommand deleteCommand;
-        private ICommand navigateFirst;
-        private ICommand navigateLast;
-        private string documentSize;
-        private static JsonSyntaxLanguageExtended JsonLanguage;
-        private bool isShowingErrors;
-        private bool hasUnsavedChanges;
+		private DocumentNavigator navigator;
+		private ICommand navigateNext;
+		private ICommand navigatePrevious;
+		private string urlForFirst;
+		private string urlForPrevious;
+		private string urlForNext;
+		private string urlForLast;
+		private DocumentSection dataSection;
+		private DocumentSection metaDataSection;
+		private ICommand deleteCommand;
+		private ICommand navigateFirst;
+		private ICommand navigateLast;
+		private string documentSize;
+		private static JsonSyntaxLanguageExtended JsonLanguage;
+		private bool isShowingErrors;
+		private bool hasUnsavedChanges;
 
 		static EditableDocumentModel()
 		{
@@ -90,7 +90,7 @@ namespace Raven.Studio.Models
 			DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection };
 			CurrentSection = dataSection;
 
-            References = new BindableCollection<LinkModel>(model => model.Title);
+			References = new BindableCollection<LinkModel>(model => model.Title);
 			Related = new BindableCollection<LinkModel>(model => model.Title);
 			DocumentErrors = new ObservableCollection<DocumentError>();
 
@@ -98,7 +98,7 @@ namespace Raven.Studio.Models
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
-		    documentIdManager = JsonDataDocument.Properties.GetOrCreateSingleton(() => new DocumentReferencedIdManager());
+			documentIdManager = JsonDataDocument.Properties.GetOrCreateSingleton(() => new DocumentReferencedIdManager());
 
 			InitialiseDocument();
 
@@ -109,12 +109,12 @@ namespace Raven.Studio.Models
 
 			currentDatabase = Database.Value.Name;
 
-		    dataSection.Document.ObserveTextChanged()
-                .Merge(metaDataSection.Document.ObserveTextChanged())
-                .Do(_ => HasUnsavedChanges = true)
-		        .Throttle(TimeSpan.FromSeconds(1))
-		        .ObserveOnDispatcher()
-		        .Subscribe(e => HandleDocumentChanged());
+			dataSection.Document.ObserveTextChanged()
+				.Merge(metaDataSection.Document.ObserveTextChanged())
+				.Do(_ => HasUnsavedChanges = true)
+				.Throttle(TimeSpan.FromSeconds(1))
+				.ObserveOnDispatcher()
+				.Subscribe(e => HandleDocumentChanged());
 		}
 
 		private void HandleDocumentChanged()
@@ -258,9 +258,9 @@ namespace Raven.Studio.Models
 		public override void LoadModelParameters(string parameters)
 		{
 			var url = new UrlParser(UrlUtil.Url);
-		    documentIdManager.Clear();
+			documentIdManager.Clear();
 
-            if (url.GetQueryParam("mode") == "new")
+			if (url.GetQueryParam("mode") == "new")
 			{
 				Mode = DocumentMode.New;
 				InitialiseDocument();
@@ -312,83 +312,72 @@ namespace Raven.Studio.Models
 					WhenParsingComplete(dataSection.Document)
 						.ContinueOnUIThread(t => ApplyOutliningMode());
 
-                    HandleDocumentChanged();
+					HandleDocumentChanged();
 				})
 				.Catch(exception =>
 				{
-					if(exception.GetBaseException() is ConflictException)
+					var conflictExeption = exception.GetBaseException() as ConflictException;
+
+					if (conflictExeption != null)
 					{
-						var conflictExeption = exception.GetBaseException() as ConflictException;
-						if (conflictExeption != null)
-							ApplicationModel.Current.Server.Value.SelectedDatabase.Value
-								.AsyncDatabaseCommands
-								.GetAsync(conflictExeption.ConflictedVersionIds, null)
-								.ContinueOnSuccessInTheUIThread(docs =>
+						ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+							.AsyncDatabaseCommands
+							.GetAsync(conflictExeption.ConflictedVersionIds, null)
+							.ContinueOnSuccessInTheUIThread(doc =>
+							{
+								var docs = new List<RavenJObject>();
+								var metadatas = new List<RavenJObject>();
+								foreach (var result in doc.Results)
 								{
-									var conflictsResolver = new ConflictsResolver(docs.Results.ToArray());
-									var conflictSections = conflictsResolver.Resolve().Split(new[] {"\"@metadata\":"},StringSplitOptions.None);
+									metadatas.Add(result.Value<RavenJObject>("@metadata"));
+									result.Remove("@metadata");
+									docs.Add(result);
+								}
 
-									Key = url.GetQueryParam("id");
-									Etag = conflictExeption.Etag;
-									ResolvingConflict = true;
+								ClearMetadatas(metadatas);
 
-									dataSection.Document.DeleteText(TextChangeTypes.Custom, 0, dataSection.Document.CurrentSnapshot.Length);
-									dataSection.Document.AppendText(TextChangeTypes.Custom, conflictSections[0].Insert(conflictSections[0].Length, "}"));
+								var docsConflictsResolver = new ConflictsResolver(docs.ToArray());
+								var metadataConflictsResolver = new ConflictsResolver(metadatas.ToArray());
 
-									conflictSections[1] = ClearMetadata(conflictSections[1].Remove(conflictSections[1].Length - 1));
+								Key = url.GetQueryParam("id");
+								DocumentKey = Key;
+								OnPropertyChanged(() => DisplayId);
+								Etag = conflictExeption.Etag;
+	
+								ResolvingConflict = true;
 
-									metaDataSection.Document.DeleteText(TextChangeTypes.Custom, 0, metaDataSection.Document.CurrentSnapshot.Length);
-									metaDataSection.Document.AppendText(TextChangeTypes.Custom, conflictSections[1]);
+								dataSection.Document.DeleteText(TextChangeTypes.Custom, 0, dataSection.Document.CurrentSnapshot.Length);
+								dataSection.Document.AppendText(TextChangeTypes.Custom, docsConflictsResolver.Resolve());
 
-									Etag = conflictExeption.Etag;
+								metaDataSection.Document.DeleteText(TextChangeTypes.Custom, 0, metaDataSection.Document.CurrentSnapshot.Length);
+								metaDataSection.Document.AppendText(TextChangeTypes.Custom, metadataConflictsResolver.Resolve());
 
-									OnPropertyChanged(() => dataSection);
-									OnPropertyChanged(() => document);
-								});
+								OnPropertyChanged(() => dataSection);
+								OnPropertyChanged(() => document);
+							});
+						return true;
 					}
+
+					return false;
 				});
 		}
 
-		private string ClearMetadata(string metadataToClear)
+		private static void ClearMetadatas(IEnumerable<RavenJObject> metadatas)
 		{
-			var lines = metadataToClear.Replace("\r", "").Split('\n');
-			var result = new List<string>();
-			var arrayCounter = 0;
-
-			for (var i = 0; i < lines.Length; i++)
+			foreach (var meta in metadatas)
 			{
-				if (lines[i].Contains("\"Raven-Replication-") || 
-					lines[i].Contains("@id") || 
-					lines[i].Contains("\"Last-Modified\"") || 
-					lines[i].Contains("@etag") || 
-					lines[i].Contains("\"Non-Authoritative-Information\""))
+				var keysToRemove = new List<string>();
+				foreach (var item in meta)
 				{
-					if (lines[i].Contains("["))
-					{
-						arrayCounter++;
-						var removeLine = true;
-						while (removeLine)
-						{
-							i++;
-							if (lines[i].Contains("["))
-								arrayCounter++;
-
-							if (lines[i].Contains("]"))
-							{
-								arrayCounter--;
-								if(arrayCounter == 0)
-									removeLine = false;
-							}
-						}
-					}
+					if (item.Key.StartsWith("Raven-Replication-") || item.Key == "@id" || item.Key == "Last-Modified" ||
+					    item.Key == "@etag" || item.Key == "Non-Authoritative-Information")
+						keysToRemove.Add(item.Key);
 				}
-				else
+				foreach (var key in keysToRemove)
 				{
-					result.Add(lines[i]);
+					meta.Remove(key);
 				}
 			}
-
-			return string.Join("\r\n", result);
 		}
 
 		public bool ResolvingConflict
@@ -514,7 +503,7 @@ namespace Raven.Studio.Models
 
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 
-            HasUnsavedChanges = false;
+			HasUnsavedChanges = false;
 			UpdateRelated();
 			OnEverythingChanged();
 		}
@@ -539,7 +528,7 @@ namespace Raven.Studio.Models
 
 
 
-        public BindableCollection<LinkModel> References { get; private set; }
+		public BindableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
 
 		private bool searchEnabled;
@@ -646,64 +635,64 @@ namespace Raven.Studio.Models
 			if (Seperator == null)
 				return;
 
-            // Note: if this proves to be too slow with large documents, we can potential optimise the finding 
-            // of references by only considering the parts of the AST which occur after the Offset at which the text change began
-            // (we can find this by getting hold of the TextSnapshotChangedEventArgs)
-		    var potentialReferences = FindPotentialReferences(JsonDataDocument).ToList();
-		    var newReferences = potentialReferences.Where(id => documentIdManager.NeedsChecking(id)).ToArray();
+			// Note: if this proves to be too slow with large documents, we can potential optimise the finding 
+			// of references by only considering the parts of the AST which occur after the Offset at which the text change began
+			// (we can find this by getting hold of the TextSnapshotChangedEventArgs)
+			var potentialReferences = FindPotentialReferences(JsonDataDocument).ToList();
+			var newReferences = potentialReferences.Where(id => documentIdManager.NeedsChecking(id)).ToArray();
 
-            if (newReferences.Any())
-            {
-                ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(
-                    newReferences, null, metadataOnly:true)
-                    .ContinueOnSuccessInTheUIThread(results =>
-                    {
-                        var ids =
-                            results.Results.Where(r => r != null).Select(
-                                r => r["@metadata"].SelectToken("@id").ToString()).ToList();
+			if (newReferences.Any())
+			{
+				ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(
+					newReferences, null, metadataOnly: true)
+					.ContinueOnSuccessInTheUIThread(results =>
+					{
+						var ids =
+							results.Results.Where(r => r != null).Select(
+								r => r["@metadata"].SelectToken("@id").ToString()).ToList();
 
-                        documentIdManager.AddKnownIds(ids);
-                        documentIdManager.AddKnownInvalidIds(newReferences.Except(ids));
+						documentIdManager.AddKnownIds(ids);
+						documentIdManager.AddKnownInvalidIds(newReferences.Except(ids));
 
-                        UpdateListWithKnownIds(potentialReferences);
-                    });
-            }
-            else
-            {
-                UpdateListWithKnownIds(potentialReferences);
-            }
+						UpdateListWithKnownIds(potentialReferences);
+					});
+			}
+			else
+			{
+				UpdateListWithKnownIds(potentialReferences);
+			}
 
 		}
 
-	    private void UpdateListWithKnownIds(IEnumerable<string> potentialReferences)
-	    {
-	        var referenceModels = potentialReferences.Where(id => documentIdManager.IsId(id))
-	            .Select(key => new LinkModel
-	            {
-	                Title = key,
-	                HRef = "/Edit?id=" + key
-	            })
-	            .ToArray();
+		private void UpdateListWithKnownIds(IEnumerable<string> potentialReferences)
+		{
+			var referenceModels = potentialReferences.Where(id => documentIdManager.IsId(id))
+				.Select(key => new LinkModel
+				{
+					Title = key,
+					HRef = "/Edit?id=" + key
+				})
+				.ToArray();
 
-	        References.Match(referenceModels);
-	    }
+			References.Match(referenceModels);
+		}
 
-	    private IEnumerable<string> FindPotentialReferences(ICodeDocument document)
-        {
-            var stringValueNodes = document.FindAllStringValueNodes();
-            return stringValueNodes.Select(n => n.Text).Distinct().Where(IsPotentialReference);
-        } 
+		private IEnumerable<string> FindPotentialReferences(ICodeDocument document)
+		{
+			var stringValueNodes = document.FindAllStringValueNodes();
+			return stringValueNodes.Select(n => n.Text).Distinct().Where(IsPotentialReference);
+		}
 
-        private bool IsPotentialReference(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return false;
-            }
+		private bool IsPotentialReference(string value)
+		{
+			if (string.IsNullOrWhiteSpace(value))
+			{
+				return false;
+			}
 
-            var pattern = "\\w" + Seperator + "\\w";
-            return Regex.IsMatch(value, pattern);
-        }
+			var pattern = "\\w" + Seperator + "\\w";
+			return Regex.IsMatch(value, pattern);
+		}
 
 		private void UpdateRelated()
 		{
@@ -711,39 +700,39 @@ namespace Raven.Studio.Models
 				return;
 
 			var childrenTask = DatabaseCommands.StartsWithAsync(Key + Seperator, 0, 15)
-                .ContinueOnSuccess(items => items == null ?  new string[0] : items.Select(i => i.Key));
+				.ContinueOnSuccess(items => items == null ? new string[0] : items.Select(i => i.Key));
 
-            // find parent Ids
-            var parentids = new List<string>();
-            var id = Key;
-            var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+			// find parent Ids
+			var parentids = new List<string>();
+			var id = Key;
+			var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
 
-            while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
-            {
-                id = id.Remove(lastindex);
-                parentids.Add(id);
-                lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
-            }
+			while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
+			{
+				id = id.Remove(lastindex);
+				parentids.Add(id);
+				lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+			}
 
-            var parentsTask = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null, metadataOnly:true)
-                .ContinueOnSuccess(results => results.Results.Where(r => r != null).Select(r => r["@metadata"].SelectToken("@id").ToString()));
+			var parentsTask = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null, metadataOnly: true)
+				.ContinueOnSuccess(results => results.Results.Where(r => r != null).Select(r => r["@metadata"].SelectToken("@id").ToString()));
 
 
-		    TaskEx.WhenAll(childrenTask, parentsTask).ContinueOnSuccessInTheUIThread(t =>
-		    {
-		        var linkModels =
-		            childrenTask.Result
-                    .Concat(parentsTask.Result)
-		                .OrderBy(key => key.Length)
-		                .Select(key => new LinkModel
-		                {
-		                    Title = key,
-		                    HRef = "/Edit?id=" + key
-		                })
-                        .ToArray();
+			TaskEx.WhenAll(childrenTask, parentsTask).ContinueOnSuccessInTheUIThread(t =>
+			{
+				var linkModels =
+					childrenTask.Result
+					.Concat(parentsTask.Result)
+						.OrderBy(key => key.Length)
+						.Select(key => new LinkModel
+						{
+							Title = key,
+							HRef = "/Edit?id=" + key
+						})
+						.ToArray();
 
-		        Related.Set(linkModels);
-		    });
+				Related.Set(linkModels);
+			});
 		}
 
 		private void HandleDeleteDocument()
@@ -792,46 +781,46 @@ namespace Raven.Studio.Models
 		{
 			ParserDispatcherManager.EnsureParserDispatcherIsCreated();
 
-            DocumentOutliningMode mode = null;
+			DocumentOutliningMode mode = null;
 
-            if (!string.IsNullOrEmpty(Settings.Instance.DocumentOutliningMode))
-            {
-                mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
-            }
+			if (!string.IsNullOrEmpty(Settings.Instance.DocumentOutliningMode))
+			{
+				mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
+			}
 
-            if (mode == null)
-            {
-                mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
-            }
+			if (mode == null)
+			{
+				mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
+			}
 
-            SelectedOutliningMode = mode;
+			SelectedOutliningMode = mode;
 
-            if (Database.Value != null)
-            {
-                Database.Value.DocumentChanges.TakeUntil(Unloaded)
-                    .ObserveOnDispatcher()
-                    .Subscribe(n => HandleChangeNotification(n));
-            }
-        }
+			if (Database.Value != null)
+			{
+				Database.Value.DocumentChanges.TakeUntil(Unloaded)
+					.ObserveOnDispatcher()
+					.Subscribe(n => HandleChangeNotification(n));
+			}
+		}
 
-	    private void HandleChangeNotification(DocumentChangeNotification notification)
-	    {
-            if (notification.Name.Equals(DocumentKey, StringComparison.InvariantCulture))
-            {
-                if (notification.Type == DocumentChangeTypes.Put && notification.Etag != Etag)
-                {
-                    ApplicationModel.Current.AddNotification(
-                            new Notification("Document " + Key + " was changed on the server"));
-                }
-                else if (notification.Type == DocumentChangeTypes.Delete)
-                {
-                    ApplicationModel.Current.AddNotification(
-                            new Notification("Document " + Key + " was deleted on the server"));
-                }
-            }
-	    }
+		private void HandleChangeNotification(DocumentChangeNotification notification)
+		{
+			if (notification.Name.Equals(DocumentKey, StringComparison.InvariantCulture))
+			{
+				if (notification.Type == DocumentChangeTypes.Put && notification.Etag != Etag)
+				{
+					ApplicationModel.Current.AddNotification(
+							new Notification("Document " + Key + " was changed on the server"));
+				}
+				else if (notification.Type == DocumentChangeTypes.Delete)
+				{
+					ApplicationModel.Current.AddNotification(
+							new Notification("Document " + Key + " was deleted on the server"));
+				}
+			}
+		}
 
-	    public string Key
+		public string Key
 		{
 			get { return document.Value.Key; }
 			set
@@ -878,7 +867,7 @@ namespace Raven.Studio.Models
 		private IDictionary<string, string> metadata;
 		private ICommand toggleExpansion;
 		private DocumentOutliningMode outliningMode;
-	    private DocumentReferencedIdManager documentIdManager;
+		private DocumentReferencedIdManager documentIdManager;
 		private bool resolvingConflict;
 		public static IList<DocumentOutliningMode> OutliningModes { get; private set; }
 
@@ -930,18 +919,18 @@ namespace Raven.Studio.Models
 			return tcs.Task;
 		}
 
-        public override bool CanLeavePage()
-        {
-            if (HasUnsavedChanges)
-            {
-                return AskUser.Confirmation("Edit Document",
-                                            "There are unsaved changes to this document. Are you sure you want to continue?");
-            }
-            else
-            {
-                return true;
-            }
-        }
+		public override bool CanLeavePage()
+		{
+			if (HasUnsavedChanges)
+			{
+				return AskUser.Confirmation("Edit Document",
+											"There are unsaved changes to this document. Are you sure you want to continue?");
+			}
+			else
+			{
+				return true;
+			}
+		}
 
 		public ICommand Save
 		{
@@ -978,13 +967,13 @@ namespace Raven.Studio.Models
 			get { return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = !x.searchEnabled); }
 		}
 
-        protected bool HasUnsavedChanges
-        {
-            get { return hasUnsavedChanges; }
-            set { hasUnsavedChanges = value; }
-        }
+		protected bool HasUnsavedChanges
+		{
+			get { return hasUnsavedChanges; }
+			set { hasUnsavedChanges = value; }
+		}
 
-        private class RefreshDocumentCommand : Command
+		private class RefreshDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel parent;
 
@@ -1000,33 +989,33 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object _)
 			{
-                if (parent.HasUnsavedChanges)
-                {
-                    AskUser.ConfirmationAsync("Edit Document",
-                                              "There are unsaved changes to this document. Are you sure you want to refresh?")
-                        .ContinueWhenTrueInTheUIThread(DoRefresh);
-                }
-                else
-                {
-                    DoRefresh();
-                }
+				if (parent.HasUnsavedChanges)
+				{
+					AskUser.ConfirmationAsync("Edit Document",
+											  "There are unsaved changes to this document. Are you sure you want to refresh?")
+						.ContinueWhenTrueInTheUIThread(DoRefresh);
+				}
+				else
+				{
+					DoRefresh();
+				}
 			}
 
-            private void DoRefresh()
-            {
-                parent.DatabaseCommands.GetAsync(parent.DocumentKey)
-                    .ContinueOnSuccess(doc =>
-                                           {
-                                               if (doc == null)
-                                               {
-                                                   parent.HandleDocumentNotFound();
-                                                   return;
-                                               }
+			private void DoRefresh()
+			{
+				parent.DatabaseCommands.GetAsync(parent.DocumentKey)
+					.ContinueOnSuccess(doc =>
+										   {
+											   if (doc == null)
+											   {
+												   parent.HandleDocumentNotFound();
+												   return;
+											   }
 
-                                               parent.document.Value = doc;
-                                           })
-                    .Catch();
-            }
+											   parent.document.Value = doc;
+										   })
+					.Catch();
+			}
 		}
 
 		private class SaveDocumentCommand : Command
@@ -1113,11 +1102,11 @@ namespace Raven.Studio.Models
 					{
 						parentModel.ResolvingConflict = false;
 
-                        ApplicationModel.Current.AddInfoNotification("Document " + result.Key + " saved");
-					    parentModel.HasUnsavedChanges = false;
-                        parentModel.Etag = result.ETag;
-					    parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab:true);
-					    parentModel.SetCurrentDocumentKey(result.Key);
+						ApplicationModel.Current.AddInfoNotification("Document " + result.Key + " saved");
+						parentModel.HasUnsavedChanges = false;
+						parentModel.Etag = result.ETag;
+						parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab: true);
+						parentModel.SetCurrentDocumentKey(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(parentModel).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddErrorNotification(exception, "Could not save document."));

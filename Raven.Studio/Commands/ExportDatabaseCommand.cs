@@ -11,6 +11,7 @@ using Raven.Client.Silverlight.Connection;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 using Raven.Studio.Models;
 using TaskStatus = Raven.Studio.Models.TaskStatus;
 
@@ -36,11 +37,19 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var saveFile = new SaveFileDialog
-						   {
-							   DefaultFileName = string.Format("Dump of {0}, {1}", ApplicationModel.Database.Value.Name, DateTimeOffset.Now.ToString("MMM dd yyyy HH-mm", CultureInfo.InvariantCulture)),
-							   DefaultExt = ".ravendump",
-							   Filter = "Raven Dumps|*.ravendump;*.raven.dump",
-						   };
+			{
+				DefaultExt = ".ravendump",
+				Filter = "Raven Dumps|*.ravendump;*.raven.dump",
+			};
+
+			try
+			{
+				saveFile.DefaultFileName = string.Format("Dump of {0}, {1}", ApplicationModel.Database.Value.Name, DateTimeOffset.Now.ToString("MMM dd yyyy HH-mm", CultureInfo.InvariantCulture));
+			}
+			catch
+			{
+				saveFile.DefaultFileName = string.Empty;
+			}
 
 			if (saveFile.ShowDialog() != true)
 				return;
@@ -49,9 +58,9 @@ namespace Raven.Studio.Commands
 			gZipStream = new GZipStream(stream, CompressionMode.Compress);
 			streamWriter = new StreamWriter(gZipStream);
 			jsonWriter = new JsonTextWriter(streamWriter)
-						 {
-							 Formatting = Formatting.Indented
-						 };
+			{
+				Formatting = Formatting.Indented
+			};
 			taskModel.TaskStatus = TaskStatus.Started;
 			output(String.Format("Exporting to {0}", saveFile.SafeFileName));
 
