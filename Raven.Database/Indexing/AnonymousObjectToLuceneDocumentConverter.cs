@@ -200,6 +200,13 @@ namespace Raven.Database.Indexing
 							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 
 			}
+			else if(value is decimal)
+			{
+				var convert = ((double)(decimal)value);
+				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), storage,
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+		
+			}
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible) value);
