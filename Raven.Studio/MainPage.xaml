@@ -137,18 +137,7 @@
 						Margin="{StaticResource Margin_MainPageLeftRight}">
 
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				<!--<HyperlinkButton x:Name="SummaryLink"
-								 Content="Summary"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/home"
-								 Style="{StaticResource Style_Text_HeaderLink}">
-					<Behaviors:LinkHighlighter.AlternativeUris>
-						<Behaviors:StringCollection>
-							<System:String>/statistics</System:String>
-						</Behaviors:StringCollection>
-					</Behaviors:LinkHighlighter.AlternativeUris>
-				</HyperlinkButton>-->
-				
+			
 				<HyperlinkButton Content="Documents"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/documents"
@@ -177,13 +166,19 @@
 				</HyperlinkButton>
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
-				
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+
+				<HyperlinkButton Content="Alerts"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/alerts"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				
 				<HyperlinkButton Content="Logs"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/logs"

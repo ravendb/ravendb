@@ -34,6 +34,8 @@ namespace Raven.Studio.Infrastructure
 				Command.ExecuteCommand(new CreateDatabaseCommand());
 			}
 
+			ApplicationModel.Current.UpdateAlerts();
+
 			if (currentTask != null)
 				return;
 

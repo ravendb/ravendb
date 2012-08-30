@@ -152,6 +152,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
+      <Link>Infrastructure\Alert.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\ConflictsResolver.cs">
       <Link>Infrastructure\ConflictsResolver.cs</Link>
     </Compile>
@@ -238,6 +241,9 @@
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
+    <Compile Include="Features\Alerts\AlertsView.xaml.cs">
+      <DependentUpon>AlertsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Settings\SettingsView.xaml.cs">
       <DependentUpon>SettingsView.xaml</DependentUpon>
     </Compile>
@@ -383,6 +389,7 @@
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
+    <Compile Include="Models\AlertsModel.cs" />
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\SettingsModel.cs" />
     <Compile Include="Models\BaseSettingsModel.cs" />
@@ -400,6 +407,9 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
+    <Compile Include="Views\Alerts.xaml.cs">
+      <DependentUpon>Alerts.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Settings.xaml.cs">
       <DependentUpon>Settings.xaml</DependentUpon>
     </Compile>
@@ -730,6 +740,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Alerts\AlertsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Settings\SettingsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -765,6 +779,10 @@
     <Page Include="Impl\SplitButton\Themes\generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Alerts.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Settings.xaml">
       <SubType>Designer</SubType>
