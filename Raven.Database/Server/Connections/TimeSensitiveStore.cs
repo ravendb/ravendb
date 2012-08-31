@@ -8,7 +8,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Raven.Abstractions;
 
-namespace Raven.Database.Server.SignalR
+namespace Raven.Database.Server.Connections
 {
 	public class TimeSensitiveStore<T>
 	{

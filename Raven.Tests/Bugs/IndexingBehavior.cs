@@ -61,8 +61,6 @@ namespace Raven.Tests.Bugs
 				db.Put("a" + i, null, new RavenJObject(), new RavenJObject(), null);
 			}
 
-			Assert.Empty(db.Statistics.Errors);
-
 			bool isIndexStale = false;
 			for (int i = 0; i < 50; i++)
 			{

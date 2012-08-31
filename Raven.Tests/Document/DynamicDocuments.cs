@@ -61,8 +61,8 @@ namespace Raven.Tests.Document
 					Assert.Equal("John Smith", employeeLoad.Name);
 					Assert.Equal("0111 123123", employeeLoad.Phones.Home);
 					Assert.Equal("0772 321123", employeeLoad.Phones.Office);
-					Assert.Contains(123.4D, employeeLoad.Prices);
-					Assert.Contains(123432.54D, employeeLoad.Prices);
+					Assert.Contains(123.4m, employeeLoad.Prices);
+					Assert.Contains(123432.54m, employeeLoad.Prices);
 					Assert.IsType<DynamicNullObject>(employeeLoad.Address);
 
 					dynamic personLoad = session.Load<object>(idPerson);

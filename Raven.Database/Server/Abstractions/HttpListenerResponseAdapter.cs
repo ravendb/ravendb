@@ -4,23 +4,26 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
+using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.Abstractions
 {
-	public class HttpListenerResponseAdapter : IHttpResponse
+	public class HttpListenerResponseAdapter : IHttpResponse, IDisposable
 	{
 		private readonly HttpListenerResponse response;
 
-		public HttpListenerResponseAdapter(HttpListenerResponse response)
+		public HttpListenerResponseAdapter(HttpListenerResponse response, IBufferPool bufferPool)
 		{
+			StreamsToDispose = new List<Stream>();
 			this.response = response;
-			OutputStream = response.OutputStream;
+			OutputStream = new BufferPoolStream(response.OutputStream, bufferPool);
 		}
 
 		public string RedirectionPrefix
@@ -67,9 +70,18 @@ namespace Raven.Database.Server.Abstractions
 			response.Redirect(RedirectionPrefix + url);
 		}
 
+		public List<Stream> StreamsToDispose { get; set; }
+
 		public void Close()
 		{
+			OutputStream.Flush();
 			OutputStream.Dispose();
+
+			foreach (var stream in StreamsToDispose)
+			{
+				stream.Flush();
+				stream.Dispose();
+			}
 			response.Close();
 		}
 
@@ -113,6 +125,12 @@ namespace Raven.Database.Server.Abstractions
 		public void SetPublicCachability()
 		{
 			response.Headers["Cache-Control"] = "Public";
+		}
+
+		public void Dispose()
+		{
+			if(OutputStream != null)
+				OutputStream.Dispose();
 		}
 	}
 }

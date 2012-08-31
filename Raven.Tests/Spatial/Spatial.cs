@@ -8,7 +8,7 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.Spatial
 {
 	public class SpatialTest : RavenTest
 	{
@@ -49,7 +49,7 @@ namespace Raven.Tests.Bugs
 
 						Latitude = lat,
 						Longitude = lng,
-						_ = SpatialIndex.Generate(lat, lng)
+						_ = SpatialGenerate(lat, lng)
 					};
 
 				Store(x => x.Id, FieldStorage.Yes);
@@ -155,7 +155,7 @@ namespace Raven.Tests.Bugs
 					from doc in docs
 					select new
 					{
-						_ = SpatialIndex.Generate(doc.Latitude, doc.Longitude)
+						_ = SpatialGenerate(doc.Latitude, doc.Longitude)
 					};
 			}
 		}

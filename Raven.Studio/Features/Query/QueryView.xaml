@@ -17,19 +17,19 @@
                          xmlns:Query="clr-namespace:Raven.Studio.Features.Query"
                          xmlns:Controls1="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
                          d:DataContext="{d:DesignInstance Models:QueryModel}">
-    <Infrastructure:PageView.Resources>
-        <Storyboard x:Key="ShowErrorPanel">
-            <DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="50" Duration="0:0:0.1"/>
-        </Storyboard>
-        <Storyboard x:Key="HideErrorPanel">
-            <DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="0" Duration="0:0:0.1"/>
-        </Storyboard>
-    </Infrastructure:PageView.Resources>
-    <i:Interaction.Triggers>
-        <i:EventTrigger EventName="Loaded">
-            <Behaviors:FocusElementAction TargetName="QueryEditor"/>
-        </i:EventTrigger>
-    </i:Interaction.Triggers>
+	<Infrastructure:PageView.Resources>
+		<Storyboard x:Key="ShowErrorPanel">
+			<DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="50" Duration="0:0:0.1"/>
+		</Storyboard>
+		<Storyboard x:Key="HideErrorPanel">
+			<DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="0" Duration="0:0:0.1"/>
+		</Storyboard>
+	</Infrastructure:PageView.Resources>
+	<i:Interaction.Triggers>
+		<i:EventTrigger EventName="Loaded">
+			<Behaviors:FocusElementAction TargetName="QueryEditor"/>
+		</i:EventTrigger>
+	</i:Interaction.Triggers>
 	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
@@ -81,31 +81,31 @@
 				<TextBlock Text="Query"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
-				</StackPanel>
-			</toolkit:DockPanel>
-        
-        <Border Background="{StaticResource Brush_ToolbarBackground}"
+			</StackPanel>
+		</toolkit:DockPanel>
+
+		<Border Background="{StaticResource Brush_ToolbarBackground}"
                 Grid.Row="1">
-            <StackPanel Orientation="Horizontal"
+			<StackPanel Orientation="Horizontal"
 						Margin="0,4,4,4"
 						VerticalAlignment="Center">
 
-					<Button Command="{Binding Execute}"
+				<Button Command="{Binding Execute}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							ToolTipService.ToolTip="Show the Results of the Query (Ctrl+Enter)">
-						<Button.Content>
-							<StackPanel Orientation="Horizontal">
-								<Image Source="{StaticResource Image_ExecuteQuery_Small}"
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image Source="{StaticResource Image_ExecuteQuery_Small}"
 									   Stretch="None"
 								   />
-								<TextBlock Text="Execute" Margin="2,0,0,0" />
-							</StackPanel>
-						</Button.Content>
-					</Button>
+							<TextBlock Text="Execute" Margin="2,0,0,0" />
+						</StackPanel>
+					</Button.Content>
+				</Button>
 
-					<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
-					<Button x:Name="AddSortBy"
+				<Button x:Name="AddSortBy"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							ToolTipService.ToolTip="Add sort by option for this query"
 							VerticalAlignment="Center"
@@ -113,46 +113,46 @@
 							Command="{Binding AddSortBy}"
 							Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
 							VerticalContentAlignment="Center">
-						<Button.Content>
-							<StackPanel Orientation="Horizontal"
+					<Button.Content>
+						<StackPanel Orientation="Horizontal"
 										VerticalAlignment="Center">
-								<Image Source="{StaticResource Image_Add_Tiny}"
+							<Image Source="{StaticResource Image_Add_Tiny}"
 									   Stretch="None"
 									   VerticalAlignment="Center" />
-								<TextBlock Text="Add Sort By"
+							<TextBlock Text="Add Sort By"
 										   VerticalAlignment="Center"
 										   Margin="2,0,0,0" />
-                        </StackPanel>
-                    </Button.Content>
-                </Button>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 
-                <StackPanel Orientation="Horizontal"
+				<StackPanel Orientation="Horizontal"
 							Margin="0,4"
 							VerticalAlignment="Center"
 							Grid.Column="2">
-                    <TextBlock Text="Default Operator:" VerticalAlignment="Center"/>
-                    <ComboBox SelectedValuePath="Content"
+					<TextBlock Text="Default Operator:" VerticalAlignment="Center"/>
+					<ComboBox SelectedValuePath="Content"
 							  SelectedValue="{Binding DefualtOperator, Mode=TwoWay, Converter={StaticResource StringToDefaultOperator}}" 
                               VerticalAlignment="Center"
                               Margin="4,0,0,0"
                               Width="60">
-                        <ComboBoxItem Content="AND"/>
-                        <ComboBoxItem Content="OR"/>
-                    </ComboBox>
-                </StackPanel>
+						<ComboBoxItem Content="AND"/>
+						<ComboBoxItem Content="OR"/>
+					</ComboBox>
+				</StackPanel>
 
 
-            <ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}"
+				<ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}"
                               Style="{StaticResource Style_ToggleButton_MouseOverChrome}"
                               ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents"
                               Margin="4,0,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{StaticResource Image_IndexFields_Tiny}"
+					<StackPanel Orientation="Horizontal">
+						<Image Source="{StaticResource Image_IndexFields_Tiny}"
                                Stretch="None" VerticalAlignment="Center"/>
-                        <TextBlock VerticalAlignment="Center"
+						<TextBlock VerticalAlignment="Center"
 										   Margin="2,0,0,0" >Show fields</TextBlock>
-                    </StackPanel>
-                </ToggleButton>
+					</StackPanel>
+				</ToggleButton>
 
 
 				<ToggleButton IsChecked="{Binding ShowEntries, Mode=TwoWay}"
@@ -172,20 +172,20 @@
                               ToolTipService.ToolTip="Prevents the Transform Results stage of the index being applied"
                               Margin="4,0,0,0"
                               Visibility="{Binding HasTransform, Converter={StaticResource BooleanToVisibility}}">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{StaticResource Image_SkipTransform_Tiny}"
+					<StackPanel Orientation="Horizontal">
+						<Image Source="{StaticResource Image_SkipTransform_Tiny}"
                                Stretch="None" VerticalAlignment="Center"/>
-                        <TextBlock VerticalAlignment="Center"
+						<TextBlock VerticalAlignment="Center"
 										   Margin="2,0,0,0" >Skip Transform</TextBlock>
-                    </StackPanel>
-                </ToggleButton>
+					</StackPanel>
+				</ToggleButton>
 
-                <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
-                
-                <Controls1:RecentQueriesButton/>
-            </StackPanel>
-        </Border>
-        
+				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+
+				<Controls1:RecentQueriesButton/>
+			</StackPanel>
+		</Border>
+
 		<Grid Grid.Row="2">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="*"
@@ -247,14 +247,14 @@
 					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Converter={StaticResource BooleanToVisibility}}"
 								Margin="0,5">
 
-                        <i:Interaction.Triggers>
-                            <Behaviors:StudioKeyTrigger Key="Enter"
+						<i:Interaction.Triggers>
+							<Behaviors:StudioKeyTrigger Key="Enter"
 									   Modifiers="Control">
-                                <i:InvokeCommandAction Command="{Binding Execute}" />
-                            </Behaviors:StudioKeyTrigger>
-                        </i:Interaction.Triggers>
-                        
-                        <CheckBox Content="Make spatial queries"
+								<i:InvokeCommandAction Command="{Binding Execute}" />
+							</Behaviors:StudioKeyTrigger>
+						</i:Interaction.Triggers>
+
+						<CheckBox Content="Make spatial queries"
 								  Foreground="{StaticResource Brush_ContrastColor}"
 								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
 
@@ -268,7 +268,7 @@
 									 Text="{Binding Longitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 VerticalAlignment="Center" />
 
-						  <TextBlock Text="Latitude:"
+							<TextBlock Text="Latitude:"
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
@@ -281,6 +281,17 @@
 									 Width="100"
 									 Text="{Binding Radius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 VerticalAlignment="Center" />
+
+							<TextBlock Margin="50,0,0,0"
+									   Text="Address:"
+									   VerticalAlignment="Center" />
+							<TextBox Margin="5,0,5,0"
+									 Width="200"
+									 Text="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 VerticalAlignment="Center" />
+							
+							<HyperlinkButton Content="Calculate from address"
+											 Command="{Binding CalculateFromAddress}" VerticalAlignment="Center"/>
 						</StackPanel>
 					</StackPanel>
 
@@ -387,58 +398,62 @@
 						CornerRadius="2"
 						Margin="0,5,0,0">
 
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <toolkit:WrapPanel Margin="3" Grid.Row="0">
-                            <toolkit:WrapPanel.Resources>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Margin" Value="0,2,25,2"/>
-                                </Style>
-                            </toolkit:WrapPanel.Resources>
-                            <TextBlock>
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
+						<toolkit:WrapPanel Margin="3" Grid.Row="0">
+							<toolkit:WrapPanel.Resources>
+								<Style TargetType="TextBlock">
+									<Setter Property="Margin" Value="0,2,25,2"/>
+								</Style>
+							</toolkit:WrapPanel.Resources>
+							<TextBlock>
 					    <Run Text="Total results: " />
 					    <Run Text="{Binding Results.TotalResults, StringFormat='#,#'}" />
-                                </TextBlock>
-                            <TextBlock>
+							</TextBlock>
+							<TextBlock>
 					    <Run Text="Status: " />
 					    <Run Text="{Binding Results.IsStale, Converter={StaticResource BooleanToStaleStatConverter},StringFormat='\{0\}'}" />
-                                 </TextBlock>
-                            <TextBlock ToolTipService.ToolTip="{Binding Results.IndexTimestamp,Converter={StaticResource UtcToLocalConverter}, StringFormat='Last document change was at {0}'}" >
+							</TextBlock>
+							<TextBlock ToolTipService.ToolTip="{Binding Results.IndexTimestamp,Converter={StaticResource UtcToLocalConverter}, StringFormat='Last document change was at {0}'}" >
 					    <Run Text="Last update of document: " />
 					    <Run Text="{Binding Results.IndexTimestamp, Converter={StaticResource TimeToLongAgoConverter}}"/>
-                                </TextBlock>
-                            <TextBlock>
+							</TextBlock>
+							<TextBlock>
 					    <Run Text="Duration (query+network+parsing): " />
 					    <Run Text="{Binding QueryTime.TotalMilliseconds, StringFormat='\{0:#,#\} ms'}" />
-                                </TextBlock>
-                            <TextBlock>
-					    <Run Text="Index: " />
-					    <Run Text="{Binding Results.IndexName}" />
-                                </TextBlock>
-                            <TextBlock>
+							</TextBlock>
+							<StackPanel Orientation="Horizontal" Margin="0,2,25,2" VerticalAlignment="Center">
+								<TextBlock Text="Index: " Margin="0"/>
+								<HyperlinkButton Content="{Binding Results.IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
+										 ToolTipService.ToolTip="{Binding Results.IndexName}"
+										 Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="{Binding Results.IndexName, StringFormat=/indexes/\{0\}}"
+										 VerticalAlignment="Center" />
+							</StackPanel>
+							<TextBlock>
 					    <Run Text="Etag: " />
 					    <Run Text="{Binding Results.IndexEtag}" />
-                                </TextBlock>
-                        </toolkit:WrapPanel>
+							</TextBlock>
+						</toolkit:WrapPanel>
 
-                        <toolkit:DockPanel Grid.Row="1" Margin="3" >
-                            <TextBlock Text="Url:" toolkit:DockPanel.Dock="Left" VerticalAlignment="Center"/>
-                            <toolkit:DockPanel LastChildFill="False" HorizontalAlignment="Left">
-                                <Button Style="{StaticResource Style_Button_MouseOverChrome}" Command="{StaticResource NavigateToExternalUrlCommand}"
+						<toolkit:DockPanel Grid.Row="1" Margin="3" >
+							<TextBlock Text="Url:" toolkit:DockPanel.Dock="Left" VerticalAlignment="Center"/>
+							<toolkit:DockPanel LastChildFill="False" HorizontalAlignment="Left">
+								<Button Style="{StaticResource Style_Button_MouseOverChrome}" Command="{StaticResource NavigateToExternalUrlCommand}"
                                         CommandParameter="{Binding FullQueryUrl}" toolkit:DockPanel.Dock="Right"
                                         ToolTipService.ToolTip="Open Url in Browser">
-                                    <Image Source="{StaticResource Image_VisitLink_Tiny}" Stretch="None"/>
-                                </Button>
-                              <TextBox IsReadOnly="True" Text="{Binding QueryUrl}" Margin="5" VerticalAlignment="Center" 
+									<Image Source="{StaticResource Image_VisitLink_Tiny}" Stretch="None"/>
+								</Button>
+								<TextBox IsReadOnly="True" Text="{Binding QueryUrl}" Margin="5" VerticalAlignment="Center" 
                                          Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" toolkit:DockPanel.Dock="Right"/>
-                            </toolkit:DockPanel>
-                        </toolkit:DockPanel>
-                    </Grid>
-                </Border>
-            </Grid>
+							</toolkit:DockPanel>
+						</toolkit:DockPanel>
+					</Grid>
+				</Border>
+			</Grid>
 		</Grid>
 	</Grid>
 </Infrastructure:PageView>

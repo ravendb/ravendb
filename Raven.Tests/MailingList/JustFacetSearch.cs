@@ -176,8 +176,6 @@ namespace Raven.Tests.MailingList
 					Thread.Sleep(100);
 				}
 
-				WaitForUserToContinueTheTest(store);
-
 				var facets = searcher.FacetSearch("how to");
 				Assert.Equal(2, facets.Count);
 				Assert.Equal("TV Articles", facets[0].Name);

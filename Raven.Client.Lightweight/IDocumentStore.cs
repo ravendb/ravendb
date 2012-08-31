@@ -40,13 +40,13 @@ namespace Raven.Client
 		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>
-		/// <param name="cahceDuration">Specify the aggressive cache duration</param>
+		/// <param name="cacheDuration">Specify the aggressive cache duration</param>
 		/// <remarks>
 		/// Aggressive caching means that we will not check the server to see whatever the response
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
+		IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
 
 		/// <summary>
 		/// Setup the context for no aggressive caching

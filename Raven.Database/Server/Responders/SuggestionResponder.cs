@@ -56,13 +56,18 @@ namespace Raven.Database.Server.Responders
 			if(float.TryParse(context.Request.QueryString["accuracy"], out accuracy) == false)
 				accuracy = 0.5f;
 
+			bool popularity;
+			if(bool.TryParse(context.Request.QueryString["popularity"], out popularity) == false)
+				popularity = false;
+
 			var query = new SuggestionQuery
 							{
 								Distance = distanceTypes,
 								Field = field,
 								MaxSuggestions = numOfSuggestions,
 								Term = term,
-								Accuracy = accuracy
+								Accuracy = accuracy,
+								Popularity = popularity
 							};
 
 			var suggestionQueryResult = Database.ExecuteSuggestionQuery(index, query);

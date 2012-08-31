@@ -80,10 +80,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.Spatial">
+    <Reference Include="Lucene.Net.Contrib.Spatial, Version=2.9.9.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.SpellChecker">
+    <Reference Include="Lucene.Net.Contrib.SpellChecker, Version=2.9.2.1, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.SpellChecker.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
@@ -446,8 +448,10 @@
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
-    <Compile Include="Bugs\Spatial.cs" />
-    <Compile Include="Bugs\SpatialTest2.cs" />
+    <Compile Include="Spatial\Nick.cs" />
+    <Compile Include="Spatial\RavenDB_423.cs" />
+    <Compile Include="Spatial\Spatial.cs" />
+    <Compile Include="Spatial\SpatialTest2.cs" />
     <Compile Include="Bugs\spokeypokey.cs" />
     <Compile Include="Bugs\Stacey\InServerDatabase.cs" />
     <Compile Include="Bugs\Stacey\Models.cs" />
@@ -458,7 +462,7 @@
     <Compile Include="Bugs\SortingById.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
-    <Compile Include="Bugs\SpatialQueries.cs" />
+    <Compile Include="Spatial\SpatialQueries.cs" />
     <Compile Include="Bugs\StaticDynamic.cs" />
     <Compile Include="Bugs\TakeQueries.cs" />
     <Compile Include="Bugs\TempIndexScore.cs" />
@@ -619,7 +623,6 @@
     <Compile Include="Issues\RavenDB_381.cs" />
     <Compile Include="Issues\RavenDB_384.cs" />
     <Compile Include="Issues\RavenDB_421.cs" />
-    <Compile Include="Issues\RavenDB_423.cs" />
     <Compile Include="Issues\RavenDB_425.cs" />
     <Compile Include="Issues\RavenDB_483.cs" />
     <Compile Include="Issues\Raven_410.cs" />
@@ -677,14 +680,14 @@
     <Compile Include="MailingList\DeserialisationToObjectTests.cs" />
     <Compile Include="MailingList\DtcIssue.cs" />
     <Compile Include="MailingList\Everett\CanReadBytes.cs" />
-    <Compile Include="MailingList\Afif.cs" />
+    <Compile Include="Spatial\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />
     <Compile Include="MailingList\Everett616.cs" />
     <Compile Include="MailingList\Idsa\Casino.cs" />
     <Compile Include="MailingList\Idsa\CasinosSuspensionsIndex.cs" />
     <Compile Include="MailingList\Idsa\IdsaTest.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
-    <Compile Include="MailingList\JamesCrowley.cs" />
+    <Compile Include="Spatial\JamesCrowley.cs" />
     <Compile Include="MailingList\Joel.cs" />
     <Compile Include="MailingList\Johnson.cs" />
     <Compile Include="MailingList\Jorre.cs" />
@@ -706,6 +709,7 @@
     <Compile Include="MailingList\NullableBoolQuery.cs" />
     <Compile Include="MailingList\OrderByValueTypeCast.cs" />
     <Compile Include="MailingList\Oregon.cs" />
+    <Compile Include="MailingList\ParallelTxDelete.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\LazyWithIncludes.cs" />
@@ -714,6 +718,7 @@
     <Compile Include="MailingList\PhilJones_SelectMany_NoResults.cs" />
     <Compile Include="MailingList\ProjectionTests.cs" />
     <Compile Include="MailingList\QueryNotAnyTest.cs" />
+    <Compile Include="MailingList\RateTests.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RavenDB252.cs" />
     <Compile Include="MailingList\RavenProjectionGuid.cs" />
@@ -739,10 +744,11 @@
     <Compile Include="MailingList\VacancyCampaignsTests.cs" />
     <Compile Include="MailingList\Vicente.cs" />
     <Compile Include="MailingList\ZNS.cs" />
+    <Compile Include="MailingList\ZNS2.cs" />
     <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
-    <Compile Include="MailingList\TwoLocations.cs" />
+    <Compile Include="Spatial\TwoLocations.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Notifications\NotificationOnWrongDatabase.cs" />
     <Compile Include="Notifications\ClientServer.cs" />
@@ -773,7 +779,7 @@
     <Compile Include="MailingList\Andrew.cs" />
     <Compile Include="MailingList\Asger.cs" />
     <Compile Include="MailingList\Benjamin.cs" />
-    <Compile Include="MailingList\BrainV.cs" />
+    <Compile Include="Spatial\BrainV.cs" />
     <Compile Include="MailingList\BAM.cs" />
     <Compile Include="MailingList\Build570.cs" />
     <Compile Include="MailingList\CanDeleteIndex.cs" />

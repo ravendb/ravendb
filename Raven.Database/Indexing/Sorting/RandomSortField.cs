@@ -10,12 +10,15 @@ namespace Raven.Database.Indexing.Sorting
 
 		public override FieldComparator GetComparator(int numHits, int sortPos)
 		{
-			return new RandomFieldComparator(numHits, GetField());
+			return new RandomFieldComparator(numHits, Field);
 		}
 
-		public override FieldComparatorSource GetComparatorSource()
+		public override FieldComparatorSource ComparatorSource
 		{
-			return new RandomFieldComparatorSource();
+			get
+			{
+				return new RandomFieldComparatorSource();
+			}
 		}
 	}
 }

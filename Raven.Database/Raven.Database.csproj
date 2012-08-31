@@ -87,22 +87,22 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.Spatial">
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.dll</HintPath>
-    </Reference>
-    <Reference Include="Lucene.Net.Contrib.SpellChecker">
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.SpellChecker.dll</HintPath>
+    <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Mono.Cecil">
       <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.dll</HintPath>
     </Reference>
+    <Reference Include="NetTopologySuite">
+      <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
+    </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
-    <Reference Include="Spatial4n.Core">
-      <HintPath>..\SharedLibs\Spatial4n.Core.dll</HintPath>
+    <Reference Include="Spatial4n.Core.NTS">
+      <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -110,6 +110,8 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
@@ -157,15 +159,28 @@
     <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
+    <Compile Include="Bundles\SpellChecker\IDictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\JaroWinklerDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\LevenshteinDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\LuceneDictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\NGramDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\PlainTextDictionary.cs" />
+    <Compile Include="Bundles\SpellChecker\SpellChecker.cs" />
+    <Compile Include="Bundles\SpellChecker\StringDistance.cs" />
+    <Compile Include="Bundles\SpellChecker\SuggestWord.cs" />
+    <Compile Include="Bundles\SpellChecker\SuggestWordQueue.cs" />
+    <Compile Include="Bundles\SpellChecker\TRStringDistance.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
     <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Extensions\AdminFinder.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
+    <Compile Include="Linq\Ast\TransformObseleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
     <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
     <Compile Include="Linq\Mono.Reflection\ByteBuffer.cs" />
@@ -174,8 +189,10 @@
     <Compile Include="Linq\Mono.Reflection\Image.cs" />
     <Compile Include="Linq\Mono.Reflection\Instruction.cs" />
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
+    <Compile Include="Queries\MatchNoDocsQuery.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
+    <Compile Include="Server\Responders\Admin\AdminChangeDbId.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
@@ -660,6 +677,8 @@
     <Compile Include="Util\BoundedMemoryTarget.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\PortUtil.cs" />
+    <Compile Include="Util\Streams\BufferPool.cs" />
+    <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>

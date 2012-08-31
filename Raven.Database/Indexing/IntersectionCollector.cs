@@ -17,12 +17,12 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var scoreDoc in scoreDocs)
 			{
-				var document = indexSearcher.Doc(scoreDoc.doc);
+				var document = indexSearcher.Doc(scoreDoc.Doc);
 				var subQueryResult = new SubQueryResult
 				{
-					LuceneId = scoreDoc.doc,
+					LuceneId = scoreDoc.Doc,
 					RavenDocId = document.Get(Constants.DocumentIdFieldName) ?? document.Get(Constants.ReduceKeyFieldName),
-					Score = float.IsNaN(scoreDoc.score) ? 0.0f : scoreDoc.score,
+					Score = float.IsNaN(scoreDoc.Score) ? 0.0f : scoreDoc.Score,
 					Count = 1
 				};
 				results[subQueryResult.RavenDocId] = subQueryResult;
@@ -54,10 +54,10 @@ namespace Raven.Database.Indexing
 			currentReader = reader;
 			currentBase = docBase;
 		}
-		
-		public override bool AcceptsDocsOutOfOrder()
+
+		public override bool AcceptsDocsOutOfOrder
 		{
-			return true;
+			get { return true; }
 		}
 
 		public IEnumerable<SubQueryResult> DocumentsIdsForCount(int expectedCount)

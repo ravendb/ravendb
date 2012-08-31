@@ -23,7 +23,6 @@ namespace Raven.Tests.Indexes
 		{
 			store = NewDocumentStore();
 			db = store.DocumentDatabase;
-			db.SpinBackgroundWorkers();
 		}
 
 		public override void Dispose()

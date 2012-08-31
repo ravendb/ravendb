@@ -2,12 +2,17 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Client.Linq;
+using Raven.Json.Linq;
 using Raven.Tests.Bugs;
 using Raven.Tests.Faceted;
+using Raven.Abstractions.Extensions;
+using Raven.Tests.Indexes;
+using Raven.Tests.MailingList;
 
 namespace Raven.Tryouts
 {
@@ -15,9 +20,26 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
-			using(var x = new FacetedIndex())
+			using (var docStore = new DocumentStore
 			{
-				x.CanPerformFacetedSearch_Embedded();
+				Url = "http://localhost:8080",
+				DefaultDatabase = "Statics"
+			}.Initialize())
+			{
+				var buffer = new byte[1024 * 1024 * 11];
+				var sw = Stopwatch.StartNew();
+				docStore.DatabaseCommands.PutAttachment("a", null, new MemoryStream(buffer), new RavenJObject());
+				Console.WriteLine("Putting 11 MB in {0:#,#} ms", sw.ElapsedMilliseconds);
+
+				sw.Restart();
+				var attachment = docStore.DatabaseCommands.GetAttachment("a");
+				Console.WriteLine("Getting 11 MB in {0:#,#} ms", sw.ElapsedMilliseconds);
+
+				sw.Restart();
+				attachment.Data().ReadData();
+				Console.WriteLine("Reading 11 MB in {0:#,#} ms", sw.ElapsedMilliseconds);
+
+
 			}
 
 		}

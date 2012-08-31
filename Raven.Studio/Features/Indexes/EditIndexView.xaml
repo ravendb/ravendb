@@ -392,7 +392,7 @@
                                         <ColumnDefinition Width="24" />
                                     </Grid.ColumnDefinitions>
 
-                                    <Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}" />
+									<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}" Height="{Binding TextHeight}" MinHeight="100" />
 
                                     <sdk:GridSplitter Grid.Row="1"
                                                   Grid.ColumnSpan="2"
@@ -435,7 +435,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}" />
+						<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}" Height="{Binding ReduceHeight}" />
                         <Button Grid.Column="1"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
                             Padding="4"
@@ -474,7 +474,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <Editors:LinqEditor Text="{Binding TransformResults, Mode=TwoWay}" />
+						<Editors:LinqEditor Text="{Binding TransformResults, Mode=TwoWay}" Height="{Binding TransformHeight}"/>
                         <Button Grid.Column="1"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
                             Padding="4"

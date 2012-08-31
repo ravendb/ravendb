@@ -78,6 +78,7 @@ namespace Raven.Tests
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = false,
+					Port = 8079
 				}
 			};
 
