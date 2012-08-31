@@ -13,6 +13,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Tests.Storage;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Spatial
 {
@@ -59,14 +60,14 @@ namespace Raven.Tests.Spatial
 			}
 
 			const double lat = 38.96939, lng = -77.386398;
-			const double radius = 6.0;
+			const double radiusInKm = 6.0*1.609344;
 			QueryResult queryResult;
 			do
 			{
 				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
 					Query = "Tag:[[Event]]",
-					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radiusInKm),
 					SpatialRelation = SpatialRelation.Within,
 					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[] { new SortedField("__distance"), }
@@ -75,21 +76,23 @@ namespace Raven.Tests.Spatial
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
 
+			var expected = events.Count(e => Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
+
+			Assert.Equal(expected, queryResult.Results.Count);
 			Assert.Equal(7, queryResult.Results.Count);
 
-			//TODO
-			//double previous = 0;
-			//foreach (var r in queryResult.Results)
-			//{
-			//    Event e = r.JsonDeserialization<Event>();
+			double previous = 0;
+			foreach (var r in queryResult.Results)
+			{
+				Event e = r.JsonDeserialization<Event>();
 
-			//    double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
-			//    Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
+				double distance = Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude);
+				Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 
-			//    Assert.True(distance < radius);
-			//    Assert.True(distance >= previous);
-			//    previous = distance;
-			//}
+				Assert.True(distance < radiusInKm);
+				Assert.True(distance >= previous);
+				previous = distance;
+			}
 		}
 
 		[Fact]

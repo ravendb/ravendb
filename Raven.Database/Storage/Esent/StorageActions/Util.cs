@@ -107,7 +107,15 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["tx_id"], transactionInformation.Id.ToByteArray());
 				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"],
 							  SystemTime.UtcNow + transactionInformation.Timeout);
-				update.Save();
+				try
+				{
+					update.Save();
+				}
+				catch (EsentKeyDuplicateException)
+				{
+					// someone else might ahvehave created this record in a separate thread
+					// that is fine from our point of view
+				}
 			}
 		}
 

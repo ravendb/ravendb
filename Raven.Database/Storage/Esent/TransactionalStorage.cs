@@ -235,6 +235,26 @@ namespace Raven.Storage.Esent
 
 		}
 
+		public Guid ChangeId()
+		{
+			Guid newId = Guid.NewGuid();
+			instance.WithDatabase(database, (session, dbid) =>
+			{
+				using (var details = new Table(session, dbid, "details", OpenTableGrbit.ReadOnly))
+				{
+					Api.JetMove(session, details, JET_Move.First, MoveGrbit.None);
+					var columnids = Api.GetColumnDictionary(session, details);
+					using(var update = new Update(session,details, JET_prep.Replace))
+					{
+						Api.SetColumn(session, details, columnids["id"], newId.ToByteArray());
+						update.Save();
+					}
+				}
+			});
+			Id = newId;
+			return newId;
+		}
+
 		public bool Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
 			try

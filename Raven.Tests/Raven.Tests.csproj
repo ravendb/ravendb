@@ -709,6 +709,7 @@
     <Compile Include="MailingList\NullableBoolQuery.cs" />
     <Compile Include="MailingList\OrderByValueTypeCast.cs" />
     <Compile Include="MailingList\Oregon.cs" />
+    <Compile Include="MailingList\ParallelTxDelete.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\LazyWithIncludes.cs" />
@@ -717,6 +718,7 @@
     <Compile Include="MailingList\PhilJones_SelectMany_NoResults.cs" />
     <Compile Include="MailingList\ProjectionTests.cs" />
     <Compile Include="MailingList\QueryNotAnyTest.cs" />
+    <Compile Include="MailingList\RateTests.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RavenDB252.cs" />
     <Compile Include="MailingList\RavenProjectionGuid.cs" />

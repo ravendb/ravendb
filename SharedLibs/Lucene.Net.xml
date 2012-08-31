@@ -140,10 +140,10 @@
             
             <code>
             int advance(int target) {
-                int doc;
-                while ((doc = nextDoc()) &lt; target) {
-                }
-                return doc;
+            int doc;
+            while ((doc = nextDoc()) &lt; target) {
+            }
+            return doc;
             }
             </code>
             
@@ -658,19 +658,19 @@
              <summary>A Directory is a flat list of files.  Files may be written once, when they
              are created.  Once a file is created it may only be opened for read, or
              deleted.  Random access is permitted both when reading and writing.
-             
+            
              <p/> Java's i/o APIs not used directly, but rather all i/o is
              through this API.  This permits things such as: <list>
              <item> implementation of RAM-based indices;</item>
              <item> implementation indices stored in a database, via JDBC;</item>
              <item> implementation of an index as a single file;</item>
              </list>
-             
+            
              Directory locking is implemented by an instance of <see cref="P:Lucene.Net.Store.Directory.LockFactory"/>
             , and can be changed for each Directory
              instance using <see cref="M:Lucene.Net.Store.Directory.SetLockFactory(Lucene.Net.Store.LockFactory)"/>.
-             
-             </summary>
+            
+            </summary>
         </member>
         <member name="F:Lucene.Net.Store.Directory.interalLockFactory">
             <summary>Holds the LockFactory instance (implements locking for
@@ -718,7 +718,7 @@
              the only Directory implementations that respect this
              parameter are <see cref="T:Lucene.Net.Store.FSDirectory"/> and <see cref="T:Lucene.Net.Index.CompoundFileReader"/>
             .
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Store.Directory.MakeLock(System.String)">
             <summary>Construct a <see cref="T:Lucene.Net.Store.Lock"/>.</summary>
@@ -1024,21 +1024,21 @@
         <member name="T:Lucene.Net.Search.Scorer">
              <summary> Expert: Common scoring functionality for different types of queries.
              
-             <p/>
+            <p/>
              A <c>Scorer</c> iterates over documents matching a
              query in increasing order of doc Id.
-             <p/>
-             <p/>
+            <p/>
+            <p/>
              Document scores are computed using a given <c>Similarity</c>
              implementation.
-             <p/>
+            <p/>
              
              <p/><b>NOTE</b>: The values Float.Nan,
              Float.NEGATIVE_INFINITY and Float.POSITIVE_INFINITY are
              not valid scores.  Certain collectors (eg <see cref="T:Lucene.Net.Search.TopScoreDocCollector"/>
             ) will not properly collect hits
              with these scores.
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Search.Scorer.#ctor(Lucene.Net.Search.Similarity)">
             <summary>Constructs a Scorer.</summary>
@@ -1402,13 +1402,13 @@
              
              <em>// ignore scorer</em>
              public void setScorer(Scorer scorer) {
-             }
-             
+            }
+            
              <em>// accept docs out of order (for a BitSet it doesn't matter)</em>
              public boolean acceptsDocsOutOfOrder() {
              return true;
              }
-             
+            
              public void collect(int doc) {
              bits.set(doc + docBase);
              }
@@ -1430,11 +1430,11 @@
              negative custom scores, could cause it to happen).  If
              you need that behavior, use <see cref="T:Lucene.Net.Search.PositiveScoresOnlyCollector"/>
             .<p/>
-             
+            
              <p/><b>NOTE:</b> This API is experimental and might change
              in incompatible ways in the next release.<p/>
              
-             </summary>
+            </summary>
              <since> 2.9
              </since>
         </member>
@@ -2239,7 +2239,7 @@
             
              Note that this return value is different from Java in that it enumerates over the values
              and not the keys
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Util.AttributeSource.GetAttributeImplsIterator">
             <summary>Returns a new iterator that iterates all unique Attribute implementations.
@@ -2775,7 +2775,7 @@
              Note that <see cref="T:Lucene.Net.QueryParsers.QueryParser"/> produces
              MultiTermQueries using <see cref="F:Lucene.Net.Search.MultiTermQuery.CONSTANT_SCORE_AUTO_REWRITE_DEFAULT"/>
              by default.
-             </summary>
+            </summary>
         </member>
         <member name="F:Lucene.Net.Search.MultiTermQuery.CONSTANT_SCORE_FILTER_REWRITE">
             <summary>A rewrite method that first creates a private Filter,
@@ -2837,7 +2837,7 @@
              Note that you cannot alter the configuration of this
              instance; you'll need to create a private instance
              instead. 
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Search.MultiTermQuery.#ctor">
             <summary> Constructs a query matching terms that cannot be represented with a single
@@ -3155,13 +3155,13 @@
              <returns> a DocIdSet that provides the documents which should be permitted or
              prohibited in search results. <b>NOTE:</b> null can be returned if
              no documents will be accepted by this Filter.
-             </returns>
+            </returns>
              <param name="reader">
              A <see cref="T:Lucene.Net.Index.IndexReader"/> instance opened on the index currently
              searched on. Note, it is likely that the provided reader does not
              represent the whole underlying index i.e. if the index has more than
              one segment the given reader only represents a single segment.
-             </param>
+            </param>
              <seealso cref="T:Lucene.Net.Util.DocIdBitSet">
              </seealso>
         </member>
@@ -3341,7 +3341,7 @@
             frequency are the same as for a TermDocs.  The positions portion lists the ordinal
             positions of each occurrence of a term in a document.
             
-            </summary>
+             </summary>
             <seealso cref="M:Lucene.Net.Index.IndexReader.TermPositions">
             </seealso>
         </member>
@@ -4462,7 +4462,7 @@
              Expert: by default, the cached filter will be shared
              across reopened segments that only had changes to their
              deletions.  
-             </summary>
+            </summary>
              <param name="filter">Filter to cache results of</param>
              <param name="deletesMode">See <see cref="T:Lucene.Net.Search.CachingWrapperFilter.DeletesMode"/></param>
             
@@ -4546,7 +4546,7 @@
              implementation that provides on-demand filter/validation
              mechanism on an underlying DocIdSetIterator.  See <see cref="T:Lucene.Net.Search.FilteredDocIdSet"/>
             .
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Search.FilteredDocIdSetIterator.#ctor(Lucene.Net.Search.DocIdSetIterator)">
             <summary> Constructor.</summary>
@@ -4608,7 +4608,7 @@
              synchronization, you should <b>not</b> synchronize on the
              <c>IndexReader</c> instance; use your own
              (non-Lucene) objects instead.
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Index.IndexReader.IncRef">
             <summary> Expert: increments the refCount of this IndexReader
@@ -4675,15 +4675,15 @@
              since it gives much better concurrent performance,
              unless you intend to do write operations (delete
              documents or change norms) with the reader.
-             </summary>
+            </summary>
              <param name="directory">the index directory
              </param>
              <param name="deletionPolicy">a custom deletion policy (only used
              if you use this reader to perform deletes or to set
              norms); see <see cref="T:Lucene.Net.Index.IndexWriter"/> for details.
-             </param>
+            </param>
              <param name="readOnly">true if no changes (deletions, norms) will be made with this IndexReader
-             </param>
+            </param>
              <throws>  CorruptIndexException if the index is corrupt </throws>
              <throws>  IOException if there is a low-level IO error </throws>
         </member>
@@ -4694,15 +4694,15 @@
              since it gives much better concurrent performance,
              unless you intend to do write operations (delete
              documents or change norms) with the reader.
-             </summary>
+            </summary>
              <param name="directory">the index directory
-             </param>
+            </param>
              <param name="deletionPolicy">a custom deletion policy (only used
              if you use this reader to perform deletes or to set
              norms); see <see cref="T:Lucene.Net.Index.IndexWriter"/> for details.
-             </param>
+            </param>
              <param name="readOnly">true if no changes (deletions, norms) will be made with this IndexReader
-             </param>
+            </param>
              <param name="termInfosIndexDivisor">Subsamples which indexed
              terms are loaded into RAM. This has the same effect as <see>
                                                                       <cref>IndexWriter.SetTermIndexInterval</cref>
@@ -4714,7 +4714,7 @@
              memory usage, at the expense of higher latency when
              loading a TermInfo.  The default value is 1.  Set this
              to -1 to skip loading the terms index entirely.
-             </param>
+            </param>
              <throws>  CorruptIndexException if the index is corrupt </throws>
              <throws>  IOException if there is a low-level IO error </throws>
         </member>
@@ -4903,7 +4903,7 @@
             </returns>
             <throws>  CorruptIndexException if the index is corrupt </throws>
             <throws>  IOException if there is a low-level IO error </throws>
-            <summary> 
+            <summary>
             </summary>
             <seealso cref="M:Lucene.Net.Index.IndexReader.GetCommitUserData(Lucene.Net.Store.Directory)">
             </seealso>
@@ -5284,7 +5284,7 @@
              that's recorded into the segments file in the index,
              and retrievable by <see cref="M:Lucene.Net.Index.IndexReader.GetCommitUserData(Lucene.Net.Store.Directory)"/>
             .
-             </param>
+            </param>
              <throws>  IOException </throws>
         </member>
         <member name="M:Lucene.Net.Index.IndexReader.Commit">
@@ -5353,7 +5353,7 @@
              Note that if a commit is in
              progress while this method is running, that commit
              may or may not be returned array.  
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Index.IndexReader.GetSequentialSubReaders">
             <summary>Expert: returns the sequential sub readers that this
@@ -5972,7 +5972,7 @@
              <summary> <p/>Expert: a MergePolicy determines the sequence of
              primitive merge operations to be used for overall merge
              and optimize operations.<p/>
-             
+            
              <p/>Whenever the segments in an index have been altered by
              <see cref="T:Lucene.Net.Index.IndexWriter"/>, either the addition of a newly
              flushed segment, addition of many segments from
@@ -5985,25 +5985,25 @@
              necessary.  When IndexWriter.optimize is called, it calls
              <see cref="M:Lucene.Net.Index.MergePolicy.FindMergesForOptimize(Lucene.Net.Index.SegmentInfos,System.Int32,System.Collections.Generic.ISet{Lucene.Net.Index.SegmentInfo})"/> and the MergePolicy should
              then return the necessary merges.<p/>
-             
+            
              <p/>Note that the policy can return more than one merge at
              a time.  In this case, if the writer is using <see cref="T:Lucene.Net.Index.SerialMergeScheduler"/>
             , the merges will be run
              sequentially but if it is using <see cref="T:Lucene.Net.Index.ConcurrentMergeScheduler"/>
              they will be run concurrently.<p/>
-             
+            
              <p/>The default MergePolicy is <see cref="T:Lucene.Net.Index.LogByteSizeMergePolicy"/>
             .<p/>
-             
+            
              <p/><b>NOTE:</b> This API is new and still experimental
              (subject to change suddenly in the next release)<p/>
-             
+            
              <p/><b>NOTE</b>: This class typically requires access to
              package-private APIs (e.g. <c>SegmentInfos</c>) to do its job;
              if you implement your own MergePolicy, you'll need to put
              it in package Lucene.Net.Index in order to use
              these APIs.
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Index.MergePolicy.FindMerges(Lucene.Net.Index.SegmentInfos)">
             <summary> Determine what set of merge operations are now necessary on the index.
@@ -6072,7 +6072,7 @@
         <member name="M:Lucene.Net.Index.MergePolicy.OneMerge.GetException">
              <summary>Retrieve previous exception set by <see cref="M:Lucene.Net.Index.MergePolicy.OneMerge.SetException(System.Exception)"/>
             . 
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Index.MergePolicy.OneMerge.Abort">
             <summary>Mark this merge as aborted.  If this is called
@@ -6230,7 +6230,7 @@
              not yet committed.  This class uses simple reference
              counting to map the live SegmentInfos instances to
              individual files in the Directory.</para>
-             
+            
              <para>The same directory file may be referenced by more than
              one IndexCommit, i.e. more than one SegmentInfos.
              Therefore we count how many commits reference each file.
@@ -6242,12 +6242,12 @@
              (IndexDeletionPolicy) is consulted on creation (onInit)
              and once per commit (onCommit), to decide when a commit
              should be removed.</para>
-             
+            
              <para>It is the business of the IndexDeletionPolicy to choose
              when to delete commit points.  The actual mechanics of
              file deletion, retrying, etc, derived from the deletion
              of commit points is the business of the IndexFileDeleter.</para>
-             
+            
              <para>The current default deletion policy is
              <see cref="T:Lucene.Net.Index.KeepOnlyLastCommitDeletionPolicy"/>, which removes all
              prior commits when a new commit has completed.  This
@@ -6256,7 +6256,7 @@
              <para>Note that you must hold the write.lock before
              instantiating this class.  It opens segments_N file(s)
              directly with no retry logic.</para>
-             </summary>
+            </summary>
         </member>
         <member name="F:Lucene.Net.Index.IndexFileDeleter.deletable">
             because they are open and we are running on Windows),
@@ -7139,16 +7139,16 @@
              Base class for Directory implementations that store index
              files in the file system.  There are currently three core
              subclasses:
-             
+            
              <list type="bullet">
-             
+            
              <item> <see cref="T:Lucene.Net.Store.SimpleFSDirectory"/> is a straightforward
              implementation using java.io.RandomAccessFile.
              However, it has poor concurrent performance
              (multiple threads will bottleneck) as it
              synchronizes when multiple threads read from the
              same file.</item>
-             
+            
              <item> <see cref="T:Lucene.Net.Store.NIOFSDirectory"/> uses java.nio's
              FileChannel's positional io when reading to avoid
              synchronization when reading from the same file.
@@ -7159,7 +7159,7 @@
              <c>Future#cancel(boolean)</c> (on Java 1.5) should use
              <see cref="T:Lucene.Net.Store.SimpleFSDirectory"/> instead. See <see cref="T:Lucene.Net.Store.NIOFSDirectory"/> java doc
              for details.
-                    
+            
                     
              
              <item> <see cref="T:Lucene.Net.Store.MMapDirectory"/> uses memory-mapped IO when
@@ -7202,11 +7202,11 @@
              specific implementation, it's best to simply use <see cref="M:Lucene.Net.Store.FSDirectory.Open(System.IO.DirectoryInfo)"/>
             .  For all others, you should instantiate the
              desired implementation directly.
-             
+            
              <p/>The locking implementation is by default <see cref="T:Lucene.Net.Store.NativeFSLockFactory"/>
             , but can be changed by
              passing in a custom <see cref="T:Lucene.Net.Store.LockFactory"/> instance.
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Store.FSDirectory.InitOutput(System.String)">
             <summary>Initializes the directory to create a new file with the given name.
@@ -7394,13 +7394,13 @@
         <member name="T:Lucene.Net.Store.LockFactory">
              <summary> <p/>Base class for Locking implementation.  <see cref="T:Lucene.Net.Store.Directory"/> uses
              instances of this class to implement locking.<p/>
-             
+            
              <p/>Note that there are some useful tools to verify that
              your LockFactory is working correctly: <see cref="T:Lucene.Net.Store.VerifyingLockFactory"/>
             , <see cref="T:Lucene.Net.Store.LockStressTest"/>, <see cref="T:Lucene.Net.Store.LockVerifyServer"/>
             .<p/>
              
-             </summary>
+            </summary>
              <seealso cref="T:Lucene.Net.Store.LockVerifyServer">
              </seealso>
              <seealso cref="T:Lucene.Net.Store.LockStressTest">
@@ -9194,7 +9194,7 @@
              since this reader was instantiated.  When this happens
              you must open a new reader on the current index to make
              the changes.
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Index.SegmentTermEnum.Next">
             <summary>Increments the enumeration to the next element.  True if one exists.</summary>
@@ -9811,29 +9811,29 @@
              value according to your comparator, in cases where
              your comparator is not the primary one (ie, is only
              used to break ties from the comparators before it).</item>
-             
+            
              <item> <see cref="M:Lucene.Net.Search.FieldComparator.CompareBottom(System.Int32)"/> Compare a new hit (docID)
              against the "weakest" (bottom) entry in the queue.</item>
-             
+            
              <item> <see cref="M:Lucene.Net.Search.FieldComparator.Copy(System.Int32,System.Int32)"/> Installs a new hit into the
              priority queue.  The <see cref="T:Lucene.Net.Search.FieldValueHitQueue"/>
              calls this method when a new hit is competitive.</item>
-             
+            
              <item> <see cref="M:Lucene.Net.Search.FieldComparator.SetNextReader(Lucene.Net.Index.IndexReader,System.Int32)"/> Invoked
              when the search is switching to the next segment.
              You may need to update internal state of the
              comparator, for example retrieving new values from
              the <see cref="T:Lucene.Net.Search.FieldCache"/>.</item>
-             
+            
              <item> <see cref="!:Value"/> Return the sort value stored in
              the specified slot.  This is only called at the end
              of the search, in order to populate <see cref="F:Lucene.Net.Search.FieldDoc.fields"/>
              when returning the top results.</item>
              </list>
-             
+            
              <b>NOTE:</b> This API is experimental and might change in
              incompatible ways in the next release.
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Search.FieldComparator.Compare(System.Int32,System.Int32)">
             <summary> Compare hit at slot1 with hit at slot2.
@@ -9864,19 +9864,19 @@
              should return the same result as <see cref="M:Lucene.Net.Search.FieldComparator.Compare(System.Int32,System.Int32)"/>
             } as if bottom were slot1 and the new
              document were slot 2.
-             
+            
              <p/>For a search that hits many results, this method
              will be the hotspot (invoked by far the most
              frequently).<p/>
-             
-             </summary>
+            
+            </summary>
              <param name="doc">that was hit
-             </param>
+            </param>
              <returns> any N &lt; 0 if the doc's value is sorted after
              the bottom entry (not competitive), any N &gt; 0 if the
              doc's value is sorted before the bottom entry and 0 if
              they are equal.
-             </returns>
+            </returns>
         </member>
         <member name="M:Lucene.Net.Search.FieldComparator.Copy(System.Int32,System.Int32)">
             <summary> This method is called when a new hit is competitive.
@@ -9976,7 +9976,7 @@
              to large results, this comparator will be much faster
              than <see cref="T:Lucene.Net.Search.FieldComparator.StringValComparator"/>.  For very small
              result sets it may be slower. 
-             </summary>
+            </summary>
         </member>
         <member name="T:Lucene.Net.Search.FieldComparator.StringValComparator">
             <summary>Sorts by field's natural String sort order.  All
@@ -11063,7 +11063,7 @@
             contained in a <see cref="T:Lucene.Net.Analysis.NormalizeCharMap"/> to the character
             stream, and correcting the resulting changes to the
             offsets.
-            </summary>
+            </summary>   
         </member>
         <member name="M:Lucene.Net.Analysis.MappingCharFilter.#ctor(Lucene.Net.Analysis.NormalizeCharMap,Lucene.Net.Analysis.CharStream)">
             Default constructor that takes a <see cref="T:Lucene.Net.Analysis.CharStream"/>.
@@ -12128,12 +12128,12 @@
              run with a background thread so as not to block the
              addDocument calls (see <a href="#mergePolicy">below</a>
              for changing the <see cref="P:Lucene.Net.Index.IndexWriter.MergeScheduler"/>).
-             <p/>
+            <p/>
              If an index will not have more documents added for a while and optimal search
              performance is desired, then either the full <see cref="M:Lucene.Net.Index.IndexWriter.Optimize"/>
              method or partial <see cref="M:Lucene.Net.Index.IndexWriter.Optimize(System.Int32)"/> method should be
              called before the index is closed.
-             <p/>
+            <p/>
              Opening an <c>IndexWriter</c> creates a lock file for the directory in use. Trying to open
              another <c>IndexWriter</c> on the same directory will lead to a
              <see cref="T:Lucene.Net.Store.LockObtainFailedException"/>. The <see cref="T:Lucene.Net.Store.LockObtainFailedException"/>
@@ -12192,7 +12192,7 @@
              it's in a Wait() or Thread.Sleep()), and will then throw
              the unchecked exception <see cref="T:System.Threading.ThreadInterruptedException"/>
              and <b>clear</b> the interrupt status on the thread<p/>
-             </summary>
+            </summary>
         </member>
         <member name="F:Lucene.Net.Index.IndexWriter.WRITE_LOCK_NAME">
             <summary> Name of the write lock in the index.</summary>
@@ -12239,17 +12239,17 @@
              searching, in that changes made during an IndexWriter session can be
              quickly made available for searching without closing the writer nor
              calling <see cref="M:Lucene.Net.Index.IndexWriter.Commit"/>.
-             
-             <p/>
+            
+            <p/>
              Note that this is functionally equivalent to calling {#commit} and then
              using <see cref="!:IndexReader.Open(string)"/> to open a new reader. But the turarnound
              time of this method should be faster since it avoids the potentially
              costly <see cref="M:Lucene.Net.Index.IndexWriter.Commit"/>.
-             <p/>
+            <p/>
              
              You must close the <see cref="T:Lucene.Net.Index.IndexReader"/> returned by  this method once you are done using it.
              
-             <p/>
+            <p/>
              It's <i>near</i> real-time because there is no hard
              guarantee on how quickly you can get a new reader after
              making changes with IndexWriter.  You'll have to
@@ -12288,7 +12288,7 @@
              <p/><b>NOTE:</b> This API is experimental and might
              change in incompatible ways in the next release.<p/>
              
-             </summary>
+            </summary>
              <returns> IndexReader that covers entire index plus all
              changes made so far by this IndexWriter instance
              
@@ -12393,7 +12393,7 @@
              first creating it if it does not already exist.  Text
              will be analyzed with <c>a</c>.
              
-             </summary>
+            </summary>
              <param name="d">the index directory
              </param>
              <param name="a">the analyzer to use
@@ -12406,11 +12406,11 @@
              <throws>  LockObtainFailedException if another writer </throws>
              <summary>  has this index open (<c>write.lock</c> could not
              be obtained)
-             </summary>
+            </summary>
              <throws>  IOException if the directory cannot be </throws>
              <summary>  read/written to or if there is any other low-level
              IO error
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Index.IndexWriter.#ctor(Lucene.Net.Store.Directory,Lucene.Net.Analysis.Analyzer,System.Boolean,Lucene.Net.Index.IndexDeletionPolicy,Lucene.Net.Index.IndexWriter.MaxFieldLength)">
              <summary> Expert: constructs an IndexWriter with a custom <see cref="T:Lucene.Net.Index.IndexDeletionPolicy"/>
@@ -12420,7 +12420,7 @@
              will be created in <c>d</c>, replacing the index
              already there, if any.
              
-             </summary>
+            </summary>
              <param name="d">the index directory
              </param>
              <param name="a">the analyzer to use
@@ -12437,12 +12437,12 @@
              <throws>  LockObtainFailedException if another writer </throws>
              <summary>  has this index open (<c>write.lock</c> could not
              be obtained)
-             </summary>
+            </summary>
              <throws>  IOException if the directory cannot be read/written to, or </throws>
              <summary>  if it does not exist and <c>create</c> is
              <c>false</c> or if there is any other low-level
              IO error
-             </summary>
+            </summary>
         </member>
         <member name="M:Lucene.Net.Index.IndexWriter.#ctor(Lucene.Net.Store.Directory,Lucene.Net.Analysis.Analyzer,System.Boolean,Lucene.Net.Index.IndexDeletionPolicy,Lucene.Net.Index.IndexWriter.MaxFieldLength,Lucene.Net.Index.DocumentsWriter.IndexingChain,Lucene.Net.Index.IndexCommit)">
             <summary> Expert: constructs an IndexWriter with a custom <see cref="T:Lucene.Net.Index.IndexDeletionPolicy"/>
@@ -13056,11 +13056,11 @@
              <summary> Optimize the index down to &lt;= maxNumSegments.  If
              maxNumSegments==1 then this is the same as <see cref="M:Lucene.Net.Index.IndexWriter.Optimize"/>
             .
-             
+            
              <p/><b>NOTE</b>: if this method hits an OutOfMemoryError
              you should immediately close the writer.  See <a href="#OOME">above</a> for details.<p/>
-             
-             </summary>
+            
+            </summary>
              <param name="maxNumSegments">maximum number of segments left
              in the index after optimization finishes
              </param>
@@ -13250,7 +13250,7 @@
              A hook for extending classes to execute operations after pending added and
              deleted documents have been flushed to the Directory but before the change
              is committed (new segments_N file written).
-            </summary>   
+            </summary>
         </member>
         <member name="M:Lucene.Net.Index.IndexWriter.DoBeforeFlush">
             <summary>
@@ -13584,7 +13584,7 @@
         <member name="P:Lucene.Net.Index.IndexWriter.MergedSegmentWarmer">
              <summary>Gets or sets the merged segment warmer.  See <see cref="T:Lucene.Net.Index.IndexWriter.IndexReaderWarmer"/>
             . 
-             </summary>
+            </summary>
         </member>
         <member name="T:Lucene.Net.Index.IndexWriter.ReaderPool">
             <summary>Holds shared SegmentReader instances. IndexWriter uses
@@ -14880,8 +14880,8 @@
              appropriate. For example, this score factor does not make sense for most
              automatically generated queries, like <see cref="T:Lucene.Net.Search.WildcardQuery"/> and <see cref="T:Lucene.Net.Search.FuzzyQuery"/>
             .
-             
-             </summary>
+            
+            </summary>
              <param name="disableCoord">disables <see cref="M:Lucene.Net.Search.Similarity.Coord(System.Int32,System.Int32)"/> in scoring.
              </param>
         </member>
@@ -16166,12 +16166,12 @@
              needs to iterate over many terms. In order to prevent extremely slow WildcardQueries,
              a Wildcard term should not start with one of the wildcards <c>*</c> or
              <c>?</c>.
-             
+            
              <p/>This query uses the <see cref="F:Lucene.Net.Search.MultiTermQuery.CONSTANT_SCORE_AUTO_REWRITE_DEFAULT"/>
             
              rewrite method.
-             
-             </summary>
+            
+            </summary>
              <seealso cref="T:Lucene.Net.Search.WildcardTermEnum">
              </seealso>
         </member>
@@ -16317,9 +16317,9 @@
              might change in incompatible ways in the next
              release.</font>
              
-             </summary>
+            </summary>
              <since> 2.9
-             
+            
              </since>
         </member>
         <member name="P:Lucene.Net.Search.NumericRangeFilter`1.Field">
@@ -16893,21 +16893,21 @@
              
              <p/>You create a new NumericRangeQuery with the static
              factory methods, eg:
-             
+            
              <code>
              Query q = NumericRangeQuery.newFloatRange("weight",
              new Float(0.3f), new Float(0.10f),
              true, true);
              </code>
-             
+            
              matches all documents whose float valued "weight" field
              ranges from 0.3 to 0.10, inclusive.
-             
+            
              <p/>The performance of NumericRangeQuery is much better
              than the corresponding <see cref="T:Lucene.Net.Search.TermRangeQuery"/> because the
              number of terms that must be searched is usually far
              fewer, thanks to trie indexing, described below.<p/>
-             
+            
              <p/>You can optionally specify a <a href="#precisionStepDesc"><c>precisionStep</c></a>
              when creating this query.  This is necessary if you've
              changed this configuration from its default (4) during
@@ -16917,7 +16917,7 @@
              which is the default value for all <c>Numeric*</c>
              classes.  See <a href="#precisionStepDesc">below</a> for
              details.
-             
+            
              <p/>This query defaults to
              <see cref="F:Lucene.Net.Search.MultiTermQuery.CONSTANT_SCORE_AUTO_REWRITE_DEFAULT"/> for
              32 bit (int/float) ranges with precisionStep &lt;8 and 64
@@ -16928,20 +16928,20 @@
              steps of &lt;4, this query can be run with one of the
              BooleanQuery rewrite methods without changing
              BooleanQuery's default max clause count.
-             
+            
              <p/><font color="red"><b>NOTE:</b> This API is experimental and
              might change in incompatible ways in the next release.</font>
-             
+            
              <br/><h3>How it works</h3>
-             
+            
              <p/>See the publication about <a target="_blank" href="http://www.panfmp.org">panFMP</a>,
              where this algorithm was described (referred to as <c>TrieRangeQuery</c>):
-             
+            
              <blockquote><strong>Schindler, U, Diepenbroek, M</strong>, 2008.
              <em>Generic XML-based Framework for Metadata Portals.</em>
              Computers &amp; Geosciences 34 (12), 1947-1955.
              <a href="http://dx.doi.org/10.1016/j.cageo.2008.02.023" target="_blank">doi:10.1016/j.cageo.2008.02.023</a></blockquote>
-             
+            
              <p/><em>A quote from this paper:</em> Because Apache Lucene is a full-text
              search engine and not a conventional database, it cannot handle numerical ranges
              (e.g., field value is inside user defined bounds, even dates are numerical values).
@@ -16953,7 +16953,7 @@
              see <see cref="T:Lucene.Net.Util.NumericUtils"/>). A range is then divided recursively into multiple intervals for searching:
              The center of the range is searched only with the lowest possible precision in the <em>trie</em>,
              while the boundaries are matched more exactly. This reduces the number of terms dramatically.<p/>
-             
+            
              <p/>For the variant that stores long values in 8 different precisions (each reduced by 8 bits) that
              uses a lowest precision of 1 byte, the index contains only a maximum of 256 distinct values in the
              lowest precision. Overall, a range could consist of a theoretical maximum of
@@ -16962,7 +16962,7 @@
              because it would always be possible to reduce the full 256 values to one term with degraded precision).
              In practice, we have seen up to 300 terms in most cases (index with 500,000 metadata records
              and a uniform value distribution).<p/>
-             
+            
              <a name="precisionStepDesc"/><h3>Precision Step</h3>
              <p/>You can choose any <c>precisionStep</c> when encoding values.
              Lower step values mean more precisions and so more terms in index (and index gets larger).
@@ -16979,7 +16979,7 @@
              in the term enum of the index. Because of this, the ideal <c>precisionStep</c> value can only
              be found out by testing. <b>Important:</b> You can index with a lower precision step value and test search speed
              using a multiple of the original step value.<p/>
-             
+            
              <p/>Good values for <c>precisionStep</c> are depending on usage and data type:
              <list type="bullet">
              <item>The default for all data types is <b>4</b>, which is used, when no <c>precisionStep</c> is given.</item>
@@ -16992,18 +16992,18 @@
              is ideal, because building the field cache is much faster than with text-only numbers.
              Sorting is also possible with range query optimized fields using one of the above <c>precisionSteps</c>.</item>
              </list>
-             
+            
              <p/>Comparisons of the different types of RangeQueries on an index with about 500,000 docs showed
              that <see cref="T:Lucene.Net.Search.TermRangeQuery"/> in boolean rewrite mode (with raised <see cref="T:Lucene.Net.Search.BooleanQuery"/> clause count)
              took about 30-40 secs to complete, <see cref="T:Lucene.Net.Search.TermRangeQuery"/> in constant score filter rewrite mode took 5 secs
              and executing this class took &lt;100ms to complete (on an Opteron64 machine, Java 1.5, 8 bit
              precision step). This query type was developed for a geographic portal, where the performance for
              e.g. bounding boxes or exact date/time stamps is important.<p/>
+            
+            </summary>
+            <since> 2.9
              
-             </summary>
-             <since> 2.9
-             
-             </since>
+            </since>
         </member>
         <member name="P:Lucene.Net.Search.NumericRangeQuery`1.Field">
             <summary>Returns the field name for this query </summary>
@@ -19753,7 +19753,7 @@
              <b>NOTE:</b> This API is experimental and might change in
              incompatible ways in the next release.
              
-             </summary>
+            </summary>
              <param name="numHits">number of top hits the queue will store
              </param>
              <param name="sortPos">position of this SortField within <see cref="T:Lucene.Net.Search.Sort"/>
@@ -20134,16 +20134,16 @@
             <summary>Expert: Default scoring implementation. </summary>
         </member>
         <member name="M:Lucene.Net.Search.DefaultSimilarity.ComputeNorm(System.String,Lucene.Net.Index.FieldInvertState)">
-             <summary>Implemented as
+            <summary>Implemented as
              <c>state.getBoost()*lengthNorm(numTerms)</c>, where
              <c>numTerms</c> is <see cref="!:FieldInvertState.GetLength()"/> if <see cref="!:SetDiscountOverlaps"/>
              is false, else it's <see cref="!:FieldInvertState.GetLength()"/>
              - <see cref="!:FieldInvertState.GetNumOverlap()"/>
             .
-             
-             <p/><b>WARNING</b>: This API is new and experimental, and may suddenly
-             change.<p/> 
-             </summary>
+            
+            <p/><b>WARNING</b>: This API is new and experimental, and may suddenly
+            change.<p/> 
+            </summary>
         </member>
         <member name="M:Lucene.Net.Search.DefaultSimilarity.LengthNorm(System.String,System.Int32)">
             <summary>Implemented as <c>1/sqrt(numTerms)</c>. </summary>
@@ -20973,9 +20973,9 @@
              <summary>Builds an analyzer with the given stop words.</summary>
              <param name="matchVersion">Lucene version to match See <see cref="T:Lucene.Net.Util.Version">above</see> /&gt;
             
-             </param>
+            </param>
              <param name="stopWords">stop words 
-             </param>
+            </param>
         </member>
         <member name="M:Lucene.Net.Analysis.Standard.StandardAnalyzer.#ctor(Lucene.Net.Util.Version,System.IO.FileInfo)">
              <summary>Builds an analyzer with the stop words from the given file.</summary>
@@ -20983,9 +20983,9 @@
              </seealso>
              <param name="matchVersion">Lucene version to match See <see cref="T:Lucene.Net.Util.Version">above</see> /&gt;
             
-             </param>
+            </param>
              <param name="stopwords">File to read stop words from 
-             </param>
+            </param>
         </member>
         <member name="M:Lucene.Net.Analysis.Standard.StandardAnalyzer.#ctor(Lucene.Net.Util.Version,System.IO.TextReader)">
              <summary>Builds an analyzer with the stop words from the given reader.</summary>
@@ -20993,14 +20993,14 @@
              </seealso>
              <param name="matchVersion">Lucene version to match See <see cref="T:Lucene.Net.Util.Version">above</see> /&gt;
             
-             </param>
+            </param>
              <param name="stopwords">Reader to read stop words from 
-             </param>
+            </param>
         </member>
         <member name="M:Lucene.Net.Analysis.Standard.StandardAnalyzer.TokenStream(System.String,System.IO.TextReader)">
              <summary>Constructs a <see cref="T:Lucene.Net.Analysis.Standard.StandardTokenizer"/> filtered by a <see cref="T:Lucene.Net.Analysis.Standard.StandardFilter"/>
             , a <see cref="T:Lucene.Net.Analysis.LowerCaseFilter"/> and a <see cref="T:Lucene.Net.Analysis.StopFilter"/>. 
-             </summary>
+            </summary>
         </member>
         <member name="P:Lucene.Net.Analysis.Standard.StandardAnalyzer.MaxTokenLength">
             <summary> Set maximum allowed token length.  If a token is seen
@@ -21320,7 +21320,7 @@
         <member name="T:Lucene.Net.Store.SimpleFSLockFactory">
              <summary> <p/>Implements <see cref="T:Lucene.Net.Store.LockFactory"/> using <see cref="M:System.IO.FileInfo.Create"/>
             .<p/>
-             
+            
              <p/><b>NOTE:</b> the <a target="_top" href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/File.html#createNewFile()">javadocs
              for <c>File.createNewFile</c></a> contain a vague
              yet spooky warning about not using the API for file
@@ -21336,13 +21336,13 @@
              API.  But, first be certain that no writer is in fact
              writing to the index otherwise you can easily corrupt
              your index.<p/>
-             
+            
              <p/>If you suspect that this or any other LockFactory is
              not working properly in your environment, you can easily
              test it by using <see cref="T:Lucene.Net.Store.VerifyingLockFactory"/>, <see cref="T:Lucene.Net.Store.LockVerifyServer"/>
              and <see cref="T:Lucene.Net.Store.LockStressTest"/>.<p/>
              
-             </summary>
+            </summary>
              <seealso cref="T:Lucene.Net.Store.LockFactory">
              </seealso>
         </member>
@@ -21369,7 +21369,7 @@
             <see cref="T:Lucene.Net.Search.Spans.SpanNearQuery"/> except that it factors
             in the value of the payloads located at each of the positions where the
             <see cref="T:Lucene.Net.Search.Spans.TermSpans"/> occurs.
-            <p/>
+            <p/> 
             In order to take advantage of this, you must override
             <see cref="M:Lucene.Net.Search.Similarity.ScorePayload(System.Int32,System.String,System.Int32,System.Int32,System.Byte[],System.Int32,System.Int32)"/>
             which returns 1 by default.
@@ -21485,11 +21485,11 @@
              <code>
              document.add(new NumericField(name).setIntValue(value));
              </code>
-             
+            
              For optimal performance, re-use the
              <c>NumericField</c> and <see cref="T:Lucene.Net.Documents.Document"/> instance for more than
              one document:
-             
+            
              <code>
              NumericField field = new NumericField(name);
              Document document = new Document();
@@ -21588,7 +21588,7 @@
              experimental and might change in incompatible ways in the
              next release.</font>
              
-             </summary>
+            </summary>
              <since> 2.9
              </since>
         </member>

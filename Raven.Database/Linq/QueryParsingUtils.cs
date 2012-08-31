@@ -115,6 +115,7 @@ namespace Raven.Database.Linq
 				variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 				return variable;
 			}
 			catch (Exception e)
@@ -160,6 +161,7 @@ namespace Raven.Database.Linq
 				variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 
 				var expressionBody = GetAnonymousCreateExpression(lambdaExpression.ExpressionBody);
 
