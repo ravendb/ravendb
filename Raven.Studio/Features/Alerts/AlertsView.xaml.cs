@@ -1,11 +1,11 @@
 ﻿using System.Windows.Navigation;
 using Raven.Studio.Infrastructure;
 
-namespace Raven.Studio.Views
+namespace Raven.Studio.Features.Alerts
 {
-	public partial class Bundles : PageView
+	public partial class AlertsView : PageView
 	{
-		public Bundles()
+		public AlertsView()
 		{
 			InitializeComponent();
 		}

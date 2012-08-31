@@ -20,7 +20,7 @@ namespace Raven.Studio.Commands
 				{
 					if (!task.Result)
 						return;
-					Command.ExecuteCommand(new ChangeDatabaseCommand(), Constants.SystemDatabase);
+					Command.ExecuteCommand(new ChangeDatabaseCommand(true), Constants.SystemDatabase);
 				});
 		}
 	}

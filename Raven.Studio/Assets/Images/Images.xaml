@@ -13,8 +13,10 @@
     <BitmapImage x:Key="Image_Document_Tiny" UriSource="document_tiny.png"/>
     <BitmapImage x:Key="Image_Document_Small" UriSource="document_small.png"/>
     <BitmapImage x:Key="Image_Add_Tiny" UriSource="add_tiny.png"/>
-    <BitmapImage x:Key="Image_AddDocument_Tiny" UriSource="document_add_tiny.png"/>
-    <BitmapImage x:Key="Image_Remove_Tiny" UriSource="remove_tiny.png"/>
+	<BitmapImage x:Key="Image_AddDocument_Tiny" UriSource="document_add_tiny.png"/>
+	<BitmapImage x:Key="Image_Settings" UriSource="Image_Settings.png"/>
+	<BitmapImage x:Key="Image_Settings_Tiny" UriSource="Image_Settings_Tiny.png"/>
+	<BitmapImage x:Key="Image_Remove_Tiny" UriSource="remove_tiny.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="save_tiny.png"/>
     <BitmapImage x:Key="Image_Search_Small" UriSource="search_tiny.png" />
     <BitmapImage x:Key="Image_Undo_Small" UriSource="undo_tiny.png"/>

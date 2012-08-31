@@ -5,14 +5,15 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Studio.Controls;
-using Raven.Studio.Features.Bundles;
 using Raven.Studio.Features.Input;
+using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Studio.Models;
@@ -36,13 +37,13 @@ namespace Raven.Studio.Commands
 
 					AssertValidName(databaseName);
 
-							var bundlesModel = new CreateBundlesModel();
+							var bundlesModel = new CreateSettingsModel();
 							var bundlesSettings = new List<ChildWindow>();
 							if (newDatabase.Encryption.IsChecked == true)
 								bundlesSettings.Add(new EncryptionSettings());
 							if (newDatabase.Quotas.IsChecked == true || newDatabase.Replication.IsChecked == true || newDatabase.Versioning.IsChecked == true)
 							{
-								bundlesModel = new CreateBundlesModel()
+								bundlesModel = new CreateSettingsModel()
 									{
 										HasQuotas = newDatabase.Quotas.IsChecked == true,
 										HasReplication = newDatabase.Replication.IsChecked == true,
@@ -50,32 +51,39 @@ namespace Raven.Studio.Commands
 									};
 								if (bundlesModel.HasQuotas)
 								{
-									bundlesModel.Bundles.Add("Quotas");
-									bundlesModel.SelectedBundle.Value = "Quotas";
+									bundlesModel.Settings.Add("Quotas");
+									bundlesModel.SelectedSetting.Value = "Quotas";
 								}
 								if (bundlesModel.HasReplication)
 								{ 
-									bundlesModel.Bundles.Add("Replication");
-									if(bundlesModel.SelectedBundle.Value == null)
-										bundlesModel.SelectedBundle.Value = "Replication";
+									bundlesModel.Settings.Add("Replication");
+									if(bundlesModel.SelectedSetting.Value == null)
+										bundlesModel.SelectedSetting.Value = "Replication";
 								}
 								if (bundlesModel.HasVersioning)
 								{
-									bundlesModel.Bundles.Add("Versioning");
-									if (bundlesModel.SelectedBundle.Value == null)
-										bundlesModel.SelectedBundle.Value = "Versioning";
+									bundlesModel.Settings.Add("Versioning");
+									if (bundlesModel.SelectedSetting.Value == null)
+										bundlesModel.SelectedSetting.Value = "Versioning";
 								}
 
-								var bundleView = new BundlesView()
+								var bundleView = new SettingsView()
 								{
 									DataContext = bundlesModel
 								};
-
-								bundlesSettings.Add(new ChildWindow()
+								var bundlesSettingsWindow = new ChildWindow()
 								{
 									Title = "Setup bundles",
-									Content = bundleView
-								});
+									Content = bundleView,
+								};
+
+								bundlesSettingsWindow.KeyDown += (sender, args) =>
+								{
+									if (args.Key == Key.Escape)
+										bundlesSettingsWindow.DialogResult = false;
+								};
+
+								bundlesSettings.Add(bundlesSettingsWindow);
 							}
 
 							new Wizard(bundlesSettings).StartAsync()
@@ -131,16 +139,16 @@ namespace Raven.Studio.Commands
 			return settings;
 		}
 
-		private void HendleBundleAfterCreation(CreateBundlesModel bundlesModel, string databaseName, string encryptionKey)
+		private void HendleBundleAfterCreation(CreateSettingsModel settingsModel, string databaseName, string encryptionKey)
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
-			if (bundlesModel.HasVersioning)
-				StoreVersioningData(bundlesModel.VersioningConfigurations, session);
+			if (settingsModel.HasVersioning)
+				StoreVersioningData(settingsModel.VersioningConfigurations, session);
 
-			if (bundlesModel.HasReplication)
+			if (settingsModel.HasReplication)
 			{
 				var replicationDocument = new ReplicationDocument();
-				foreach (var replicationDestination in bundlesModel.ReplicationDestinations
+				foreach (var replicationDestination in settingsModel.ReplicationDestinations
 					.Where(replicationDestination => !string.IsNullOrWhiteSpace(replicationDestination.Url) || !string.IsNullOrWhiteSpace(replicationDestination.ConnectionStringName)))
 				{
 					replicationDocument.Destinations.Add(replicationDestination);
@@ -164,7 +172,7 @@ namespace Raven.Studio.Commands
 			}
 		}
 
-		private static Dictionary<string, string> UpdateSettings(NewDatabase newDatabase, NewDatabase bundles, CreateBundlesModel bundlesData)
+		private static Dictionary<string, string> UpdateSettings(NewDatabase newDatabase, NewDatabase bundles, CreateSettingsModel settingsData)
 		{
 			var settings = new Dictionary<string, string>
 			{
@@ -181,12 +189,12 @@ namespace Raven.Studio.Commands
 			if (!string.IsNullOrWhiteSpace(newDatabase.IndexPath.Text))
 				settings.Add(Constants.RavenIndexPath, newDatabase.IndexPath.Text);
 
-			if (bundlesData.HasQuotas)
+			if (settingsData.HasQuotas)
 			{
-				settings[Constants.DocsHardLimit] = (bundlesData.MaxDocs).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.DocsSoftLimit] = (bundlesData.WarnDocs).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.SizeHardLimitInKB] = (bundlesData.MaxSize * 1024).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.SizeSoftLimitInKB] = (bundlesData.WarnSize * 1024).ToString(CultureInfo.InvariantCulture);
+				settings[Constants.DocsHardLimit] = (settingsData.MaxDocs).ToString(CultureInfo.InvariantCulture);
+				settings[Constants.DocsSoftLimit] = (settingsData.WarnDocs).ToString(CultureInfo.InvariantCulture);
+				settings[Constants.SizeHardLimitInKB] = (settingsData.MaxSize * 1024).ToString(CultureInfo.InvariantCulture);
+				settings[Constants.SizeSoftLimitInKB] = (settingsData.WarnSize * 1024).ToString(CultureInfo.InvariantCulture);
 			}
 
 			return settings;

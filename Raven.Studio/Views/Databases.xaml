@@ -15,7 +15,7 @@
 
 				<i:Interaction.Behaviors>
 					<Behaviors:DoubleClickBehavior Command="{StaticResource NavigateToCommand}"
-												   CommandParameter="/home" />
+												   CommandParameter="/documents" />
 				</i:Interaction.Behaviors>
 				<i:Interaction.Triggers>
 					<i:EventTrigger EventName="MouseLeftButtonDown">
@@ -124,10 +124,9 @@
 
 				<Controls:ContextMenuService.ContextMenu>
 					<Controls:ContextMenu>
-						<Controls:MenuItem Header="Edit Bundles"
+						<Controls:MenuItem Header="Edit Settings"
 											Command="{StaticResource NavigateToCommand}" 
-										 CommandParameter="/bundles"
-										   Visibility="{Binding ShowEditBundles, Converter={StaticResource BooleanToVisibility}}"/>
+										 CommandParameter="/settings"/>
 						<Controls:MenuItem Header="Delete"
 											Command="{Binding DeleteSelectedDatabase}">
 							<Controls:MenuItem.Icon>

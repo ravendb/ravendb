@@ -227,6 +227,7 @@
                     </Button>
 
                     <Button Command="{Binding Delete}"
+							IsEnabled="{Binding EditingDatabase,Converter={StaticResource NegatingBool}}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Delete Document">

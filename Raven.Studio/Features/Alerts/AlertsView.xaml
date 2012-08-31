@@ -1,0 +1,29 @@
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Alerts.AlertsView" 
+           xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+           xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+           xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+           mc:Ignorable="d"
+           xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
+              xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" d:DesignWidth="640" d:DesignHeight="480"
+						 xmlns:Controls="clr-namespace:System.Windows.Controls"
+           Title="AlertsView Page">
+
+	<UserControl.Resources>
+		<DataTemplate x:Key="AlertItemTemplate">
+			<StackPanel Orientation="Horizontal" Visibility="{Binding Observed,Converter={StaticResource BooleanToOppositeVisibility}}">
+				<TextBlock Text="{Binding AlertLevel, Converter={StaticResource enumeratedValue}}" Margin="5,0,5,0"/>
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+
+				<TextBlock Text="{Binding Message}" Margin="5,0,5,0"/>
+			</StackPanel>
+		</DataTemplate>
+	</UserControl.Resources>
+
+	<Grid x:Name="LayoutRoot">
+		<ListBox ItemsSource="{Binding Alerts, Mode=TwoWay}"
+				 ItemTemplate="{StaticResource AlertItemTemplate}"
+				 Margin="0"
+				 Padding="10,10,10,0"/>
+	</Grid>
+</Infrastructure:PageView>

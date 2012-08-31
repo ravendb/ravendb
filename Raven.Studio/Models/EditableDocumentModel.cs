@@ -281,6 +281,13 @@ namespace Raven.Studio.Models
 				return;
 			}
 
+			var database = url.GetQueryParam("databaseid");
+			if(database != null)
+			{
+				EditDatabaseDocument(database);
+				return;
+			}
+
 			Navigator = DocumentNavigator.FromUrl(url);
 
 			Navigator.GetDocument().ContinueOnSuccessInTheUIThread(
@@ -367,6 +374,38 @@ namespace Raven.Studio.Models
 					}
 
 					return false;
+				});
+		}
+
+		public bool EditingDatabase { get; set; }
+
+		private void EditDatabaseDocument(string database)
+		{
+			ApplicationModel.Current.Server.Value.DocumentStore
+				.AsyncDatabaseCommands
+				.ForDefaultDatabase()
+				.CreateRequest("/admin/databases/" + database, "GET")
+				.ReadResponseJsonAsync()
+				.ContinueOnSuccessInTheUIThread(result =>
+				{
+					var doc = result as RavenJObject;
+					
+
+					if (doc == null)
+						return;
+					var meta = doc.Value<RavenJObject>("@metadata");
+					if(meta == null)
+						meta = new RavenJObject();
+					doc.Remove("@metadata");
+					doc.Remove("Id");
+
+					EditingDatabase = true;
+					OnPropertyChanged(() => EditingDatabase);
+					Key = database;
+					dataSection.Document.DeleteText(TextChangeTypes.Custom, 0, dataSection.Document.CurrentSnapshot.Length);
+					dataSection.Document.AppendText(TextChangeTypes.Custom, doc.ToString());
+					metaDataSection.Document.DeleteText(TextChangeTypes.Custom, 0, metaDataSection.Document.CurrentSnapshot.Length);
+					metaDataSection.Document.AppendText(TextChangeTypes.Custom, meta.ToString());
 				});
 		}
 
@@ -1067,7 +1106,43 @@ namespace Raven.Studio.Models
 					return;
 				}
 
+				if(parentModel.EditingDatabase)
+				{
+					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to change the database document? This could cause irreversible damage")
+						.ContinueWhenTrueInTheUIThread(SaveDatabaseDocument);
+					return;
+				}
+
 				SaveDocument();
+			}
+
+			private void SaveDatabaseDocument()
+			{
+				RavenJObject doc;
+				try
+				{
+					doc = RavenJObject.Parse(parentModel.JsonData);
+				}
+				catch (Exception ex)
+				{
+					ApplicationModel.Current.AddErrorNotification(ex, "Could not parse JSON");
+					return;
+				}
+
+
+				var req = ApplicationModel.Current.Server.Value.DocumentStore
+					.AsyncDatabaseCommands
+					.ForDefaultDatabase()
+					.CreateRequest("/admin/databases/" + ApplicationModel.Database.Value.Name, "PUT");
+
+				req
+					.WriteAsync(doc.ToString())
+					.ContinueOnSuccess(() => req.ExecuteRequestAsync())
+					.ContinueOnSuccessInTheUIThread(() =>
+					{
+						parentModel.HasUnsavedChanges = false;
+						UrlUtil.Navigate("/settings");
+					});
 			}
 
 			private void SaveDocument()
