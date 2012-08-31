@@ -40,12 +40,12 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 				{
 					session.Store(new Post
 					{
-						PostedAt = SystemTime.Now,
+						PostedAt = SystemTime.UtcNow,
 						Tags = new List<string>{"C#", "Programming","NoSql"}
 					});
 					session.Store(new Post
 					{
-						PostedAt = SystemTime.Now,
+						PostedAt = SystemTime.UtcNow,
 						Tags = new List<string> { "Database", "NoSql" }
 					});
 					session.SaveChanges();
@@ -93,7 +93,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 		[Fact]
 		public void CanStoreAndRetrieveTimeLocal()
 		{
-			CanStoreAndRetrieveTime(SystemTime.Now);
+			CanStoreAndRetrieveTime(SystemTime.UtcNow);
 		}
 
 		[Fact]
@@ -128,12 +128,12 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 				{
 					session.Store(new Post
 					{
-						PostedAt = SystemTime.Now,
+						PostedAt = SystemTime.UtcNow,
 						Tags = new List<string> { "C#", "Programming", "NoSql" }
 					});
 					session.Store(new Post
 					{
-						PostedAt = SystemTime.Now,
+						PostedAt = SystemTime.UtcNow,
 						Tags = new List<string> { "Database", "NoSql" }
 					});
 					session.SaveChanges();
@@ -148,12 +148,12 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 		
 					session.Store(new Post
 					{
-						PostedAt = SystemTime.Now,
+						PostedAt = SystemTime.UtcNow,
 						Tags = new List<string> { "C#", "Programming", "NoSql" }
 					});
 					session.Store(new Post
 					{
-						PostedAt = SystemTime.Now,
+						PostedAt = SystemTime.UtcNow,
 						Tags = new List<string> { "Database", "NoSql" }
 					});
 					session.SaveChanges();

@@ -73,7 +73,7 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 
 				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["etag"], etag.TransformToValueForEsentSorting());
-				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["timestamp"], SystemTime.Now);
+				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["timestamp"], SystemTime.UtcNow);
 
 				update.Save();
 			}
@@ -96,7 +96,7 @@ namespace Raven.Storage.Esent.StorageActions
 					              uuidGenerator.CreateSequentialUuid());
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"],
-					              SystemTime.Now);
+								  SystemTime.UtcNow);
 
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"],

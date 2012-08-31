@@ -166,7 +166,7 @@ namespace Raven.Tests.Bugs
 					var items = new[]
 					            	{
 					            		new Doc {Date = null},
-					            		new Doc {Date = SystemTime.Now},
+					            		new Doc {Date = SystemTime.UtcNow},
 					            	};
 					foreach (var item in items)
 						session.Store(item);

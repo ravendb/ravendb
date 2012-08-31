@@ -42,7 +42,7 @@ namespace Raven.Tests.Indexes
 			{
 				For = "ShoppingCart",
 				Type = "Create",
-				Timestamp = SystemTime.Now,
+				Timestamp = SystemTime.UtcNow,
 				ShoppingCartId = "shoppingcarts/12",
 				CustomerId = "users/ayende",
 				CustomerName = "Ayende Rahien"
@@ -72,7 +72,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Create",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					CustomerId = "users/ayende",
 					CustomerName = "Ayende Rahien"
@@ -81,7 +81,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Add",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					ProductId = "products/8123",
 					ProductName = "Fish & Chips",
@@ -91,7 +91,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Add",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					ProductId = "products/3214",
 					ProductName = "Guinness",
@@ -101,7 +101,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Remove",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					ProductId = "products/8123",
 					ProductName = "Fish & Chips",
@@ -111,7 +111,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Add",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					ProductId = "products/8121",
 					ProductName = "Beef Pie",
