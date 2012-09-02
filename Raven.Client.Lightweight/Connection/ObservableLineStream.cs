@@ -68,7 +68,8 @@ namespace Raven.Client.Connection
 				              				{
 												continue;
 				              				}
-											var data = Encoding.UTF8.GetString(buffer, oldStartPos + 5, i - 6);
+
+											var data = Encoding.UTF8.GetString(buffer, oldStartPos + 5, i - oldStartPos - 6);
 				              				foreach (var subscriber in subscribers)
 				              				{
 				              					subscriber.OnNext(data);
