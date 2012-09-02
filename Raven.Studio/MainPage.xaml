@@ -170,12 +170,15 @@
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" 
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
 
 				<HyperlinkButton Content="Alerts"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/alerts"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
+								 Style="{StaticResource Style_Text_HeaderLink}" 
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
 				
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				

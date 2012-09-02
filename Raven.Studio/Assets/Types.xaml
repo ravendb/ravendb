@@ -28,6 +28,7 @@
 												 ValueWhenNonEmpty="*" />
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:VisableWhenDifferent x:Key="VisableWhenDifferent" />
+	<Converters:VisableWhenEqual x:Key="VisableWhenEqual" />
 	<Converters:DisableIfDefaultVersioning x:Key="DisableIfDefaultVersioning"/>
 	<Converters:CollectionCountToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedWhenNonEmpty"/>
 	<Converters:StringToDefaultOperatorConverter x:Key="StringToDefaultOperator"/>
