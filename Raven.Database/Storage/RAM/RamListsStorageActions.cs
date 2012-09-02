@@ -43,7 +43,7 @@ namespace Raven.Database.Storage.RAM
 
 		public ListItem Read(string name, string key)
 		{
-			return state.Lists.GetOrAdd(key).GetOrDefault(key);
+			return state.Lists.GetOrAdd(name).GetOrDefault(key);
 		}
 	}
 }
