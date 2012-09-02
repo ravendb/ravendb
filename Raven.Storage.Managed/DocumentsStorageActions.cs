@@ -18,6 +18,7 @@ using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 
@@ -70,7 +71,7 @@ namespace Raven.Storage.Managed
 			return storage.Documents["ByEtag"].SkipAfter(new RavenJObject{{"etag", etag.ToByteArray()}})
 				.Select(result => DocumentByKey(result.Value<string>("key"), null))
 				.Take(take);
-		}
+			}
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
@@ -156,8 +157,22 @@ namespace Raven.Storage.Managed
 				Etag = etag,
 				Metadata = metadata,
 				LastModified = readResult.Key.Value<DateTime>("modified"),
-				NonAuthoritativeInformation = resultInTx != null
+				NonAuthoritativeInformation = IsModifiedByTransaction(resultInTx)
 			});
+		}
+
+		private bool IsModifiedByTransaction(Table.ReadResult resultInTx)
+		{
+			if(resultInTx == null)
+				return false;
+			var txId = resultInTx.Key.Value<byte[]>("txId");
+			var tx = storage.Transactions.Read(new RavenJObject
+			{
+				{"txId", txId}
+			});
+			if(tx  == null)
+				return false;
+			return SystemTime.UtcNow < tx.Key.Value<DateTime>("timeout");
 		}
 
 		private Tuple<MemoryStream, RavenJObject, int> ReadMetadata(string key, Guid etag, Func<byte[]> getData, out RavenJObject metadata)

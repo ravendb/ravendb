@@ -79,6 +79,13 @@ namespace Raven.Storage.Esent.StorageActions
 			byte[] docTxId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
 			if (new Guid(docTxId) != txId)
 			{
+				var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
+				if (SystemTime.UtcNow > timeout)// the timeout for the transaction has passed
+				{
+					RollbackTransaction(new Guid(docTxId));
+					return;
+				}
+
 				throw new ConcurrencyException("A document with key: '" + key + "' is currently created in another transaction");
 			}
 		}
@@ -87,7 +94,18 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			return Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ);
+			if(Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
+				return false;
+			var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
+										  tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
+
+			Api.JetSetCurrentIndex(session, Transactions, "by_tx_id");
+			Api.MakeKey(session, Transactions, txId, MakeKeyGrbit.NewKey);
+			if(Api.TrySeek(session, Transactions, SeekGrbit.SeekEQ) == false)
+				return false;
+			
+			var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
+			return SystemTime.UtcNow < timeout;
 		}
 
 		private void EnsureTransactionExists(TransactionInformation transactionInformation)
@@ -100,8 +118,8 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["tx_id"], transactionInformation.Id.ToByteArray());
 				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"],
 							  SystemTime.UtcNow + transactionInformation.Timeout);
-				update.Save();
-			}
+					update.Save();
+				}
 		}
 
 
