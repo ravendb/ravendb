@@ -9,10 +9,13 @@ using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix;
 using Lucene.Net.Spatial.Prefix.Tree;
 using Lucene.Net.Spatial.Queries;
+using NetTopologySuite.IO;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Spatial4n.Core.Context;
+using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Shapes;
+using Spatial4n.Core.Shapes.Nts;
 using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
 
 namespace Raven.Database.Indexing
@@ -21,6 +24,7 @@ namespace Raven.Database.Indexing
 	{
 		// TODO: Support new SpatialContext(DistanceUnits.MILES) for backward compatibility through config
 		internal static readonly SpatialContext Context = SpatialContext.GEO_KM;
+		private static readonly NetTopologySuite.IO.WKTReader shapeReader = new WKTReader();
 
 		static SpatialIndex()
 		{
@@ -40,7 +44,8 @@ namespace Raven.Database.Indexing
 
 		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025)
 		{
-			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(shapeWKT));
+			var ntsGeometry = new NtsGeometry(shapeReader.Read(shapeWKT), NtsSpatialContext.GEO_KM, false);
+			var args = new SpatialArgs(SpatialOperation.IsWithin, ntsGeometry);
 			args.SetDistPrecision(distanceErrorPct);
 			return spatialStrategy.MakeQuery(args);
 		}
@@ -50,7 +55,8 @@ namespace Raven.Database.Indexing
 			var spatialQry = indexQuery as SpatialIndexQuery;
 			if (spatialQry == null) return null;
 
-			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(spatialQry.QueryShape));
+			var ntsGeometry = new NtsGeometry(shapeReader.Read(spatialQry.QueryShape), NtsSpatialContext.GEO_KM, false);
+			var args = new SpatialArgs(SpatialOperation.IsWithin, ntsGeometry);
 			return spatialStrategy.MakeFilter(args);
 		}
 
