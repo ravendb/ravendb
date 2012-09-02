@@ -80,7 +80,7 @@ namespace Raven.Tests.Bugs.DTC
 
 					var stored = session.Load<Foo>(id1.ToString());
 
-					Assert.Equal(stored.Name, "Some other value");
+					Assert.Equal("Some other value", stored.Name);
 				}
 			}
 		}
