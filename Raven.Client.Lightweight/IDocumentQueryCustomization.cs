@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Client
 {
@@ -99,6 +100,24 @@ namespace Raven.Client
 		/// <param name="latitude">The latitude.</param>
 		/// <param name="longitude">The longitude.</param>
 		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
+
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		/// <param name="radius">The radius.</param>
+		/// <param name="latitude">The latitude.</param>
+		/// <param name="longitude">The longitude.</param>
+		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+
+		/// <summary>
+		/// Filter matches based on a given shape - only documents with the shape defined in fieldName that
+		/// have a relation rel with the given shapeWKT will be returned
+		/// </summary>
+		/// <param name="fieldName">The name of the field containing the shape to use for filtering</param>
+		/// <param name="shapeWKT">The query shape</param>
+		/// <param name="rel">Spatial relation to check</param>
+		/// <returns></returns>
+		IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel);
 
 		/// <summary>
 		/// When using spatial queries, instruct the query to sort by the distance from the origin point

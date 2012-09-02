@@ -20,8 +20,8 @@ namespace Raven.Tests.Bugs.Queries
 					var str = session.Query<WithInteger>()
 						.Where(x => x.Sequence < 300 && x.Sequence > 150 )
 						.ToString();
-					
-					Assert.Equal("Sequence_Range:{0x00000096 TO 0x0000012C}", str);
+
+					Assert.Equal("Sequence_Range:{Ix150 TO Ix300}", str);
 				}
 			}
 		}
@@ -37,7 +37,7 @@ namespace Raven.Tests.Bugs.Queries
 						.Where(x => 150 > x.Sequence && x.Sequence < 300)
 						.ToString();
 
-					Assert.Equal("Sequence_Range:{0x00000096 TO 0x0000012C}", str);
+					Assert.Equal("Sequence_Range:{Ix150 TO Ix300}", str);
 				}
 			}
 		}
@@ -53,7 +53,7 @@ namespace Raven.Tests.Bugs.Queries
 						.Where(x => 150 > x.Sequence && 300 < x.Sequence)
 						.ToString();
 
-					Assert.Equal("Sequence_Range:{0x00000096 TO 0x0000012C}", str);
+					Assert.Equal("Sequence_Range:{Ix150 TO Ix300}", str);
 				}
 			}
 		}
@@ -69,7 +69,7 @@ namespace Raven.Tests.Bugs.Queries
 						.Where(x => x.Sequence >= 150 && x.Sequence <= 300)
 						.ToString();
 
-					Assert.Equal("Sequence_Range:[0x00000096 TO 0x0000012C]", str);
+					Assert.Equal("Sequence_Range:[Ix150 TO Ix300]", str);
 				}
 			}
 		}

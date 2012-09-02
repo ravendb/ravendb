@@ -646,6 +646,9 @@
     <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
       <Link>Imports\Extensions\ListExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptions.cs">
+      <Link>Imports\Indexing\SpatialOptions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeISO8601Converter.cs">
       <Link>Imports\Json\JsonDateTimeISO8601Converter.cs</Link>
     </Compile>
@@ -1278,9 +1281,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexCreation.cs">
       <Link>Imports\Indexes\IndexCreation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Indexes\SpatialIndex.cs">
-      <Link>Imports\Indexes\SpatialIndex.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\ISyncAdvancedSessionOperation.cs">
       <Link>Imports\ISyncAdvancedSessionOperation.cs</Link>

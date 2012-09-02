@@ -12,12 +12,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
-using Raven.Database;
 using Raven.Database.Impl;
-using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 
@@ -167,8 +166,22 @@ namespace Raven.Storage.Managed
 				Etag = etag,
 				Metadata = metadata,
 				LastModified = readResult.Key.Value<DateTime>("modified"),
-				NonAuthoritativeInformation = resultInTx != null
+				NonAuthoritativeInformation = IsModifiedByTransaction(resultInTx)
 			});
+		}
+
+		private bool IsModifiedByTransaction(Table.ReadResult resultInTx)
+		{
+			if(resultInTx == null)
+				return false;
+			var txId = resultInTx.Key.Value<byte[]>("txId");
+			var tx = storage.Transactions.Read(new RavenJObject
+			{
+				{"txId", txId}
+			});
+			if(tx  == null)
+				return false;
+			return SystemTime.UtcNow < tx.Key.Value<DateTime>("timeout");
 		}
 
 		private Tuple<MemoryStream, RavenJObject, int> ReadMetadata(string key, Guid etag, Func<byte[]> getData, out RavenJObject metadata)
@@ -195,7 +208,7 @@ namespace Raven.Storage.Managed
 
 			RavenJObject result;
 			Stream docDataStream = stream.Item1;
-			if (documentCodecs.Count() > 0)
+			if (documentCodecs.Any())
 			{
 				var metadataCopy = (RavenJObject)metadata.Metadata.CloneToken() ;
 				using (docDataStream = documentCodecs

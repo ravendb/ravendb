@@ -117,6 +117,20 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
             _writer.Write(Convert.ToDouble(value.Value, CultureInfo.InvariantCulture));
           }
           break;
+          case BsonType.NumberDecimal:
+          {
+            BsonValue value = (BsonValue)t;
+#if !SILVERLIGHT            
+            _writer.Write(Convert.ToDecimal(value.Value, CultureInfo.InvariantCulture));
+#else
+            var parts = Decimal.GetBits((decimal)value.Value);
+            foreach (var part in parts)
+            {
+                _writer.Write(part);
+            }
+#endif
+          }
+          break;
         case BsonType.String:
           {
             BsonString value = (BsonString)t;
@@ -280,6 +294,8 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
           return 8;
         case BsonType.Number:
           return 8;
+        case BsonType.NumberDecimal:
+          return 16;
         case BsonType.String:
           {
             BsonString value = (BsonString)t;

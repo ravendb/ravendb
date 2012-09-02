@@ -33,6 +33,8 @@ namespace Raven.Database.Extensions
 				if (windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
 					return true;
 
+				if (windowsIdentity.User == null)
+					return false; // we aren't sure who this use is, probably anonymous?
 				// we still need to make this check, to by pass UAC non elevated admin issue
 				return cachingAdminFinder.IsAdministrator(windowsIdentity);
 			}
@@ -59,10 +61,6 @@ namespace Raven.Database.Extensions
 
 			public bool IsAdministrator(WindowsIdentity windowsIdentity)
 			{
-				if (windowsIdentity == null) throw new ArgumentNullException("windowsIdentity");
-				if (windowsIdentity.User == null)
-					throw new ArgumentException("Could not find user on the windowsIdentity", "windowsIdentity");
-
 				CachedResult value;
 				if (cache.TryGetValue(windowsIdentity.User, out value) && (DateTime.UtcNow - value.Timestamp) <= maxDuration)
 				{

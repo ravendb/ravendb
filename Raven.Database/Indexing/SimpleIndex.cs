@@ -84,7 +84,7 @@ namespace Raven.Database.Indexing
 						{
 							count += 1;
 							luceneDoc.GetFields().Clear();
-							luceneDoc.SetBoost(boost);
+							luceneDoc.Boost = boost;
 							documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
 							luceneDoc.Add(documentIdField);
 							foreach (var field in indexingResult.Fields)
@@ -159,7 +159,7 @@ namespace Raven.Database.Indexing
 			{
 				foreach (var abstractField in indexingResult.Fields)
 				{
-					abstractField.SetOmitNorms(false);
+					abstractField.OmitNorms = false;
 				}
 			}
 

@@ -42,7 +42,7 @@ namespace Raven.Database.Queries
 			IndexSearcher currentSearcher;
 			using(_database.IndexStorage.GetCurrentIndexSearcher(indexName,out currentSearcher))
 			{
-				var indexReader = currentSearcher.GetIndexReader();
+				var indexReader = currentSearcher.IndexReader;
 
 				if (indexExtension != null)
 					return indexExtension.Query(suggestionQuery, indexReader);

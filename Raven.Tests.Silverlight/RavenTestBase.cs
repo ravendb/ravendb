@@ -24,7 +24,7 @@ namespace Raven.Tests.Silverlight
 
 			return generateNewDatabaseName
 				.Substring(0, generateNewDatabaseName.IndexOf(">"))
-				.Replace("Raven.Tests.Silverlight.",string.Empty) + SystemTime.Now.Ticks;
+				.Replace("Raven.Tests.Silverlight.", string.Empty) + SystemTime.UtcNow.Ticks;
 		}
 	}
 }

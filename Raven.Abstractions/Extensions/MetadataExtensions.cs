@@ -107,12 +107,11 @@ namespace Raven.Abstractions.Extensions
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
-		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static RavenJObject FilterHeaders(this RavenJObject self)
 		{
 			if (self == null)
-				return self;
+				return null;
 
 			var metadata = new RavenJObject();
 			foreach (var header in self)

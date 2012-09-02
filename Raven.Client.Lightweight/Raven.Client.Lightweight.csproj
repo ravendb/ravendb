@@ -174,7 +174,6 @@
     <Compile Include="Indexes\IndexDefinitionBuilder.cs" />
     <Compile Include="Indexes\IndexDefinitionHelper.cs" />
     <Compile Include="Indexes\RavenDocumentsByEntityName.cs" />
-    <Compile Include="Indexes\SpatialIndex.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\ExpressionInfo.cs" />

@@ -16,6 +16,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Spatial;
 using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions;
@@ -29,9 +30,11 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -133,7 +136,7 @@ namespace Raven.Database.Indexing
 
 					try
 					{
-						writer.GetAnalyzer().Close();
+						writer.Analyzer.Close();
 					}
 					catch (Exception e)
 					{
@@ -225,16 +228,16 @@ namespace Raven.Database.Indexing
 			IEnumerable<string> fields = fieldsToFetch.Fields;
 
 			if (fieldsToFetch.FetchAllStoredFields)
-				fields = fields.Concat(document.GetFields().Cast<Fieldable>().Select(x => x.Name()));
+				fields = fields.Concat(document.GetFields().Cast<IFieldable>().Select(x => x.Name));
 
 			var q = fields
 				.SelectMany(name => document.GetFields(name) ?? new Field[0])
 				.Where(x => x != null)
 				.Where(
 					x =>
-					x.Name().EndsWith("_IsArray") == false &&
-					x.Name().EndsWith("_Range") == false &&
-					x.Name().EndsWith("_ConvertToJson") == false)
+					x.Name.EndsWith("_IsArray") == false &&
+					x.Name.EndsWith("_Range") == false &&
+					x.Name.EndsWith("_ConvertToJson") == false)
 				.Select(fld => CreateProperty(fld, document))
 				.GroupBy(x => x.Key)
 				.Select(g =>
@@ -255,19 +258,19 @@ namespace Raven.Database.Indexing
 
 		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
-			if (fld.IsBinary())
-				return new KeyValuePair<string, RavenJToken>(fld.Name(), fld.GetBinaryValue());
-			var stringValue = fld.StringValue();
-			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
+			if (fld.IsBinary)
+				return new KeyValuePair<string, RavenJToken>(fld.Name, fld.GetBinaryValue());
+			var stringValue = fld.StringValue;
+			if (document.GetField(fld.Name + "_ConvertToJson") != null)
 			{
-				var val = RavenJToken.Parse(fld.StringValue()) as RavenJObject;
-				return new KeyValuePair<string, RavenJToken>(fld.Name(), val);
+				var val = RavenJToken.Parse(fld.StringValue) as RavenJObject;
+				return new KeyValuePair<string, RavenJToken>(fld.Name, val);
 			}
 			if (stringValue == Constants.NullValue)
 				stringValue = null;
 			if (stringValue == Constants.EmptyString)
 				stringValue = string.Empty;
-			return new KeyValuePair<string, RavenJToken>(fld.Name(), stringValue);
+			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
 		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, IndexingWorkStats, int> action)
@@ -360,9 +363,7 @@ namespace Raven.Database.Indexing
 		private static IndexWriter CreateIndexWriter(Directory directory)
 		{
 			var indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
-			var mergeScheduler = indexWriter.GetMergeScheduler();
-			if (mergeScheduler != null)
-				mergeScheduler.Close();
+			using (indexWriter.MergeScheduler){}
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 			return indexWriter;
 		}
@@ -372,7 +373,7 @@ namespace Raven.Database.Indexing
 			if (context.Configuration.RunInMemory || !indexDefinition.IsTemp)
 				return;
 
-			var dir = indexWriter.GetDirectory() as RAMDirectory;
+			var dir = indexWriter.Directory as RAMDirectory;
 			if (dir == null ||
 				dir.SizeInBytes() < context.Configuration.TempIndexInMemoryMaxBytes)
 				return;
@@ -381,8 +382,8 @@ namespace Raven.Database.Indexing
 			var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
 			directory = fsDir;
 
-			indexWriter.GetAnalyzer().Close();
-			indexWriter.Close();
+			indexWriter.Analyzer.Close();
+			indexWriter.Dispose(true);
 
 			indexWriter = CreateIndexWriter(directory);
 		}
@@ -607,10 +608,10 @@ namespace Raven.Database.Indexing
 				var numericField = field as NumericField;
 				if (numericField != null)
 				{
-					var clonedNumericField = new NumericField(numericField.Name(),
-															numericField.IsStored() ? Field.Store.YES : Field.Store.NO,
-															numericField.IsIndexed());
-					var numericValue = numericField.GetNumericValue();
+					var clonedNumericField = new NumericField(numericField.Name,
+															numericField.IsStored ? Field.Store.YES : Field.Store.NO,
+															numericField.IsIndexed);
+					var numericValue = numericField.NumericValue;
 					if (numericValue is int)
 					{
 						clonedNumericField.SetIntValue((int)numericValue);
@@ -632,16 +633,16 @@ namespace Raven.Database.Indexing
 				else
 				{
 					Field clonedField;
-					if (field.IsBinary())
+					if (field.IsBinary)
 					{
-						clonedField = new Field(field.Name(), field.BinaryValue(),
-												field.IsStored() ? Field.Store.YES : Field.Store.NO);
+						clonedField = new Field(field.Name, field.GetBinaryValue(),
+												field.IsStored ? Field.Store.YES : Field.Store.NO);
 					}
 					else
 					{
-						clonedField = new Field(field.Name(), field.StringValue(),
-										field.IsStored() ? Field.Store.YES : Field.Store.NO,
-										field.IsIndexed() ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
+						clonedField = new Field(field.Name, field.StringValue,
+										field.IsStored ? Field.Store.YES : Field.Store.NO,
+										field.IsIndexed ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
 					}
 					clonedDocument.Add(clonedField);
 				}
@@ -653,12 +654,12 @@ namespace Raven.Database.Indexing
 		{
 			if (logIndexing.IsDebugEnabled)
 			{
-				var fieldsForLogging = luceneDoc.GetFields().Cast<Fieldable>().Select(x => new
+				var fieldsForLogging = luceneDoc.GetFields().Cast<IFieldable>().Select(x => new
 				{
-					Name = x.Name(),
-					Value = x.IsBinary() ? "<binary>" : x.StringValue(),
-					Indexed = x.IsIndexed(),
-					Stored = x.IsStored(),
+					Name = x.Name,
+					Value = x.IsBinary ? "<binary>" : x.StringValue,
+					Indexed = x.IsIndexed,
+					Stored = x.IsStored,
 				});
 				var sb = new StringBuilder();
 				foreach (var fieldForLogging in fieldsForLogging)
@@ -720,11 +721,9 @@ namespace Raven.Database.Indexing
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 						totalResults.Value = search.TotalHits;
 
-						var indexReader = indexSearcher.GetIndexReader();
-
 						foreach (var scoreDoc in search.ScoreDocs)
 						{
-							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.doc].CloneToken();
+							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.Doc].CloneToken();
 							foreach (var prop in ravenJObject.Where(x=>x.Key.EndsWith("_Range")).ToArray())
 							{
 								ravenJObject.Remove(prop.Key);
@@ -784,8 +783,8 @@ namespace Raven.Database.Indexing
 
 							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
-								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
-								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
+								Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
+								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
@@ -875,7 +874,7 @@ namespace Raven.Database.Indexing
 						for (int i = indexQuery.Start; i < intersectResults.Count && (i - indexQuery.Start) < pageSizeBestGuess; i++)
 						{
 							Document document = indexSearcher.Doc(intersectResults[i].LuceneId);
-							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
+							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
 							if (ShouldIncludeInResults(indexQueryResult) == false)
 							{
 								indexQuery.SkippedResults.Value++;
@@ -900,6 +899,33 @@ namespace Raven.Database.Indexing
 				if (fieldsToFetch.IsDistinctQuery && alreadyReturned.Add(indexQueryResult.Projection) == false)
 					return false;
 				return true;
+			}
+
+			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
+			{
+				var min = Math.Min(start, search.TotalHits);
+
+				// we are paging, we need to check that we don't have duplicates in the previous page
+				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
+				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits)
+				{
+					for (int i = start - pageSize; i < min; i++)
+					{
+						var document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
+						documentsAlreadySeenInPreviousPage.Add(document.Get(Constants.DocumentIdFieldName));
+					}
+				}
+
+				if (fieldsToFetch.IsDistinctQuery == false)
+					return;
+
+				// add results that were already there in previous pages
+				for (int i = 0; i < min; i++)
+				{
+					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+					alreadyReturned.Add(indexQueryResult.Projection);
+				}
 			}
 
 			private void AssertQueryDoesNotContainFieldsThatAreNotIndexes()
@@ -941,12 +967,19 @@ namespace Raven.Database.Indexing
 				var spatialIndexQuery = indexQuery as SpatialIndexQuery;
 				if (spatialIndexQuery != null)
 				{
-					var dq = SpatialIndex.MakeQuery(spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
+					// if viewGenerator.SpatialStrategy is null, that means we didn't get around to indexing just yet,
+					// and there's no point in going any further with this
+					SpatialStrategy spatialStrategy;
+					if (!parent.viewGenerator.SpatialStrategies.TryGetValue(spatialIndexQuery.SpatialFieldName, out spatialStrategy) || spatialStrategy == null)
+						return MatchNoDocsQuery.INSTANCE;
+
+					SpatialRelation rel;
+					if (!Enum.TryParse(spatialIndexQuery.SpatialRelation.ToString(), true, out rel))
+						return MatchNoDocsQuery.INSTANCE;
+					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, rel, spatialIndexQuery.DistanceErrorPercentage);
 					if (q is MatchAllDocsQuery) return dq;
 
-					var bq = new BooleanQuery();
-					bq.Add(q, BooleanClause.Occur.MUST);
-					bq.Add(dq, BooleanClause.Occur.MUST);
+					var bq = new BooleanQuery {{q, Occur.MUST}, {dq, Occur.MUST}};
 					return bq;
 				}
 				return q;
@@ -1069,7 +1102,7 @@ namespace Raven.Database.Indexing
 							var pageSizeIncreaseSize = min - search.ScoreDocs.Length;
 							return pageSizeIncreaseSize;
 						}
-						var document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+						var document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
 						var id = document.Get(Constants.DocumentIdFieldName);
 						if (documentsAlreadySeenInPreviousPage.Add(id) == false)
 						{
@@ -1092,8 +1125,8 @@ namespace Raven.Database.Indexing
 				// add results that were already there in previous pages
 				for (int i = 0; i < min; i++)
 				{
-					Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
+					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 				return 0;

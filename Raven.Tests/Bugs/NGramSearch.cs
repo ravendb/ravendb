@@ -59,8 +59,8 @@ namespace Raven.Tests.Bugs
 				this.minGram = minGram;
 				this.maxGram = maxGram;
 
-				this.termAtt = (TermAttribute)AddAttribute(typeof(TermAttribute));
-				this.offsetAtt = (OffsetAttribute)AddAttribute(typeof(OffsetAttribute));
+				this.termAtt = (TermAttribute) AddAttribute<ITermAttribute>();
+				this.offsetAtt = (OffsetAttribute) AddAttribute<IOffsetAttribute>();
 			}
 
 			/**
@@ -90,7 +90,7 @@ namespace Raven.Tests.Bugs
 							curTermLength = termAtt.TermLength();
 							curGramSize = minGram;
 							curPos = 0;
-							tokStart = offsetAtt.StartOffset();
+							tokStart = offsetAtt.StartOffset;
 						}
 					}
 					while (curGramSize <= maxGram)
@@ -110,22 +110,6 @@ namespace Raven.Tests.Bugs
 				}
 			}
 
-			/** @deprecated Will be removed in Lucene 3.0. This method is final, as it should
-			 * not be overridden. Delegates to the backwards compatibility layer. */
-			[System.Obsolete("Will be removed in Lucene 3.0. This method is final, as it should not be overridden. Delegates to the backwards compatibility layer.")]
-			public override Token Next(Token reusableToken)
-			{
-				return base.Next(reusableToken);
-			}
-
-			/** @deprecated Will be removed in Lucene 3.0. This method is final, as it should
-			 * not be overridden. Delegates to the backwards compatibility layer. */
-			[System.Obsolete("Will be removed in Lucene 3.0. This method is final, as it should not be overridden. Delegates to the backwards compatibility layer.")]
-			public override Token Next()
-			{
-				return base.Next();
-			}
-
 			public override void Reset()
 			{
 				base.Reset();
@@ -139,7 +123,7 @@ namespace Raven.Tests.Bugs
 			public override TokenStream TokenStream(string fieldName, TextReader reader)
 			{
 				var tokenizer = new StandardTokenizer(Version.LUCENE_29, reader);
-				tokenizer.SetMaxTokenLength(255);
+				tokenizer.MaxTokenLength = 255;
 				TokenStream filter = new StandardFilter(tokenizer);
 				filter = new LowerCaseFilter(filter);
 				filter = new StopFilter(false,filter, StandardAnalyzer.STOP_WORDS_SET);

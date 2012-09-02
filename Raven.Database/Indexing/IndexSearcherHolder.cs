@@ -106,10 +106,8 @@ namespace Raven.Database.Indexing
 			{
 				if (IndexSearcher != null)
 				{
-					var indexReader = IndexSearcher.GetIndexReader();
-					if (indexReader != null)
-						indexReader.Close();
-					IndexSearcher.Close();
+					using (IndexSearcher)
+					using (IndexSearcher.IndexReader){}
 				}
 			}
 
@@ -119,7 +117,7 @@ namespace Raven.Database.Indexing
 				if (readEntriesFromIndex != null)
 					return readEntriesFromIndex;
 
-				var indexReader = IndexSearcher.GetIndexReader();
+				var indexReader = IndexSearcher.IndexReader;
 				readEntriesFromIndex = IndexedTerms.ReadEntriesFromIndex(indexReader);
 				return readEntriesFromIndex;
 			}

@@ -285,7 +285,7 @@ namespace Raven.Tests.Document
 			documentStore.DatabaseCommands.Query("Raven/DocumentsByEntityName", new IndexQuery
 			                                                                    	{
 			                                                                    		PageSize = 10,
-			                                                                    		Cutoff = SystemTime.Now.AddHours(-1)
+			                                                                    		Cutoff = SystemTime.UtcNow.AddHours(-1)
 			                                                                    	}, null);
 		}
 
@@ -926,27 +926,33 @@ namespace Raven.Tests.Document
 					.ToArray();
 
 				const double lat = 38.96939, lng = -77.386398;
-				const double radius = 6.0;
+				const double radiusInKm = 6.0 * 1.609344;
 
 				var events = session.Advanced.LuceneQuery<Event>("eventsByLatLng")
 					.WhereEquals("Tag", "Event")
-					.WithinRadiusOf(radius, lat, lng)
+					.WithinRadiusOf(radiusInKm, lat, lng)
 					.SortByDistance()
 					.WaitForNonStaleResults()
 					.ToArray();
 
+
+				var expected =
+					SpatialIndexTestHelper.GetEvents()
+						.Count(e => Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
+
+				Assert.Equal(expected, events.Length);
+
 				Assert.Equal(7, events.Length);
 
-				//TODO
-				//double previous = 0;
-				//foreach (var e in events)
-				//{
-				//    double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
-				//    Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
-				//    Assert.True(distance < radius);
-				//    Assert.True(distance >= previous);
-				//    previous = distance;
-				//}
+				double previous = 0;
+				foreach (var e in events)
+				{
+					double distance = Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude);
+					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
+					Assert.True(distance < radiusInKm);
+					Assert.True(distance >= previous);
+					previous = distance;
+				}
 			}
 		}
 
@@ -1125,7 +1131,7 @@ namespace Raven.Tests.Document
 		//The issue only shows up in Server/Client mode, not in Embedded mode!!!
 		public void Using_attachments_can_properly_set_WebRequest_Headers()
 		{
-			var key = string.Format("{0}-{1}", "test", SystemTime.Now.ToFileTimeUtc());
+			var key = string.Format("{0}-{1}", "test", SystemTime.UtcNow.ToFileTimeUtc());
 			var metadata = new RavenJObject
 			               	{
 			               		{"owner", 5},
