@@ -11,13 +11,14 @@ namespace Raven.Database.Storage.RAM
 		public TransactionalDictionary<string, TransactionalDictionary<Guid, byte[]>> Queues { get; set; }
 		public TransactionalDictionary<string, TransactionalDictionary<Guid, byte[]>> Tasks { get; set; }
 		public TransactionalDictionary<string, TransactionalValue<long>> Identities { get; set; }
-		public TransactionalDictionary<string, TransactionalValue<Attachment>> Attachments { get; set; }
-		
+		public TransactionalDictionary<string, Attachment> Attachments { get; set; }
+		public TransactionalValue<int> AttachmentCount { get; set; }
+
 		public RamState()
 		{
-			Attachments = new TransactionalDictionary<string, TransactionalValue<Attachment>>(StringComparer.InvariantCultureIgnoreCase,
-					() => new TransactionalValue<Attachment>());
+			AttachmentCount = new TransactionalValue<int>();
 
+			Attachments = new TransactionalDictionary<string, Attachment>(StringComparer.InvariantCultureIgnoreCase);
 
 			Lists = new TransactionalDictionary<string, TransactionalDictionary<string, ListItem>>(StringComparer.InvariantCultureIgnoreCase,
 					() => new TransactionalDictionary<string, ListItem>(StringComparer.InvariantCultureIgnoreCase));
