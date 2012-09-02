@@ -76,6 +76,10 @@
       <HintPath>..\SharedLibs\FSharp.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="GeoAPI, Version=1.6.4448.22541, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\GeoAPI.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
@@ -671,6 +675,18 @@
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
     <Compile Include="Storage\Managed\TransactionStorageActions.cs" />
+    <Compile Include="Storage\RAM\InMemoryTransaction.cs" />
+    <Compile Include="Storage\RAM\RamAttachmentsStorageActions.cs" />
+    <Compile Include="Storage\RAM\RamGeneralStorageActions.cs" />
+    <Compile Include="Storage\RAM\RamListsStorageActions.cs" />
+    <Compile Include="Storage\RAM\RamQueueStorageActions.cs" />
+    <Compile Include="Storage\RAM\RamState.cs" />
+    <Compile Include="Storage\RAM\RamStorageActionsAccessor.cs" />
+    <Compile Include="Storage\RAM\RamTasksStorageActions.cs" />
+    <Compile Include="Storage\RAM\RamTransactionalStorage.cs" />
+    <Compile Include="Storage\RAM\TransactionalDictionary.cs" />
+    <Compile Include="Storage\RAM\TransactionalList.cs" />
+    <Compile Include="Storage\RAM\TransactionalValue.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

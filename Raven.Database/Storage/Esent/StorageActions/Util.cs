@@ -94,7 +94,18 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			return Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ);
+			if(Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
+				return false;
+			var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
+										  tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
+
+			Api.JetSetCurrentIndex(session, Transactions, "by_tx_id");
+			Api.MakeKey(session, Transactions, txId, MakeKeyGrbit.NewKey);
+			if(Api.TrySeek(session, Transactions, SeekGrbit.SeekEQ) == false)
+				return false;
+			
+			var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
+			return SystemTime.UtcNow < timeout;
 		}
 
 		private void EnsureTransactionExists(TransactionInformation transactionInformation)
