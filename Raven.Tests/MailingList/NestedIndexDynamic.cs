@@ -21,6 +21,7 @@ namespace Raven.Tests.MailingList
 			{
 				AddField("_");
 				MapDefinitions.Add(Map);
+				Init(new IndexDefinition());
 			}
 
 			private IEnumerable<dynamic> Map(IEnumerable<dynamic> source)
