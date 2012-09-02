@@ -15,21 +15,16 @@
  * limitations under the License.
  */
 
-using System;
-
-// org.apache.lucene.index.Term   -> Lucene.Net.Index.Term
-// org.apache.lucene.search.spell -> Lucene.Net.Search.Spell
-
 
 namespace SpellChecker.Net.Search.Spell
 {
 
 	/// <summary> A simple interface representing a Dictionary</summary>
-	public interface Dictionary
+	public interface IDictionary
 	{
 		/// <summary> return all the words present in the dictionary</summary>
 		/// <returns> Iterator
 		/// </returns>
-		System.Collections.IEnumerator GetWordsIterator();
+		System.Collections.Generic.IEnumerator<string> GetWordsIterator();
 	}
 }

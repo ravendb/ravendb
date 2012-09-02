@@ -179,7 +179,7 @@ namespace Raven.Database.Indexing
 								  true, out distanceType);
 					var field = decodedKey.Substring(0, lastIndexOfDistance);
 					var extension = new SuggestionQueryIndexExtension(
-						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.GetIndexReader(),
+						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader,
 						SuggestionQueryRunner.GetStringDistance(distanceType),
 						field,
 						accuracy);

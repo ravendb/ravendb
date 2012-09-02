@@ -2,6 +2,10 @@
 * text=auto
 
 *.cs     text eol=crlf
+*.xml    text eol=crlf
+*.XML    text eol=crlf
+*.xsd    text eol=crlf
+*.ps1    text eol=crlf
 *.config     text eol=crlf
 *.sln    text eol=crlf
 *.csproj text eol=crlf

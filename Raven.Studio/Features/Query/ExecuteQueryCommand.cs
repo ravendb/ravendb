@@ -12,6 +12,7 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Linq;
 using Raven.Studio.Controls.Editors;
@@ -120,9 +121,9 @@ namespace Raven.Studio.Features.Query
 			{
 				q = new SpatialIndexQuery(q)
 						{
-							Latitude = model.Latitude.Value,
-							Longitude = model.Longitude.Value,
-							Radius = model.Radius.HasValue ? model.Radius.Value : 1,
+							QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(model.Latitude.Value, model.Longitude.Value, model.Radius.HasValue ? model.Radius.Value : 1),
+							SpatialRelation = SpatialRelation.Within,
+							SpatialFieldName = Constants.DefaultSpatialFieldName,
 							DefaultOperator = model.DefualtOperator
 						};
 			}

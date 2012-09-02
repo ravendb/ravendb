@@ -21,6 +21,7 @@
  */
 
 using System;
+using SupportClass = Lucene.Net.Support;
 
 // {{Aroush-2.9}} Port issue?  Both of those were treated as: System.IO.MemoryStream
 //using CharBuffer = java.nio.CharBuffer;

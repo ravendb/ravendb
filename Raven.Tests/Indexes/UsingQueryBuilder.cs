@@ -24,8 +24,8 @@ namespace Raven.Tests.Indexes
 
 			Assert.Equal("Name:singleterm", query.ToString());
 			Assert.True(query is TermQuery);
-			Assert.Equal(((TermQuery)query).GetTerm().Field(), "Name");
-			Assert.Equal(((TermQuery)query).GetTerm().Text(), "singleterm");
+			Assert.Equal(((TermQuery)query).Term.Field, "Name");
+			Assert.Equal(((TermQuery)query).Term.Text, "singleterm");
 		}
 
 		[Fact]
@@ -36,10 +36,10 @@ namespace Raven.Tests.Indexes
 			Assert.Equal("Name:\"simple phrase\"", query.ToString());
 			Assert.True(query is PhraseQuery);
 			var terms = ((PhraseQuery)query).GetTerms();
-			Assert.Equal(terms[0].Field(), "Name");
-			Assert.Equal(terms[0].Text(), "simple");
-			Assert.Equal(terms[1].Field(), "Name");
-			Assert.Equal(terms[1].Text(), "phrase");
+			Assert.Equal(terms[0].Field, "Name");
+			Assert.Equal(terms[0].Text, "simple");
+			Assert.Equal(terms[1].Field, "Name");
+			Assert.Equal(terms[1].Text, "phrase");
 		}
 
 		[Fact]
@@ -50,10 +50,10 @@ namespace Raven.Tests.Indexes
 			Assert.Equal("Name:\"escaped phrase\"", query.ToString());
 			Assert.True(query is PhraseQuery);
 			var terms = ((PhraseQuery)query).GetTerms();
-			Assert.Equal(terms[0].Field(), "Name");
-			Assert.Equal(terms[0].Text(), "escaped");
-			Assert.Equal(terms[1].Field(), "Name");
-			Assert.Equal(terms[1].Text(), "phrase");
+			Assert.Equal(terms[0].Field, "Name");
+			Assert.Equal(terms[0].Text, "escaped");
+			Assert.Equal(terms[1].Field, "Name");
+			Assert.Equal(terms[1].Text, "phrase");
 		}
 
 		[Fact]
@@ -63,8 +63,8 @@ namespace Raven.Tests.Indexes
 
 			Assert.Equal("Name:SingleTerm", query.ToString());
 			Assert.True(query is TermQuery);
-			Assert.Equal(((TermQuery)query).GetTerm().Field(), "Name");
-			Assert.Equal(((TermQuery)query).GetTerm().Text(), "SingleTerm");
+			Assert.Equal(((TermQuery)query).Term.Field, "Name");
+			Assert.Equal(((TermQuery)query).Term.Text, "SingleTerm");
 		}
 
 		[Fact]
@@ -74,8 +74,8 @@ namespace Raven.Tests.Indexes
 
 			Assert.Equal("Name:Simple Phrase", query.ToString());
 			Assert.True(query is TermQuery);
-			Assert.Equal(((TermQuery)query).GetTerm().Field(), "Name");
-			Assert.Equal(((TermQuery)query).GetTerm().Text(), "Simple Phrase");
+			Assert.Equal(((TermQuery)query).Term.Field, "Name");
+			Assert.Equal(((TermQuery)query).Term.Text, "Simple Phrase");
 		}
 
 		[Fact]
@@ -85,8 +85,8 @@ namespace Raven.Tests.Indexes
 
 			Assert.Equal("Name:Escaped+-&|!(){}[]^\"~*?:\\Phrase", query.ToString());
 			Assert.True(query is TermQuery);
-			Assert.Equal(((TermQuery)query).GetTerm().Field(), "Name");
-			Assert.Equal(((TermQuery)query).GetTerm().Text(), "Escaped+-&|!(){}[]^\"~*?:\\Phrase");
+			Assert.Equal(((TermQuery)query).Term.Field, "Name");
+			Assert.Equal(((TermQuery)query).Term.Text, "Escaped+-&|!(){}[]^\"~*?:\\Phrase");
 		}
 
 		[Fact]
@@ -111,9 +111,7 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO NULL}", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
 			Assert.Equal("Age_Range:{3 TO 2147483647}", query.ToString());
-			Assert.True(query is NumericRangeQuery);
-			Assert.True(((NumericRangeQuery)query).GetMin() is int);
-			Assert.True(((NumericRangeQuery)query).GetMax() is int);
+			Assert.True(query is NumericRangeQuery<int>);
 		}
 
 		[Fact]
@@ -122,9 +120,7 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Age_Range:[0x00000003 TO NULL]", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
 			Assert.Equal("Age_Range:[3 TO 2147483647]", query.ToString());
-			Assert.True(query is NumericRangeQuery);
-			Assert.True(((NumericRangeQuery)query).GetMin() is int);
-			Assert.True(((NumericRangeQuery)query).GetMax() is int);
+			Assert.True(query is NumericRangeQuery<int>);
 		}
 
 		[Fact]
@@ -133,9 +129,7 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Age_Range:[0x0000000000000003 TO NULL]", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
 			Assert.Equal("Age_Range:[3 TO 9223372036854775807]", query.ToString());
-			Assert.True(query is NumericRangeQuery);
-			Assert.True(((NumericRangeQuery)query).GetMin() is long);
-			Assert.True(((NumericRangeQuery)query).GetMax() is long);
+			Assert.True(query is NumericRangeQuery<long>);
 		}
 
 		[Fact]
@@ -144,9 +138,7 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Price_Range:[Dx1.0 TO NULL]", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
 			Assert.Equal("Price_Range:[1 TO 1" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "79769313486232E+308]", query.ToString());
-			Assert.True(query is NumericRangeQuery);
-			Assert.True(((NumericRangeQuery)query).GetMin() is double);
-			Assert.True(((NumericRangeQuery)query).GetMax() is double);
+			Assert.True(query is NumericRangeQuery<double>);
 		}
 
 		[Fact]
@@ -155,20 +147,16 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Price_Range:{NULL TO Fx1.0}", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
 			Assert.Equal("Price_Range:{-3" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "402823E+38 TO 1}", query.ToString());
-			Assert.True(query is NumericRangeQuery);
-			Assert.True(((NumericRangeQuery)query).GetMin() is float);
-			Assert.True(((NumericRangeQuery)query).GetMax() is float);
+			Assert.True(query is NumericRangeQuery<float>);
 		}
 
 		[Fact]
 		public void Can_parse_fixed_range_on_int()
 		{
-			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO 0x00000009}", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
+			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO 0x00000009}", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_30)));
 
 			Assert.Equal("Age_Range:{3 TO 9}", query.ToString());
-			Assert.True(query is NumericRangeQuery);
-			Assert.True(((NumericRangeQuery)query).GetMin() is int);
-			Assert.True(((NumericRangeQuery)query).GetMax() is int);
+			Assert.True(query is NumericRangeQuery<int>);
 		}
 
 		[Fact]

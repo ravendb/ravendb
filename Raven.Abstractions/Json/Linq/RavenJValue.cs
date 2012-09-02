@@ -295,6 +295,11 @@ namespace Raven.Json.Linq
 					writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
 					return;
 				case JTokenType.Float:
+					if (_value is decimal)
+					{
+						writer.WriteValue((decimal)_value);
+						return;
+					}
 					writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
 					return;
 				case JTokenType.String:

@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-using System;
-using SpellChecker.Net.Search.Spell;
 
 namespace SpellChecker.Net.Search.Spell
 {
@@ -46,7 +44,6 @@ namespace SpellChecker.Net.Search.Spell
 		public int GetDistance(System.String other)
 		{
 			int[][] d; // matrix
-			int cost; // cost
 
 			// Step 1
 			char[] ta = other.ToCharArray();
@@ -86,18 +83,7 @@ namespace SpellChecker.Net.Search.Spell
 
 					// Step 5
 
-					if (s_i == t_j)
-					{
-						// same
-						cost = 0;
-					}
-					else
-					{
-						// not a match
-						cost = 1;
-
-						// Step 6
-					}
+					int cost = s_i == t_j ? 0 : 1;
 					d[i][j] = Min3(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
 				}
 			}

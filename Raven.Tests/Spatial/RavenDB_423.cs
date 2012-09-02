@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_423.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,7 +7,7 @@ using System;
 using Raven.Abstractions.Indexing;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.Tests.Spatial
 {
 	public class RavenDB_423 : RavenTest
 	{

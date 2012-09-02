@@ -119,8 +119,8 @@ namespace Raven.Database.Indexing
 			{
 				foreach (var field in CreateFields(name, boostedValue.Value, storage))
 				{
-					field.SetBoost(boostedValue.Boost);
-					field.SetOmitNorms(false);
+					field.Boost = boostedValue.Boost;
+					field.OmitNorms = false;
 					yield return field;
 				}
 				yield break;
@@ -199,6 +199,13 @@ namespace Raven.Database.Indexing
 				yield return new Field(name, ((bool) value) ? "true" : "false", storage,
 							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 
+			}
+			else if(value is decimal)
+			{
+				var convert = ((double)(decimal)value);
+				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), storage,
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+		
 			}
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
@@ -298,19 +305,19 @@ namespace Raven.Database.Indexing
 				fieldsCache[cacheKey] = field = new Field(name, value, store);
 			}
 			field.SetValue(value);
-			field.SetBoost(1);
-			field.SetOmitNorms(true);
+			field.Boost = 1;
+			field.OmitNorms = true;
 			return field;
 		}
 
 		public class FieldCacheKey
 		{
 			private readonly string name;
-			private readonly Field.Index index;
+			private readonly Field.Index? index;
 			private readonly Field.Store store;
 			private readonly int[] multipleItemsSameField;
 
-			public FieldCacheKey(string name, Field.Index index, Field.Store store, int[] multipleItemsSameField)
+			public FieldCacheKey(string name, Field.Index? index, Field.Store store, int[] multipleItemsSameField)
 			{
 				this.name = name;
 				this.index = index;
@@ -355,8 +362,8 @@ namespace Raven.Database.Indexing
 				fieldsCache[cacheKey] = field = new Field(name, value, store, index);
 			}
 			field.SetValue(value);
-			field.SetBoost(1);
-			field.SetOmitNorms(true);
+			field.Boost = 1;
+			field.OmitNorms = true;
 			return field;
 		}
 

@@ -30,22 +30,22 @@ namespace Raven.Database.Queries
 			IndexSearcher currentIndexSearcher;
 			using(database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
-				var termEnum = currentIndexSearcher.GetIndexReader().Terms(new Term(field, fromValue ?? string.Empty));
+				var termEnum = currentIndexSearcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty));
 				try
 				{
 					if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
 					{
-						while (termEnum.Term() == null || fromValue.Equals(termEnum.Term().Text()))
+						while (termEnum.Term == null || fromValue.Equals(termEnum.Term.Text))
 						{
 							if (termEnum.Next() == false)
 								return result;
 						}
 					}
-					while (termEnum.Term() == null || 
-						field.Equals(termEnum.Term().Field()))
+					while (termEnum.Term == null || 
+						field.Equals(termEnum.Term.Field))
 					{
-						if (termEnum.Term() != null)
-							result.Add(termEnum.Term().Text());
+						if (termEnum.Term != null)
+							result.Add(termEnum.Term.Text);
 
 						if (result.Count >= pageSize)
 							break;

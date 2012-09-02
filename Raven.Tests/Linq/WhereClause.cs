@@ -143,7 +143,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 > user.Age
 					select user;
-			Assert.Equal("Age_Range:{* TO 0x0000000F}", q.ToString());
+			Assert.Equal("Age_Range:{* TO Ix15}", q.ToString());
 		}
 
 		[Fact]
@@ -153,7 +153,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 >= user.Age
 					select user;
-			Assert.Equal("Age_Range:[* TO 0x0000000F]", q.ToString());
+			Assert.Equal("Age_Range:[* TO Ix15]", q.ToString());
 		}
 
 		[Fact]
@@ -163,7 +163,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 < user.Age
 					select user;
-			Assert.Equal("Age_Range:{0x0000000F TO NULL}", q.ToString());
+			Assert.Equal("Age_Range:{Ix15 TO NULL}", q.ToString());
 		}
 
 		[Fact]
@@ -173,7 +173,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 <= user.Age
 					select user;
-			Assert.Equal("Age_Range:[0x0000000F TO NULL]", q.ToString());
+			Assert.Equal("Age_Range:[Ix15 TO NULL]", q.ToString());
 		}
 
 		[Fact]
@@ -463,7 +463,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Age > 3
 					select user;
-			Assert.Equal("Age_Range:{0x00000003 TO NULL}", q.ToString());
+			Assert.Equal("Age_Range:{Ix3 TO NULL}", q.ToString());
 		}
 
 		[Fact]

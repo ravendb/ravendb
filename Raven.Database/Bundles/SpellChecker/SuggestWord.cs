@@ -30,14 +30,11 @@ namespace SpellChecker.Net.Search.Spell
 		/// <summary> the score of the word</summary>
 		public float score;
 
-
 		/// <summary> The freq of the word</summary>
 		public int freq;
 
-
 		/// <summary> the suggested word</summary>
-		public System.String term;
-
+		public System.String termString;
 
 		public int CompareTo(SuggestWord a)
 		{

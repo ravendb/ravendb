@@ -15,17 +15,20 @@
  * limitations under the License.
  */
 
-using System;
-using IndexReader = Lucene.Net.Index.IndexReader;
-using TermEnum = Lucene.Net.Index.TermEnum;
-using Term = Lucene.Net.Index.Term;
+using System.Collections;
+using Lucene.Net.Documents;
 
 namespace SpellChecker.Net.Search.Spell
 {
-	/// <summary> Lucene Dictionary
-	/// 
+	using System;
+	using IndexReader = Lucene.Net.Index.IndexReader;
+	using TermEnum = Lucene.Net.Index.TermEnum;
+	using Term = Lucene.Net.Index.Term;
+
+	/// <summary> 
+	/// Lucene Dictionary
 	/// </summary>
-	public class LuceneDictionary : Dictionary
+	public class LuceneDictionary : IDictionary, System.Collections.Generic.IEnumerable<string>
 	{
 		internal IndexReader reader;
 		internal System.String field;
@@ -36,24 +39,28 @@ namespace SpellChecker.Net.Search.Spell
 			this.field = field;
 		}
 
-		virtual public System.Collections.IEnumerator GetWordsIterator()
+		virtual public System.Collections.Generic.IEnumerator<string> GetWordsIterator()
 		{
 			return new LuceneIterator(this);
 		}
 
-		public System.Collections.IEnumerator GetEnumerator()
+		public System.Collections.Generic.IEnumerator<string> GetEnumerator()
 		{
 			return GetWordsIterator();
 		}
 
-
-		internal sealed class LuceneIterator : System.Collections.IEnumerator
+		IEnumerator IEnumerable.GetEnumerator()
 		{
-			private TermEnum termEnum;
+			return GetEnumerator();
+		}
+
+		internal sealed class LuceneIterator : System.Collections.Generic.IEnumerator<string>
+		{
+			private readonly TermEnum termEnum;
 			private Term actualTerm;
 			private bool hasNextCalled;
 
-			private LuceneDictionary enclosingInstance;
+			private readonly LuceneDictionary enclosingInstance;
 
 			public LuceneIterator(LuceneDictionary enclosingInstance)
 			{
@@ -68,8 +75,7 @@ namespace SpellChecker.Net.Search.Spell
 				}
 			}
 
-			//next()
-			public System.Object Current
+			public string Current
 			{
 				get
 				{
@@ -78,22 +84,26 @@ namespace SpellChecker.Net.Search.Spell
 						MoveNext();
 					}
 					hasNextCalled = false;
-					return (actualTerm != null) ? actualTerm.Text() : null;
+					return (actualTerm != null) ? actualTerm.Text : null;
 				}
 
 			}
 
-			//hasNext()
+			object IEnumerator.Current
+			{
+				get { return Current; }
+			}
+
 			public bool MoveNext()
 			{
 				hasNextCalled = true;
 
-				actualTerm = termEnum.Term();
+				actualTerm = termEnum.Term;
 
 				// if there are no words return false
 				if (actualTerm == null) return false;
 
-				System.String fieldt = actualTerm.Field();
+				System.String fieldt = actualTerm.Field;
 				termEnum.Next();
 
 				// if the next word doesn't have the same field return false
@@ -107,12 +117,17 @@ namespace SpellChecker.Net.Search.Spell
 
 			public void Remove()
 			{
-				throw new NotImplementedException();
+
 			}
 
 			public void Reset()
 			{
-				throw new NotImplementedException();
+
+			}
+
+			public void Dispose()
+			{
+				// Nothing
 			}
 		}
 	}

@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs
 										Content = new
 													  {
 														  Order = i,
-														  Inserted = SystemTime.Now.AddDays(i)
+														  Inserted = SystemTime.UtcNow.AddDays(i)
 													  }
 									});
 					}
@@ -68,7 +68,7 @@ namespace Raven.Tests.Bugs
 										Body = new
 												   {
 													   Order = i,
-													   Inserted = SystemTime.Now.AddDays(i)
+													   Inserted = SystemTime.UtcNow.AddDays(i)
 												   }
 									});
 					}
@@ -79,7 +79,7 @@ namespace Raven.Tests.Bugs
 					IDocumentQuery<dynamic> query =
 						s.Advanced.LuceneQuery<dynamic>()
 							.WhereBetweenOrEqual("Body.Inserted",
-												 SystemTime.Now.Date, SystemTime.Now.AddDays(2))
+												 SystemTime.UtcNow.Date, SystemTime.UtcNow.AddDays(2))
 							.OrderBy("-Body.Order")
 							.Take(2)
 							.WaitForNonStaleResults();

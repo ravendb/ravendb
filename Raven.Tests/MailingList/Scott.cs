@@ -40,12 +40,12 @@ select new {
 				{
 					session.Store(new TagCloud.Post
 					{
-						PostedAt = SystemTime.Now,
+						PostedAt = SystemTime.UtcNow,
 						Tags = new List<string> { "C#", "Programming", "NoSql" }
 					});
 					session.Store(new TagCloud.Post
 					{
-						PostedAt = SystemTime.Now,
+						PostedAt = SystemTime.UtcNow,
 						Tags = new List<string> { "Database", "NoSql" }
 					});
 					session.SaveChanges();

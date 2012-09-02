@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs.Indexing
 		public void Isolated()
 		{
 			var ramDirectory = new RAMDirectory();
-			new IndexWriter(ramDirectory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED).Close();
+			using (new IndexWriter(ramDirectory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED)){}
 			var simpleIndex = new SimpleIndex(ramDirectory, "test", new IndexDefinition
 			{
 				Map =
@@ -66,8 +66,8 @@ namespace Raven.Tests.Bugs.Indexing
 			var tokenStream = perFieldAnalyzerWrapper.TokenStream("f_name", new StringReader("hello Shrek"));
 			while (tokenStream.IncrementToken())
 			{
-				var attribute = (TermAttribute)tokenStream.GetAttribute(typeof(TermAttribute));
-				Assert.Equal("hello Shrek", attribute.Term());
+				var attribute = (TermAttribute) tokenStream.GetAttribute<ITermAttribute>();
+				Assert.Equal("hello Shrek", attribute.Term);
 			}
 		}
 

@@ -421,12 +421,14 @@ namespace Raven.Database.Server
 			{
 				if (SetupRequestToProperDatabase(context) == false)
 				{
+					FinalizeRequestSafe(context);
+					onDisconnect();
 					return new CompletedTask();
 				}
 
 				if (!SetThreadLocalState(context))
 				{
-					context.FinalizeResonse();
+					FinalizeRequestSafe(context);
 					onDisconnect();
 					return new CompletedTask();
 				}
@@ -446,14 +448,7 @@ namespace Raven.Database.Server
 				}
 				finally
 				{
-					try
-					{
-						FinalizeRequestProcessing(context, null, true);
-					}
-					catch (Exception e2)
-					{
-						logger.ErrorException("Could not finalize request properly", e2);
-					}
+					FinalizeRequestSafe(context);
 				}
 				onDisconnect();
 				return new CompletedTask();
@@ -474,7 +469,18 @@ namespace Raven.Database.Server
 					logger.WarnException("Could not gather information to log request stats", e);
 				}
 				ResetThreadLocalState();
+			}
+		}
 
+		private void FinalizeRequestSafe(IHttpContext context)
+		{
+			try
+			{
+				FinalizeRequestProcessing(context, null, true);
+			}
+			catch (Exception e2)
+			{
+				logger.ErrorException("Could not finalize request properly", e2);
 			}
 		}
 
@@ -555,7 +561,7 @@ namespace Raven.Database.Server
 
 			ctx.FinalizeResonse();
 
-			if (ravenUiRequest || logHttpRequestStatsParam == null)
+			if (ravenUiRequest || logHttpRequestStatsParam == null || sw == null)
 				return;
 
 			sw.Stop();
