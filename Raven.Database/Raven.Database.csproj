@@ -80,8 +80,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
-    <Reference Include="IronJS">
-      <HintPath>..\SharedLibs\IronJS.dll</HintPath>
+    <Reference Include="IronJS, Version=0.2.0.1, Culture=neutral, PublicKeyToken=e40e35e206e6bc4f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\IronJS\Src\IronJS\bin\Debug - Copy\IronJS.dll</HintPath>
+    </Reference>
+    <Reference Include="IronJS.Runtime">
+      <HintPath>..\..\IronJS\Src\IronJS\bin\Debug - Copy\IronJS.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

@@ -36,7 +36,8 @@ namespace Raven.Tests.Patching
 		[Fact]
 		public void CanApplyBasicScriptAsPatch()
 		{
-			var resultJson = new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest { Script = sampleScript });
+			var doc = RavenJObject.FromObject(test);
+			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = sampleScript });
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
 			Assert.Equal("Something new", result.Id);
@@ -50,7 +51,8 @@ namespace Raven.Tests.Patching
 		[Fact]
 		public void CanRemoveFromCollectionByValue()
 		{
-			var resultJson = new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest
+			var doc = RavenJObject.FromObject(test);
+			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
 			                                                                              	{
 			                                                                              		Script = @"
 this.Comments.Remove('two');
@@ -64,8 +66,9 @@ this.Comments.Remove('two');
 		[Fact]
 		public void CanRemoveFromCollectionByCondition()
 		{
-			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
-			var resultJson = advancedJsonPatcher.Apply(new ScriptedPatchRequest
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			var resultJson = advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 			{
 				Script = @"
 this.Comments.RemoveWhere(function(el) {return el == 'seven';});
@@ -79,7 +82,8 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CanPatchUsingVars()
 		{
-			var resultJson = new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest
+			var doc = RavenJObject.FromObject(test);
+			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
 			                                                                              	{
 			                                                                              		Script = "this.TheName = Name",
 																								Values = {{"Name", "ayende"}}
@@ -90,8 +94,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CannotUseEval()
 		{
+			var doc = RavenJObject.FromObject(test);
 			Assert.Throws<NotSupportedException>(
-				() => new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest
+				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
 				                                                                   	{
 				                                                                   		Script = "eval('this.Value = 2')",
 				                                                                   	}));
@@ -100,16 +105,18 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CanHandleNonsensePatching()
 		{
+			var doc = RavenJObject.FromObject(test);
 			Assert.Throws<InvalidOperationException>(
 				() =>
-				new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest { Script = "this.Id = 'Somethi" }));
+				new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "this.Id = 'Somethi" }));
 		}
 
 		[Fact]
 		public void CanThrowIfValueIsWrong()
 		{
+			var doc = RavenJObject.FromObject(test);
 			var invalidOperationException = Assert.Throws<InvalidOperationException>(
-				() => new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest {Script = "raise 'problem'"}));
+				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest {Script = "raise 'problem'"}));
 
 			Assert.Contains("problem", invalidOperationException.Message);
 		}
@@ -117,8 +124,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CanOutputDebugInformation()
 		{
-			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
-			advancedJsonPatcher.Apply(new ScriptedPatchRequest
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 			                                                             	{
 																				Script = "output(this.Id)"
 			                                                             	});
@@ -129,8 +137,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CannotUseWhile()
 		{
-			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new ScriptedPatchRequest
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 			                                                                         	{
 			                                                                         		Script = "while(true) {}"
 			                                                                         	}));
@@ -139,8 +148,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void DefiningFunctionForbidden()
 		{
-			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new ScriptedPatchRequest
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 			{
 				Script = "function a() { a(); }"
 			}));
@@ -149,8 +159,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void LongStringRejected()
 		{
-			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new ScriptedPatchRequest
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 			{
 				Script = new string('a', 8193)
 			}));
