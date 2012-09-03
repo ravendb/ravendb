@@ -41,7 +41,7 @@ namespace Raven.Database.Storage.RAM
 			LocalState.Added.Add(val);
 		}
 
-		public void Remote(TVal val)
+		public void Remove(TVal val)
 		{
 			LocalState.Removed.Add(val);
 		}

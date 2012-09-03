@@ -677,6 +677,7 @@
     <Compile Include="Storage\Managed\TransactionStorageActions.cs" />
     <Compile Include="Storage\RAM\InMemoryTransaction.cs" />
     <Compile Include="Storage\RAM\RamAttachmentsStorageActions.cs" />
+    <Compile Include="Storage\RAM\RamDocumentsStorageActions.cs" />
     <Compile Include="Storage\RAM\RamGeneralStorageActions.cs" />
     <Compile Include="Storage\RAM\RamListsStorageActions.cs" />
     <Compile Include="Storage\RAM\RamQueueStorageActions.cs" />
@@ -684,6 +685,7 @@
     <Compile Include="Storage\RAM\RamStorageActionsAccessor.cs" />
     <Compile Include="Storage\RAM\RamTasksStorageActions.cs" />
     <Compile Include="Storage\RAM\RamTransactionalStorage.cs" />
+    <Compile Include="Storage\RAM\RamTransactionStorageActions.cs" />
     <Compile Include="Storage\RAM\TransactionalDictionary.cs" />
     <Compile Include="Storage\RAM\TransactionalList.cs" />
     <Compile Include="Storage\RAM\TransactionalValue.cs" />
