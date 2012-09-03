@@ -26,7 +26,7 @@ namespace Raven.Tryouts
 				var sw = Stopwatch.StartNew();
 				using (var x = new AdvancedPatching())
 				{
-					x.CanUpdateBasedOnAnotherDocumentProperty();
+					x.CanRemoveFromCollectionByCondition();
 				}
 				Console.WriteLine("{0:#,#}", sw.ElapsedMilliseconds);
 			}

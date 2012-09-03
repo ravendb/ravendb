@@ -193,7 +193,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
 		{
-			using (var server = GetNewServer(port: 8079))
+			using (GetNewServer()) 
 			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8079"

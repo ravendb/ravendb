@@ -120,7 +120,6 @@ namespace Raven.Database
 		private readonly object idleLocker = new object();
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
-
 		private long currentEtagBase;
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
@@ -1311,9 +1310,9 @@ namespace Raven.Database
 				jsonDoc =>
 				{
 					scriptedJsonPatcher = new ScriptedJsonPatcher(
-						s =>
+						loadDocument: id =>
 						{
-							var jsonDocument = Get(s, transactionInformation);
+							var jsonDocument = Get(id, transactionInformation);
 							return jsonDocument == null ? null : jsonDocument.ToJson();
 						});
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);

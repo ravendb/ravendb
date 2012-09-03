@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Principal;
 using System.Threading;
 using NLog;
+using Raven.Abstractions;
 
 namespace Raven.Database.Extensions
 {
@@ -62,7 +63,7 @@ namespace Raven.Database.Extensions
 			public bool IsAdministrator(WindowsIdentity windowsIdentity)
 			{
 				CachedResult value;
-				if (cache.TryGetValue(windowsIdentity.User, out value) && (DateTime.UtcNow - value.Timestamp) <= maxDuration)
+				if (cache.TryGetValue(windowsIdentity.User, out value) && (SystemTime.UtcNow - value.Timestamp) <= maxDuration)
 				{
 					Interlocked.Increment(ref value.Usage);
 					return value.Value;
@@ -81,7 +82,7 @@ namespace Raven.Database.Extensions
 				{
 					Usage = value == null ? 1 : value.Usage + 1,
 					Value = isAdministratorNoCache,
-					Timestamp = DateTime.UtcNow
+					Timestamp = SystemTime.UtcNow
 				};
 
 				cache.AddOrUpdate(windowsIdentity.User, cachedResult, (_, __) => cachedResult);
