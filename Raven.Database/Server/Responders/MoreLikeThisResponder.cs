@@ -68,13 +68,13 @@ namespace Raven.Database.Bundles.MoreLikeThis
 				if (!string.IsNullOrEmpty(parameters.DocumentId))
 				{
 					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId.ToLowerInvariant())),
-									  BooleanClause.Occur.MUST);
+									  Occur.MUST);
 				}
 
 				foreach (string key in parameters.MapGroupFields.Keys)
 				{
 					documentQuery.Add(new TermQuery(new Term(key, parameters.MapGroupFields[key])),
-									  BooleanClause.Occur.MUST);
+									  Occur.MUST);
 				}
 
 				var td = searcher.Search(documentQuery, 1);
@@ -87,7 +87,7 @@ namespace Raven.Database.Bundles.MoreLikeThis
 					return;
 				}
 
-				var ir = searcher.GetIndexReader();
+				var ir = searcher.IndexReader;
 				var mlt = new RavenMoreLikeThis(ir);
 
 				AssignParameters(mlt, parameters);
@@ -128,11 +128,11 @@ namespace Raven.Database.Bundles.MoreLikeThis
 					perFieldAnalyzerWrapper = index.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
 					mlt.SetAnalyzer(perFieldAnalyzerWrapper);
 
-					var mltQuery = mlt.Like(td.ScoreDocs[0].doc);
-					var tsdc = TopScoreDocCollector.create(context.GetPageSize(Database.Configuration.MaxPageSize), true);
+					var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
+					var tsdc = TopScoreDocCollector.Create(context.GetPageSize(Database.Configuration.MaxPageSize), true);
 					searcher.Search(mltQuery, tsdc);
 					var hits = tsdc.TopDocs().ScoreDocs;
-					var jsonDocuments = GetJsonDocuments(parameters, searcher, index, indexName, hits, td.ScoreDocs[0].doc);
+					var jsonDocuments = GetJsonDocuments(parameters, searcher, index, indexName, hits, td.ScoreDocs[0].Doc);
 
 					var result = new MultiLoadResult();
 
@@ -186,8 +186,8 @@ namespace Raven.Database.Bundles.MoreLikeThis
 			if (string.IsNullOrEmpty(parameters.DocumentId) == false)
 			{
 				var documentIds = hits
-					.Where(hit => hit.doc != baseDocId)
-					.Select(hit => searcher.Doc(hit.doc).Get(Constants.DocumentIdFieldName))
+					.Where(hit => hit.Doc != baseDocId)
+					.Select(hit => searcher.Doc(hit.Doc).Get(Constants.DocumentIdFieldName))
 					.Where(x => x != null)
 					.Distinct();
 
@@ -197,13 +197,13 @@ namespace Raven.Database.Bundles.MoreLikeThis
 					.ToArray();
 			}
 
-			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name()).Distinct().ToArray();
+			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().ToArray();
 			var etag = Database.GetIndexEtag(indexName, null);
 			return hits
-				.Where(hit => hit.doc != baseDocId)
+				.Where(hit => hit.Doc != baseDocId)
 				.Select(hit => new JsonDocument
 				{
-					DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.doc), new FieldsToFetch(fields, AggregationOperation.None,
+					DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.Doc), new FieldsToFetch(fields, AggregationOperation.None,
 						index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
 					Etag = etag
 				})

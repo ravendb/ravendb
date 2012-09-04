@@ -55,17 +55,17 @@ namespace Raven.Database.Queries
 								Range = range,
 							}).ToList()
 						};
-
+					
 						break;
 					default:
 						throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
 				}
 			}
-		
+
 			new QueryForFacets(database,index, defaultFacets, rangeFacets, indexQuery, results).Execute();
 
 			return results;
-		}
+			}
 
 		private static ParsedRange ParseRange(string field, string range)
 		{
@@ -185,7 +185,7 @@ namespace Raven.Database.Queries
 				 List<List<ParsedRange>> ranges,
 				 IndexQuery indexQuery,
 				 FacetResults results)
-			{
+		{
 				Database = database;
 				this.Index = index;
 				this.Facets = facets;
@@ -210,64 +210,64 @@ namespace Raven.Database.Queries
 				IndexSearcher currentIndexSearcher;
 				RavenJObject[] termsDocs;
 				using (Database.IndexStorage.GetCurrentIndexSearcherAndTermDocs(Index, out currentIndexSearcher, out termsDocs))
-				{
+					{
 					var baseQuery = Database.IndexStorage.GetLuceneQuery(Index, IndexQuery, Database.IndexQueryTriggers);
 					currentIndexSearcher.Search(baseQuery, allCollector);
 				}
 
 				var facetsByName = GetFacetsByName(termsDocs, allCollector);
-
+				
 				UpdateFacetResults(facetsByName);
-			}
+							}
 
 			private void UpdateFacetResults(IDictionary<string, Dictionary<string, int>> facetsByName)
 			{
 				foreach (var facet in Facets)
-				{
-					var values = new List<FacetValue>();
-					List<string> allTerms;
+			{
+				var values = new List<FacetValue>();
+				List<string> allTerms;
 
 					int maxResults = Math.Min(facet.MaxResults ?? Database.Configuration.MaxPageSize, Database.Configuration.MaxPageSize);
-					var groups = facetsByName.GetOrDefault(facet.Name);
+				var groups = facetsByName.GetOrDefault(facet.Name);
 
 					if (groups == null)
-						continue;
+					continue;
 
-					switch (facet.TermSortMode)
-					{
-						case FacetTermSortMode.ValueAsc:
-							allTerms = new List<string>(groups.Keys.OrderBy(x => x));
-							break;
-						case FacetTermSortMode.ValueDesc:
-							allTerms = new List<string>(groups.Keys.OrderByDescending(x => x));
-							break;
-						case FacetTermSortMode.HitsAsc:
-							allTerms = new List<string>(groups.OrderBy(x => x.Value).Select(x => x.Key));
-							break;
-						case FacetTermSortMode.HitsDesc:
-							allTerms = new List<string>(groups.OrderByDescending(x => x.Value).Select(x => x.Key));
-							break;
-						default:
-							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
-					}
+				switch (facet.TermSortMode)
+				{
+					case FacetTermSortMode.ValueAsc:
+						allTerms = new List<string>(groups.Keys.OrderBy(x => x));
+						break;
+					case FacetTermSortMode.ValueDesc:
+						allTerms = new List<string>(groups.Keys.OrderByDescending(x => x));
+						break;
+					case FacetTermSortMode.HitsAsc:
+						allTerms = new List<string>(groups.OrderBy(x => x.Value).Select(x => x.Key));
+						break;
+					case FacetTermSortMode.HitsDesc:
+						allTerms = new List<string>(groups.OrderByDescending(x => x.Value).Select(x => x.Key));
+						break;
+					default:
+						throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
+				}
 
-					foreach (var term in allTerms.TakeWhile(term => values.Count < maxResults))
+				foreach (var term in allTerms.TakeWhile(term => values.Count < maxResults))
+				{
+					values.Add(new FacetValue
 					{
-						values.Add(new FacetValue
-						{
-							Hits = groups.GetOrDefault(term),
-							Range = term
-						});
-					}
+						Hits = groups.GetOrDefault(term),
+						Range = term
+					});
+				}
 
 					Results.Results[facet.Name] = new FacetResult
-					{
-						Values = values,
-						RemainingTermsCount = allTerms.Count - values.Count,
-						RemainingHits = groups.Values.Sum() - values.Sum(x => x.Hits),
-					};
+				{
+					Values = values,
+					RemainingTermsCount = allTerms.Count - values.Count,
+					RemainingHits = groups.Values.Sum() - values.Sum(x => x.Hits),
+				};
 
-					if (facet.InclueRemainingTerms)
+				if (facet.InclueRemainingTerms)
 						Results.Results[facet.Name].RemainingTerms = allTerms.Skip(maxResults).ToList();
 				}
 			}

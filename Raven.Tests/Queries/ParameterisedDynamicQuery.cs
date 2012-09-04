@@ -60,7 +60,7 @@ namespace Raven.Tests.Queries
 		   {
 			   PageSize = 128,
 			   Start = 0,
-			   Cutoff = SystemTime.Now,
+			   Cutoff = SystemTime.UtcNow,
 			   Query = "Title.Length:3 AND Category:Rhinos"
 		   });
 
@@ -97,21 +97,21 @@ namespace Raven.Tests.Queries
 			{
 				PageSize = 128,
 				Start = 0,
-				Cutoff = SystemTime.Now,
+				Cutoff = SystemTime.UtcNow,
 				Query = "Title.Length:3 AND Category:Rhinos"
 			});
 			db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
 				PageSize = 128,
 				Start = 0,
-				Cutoff = SystemTime.Now,
+				Cutoff = SystemTime.UtcNow,
 				Query = "Title.Length:3 AND Category:Rhinos"
 			});
 			db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
 				PageSize = 128,
 				Start = 0,
-				Cutoff = SystemTime.Now,
+				Cutoff = SystemTime.UtcNow,
 				Query = "Category:Rhinos AND Title.Length:3"
 			});
 
@@ -129,7 +129,7 @@ namespace Raven.Tests.Queries
 				{
 					PageSize = 128,
 					Start = 0,
-					Cutoff = SystemTime.Now,
+					Cutoff = SystemTime.UtcNow,
 					Query = "Title.Length:3 AND Category:Rhinos"
 				});
 		  
@@ -170,7 +170,7 @@ namespace Raven.Tests.Queries
 				{
 					PageSize = 128,
 					Start = 0,
-					Cutoff = SystemTime.Now,
+					Cutoff = SystemTime.UtcNow,
 					Query = "Title.Length_Range:[0x00000004 TO 0x00000009]"
 				});
 
@@ -188,7 +188,7 @@ namespace Raven.Tests.Queries
 				{
 					PageSize = 128,
 					Start = 0,
-					Cutoff = SystemTime.Now,
+					Cutoff = SystemTime.UtcNow,
 					Query = "Title.Length:3 AND Category:Rhinos"
 				});
 			}
@@ -237,7 +237,7 @@ namespace Raven.Tests.Queries
 			{
 				PageSize = 128,
 				Start = 0,
-				Cutoff = SystemTime.Now,
+				Cutoff = SystemTime.UtcNow,
 				Query = "Tags,Name:[[birds]]"
 			});
 
@@ -276,7 +276,7 @@ namespace Raven.Tests.Queries
 			{
 				PageSize = 128,
 				Start = 0,
-				Cutoff = SystemTime.Now,
+				Cutoff = SystemTime.UtcNow,
 				Query = "User.Name:rob"
 			});
 
@@ -303,7 +303,7 @@ namespace Raven.Tests.Queries
 			{
 				PageSize = 128,
 				Start = 0,
-				Cutoff = SystemTime.Now,
+				Cutoff = SystemTime.UtcNow,
 				Query = "Tags,Name:[[birds]]",
 				FieldsToFetch = new string[] { "Title", "Category" }
 			});

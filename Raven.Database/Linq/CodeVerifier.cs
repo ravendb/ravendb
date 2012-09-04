@@ -56,7 +56,7 @@ namespace Raven.Database.Linq
 
 			foreach (var type in asm.GetTypes())
 			{
-				foreach (var methodInfo in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
+				foreach (var methodInfo in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
 				{
 					foreach (var instruction in methodInfo.GetInstructions())
 					{

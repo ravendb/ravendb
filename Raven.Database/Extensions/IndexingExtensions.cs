@@ -10,9 +10,9 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
-using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Raven.Database.Server;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -29,7 +29,14 @@ namespace Raven.Database.Extensions
 				throw new InvalidOperationException("Cannot find analzyer type '" + analyzerTypeAsString + "' for field: " + name);
 			try
 			{
-				return (Analyzer)Activator.CreateInstance(analyzerType);
+				// try to get paramerless ctor
+				var ctors = analyzerType.GetConstructor(Type.EmptyTypes);
+				if (ctors != null)
+					return (Analyzer)Activator.CreateInstance(analyzerType);
+
+				ctors = analyzerType.GetConstructor(new[] {typeof (Lucene.Net.Util.Version)});
+				if (ctors != null)
+					return (Analyzer)Activator.CreateInstance(analyzerType, Lucene.Net.Util.Version.LUCENE_30);
 			}
 			catch (Exception e)
 			{
@@ -37,12 +44,15 @@ namespace Raven.Database.Extensions
 					"Could not create new analyzer instance '" + name + "' for field: " +
 						name, e);
 			}
+
+			throw new InvalidOperationException(
+				"Could not create new analyzer instance '" + name + "' for field: " + name + ". No recognizable constructor found.");
 		}
 
-		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index defaultIndex)
+		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index? defaultIndex)
 		{
 			if (self.Indexes == null)
-				return defaultIndex;
+				return defaultIndex ?? Field.Index.ANALYZED_NO_NORMS;
 			FieldIndexing value;
 			if (self.Indexes.TryGetValue(name, out value) == false)
 			{
@@ -54,7 +64,7 @@ namespace Raven.Database.Extensions
 					{
 						return Field.Index.ANALYZED; // if there is a custom analyzer, the value should be analyzed
 					}
-					return defaultIndex;
+					return defaultIndex ?? Field.Index.ANALYZED_NO_NORMS;
 				}
 			}
 			switch (value)
@@ -66,7 +76,7 @@ namespace Raven.Database.Extensions
 				case FieldIndexing.NotAnalyzed:
 					return Field.Index.NOT_ANALYZED_NO_NORMS;
 				case FieldIndexing.Default:
-					return defaultIndex;
+					return defaultIndex ?? Field.Index.ANALYZED_NO_NORMS;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
@@ -113,7 +123,8 @@ namespace Raven.Database.Extensions
 								}
 								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
 								{
-									var dsort = new SpatialDistanceFieldComparatorSource(spatialQuery.Latitude, spatialQuery.Longitude);
+									var shape = SpatialIndex.Context.ReadShape(spatialQuery.QueryShape);
+									var dsort = new SpatialDistanceFieldComparatorSource(shape.GetCenter());
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);

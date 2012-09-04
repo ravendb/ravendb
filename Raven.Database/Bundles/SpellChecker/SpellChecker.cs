@@ -15,27 +15,29 @@
  * limitations under the License.
  */
 
-using System;
+
 using System.Collections.Generic;
-using WhitespaceAnalyzer = Lucene.Net.Analysis.WhitespaceAnalyzer;
-using Document = Lucene.Net.Documents.Document;
-using Field = Lucene.Net.Documents.Field;
-using IndexReader = Lucene.Net.Index.IndexReader;
-using IndexWriter = Lucene.Net.Index.IndexWriter;
-using Term = Lucene.Net.Index.Term;
-using BooleanClause = Lucene.Net.Search.BooleanClause;
-using BooleanQuery = Lucene.Net.Search.BooleanQuery;
-using Hits = Lucene.Net.Search.Hits;
-using IndexSearcher = Lucene.Net.Search.IndexSearcher;
-using Query = Lucene.Net.Search.Query;
-using TermQuery = Lucene.Net.Search.TermQuery;
-using Directory = Lucene.Net.Store.Directory;
-using SpellChecker.Net.Search.Spell;
-using Lucene.Net.Store;
-using Lucene.Net.Search;
 
 namespace SpellChecker.Net.Search.Spell
 {
+	using System;
+
+	using Lucene.Net.Search;
+	using Lucene.Net.Store;
+	using BooleanClause = Lucene.Net.Search.BooleanClause;
+	using BooleanQuery = Lucene.Net.Search.BooleanQuery;
+	using Directory = Lucene.Net.Store.Directory;
+	using Document = Lucene.Net.Documents.Document;
+	using Field = Lucene.Net.Documents.Field;
+	using IndexReader = Lucene.Net.Index.IndexReader;
+	using IndexSearcher = Lucene.Net.Search.IndexSearcher;
+	using IndexWriter = Lucene.Net.Index.IndexWriter;
+	using Query = Lucene.Net.Search.Query;
+	using Term = Lucene.Net.Index.Term;
+	using TermQuery = Lucene.Net.Search.TermQuery;
+	using WhitespaceAnalyzer = Lucene.Net.Analysis.WhitespaceAnalyzer;
+
+
 	/// <summary>  <p>
 	/// Spell Checker class  (Main class) <br/>
 	/// (initially inspired by the David Spencer code).
@@ -67,17 +69,16 @@ namespace SpellChecker.Net.Search.Spell
 		internal Directory spellindex;
 
 		/// <summary> Boost value for start and end grams</summary>
-		private float bStart = 2.0f;
-		private float bEnd = 1.0f;
+		private const float bStart = 2.0f;
+		private const float bEnd = 1.0f;
 
-		//private IndexReader reader;
 		// don't use this searcher directly - see #swapSearcher()
 		private IndexSearcher searcher;
 
 		/// <summary>
 		/// this locks all modifications to the current searcher. 
 		/// </summary>
-		private static System.Object searcherLock = new System.Object();
+		private static readonly System.Object searcherLock = new System.Object();
 
 		/*
 		 * this lock synchronizes all possible modifications to the 
@@ -85,7 +86,7 @@ namespace SpellChecker.Net.Search.Spell
 		 * the same index concurrently. Note: Do not acquire the searcher lock
 		 * before acquiring this lock! 
 		*/
-		private static System.Object modifyCurrentIndexLock = new System.Object();
+		private static readonly System.Object modifyCurrentIndexLock = new System.Object();
 		private volatile bool closed = false;
 
 		internal float minScore = 0.5f;  //LUCENENET-359 Spellchecker accuracy gets overwritten
@@ -96,11 +97,11 @@ namespace SpellChecker.Net.Search.Spell
 		/// Use the given directory as a spell checker index. The directory
 		/// is created if it doesn't exist yet.
 		/// </summary>
-		/// <param name="gramIndex">the spell index directory</param>
+		/// <param name="spellIndex">the spell index directory</param>
 		/// <param name="sd">the <see cref="StringDistance"/> measurement to use </param>
-		public SpellChecker(Directory gramIndex, StringDistance sd)
+		public SpellChecker(Directory spellIndex, StringDistance sd)
 		{
-			this.SetSpellIndex(gramIndex);
+			this.SetSpellIndex(spellIndex);
 			this.setStringDistance(sd);
 		}
 
@@ -109,9 +110,9 @@ namespace SpellChecker.Net.Search.Spell
 		/// <see cref="LevenshteinDistance"/> as the default <see cref="StringDistance"/>. The
 		/// directory is created if it doesn't exist yet.
 		/// </summary>
-		/// <param name="gramIndex">the spell index directory</param>
-		public SpellChecker(Directory gramIndex)
-			: this(gramIndex, new LevenshteinDistance())
+		/// <param name="spellIndex">the spell index directory</param>
+		public SpellChecker(Directory spellIndex)
+			: this(spellIndex, new LevenshteinDistance())
 		{ }
 
 		/// <summary>
@@ -131,7 +132,7 @@ namespace SpellChecker.Net.Search.Spell
 				EnsureOpen();
 				if (!IndexReader.IndexExists(spellIndexDir))
 				{
-					IndexWriter writer = new IndexWriter(spellIndexDir, null, true,
+					var writer = new IndexWriter(spellIndexDir, null, true,
 						IndexWriter.MaxFieldLength.UNLIMITED);
 					writer.Close();
 				}
@@ -218,13 +219,13 @@ namespace SpellChecker.Net.Search.Spell
 					return new String[] { word };
 				}
 
-				BooleanQuery query = new BooleanQuery();
+				var query = new BooleanQuery();
 				String[] grams;
 				String key;
-				var alreadySeen = new HashSet<string>();
-				for (int ng = GetMin(lengthWord); ng <= GetMax(lengthWord); ng++)
-				{
 
+				var alreadySeen = new HashSet<string>();
+				for (var ng = GetMin(lengthWord); ng <= GetMax(lengthWord); ng++)
+				{
 					key = "gram" + ng; // form key
 
 					grams = FormGrams(word, ng); // form word into ngrams (allow dups too)
@@ -253,7 +254,7 @@ namespace SpellChecker.Net.Search.Spell
 				int maxHits = 10 * numSug;
 
 				//    System.out.println("Q: " + query);
-				ScoreDoc[] hits = indexSearcher.Search(query, null, maxHits).scoreDocs;
+				ScoreDoc[] hits = indexSearcher.Search(query, null, maxHits).ScoreDocs;
 				//    System.out.println("HITS: " + hits.length());
 				SuggestWordQueue sugQueue = new SuggestWordQueue(numSug);
 
@@ -262,17 +263,16 @@ namespace SpellChecker.Net.Search.Spell
 				SuggestWord sugWord = new SuggestWord();
 				for (int i = 0; i < stop; i++)
 				{
-
-					sugWord.term = indexSearcher.Doc(hits[i].doc).Get(F_WORD); // get orig word
+					sugWord.termString = indexSearcher.Doc(hits[i].Doc).Get(F_WORD); // get orig word
 
 					// don't suggest a word for itself, that would be silly
-					if (sugWord.term.Equals(word))
+					if (sugWord.termString.Equals(word))
 					{
 						continue;
 					}
 
 					// edit distance
-					sugWord.score = sd.GetDistance(word, sugWord.term);
+					sugWord.score = sd.GetDistance(word, sugWord.termString);
 					if (sugWord.score < min)
 					{
 						continue;
@@ -280,14 +280,15 @@ namespace SpellChecker.Net.Search.Spell
 
 					if (ir != null && field != null)
 					{ // use the user index
-						sugWord.freq = ir.DocFreq(new Term(field, sugWord.term)); // freq in the index
+						sugWord.freq = ir.DocFreq(new Term(field, sugWord.termString)); // freq in the index
 						// don't suggest a word that is not present in the field
 						if ((morePopular && goalFreq > sugWord.freq) || sugWord.freq < 1)
 						{
 							continue;
 						}
 					}
-					if (alreadySeen.Add(sugWord.term) == false) // we already seen this word, no point returning it twice
+
+					if (alreadySeen.Add(sugWord.termString) == false) // we already seen this word, no point returning it twice
 						continue;
 
 					sugQueue.InsertWithOverflow(sugWord);
@@ -303,7 +304,7 @@ namespace SpellChecker.Net.Search.Spell
 				String[] list = new String[sugQueue.Size()];
 				for (int i = sugQueue.Size() - 1; i >= 0; i--)
 				{
-					list[i] = ((SuggestWord)sugQueue.Pop()).term;
+					list[i] = ((SuggestWord)sugQueue.Pop()).termString;
 				}
 
 				return list;
@@ -320,15 +321,15 @@ namespace SpellChecker.Net.Search.Spell
 		private static void Add(BooleanQuery q, System.String k, System.String v, float boost)
 		{
 			Query tq = new TermQuery(new Term(k, v));
-			tq.SetBoost(boost);
-			q.Add(new BooleanClause(tq, BooleanClause.Occur.SHOULD));
+			tq.Boost = boost;
+			q.Add(new BooleanClause(tq, Occur.SHOULD));
 		}
 
 
 		/// <summary> Add a clause to a boolean query.</summary>
 		private static void Add(BooleanQuery q, System.String k, System.String v)
 		{
-			q.Add(new BooleanClause(new TermQuery(new Term(k, v)), BooleanClause.Occur.SHOULD));
+			q.Add(new BooleanClause(new TermQuery(new Term(k, v)), Occur.SHOULD));
 		}
 
 
@@ -393,14 +394,14 @@ namespace SpellChecker.Net.Search.Spell
 		/// <param name="ramMB">the max amount or memory in MB to use</param>
 		/// <throws>  IOException </throws>
 		/// <throws>AlreadyClosedException if the Spellchecker is already closed</throws>
-		public virtual void IndexDictionary(Dictionary dict, int mergeFactor, int ramMB)
+		public virtual void IndexDictionary(IDictionary dict, int mergeFactor, int ramMB)
 		{
 			lock (modifyCurrentIndexLock)
 			{
 				EnsureOpen();
 				Directory dir = this.spellindex;
 				IndexWriter writer = new IndexWriter(spellindex, new WhitespaceAnalyzer(), IndexWriter.MaxFieldLength.UNLIMITED);
-				writer.SetMergeFactor(mergeFactor);
+				writer.MergeFactor = mergeFactor;
 				writer.SetMaxBufferedDocs(ramMB);
 
 				System.Collections.IEnumerator iter = dict.GetWordsIterator();
@@ -434,10 +435,10 @@ namespace SpellChecker.Net.Search.Spell
 		}
 
 		/// <summary>
-		/// Indexes the data from the given <see cref="Dictionary"/>.
+		/// Indexes the data from the given <see cref="IDictionary"/>.
 		/// </summary>
 		/// <param name="dict">dict the dictionary to index</param>
-		public void IndexDictionary(Dictionary dict)
+		public void IndexDictionary(IDictionary dict)
 		{
 			IndexDictionary(dict, 300, 10);
 		}
@@ -509,7 +510,7 @@ namespace SpellChecker.Net.Search.Spell
 			lock (searcherLock)
 			{
 				EnsureOpen();
-				searcher.GetIndexReader().IncRef();
+				searcher.IndexReader.IncRef();
 				return searcher;
 			}
 		}
@@ -518,7 +519,7 @@ namespace SpellChecker.Net.Search.Spell
 		{
 			// don't check if open - always decRef 
 			// don't decrement the private searcher - could have been swapped
-			aSearcher.GetIndexReader().DecRef();
+			aSearcher.IndexReader.DecRef();
 		}
 
 		private void EnsureOpen()

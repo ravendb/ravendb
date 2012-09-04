@@ -45,21 +45,21 @@ namespace Raven.Database.Indexing.Sorting
 
 		public override void SetNextReader(IndexReader reader, int docBase)
 		{
-			currentReaderValues = new int[reader.MaxDoc()];
+			currentReaderValues = new int[reader.MaxDoc];
 			for (int i = 0; i < currentReaderValues.Length; i++)
 			{
 				currentReaderValues[i] = random.Next();
 			}
 		}
 
+		public override IComparable this[int slot]
+		{
+			get { return values[slot]; }
+		}
+
 		public override void SetBottom(int bottom)
 		{
 			this.bottom = values[bottom];
-		}
-
-		public override IComparable Value(int slot)
-		{
-			return values[slot];
 		}
 	}
 }

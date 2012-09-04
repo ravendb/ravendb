@@ -3,7 +3,7 @@ using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.Spatial
 {
 	public class SpatialTest2 : RavenTest
 	{
@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 			public EntitiesByLocation()
 			{
 				Map = entities => from entity in entities
-								  select new { _ = SpatialIndex.Generate(entity.Latitude, entity.Longitude) };
+								  select new { _ = SpatialGenerate(entity.Latitude, entity.Longitude) };
 			}
 		}
 

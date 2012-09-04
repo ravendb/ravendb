@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.IO;
 using Lucene.Net.Analysis;
 using Lucene.Net.Util;
@@ -15,7 +14,7 @@ namespace Raven.Database.Indexing
 	{
 		public override TokenStream ReusableTokenStream(string fieldName, TextReader reader)
 		{
-			var previousTokenStream = (LowerCaseKeywordTokenizer)GetPreviousTokenStream();
+			var previousTokenStream = (LowerCaseKeywordTokenizer)PreviousTokenStream;
 			if (previousTokenStream == null)
 				return TokenStream(fieldName, reader);
 			previousTokenStream.Reset(reader);

@@ -18,20 +18,21 @@ namespace Raven.Tests.Bugs
 		{
 			var dir = new RAMDirectory();
 			var analyzer = new LowerCaseKeywordAnalyzer();
-			var writer = new IndexWriter(dir, analyzer, true, IndexWriter.MaxFieldLength.UNLIMITED);
-			var document = new Lucene.Net.Documents.Document();
-			document.Add(new Field("Name", "MRS. SHABA", Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
-			writer.AddDocument(document);
 
-			writer.Close(true);
-			
+			using (var writer = new IndexWriter(dir, analyzer, true, IndexWriter.MaxFieldLength.UNLIMITED))
+			{
+				var document = new Lucene.Net.Documents.Document();
+				document.Add(new Field("Name", "MRS. SHABA", Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+				writer.AddDocument(document);
+			}
+
 
 			var searcher = new IndexSearcher(dir, true);
 
-			var termEnum = searcher.GetIndexReader().Terms();
+			var termEnum = searcher.IndexReader.Terms();
 			while (termEnum.Next())
 			{
-				var buffer = termEnum.Term().Text();
+				var buffer = termEnum.Term.Text;
 				Console.WriteLine(buffer);
 			}
 

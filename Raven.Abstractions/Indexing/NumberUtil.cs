@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public static string NumberToString(int number)
 		{
-			return string.Format("0x{0:X8}", number);
+			return "Ix" + number.ToString("G", CultureInfo.InvariantCulture);
 		}
 
 		/// <summary>
@@ -26,7 +26,7 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public static string NumberToString(long number)
 		{
-			return string.Format("0x{0:X16}", number);
+			return "Lx" + number.ToString("G", CultureInfo.InvariantCulture);
 		}
 
 		/// <summary>
@@ -71,6 +71,10 @@ namespace Raven.Abstractions.Indexing
 							return long.Parse(num, NumberStyles.HexNumber);
 					}
 					break;
+				case "Ix":
+					return int.Parse(num, CultureInfo.InvariantCulture);
+				case "Lx":
+					return long.Parse(num, CultureInfo.InvariantCulture);
 				case "Fx":
 					return  float.Parse(num, CultureInfo.InvariantCulture);
 				case "Dx":

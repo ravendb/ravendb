@@ -31,9 +31,9 @@ namespace Raven.Database.Indexing
 			_docBase = docBase;
 		}
 
-		public override bool AcceptsDocsOutOfOrder()
+		public override bool AcceptsDocsOutOfOrder
 		{
-			return true;
+			get { return true; }
 		}
 
 		public HashSet<int> Documents

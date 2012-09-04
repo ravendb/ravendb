@@ -43,13 +43,13 @@ namespace Raven.Database.Indexing.Collation
 
 		public override TokenStream ReusableTokenStream(string fieldName, TextReader reader)
 		{
-			var streams = (SavedStreams)GetPreviousTokenStream();
+			var streams = (SavedStreams)PreviousTokenStream;
 			if (streams == null)
 			{
 				streams = new SavedStreams();
 				streams.source = new KeywordTokenizer(reader);
 				streams.result = new CollationKeyFilter(streams.source, cultureInfo);
-				SetPreviousTokenStream(streams);
+				PreviousTokenStream = streams;
 			}
 			else
 			{
