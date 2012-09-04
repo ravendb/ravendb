@@ -353,9 +353,12 @@ namespace Raven.Munin
 
 		public Table Add(Table dictionary)
 		{
-			tables.Add(dictionary);
-			DictionaryStates.Add(null);
-			dictionary.Initialize(persistentSource, tables.Count - 1, this, CurrentTransactionId);
+			persistentSource.Write(stream =>
+				{
+					tables.Add(dictionary);
+					DictionaryStates.Add(null);
+					dictionary.Initialize(persistentSource, tables.Count - 1, this, CurrentTransactionId);
+				});
 			return dictionary;
 		}
 

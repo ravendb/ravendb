@@ -332,6 +332,10 @@ namespace Raven.Munin
 
 		private void AddInteral(RavenJToken key, PositionInFile position)
 		{
+			var ravenJObject = key as RavenJObject;
+			if (ravenJObject != null)
+				ravenJObject.EnsureSnapshot();
+
 			KeyToFilePos = KeyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
 			{
 				WasteCount += 1;

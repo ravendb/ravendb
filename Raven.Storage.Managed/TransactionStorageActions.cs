@@ -43,9 +43,10 @@ namespace Raven.Storage.Managed
 				StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
 				AssertValidEtag(key, readResult, storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } }), etag);
 
-				((RavenJObject)readResult.Key)["txId"] = transactionInformation.Id.ToByteArray();
+				var muninKey = (RavenJObject) readResult.Key.CloneToken();
+				muninKey["txId"] = transactionInformation.Id.ToByteArray();
 				if (storage.Documents.UpdateKey(readResult.Key) == false)
-					throw new ConcurrencyException("PUT attempted on document '" + key +
+					throw new ConcurrencyException("PUT attempted on document '" + muninKey +
 												   "' that is currently being modified by another transaction");
 			}
 			else

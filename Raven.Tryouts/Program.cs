@@ -2,24 +2,22 @@
 using System.Diagnostics;
 using System.Globalization;
 using Raven.Client.Document;
+using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
 {
 	class Program
 	{
-		static void Main(string[] args)
+		static void Main()
 		{
-			var val = "2012-05-31T20:58:43.9785585Z";
-			var formats = new[] { "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK" };
-
-			try
+			for (int i = 0; i < 100; i++)
 			{
-				var dateTime = DateTime.ParseExact(val, formats, CultureInfo.InvariantCulture, DateTimeStyles.None);
-				Console.WriteLine(dateTime.Kind);
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e);
+				Console.Clear();
+				Console.WriteLine(i);
+				using(var x = new AsyncCommit())
+				{
+					x.DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalse();
+				}
 			}
 		} 
 	}

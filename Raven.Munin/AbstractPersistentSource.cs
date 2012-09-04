@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Linq;
@@ -15,7 +14,7 @@ namespace Raven.Munin
 	public abstract class AbstractPersistentSource : IPersistentSource
 	{
 		private readonly StreamsPool pool;
-		private IList<PersistentDictionaryState> globalStates = new List<PersistentDictionaryState>();
+		private volatile IList<PersistentDictionaryState> globalStates = new List<PersistentDictionaryState>();
 
 		private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
 			new ThreadLocal<IList<PersistentDictionaryState>>(() => null);
@@ -44,7 +43,13 @@ namespace Raven.Munin
 
 		public IList<PersistentDictionaryState> DictionariesStates
 		{
-			get { return CurrentStates ?? globalStates; }
+			get
+			{
+				var persistentDictionaryStates = CurrentStates;
+				if(persistentDictionaryStates == null)
+					throw new NotSupportedException("Why are you touching the state outside a transaction?");
+				return persistentDictionaryStates;
+			}
 		}
 
 		protected abstract Stream CreateClonedStreamForReadOnlyPurposes();
@@ -92,6 +97,7 @@ namespace Raven.Munin
 				if (disposed)
 					throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
 			
+				Thread.MemoryBarrier();
 				try
 				{
 					CurrentStates = new List<PersistentDictionaryState>(
@@ -106,7 +112,7 @@ namespace Raven.Munin
 				finally
 				{
 					pool.Clear();
-					Interlocked.Exchange(ref globalStates, CurrentStates);
+					globalStates = CurrentStates;
 					CurrentStates = null;
 				}
 			}
