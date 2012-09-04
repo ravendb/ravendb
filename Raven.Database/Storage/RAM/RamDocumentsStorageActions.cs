@@ -14,17 +14,20 @@ namespace Raven.Database.Storage.RAM
 	{
 		private readonly RamState state;
 		private readonly IUuidGenerator generator;
+		private readonly RamStorageHelper helper;
 
 		public RamDocumentsStorageActions(RamState state, IUuidGenerator generator)
 		{
 			this.state = state;
 			this.generator = generator;
+			helper = new RamStorageHelper(state);
 		}
 
 		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
 		{
 			return state.Documents
-				.OrderByDescending(document => document.LastModified)
+				.OrderByDescending(pair => pair.Value.Document.LastModified)
+				.Select(pair => pair.Value.Document)
 				.Skip(start)
 				.Take(take);
 		}
@@ -34,24 +37,26 @@ namespace Raven.Database.Storage.RAM
 			long totalSize = 0;
 
 			return state.Documents
-				.OrderBy(document => document.Etag)
-				.SkipWhile(document => document.Etag != null && ((Guid) document.Etag).CompareTo(etag) > 0)
+				.OrderBy(pair => pair.Value.Document.Etag)
+				.SkipWhile(pair => pair.Value.Document.Etag != null && ((Guid)pair.Value.Document.Etag).CompareTo(etag) > 0)
 				.Take(take)
 				.TakeWhile(p =>
 				{
 					var fit = totalSize <= maxSize;
-					totalSize += p.SerializedSizeOnDisk;
+					totalSize += p.Value.Document.SerializedSizeOnDisk;
 					return fit;
-				});
+				})
+				.Select(pair => pair.Value.Document);
 		}
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
 			return
 				state.Documents
-				.Where(document => document.Key.StartsWith(idPrefix, StringComparison.InvariantCultureIgnoreCase))
+				.Where(pair => pair.Value.Document.Key.StartsWith(idPrefix, StringComparison.InvariantCultureIgnoreCase))
 				.Skip(start)
-				.Take(take);
+				.Take(take)
+				.Select(pair => pair.Value.Document);
 		}
 
 		public long GetDocumentsCount()
@@ -61,49 +66,43 @@ namespace Raven.Database.Storage.RAM
 
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
-			//TODO: check transaction
-
-			return state.Documents.FirstOrDefault(document => document.Key == key);
+			return DocumentByKeyInternal(key, transactionInformation, (metadata, createDocument) => metadata.Etag != null ? new JsonDocument
+			{
+				DataAsJson = createDocument(metadata.Key, metadata.Etag.Value, metadata.Metadata),
+				Etag = metadata.Etag,
+				Key = metadata.Key,
+				LastModified = metadata.LastModified,
+				Metadata = metadata.Metadata,
+				NonAuthoritativeInformation = metadata.NonAuthoritativeInformation,
+			} : null);
 		}
 
 		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
 		{
-			var doc =  state.Documents.FirstOrDefault(document => document.Key == key);
-
-			if (doc == null)
-				return null;
-
-			//TODO: check transaction
-
-			return new JsonDocumentMetadata
-			{
-				Etag = doc.Etag,
-				Key = doc.Key,
-				LastModified = doc.LastModified,
-				Metadata = doc.Metadata,
-				NonAuthoritativeInformation = doc.NonAuthoritativeInformation
-			};
+			return DocumentByKeyInternal(key, transactionInformation, (metadata, func) => metadata);
 		}
 
 		public bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata)
 		{
 			metadata = null;
-			var doc = state.Documents.FirstOrDefault(document => document.Key == key);
+
+			var doc = state.Documents.GetOrDefault(key);
 
 			if (doc == null)
 				return false;
 
-			var existingEtag = doc.Etag;
-			if (existingEtag != etag && etag != null && existingEtag != null)
+
+			if(doc.Document.Etag != etag)
 			{
-				return false;
+				throw new ConcurrencyException("DELETE attempted on document '" + key +
+				                               "' using a non current etag");
 			}
 
-			//TODO: check transaction
+			helper.EnsureNotLockedByTransaction(key, null);
 
-			metadata = doc.Metadata;
+			metadata = doc.Document.Metadata;
 
-			state.Documents.Remove(doc);
+			state.Documents.Remove(key);
 			state.DocumentCount.Value--;
 
 			return true;
@@ -111,38 +110,107 @@ namespace Raven.Database.Storage.RAM
 
 		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
-			var docuemnt = state.Documents.FirstOrDefault(document => document.Key == key);
-			if (docuemnt != null)
+
+			if (key != null && Encoding.Unicode.GetByteCount(key) >= 2048)
+				throw new ArgumentException(string.Format("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters, key is: '{0}'", key), "key");
+
+			var doc = state.Documents.GetOrDefault(key);
+
+			var isUpdate = doc != null;
+
+			if (isUpdate)
 			{
-				var existingEtag = docuemnt.Etag;
-				if (existingEtag != etag && etag != null && existingEtag != null)
-				{
-					throw new ConcurrencyException("PUT attempted on document '" + key +
-						"' using a non current etag")
-					{
-						ActualETag = (Guid)existingEtag,
-						ExpectedETag = etag.Value
-					};
-				}
+				helper.EnsureNotLockedByTransaction(key, null);
+				helper.EnsureDocumentEtagMatch(key, etag, "PUT");
 			}
 			else
 			{
-				//TODO: check transaction
+				if (etag != null && etag != Guid.Empty) // expected something to be there.
+					throw new ConcurrencyException("PUT attempted on document '" + key +
+												   "' using a non current etag (document deleted)")
+					{
+						ExpectedETag = etag.Value
+					};
+
+				helper.EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
 
 				state.DocumentCount.Value++;
 			}
+			Guid newEtag = generator.CreateSequentialUuid();
 
-			Guid newETag = generator.CreateSequentialUuid();
-			state.Documents.Add(new JsonDocument
+			state.Documents.Set(key, new DocuementWrapper
 			{
-				Key = key,
-				Etag = newETag,
-				DataAsJson = data,
-				LastModified = SystemTime.UtcNow,
-				Metadata = metadata,
+				Document = new JsonDocument
+				{
+					Key = key,
+					Metadata = metadata,
+					Etag = etag,
+					DataAsJson = data,
+					LastModified = SystemTime.UtcNow
+				}
 			});
 
-			return newETag;
+			return newEtag;
+		}
+
+		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Guid, RavenJObject, RavenJObject>, T> createResult)
+			where T : class
+		{
+			var existsInTx = helper.IsDocumentModifiedInsideTransaction(key);
+			var documentsModifiedByTransation = state.DocumentsModifiedByTransations.GetOrDefault(key);
+
+			if (transactionInformation != null && existsInTx)
+			{
+				var txId = documentsModifiedByTransation.LockByTransaction;
+				if (txId == transactionInformation.Id)
+				{
+
+					if (documentsModifiedByTransation.DeleteDocument)
+						return null;
+
+					var etag = documentsModifiedByTransation.Document.Etag;
+
+					var metadata = documentsModifiedByTransation.Document.Metadata;
+
+					return createResult(new JsonDocumentMetadata
+					{
+						NonAuthoritativeInformation = false,// we are the transaction, therefor we are Authoritative
+						Etag = etag,
+						LastModified = documentsModifiedByTransation.Document.LastModified,
+						Key = documentsModifiedByTransation.Document.Key,
+						Metadata = metadata
+					}, (s, guid, arg3) => state.Documents.GetOrDefault(s).Document.DataAsJson);
+				}
+			}
+
+			var doc = state.Documents.GetOrDefault(key);
+		
+			if (doc == null)
+			{
+				if (existsInTx)
+				{
+					return createResult(new JsonDocumentMetadata
+					{
+						Etag = Guid.Empty,
+						Key = key,
+						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
+						NonAuthoritativeInformation = true,
+						LastModified = DateTime.MinValue,
+					}, (docKey, etag, metadata) => new RavenJObject());
+				}
+				return null;
+			}
+
+			var existingEtag = doc.Document.Etag;
+
+			return createResult(new JsonDocumentMetadata
+			{
+				Etag = existingEtag,
+				NonAuthoritativeInformation = existsInTx,
+				LastModified = doc.Document.LastModified,
+				Key = doc.Document.Key,
+				Metadata = doc.Document.Metadata
+			}, (s, guid, arg3) => state.Documents.GetOrDefault(s).Document.DataAsJson);
 		}
 	}
 }

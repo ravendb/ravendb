@@ -680,9 +680,12 @@
     <Compile Include="Storage\RAM\RamDocumentsStorageActions.cs" />
     <Compile Include="Storage\RAM\RamGeneralStorageActions.cs" />
     <Compile Include="Storage\RAM\RamListsStorageActions.cs" />
+    <Compile Include="Storage\RAM\RamMappedResultStrageAction.cs" />
     <Compile Include="Storage\RAM\RamQueueStorageActions.cs" />
+    <Compile Include="Storage\RAM\RamStalenessStorageActions.cs" />
     <Compile Include="Storage\RAM\RamState.cs" />
     <Compile Include="Storage\RAM\RamStorageActionsAccessor.cs" />
+    <Compile Include="Storage\RAM\RamStorageHelper.cs" />
     <Compile Include="Storage\RAM\RamTasksStorageActions.cs" />
     <Compile Include="Storage\RAM\RamTransactionalStorage.cs" />
     <Compile Include="Storage\RAM\RamTransactionStorageActions.cs" />

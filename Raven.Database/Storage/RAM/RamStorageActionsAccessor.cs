@@ -22,7 +22,8 @@ namespace Raven.Database.Storage.RAM
 			Attachments = new RamAttachmentsStorageActions(state, generator);
 			Documents = new RamDocumentsStorageActions(state, generator);
 			Transactions = new RamTransactionStorageActions(state, generator);
-
+			Staleness = new RamStalenessStorageActions(state);
+			MapReduce = new RamMappedResultStrageAction(state, generator);
 		}
 
 		public void Dispose()
@@ -35,14 +36,14 @@ namespace Raven.Database.Storage.RAM
 		public ITasksStorageActions Tasks { get; private set; }
 		public IGeneralStorageActions General { get; private set; }
 		public IAttachmentsStorageActions Attachments { get; private set; }
+		
 		public IDocumentStorageActions Documents { get; private set; }
-
 		public ITransactionStorageActions Transactions { get; private set; }
-		
-		public IStalenessStorageActions Staleness { get; private set; }
-		public IIndexingStorageActions Indexing { get; private set; }
+		public IStalenessStorageActions Staleness { get; private set; }		
 		public IMappedResultsStorageAction MapReduce { get; private set; }
-		
+
+		public IIndexingStorageActions Indexing { get; private set; }
+
 		public event Action OnCommit;
 
 		public bool IsWriteConflict(Exception exception)

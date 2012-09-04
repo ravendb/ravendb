@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Json.Linq;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage.RAM
 {
@@ -13,10 +13,14 @@ namespace Raven.Database.Storage.RAM
 		public TransactionalDictionary<string, TransactionalValue<long>> Identities { get; set; }
 		public TransactionalDictionary<string, Attachment> Attachments { get; set; }
 		public TransactionalValue<int> AttachmentCount { get; set; }
-		public TransactionalList<JsonDocument> Documents { get; set; }
+		public TransactionalDictionary<string, DocuementWrapper> Documents { get; set; }
+		public TransactionalDictionary<string, DocumentsModifiedByTransation> DocumentsModifiedByTransations { get; set; }
 		public TransactionalValue<long> DocumentCount { get; set; }
-		public TransactionalDictionary<string, Transaction> Transactions { get;set; }
-
+		public TransactionalDictionary<Guid, Transaction> Transactions { get;set; }
+		public TransactionalDictionary<string, Index> Indexes { get; set; }
+		public TransactionalDictionary<string, IndexStats> IndexesStats { get; set; }
+		public TransactionalDictionary<string,TransactionalList<MappedResultsWrapper>> MappedResults { get; set; }
+		public TransactionalDictionary<string, TransactionalList<ScheduledReductionInfo>> ScheduledReductions { get; set; } 
 
 		public RamState()
 		{
@@ -26,7 +30,19 @@ namespace Raven.Database.Storage.RAM
 
 			DocumentCount = new TransactionalValue<long>();
 
-			Documents = new TransactionalList<JsonDocument>();
+			Documents = new  TransactionalDictionary<string, DocuementWrapper>(StringComparer.InvariantCultureIgnoreCase);
+
+			Transactions = new TransactionalDictionary<Guid, Transaction>(EqualityComparer<Guid>.Default);
+
+			Indexes = new TransactionalDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
+
+			IndexesStats = new TransactionalDictionary<string, IndexStats>(StringComparer.InvariantCultureIgnoreCase);
+
+			MappedResults = new TransactionalDictionary<string, TransactionalList<MappedResultsWrapper>>(StringComparer.InvariantCultureIgnoreCase,
+				() => new TransactionalList<MappedResultsWrapper>());
+
+			ScheduledReductions = new TransactionalDictionary<string, TransactionalList<ScheduledReductionInfo>>(StringComparer.InvariantCultureIgnoreCase,
+				() => new TransactionalList<ScheduledReductionInfo>());
 
 			Lists = new TransactionalDictionary<string, TransactionalDictionary<string, ListItem>>(StringComparer.InvariantCultureIgnoreCase,
 					() => new TransactionalDictionary<string, ListItem>(StringComparer.InvariantCultureIgnoreCase));
@@ -46,13 +62,25 @@ namespace Raven.Database.Storage.RAM
 	{
 		public Guid Key { get; set; }
 		public DateTime TimeOut { get; set; }
-		public JsonDocument Document { get; set; }
-		public TransationCommand Command { get; set; }
 	}
 
-	public enum TransationCommand
+	public class DocuementWrapper
 	{
-		Add,
-		Delete
+		public JsonDocument Document { get; set; }
+		public Guid? LockByTransaction { get; set; }
+	}
+
+	public class DocumentsModifiedByTransation
+	{
+		public JsonDocument Document { get; set; }
+		public Guid? LockByTransaction { get; set; }
+		public bool DeleteDocument { get; set; }
+	}
+
+	public class MappedResultsWrapper
+	{
+		public MappedResultInfo MappedResultInfo { get; set; }
+		public string View { get; set; }
+		public string DocumentKey { get; set; }
 	}
 }
