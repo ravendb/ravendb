@@ -1,0 +1,16 @@
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.Alerts" 
+           xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+           xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+           xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+           mc:Ignorable="d"
+           xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
+              xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:Alerts="clr-namespace:Raven.Studio.Features.Alerts" d:DesignWidth="640" d:DesignHeight="480"
+					 Infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Models.AlertsModel"
+						 
+           Title="Alerts Page">
+	<Grid DataContext="{Binding Value}">
+		<Alerts:AlertsView/>
+    </Grid>
+</Infrastructure:PageView>

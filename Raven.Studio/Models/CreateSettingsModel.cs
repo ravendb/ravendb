@@ -3,9 +3,9 @@ using Raven.Bundles.Versioning.Data;
 
 namespace Raven.Studio.Models
 {
-	public sealed class CreateBundlesModel : BaseBundlesModel
+	public sealed class CreateSettingsModel : BaseSettingsModel
 	{
-		public CreateBundlesModel()
+		public CreateSettingsModel()
 		{
 			MaxSize = 50;
 			WarnSize = 45;

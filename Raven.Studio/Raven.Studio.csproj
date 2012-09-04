@@ -152,6 +152,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
+      <Link>Infrastructure\Alert.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\ConflictsResolver.cs">
       <Link>Infrastructure\ConflictsResolver.cs</Link>
     </Compile>
@@ -187,6 +190,7 @@
     <Compile Include="Commands\AddVersioningCommand.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
+    <Compile Include="Commands\CreateSampleDataCommand.cs" />
     <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
     <Compile Include="Commands\DeleteReplicationCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
@@ -237,8 +241,12 @@
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
-    <Compile Include="Features\Bundles\BundlesView.xaml.cs">
-      <DependentUpon>BundlesView.xaml</DependentUpon>
+    <Compile Include="Features\Alerts\AlertProxy.cs" />
+    <Compile Include="Features\Alerts\AlertsView.xaml.cs">
+      <DependentUpon>AlertsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\SettingsView.xaml.cs">
+      <DependentUpon>SettingsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
@@ -306,6 +314,7 @@
     <Compile Include="Features\Query\RecentQueriesModel.cs" />
     <Compile Include="Features\Query\SavedQuery.cs" />
     <Compile Include="Features\Tasks\IndexingTask.cs" />
+    <Compile Include="Features\Tasks\SampleDataTask.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
@@ -326,6 +335,7 @@
     <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\VisableWhenEqual.cs" />
     <Compile Include="Infrastructure\Converters\DisableIfDefaultVersioning.cs" />
     <Compile Include="Infrastructure\Converters\StringToBooleanConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
@@ -341,6 +351,7 @@
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
     <Compile Include="Infrastructure\Converters\TrimmedStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
+    <Compile Include="Infrastructure\Converters\VisableWhenDifferent.cs" />
     <Compile Include="Infrastructure\Disposer.cs" />
     <Compile Include="Infrastructure\DocumentsVirtualCollectionSourceBase.cs" />
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
@@ -380,10 +391,11 @@
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
+    <Compile Include="Models\AlertsModel.cs" />
     <Compile Include="Models\ApplicationState.cs" />
-    <Compile Include="Models\BundlesModel.cs" />
-    <Compile Include="Models\BaseBundlesModel.cs" />
-    <Compile Include="Models\CreateBundlesModel.cs" />
+    <Compile Include="Models\SettingsModel.cs" />
+    <Compile Include="Models\BaseSettingsModel.cs" />
+    <Compile Include="Models\CreateSettingsModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
     <Compile Include="Models\DatabaseSelectionModel.cs" />
     <Compile Include="Models\DocumentSize.cs" />
@@ -397,8 +409,11 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
-    <Compile Include="Views\Bundles.xaml.cs">
-      <DependentUpon>Bundles.xaml</DependentUpon>
+    <Compile Include="Views\Alerts.xaml.cs">
+      <DependentUpon>Alerts.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Settings.xaml.cs">
+      <DependentUpon>Settings.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\IndexStats.xaml.cs">
       <DependentUpon>IndexStats.xaml</DependentUpon>
@@ -727,7 +742,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Bundles\BundlesView.xaml">
+    <Page Include="Features\Alerts\AlertsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\SettingsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -763,7 +782,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\Bundles.xaml">
+    <Page Include="Views\Alerts.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Settings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1012,6 +1035,13 @@
     <Resource Include="Assets\Images\database_system_tiny.png" />
     <Resource Include="Assets\Images\index_delete_small.png" />
     <Resource Include="Assets\Images\index_delete_tiny.png" />
+    <Resource Include="Assets\Images\Image_Settings.png" />
+    <Resource Include="Assets\Images\Image_Settings_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Check_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Observed_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Uncheck_Tiny.png" />
+    <Resource Include="Assets\Images\Image_NotObserved_Tiny.png" />
+    <Resource Include="Assets\Images\Image_DeleteObserved_Tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

@@ -6,11 +6,11 @@ namespace Raven.Studio.Commands
 {
 	public class DeleteVersioningCommand : Command
 	{
-		private readonly BaseBundlesModel bundlesModel;
+		private readonly BaseSettingsModel settingsModel;
 
-		public DeleteVersioningCommand(BaseBundlesModel bundlesModel)
+		public DeleteVersioningCommand(BaseSettingsModel settingsModel)
 		{
-			this.bundlesModel = bundlesModel;
+			this.settingsModel = settingsModel;
 		}
 
 		public override void Execute(object parameter)
@@ -19,9 +19,9 @@ namespace Raven.Studio.Commands
 			if (versioningConfiguration == null)
 				return;
 
-			bundlesModel.VersioningConfigurations.Remove(versioningConfiguration);
-			var test = bundlesModel.HasDefaultVersioning;
-			bundlesModel.SeletedVersioning = null;
+			settingsModel.VersioningConfigurations.Remove(versioningConfiguration);
+			var test = settingsModel.HasDefaultVersioning;
+			settingsModel.SeletedVersioning = null;
 		}
 	}
 }

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Text;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -21,9 +23,11 @@ namespace Raven.Studio.Commands
 			var webRequest = WebRequest.Create(new Uri(url, UriKind.Absolute));
 			webRequest.GetResponseAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{
-				var buffer = new byte[doc.ContentLength];
-				doc.GetResponseStream().Read(buffer, 0, (int) doc.ContentLength);
-				var jsonData = RavenJObject.Parse(Encoding.UTF8.GetString(buffer,0, buffer.Length));
+				RavenJObject jsonData;
+				using (var stream = doc.GetResponseStream())
+				{
+					jsonData = RavenJObject.Load(new JsonTextReader(new StreamReader(stream)));
+				}
 				var result = jsonData["ResultSet"].SelectToken("Results").Values().FirstOrDefault();
 				if (result != null)
 				{

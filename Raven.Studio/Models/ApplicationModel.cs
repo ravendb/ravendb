@@ -1,21 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using System.Linq;
+using Raven.Client.Linq;
 
 namespace Raven.Studio.Models
 {
-    public class ApplicationModel : NotifyPropertyChangedBase
+	public class ApplicationModel : NotifyPropertyChangedBase
 	{
 		public static ApplicationModel Current { get; private set; }
 
@@ -26,25 +29,27 @@ namespace Raven.Studio.Models
 
 		private ApplicationModel()
 		{
-			Notifications = new BindableCollection<Notification>(x=>x.Message);
-		    Notifications.CollectionChanged += delegate
-		    {
-		    	OnPropertyChanged(() => ErrorCount);
-		    };
+			Notifications = new BindableCollection<Notification>(x => x.Message);
+			Notifications.CollectionChanged += delegate
+			{
+				OnPropertyChanged(() => ErrorCount);
+			};
 			LastNotification = new Observable<string>();
-			Server = new Observable<ServerModel> {Value = new ServerModel()};
+			Server = new Observable<ServerModel> { Value = new ServerModel() };
 			Server.Value.SelectedDatabase.Value.Status.PropertyChanged += delegate
 			{
 				OnPropertyChanged(() => StatusImage);
 			};
 
+			Alerts = new ObservableCollection<Alert>();
+
 			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
-		    State = new ApplicationState();
+			State = new ApplicationState();
 		}
 
-	    public ApplicationState State { get; private set; }
+		public ApplicationState State { get; private set; }
 
-	    public static Observable<DatabaseModel> Database { get { return Current.Server.Value.SelectedDatabase; } }
+		public static Observable<DatabaseModel> Database { get { return Current.Server.Value.SelectedDatabase; } }
 
 		public static IAsyncDatabaseCommands DatabaseCommands
 		{
@@ -61,28 +66,28 @@ namespace Raven.Studio.Models
 		public void AddNotification(Notification notification)
 		{
 			Execute.OnTheUI(() =>
-			                	{
-			                		Notifications.Add(notification);
-			                		if (Notifications.Count > 10)
-			                		{
-			                			Notifications.RemoveAt(0);
-			                		}
-			                		LastNotification.Value = notification.Message;
-			                	});
+								{
+									Notifications.Add(notification);
+									if (Notifications.Count > 10)
+									{
+										Notifications.RemoveAt(0);
+									}
+									LastNotification.Value = notification.Message;
+								});
 		}
 
-        public void AddInfoNotification(string message)
-        {
-            AddNotification(new Notification(message, NotificationLevel.Info));
-        }
+		public void AddInfoNotification(string message)
+		{
+			AddNotification(new Notification(message, NotificationLevel.Info));
+		}
 
-        public void AddWarningNotification(string message)
-        {
-            AddNotification(new Notification(message, NotificationLevel.Warning));
-        }
+		public void AddWarningNotification(string message)
+		{
+			AddNotification(new Notification(message, NotificationLevel.Warning));
+		}
 
-        public void AddErrorNotification(Exception exception, string message = null, params object[] details)
-        {
+		public void AddErrorNotification(Exception exception, string message = null, params object[] details)
+		{
 			if (message == null)
 			{
 				var webException = exception as WebException;
@@ -108,7 +113,7 @@ namespace Raven.Studio.Models
 						}
 						catch (Exception)
 						{
-							objects.Insert(0, "Server sent:"); 
+							objects.Insert(0, "Server sent:");
 							objects.Insert(1, error);
 							objects.Insert(2, Environment.NewLine);
 							objects.Insert(3, Environment.NewLine);
@@ -116,29 +121,45 @@ namespace Raven.Studio.Models
 						details = objects.ToArray();
 					}
 				}
-				if(message == null)
+				if (message == null)
 				{
 					message = exception.Message;
 				}
 			}
 
-        	AddNotification(new Notification(message, NotificationLevel.Error, exception, details));
-        }
+			AddNotification(new Notification(message, NotificationLevel.Error, exception, details));
+		}
 
 		public Observable<string> LastNotification { get; set; }
 
 		public BindableCollection<Notification> Notifications { get; set; }
 
-    	public BitmapImage StatusImage
-    	{
-    		get
-    		{
+		public ObservableCollection<Alert> Alerts { get; set; }
+
+		public void UpdateAlerts()
+		{
+			Alerts.Clear();
+
+			Server.Value.DocumentStore.OpenAsyncSession(null).Query<Alert>().ToListAsync().ContinueOnSuccessInTheUIThread(
+				list =>
+				{
+					foreach (var alert in list)
+					{
+						Alerts.Add(alert);
+					}
+				});
+		}
+
+		public BitmapImage StatusImage
+		{
+			get
+			{
 				var url = new Uri("../Assets/Images/" + Server.Value.SelectedDatabase.Value.Status.Value + ".png", UriKind.Relative);
 				return new BitmapImage(url);
-    		}
-    	}
+			}
+		}
 
-        public int ErrorCount {get { return Notifications.Count(n => n.Level == NotificationLevel.Error); }}
+		public int ErrorCount { get { return Notifications.Count(n => n.Level == NotificationLevel.Error); } }
 
 		public string AssemblyVersion
 		{

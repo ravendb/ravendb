@@ -83,18 +83,19 @@
 				  x:Name="Logo">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="34" />
 					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="Auto" />
 				</Grid.ColumnDefinitions>
 
-				<Image Grid.Column="3"
+				<Image Grid.Column="4"
 					   ToolTipService.ToolTip="{Binding Server.Value.SelectedDatabase.Value.Status.Value, StringFormat='Server status: {0}'}"
 					   Source="{Binding StatusImage}"
 					   VerticalAlignment="Center"
 					   />
 
-				<HyperlinkButton Grid.Column="2"
+				<HyperlinkButton Grid.Column="3"
 								 HorizontalAlignment="Left"
 								 Margin="0,5,5,1"
 								 Command="{StaticResource NavigateToExternalUrlCommand}"
@@ -105,7 +106,7 @@
 						   Height="25" />
 				</HyperlinkButton>
 
-				<Button Grid.Column="1"
+				<Button Grid.Column="2"
 						Command="{StaticResource ShowErrorListWindowCommand}"
 						Style="{StaticResource Style_Button_MouseOverChrome}"
 						HorizontalAlignment="Center"
@@ -115,6 +116,16 @@
 					<Image Source="{StaticResource Image_Error_Small}"
 						   Stretch="Fill" Width="24" Height="24"/>
 				</Button>
+
+				<HyperlinkButton Grid.Column="1"
+								 HorizontalAlignment="Left"
+								 VerticalAlignment="Center"
+								 Margin="0,5,5,1"
+								  Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/settings"
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenDifferent}, ConverterParameter='&lt;system&gt;'}">
+					<Image Source="{StaticResource Image_Settings_Tiny}"/>
+				</HyperlinkButton>
 
 				<Databases:DatabaseSelectionView VerticalAlignment="Center"
 												 HorizontalAlignment="Right" />
@@ -126,14 +137,14 @@
 						Margin="{StaticResource Margin_MainPageLeftRight}">
 
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				<HyperlinkButton x:Name="SummaryLink"
-								 Content="Summary"
+			
+				<HyperlinkButton Content="Documents"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/home"
+								 CommandParameter="/documents"
 								 Style="{StaticResource Style_Text_HeaderLink}">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
-							<System:String>/statistics</System:String>
+							<System:String>/Edit</System:String>
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
@@ -155,22 +166,22 @@
 				</HyperlinkButton>
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
-				<HyperlinkButton Content="Documents"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/documents"
-								 Style="{StaticResource Style_Text_HeaderLink}">
-					<Behaviors:LinkHighlighter.AlternativeUris>
-						<Behaviors:StringCollection>
-							<System:String>/Edit</System:String>
-						</Behaviors:StringCollection>
-					</Behaviors:LinkHighlighter.AlternativeUris>
-				</HyperlinkButton>
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
+				
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" 
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
+
+				<HyperlinkButton Content="Alerts"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/alerts"
+								 Style="{StaticResource Style_Text_HeaderLink}" 
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
+				
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				
 				<HyperlinkButton Content="Logs"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/logs"
@@ -286,7 +297,7 @@
 											  MappedUri="/Views/IndexStats.xaml" />
 						<sdk:UriMapping Uri="/{pageName}"
 											  MappedUri="/Views/{pageName}.xaml" />
-						<sdk:UriMapping Uri="/bundles"
+						<sdk:UriMapping Uri="/settings"
 											  MappedUri="/Views/bundles.xaml" />
 
 					</sdk:UriMapper>

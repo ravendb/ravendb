@@ -6,11 +6,11 @@ using Raven.Bundles.Versioning.Data;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
-namespace Raven.Studio.Features.Bundles
+namespace Raven.Studio.Features.Settings
 {
-	public partial class BundlesView : PageView
+	public partial class SettingsView : PageView
 	{
-		public BundlesView()
+		public SettingsView()
 		{
 			InitializeComponent();
 			MaxSize.Maximum = int.MaxValue;
@@ -92,7 +92,7 @@ namespace Raven.Studio.Features.Bundles
 
 		private void DeleteReplication(object sender, RoutedEventArgs e)
 		{
-			var bundleModel = this.DataContext as BaseBundlesModel;
+			var bundleModel = this.DataContext as BaseSettingsModel;
 			var button = sender as HyperlinkButton;
 			if (bundleModel != null && button != null)
 			{
@@ -112,7 +112,7 @@ namespace Raven.Studio.Features.Bundles
 
 		private void DeleteVersioning(object sender, RoutedEventArgs e)
 		{
-			var bundleModel = this.DataContext as BaseBundlesModel;
+			var bundleModel = this.DataContext as BaseSettingsModel;
 			var button = sender as HyperlinkButton;
 			if (bundleModel != null && button != null)
 			{
