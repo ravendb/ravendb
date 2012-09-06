@@ -1,7 +1,19 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Bugs.DTC;
+using Raven.Database.Extensions;
+using Raven.Client.Linq;
+using Raven.Json.Linq;
+using Raven.Tests.Bugs;
+using Raven.Tests.Faceted;
+using Raven.Abstractions.Extensions;
+using Raven.Tests.Indexes;
+using Raven.Tests.MailingList;
+using Raven.Tests.Patching;
 
 namespace Raven.Tryouts
 {
@@ -11,12 +23,12 @@ namespace Raven.Tryouts
 		{
 			for (int i = 0; i < 100; i++)
 			{
-				Console.Clear(); ;
-				Console.WriteLine(i);
-				using (var x = new UsingDTCForUpdates())
+				var sw = Stopwatch.StartNew();
+				using (var x = new AdvancedPatching())
 				{
-					x.can_update_a_doc_after_inserting_another_within_transaction_scope();
+					x.CanRemoveFromCollectionByCondition();
 				}
+				Console.WriteLine("{0:#,#}", sw.ElapsedMilliseconds);
 			}
 
 		}
