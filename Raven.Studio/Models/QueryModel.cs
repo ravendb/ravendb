@@ -501,7 +501,7 @@ namespace Raven.Studio.Models
 
                     IsSpatialQuerySupported =
 						task.Result.Maps.Any(x => x.Contains(spatialindexGenerate) || x.Contains(spatialindexGenerateLegacy)) ||
-						(task.Result.Reduce != null && (task.Result.Reduce.Contains(spatialindexGenerate) || task.Result.Reduce.Contains(spatialindexGenerateLegacy));
+						(task.Result.Reduce != null && (task.Result.Reduce.Contains(spatialindexGenerate) || task.Result.Reduce.Contains(spatialindexGenerateLegacy)));
                     HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
                     DocumentsResult.SetChangesObservable(
