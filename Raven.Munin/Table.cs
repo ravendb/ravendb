@@ -84,7 +84,12 @@ namespace Raven.Munin
 
 		public int Count
 		{
-			get { return KeyToFilePos.Count; }
+			get
+			{
+				int count = 0;
+				persistentSource.Read(() => count = KeyToFilePos.Count);
+				return count;
+			}
 		}
 
 		public List<SecondaryIndex> SecondaryIndices { get; set; }
@@ -388,7 +393,9 @@ namespace Raven.Munin
 
 		public IEnumerator<ReadResult> GetEnumerator()
 		{
-			foreach (var positionInFile in KeyToFilePos.ValuesInOrder)
+			IBinarySearchTree<RavenJToken, PositionInFile> keyToFilePos = null;
+			persistentSource.Read(() => keyToFilePos = KeyToFilePos);
+			foreach (var positionInFile in keyToFilePos.ValuesInOrder)
 			{
 				byte[] readData = null;
 				var pos = positionInFile;
