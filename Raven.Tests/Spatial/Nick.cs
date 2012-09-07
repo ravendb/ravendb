@@ -20,10 +20,10 @@ namespace Raven.Tests.Spatial
 			public MySpatialIndex()
 			{
 				Map = entities => from entity in entities
-				                  select new
-				                  {
-					                  _ = SpatialGenerate(entity.Latitude, entity.Longitude)
-				                  };
+								  select new
+								  {
+									  _ = SpatialGenerate(entity.Latitude, entity.Longitude)
+								  };
 			}
 		}
 
@@ -61,6 +61,12 @@ namespace Raven.Tests.Spatial
 
 					result = session.Advanced.LuceneQuery<MySpatialDocument, MySpatialIndex>()
 						.WithinRadiusOf(radius: 30, latitude: 48.6003516, longitude: 2.4632387000000335)
+						.SingleOrDefault();
+
+					Assert.Null(result); // No result should be returned.
+
+					result = session.Advanced.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+						.WithinRadiusOf(radius: 33, latitude: 48.6003516, longitude: 2.4632387000000335)
 						.SingleOrDefault();
 
 					Assert.Null(result); // No result should be returned.

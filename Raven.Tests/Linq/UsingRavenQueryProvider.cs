@@ -319,7 +319,7 @@ namespace Raven.Tests.Linq
 									select new { info.TimeOfDay }",
 						});
 
-				var currentTime = SystemTime.Now;
+				var currentTime = SystemTime.UtcNow;
 				using (var s = db.OpenSession())
 				{
 					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });
@@ -368,9 +368,9 @@ namespace Raven.Tests.Linq
 
 				using (var s = db.OpenSession())
 				{
-					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.Now.AddDays(1) });
-					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.Now.AddDays(-1) });
-					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.Now.AddDays(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.UtcNow.AddDays(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.UtcNow.AddDays(-1) });
+					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.UtcNow.AddDays(1) });
 					s.SaveChanges();
 				}
 
@@ -380,7 +380,7 @@ namespace Raven.Tests.Linq
 					s.Query<DateTimeInfo>("DateTime")
 						.Customize(x => x.WaitForNonStaleResults()).FirstOrDefault();
 
-					var count = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > SystemTime.Now).Count();
+					var count = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > SystemTime.UtcNow).Count();
 					Assert.Equal(2, count);
 				}
 			}
@@ -400,7 +400,7 @@ namespace Raven.Tests.Linq
 									select new { info.TimeOfDay }",
 						});
 
-				var currentTime = SystemTime.Now;
+				var currentTime = SystemTime.UtcNow;
 				using (var s = db.OpenSession())
 				{
 					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });

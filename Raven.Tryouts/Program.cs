@@ -13,6 +13,7 @@ using Raven.Tests.Faceted;
 using Raven.Abstractions.Extensions;
 using Raven.Tests.Indexes;
 using Raven.Tests.MailingList;
+using Raven.Tests.Patching;
 
 namespace Raven.Tryouts
 {
@@ -20,26 +21,14 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
-			using (var docStore = new DocumentStore
+			for (int i = 0; i < 100; i++)
 			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "Statics"
-			}.Initialize())
-			{
-				var buffer = new byte[1024 * 1024 * 11];
 				var sw = Stopwatch.StartNew();
-				docStore.DatabaseCommands.PutAttachment("a", null, new MemoryStream(buffer), new RavenJObject());
-				Console.WriteLine("Putting 11 MB in {0:#,#} ms", sw.ElapsedMilliseconds);
-
-				sw.Restart();
-				var attachment = docStore.DatabaseCommands.GetAttachment("a");
-				Console.WriteLine("Getting 11 MB in {0:#,#} ms", sw.ElapsedMilliseconds);
-
-				sw.Restart();
-				attachment.Data().ReadData();
-				Console.WriteLine("Reading 11 MB in {0:#,#} ms", sw.ElapsedMilliseconds);
-
-
+				using (var x = new AdvancedPatching())
+				{
+					x.CanRemoveFromCollectionByCondition();
+				}
+				Console.WriteLine("{0:#,#}", sw.ElapsedMilliseconds);
 			}
 
 		}

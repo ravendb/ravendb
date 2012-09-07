@@ -143,7 +143,7 @@ namespace Raven.Tests.Storage
 					{
 						Index = "foo",
 						Keys = { "tasks/"+i },
-					},SystemTime.Now);
+					},SystemTime.UtcNow);
 				}
 			});
 

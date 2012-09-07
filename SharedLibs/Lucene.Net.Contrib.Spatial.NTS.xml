@@ -302,28 +302,9 @@
         <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.Equals(System.Object)">
             returns true if both sets have the same bits set 
         </member>
-        <member name="T:Lucene.Net.Spatial.Util.OpenBitSetIterator">
-            <summary>An iterator to iterate over set bits in an OpenBitSet.
-            This is faster than nextSetBit() for iterating over the complete set of bits,
-            especially when the density of the bits set is high.
-            
-            </summary>
-            <version>  $Id$
-            </version>
-        </member>
-        <member name="F:Lucene.Net.Spatial.Util.OpenBitSetIterator.arr">
-            <summary>** the python code that generated bitlist
-            def bits2int(val):
-            arr=0
-            for shift in range(8,0,-1):
-            if val &amp; 0x80:
-            arr = (arr &lt;&lt; 4) | shift
-            val = val &lt;&lt; 1
-            return arr
-            def int_table():
-            tbl = [ hex(bits2int(val)).strip('L') for val in range(256) ]
-            return ','.join(tbl)
-            ****
+        <member name="T:Lucene.Net.Spatial.Util.FixedBitSet.FixedBitSetIterator">
+            <summary>
+            A FixedBitSet Iterator implementation
             </summary>
         </member>
         <member name="T:Lucene.Net.Spatial.Util.Bits">

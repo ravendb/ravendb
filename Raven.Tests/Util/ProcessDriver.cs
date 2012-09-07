@@ -101,7 +101,7 @@ namespace Raven.Tests.Util
 
 		protected Match WaitForConsoleOutputMatching(string pattern, int msMaxWait = 10000, int msWaitInterval = 500)
 		{
-			DateTime t = SystemTime.Now;
+			DateTime t = SystemTime.UtcNow;
 
 			var sb = new StringBuilder();
 			Match match;
@@ -112,7 +112,7 @@ namespace Raven.Tests.Util
 
 				if (nextLine == null)
 				{
-					if ((SystemTime.Now - t).TotalMilliseconds > msMaxWait)
+					if ((SystemTime.UtcNow - t).TotalMilliseconds > msMaxWait)
 						throw new TimeoutException("Timeout waiting for regular expression " + pattern + Environment.NewLine + sb);
 					
 					continue;

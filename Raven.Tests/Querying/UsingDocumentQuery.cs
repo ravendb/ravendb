@@ -196,7 +196,7 @@ namespace Raven.Tests.Querying
 			// should DocumentQuery<T> understand how to generate range field names?
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereGreaterThan("Age_Range", 3);
-			Assert.Equal("Age_Range:{0x00000003 TO NULL}", q.ToString());
+			Assert.Equal("Age_Range:{Ix3 TO NULL}", q.ToString());
 		}
 	}
 }

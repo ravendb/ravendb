@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
 using Raven.Studio.Models;
@@ -16,7 +17,12 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task ContinueOnSuccess<T>(this Task<T> parent, Action<T> action)
 		{
-			return parent.ContinueWith(task => action(task.Result));
+			return parent.ContinueWith(task =>
+			{
+				if(task.IsCanceled)
+					return;
+				action(task.Result);
+			});
 		}
 
 
@@ -38,7 +44,16 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task<TResult> ContinueOnSuccess<T, TResult>(this Task<T> parent, Func<T, TResult> action)
 		{
-			return parent.ContinueWith(task => action(task.Result));
+			return parent.ContinueWith(task =>
+			{
+				if (task.IsCanceled)
+				{
+					var tcs = new TaskCompletionSource<TResult>();
+					tcs.SetCanceled();
+					return tcs.Task;
+				}
+				return new CompletedTask<TResult>(action(task.Result));
+			}).Unwrap();
 		}
 
 		public static Task ContinueOnSuccess(this Task parent, Action action)
