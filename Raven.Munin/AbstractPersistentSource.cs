@@ -44,7 +44,7 @@ namespace Raven.Munin
 			{
 				var persistentDictionaryStates = CurrentStates;
 				if(persistentDictionaryStates == null)
-					throw new NotSupportedException("Why are you touching the state outside a transaction?");
+					return globalStates;
 				return persistentDictionaryStates;
 			}
 		}
