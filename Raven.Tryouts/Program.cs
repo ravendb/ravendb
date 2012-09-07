@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
 
