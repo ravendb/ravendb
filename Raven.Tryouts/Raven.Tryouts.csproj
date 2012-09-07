@@ -113,6 +113,10 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Munin\Raven.Munin.csproj">
+      <Project>{486537c2-edf7-404f-9cfb-eee25996df5f}</Project>
+      <Name>Raven.Munin</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
       <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
       <Name>Raven.Storage.Managed</Name>

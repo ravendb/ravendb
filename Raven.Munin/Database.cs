@@ -155,10 +155,12 @@ namespace Raven.Munin
 				return new DisposableAction(() => { }); // no op, already in tx
 
 			CurrentTransactionId.Value = Guid.NewGuid();
+			persistentSource.BeginTx();
 			return new DisposableAction(() =>
 			{
 				if (CurrentTransactionId.Value != Guid.Empty) // tx not committed
 					Rollback();
+				persistentSource.CompleteTx();
 			});
 		}
 
@@ -180,9 +182,14 @@ namespace Raven.Munin
 			if (CurrentTransactionId.Value == Guid.Empty)
 				return;
 
-			Commit(CurrentTransactionId.Value);
+			CommitCurrentTransaction();
 
 			CurrentTransactionId.Value = Guid.Empty;
+		}
+
+		public void CommitCurrentTransaction()
+		{
+			Commit(CurrentTransactionId.Value);
 		}
 
 		public void Rollback()

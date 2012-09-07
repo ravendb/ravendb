@@ -24,10 +24,7 @@ namespace Raven.Munin
 		public IList<PersistentDictionaryState> CurrentStates
 		{
 			get { return currentStates.Value; }
-			set
-			{
-				currentStates.Value = value;
-			}
+			set { currentStates.Value = value; }
 		}
 
 		protected AbstractPersistentSource()
@@ -59,34 +56,16 @@ namespace Raven.Munin
 			if (disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
 
-			var oldValue = CurrentStates;
-			CurrentStates = oldValue ?? globalStates;
-			try
-			{
-				Stream stream;
-				using (pool.Use(out stream))
-					return readOnlyAction(stream);
-			}
-			finally
-			{
-				CurrentStates = oldValue;
-			}
+			Stream stream;
+			using (pool.Use(out stream))
+				return readOnlyAction(stream);
 		}
 
 		public T Read<T>(Func<T> readOnlyAction)
 		{
 			if(disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-			var oldValue = CurrentStates;
-			CurrentStates = oldValue ?? globalStates;
-			try
-			{
-				return readOnlyAction();
-			}
-			finally
-			{
-				CurrentStates = oldValue;
-			}
+			return readOnlyAction();
 		}
 
 
@@ -96,8 +75,8 @@ namespace Raven.Munin
 			{
 				if (disposed)
 					throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-			
-				Thread.MemoryBarrier();
+
+				bool success = false;
 				try
 				{
 					CurrentStates = new List<PersistentDictionaryState>(
@@ -108,11 +87,15 @@ namespace Raven.Munin
 						}));
 
 					readWriteAction(Log);
+					success = true;
 				}
 				finally
 				{
-					pool.Clear();
-					globalStates = CurrentStates;
+					if(success)
+					{
+						pool.Clear();
+						globalStates = CurrentStates;
+					}
 					CurrentStates = null;
 				}
 			}
@@ -131,6 +114,16 @@ namespace Raven.Munin
 		}
 
 		public abstract void EnsureCapacity(int value);
+
+		public void BeginTx()
+		{
+			CurrentStates = globalStates;
+		}
+
+		public void CompleteTx()
+		{
+			CurrentStates = null;
+		}
 
 		public virtual void Dispose()
 		{
