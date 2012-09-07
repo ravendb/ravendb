@@ -43,34 +43,13 @@ namespace Raven.Studio.Commands
 								bundlesSettings.Add(new EncryptionSettings());
 							if (newDatabase.Quotas.IsChecked == true || newDatabase.Replication.IsChecked == true || newDatabase.Versioning.IsChecked == true)
 							{
-								bundlesModel = new CreateSettingsModel()
-									{
-										HasQuotas = newDatabase.Quotas.IsChecked == true,
-										HasReplication = newDatabase.Replication.IsChecked == true,
-										HasVersioning = newDatabase.Versioning.IsChecked == true
-									};
-								if (bundlesModel.HasQuotas)
-								{
-									bundlesModel.Settings.Add("Quotas");
-									bundlesModel.SelectedSetting.Value = "Quotas";
-								}
-								if (bundlesModel.HasReplication)
-								{ 
-									bundlesModel.Settings.Add("Replication");
-									if(bundlesModel.SelectedSetting.Value == null)
-										bundlesModel.SelectedSetting.Value = "Replication";
-								}
-								if (bundlesModel.HasVersioning)
-								{
-									bundlesModel.Settings.Add("Versioning");
-									if (bundlesModel.SelectedSetting.Value == null)
-										bundlesModel.SelectedSetting.Value = "Versioning";
-								}
+								bundlesModel = ConfigureSettingsModel(newDatabase);
 
-								var bundleView = new SettingsView()
+							    var bundleView = new SettingsDialog()
 								{
 									DataContext = bundlesModel
 								};
+
 								var bundlesSettingsWindow = new ChildWindow()
 								{
 									Title = "Setup bundles",
@@ -125,7 +104,52 @@ namespace Raven.Studio.Commands
 				.Catch();
 		}
 
-		private Dictionary<string, string> UpdateSecuredSettings(IEnumerable<ChildWindow> bundlesData)
+	    private static CreateSettingsModel ConfigureSettingsModel(NewDatabase newDatabase)
+	    {
+	        CreateSettingsModel bundlesModel;
+	        bundlesModel = new CreateSettingsModel() {Creation = true};
+
+	        if (newDatabase.Quotas.IsChecked == true)
+	        {
+	            AddSection(bundlesModel, new QuotaSettingsSectionModel()
+	            {
+	                MaxSize = 50,
+	                WarnSize = 45,
+	                MaxDocs = 10000,
+	                WarnDocs = 8000,
+	            });
+	        }
+	        if (newDatabase.Replication.IsChecked == true)
+	        {
+	            AddSection(bundlesModel,
+	                       new ReplicationSettingsSectionModel() {ReplicationDestinations = {new ReplicationDestination()}});
+	        }
+	        if (newDatabase.Versioning.IsChecked == true)
+	        {
+	            AddSection(bundlesModel, new VersioningSettingsSectionModel()
+	            {
+	                VersioningConfigurations =
+	                {
+	                    new VersioningConfiguration()
+	                    {
+	                        Exclude = false,
+	                        Id = "Raven/Versioning/DefaultConfiguration",
+	                        MaxRevisions = 5
+	                    }
+	                }
+	            });
+	        }
+	        return bundlesModel;
+	    }
+
+	    private static void AddSection(CreateSettingsModel bundlesModel, SettingsSectionModel section)
+	    {
+	        bundlesModel.Sections.Add(section);
+	        if (bundlesModel.SelectedSection.Value == null)
+	            bundlesModel.SelectedSection.Value = section;
+	    }
+
+	    private Dictionary<string, string> UpdateSecuredSettings(IEnumerable<ChildWindow> bundlesData)
 		{
 			var settings = new Dictionary<string, string>();
 
@@ -142,13 +166,16 @@ namespace Raven.Studio.Commands
 		private void HendleBundleAfterCreation(CreateSettingsModel settingsModel, string databaseName, string encryptionKey)
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
-			if (settingsModel.HasVersioning)
-				StoreVersioningData(settingsModel.VersioningConfigurations, session);
 
-			if (settingsModel.HasReplication)
+		    var versioningSection = settingsModel.GetSection<VersioningSettingsSectionModel>();
+            if (versioningSection != null)
+                StoreVersioningData(versioningSection.VersioningConfigurations, session);
+
+		    var replicationSection = settingsModel.GetSection<ReplicationSettingsSectionModel>();
+            if (replicationSection != null)
 			{
 				var replicationDocument = new ReplicationDocument();
-				foreach (var replicationDestination in settingsModel.ReplicationDestinations
+                foreach (var replicationDestination in replicationSection.ReplicationDestinations
 					.Where(replicationDestination => !string.IsNullOrWhiteSpace(replicationDestination.Url) || !string.IsNullOrWhiteSpace(replicationDestination.ConnectionStringName)))
 				{
 					replicationDocument.Destinations.Add(replicationDestination);
@@ -161,7 +188,6 @@ namespace Raven.Studio.Commands
 
 			if (!string.IsNullOrEmpty(encryptionKey))
 				new ShowEncryptionMessage(encryptionKey).Show();
-
 		}
 
 		private void StoreVersioningData(IEnumerable<VersioningConfiguration> versioningData, IAsyncDocumentSession session)
@@ -189,12 +215,14 @@ namespace Raven.Studio.Commands
 			if (!string.IsNullOrWhiteSpace(newDatabase.IndexPath.Text))
 				settings.Add(Constants.RavenIndexPath, newDatabase.IndexPath.Text);
 
-			if (settingsData.HasQuotas)
+            var quotasData = settingsData.GetSection<QuotaSettingsSectionModel>();
+
+            if (quotasData != null)
 			{
-				settings[Constants.DocsHardLimit] = (settingsData.MaxDocs).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.DocsSoftLimit] = (settingsData.WarnDocs).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.SizeHardLimitInKB] = (settingsData.MaxSize * 1024).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.SizeSoftLimitInKB] = (settingsData.WarnSize * 1024).ToString(CultureInfo.InvariantCulture);
+                settings[Constants.DocsHardLimit] = (quotasData.MaxDocs).ToString(CultureInfo.InvariantCulture);
+                settings[Constants.DocsSoftLimit] = (quotasData.WarnDocs).ToString(CultureInfo.InvariantCulture);
+                settings[Constants.SizeHardLimitInKB] = (quotasData.MaxSize * 1024).ToString(CultureInfo.InvariantCulture);
+                settings[Constants.SizeSoftLimitInKB] = (quotasData.WarnSize * 1024).ToString(CultureInfo.InvariantCulture);
 			}
 
 			return settings;

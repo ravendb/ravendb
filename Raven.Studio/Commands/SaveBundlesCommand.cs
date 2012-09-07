@@ -11,7 +11,7 @@ namespace Raven.Studio.Commands
 {
 	public class SaveBundlesCommand : Command
 	{
-		private readonly SettingsModel settingsModel;
+        private readonly SettingsModel settingsModel;
 
 		public SaveBundlesCommand(SettingsModel settingsModel)
 		{
@@ -23,28 +23,35 @@ namespace Raven.Studio.Commands
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
 
-			if (settingsModel.HasQuotas)
+            var quotaSettings = settingsModel.GetSection<QuotaSettingsSectionModel>();
+            if (quotaSettings != null)
 			{
 				settingsModel.DatabaseDocument.Settings[Constants.SizeHardLimitInKB] =
-					(settingsModel.MaxSize*1024).ToString(CultureInfo.InvariantCulture);
+                    (quotaSettings.MaxSize * 1024).ToString(CultureInfo.InvariantCulture);
 				settingsModel.DatabaseDocument.Settings[Constants.SizeSoftLimitInKB] =
-					(settingsModel.WarnSize*1024).ToString(CultureInfo.InvariantCulture);
+                    (quotaSettings.WarnSize * 1024).ToString(CultureInfo.InvariantCulture);
 				settingsModel.DatabaseDocument.Settings[Constants.DocsHardLimit] =
-					(settingsModel.MaxDocs).ToString(CultureInfo.InvariantCulture);
+                    (quotaSettings.MaxDocs).ToString(CultureInfo.InvariantCulture);
 				settingsModel.DatabaseDocument.Settings[Constants.DocsSoftLimit] =
-					(settingsModel.WarnDocs).ToString(CultureInfo.InvariantCulture);
+                    (quotaSettings.WarnDocs).ToString(CultureInfo.InvariantCulture);
 				if (settingsModel.DatabaseDocument.Id == null)
 					settingsModel.DatabaseDocument.Id = databaseName;
 				DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 			}
 
-			if (settingsModel.HasReplication)
+		    var replicationSettings = settingsModel.GetSection<ReplicationSettingsSectionModel>();
+            if (replicationSettings != null)
 			{
 				session.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
 					.ContinueOnSuccessInTheUIThread(document =>
 					{
+                        if (document == null)
+                        {
+                            document = new ReplicationDocument();
+                        }
+
 						document.Destinations.Clear();
-						foreach (var destination in settingsModel.ReplicationDestinations
+                        foreach (var destination in replicationSettings.ReplicationDestinations
 							.Where(destination => !string.IsNullOrWhiteSpace(destination.Url) || !string.IsNullOrWhiteSpace(destination.ConnectionStringName)))
 						{
 							document.Destinations.Add(destination);
@@ -54,19 +61,20 @@ namespace Raven.Studio.Commands
 					});
 			}
 
-			if (settingsModel.HasVersioning)
+            var versioningSettings = settingsModel.GetSection<VersioningSettingsSectionModel>();
+            if (versioningSettings != null)
 			{
-				var versionsToDelete = settingsModel.OriginalVersioningConfigurations
+                var versionsToDelete = versioningSettings.OriginalVersioningConfigurations
 					.Where(
 						originalVersioningConfiguration =>
-						settingsModel.VersioningConfigurations.Contains(originalVersioningConfiguration) == false)
+                        versioningSettings.VersioningConfigurations.Contains(originalVersioningConfiguration) == false)
 					.ToList();
 				foreach (var versioningConfiguration in versionsToDelete)
 				{
 					DatabaseCommands.DeleteDocumentAsync(versioningConfiguration.Id);
 				}
 
-				foreach (var versioningConfiguration in settingsModel.VersioningConfigurations)
+                foreach (var versioningConfiguration in versioningSettings.VersioningConfigurations)
 				{
 					session.Store(versioningConfiguration);
 				}
