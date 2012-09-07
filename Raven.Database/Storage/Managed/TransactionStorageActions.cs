@@ -46,7 +46,6 @@ namespace Raven.Storage.Managed
 				var ravenJObject = ((RavenJObject) readResult.Key.CloneToken());
 				ravenJObject["txId"] = transactionInformation.Id.ToByteArray();
 				if (storage.Documents.UpdateKey(readResult.Key) == false)
-					throw new ConcurrencyException("PUT attempted on document '" + key +
 												   "' that is currently being modified by another transaction");
 			}
 			else

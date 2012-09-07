@@ -155,10 +155,12 @@ namespace Raven.Munin
 				return new DisposableAction(() => { }); // no op, already in tx
 
 			CurrentTransactionId.Value = Guid.NewGuid();
+			persistentSource.BeginTx();
 			return new DisposableAction(() =>
 			{
 				if (CurrentTransactionId.Value != Guid.Empty) // tx not committed
 					Rollback();
+				persistentSource.CompleteTx();
 			});
 		}
 
@@ -180,9 +182,15 @@ namespace Raven.Munin
 			if (CurrentTransactionId.Value == Guid.Empty)
 				return;
 
-			Commit(CurrentTransactionId.Value);
+			CommitCurrentTransaction();
 
 			CurrentTransactionId.Value = Guid.Empty;
+		}
+
+		public void CommitCurrentTransaction()
+		{
+			Commit(CurrentTransactionId.Value);
+			persistentSource.CompleteTx();
 		}
 
 		public void Rollback()
@@ -212,7 +220,7 @@ namespace Raven.Munin
 			{
 				log.Position = log.Length; // always write at the end of the file
 
-				for (int i = 0; i < cmds.Count; i+=1024)
+				for (int i = 0; i < cmds.Count; i += 1024)
 				{
 					WriteCommands(cmds.Skip(i).Take(1024), log);
 					
@@ -244,7 +252,7 @@ namespace Raven.Munin
 
 			if (dataSizeInBytes > 0)
 			{
-				WriteTo(log, new RavenJArray(new RavenJObject {{"type", (short) CommandType.Skip}, {"size", dataSizeInBytes}}));
+				WriteTo(log, new RavenJArray(new RavenJObject { { "type", (short)CommandType.Skip }, { "size", dataSizeInBytes } }));
 			}
 
 			var array = new RavenJArray();
@@ -294,6 +302,8 @@ namespace Raven.Munin
 
 		public void Compact()
 		{
+			using(BeginTransaction())
+			{
 			persistentSource.Write(log =>
 			{
 				Stream tempLog = persistentSource.CreateTemporaryStream();
@@ -324,6 +334,7 @@ namespace Raven.Munin
 				}
 			});
 		}
+		}
 
 
 		/// <summary>
@@ -341,6 +352,8 @@ namespace Raven.Munin
 
 		private bool CompactionRequired()
 		{
+			using (BeginTransaction())
+			{
 			var itemsCount = tables.Sum(x => x.Count);
 			var wasteCount = tables.Sum(x => x.WasteCount);
 
@@ -349,13 +362,18 @@ namespace Raven.Munin
 			if (itemsCount < 100000) // for medium data sizes, we cleanup on 50% waste
 				return wasteCount > (itemsCount / 2);
 			return wasteCount > (itemsCount / 10); // on large data size, we cleanup on 10% waste
+
+		}
 		}
 
 		public Table Add(Table dictionary)
 		{
+			persistentSource.Write(stream =>
+				{
 			tables.Add(dictionary);
 			DictionaryStates.Add(null);
 			dictionary.Initialize(persistentSource, tables.Count - 1, this, CurrentTransactionId);
+				});
 			return dictionary;
 		}
 
@@ -379,7 +397,7 @@ namespace Raven.Munin
 			{
 				table.Dispose();
 			}
-			CurrentTransactionId .Dispose();
+			CurrentTransactionId.Dispose();
 		}
 	}
 }

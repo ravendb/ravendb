@@ -169,8 +169,11 @@ namespace Raven.Storage.Managed
 			}
 			else
 			{
+				using(tableStroage.BeginTransaction())
+				{
 				var readResult = tableStroage.Details.Read("id");
 				Id = new Guid(readResult.Data());
+			}
 			}
 
 			return persistenceSource.CreatedNew;
