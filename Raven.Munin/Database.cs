@@ -51,7 +51,7 @@ namespace Raven.Munin
 					log.Flush();
 				}
 				log.Position = 0;
-				
+
 				AssertValidVersionAndTables(log);
 
 				while (true)
@@ -190,6 +190,7 @@ namespace Raven.Munin
 		public void CommitCurrentTransaction()
 		{
 			Commit(CurrentTransactionId.Value);
+			persistentSource.CompleteTx();
 		}
 
 		public void Rollback()
@@ -219,10 +220,10 @@ namespace Raven.Munin
 			{
 				log.Position = log.Length; // always write at the end of the file
 
-				for (int i = 0; i < cmds.Count; i+=1024)
+				for (int i = 0; i < cmds.Count; i += 1024)
 				{
 					WriteCommands(cmds.Skip(i).Take(1024), log);
-					
+
 				}
 				persistentSource.FlushLog(); // flush all the index changes to disk
 
@@ -251,7 +252,7 @@ namespace Raven.Munin
 
 			if (dataSizeInBytes > 0)
 			{
-				WriteTo(log, new RavenJArray(new RavenJObject {{"type", (short) CommandType.Skip}, {"size", dataSizeInBytes}}));
+				WriteTo(log, new RavenJArray(new RavenJObject { { "type", (short)CommandType.Skip }, { "size", dataSizeInBytes } }));
 			}
 
 			var array = new RavenJArray();
@@ -301,35 +302,38 @@ namespace Raven.Munin
 
 		public void Compact()
 		{
-			persistentSource.Write(log =>
+			using(BeginTransaction())
 			{
-				Stream tempLog = persistentSource.CreateTemporaryStream();
-
-				WriteFileHeader(tempLog);
-			  
-				var cmds = new List<Command>();
-				foreach (var persistentDictionary in tables)
+				persistentSource.Write(log =>
 				{
-					cmds.AddRange(persistentDictionary.CopyCommittedData(tempLog));
-					persistentDictionary.ResetWaste();
-				}
+					Stream tempLog = persistentSource.CreateTemporaryStream();
 
-				WriteCommands(cmds, tempLog);
+					WriteFileHeader(tempLog);
 
-				persistentSource.ClearPool();
-
-				persistentSource.ReplaceAtomically(tempLog);
-
-				using (SuppressTransaction())
-				{
-					CurrentTransactionId.Value = Guid.NewGuid();
-					foreach (var command in cmds)
+					var cmds = new List<Command>();
+					foreach (var persistentDictionary in tables)
 					{
-						tables[command.DictionaryId].UpdateKey(command.Key, command.Position, command.Size);
-						tables[command.DictionaryId].CompleteCommit(CurrentTransactionId.Value);
+						cmds.AddRange(persistentDictionary.CopyCommittedData(tempLog));
+						persistentDictionary.ResetWaste();
 					}
-				}
-			});
+
+					WriteCommands(cmds, tempLog);
+
+					persistentSource.ClearPool();
+
+					persistentSource.ReplaceAtomically(tempLog);
+
+					using (SuppressTransaction())
+					{
+						CurrentTransactionId.Value = Guid.NewGuid();
+						foreach (var command in cmds)
+						{
+							tables[command.DictionaryId].UpdateKey(command.Key, command.Position, command.Size);
+							tables[command.DictionaryId].CompleteCommit(CurrentTransactionId.Value);
+						}
+					}
+				});
+			}
 		}
 
 
@@ -348,14 +352,18 @@ namespace Raven.Munin
 
 		private bool CompactionRequired()
 		{
-			var itemsCount = tables.Sum(x => x.Count);
-			var wasteCount = tables.Sum(x => x.WasteCount);
+			using (BeginTransaction())
+			{
+				var itemsCount = tables.Sum(x => x.Count);
+				var wasteCount = tables.Sum(x => x.WasteCount);
 
-			if (itemsCount < 10000) // for small data sizes, we cleanup on 100% waste
-				return wasteCount > itemsCount;
-			if (itemsCount < 100000) // for medium data sizes, we cleanup on 50% waste
-				return wasteCount > (itemsCount / 2);
-			return wasteCount > (itemsCount / 10); // on large data size, we cleanup on 10% waste
+				if (itemsCount < 10000) // for small data sizes, we cleanup on 100% waste
+					return wasteCount > itemsCount;
+				if (itemsCount < 100000) // for medium data sizes, we cleanup on 50% waste
+					return wasteCount > (itemsCount / 2);
+				return wasteCount > (itemsCount / 10); // on large data size, we cleanup on 10% waste
+
+			}
 		}
 
 		public Table Add(Table dictionary)
@@ -389,7 +397,7 @@ namespace Raven.Munin
 			{
 				table.Dispose();
 			}
-			CurrentTransactionId .Dispose();
+			CurrentTransactionId.Dispose();
 		}
 	}
 }
