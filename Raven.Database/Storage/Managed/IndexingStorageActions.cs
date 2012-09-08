@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -13,6 +14,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -29,30 +31,41 @@ namespace Raven.Storage.Managed
 
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
-			foreach (var key in storage.IndexingStats.Keys)
+			return from key in storage.IndexingStats.Keys
+			       select storage.IndexingStats.Read(key)
+			       into readResult
+			       where readResult != null
+			       select GetIndexStats(readResult);
+		}
+
+		public IndexStats GetIndexStats(string index)
+		{
+			var readResult = storage.IndexingStats.Read(new RavenJObject {{"index", index}});
+			if(readResult == null)
+				return null;
+			return GetIndexStats(readResult);
+		}
+
+		private static IndexStats GetIndexStats(Table.ReadResult readResult)
+		{
+			return new IndexStats
 			{
-				var readResult = storage.IndexingStats.Read(key);
-				if(readResult == null)
-					continue;
-				yield return new IndexStats
-				{
-					TouchCount = readResult.Key.Value<int>("touches"),
-					
-					IndexingAttempts = readResult.Key.Value<int>("attempts"),
-					IndexingErrors = readResult.Key.Value<int>("failures"),
-					IndexingSuccesses = readResult.Key.Value<int>("successes"),
-
-					ReduceIndexingAttempts = readResult.Key.Value<int?>("reduce_attempts"),
-					ReduceIndexingErrors = readResult.Key.Value<int?>("reduce_failures"),
-					ReduceIndexingSuccesses = readResult.Key.Value<int?>("reduce_successes"),
-
-					Name = readResult.Key.Value<string>("index"),
-					LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
-					LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
-					LastReducedEtag = readResult.Key.Value<byte[]>("lastReducedEtag") != null ? (Guid?)new Guid(readResult.Key.Value<byte[]>("lastReducedEtag")) : null,
-					LastReducedTimestamp = readResult.Key.Value<DateTime?>("lastReducedTimestamp")
-				};
-			}
+				TouchCount = readResult.Key.Value<int>("touches"),
+				IndexingAttempts = readResult.Key.Value<int>("attempts"),
+				IndexingErrors = readResult.Key.Value<int>("failures"),
+				IndexingSuccesses = readResult.Key.Value<int>("successes"),
+				ReduceIndexingAttempts = readResult.Key.Value<int?>("reduce_attempts"),
+				ReduceIndexingErrors = readResult.Key.Value<int?>("reduce_failures"),
+				ReduceIndexingSuccesses = readResult.Key.Value<int?>("reduce_successes"),
+				Name = readResult.Key.Value<string>("index"),
+				LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
+				LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
+				LastReducedEtag =
+					readResult.Key.Value<byte[]>("lastReducedEtag") != null
+						? (Guid?) new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
+						: null,
+				LastReducedTimestamp = readResult.Key.Value<DateTime?>("lastReducedTimestamp")
+			};
 		}
 
 		public void AddIndex(string name, bool createMapReduce)

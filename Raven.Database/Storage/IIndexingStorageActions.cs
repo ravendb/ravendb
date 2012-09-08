@@ -14,6 +14,8 @@ namespace Raven.Database.Storage
 	public interface IIndexingStorageActions : IDisposable
 	{
 		IEnumerable<IndexStats> GetIndexesStats();
+
+		IndexStats GetIndexStats(string index);
 		void AddIndex(string name, bool createMapReduce);
 		void DeleteIndex(string name);
 

@@ -113,6 +113,9 @@ namespace Raven.Database.Server.Responders
 				case "entries":
 					GetIndexEntries(context, index);
 					break;
+				case "stats":
+					GetIndexStats(context, index);
+					break;
 				default:
 					context.WriteJson(new
 					{
@@ -121,6 +124,26 @@ namespace Raven.Database.Server.Responders
 					context.SetStatusToBadRequest();
 					break;
 			}
+		}
+
+		private void GetIndexStats(IHttpContext context, string index)
+		{
+			IndexStats stats = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				stats = accessor.Indexing.GetIndexStats(index);
+			});
+
+			if (stats == null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+
+			stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(index);
+			stats.Performance = Database.IndexStorage.GetIndexingPerformance(index);
+
+			context.WriteJson(stats);
 		}
 
 		private void GetIndexEntries(IHttpContext context, string index)
