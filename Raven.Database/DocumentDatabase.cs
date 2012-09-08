@@ -331,6 +331,7 @@ namespace Raven.Database
 				foreach (var index in result.Indexes)
 				{
 					index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
+					index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
 				}
 
 				return result;

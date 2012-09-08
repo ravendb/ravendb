@@ -628,5 +628,10 @@ namespace Raven.Database.Indexing
 		{
 			return GetIndexByName(index).LastQueryTime;
 		}
+
+		public IndexingPerformanceStats[] GetIndexingPerformance(string index)
+		{
+			return GetIndexByName(index).GetIndexingPerformance();
+		}
 	}
 }
