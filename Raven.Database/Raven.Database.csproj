@@ -603,6 +603,7 @@
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From38To39.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From36To37.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From37To38.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
