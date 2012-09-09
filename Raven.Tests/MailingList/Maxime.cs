@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
@@ -51,7 +52,6 @@ namespace Raven.Tests.MailingList
 					.Take(10)
 					.ToList();
 
-				WaitForUserToContinueTheTest(store);
 				Assert.Equal("places/2", places[0].Id);
 				// places/1: perfect match + boost
 				terms = "Université Québec Montréal";
@@ -64,6 +64,52 @@ namespace Raven.Tests.MailingList
 					.ToList();
 
 				Assert.Equal("places/1", places[0].Id);
+			}
+		}
+
+
+		[Fact]
+		public void Can_just_set_to_sort_by_relevance_without_filtering()
+		{
+			using (var store = NewDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				new PlacesByTermsAndLocation().Execute(store);
+
+				var place1 = new Place("Université du Québec à Montréal")
+				{
+					Id = "places/1",
+					Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
+					Latitude = 45.50955,
+					Longitude = -73.569131
+				};
+
+				var place2 = new Place("UQAM")
+				{
+					Id = "places/2",
+					Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
+					Latitude = 45.50955,
+					Longitude = -73.569131
+				};
+
+				session.Store(place1);
+				session.Store(place2);
+
+				session.SaveChanges();
+
+				// places/1: perfect match + boost
+				const string terms = "Université Québec Montréal";
+				RavenQueryStatistics stats;
+				var places = session.Advanced.LuceneQuery<Place, PlacesByTermsAndLocation>()
+					.WaitForNonStaleResults()
+					.Statistics(out stats)
+					.RelatesToShape(Constants.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
+					.Where("(Name:(" + terms + ") OR Terms:(" + terms + "))")
+					.Take(10)
+					.ToList();
+
+				Assert.Equal("places/1", places[0].Id);
+				Assert.Equal("places/2", places[1].Id);
 			}
 		}
 
