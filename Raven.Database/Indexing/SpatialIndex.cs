@@ -38,9 +38,27 @@ namespace Raven.Database.Indexing
 			return null;
 		}
 
-		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025)
+		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, Abstractions.Indexing.SpatialRelation relation, double distanceErrorPct = 0.025)
 		{
-			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(shapeWKT));
+			SpatialOperation spatialOperation;
+			switch (relation)
+			{
+				case Abstractions.Indexing.SpatialRelation.Within:
+					spatialOperation = SpatialOperation.IsWithin;
+					break;
+				case Abstractions.Indexing.SpatialRelation.Contains:
+					spatialOperation = SpatialOperation.Contains;
+					break;
+				case Abstractions.Indexing.SpatialRelation.Disjoint:
+					spatialOperation = SpatialOperation.IsDisjointTo;
+					break;
+				case Abstractions.Indexing.SpatialRelation.Intersects:
+					spatialOperation = SpatialOperation.Intersects;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException("relation");
+			}
+			var args = new SpatialArgs(spatialOperation, Context.ReadShape(shapeWKT));
 			args.SetDistPrecision(distanceErrorPct);
 			return spatialStrategy.MakeQuery(args);
 		}
