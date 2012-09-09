@@ -78,14 +78,19 @@
     </Reference>
     <Reference Include="GeoAPI, Version=1.6.4448.22541, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\GeoAPI.dll</HintPath>
+      <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
-    <Reference Include="IronJS">
+    <Reference Include="IronJS, Version=0.2.1.0, Culture=neutral, PublicKeyToken=ba8d9a369cd43ae9, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\IronJS.dll</HintPath>
+    </Reference>
+    <Reference Include="IronJS.Runtime, Version=2.0.1.0, Culture=neutral, PublicKeyToken=ba8d9a369cd43ae9, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\IronJS.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -183,6 +188,7 @@
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
+    <Compile Include="Json\ScriptsCache.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\Ast\TransformObseleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />

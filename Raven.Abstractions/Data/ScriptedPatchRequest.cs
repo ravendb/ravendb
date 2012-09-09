@@ -29,5 +29,27 @@ namespace Raven.Abstractions.Data
 		{
 			return patchRequestJson.JsonDeserialization<ScriptedPatchRequest>();
 		}
+
+		protected bool Equals(ScriptedPatchRequest other)
+		{
+			if(other == null)
+				return false;
+			return string.Equals(Script, other.Script) && Values.Keys.SequenceEqual(other.Values.Keys);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			return Equals(obj as ScriptedPatchRequest);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return Values.Keys.Aggregate(Script.GetHashCode()*397, (i, s) => i*397 ^ s.GetHashCode());
+			}
+		}
 	}
 }

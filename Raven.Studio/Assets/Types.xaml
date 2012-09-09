@@ -27,6 +27,7 @@
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
+	<Converters:TrueWhenAnalyzedConverter x:Key="TrueWhenAnalyzed"/>
 	<Converters:VisableWhenDifferent x:Key="VisableWhenDifferent" />
 	<Converters:VisableWhenEqual x:Key="VisableWhenEqual" />
 	<Converters:DisableIfDefaultVersioning x:Key="DisableIfDefaultVersioning"/>

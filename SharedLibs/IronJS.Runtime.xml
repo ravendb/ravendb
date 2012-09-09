@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>IronJS.Runtime</name>
+    </assembly>
+    <members>
+        <member name="T:IronJS.Runtime.BoxedValue">
+            <summary>
+            This is a NaN-tagged struct that is used for representing
+            values that don't have a known type at runtime
+            </summary>
+        </member>
+        <member name="T:IronJS.Runtime.ArgumentsObject">
+            <summary>
+            A <see cref="T:IronJS.Runtime.CommonObject"/> used as an argument to a <see cref="T:IronJS.Runtime.FunctionObject"/>.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.CommonObject.ExpandStorage">
+            <summary>
+            Expands object property storage
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.CommonObject.CreateIndex(System.String)">
+            <summary>
+            Creates an index for property named <paramref name="name"/>
+            </summary>
+            <param name="name">The property to be allocated.</param>
+        </member>
+        <member name="M:IronJS.Runtime.CommonObject.Find(System.String)">
+            <summary>
+            Finds a property in the prototype chain.
+            </summary>
+            <param name="name"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IronJS.Runtime.CommonObject.CanPut(System.String,System.Int32@)">
+            <summary>
+            Can we put property named <paramref name="name"/>?
+            </summary>
+            <param name="name"></param>
+            <param name="index"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.#ctor(IronJS.Runtime.Environment,System.Tuple{IronJS.Runtime.ParameterStorageType,System.Int32}[],IronJS.Runtime.BoxedValue[],IronJS.Runtime.BoxedValue[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:IronJS.Runtime.ArgumentsObject"/> class.
+            </summary>
+            <param name="env">The environment.</param>
+            <param name="linkMap">The link map.</param>
+            <param name="privateScope">The private scope.</param>
+            <param name="sharedScope">The shared scope.</param>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.CreateForFunction(IronJS.Runtime.FunctionObject,IronJS.Runtime.BoxedValue[],IronJS.Runtime.BoxedValue[],System.Int32,IronJS.Runtime.BoxedValue[])">
+            <summary>
+            Creates a <see cref="T:IronJS.Runtime.ArgumentsObject"/> for the specified <see cref="T:IronJS.Runtime.FunctionObject"/>
+            <paramref name="f"/>.
+            </summary>
+            <param name="f">The function for which to create an <see cref="T:IronJS.Runtime.ArgumentsObject"/>.</param>
+            <param name="privateScope">The private scope.</param>
+            <param name="sharedScope">The shared scope.</param>
+            <param name="namedArgsPassed">The number of named arguments that is passed.</param>
+            <param name="extraArgs">The extra arguments.</param>
+            <returns>
+            A <see cref="T:IronJS.Runtime.ArgumentsObject"/> for the specified <see cref="T:IronJS.Runtime.FunctionObject"/>
+            <paramref name="f"/>.
+            </returns>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.CreateForVariadicFunction(IronJS.Runtime.FunctionObject,IronJS.Runtime.BoxedValue[],IronJS.Runtime.BoxedValue[],IronJS.Runtime.BoxedValue[])">
+            <summary>
+            Creates a <see cref="T:IronJS.Runtime.ArgumentsObject"/> for the specified variadic
+            <see cref="T:IronJS.Runtime.FunctionObject"/> <paramref name="f"/>.
+            </summary>
+            <param name="f">The f.</param>
+            <param name="privateScope">The private scope.</param>
+            <param name="sharedScope">The shared scope.</param>
+            <param name="variadicArgs">The variadic args.</param>
+            <returns>
+            A <see cref="T:IronJS.Runtime.ArgumentsObject"/> for the specified variadic <see cref="T:IronJS.Runtime.FunctionObject"/>
+            <paramref name="f"/>.
+            </returns>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.Delete(System.UInt32)">
+            <summary>
+            Deletes the property at the specified <paramref name="index"/>.
+            </summary>
+            <param name="index">The index of the property to delete.</param>
+            <returns>
+              <c>true</c> if the deletion succeeded; otherwise <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.Get(System.UInt32)">
+            <summary>
+            Gets the property at the specified <paramref name="index"/>.
+            </summary>
+            <param name="index">The index of the property to get.</param>
+            <returns>
+            The property at the specified <paramref name="index"/>.
+            </returns>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.Has(System.UInt32)">
+            <summary>
+            Determines whether the <see cref="T:IronJS.Runtime.ArgumentsObject"/> has a
+            property at the specified <paramref name="index"/>.
+            </summary>
+            <param name="index">The index.</param>
+            <returns>
+              <c>true</c> if the <see cref="T:IronJS.Runtime.ArgumentsObject"/> has a
+            property at the specified <paramref name="index"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.Put(System.UInt32,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Puts the <paramref name="value"/> at the specified <paramref name="index"/>.
+            </summary>
+            <param name="index">The index.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.Put(System.UInt32,System.Double)">
+            <summary>
+            Puts the <paramref name="value"/> at the specified <paramref name="index"/>.
+            </summary>
+            <param name="index">The index.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.Put(System.UInt32,System.Object,System.UInt32)">
+            <summary>
+            Puts the <paramref name="value"/> at the specified <paramref name="index"/>
+            with the provided <paramref name="tag"/>.
+            </summary>
+            <param name="index">The index.</param>
+            <param name="value">The value.</param>
+            <param name="tag">The tag.</param>
+        </member>
+        <member name="M:IronJS.Runtime.ArgumentsObject.CopyLinkedValues">
+            <summary>
+            Copies the linked values.
+            </summary>
+        </member>
+        <member name="P:IronJS.Runtime.ArgumentsObject.LinkIntact">
+            <summary>
+            Gets or sets a value indicating whether to keep the link intact.
+            </summary>
+            <value>
+              <c>true</c> to keep the link intact; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:IronJS.Runtime.ArgumentsObject.LinkMap">
+            <summary>
+            Gets or sets the link map.
+            </summary>
+            <value>
+            The link map.
+            </value>
+        </member>
+        <member name="P:IronJS.Runtime.ArgumentsObject.PrivateScope">
+            <summary>
+            Gets or sets whether the <see cref="T:IronJS.Runtime.ArgumentsObject"/> should be limited
+            to the private scope or not.
+            </summary>
+            <value>
+            	<c>true</c> if the <see cref="T:IronJS.Runtime.ArgumentsObject"/> should be limited
+            to the private scope; otherwise <c>false</c>.
+            </value>
+        </member>
+        <member name="P:IronJS.Runtime.ArgumentsObject.SharedScope">
+            <summary>
+            Gets or sets the shared scope.
+            </summary>
+            <value>
+            The shared scope.
+            </value>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.typeOf(IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the unary `typeof` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.not(IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the unary `!` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.bitCmpl(IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the unary `~` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.plus(IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the unary `+` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.minus(IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the unary `-` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.in(IronJS.Runtime.Environment,IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `in` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.instanceOf(IronJS.Runtime.Environment,IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `instanceof` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.Compare(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue,System.Boolean,System.Func{System.String,System.String,System.Boolean},System.Func{System.Double,System.Double,System.Boolean})">
+            <summary>
+            Supports the binary comparison operators.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.lt(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `&lt;` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.ltEq(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `&lt;=` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.gt(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `&gt;` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.gtEq(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `&gt;=` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.eq(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `==` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.notEq(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `!=` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.same(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `===` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.notSame(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `!==` operator.
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.Operators.add(IronJS.Runtime.BoxedValue,IronJS.Runtime.BoxedValue)">
+            <summary>
+            Implements the binary `+` operator.
+            </summary>
+        </member>
+        <member name="T:IronJS.Runtime.SuffixString">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:IronJS.Runtime.SuffixString.ToString">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:IronJS.Runtime.SuffixString.Concat(IronJS.Runtime.SuffixString,System.Object)">
+            <summary>
+            
+            </summary>
+            <param name="current"></param>
+            <param name="right"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IronJS.Runtime.SuffixString.Concat(System.Object,System.Object)">
+            <summary>
+            
+            </summary>
+            <param name="left"></param>
+            <param name="right"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IronJS.Runtime.TypeConverter.ToString(System.Double)">
+            These steps are outlined in the ECMA-262, Section 9.8.1
+        </member>
+    </members>
+</doc>

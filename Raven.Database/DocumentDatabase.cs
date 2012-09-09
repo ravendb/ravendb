@@ -120,7 +120,6 @@ namespace Raven.Database
 		private readonly object idleLocker = new object();
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
-
 		private long currentEtagBase;
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
@@ -1310,13 +1309,13 @@ namespace Raven.Database
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
 				jsonDoc =>
 				{
-					scriptedJsonPatcher = new ScriptedJsonPatcher(jsonDoc,
-						s =>
+					scriptedJsonPatcher = new ScriptedJsonPatcher(
+						loadDocument: id =>
 						{
-							var jsonDocument = Get(s, transactionInformation);
+							var jsonDocument = Get(id, transactionInformation);
 							return jsonDocument == null ? null : jsonDocument.ToJson();
 						});
-					return scriptedJsonPatcher.Apply(patch);
+					return scriptedJsonPatcher.Apply(jsonDoc, patch);
 				});
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
 		}

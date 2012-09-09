@@ -71,6 +71,8 @@ namespace Raven.Database.Storage.RAM
 			this.theGenerator = generator;
 
 			Id = Guid.NewGuid();
+
+			return true;
 		}
 
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup)
