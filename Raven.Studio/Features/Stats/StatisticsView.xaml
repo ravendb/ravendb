@@ -7,7 +7,24 @@
 					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 					 mc:Ignorable="d">
 
-	<Grid Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Path=Database.Value.Statistics.Value}">
+
+	<UserControl.Resources>
+		<DataTemplate x:Key="Statistics_Item_Tamplate">
+			<Grid Margin="4" x:Name="grid">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="300" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+			
+				<TextBlock Text="{Binding Key}" Style="{StaticResource Style_TextBlock_FieldName}"/>
+				<TextBlock Grid.Column="1" Text="{Binding Value.Message}"/>
+			</Grid>
+
+		</DataTemplate>
+	</UserControl.Resources>
+
+
+	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
@@ -28,7 +45,7 @@
 					<TextBlock Text="Statistics" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
 				</StackPanel>
 				<StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">
-					
+
 				</StackPanel>
 			</toolkit:DockPanel>
 		</Border>
@@ -40,90 +57,26 @@
 				  HorizontalScrollBarVisibility="Disabled"
 				  Grid.Row="1"
 				  Margin="0,10,0,0">
-			<Grid HorizontalAlignment="Left">
-				<Grid.Resources>
-				</Grid.Resources>
-				
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="8" />
-					<ColumnDefinition Width="*" />
-				</Grid.ColumnDefinitions>
+
+			<Grid>
 				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
 
-				<TextBlock Text="Count Of Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Column="2" Text="{Binding CountOfIndexes, StringFormat='\{0:#,#;;0\}'}" />
-
-				<TextBlock Grid.Row="1" Text="Tasks Count" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ApproximateTaskCount, StringFormat='\{0:#,#;;0\}'}" />
-
-				<TextBlock Grid.Row="2" Text="Count Of Documents" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments, StringFormat='\{0:#,#;;0\}'}" />
-
-				<TextBlock Grid.Row="3" Text="Count of Item to Index In Batch" Style="{StaticResource Style_TextBlock_FieldName}" />
-				<TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding CurrentNumberOfItemsToIndexInSingleBatch, StringFormat='\{0:#,#;;0\}'}" />
+				<ComboBox ItemsSource="{Binding ViewOptions}" SelectedIndex="0" SelectedValue="{Binding SeletedViewOption.Value, Mode=TwoWay}"/>
 				
-				<TextBlock Grid.Row="4" Text="Stale Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<ItemsControl Grid.Row="4" Grid.Column="2" ItemsSource="{Binding StaleIndexes}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<StackPanel>
-								<TextBlock Text="{Binding}" />
-							</StackPanel>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
-
-				<TextBlock Grid.Row="6" Text="Extensions" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<ItemsControl Grid.Row="6"
-						  Grid.Column="2"
-						  ItemsSource="{Binding Extensions}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<StackPanel>
-								<TextBlock Text="{Binding Name}" FontWeight="Bold" />
-								<ItemsControl ItemsSource="{Binding Installed}" Margin="20,0,0,10">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<StackPanel Orientation="Horizontal">
-												<TextBlock Text="{Binding Name}" />
-												<TextBlock Text=", " />
-												<TextBlock Text="{Binding Assembly}" />
-											</StackPanel>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</StackPanel>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
-
-				<TextBlock Grid.Row="7"
-						   Text="Triggers"
-						   Style="{StaticResource Style_TextBlock_FieldName}" />
-				<ItemsControl Grid.Row="7"
-							  Grid.Column="2"
-							  ItemsSource="{Binding Triggers}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<StackPanel>
-								<TextBlock Text="{Binding Name}"
-										   FontWeight="Bold" />
-								<TextBlock Text="{Binding Type, StringFormat='Type: {0}'}" />
-							</StackPanel>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
+				<ListBox Grid.Row="1"
+						 Grid.ColumnSpan="2"
+						 ItemsSource="{Binding StatisticsToView}"
+						 ItemTemplate="{StaticResource Statistics_Item_Tamplate}">
+				</ListBox>
 			</Grid>
+
 		</ScrollViewer>
 	</Grid>
 </Infrastructure:PageView>
