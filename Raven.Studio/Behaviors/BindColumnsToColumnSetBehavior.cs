@@ -321,21 +321,25 @@ namespace Raven.Studio.Behaviors
 
         private string ExpandBinding(string binding)
         {
-            if (binding.StartsWith("$JsonDocument:"))
+	        if (binding.StartsWith("$JsonDocument:"))
             {
                 return binding.Substring("$JsonDocument:".Length);
             }
-            else if (binding.StartsWith("$Meta:"))
-            {
-                return "Metadata" + ExpandPropertyPathToXamlBinding(binding.Substring("$Meta:".Length));
-            }
-            else
-            {
-                return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
-            }
+	        if (binding.StartsWith("$Meta:"))
+	        {
+		        return "Metadata" + ExpandPropertyPathToXamlBinding(binding.Substring("$Meta:".Length));
+	        }
+			if (binding == "$Temp:Score")
+			{
+				return "TempIndexScore";
+			}
+	        else
+	        {
+		        return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
+	        }
         }
 
-        private string ExpandPropertyPathToXamlBinding(string binding)
+	    private string ExpandPropertyPathToXamlBinding(string binding)
         {
             // for example TestNested[0].MyProperty will be expanded to [TestNested][0][MyProperty]
             var result = binding.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries)

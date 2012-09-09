@@ -46,6 +46,7 @@ namespace Raven.Client.Connection
 						Key = key,
 						LastModified = lastModified,
 						Etag = etag,
+						TempIndexScore = metadata.Value<float?>("Temp-Index-Score"),
 						NonAuthoritativeInformation = nai,
 						Metadata = metadata.FilterHeaders(),
 						DataAsJson = doc,
