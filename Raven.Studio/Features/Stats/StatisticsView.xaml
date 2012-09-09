@@ -19,7 +19,6 @@
 				<TextBlock Text="{Binding Key}" Style="{StaticResource Style_TextBlock_FieldName}"/>
 				<TextBlock Grid.Column="1" Text="{Binding Value.Message}"/>
 			</Grid>
-
 		</DataTemplate>
 	</UserControl.Resources>
 
