@@ -186,15 +186,11 @@
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
-    <Compile Include="Commands\AddReplicationCommand.cs" />
-    <Compile Include="Commands\AddVersioningCommand.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
     <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
-    <Compile Include="Commands\DeleteReplicationCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
-    <Compile Include="Commands\DeleteVersioningCommand.cs" />
     <Compile Include="Commands\SaveBundlesCommand.cs" />
     <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
     <Compile Include="Commands\ItemSelectionCommand.cs" />
@@ -244,6 +240,21 @@
     <Compile Include="Features\Alerts\AlertProxy.cs" />
     <Compile Include="Features\Alerts\AlertsView.xaml.cs">
       <DependentUpon>AlertsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\DatabaseSettingsSectionView.xaml.cs">
+      <DependentUpon>DatabaseSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\QuotasSettingsSectionView.xaml.cs">
+      <DependentUpon>QuotasSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\ReplicationsSettingsSectionView.xaml.cs">
+      <DependentUpon>ReplicationsSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\SettingsDialog.xaml.cs">
+      <DependentUpon>SettingsDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\SettingsPageView.xaml.cs">
+      <DependentUpon>SettingsPageView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Settings\SettingsView.xaml.cs">
       <DependentUpon>SettingsView.xaml</DependentUpon>
@@ -313,6 +324,9 @@
     </Compile>
     <Compile Include="Features\Query\RecentQueriesModel.cs" />
     <Compile Include="Features\Query\SavedQuery.cs" />
+    <Compile Include="Features\Settings\VersioningSettingsView.xaml.cs">
+      <DependentUpon>VersioningSettingsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Tasks\IndexingTask.cs" />
     <Compile Include="Features\Tasks\SampleDataTask.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
@@ -394,8 +408,10 @@
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\AlertsModel.cs" />
     <Compile Include="Models\ApplicationState.cs" />
+    <Compile Include="Models\DatabaseSettingsSectionViewModel.cs" />
+    <Compile Include="Models\QuotaSettingsSectionModel.cs" />
+    <Compile Include="Models\ReplicationSettingsSectionModel.cs" />
     <Compile Include="Models\SettingsModel.cs" />
-    <Compile Include="Models\BaseSettingsModel.cs" />
     <Compile Include="Models\CreateSettingsModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
     <Compile Include="Models\DatabaseSelectionModel.cs" />
@@ -403,6 +419,8 @@
     <Compile Include="Models\DocumentViewStateStore.cs" />
     <Compile Include="Models\IndexStatsModel.cs" />
     <Compile Include="Models\QueryStateStore.cs" />
+    <Compile Include="Models\SettingsPageModel.cs" />
+    <Compile Include="Models\SettingsSectionModel.cs" />
     <Compile Include="Models\StudioErrorListModel.cs" />
     <Compile Include="Models\GoToDocumentModel.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
@@ -410,6 +428,7 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
+    <Compile Include="Models\VersioningSettingsSectionModel.cs" />
     <Compile Include="Views\Alerts.xaml.cs">
       <DependentUpon>Alerts.xaml</DependentUpon>
     </Compile>
@@ -747,6 +766,26 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Settings\DatabaseSettingsSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\QuotasSettingsSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\ReplicationsSettingsSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\SettingsDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\SettingsPageView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Settings\SettingsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -764,6 +803,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Query\RecentQueriesDropDownView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\VersioningSettingsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

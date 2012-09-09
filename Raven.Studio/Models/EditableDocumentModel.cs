@@ -69,11 +69,19 @@ namespace Raven.Studio.Models
 									  new DocumentOutliningMode("Disabled")
 										  {Applicator = document => document.OutliningMode = OutliningMode.None},
 									  new DocumentOutliningMode("Enabled")
-										  {Applicator = document => document.OutliningMode = OutliningMode.Automatic},
+										  {Applicator = document =>
+										  {
+                                              document.OutliningMode = OutliningMode.None;
+										      document.OutliningMode = OutliningMode.Automatic;
+										  }},
 									  new DocumentOutliningMode("Auto-Collapse Collections")
 										  {
 											  Applicator = document =>
 															   {
+                                                                   // for some reason (possibly bug in Syntax Editor),
+                                                                   // outlining is not correctly updated when the page is first shown
+                                                                   // unless we turn it off first
+                                                                   document.OutliningMode = OutliningMode.None;
 																   document.OutliningMode = OutliningMode.Automatic;
 																   document.OutliningManager.EnsureCollapsed();
 															   }

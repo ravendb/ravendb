@@ -153,4 +153,10 @@
         <GradientStop Color="#D67171"/>
         <GradientStop Color="#C25858" Offset="1"/>
     </LinearGradientBrush>
+
+    <Color x:Key="Color_ItemSelected">#FFC4C4C4</Color>
+    <SolidColorBrush x:Key="Brush_ItemSelected" Color="{StaticResource Color_ItemSelected}"/>
+
+    <Color x:Key="Color_ControlBorder">#FFEAE7E4</Color>
+    <SolidColorBrush x:Key="Brush_ControlBorder" Color="{StaticResource Color_ControlBorder}"/>
 </ResourceDictionary>
