@@ -65,6 +65,10 @@ namespace Raven.Database.Extensions
 					GC.WaitForPendingFinalizers();
 					Thread.Sleep(100);
 				}
+				catch(UnauthorizedAccessException e)
+				{
+					throw new UnauthorizedAccessException("Could not delete " + Path.GetFullPath(directory), e);
+				}
 			}
 		}
 

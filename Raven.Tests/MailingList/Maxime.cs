@@ -11,7 +11,7 @@ namespace Raven.Tests.MailingList
 {
 	public class Maxime : RavenTest
 	{
-		[Fact(Skip = "Requices relevancy enhancement http://www.ibm.com/developerworks/java/library/j-spatial/#searching.spatial")]
+		[Fact]
 		public void WithingRadiusOf_Should_Not_Break_Relevance()
 		{
 			using (var store = NewDocumentStore())
