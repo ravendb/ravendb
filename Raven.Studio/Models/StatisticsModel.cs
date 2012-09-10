@@ -57,6 +57,24 @@ namespace Raven.Studio.Models
 						{
 							StatisticsToView.Add(item.Key, item.Value);
 						}
+
+						if(StatisticsToView.Count == 0)
+						{
+							var indexs = Statistics.FirstOrDefault(pair => pair.Key == "Indexes");
+							var index = indexs.Value.ListItems.FirstOrDefault(item => item.Title == SeletedViewOption.Value);
+
+							if(index == null)
+								break;
+
+							StatisticsToView.Add(index.Title, new StatInfo
+							{
+								IsList = true,
+								ListItems = new List<StatInfoItem>
+								{
+									index
+								}
+							});
+						}
 					}
 					break;
 			}
@@ -89,7 +107,7 @@ namespace Raven.Studio.Models
 					if (list.Count == 0)
 						continue;
 
-					if(list.First().GetType() != typeof(string) && list.First().GetType() != typeof(IndexStats))
+					if((list.First() is string == false) && (list.First() is IndexStats == false))
 						continue;
 
 					var statInfo = new StatInfo
@@ -98,20 +116,13 @@ namespace Raven.Studio.Models
 						ListItems = new List<StatInfoItem>(),
 					};
 
-					statInfo.ItemsType = list.First().GetType();
-
 					foreach (var item in list)
 					{
 						var statInfoItem = new StatInfoItem(item);
-						var name = item.GetType().GetProperty("Name");
 
-						if (name != null)
+						if (statInfoItem.ItemType == typeof(IndexStats))
 						{
-							statInfoItem.Title = name.GetValue(item, null).ToString();
-						}
-						else
-						{
-							statInfoItem.Title = "";
+							AddIndexStat(statInfoItem);
 						}
 
 						statInfo.ListItems.Add(statInfoItem);
@@ -122,15 +133,78 @@ namespace Raven.Studio.Models
 				}
 				else
 				{
-					Statistics.Add(propertyInfo.Name, new StatInfo
+					if (string.IsNullOrEmpty(propertyInfo.GetValue(StatsData.Value, null).ToString()) || propertyInfo.GetValue(StatsData.Value, null).ToString() == "0")
+						continue;
+
+					if (propertyInfo.GetValue(StatsData.Value, null) is int)
 					{
-						Message = propertyInfo.GetValue(StatsData.Value, null).ToString()
-					});
+						Statistics.Add(propertyInfo.Name, new StatInfo
+						{
+							Message = ((int)propertyInfo.GetValue(StatsData.Value, null)).ToString("#,#")
+						});
+					}
+					else
+					{
+						Statistics.Add(propertyInfo.Name, new StatInfo
+						{
+							Message = propertyInfo.GetValue(StatsData.Value, null).ToString()
+						});
+					}
 				}
 			}
 
 			OnPropertyChanged(() => StatsData);
 			UpdateView();
+		}
+
+		private void AddIndexStat(StatInfoItem statInfoItem)
+		{
+			foreach (var propertyInfo in statInfoItem.Item.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
+			{
+				if (propertyInfo.Name == "Name")
+				{
+					statInfoItem.Title = propertyInfo.GetValue(statInfoItem.Item, null).ToString();
+					ViewOptions.Add(statInfoItem.Title);
+					continue;
+				}
+
+				if (propertyInfo.Name == "Performance")
+				{
+					var performance = propertyInfo.GetValue(statInfoItem.Item, null) as IndexingPerformanceStats[];
+					if(performance == null || performance.Length == 0)
+						continue;
+
+					var performanceMessage = "";
+
+					foreach (var indexingPerformanceStatse in performance)
+					{
+						performanceMessage += string.Format(@"
+Operation:         {0}
+Count:              {1}
+Duration:          {2}
+Duration in ms: {3}", indexingPerformanceStatse.Operation,
+						                                    indexingPerformanceStatse.Count, indexingPerformanceStatse.Duration,
+						                                    indexingPerformanceStatse.DurationMilliseconds.ToString("#,#"));
+					}
+
+					statInfoItem.ItemData.Add("Performance", performanceMessage);
+
+					continue;
+				}
+
+				if (propertyInfo.GetValue(statInfoItem.Item, null) == null)
+					continue;
+
+				int isZero;
+				var isInt = int.TryParse(propertyInfo.GetValue(statInfoItem.Item, null).ToString(), out isZero);
+				if (isInt && isZero == 0)
+					continue;
+
+				if(isInt)
+					statInfoItem.ItemData.Add(propertyInfo.Name, ((int)propertyInfo.GetValue(statInfoItem.Item, null)).ToString("#,#"));
+				else					
+					statInfoItem.ItemData.Add(propertyInfo.Name, propertyInfo.GetValue(statInfoItem.Item, null).ToString());
+			}
 		}
 
 		public Observable<DatabaseStatistics> StatsData { get; set; }
@@ -145,17 +219,20 @@ namespace Raven.Studio.Models
 		public bool IsList { get; set; }
 		public string Message { get; set; }
 		public List<StatInfoItem> ListItems { get; set; }
-		public Type ItemsType { get; set; }
 	}
 
 	public class StatInfoItem
 	{
-		public string Title { get; set; }
 		public object Item { get; set; }
+		public Type ItemType { get; set; }
+		public string Title { get; set; }
+		public Dictionary<string, string> ItemData { get; set; } 
 
 		public StatInfoItem(object item)
 		{
 			Item = item;
+			ItemType = item.GetType();
+			ItemData = new Dictionary<string, string>();
 		}
 	}
 }
