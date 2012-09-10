@@ -5,13 +5,13 @@ using System.Windows.Data;
 
 namespace Raven.Studio.Infrastructure.Converters
 {
-	public class VisableWhenDifferent : IValueConverter
+	public class VisibleWhenEqual : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (value.Equals(parameter))
-				return Visibility.Collapsed;
-			return Visibility.Visible;
+			if (value.ToString().Equals(parameter))
+				return Visibility.Visible;
+			return Visibility.Collapsed;
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
