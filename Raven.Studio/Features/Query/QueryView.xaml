@@ -183,6 +183,30 @@
 				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 				<Controls1:RecentQueriesButton/>
+
+				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+
+				<Button x:Name="IndexStats"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Index Statistics"
+							VerticalAlignment="Center"
+							Margin="0,0,6,0"
+							Command="{StaticResource NavigateToCommand}"
+						CommandParameter="{Binding IndexName, StringFormat='/statistics?index=\{0\}'}"
+							Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"
+							VerticalContentAlignment="Center">
+					<Button.Content>
+						<StackPanel Orientation="Horizontal"
+										VerticalAlignment="Center">
+							<Image Source="{StaticResource Image_Info_Tiny}"
+									   Stretch="None"
+									   VerticalAlignment="Center" />
+							<TextBlock Text="Index Statistics"
+										   VerticalAlignment="Center"
+										   Margin="2,0,0,0" />
+						</StackPanel>
+					</Button.Content>
+				</Button>
 			</StackPanel>
 		</Border>
 
@@ -289,7 +313,7 @@
 									 Width="200"
 									 Text="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 VerticalAlignment="Center" />
-							
+
 							<HyperlinkButton Content="Calculate from address"
 											 Command="{Binding CalculateFromAddress}" VerticalAlignment="Center"/>
 						</StackPanel>

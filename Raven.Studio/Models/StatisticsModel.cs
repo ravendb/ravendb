@@ -22,12 +22,21 @@ namespace Raven.Studio.Models
 			Statistics = new Dictionary<string, StatInfo>();
 			StatisticsToView = new Dictionary<string, StatInfo>();
 			ViewOptions = new List<string>();
-			SeletedViewOption = new Observable<string>();
-			SeletedViewOption.Value = "All";
+			SeletedViewOption = new Observable<string> { Value = "All" };
 			SeletedViewOption.PropertyChanged += (sender, args) => UpdateView();
 			UpdateStatistics();
 			ApplicationModel.Database.Value.Statistics.PropertyChanged +=
 				(sender, args) => UpdateStatistics();
+
+		}
+
+		protected override void OnViewLoaded()
+		{
+			var indexToShow = new UrlParser(UrlUtil.Url).GetQueryParam("index");
+			if (indexToShow != null)
+				SeletedViewOption.Value = indexToShow;
+			
+			base.OnViewLoaded();
 		}
 
 		private void UpdateView()
@@ -58,15 +67,15 @@ namespace Raven.Studio.Models
 							StatisticsToView.Add(item.Key, item.Value);
 						}
 
-						if(StatisticsToView.Count == 0)
+						if (StatisticsToView.Count == 0)
 						{
 							var indexs = Statistics.FirstOrDefault(pair => pair.Key == "Indexes");
 							var index = indexs.Value.ListItems.FirstOrDefault(item => item.Title == SeletedViewOption.Value);
 
-							if(index == null)
+							if (index == null)
 								break;
 
-							StatisticsToView.Add(index.Title, new StatInfo
+							StatisticsToView.Add("Indexes", new StatInfo
 							{
 								IsList = true,
 								ListItems = new List<StatInfoItem>
@@ -107,7 +116,7 @@ namespace Raven.Studio.Models
 					if (list.Count == 0)
 						continue;
 
-					if((list.First() is string == false) && (list.First() is IndexStats == false))
+					if ((list.First() is string == false) && (list.First() is IndexStats == false))
 						continue;
 
 					var statInfo = new StatInfo
@@ -136,25 +145,32 @@ namespace Raven.Studio.Models
 					if (string.IsNullOrEmpty(propertyInfo.GetValue(StatsData.Value, null).ToString()) || propertyInfo.GetValue(StatsData.Value, null).ToString() == "0")
 						continue;
 
-					if (propertyInfo.GetValue(StatsData.Value, null) is int)
+					Statistics.Add(propertyInfo.Name, new StatInfo
 					{
-						Statistics.Add(propertyInfo.Name, new StatInfo
-						{
-							Message = ((int)propertyInfo.GetValue(StatsData.Value, null)).ToString("#,#")
-						});
-					}
-					else
-					{
-						Statistics.Add(propertyInfo.Name, new StatInfo
-						{
-							Message = propertyInfo.GetValue(StatsData.Value, null).ToString()
-						});
-					}
+						Message = GetValueWithFormat(propertyInfo.GetValue(StatsData.Value, null))
+					});
 				}
 			}
 
 			OnPropertyChanged(() => StatsData);
 			UpdateView();
+		}
+
+		private string GetValueWithFormat(object value)
+		{
+			if (value == null)
+				return null;
+
+			if (value is int)
+				return ((int)value).ToString("#,#");
+			if (value is double)
+				return ((double)value).ToString("#,#");
+			if (value is long)
+				return ((long)value).ToString("#,#");
+			if (value is float)
+				return ((float)value).ToString("#,#");
+
+			return value.ToString();
 		}
 
 		private void AddIndexStat(StatInfoItem statInfoItem)
@@ -171,7 +187,7 @@ namespace Raven.Studio.Models
 				if (propertyInfo.Name == "Performance")
 				{
 					var performance = propertyInfo.GetValue(statInfoItem.Item, null) as IndexingPerformanceStats[];
-					if(performance == null || performance.Length == 0)
+					if (performance == null || performance.Length == 0)
 						continue;
 
 					var performanceMessage = "";
@@ -183,8 +199,8 @@ Operation:         {0}
 Count:              {1}
 Duration:          {2}
 Duration in ms: {3}", indexingPerformanceStatse.Operation,
-						                                    indexingPerformanceStatse.Count, indexingPerformanceStatse.Duration,
-						                                    indexingPerformanceStatse.DurationMilliseconds.ToString("#,#"));
+															indexingPerformanceStatse.Count, indexingPerformanceStatse.Duration,
+															indexingPerformanceStatse.DurationMilliseconds.ToString("#,#"));
 					}
 
 					statInfoItem.ItemData.Add("Performance", performanceMessage);
@@ -200,10 +216,7 @@ Duration in ms: {3}", indexingPerformanceStatse.Operation,
 				if (isInt && isZero == 0)
 					continue;
 
-				if(isInt)
-					statInfoItem.ItemData.Add(propertyInfo.Name, ((int)propertyInfo.GetValue(statInfoItem.Item, null)).ToString("#,#"));
-				else					
-					statInfoItem.ItemData.Add(propertyInfo.Name, propertyInfo.GetValue(statInfoItem.Item, null).ToString());
+				statInfoItem.ItemData.Add(propertyInfo.Name, GetValueWithFormat(propertyInfo.GetValue(statInfoItem.Item, null)));
 			}
 		}
 
@@ -223,10 +236,10 @@ Duration in ms: {3}", indexingPerformanceStatse.Operation,
 
 	public class StatInfoItem
 	{
-		public object Item { get; set; }
-		public Type ItemType { get; set; }
+		public object Item { get; private set; }
+		public Type ItemType { get; private set; }
 		public string Title { get; set; }
-		public Dictionary<string, string> ItemData { get; set; } 
+		public Dictionary<string, string> ItemData { get; private set; }
 
 		public StatInfoItem(object item)
 		{
