@@ -24,7 +24,7 @@ namespace Raven.Tests.Indexes
 		{
 			store =
 
-				NewDocumentStore(new AggregateCatalog
+				NewDocumentStore(catalog:new AggregateCatalog
 				{Catalogs = {new TypeCatalog(typeof (ShoppingCartEventsToShopingCart), typeof (MapOnlyView))}});
 			db = store.DocumentDatabase;
 		}
