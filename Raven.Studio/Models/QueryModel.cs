@@ -496,10 +496,12 @@ namespace Raven.Studio.Models
                     var fields = task.Result.Fields;
                     QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
 
-                    const string spatialindexGenerate = "SpatialIndex.Generate";
+                    const string spatialindexGenerateLegacy = "SpatialIndex.Generate";
+					const string spatialindexGenerate = "SpatialGenerate";
+
                     IsSpatialQuerySupported =
-                        task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
-                        (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
+						task.Result.Maps.Any(x => x.Contains(spatialindexGenerate) || x.Contains(spatialindexGenerateLegacy)) ||
+						(task.Result.Reduce != null && (task.Result.Reduce.Contains(spatialindexGenerate) || task.Result.Reduce.Contains(spatialindexGenerateLegacy)));
                     HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
                     DocumentsResult.SetChangesObservable(

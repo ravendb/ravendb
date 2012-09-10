@@ -34,7 +34,7 @@ namespace Raven.Database.Extensions
 					Directory.Delete(directory, true);
 					return;
 				}
-				catch (IOException)
+				catch (IOException e)
 				{
 					try
 					{
@@ -59,11 +59,15 @@ namespace Raven.Database.Extensions
 					{
 					}
 					if (i == retries-1)// last try also failed
-						throw;
+						throw new IOException("Could not delete " + Path.GetFullPath(directory), e);
 
 					GC.Collect();
 					GC.WaitForPendingFinalizers();
 					Thread.Sleep(100);
+				}
+				catch(UnauthorizedAccessException e)
+				{
+					throw new UnauthorizedAccessException("Could not delete " + Path.GetFullPath(directory), e);
 				}
 			}
 		}

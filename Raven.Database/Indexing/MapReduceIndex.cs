@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -53,7 +54,7 @@ namespace Raven.Database.Indexing
 			DateTime minimumTimestamp)
 		{
 			var count = 0;
-
+			var sw = Stopwatch.StartNew();
 			var changed = new HashSet<ReduceKeyAndBucket>();
 			var documentsWrapped = documents.Select(doc =>
 			{
@@ -95,6 +96,12 @@ namespace Raven.Database.Indexing
 			}
 			UpdateIndexingStats(context, stats);
 			actions.MapReduce.ScheduleReductions(name, 0, changed);
+			AddindexingPerformanceStat(new IndexingPerformanceStats
+			{
+				Count = count,
+				Operation = "Map",
+				Duration = sw.Elapsed
+			});
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
@@ -349,6 +356,8 @@ namespace Raven.Database.Indexing
 			public void ExecuteReduction()
 			{
 				var count = 0;
+				var sw = Stopwatch.StartNew();
+				
 				parent.Write(Context, (indexWriter, analyzer, stats) =>
 				{
 					stats.Operation = IndexingWorkStats.Status.Reduce;
@@ -409,6 +418,12 @@ namespace Raven.Database.Indexing
 						}
 					}
 					return count + ReduceKeys.Count;
+				});
+				parent.AddindexingPerformanceStat(new IndexingPerformanceStats
+				{
+					Count = count,
+					Duration = sw.Elapsed,
+					Operation = "Reduce Level " + Level
 				});
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", ReduceKeys)));
 			}

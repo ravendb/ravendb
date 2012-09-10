@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -35,6 +36,7 @@ namespace Raven.Database.Indexing
 		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
+			var sw = Stopwatch.StartNew();
 			Write(context, (indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
@@ -134,6 +136,12 @@ namespace Raven.Database.Indexing
 						x => x.Dispose());
 				}
 				return count;
+			});
+			AddindexingPerformanceStat(new IndexingPerformanceStats
+			{
+				Count = count,
+				Duration = sw.Elapsed,
+				Operation = "Index"
 			});
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}

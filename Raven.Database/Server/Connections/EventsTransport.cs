@@ -117,11 +117,9 @@ namespace Raven.Database.Server.Connections
 		{
 			log.DebugException("Error when using events transport", exception);
 
-			Connected = false;
-			Disconnected();
 			try
 			{
-				context.FinalizeResonse();
+				Disconnect();
 			}
 			catch (ObjectDisposedException)
 			{

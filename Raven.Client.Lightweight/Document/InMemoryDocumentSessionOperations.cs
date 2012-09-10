@@ -1344,6 +1344,8 @@ more responsive application.
 				{
 					IncludesUtil.Include(result, include, id =>
 					{
+						if(id == null)
+							return;
 						if (IsLoaded(id) == false)
 							RegisterMissing(id);
 					});

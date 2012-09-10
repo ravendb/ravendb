@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Linq;
@@ -15,7 +14,7 @@ namespace Raven.Munin
 	public abstract class AbstractPersistentSource : IPersistentSource
 	{
 		private readonly StreamsPool pool;
-		private IList<PersistentDictionaryState> globalStates = new List<PersistentDictionaryState>();
+		private volatile IList<PersistentDictionaryState> globalStates = new List<PersistentDictionaryState>();
 
 		private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
 			new ThreadLocal<IList<PersistentDictionaryState>>(() => null);
@@ -25,11 +24,8 @@ namespace Raven.Munin
 		public IList<PersistentDictionaryState> CurrentStates
 		{
 			get { return currentStates.Value; }
-			set
-			{
-				currentStates.Value = value;
+			set { currentStates.Value = value; }
 			}
-		}
 
 		protected AbstractPersistentSource()
 		{
@@ -44,7 +40,13 @@ namespace Raven.Munin
 
 		public IList<PersistentDictionaryState> DictionariesStates
 		{
-			get { return CurrentStates ?? globalStates; }
+			get
+			{
+				var persistentDictionaryStates = CurrentStates;
+				if(persistentDictionaryStates == null)
+					return globalStates;
+				return persistentDictionaryStates;
+		}
 		}
 
 		protected abstract Stream CreateClonedStreamForReadOnlyPurposes();
@@ -54,35 +56,17 @@ namespace Raven.Munin
 			if (disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
 
-			var oldValue = CurrentStates;
-			CurrentStates = oldValue ?? globalStates;
-			try
-			{
 				Stream stream;
 				using (pool.Use(out stream))
 					return readOnlyAction(stream);
 			}
-			finally
-			{
-				CurrentStates = oldValue;
-			}
-		}
 
 		public T Read<T>(Func<T> readOnlyAction)
 		{
 			if(disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-			var oldValue = CurrentStates;
-			CurrentStates = oldValue ?? globalStates;
-			try
-			{
 				return readOnlyAction();
 			}
-			finally
-			{
-				CurrentStates = oldValue;
-			}
-		}
 
 
 		public void Write(Action<Stream> readWriteAction)
@@ -92,6 +76,7 @@ namespace Raven.Munin
 				if (disposed)
 					throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
 			
+				bool success = false;
 				try
 				{
 					CurrentStates = new List<PersistentDictionaryState>(
@@ -102,11 +87,15 @@ namespace Raven.Munin
 						}));
 
 					readWriteAction(Log);
+					success = true;
 				}
 				finally
 				{
+					if(success)
+					{
 					pool.Clear();
-					Interlocked.Exchange(ref globalStates, CurrentStates);
+						globalStates = CurrentStates;
+					}
 					CurrentStates = null;
 				}
 			}
@@ -125,6 +114,16 @@ namespace Raven.Munin
 		}
 
 		public abstract void EnsureCapacity(int value);
+
+		public void BeginTx()
+		{
+			CurrentStates = globalStates;
+		}
+
+		public void CompleteTx()
+		{
+			CurrentStates = null;
+		}
 
 		public virtual void Dispose()
 		{

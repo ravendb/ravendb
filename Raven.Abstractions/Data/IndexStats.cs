@@ -24,9 +24,19 @@ namespace Raven.Abstractions.Data
 		public Guid? LastReducedEtag { get; set; }
 		public DateTime? LastReducedTimestamp { get; set; }
 
+		public IndexingPerformanceStats[] Performance { get; set; }
+
 		public override string ToString()
 		{
 			return Name;
 		}
+	}
+
+	public class IndexingPerformanceStats
+	{
+		public string Operation { get; set; }
+		public int Count { get; set; }
+		public TimeSpan Duration { get; set; }
+		public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
 	}
 }

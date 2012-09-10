@@ -65,7 +65,7 @@ namespace Raven.Storage.Managed
 					yield break;
 				}
 				yield return doc;
-			}
+		}
 		}
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
