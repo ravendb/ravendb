@@ -138,16 +138,16 @@ namespace Raven.Studio.Models
 
 		public void UpdateAlerts()
 		{
-			Alerts.Clear();
+			//Alerts.Clear();
 
-			Server.Value.DocumentStore.OpenAsyncSession(null).Query<Alert>().ToListAsync().ContinueOnSuccessInTheUIThread(
-				list =>
-				{
-					foreach (var alert in list)
-					{
-						Alerts.Add(alert);
-					}
-				});
+			//Server.Value.DocumentStore.OpenAsyncSession(null).Query<Alert>().ToListAsync().ContinueOnSuccessInTheUIThread(
+			//	list =>
+			//	{
+			//		foreach (var alert in list)
+			//		{
+			//			Alerts.Add(alert);
+			//		}
+			//	});
 		}
 
 		public BitmapImage StatusImage
