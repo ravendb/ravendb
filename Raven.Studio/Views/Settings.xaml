@@ -6,8 +6,8 @@
            mc:Ignorable="d" xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                          xmlns:Bundles="clr-namespace:Raven.Studio.Features.Settings" d:DesignWidth="640" d:DesignHeight="480"
            Title="Settings Page"
-						 Infrastructure:ModelAttacher.AttachObservableModel="SettingsModel">
+						 Infrastructure:ModelAttacher.AttachObservableModel="SettingsPageModel">
 	<Grid DataContext="{Binding Value}">
-		<Bundles:SettingsView />
+		<Bundles:SettingsPageView />
 	</Grid>
 </Infrastructure:PageView>

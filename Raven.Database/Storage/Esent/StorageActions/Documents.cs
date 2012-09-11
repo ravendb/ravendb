@@ -481,20 +481,5 @@ namespace Raven.Storage.Esent.StorageActions
 
 			return true;
 		}
-
-
-		public Tuple<int, int> FirstAndLastDocumentIds()
-		{
-			var item1 = 0;
-			var item2 = 0;
-			Api.JetSetCurrentIndex(session, Documents, "by_id");
-			Api.MoveBeforeFirst(session, Documents);
-			if (Api.TryMoveNext(session, Documents))
-				item1 = Api.RetrieveColumnAsInt32(session, Documents, tableColumnsCache.DocumentsColumns["id"]).Value;
-			Api.MoveAfterLast(session, Documents);
-			if (Api.TryMovePrevious(session, Documents))
-				item2 = Api.RetrieveColumnAsInt32(session, Documents, tableColumnsCache.DocumentsColumns["id"]).Value;
-			return new Tuple<int, int>(item1, item2);
-		}
 	}
 }

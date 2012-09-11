@@ -257,5 +257,30 @@ namespace Raven.Abstractions.Indexing
 				Analyzers.Remove(toRemove);
 			}
 		}
+
+		public IndexDefinition Clone()
+		{
+			var indexDefinition = new IndexDefinition
+			{
+				Name = Name,
+				Reduce = Reduce,
+				TransformResults = TransformResults,
+				cachedHashCodeAsBytes = cachedHashCodeAsBytes
+			};
+
+			if (Maps != null)
+				indexDefinition.Maps = new HashSet<string>(Maps);
+			if (Analyzers != null)
+				indexDefinition.Analyzers = new Dictionary<string, string>(Analyzers);
+			if (Fields != null)
+				indexDefinition.Fields = new List<string>(Fields);
+			if (Indexes != null)
+				indexDefinition.Indexes = new Dictionary<string, FieldIndexing>(Indexes);
+			if (SortOptions != null)
+				indexDefinition.SortOptions = new Dictionary<string, SortOptions>(SortOptions);
+			if (Stores != null)
+				indexDefinition.Stores = new Dictionary<string, FieldStorage>(Stores);
+			return indexDefinition;
+		}
 	}
 }

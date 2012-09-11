@@ -15,7 +15,6 @@
         <Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
         <Setter Property="SelectionBackground" Value="#E4DEDE"/>
         <Setter Property="SelectionForeground" Value="Black"/>
-        <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -137,7 +136,6 @@
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="SelectionBackground" Value="#E4DEDE"/>
         <Setter Property="SelectionForeground" Value="Black"/>
-        <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
