@@ -30,6 +30,76 @@
     </UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="30"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		<Grid>
+			<Border Background="{StaticResource Brush_ToolbarBackground}"
+                Grid.Row="1">
+				<StackPanel Orientation="Horizontal"
+						Margin="0,4,4,4"
+						VerticalAlignment="Center">
+
+					<Button Command="{Binding SaveBundles}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Save Configuration Changes"
+							Visibility="{Binding Creation, Converter={StaticResource BooleanToOppositeVisibility}}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_Save_Small}"
+									   Stretch="None"/>
+								<TextBlock Text="Save Changes" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<TextBlock Width="110" Visibility="{Binding Creation, Converter={StaticResource BooleanToVisibility}}"/>
+					<TextBlock Width="150"/>
+
+					<Button Command="{StaticResource NavigateToCommand}"
+						CommandParameter="{Binding CurrentDatabase, StringFormat='/edit?databaseid=\{0\}'}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Edit Database Settings"
+						Visibility="{Binding SelectedSection.Value, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Raven.Studio.Models.DatabaseSettingsSectionViewModel'}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_Edit_Small}"
+									   Stretch="None"/>
+								<TextBlock Text="Edit Database" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<Button Command="{Binding SelectedSection.Value.AddReplication}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Add Replication"
+						Visibility="{Binding SelectedSection.Value, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Raven.Studio.Models.ReplicationSettingsSectionModel'}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_Add_Tiny}"
+									   Stretch="None"/>
+								<TextBlock Text="Add Replication" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<Button Command="{Binding SelectedSection.Value.AddVersioning}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Add Versioning"
+						Visibility="{Binding SelectedSection.Value, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Raven.Studio.Models.VersioningSettingsSectionModel'}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_Add_Tiny}"
+									   Stretch="None"/>
+								<TextBlock Text="Add Versioning" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+				</StackPanel>
+			</Border>
+		</Grid>
+		<Grid Grid.Row="1">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto" MinWidth="250"/>
                 <ColumnDefinition Width="*"/>
@@ -49,5 +119,7 @@
                             HorizontalContentAlignment="Stretch" 
                             VerticalContentAlignment="Stretch"
                             Margin="10,10,0,0"/>
+		</Grid>
+			
 	</Grid>
 </Infrastructure:View>

@@ -40,18 +40,28 @@
 				<sdk:AutoCompleteBox Grid.Row="0" 
 									 Grid.Column="1"
 									 GotFocus="AutoCompleteGotFocus"
-									 Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=Explicit}"
+									 Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MinimumPrefixLength="0"
 									 IsTextCompletionEnabled="True"
 									 Margin="5" 
 									 MaxWidth="250" 
-									 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}">
+									 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
+									 Visibility="{Binding Path=DataContext.IsCreation, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToOppositeVisibility}}">
 					<i:Interaction.Behaviors>
 						<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding Path=DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
 					</i:Interaction.Behaviors>
 				</sdk:AutoCompleteBox>
 
-					<TextBlock Grid.Row="1" 
+				<TextBox Grid.Row="0" 
+									 Grid.Column="1"
+									 Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Margin="5" 
+									 MaxWidth="250" 
+									 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
+									 Visibility="{Binding Path=DataContext.IsCreation, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibility}}">
+				</TextBox>
+
+				<TextBlock Grid.Row="1" 
 						   Text="Max Revisions: "
 						   VerticalAlignment="Center"/>
 				<toolkit:NumericUpDown Grid.Row="1" 
