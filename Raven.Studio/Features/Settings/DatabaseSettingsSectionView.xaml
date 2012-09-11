@@ -8,13 +8,6 @@
     d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:DatabaseSettingsSectionViewModel}">
     
     <Grid x:Name="LayoutRoot">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <HyperlinkButton Content="Edit"
-									Command="{StaticResource NavigateToCommand}"
-									CommandParameter="{Binding CurrentDatabase, StringFormat='/edit?databaseid=\{0\}'}"/>
-            <Editors:JsonEditor BoundDocument="{Binding DatabaseEditor}" Grid.Row="1"/>
+            <Editors:JsonEditor BoundDocument="{Binding DatabaseEditor}"/>
     </Grid>
 </UserControl>

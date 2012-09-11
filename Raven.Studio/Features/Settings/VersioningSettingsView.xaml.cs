@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 
 namespace Raven.Studio.Features.Settings
 {
@@ -18,5 +10,15 @@ namespace Raven.Studio.Features.Settings
         {
             InitializeComponent();
         }
+
+	    private void AutoCompleteGotFocus(object sender, RoutedEventArgs e)
+	    {
+		    var autoCompleteBox = (AutoCompleteBox)sender;
+		    var text = autoCompleteBox.Text ?? "";
+			DependencyObject o = VisualTreeHelper.GetChild(autoCompleteBox, 0); 
+			o = VisualTreeHelper.GetChild(o, 0); 
+			((TextBox)(o)).Text = " ";
+			((TextBox)(o)).Text = text;
+	    }
     }
 }
