@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Globalization;
 using System.Threading;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
+using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
 {
@@ -12,9 +14,13 @@ namespace Raven.Tryouts
 		{
 			for (int i = 0; i < 10000; i++)
 			{
+				Environment.SetEnvironmentVariable("Run", i.ToString(CultureInfo.InvariantCulture));
 				Console.Clear();
 				Console.WriteLine(i);
-				UseMyData();
+				using(var x = new CompiledIndexesNhsevidence())
+				{
+					x.CanGetCorrectResults();
+				}
 			}
 		}
 
