@@ -4,9 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using NLog;
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
@@ -75,6 +77,8 @@ namespace Raven.Database.Commercial
 				licenseValidator.AssertValidLicense(()=>
 				{
 					string value;
+
+					AssertForV2(licenseValidator.LicenseAttributes, database);
 					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
 						"true".Equals(value, StringComparison.InvariantCultureIgnoreCase))
 					{
@@ -100,6 +104,24 @@ namespace Raven.Database.Commercial
 					Error = true,
 					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e
 				};
+			}
+		}
+
+		private void AssertForV2(IDictionary<string, string> licenseAttributes, DocumentDatabase database)
+		{
+			if (licenseAttributes["license"] != "1.2")
+				throw new MissingFieldException("This is not a licence for RavenDB 1.2");
+
+			if (licenseAttributes.ContainsKey("maxRamUtilization"))
+			{
+				if (licenseAttributes["maxRamUtilization"] != "unlimited")
+					MemoryStatistics.MemoryLimit = int.Parse(licenseAttributes["maxRamUtilization"]);
+			}
+
+			if (licenseAttributes.ContainsKey("maxParallelism"))
+			{
+				if (licenseAttributes["maxParallelism"] != "unlimited")
+					MemoryStatistics.MaxParallelism = int.Parse(licenseAttributes["maxRamUtilization"]);
 			}
 		}
 
