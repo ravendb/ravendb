@@ -12,5 +12,10 @@
 		Contains,
 		Disjoint,
 		Intersects,
+
+		/// <summary>
+		/// Does not filter the query, merely sort by the distance
+		/// </summary>
+		Nearby
 	}
 }

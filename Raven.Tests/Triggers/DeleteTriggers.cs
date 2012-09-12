@@ -20,7 +20,7 @@ namespace Raven.Tests.Triggers
 
 		public DeleteTriggers()
 		{
-			store = NewDocumentStore((new TypeCatalog(typeof (CascadeDeleteTrigger))));
+			store = NewDocumentStore( catalog: (new TypeCatalog(typeof (CascadeDeleteTrigger))));
 			db = store.DocumentDatabase;
 		}
 

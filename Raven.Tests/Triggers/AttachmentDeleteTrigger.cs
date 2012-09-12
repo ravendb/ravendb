@@ -23,7 +23,7 @@ namespace Raven.Tests.Triggers
 
 		public AttachmentDeleteTrigger()
 		{
-			store = NewDocumentStore((new TypeCatalog(typeof (RefuseAttachmentDeleteTrigger))));
+			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (RefuseAttachmentDeleteTrigger))));
 			db = store.DocumentDatabase;
 		}
 

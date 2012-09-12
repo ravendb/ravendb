@@ -22,7 +22,7 @@ namespace Raven.Tests.Triggers
 
 		public IndexTriggers()
 		{
-			store = NewDocumentStore((new TypeCatalog(typeof(IndexToDataTable))));
+			store = NewDocumentStore(catalog:(new TypeCatalog(typeof(IndexToDataTable))));
 		}
 
 		public override void Dispose()

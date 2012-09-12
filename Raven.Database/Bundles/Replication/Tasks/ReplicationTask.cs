@@ -229,10 +229,17 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource)
 		{
-			var attachments = GetAttachments(destinationsReplicationInformationForSource, destination);
+			var tuple = GetAttachments(destinationsReplicationInformationForSource, destination);
+			var attachments = tuple.Item1;
 
 			if (attachments == null || attachments.Length == 0)
+			{
+				if (tuple.Item2 != destinationsReplicationInformationForSource.LastDocumentEtag)
+				{
+					SetLastReplicatedEtagForDocuments(destination, lastAttachmentEtag: tuple.Item2);
+				}
 				return null;
+			}
 
 			if (TryReplicationAttachments(destination, attachments) == false)// failed to replicate, start error handling strategy
 			{
@@ -254,9 +261,14 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource)
 		{
-			var jsonDocuments = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
+			var tuple = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
+			var jsonDocuments = tuple.Item1;
 			if (jsonDocuments == null || jsonDocuments.Length == 0)
 			{
+				if(tuple.Item2 != destinationsReplicationInformationForSource.LastDocumentEtag)
+				{
+					SetLastReplicatedEtagForDocuments(destination, lastDocEtag: tuple.Item2);
+				}
 				return null;
 			}
 			if (TryReplicationDocuments(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
@@ -274,6 +286,34 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			ResetFailureCount(destination);
 			return true;
+		}
+
+		private void SetLastReplicatedEtagForDocuments(ReplicationStrategy destination, Guid? lastDocEtag = null, Guid? lastAttachmentEtag = null)
+		{
+			try
+			{
+				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
+				          "&dbid=" + docDb.TransactionalStorage.Id;
+				if(lastDocEtag != null)
+					url += "&docEtag=" + lastDocEtag.Value;
+				if(lastAttachmentEtag != null)
+					url += "&attachmentEtag=" + lastAttachmentEtag.Value;
+
+				var request = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
+				request.ExecuteRequest();
+			}
+			catch (WebException e)
+			{
+				var response = e.Response as HttpWebResponse;
+				if (response != null && (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound))
+					log.WarnException("Replication is not enabled on: " + destination, e);
+				else
+					log.WarnException("Failed to contact replication destination: " + destination, e);
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Failed to contact replication destination: " + destination, e);
+			}
 		}
 
 		private void IncrementFailureCount(ReplicationStrategy destination)
@@ -401,9 +441,10 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private RavenJArray GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
+		private Tuple<RavenJArray, Guid> GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
 		{
 			RavenJArray jsonDocuments = null;
+			Guid lastDocumentEtag = Guid.Empty;
 			try
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
@@ -413,7 +454,7 @@ namespace Raven.Bundles.Replication.Tasks
 					int docsSinceLastReplEtag = 0;
 					List<JsonDocument> docsToReplicate;
 					List<JsonDocument> filteredDocsToReplicate;
-					Guid lastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+					lastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 					while (true)
 					{
 						docsToReplicate = actions.Documents.GetDocumentsAfter(lastDocumentEtag, 100, 1024 * 1024 * 10)
@@ -448,7 +489,7 @@ namespace Raven.Bundles.Replication.Tasks
 					log.Debug(() =>
 					{
 						if (docsSinceLastReplEtag == 0)
-							return string.Format("Nothing to replicate to {0} - last replicated etag: {1}", destination,
+							return string.Format("No documents to replicate to {0} - last replicated etag: {1}", destination,
 												 destinationsReplicationInformationForSource.LastDocumentEtag);
 
 						if (docsSinceLastReplEtag == filteredDocsToReplicate.Count)
@@ -479,48 +520,99 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastDocumentEtag, e);
 			}
-			return jsonDocuments;
+			return Tuple.Create(jsonDocuments, lastDocumentEtag);
 		}
 
-		private RavenJArray GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
+
+		private Tuple<RavenJArray, Guid> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
 		{
-			RavenJArray jsonAttachments = null;
-			var lastAttachmentEtag = destinationsReplicationInformationForSource.LastAttachmentEtag;
+			RavenJArray attachments = null;
+			Guid lastAttachmentEtag = Guid.Empty;
 			try
 			{
-				string destinationInstanceId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024 * 1024 * 10)
-														.Where(
-															information =>
-															destination.FilterAttachments(information, destinationInstanceId))
-														.Select(x => new RavenJObject
-					                                  	{
-					                                  		{"@metadata", x.Metadata},
-					                                  		{"@id", x.Key},
-					                                  		{"@etag", x.Etag.ToByteArray()},
-					                                  		{"data", actions.Attachments.GetAttachment(x.Key).Data().ReadData()}
-					                                  	})
-														.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones,
-																				   lastAttachmentEtag, 100)
-																	.Select(x => new RavenJObject
-					                                  	        	{
-					                                  	        		{"@metadata", x.Data},
-					                                  	        		{"@id", x.Key},
-					                                  	        		{"@etag", x.Etag.ToByteArray()},
-					                                  	        		{"data", new byte[0]}
-					                                  	        	}))
-														.OrderBy(x => new ComparableByteArray(x.Value<byte[]>("@etag")))
-						);
+					int attachmentSinceLastEtag = 0;
+					List<AttachmentInformation> attachmentsToReplicate;
+					List<AttachmentInformation> filteredAttachmentsToReplicate;
+					lastAttachmentEtag = destinationsReplicationInformationForSource.LastAttachmentEtag;
+					while (true)
+					{
+						attachmentsToReplicate = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024*1024*10)
+							.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, 100)
+								        .Select(x => new AttachmentInformation
+								        {
+									        Key = x.Key,
+									        Etag = x.Etag,
+									        Metadata = x.Data,
+									        Size = 0,
+								        }))
+							.OrderBy(x => x.Etag)
+
+							.ToList();
+						;
+						filteredAttachmentsToReplicate = attachmentsToReplicate.Where(attachment => destination.FilterAttachments(attachment, destinationId)).ToList();
+
+						attachmentSinceLastEtag += attachmentsToReplicate.Count;
+
+						if (attachmentsToReplicate.Count == 0 ||
+							filteredAttachmentsToReplicate.Count != 0)
+						{
+							break;
+						}
+
+						AttachmentInformation jsonDocument = attachmentsToReplicate.Last();
+						Guid attachmentEtag = jsonDocument.Etag;
+						log.Debug("All the attachments were filtered, trying another batch from etag [>{0}]", attachmentEtag);
+						lastAttachmentEtag = attachmentEtag;
+					}
+
+					log.Debug(() =>
+					{
+						if (attachmentSinceLastEtag == 0)
+							return string.Format("No attachments to replicate to {0} - last replicated etag: {1}", destination,
+												 destinationsReplicationInformationForSource.LastDocumentEtag);
+
+						if (attachmentSinceLastEtag == filteredAttachmentsToReplicate.Count)
+							return string.Format("Replicating {0} attachments [>{1}] to {2}.",
+											 attachmentSinceLastEtag,
+											 destinationsReplicationInformationForSource.LastDocumentEtag,
+											 destination);
+
+						var diff = attachmentsToReplicate.Except(filteredAttachmentsToReplicate).Select(x => x.Key);
+						return string.Format("Replicating {1} attachments (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
+											 attachmentSinceLastEtag,
+											 filteredAttachmentsToReplicate.Count,
+											 destination,
+											 string.Join(", ", diff),
+											 destinationsReplicationInformationForSource.LastDocumentEtag);
+					});
+
+					attachments = new RavenJArray(filteredAttachmentsToReplicate
+						                              .Select(x =>
+						                              {
+							                              var data = new byte[0];
+														  if(x.Size> 0)
+														  {
+															  data = actions.Attachments.GetAttachment(x.Key).Data().ReadData();
+														  }
+							                              return new RavenJObject
+							                                           {
+								                                           {"@metadata", x.Metadata},
+								                                           {"@id", x.Key},
+								                                           {"@etag", x.Etag.ToByteArray()},
+								                                           {"data", data}
+							                                           };
+						                              }));
 				});
 			}
 			catch (Exception e)
 			{
-				log.WarnException("Could not get attachments to replicate after: " + lastAttachmentEtag, e);
+				log.WarnException("Could not get attachments to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
 			}
-			return jsonAttachments;
+			return Tuple.Create(attachments, lastAttachmentEtag);
 		}
 
 		private SourceReplicationInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)

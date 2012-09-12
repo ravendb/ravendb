@@ -980,10 +980,7 @@ namespace Raven.Database.Indexing
 					if (!parent.viewGenerator.SpatialStrategies.TryGetValue(spatialIndexQuery.SpatialFieldName, out spatialStrategy) || spatialStrategy == null)
 						return MatchNoDocsQuery.INSTANCE;
 
-					SpatialRelation rel;
-					if (!Enum.TryParse(spatialIndexQuery.SpatialRelation.ToString(), true, out rel))
-						return MatchNoDocsQuery.INSTANCE;
-					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, rel, spatialIndexQuery.DistanceErrorPercentage);
+					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery {{q, Occur.MUST}, {dq, Occur.MUST}};
