@@ -202,6 +202,7 @@
     <Compile Include="Bugs\MetadataBugs.cs" />
     <Compile Include="Bugs\MetadataIssues.cs" />
     <Compile Include="Bugs\Metadata\Querying.cs" />
+    <Compile Include="Bugs\MoreLikeThisTrack.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapWithoutReduce.cs" />
     <Compile Include="Bugs\MultiMap\Errors.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapReduce.cs" />
