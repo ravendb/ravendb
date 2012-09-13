@@ -25,6 +25,8 @@ using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using System.Net;
 using System.Net.Sockets;
+using Raven.Client.Extensions;
+
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection.Async;
 using Raven.Client.Silverlight.MissingFromSilverlight;
@@ -32,7 +34,7 @@ using Raven.Client.Silverlight.MissingFromSilverlight;
 
 namespace Raven.Client.Connection
 {
-	
+
 
 	/// <summary>
 	/// Replication and failover management on the client side
@@ -153,7 +155,7 @@ namespace Raven.Client.Connection
 					var serverHash = GetServerHash(serverClient);
 
 					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
-					if(document != null)
+					if (document != null)
 					{
 						UpdateReplicationInformationFromDocument(document);
 					}
@@ -351,19 +353,7 @@ namespace Raven.Client.Connection
 
 				TrySavingReplicationInformationToLocalCache(serverHash, document);
 
-				var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
-				replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
-					// filter out replication destination that don't have the url setup, we don't know how to reach them
-					// so we might as well ignore them. Probably private replication destination (using connection string names only)
-					.Where(x => x != null)
-					.ToList();
-				foreach (var replicationDestination in replicationDestinations)
-				{
-					FailureCounter value;
-					if (failureCounts.TryGetValue(replicationDestination, out value))
-						continue;
-					failureCounts[replicationDestination] = new FailureCounter();
-				}
+				UpdateReplicationInformationFromDocument(document);
 
 				lastReplicationUpdate = SystemTime.UtcNow;
 			});
@@ -401,7 +391,14 @@ namespace Raven.Client.Connection
 		private void UpdateReplicationInformationFromDocument(JsonDocument document)
 		{
 			var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
-			replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
+			replicationDestinations = replicationDocument.Destinations.Select(x =>
+			{
+				if (string.IsNullOrEmpty(x.Url))
+					return null;
+				if (string.IsNullOrEmpty(x.Database))
+					return x.Url;
+				return MultiDatabase.GetRootDatabaseUrl(x.Url) + "/databases/" + x.Database + "/";
+			})
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
 				// so we might as well ignore them. Probably private replication destination (using connection string names only)
 				.Where(x => x != null)
@@ -758,7 +755,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			}
 #endif
 			var webException = (e as WebException) ?? (e.InnerException as WebException);
-			if(webException != null)
+			if (webException != null)
 			{
 				switch (webException.Status)
 				{
@@ -768,14 +765,14 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 					case WebExceptionStatus.PipelineFailure:
 					case WebExceptionStatus.ConnectionClosed:
 					case WebExceptionStatus.Timeout:
-#endif		
+#endif
 					case WebExceptionStatus.ConnectFailure:
 					case WebExceptionStatus.SendFailure:
 						return true;
 				}
 
 				var httpWebResponse = webException.Response as HttpWebResponse;
-				if(httpWebResponse != null)
+				if (httpWebResponse != null)
 				{
 					switch (httpWebResponse.StatusCode)
 					{
