@@ -946,8 +946,14 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\GlobalLastEtagHolder.cs">
+      <Link>Imports\Util\GlobalLastEtagHolder.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\JSBeautify.cs">
       <Link>Imports\Util\JSBeautify.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\LastEtagHolder.cs">
+      <Link>Imports\Util\LastEtagHolder.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
