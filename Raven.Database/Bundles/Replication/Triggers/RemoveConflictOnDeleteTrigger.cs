@@ -1,3 +1,4 @@
+
 //-----------------------------------------------------------------------
 // <copyright file="RemoveConflictOnPutTrigger.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -28,7 +29,10 @@ namespace Raven.Bundles.Replication.Triggers
 					return;
 
 				// this is a conflict document, holding document keys in the  values of the properties
-				foreach (var prop in oldVersion.DataAsJson.Value<RavenJArray>("Conflicts"))
+				var conflicts = oldVersion.DataAsJson.Value<RavenJArray>("Conflicts");
+				if (conflicts == null)
+					return;
+				foreach (var prop in conflicts)
 				{
 					RavenJObject deletedMetadata;
 					Database.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
