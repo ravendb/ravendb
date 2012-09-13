@@ -56,8 +56,10 @@ namespace Raven.Munin.Tests.Bugs
 
 			for (int i = 0; i < count; i++)
 			{
+				database.BeginTransaction();
 				var readResult = database.Tables[0].Read(new RavenJObject { { "id", i } });
 				Assert.Equal(value, readResult.Data());
+				database.Commit();
 			}
 
 			database.Compact();
@@ -65,8 +67,10 @@ namespace Raven.Munin.Tests.Bugs
 
 			for (int i = 0; i < count; i++)
 			{
+				database.BeginTransaction();
 				var readResult = database.Tables[0].Read(new RavenJObject { { "id", i } });
 				Assert.Equal(value, readResult.Data());
+				database.Commit();
 			}
 		}
 	}

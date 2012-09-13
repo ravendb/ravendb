@@ -72,8 +72,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void DeleteAttachment(string key, Guid? etag)
 		{
-			if (Api.TryMoveFirst(session, Details))
-				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], -1);
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
@@ -81,6 +79,7 @@ namespace Raven.Storage.Esent.StorageActions
 				logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
 				return;
 			}
+
 			var fileEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting();
 			if (fileEtag != etag && etag != null)
 			{
@@ -93,6 +92,9 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			Api.JetDelete(session, Files);
+			
+			if (Api.TryMoveFirst(session, Details))
+				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], -1);
 			logger.Debug("Attachment with key '{0}' was deleted", key);
 		}
 

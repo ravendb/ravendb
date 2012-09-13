@@ -1,17 +1,5 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-using ActiproSoftware.Text.Implementation;
+﻿using System.Windows.Input;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -20,7 +8,6 @@ namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
-        private ICommand _saveBundlesCommand;
 
         public SettingsPageModel()
         {
@@ -54,25 +41,28 @@ namespace Raven.Studio.Models
                     Settings.Sections.Add(databaseSettingsSectionViewModel);
                     Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
 
-                    var activeBundles = string.Empty;
+                    string activeBundles;
                     databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
- 
-                    if (activeBundles.Contains("Quotas"))
-                    {
-                        Settings.Sections.Add(new QuotaSettingsSectionModel());
-                    }
 
-                    if (activeBundles.Contains("Replication"))
-                    {
-                        Settings.Sections.Add(new ReplicationSettingsSectionModel());
-                    }
+					if (activeBundles != null)
+					{
+						if (activeBundles.Contains("Quotas"))
+						{
+							Settings.Sections.Add(new QuotaSettingsSectionModel());
+						}
 
-                    if (activeBundles.Contains("Versioning"))
-                    {
-                        Settings.Sections.Add(new VersioningSettingsSectionModel());
-                    }
+						if (activeBundles.Contains("Replication"))
+						{
+							Settings.Sections.Add(new ReplicationSettingsSectionModel());
+						}
 
-                    foreach (var settingsSectionModel in Settings.Sections)
+						if (activeBundles.Contains("Versioning"))
+						{
+							Settings.Sections.Add(new VersioningSettingsSectionModel());
+						}
+					}
+
+	                foreach (var settingsSectionModel in Settings.Sections)
                     {
                         settingsSectionModel.LoadFor(databaseDocument);
                     }
@@ -80,7 +70,5 @@ namespace Raven.Studio.Models
         }
 
         public SettingsModel Settings { get; private set; }
-
-        public ICommand SaveBundles { get { return _saveBundlesCommand ?? (_saveBundlesCommand = new SaveBundlesCommand(Settings)); } }
     }
 }

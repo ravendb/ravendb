@@ -24,7 +24,7 @@ namespace Raven.Tests.Triggers
 
 		public AttachmentReadTrigger()
 		{
-			store = NewDocumentStore((new TypeCatalog(typeof (HideAttachmentByCaseReadTrigger))));
+			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (HideAttachmentByCaseReadTrigger))));
 			db = store.DocumentDatabase;
 		}
 

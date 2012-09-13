@@ -43,20 +43,6 @@ namespace Raven.Storage.Managed
 		    this.documentCacher = documentCacher;
 		}
 
-		public Tuple<int, int> FirstAndLastDocumentIds()
-		{
-			var lastOrDefault = storage.Documents["ById"].LastOrDefault();
-			var last = 0;
-			if (lastOrDefault != null)
-				last = lastOrDefault.Value<int>("id");
-
-			var firstOrDefault = storage.Documents["ById"].FirstOrDefault();
-			var first = 0;
-			if (firstOrDefault != null)
-				first= firstOrDefault.Value<int>("id");
-			return new Tuple<int, int>(first,last );
-		}
-
 		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
 		{
 			return storage.Documents["ByEtag"].SkipFromEnd(start)
@@ -79,7 +65,7 @@ namespace Raven.Storage.Managed
 					yield break;
 				}
 				yield return doc;
-			}
+		}
 		}
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)

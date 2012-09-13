@@ -1,63 +1,122 @@
 ﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using Raven.Client.Linq;
+using System.Threading;
+using Raven.Database.Util;
 using Raven.Json.Linq;
-using Raven.Tests.Bugs;
-using Raven.Tests.Faceted;
-using Raven.Abstractions.Extensions;
-using Raven.Tests.Indexes;
-using Raven.Tests.MailingList;
-using Raven.Tests.Patching;
+using Raven.Munin;
 
 namespace Raven.Tryouts
 {
-	public class Program
+	internal class Program
 	{
-		public static void Main()
+		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 10000; i++)
 			{
-				var sw = Stopwatch.StartNew();
-				using (var x = new AdvancedPatching())
+				Console.Clear();
+				Console.WriteLine(i);
+				UseMyData();
+			}
+		}
+
+		private static void UseMyData()
+		{
+			using (var d = new MyData(new MemoryPersistentSource()))
+			{
+				using (d.BeginTransaction())
 				{
-					x.CanRemoveFromCollectionByCondition();
+					d.Documents.Put(new RavenJObject
+						{
+							{"key", "items/1"},
+							{"id", "items/1"},
+							{"etag", Guid.NewGuid().ToByteArray()},
+						}, new byte[0]);
+					d.Commit();
 				}
-				Console.WriteLine("{0:#,#}", sw.ElapsedMilliseconds);
-			}
 
-		}
+				using (d.BeginTransaction())
+				{
+					d.Documents.Put(new RavenJObject
+						{
+							{"key", "items/1"},
+							{"id", "items/1"},
+							{"etag", Guid.NewGuid().ToByteArray()},
+							{"txId", "1234"}
+						}, new byte[0]);
+					d.Transactions.Put(new RavenJObject
+						{
+							{"id", "1234"},
+						}, new byte[0]);
 
-		public class Person
-		{
-			public string State { get; set; }
-		}
-		public class Population
-		{
-			public int Count { get; set; }
-			public string State { get; set; }
+					d.Commit();
+				}
 
-			public override string ToString()
-			{
-				return string.Format("Count: {0}, State: {1}", Count, State);
+				ThreadPool.QueueUserWorkItem(state =>
+					{
+						d.BeginTransaction();
+						Table.ReadResult readResult = d.Documents.Read(new RavenJObject {{"key", "items/1"}});
+						var txId = readResult.Key.Value<string>("txId");
+
+						Table.ReadResult txResult = d.Transactions.Read(new RavenJObject {{"id", txId}});
+
+						if (txResult == null)
+						{
+							Environment.Exit(1);
+							return;
+						}
+
+						d.Transactions.Remove(txResult.Key);
+
+						var x = ((RavenJObject) readResult.Key.CloneToken());
+						x.Remove("txId");
+
+						d.Documents.UpdateKey(x);
+						d.CommitCurrentTransaction();
+					});
+
+
+				while (true)
+				{
+					using (d.BeginTransaction())
+					{
+						Table.ReadResult readResult = d.Documents.Read(new RavenJObject {{"key", "items/1"}});
+						var txId = readResult.Key.Value<string>("txId");
+
+						if (txId == null)
+						{
+							return;
+						}
+
+						Table.ReadResult txResult = d.Transactions.Read(new RavenJObject {{"id", txId}});
+						if (txResult == null)
+						{
+							Environment.Exit(1);
+							return;
+						}
+
+						d.Commit();
+					}
+				}
 			}
 		}
-		public class PopulationByState : AbstractIndexCreationTask<Person, Population>
+	}
+
+	public class MyData : Munin.Database
+	{
+		public MyData(IPersistentSource persistentSource)
+			: base(persistentSource)
 		{
-			public PopulationByState()
-			{
-				Map = people => from person in people
-								select new { person.State, Count = 1 };
-				Reduce = results => from result in results
-									group result by result.State
-										into g
-										select new { State = g.Key, Count = g.Sum(x => x.Count) };
-			}
+			Documents = Add(new Table(x => x.Value<string>("key"), "Documents")
+				{
+					{"ByKey", x => x.Value<string>("key")},
+					{"ById", x => x.Value<string>("id")},
+					{"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
+				});
+
+			Transactions = Add(new Table(x => x.Value<string>("txId"), "Transactions"));
 		}
+
+		public Table Transactions { get; set; }
+
+		public Table Documents { get; set; }
 	}
 }

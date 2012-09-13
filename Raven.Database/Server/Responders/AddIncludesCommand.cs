@@ -64,6 +64,9 @@ namespace Raven.Database.Server.Responders
 
 		private void LoadId(string value)
 		{
+			if(value == null)
+				return;
+
 			if (LoadedIds.Add(value) == false)
 				return;
 

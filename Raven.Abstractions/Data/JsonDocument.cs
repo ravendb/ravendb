@@ -70,6 +70,11 @@ namespace Raven.Abstractions.Data
 		public DateTime? LastModified { get; set; }
 
 		/// <summary>
+		/// The ranking of this result in the current query
+		/// </summary>
+		public float? TempIndexScore { get; set; }
+
+		/// <summary>
 		/// How much space this document takes on disk
 		/// Only relevant during indexing phases, and not available on the client
 		/// </summary>

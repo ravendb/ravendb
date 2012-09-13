@@ -32,7 +32,6 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
 using Version = Lucene.Net.Util.Version;
@@ -70,6 +69,8 @@ namespace Raven.Database.Indexing
 		private IndexWriter indexWriter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
+		private ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
+
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
 		{
 			if (directory == null) throw new ArgumentNullException("directory");
@@ -103,6 +104,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
+		{
+			indexingPerformanceStats.Enqueue(stats);
+			if(indexingPerformanceStats.Count > 25)
+				indexingPerformanceStats.TryDequeue(out stats);
+		}
 
 		public void Dispose()
 		{
@@ -973,10 +980,7 @@ namespace Raven.Database.Indexing
 					if (!parent.viewGenerator.SpatialStrategies.TryGetValue(spatialIndexQuery.SpatialFieldName, out spatialStrategy) || spatialStrategy == null)
 						return MatchNoDocsQuery.INSTANCE;
 
-					SpatialRelation rel;
-					if (!Enum.TryParse(spatialIndexQuery.SpatialRelation.ToString(), true, out rel))
-						return MatchNoDocsQuery.INSTANCE;
-					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, rel, spatialIndexQuery.DistanceErrorPercentage);
+					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery {{q, Occur.MUST}, {dq, Occur.MUST}};
@@ -1131,6 +1135,11 @@ namespace Raven.Database.Indexing
 				}
 				return 0;
 			}
+		}
+
+		public IndexingPerformanceStats[] GetIndexingPerformance()
+		{
+			return indexingPerformanceStats.ToArray();
 		}
 	}
 }

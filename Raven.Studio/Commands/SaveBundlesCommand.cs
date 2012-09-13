@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Extensions;
@@ -76,6 +77,8 @@ namespace Raven.Studio.Commands
 
                 foreach (var versioningConfiguration in versioningSettings.VersioningConfigurations)
 				{
+					if (versioningConfiguration.Id.StartsWith("Raven/Versioning/",StringComparison.InvariantCultureIgnoreCase) == false)
+						versioningConfiguration.Id = "Raven/Versioning/" + versioningConfiguration.Id;
 					session.Store(versioningConfiguration);
 				}
 			}

@@ -541,6 +541,7 @@ Reduce only fields: {2}
 
 			var abstractViewGenerator = (AbstractViewGenerator) Activator.CreateInstance(GeneratedType);
 			abstractViewGenerator.SourceCode = CompiledQueryText;
+			abstractViewGenerator.Init(indexDefinition);
 			return abstractViewGenerator;
 		}
 	}

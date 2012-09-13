@@ -1490,7 +1490,24 @@
 				Value="Transparent" />
 		<Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_HeaderOptions}"/>
 	</Style>
-	
+
+	<Style x:Key="Style_ListBox_Disable_Selection" 
+		   TargetType="ListBoxItem">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ListBoxItem">
+					<Grid Background="{TemplateBinding Background}">
+						<ContentPresenter HorizontalAlignment="Left" 
+										  Margin="{TemplateBinding Padding}" 
+										  x:Name="contentPresenter" 
+										  Content="{TemplateBinding Content}" 
+										  ContentTemplate="{TemplateBinding ContentTemplate}" />
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
 	<!-- Form Styles -->
 	<Style x:Key="FormButton"
 		   TargetType="Button">

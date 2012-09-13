@@ -34,44 +34,71 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
+			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
 
 			Api.MoveBeforeFirst(session, IndexesStats);
 			while (Api.TryMoveNext(session, IndexesStats))
 			{
-				var indexName = Api.RetrieveColumnAsString(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]);
-				Api.MakeKey(session, IndexesStatsReduce, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			    var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
-
-				Api.MakeKey(session, IndexesEtags, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
-
-			    yield return new IndexStats
-				{
-					Name = indexName,
-					TouchCount = Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value,
-					IndexingAttempts =
-						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
-					IndexingSuccesses =
-						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
-					IndexingErrors =
-						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
-
-					LastIndexedEtag =
-						Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting(),
-					LastIndexedTimestamp =
-						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
-						
-					ReduceIndexingAttempts = hasReduce == false ? null : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
-					ReduceIndexingSuccesses = hasReduce == false ? null : 
-						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
-					ReduceIndexingErrors = hasReduce == false ? null : 
-						Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
-					LastReducedEtag = hasReduce == false ? (Guid?)null : GetLastReduceIndexWithPotentialNull(),
-					LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
-				
-				};
+				yield return GetIndexStats();
 			}
+		}
+
+		public IndexStats GetIndexStats(string index)
+		{
+			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+
+			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if(Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+				return null;
+
+			return GetIndexStats();
+		}
+
+		private IndexStats GetIndexStats()
+		{
+			var indexName = Api.RetrieveColumnAsString(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]);
+			Api.MakeKey(session, IndexesStatsReduce, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
+
+			Api.MakeKey(session, IndexesEtags, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
+
+			return new IndexStats
+			{
+				Name = indexName,
+				TouchCount = Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value,
+				IndexingAttempts =
+					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
+				IndexingSuccesses =
+					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
+				IndexingErrors =
+					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
+				LastIndexedEtag =
+					Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).
+						TransfromToGuidWithProperSorting(),
+				LastIndexedTimestamp =
+					Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).
+						Value,
+				ReduceIndexingAttempts =
+					hasReduce == false
+						? null
+						: Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
+						                            tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
+				ReduceIndexingSuccesses = hasReduce == false
+					                          ? null
+					                          : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
+					                                                      tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
+				ReduceIndexingErrors = hasReduce == false
+					                       ? null
+					                       : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
+					                                                   tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
+				LastReducedEtag = hasReduce == false ? (Guid?) null : GetLastReduceIndexWithPotentialNull(),
+				LastReducedTimestamp = hasReduce == false ? (DateTime?) null : GetLastReducedTimestampWithPotentialNull(),
+			};
 		}
 
 		private DateTime GetLastReducedTimestampWithPotentialNull()

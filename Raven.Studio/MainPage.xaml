@@ -123,7 +123,7 @@
 								 Margin="0,5,5,1"
 								  Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/settings"
-								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenDifferent}, ConverterParameter='&lt;system&gt;'}">
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisibleWhenDifferent}, ConverterParameter='&lt;system&gt;'}">
 					<Image Source="{StaticResource Image_Settings_Tiny}"/>
 				</HyperlinkButton>
 
@@ -172,13 +172,13 @@
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" 
-								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisibleWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
 
 				<HyperlinkButton Content="Alerts"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/alerts"
 								 Style="{StaticResource Style_Text_HeaderLink}" 
-								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisableWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
+								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisibleWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
 				
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				

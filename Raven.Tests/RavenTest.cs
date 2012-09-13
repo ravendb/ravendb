@@ -46,24 +46,11 @@ namespace Raven.Tests
 			File.Delete("test.log");
 		}
 
-		public EmbeddableDocumentStore NewDocumentStoreRestart(string requestedStorage = null)
-		{
-			return NewDocumentStoreInternal(deleteDirectory: false, requestedStorage: requestedStorage);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(string requestedStorage = null)
-		{
-			return NewDocumentStoreInternal(deleteDirectory: true, requestedStorage: requestedStorage);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(ComposablePartCatalog catalog, string requestedStorage = null)
-		{
-			return NewDocumentStoreInternal(deleteDirectory: true, catalog: catalog, requestedStorage: requestedStorage);
-		}
-
-		private EmbeddableDocumentStore NewDocumentStoreInternal(bool deleteDirectory,
-			string requestedStorage,
-			 ComposablePartCatalog catalog = null)
+		public EmbeddableDocumentStore NewDocumentStore(
+			bool deleteDirectory = true,
+			string requestedStorage = null,
+			ComposablePartCatalog catalog = null,
+			bool deleteDirectoryOnDispose = true)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
@@ -97,13 +84,15 @@ namespace Raven.Tests
 
 				CreateDefaultIndexes(documentStore);
 
+				if (deleteDirectoryOnDispose)
+					documentStore.Disposed += ClearDatabaseDirectory;
+
 				return documentStore;
 			}
 			catch
 			{
 				// We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
-				if (documentStore != null)
-					documentStore.Dispose();
+				documentStore.Dispose();
 				throw;
 			}
 		}
@@ -328,9 +317,6 @@ namespace Raven.Tests
 				{
 					IOExtensions.DeleteDirectory(DbName);
 					IOExtensions.DeleteDirectory(DbDirectory);
-
-					// Delete tenants created using the EnsureDatabaseExists method.
-					IOExtensions.DeleteDirectory("Tenants");
 					break;
 				}
 				catch (IOException)
@@ -362,14 +348,17 @@ namespace Raven.Tests
 				Url = "http://localhost:8079"
 			};
 
-			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+			store.AfterDispose += (sender, args) =>
+			{
+				ravenDbServer.Dispose();
+				ClearDatabaseDirectory();
+			};
 			ModifyStore(store);
 			return store.Initialize();
 		}
 
 		public virtual void Dispose()
 		{
-			ClearDatabaseDirectory();
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
 		}

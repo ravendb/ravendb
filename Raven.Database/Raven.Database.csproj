@@ -76,6 +76,10 @@
       <HintPath>..\SharedLibs\FSharp.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="GeoAPI, Version=1.6.4448.22541, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
@@ -603,6 +607,7 @@
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From38To39.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From36To37.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From37To38.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />

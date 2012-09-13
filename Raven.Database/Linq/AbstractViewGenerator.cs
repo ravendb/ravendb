@@ -37,6 +37,7 @@ namespace Raven.Database.Linq
 
 		private static readonly Regex selectManyOrFrom = new Regex(@"( (?<!^)\s from \s ) | ( \.SelectMany\( )", 
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+		private IndexDefinition indexDefinition;
 
 		public string SourceCode { get; set; }
 
@@ -96,13 +97,15 @@ namespace Raven.Database.Linq
 			SpatialStrategies = new ConcurrentDictionary<string, SpatialStrategy>();
 		}
 
+		public void Init(IndexDefinition definition)
+		{
+			indexDefinition = definition;
+		}
+
 		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool analyzed = true)
 		{
-			var indexDefinition = new IndexDefinition();
-			indexDefinition.Indexes[name] = analyzed ? FieldIndexing.Analyzed : FieldIndexing.NotAnalyzed;
-			var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
-
-			return anonymousObjectToLuceneDocumentConverter.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
+			return new AnonymousObjectToLuceneDocumentConverter(indexDefinition)
+				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
 		}
 
 		public void AddQueryParameterForMap(string field)

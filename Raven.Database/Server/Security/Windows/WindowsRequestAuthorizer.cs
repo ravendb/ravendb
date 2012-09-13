@@ -70,12 +70,12 @@ namespace Raven.Database.Server.Security.Windows
 							   ctx.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
 			{
-				onRejectingRequest = () => ctx.SetStatusToForbidden();
+				onRejectingRequest = ctx.SetStatusToForbidden;
 				return true;
 			}
 
 
-			onRejectingRequest = () => ctx.SetStatusToUnauthorized();
+			onRejectingRequest = ctx.SetStatusToUnauthorized;
 
 			if (requiredGroups.Count > 0 || requiredUsers.Count > 0)
 			{
