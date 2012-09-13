@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Security.Permissions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Config;
 
 namespace Raven.Database.Indexing
 {
@@ -70,7 +71,15 @@ namespace Raven.Database.Indexing
 
 		public override int MaximumConcurrencyLevel
 		{
-			get { return _threads.Count; }
+			get
+			{
+				if(MemoryStatistics.MaxParallelismSet)
+				{
+					return Math.Min(MemoryStatistics.MaxParallelism, _threads.Count);
+				}
+
+				return _threads.Count;
+			}
 		}
 
 		public void Dispose()

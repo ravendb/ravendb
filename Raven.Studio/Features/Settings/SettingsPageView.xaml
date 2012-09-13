@@ -44,7 +44,7 @@
 							   VerticalAlignment="Center" />
             
         </StackPanel>
-        <Border Background="{StaticResource Brush_ToolbarBackground}"
+        <!--<Border Background="{StaticResource Brush_ToolbarBackground}"
                 Grid.Row="1">
             <StackPanel Orientation="Horizontal"
 						Margin="0,4,4,4"
@@ -104,7 +104,7 @@
 					</Button.Content>
 				</Button>
 			</StackPanel>
-        </Border>
+        </Border>-->
         <Settings:SettingsView Grid.Row="3" DataContext="{Binding Settings}"/>
     </Grid>
 </Infrastructure:View>

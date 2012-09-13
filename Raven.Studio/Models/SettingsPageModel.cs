@@ -8,7 +8,6 @@ namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
-        private ICommand _saveBundlesCommand;
 
         public SettingsPageModel()
         {
@@ -71,7 +70,5 @@ namespace Raven.Studio.Models
         }
 
         public SettingsModel Settings { get; private set; }
-
-        public ICommand SaveBundles { get { return _saveBundlesCommand ?? (_saveBundlesCommand = new SaveBundlesCommand(Settings)); } }
     }
 }
