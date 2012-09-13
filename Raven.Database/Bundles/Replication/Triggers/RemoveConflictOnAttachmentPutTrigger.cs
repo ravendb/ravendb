@@ -7,6 +7,7 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Json.Linq;
@@ -36,7 +37,11 @@ namespace Raven.Bundles.Replication.Triggers
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
 				// this is a conflict document, holding document keys in the 
 				// values of the properties
-				foreach (var prop in oldVersion.Metadata.Value<RavenJArray>("Conflicts"))
+				var conflictData = oldVersion.Data().ToJObject();
+				var conflicts = conflictData.Value<RavenJArray>("Conflicts");
+				if (conflicts == null)
+					return;
+				foreach (var prop in conflicts)
 				{
 					var id = prop.Value<string>();
 					Attachment attachment = Database.GetStatic(id);
