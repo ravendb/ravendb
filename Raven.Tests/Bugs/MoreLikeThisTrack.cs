@@ -11,90 +11,102 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class MoreLikeThisTrack : RavenTest
-    {
-        public class Track
-        {
-            public string Title { get; set; }
-            public string Artist { get; set; }
-            public string Genre { get; set; }
-            public int? Year { get; set; }
-        }
+	public class MoreLikeThisTrack : RavenTest
+	{
+		public class Track
+		{
+			public string Title { get; set; }
+			public string Artist { get; set; }
+			public string Genre { get; set; }
+			public int? Year { get; set; }
+		}
 
-        public class TracksIndex : AbstractIndexCreationTask<Track>
-        {
-            public TracksIndex()
-            {
-                Map = docs => from doc in docs
-                              select new
-                              {
-                                  doc.Title,
-                                  doc.Artist,
-                                  doc.Genre,
-                                  doc.Year,
-                                  FreeText = new object[] { doc.Title, doc.Artist, doc.Genre, doc.Year }
-                              };
+		public class TracksIndex : AbstractIndexCreationTask<Track>
+		{
+			public TracksIndex()
+			{
+				Map = docs => from doc in docs
+							  select new
+							  {
+								  doc.Title,
+								  doc.Artist,
+								  doc.Genre,
+								  doc.Year,
+								  FreeText = new object[] { doc.Title, doc.Artist, doc.Genre, doc.Year }
+							  };
 
-                Sort(x => x.Year, SortOptions.Short);
+				Sort(x => x.Year, SortOptions.Short);
 
-                Index("FreeText", FieldIndexing.Analyzed);
-            }
-        }
+				Index("FreeText", FieldIndexing.Analyzed);
 
-        [Fact]
-        public void Should_find_similar_tracks()
-        {
-            using (var store = NewRemoteDocumentStore())
-            {
-                new TracksIndex().Execute(store);
+				Store(x => x.Genre, FieldStorage.Yes);
+				Store(x => x.Artist, FieldStorage.Yes);
+				Store("FreeText", FieldStorage.Yes);
+			}
+		}
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Track
-                    {
-                        Artist = "Bryan Adams",
-                        Title = "Star",
-                        Genre = "Rock",
-                        Year = 2005,
-                    }, "tracks/1");
+		[Fact]
+		public void Should_find_similar_tracks()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				new TracksIndex().Execute(store);
 
-                    session.Store(new Track
-                    {
-                        Artist = "Bryan Adams",
-                        Title = "Please Forgive Me",
-                        Genre = "Rock",
-                        Year = 2002,
-                    }, "tracks/2");
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Track
+					{
+						Artist = "Bryan Adams",
+						Title = "Star",
+						Genre = "Rock",
+						Year = 2005,
+					}, "tracks/1");
 
-                    session.SaveChanges();
-                }
+					session.Store(new Track
+					{
+						Artist = "Bryan Adams",
+						Title = "Please Forgive Me",
+						Genre = "Rock",
+						Year = 2002,
+					}, "tracks/2");
 
-                WaitForIndexing(store);
+					session.SaveChanges();
+				}
 
-                using (var session = store.OpenSession())
-                {
-                    var mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQueryParameters
-                    {
-                        DocumentId = "tracks/1",
-                        Fields = new[] { "Genre", "Artist" },
-                        IndexName = "TracksIndex",
+				WaitForIndexing(store);
 
-                    });
-                    Assert.NotEmpty(mlt);
+				using (var session = store.OpenSession())
+				{
+					var mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQueryParameters
+					{
+						DocumentId = "tracks/1",
+						Fields = new[] { "Genre", "Artist" },
+						IndexName = "TracksIndex",
+						MinimumTermFrequency = 0,
+						MinimumDocumentFrequency = 0,
+					});
+					Assert.NotEmpty(mlt);
 
-                    mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQueryParameters
-                    {
-                        DocumentId = "tracks/1",
-                        Fields = new[] { "FreeText" },
-                        IndexName = "TracksIndex",
+					mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQueryParameters
+					{
+						DocumentId = "tracks/1",
+						Fields = new[] { "FreeText" },
+						IndexName = "TracksIndex",
+						MinimumTermFrequency = 0,
+						MinimumDocumentFrequency = 0,
 
-                    });
-                    Assert.NotEmpty(mlt);
+					});
+					Assert.NotEmpty(mlt);
 
-                    mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>("tracks/1");
-                    Assert.NotEmpty(mlt);
-                }
-            }
-        }
-    }
+					mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQueryParameters
+					{
+						MinimumTermFrequency = 0,
+						MinimumDocumentFrequency = 0,
+						DocumentId = "tracks/1"
+					});
+					Assert.NotEmpty(mlt);
+				}
+			}
+		}
+	}
 }
