@@ -10,13 +10,16 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using NLog;
 using Raven.Abstractions.Util;
+using Raven.Database.Impl;
 using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.Abstractions
 {
 	public class HttpListenerResponseAdapter : IHttpResponse, IDisposable
 	{
+		private Logger log = LogManager.GetCurrentClassLogger();
 		private readonly HttpListenerResponse response;
 
 		public HttpListenerResponseAdapter(HttpListenerResponse response, IBufferPool bufferPool)
@@ -74,15 +77,20 @@ namespace Raven.Database.Server.Abstractions
 
 		public void Close()
 		{
-			OutputStream.Flush();
-			OutputStream.Dispose();
-
-			foreach (var stream in StreamsToDispose)
+			var exceptionAggregator = new ExceptionAggregator(log, "Failed to close response");
+			exceptionAggregator.Execute(OutputStream.Flush);
+			exceptionAggregator.Execute(OutputStream.Dispose);
+			if (StreamsToDispose!= null)
 			{
-				stream.Flush();
-				stream.Dispose();
+				foreach (var stream in StreamsToDispose)
+				{
+					exceptionAggregator.Execute(stream.Flush);
+					exceptionAggregator.Execute(stream.Dispose);
+				}
 			}
-			response.Close();
+			exceptionAggregator.Execute(response.Close);
+
+			exceptionAggregator.ThrowIfNeeded();
 		}
 
 		public void WriteFile(string path)
