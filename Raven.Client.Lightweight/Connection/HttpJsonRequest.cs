@@ -398,6 +398,9 @@ namespace Raven.Client.Connection
 					PostedData = postedData
 				});
 
+				if(string.IsNullOrWhiteSpace(readToEnd))
+					return null;// throws
+
 				RavenJObject ravenJObject;
 				try
 				{
