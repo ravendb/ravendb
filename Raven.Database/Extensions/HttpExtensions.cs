@@ -96,6 +96,9 @@ namespace Raven.Database.Extensions
 
 		public static void WriteJson(this IHttpContext context, RavenJToken obj)
 		{
+			if(context.Request.HttpMethod == "HEAD")
+				return;
+
 			bool minimal;
 			bool.TryParse(context.Request.QueryString["metadata-only"], out minimal);
 
