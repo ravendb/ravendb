@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Globalization;
+using System.Security.Principal;
 using System.Threading;
+using Raven.Database.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
@@ -12,16 +14,10 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 10000; i++)
-			{
-				Environment.SetEnvironmentVariable("Run", i.ToString(CultureInfo.InvariantCulture));
-				Console.Clear();
-				Console.WriteLine(i);
-				using(var x = new CompiledIndexesNhsevidence())
-				{
-					x.CanGetCorrectResults();
-				}
-			}
+			var x = new AdminFinder.CachingAdminFinder();
+
+			var isAdministrator = x.IsAdministrator(WindowsIdentity.GetCurrent());
+			Console.WriteLine(isAdministrator);
 		}
 
 		private static void UseMyData()
