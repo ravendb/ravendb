@@ -842,9 +842,7 @@
   <Style x:Key="LayoutRootGridStyle" TargetType="Grid">
 	<Setter Property="Background" Value="#FFFFFFFF"/>
 <!--		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>-->
-      <!-- Setting TextFormattingMode to Display currently causes a bug in ActiPro's syntax editor: review this
-      when they publish an updated build-->
-<!--		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>-->
+		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
 	</Style>
 
   <!-- Content Border Style -->
@@ -1626,6 +1624,9 @@
 		<Setter Property="Background"
 				Value="{StaticResource Brush_TextBox_Background}" />
 		<Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
+        <!-- Setting TextFormattingMode to Display currently causes a bug in ActiPro's syntax editor: review this
+      when they publish an updated build-->
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
 	</Style>
 
 	<Style TargetType="syntaxeditor:SyntaxEditor" BasedOn="{StaticResource Style_SyntaxEditor_Default}">
