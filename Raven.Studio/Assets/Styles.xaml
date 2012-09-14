@@ -25,6 +25,7 @@
 		<ResourceDictionary Source="WatermarkedTextBox.xaml" />
 		<ResourceDictionary Source="ComboBoxStyles.xaml" />
 		<ResourceDictionary Source="ProgressBarStyles.xaml" />
+		<ResourceDictionary Source="NumericUpDown.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
