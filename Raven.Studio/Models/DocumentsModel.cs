@@ -252,12 +252,12 @@ namespace Raven.Studio.Models
                                    BeginLoadPriorityProperties();
                                    UpdateColumnSet();
                                    ObserveSourceChanges();
-                                   Documents.Refresh();
+                                   Documents.Refresh(RefreshMode.ClearStaleData);
                                });
 
             ObserveSourceChanges();
 
-            Documents.Refresh();
+            Documents.Refresh(RefreshMode.ClearStaleData);
             HandleDisplayStyleChanged();
         }
 

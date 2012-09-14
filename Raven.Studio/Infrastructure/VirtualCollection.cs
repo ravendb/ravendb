@@ -36,7 +36,7 @@ namespace Raven.Studio.Infrastructure
         private readonly int _pageSize;
         private readonly IEqualityComparer<T> _equalityComparer;
 
-        private volatile uint _state; // used to ensure that data-requests are not stale
+        private uint _state; // used to ensure that data-requests are not stale
 
         private readonly SparseList<VirtualItem<T>> _virtualItems;
         private readonly HashSet<int> _fetchedPages = new HashSet<int>();
@@ -184,6 +184,11 @@ namespace Raven.Studio.Infrastructure
             get { return false; }
         }
 
+        protected uint State
+        {
+            get { return _state; }
+        }
+
         public void RealizeItemRequested(int index)
         {
             var page = index/_pageSize;
@@ -235,15 +240,14 @@ namespace Raven.Studio.Infrastructure
 
         private void HandleSourceCollectionChanged(object sender, VirtualCollectionSourceChangedEventArgs e)
         {
-            var stateWhenUpdateRequested = _state;
             if (e.ChangeType == ChangeType.Refresh)
             {
-                Task.Factory.StartNew(() => UpdateData(stateWhenUpdateRequested), CancellationToken.None,
+                Task.Factory.StartNew(UpdateData, CancellationToken.None,
                                       TaskCreationOptions.None, _synchronizationContextScheduler);
             }
             else if (e.ChangeType == ChangeType.Reset)
             {
-                Task.Factory.StartNew(() => Reset(stateWhenUpdateRequested), CancellationToken.None,
+                Task.Factory.StartNew(Reset, CancellationToken.None,
                                       TaskCreationOptions.None, _synchronizationContextScheduler);
             }
         }
@@ -275,7 +279,7 @@ namespace Raven.Studio.Infrastructure
             _mostRecentlyRequestedPages.Add(page);
             _requestedPages.Add(page);
 
-            _pendingPageRequests.Push(new PageRequest(page, _state));
+            _pendingPageRequests.Push(new PageRequest(page, State));
 
             ProcessPageRequests();
         }
@@ -288,7 +292,7 @@ namespace Raven.Studio.Infrastructure
 
                 // if we encounter a requested posted for an early collection state,
                 // we can ignore it, and all that came before it
-                if (_state != request.StateWhenRequested)
+                if (State != request.StateWhenRequested)
                 {
                     _pendingPageRequests.Clear();
                     break;
@@ -325,7 +329,7 @@ namespace Raven.Studio.Infrastructure
 
         private void MarkPageAsError(int page, uint stateWhenRequestInitiated)
         {
-            if (stateWhenRequestInitiated != _state)
+            if (stateWhenRequestInitiated != State)
             {
                 return;
             }
@@ -356,7 +360,7 @@ namespace Raven.Studio.Infrastructure
 
         private void UpdatePage(int page, IList<T> results, uint stateWhenRequested)
         {
-            if (stateWhenRequested != _state)
+            if (stateWhenRequested != State)
             {
                 // this request may contain out-of-date data, so ignore it
                 return;
@@ -389,14 +393,9 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
-        protected void UpdateData(uint stateWhenUpdateRequested)
+        protected void UpdateData()
         {
-            if (_state != stateWhenUpdateRequested)
-            {
-                return;
-            }
-
-            _state++;
+            IncrementState();
 
             MarkExistingItemsAsStale();
 
@@ -429,6 +428,11 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
+        private void IncrementState()
+        {
+            _state++;
+        }
+
         private void EnsurePageCacheSize(int numberOfPages)
         {
             if (_mostRecentlyRequestedPages.Size < numberOfPages)
@@ -437,14 +441,9 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
-        private void Reset(uint stateWhenRequested)
+        private void Reset()
         {
-            if (_state != stateWhenRequested)
-            {
-                return;
-            }
-
-            _state++;
+            IncrementState();
 
             foreach (var page in _fetchedPages)
             {
