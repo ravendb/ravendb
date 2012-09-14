@@ -7,12 +7,13 @@
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
              xmlns:Replication="clr-namespace:Raven.Abstractions.Replication;assembly=Raven.Client.Silverlight"
              xmlns:Models="clr-namespace:Raven.Studio.Models"
-             xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" mc:Ignorable="d"
+             xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+             xmlns:System="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d"
 			 d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:ReplicationSettingsSectionModel}">
 	
 	<UserControl.Resources>
 		<DataTemplate x:Key="ReplicationItemTemplate" DataType="Replication:ReplicationDestination">
-			<Grid Margin="4" x:Name="grid">
+			<Grid Margin="8,4,4,4" x:Name="grid">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
@@ -21,19 +22,27 @@
 				</Grid.RowDefinitions>
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="130" />
-					<ColumnDefinition Width="Auto" MinWidth="125" MaxWidth="250"/>
+					<ColumnDefinition Width="*"/>
 					<ColumnDefinition Width="20" />
 				</Grid.ColumnDefinitions>
-				<HyperlinkButton Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteReplication}" CommandParameter="{Binding}" VerticalAlignment="Center">
-					<Image Source="{StaticResource Image_Error_Tiny}"/>
-				</HyperlinkButton>
+				<Button Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" 
+                                 Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteReplication}" 
+                                 CommandParameter="{Binding}" VerticalAlignment="Center"
+                                 Style="{StaticResource Style_Button_MouseOverChrome}"
+                                 ToolTipService.ToolTip="Remove this replication configuration">
+                    <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+				</Button>
 
-				<ComboBox x:Name="UseConnectionCombo" Width="130" HorizontalAlignment="Left" Grid.Row="1" Margin="0,5,0,5" SelectedIndex="{Binding UseConnectionString, Converter={StaticResource BooleanToInt}, Mode=TwoWay}">
-					<ComboBoxItem Content="Url"/>
-					<ComboBoxItem Content="Connection String"/>
+				<ComboBox x:Name="UseConnectionCombo" Grid.Row="1" Margin="0,5,0,5" SelectedIndex="{Binding UseConnectionString, Converter={StaticResource BooleanToInt}, Mode=TwoWay}">
+                    <ComboBox.ItemsSource>
+                        <Behaviors:StringCollection>
+                            <System:String>Url</System:String>
+                            <System:String>Connection String</System:String>
+                        </Behaviors:StringCollection>
+                    </ComboBox.ItemsSource>
 				</ComboBox>
 
-				<TextBox x:Name="UrlText" Grid.Row="1" Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Margin="5" MaxWidth="250">
+				<TextBox x:Name="UrlText" Grid.Row="1" Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Margin="5">
 					<i:Interaction.Triggers>
 						<ei:DataTrigger Binding="{Binding ElementName=UseConnectionCombo, Path=SelectedIndex}" Value="0" Comparison="Equal">
 							<ei:ChangePropertyAction PropertyName="Visibility" Value="Visible"/>
@@ -43,7 +52,7 @@
 						</ei:DataTrigger>
 					</i:Interaction.Triggers>
 				</TextBox>
-				<TextBox x:Name="ConnectionText" Grid.Row="1" Grid.Column="1" Text="{Binding ConnectionStringName, Mode=TwoWay}" Margin="5" MaxWidth="250">
+				<TextBox x:Name="ConnectionText" Grid.Row="1" Grid.Column="1" Text="{Binding ConnectionStringName, Mode=TwoWay}" Margin="5">
 					<i:Interaction.Triggers>
 						<ei:DataTrigger Binding="{Binding ElementName=UseConnectionCombo, Path=SelectedIndex}" Value="1" Comparison="Equal">
 							<ei:ChangePropertyAction PropertyName="Visibility" Value="Visible"/>
@@ -64,28 +73,28 @@
 					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="130" />
-						<ColumnDefinition Width="Auto" MinWidth="125" MaxWidth="250" />
+						<ColumnDefinition Width="*" />
 					</Grid.ColumnDefinitions>
 
 					<TextBlock Grid.Row="0" Text="Database: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5"/>
 
 					<TextBlock Grid.Row="1" Text="Password: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" />
 
 					<TextBlock Grid.Row="2" Text="User Name: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" />
 
 					<TextBlock Grid.Row="3" Text="Domain: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5"/>
 
 					<TextBlock Grid.Row="4" Text="ApiKey: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5"/>
 				</Grid>
 
 				<TextBlock Grid.Row="3" Text="Replication Behavior: " VerticalAlignment="Center"/>
 
-				<ComboBox Grid.Row="3" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}" HorizontalAlignment="Left"
+				<ComboBox Grid.Row="3" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}"
 							  ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"/>
 			</Grid>
 		</DataTemplate>

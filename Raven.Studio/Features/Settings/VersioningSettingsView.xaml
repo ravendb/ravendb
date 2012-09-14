@@ -24,15 +24,17 @@
 					<ColumnDefinition Width="20" />
 				</Grid.ColumnDefinitions>
 
-				<HyperlinkButton Grid.Row="0" 
+				<Button Grid.Row="0" 
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
 								 Grid.Column="2" 
 								 HorizontalAlignment="Right" 
 								 Command="{Binding DataContext.DeleteVersioning, RelativeSource={RelativeSource AncestorType=UserControl}}" 
 								 CommandParameter="{Binding}"  
 								 VerticalAlignment="Center" 
-								 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}">
-					<Image Source="{StaticResource Image_Error_Tiny}"/>
-				</HyperlinkButton>
+								 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
+                                ToolTipService.ToolTip="Remove this versioning configuration">
+                    <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+                </Button>
 
 				<TextBlock Grid.Row="0" 
 						   Text="Collection: " 
