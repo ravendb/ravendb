@@ -44,7 +44,25 @@
 							   VerticalAlignment="Center" />
             
         </StackPanel>
-        
+        <Border Background="{StaticResource Brush_ToolbarBackground}"
+                Grid.Row="1">
+            <StackPanel Orientation="Horizontal"
+						Margin="4,4,4,4"
+						VerticalAlignment="Center">
+
+                <Button Command="{Binding SaveBundles}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Save Configuration Changes">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource Image_Save_Small}"
+									   Stretch="None"/>
+                            <TextBlock Text="Save Changes" Margin="2,0,0,0" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </StackPanel>
+        </Border>
         <Settings:SettingsView Grid.Row="3" DataContext="{Binding Settings}"/>
     </Grid>
 </Infrastructure:View>

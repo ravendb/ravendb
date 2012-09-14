@@ -107,7 +107,7 @@ namespace Raven.Studio.Commands
 	    private static CreateSettingsModel ConfigureSettingsModel(NewDatabase newDatabase)
 	    {
 	        CreateSettingsModel bundlesModel;
-	        bundlesModel = new CreateSettingsModel() {Creation = true};
+	        bundlesModel = new CreateSettingsModel();
 
 	        if (newDatabase.Quotas.IsChecked == true)
 	        {

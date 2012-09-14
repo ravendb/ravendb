@@ -9,7 +9,6 @@ namespace Raven.Studio.Models
 {
 	public class SettingsModel : ViewModel
 	{
-		public bool Creation { get; set; }
 		public DatabaseDocument DatabaseDocument { get; set; }
 
 		public SettingsModel() 
@@ -29,7 +28,6 @@ namespace Raven.Studio.Models
 
         public Observable<SettingsSectionModel> SelectedSection { get; private set; }
 		
-		private ICommand _saveBundlesCommand;
-		public ICommand SaveBundles { get { return _saveBundlesCommand ?? (_saveBundlesCommand = new SaveBundlesCommand(this)); } }
+
 	}
 }

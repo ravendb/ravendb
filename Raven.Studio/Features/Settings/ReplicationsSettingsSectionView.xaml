@@ -8,6 +8,7 @@
              xmlns:Replication="clr-namespace:Raven.Abstractions.Replication;assembly=Raven.Client.Silverlight"
              xmlns:Models="clr-namespace:Raven.Studio.Models"
              xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+             xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
              xmlns:System="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d"
 			 d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:ReplicationSettingsSectionModel}">
 	
@@ -101,9 +102,26 @@
 	</UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot">
-		<Border>
-				<Grid>
-					<ListBox Style="{StaticResource Databases_FluidList}"
+        <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
+            <toolkit:HeaderedContentControl.Header>
+                <StackPanel Orientation="Horizontal"
+						Margin="0,4,4,4"
+						VerticalAlignment="Center">
+
+                    <Button Command="{Binding AddReplication}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Add Replication">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource Image_Add_Tiny}"
+									   Stretch="None"/>
+                                <TextBlock Text="Add Replication" Margin="2,0,0,0" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+            </toolkit:HeaderedContentControl.Header>
+                <ListBox Style="{StaticResource Databases_FluidList}"
 							 ItemsSource="{Binding ReplicationDestinations}"
 							 SelectedItem="{Binding SelectedReplication, Mode=TwoWay}"
 							 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
@@ -114,7 +132,6 @@
 							<Behaviors:SelectItemOnRightClick />
 						</i:Interaction.Behaviors>
 					</ListBox>
-				</Grid>
-		</Border>
+            </toolkit:HeaderedContentControl>    
 	</Grid>
 </UserControl>
