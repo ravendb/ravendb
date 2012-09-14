@@ -50,7 +50,6 @@ namespace Raven.Database.Indexing
 						if (doc.__document_id == null)
 							throw new ArgumentException(string.Format("Cannot index something which doesn't have a document id, but got: '{0}'", doc));
 
-						count++;
 						string documentId = doc.__document_id.ToString();
 						if (processedKeys.Add(documentId) == false)
 							return doc;
@@ -76,8 +75,6 @@ namespace Raven.Database.Indexing
 					var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 					foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context, stats))
 					{
-
-						count++;
 
 						float boost;
 						var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
