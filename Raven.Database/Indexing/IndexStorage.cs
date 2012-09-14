@@ -336,7 +336,7 @@ namespace Raven.Database.Indexing
 		{
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly close index storage");
 
-			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => index.Dispose()));
+			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => exceptionAggregator.Execute(index.Dispose)));
 
 			exceptionAggregator.Execute(() => dummyAnalyzer.Close());
 
