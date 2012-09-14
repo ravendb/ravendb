@@ -36,6 +36,7 @@ namespace Raven.Database.Indexing
 		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
+			var sourceCount = 0;
 			var sw = Stopwatch.StartNew();
 			Write(context, (indexWriter, analyzer, stats) =>
 			{
@@ -47,6 +48,7 @@ namespace Raven.Database.Indexing
 				{
 					var documentsWrapped = documents.Select((dynamic doc) =>
 					{
+						sourceCount++;
 						if (doc.__document_id == null)
 							throw new ArgumentException(string.Format("Cannot index something which doesn't have a document id, but got: '{0}'", doc));
 
@@ -136,7 +138,8 @@ namespace Raven.Database.Indexing
 			});
 			AddindexingPerformanceStat(new IndexingPerformanceStats
 			{
-				Count = count,
+				OutputCount = count,
+				InputCount = sourceCount,
 				Duration = sw.Elapsed,
 				Operation = "Index"
 			});
