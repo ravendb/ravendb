@@ -142,14 +142,14 @@
                 <TextBlock Text="{Binding DisplayId}"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
-				<TextBlock Text="    "/>
-				<TextBlock Text="A Conflict was detected and must be resolved." 
+                <TextBlock Text="    "/>
+                <TextBlock Text="A Conflict was detected and must be resolved." 
 						   Style="{StaticResource Style_TextBlock_GroupHeader}"
 						   Visibility="{Binding ResolvingConflict, Converter={StaticResource BooleanToVisibility}}"
 						   VerticalAlignment="Center"/>
 
-			</StackPanel>
-		</toolkit:HeaderedContentControl.Header>
+            </StackPanel>
+        </toolkit:HeaderedContentControl.Header>
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.8*" />
@@ -170,29 +170,52 @@
 							Grid.Column="2"
 							VerticalAlignment="Center"
                             Margin="0,4">
-
-                    <Button Command="{Binding Save}"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							Margin="4,0"
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Command="{Binding Save}"
+                               Margin="4,0"
 							ToolTipService.ToolTip="Save Document (Ctrl-S)">
-                        <Image Source="{StaticResource Image_Save_Small}"
-							   Stretch="None" />
-                    </Button>
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <Image Source="{StaticResource Image_Save_Small}"
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
+                                    <TextBlock Text="Save"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0" />
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
 
-                    <Button Command="{Binding Prettify}"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							Margin="4,0"
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Command="{Binding Prettify}"
+                               Margin="4,0"
 							ToolTipService.ToolTip="Reformat Document">
-                        <Image Source="{StaticResource Image_Reformat_Small}"
-							   Stretch="None" />
-                    </Button>
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <Image Source="{StaticResource Image_Reformat_Small}"
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
+                                    <TextBlock Text="Reformat"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0" />
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
 
                         <Delay:SplitButtonPopup Command="{Binding ToggleExpansion}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Toggle Outlining Expansion"
                             DropDownToolTip="More Options">
-                            <Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
-							   Stretch="None" />
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
+                                       Stretch="None" />
+                                <TextBlock Text="Outlineing"
+                                           VerticalAlignment="Center"
+                                           Margin="2,0,0,0" />
+                            </StackPanel>
+
                             <Delay:SplitButtonPopup.PopupContent>
                                 <Border Background="White"
 					                BorderThickness="1"
@@ -207,43 +230,68 @@
                                         </Border>
                                         <ListBox ItemsSource="{Binding OutliningModes}" SelectedItem="{Binding SelectedOutliningMode, Mode=TwoWay}"
                                              Style="{StaticResource Style_ListBox_RadioButtons}">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Name}"/>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
                                         </ListBox>
                                     </StackPanel>
                                 </Border>
                             </Delay:SplitButtonPopup.PopupContent>
                         </Delay:SplitButtonPopup>
 
-                        <Button Command="{Binding Refresh}"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							Margin="4,0"
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Command="{Binding Refresh}"
+                               Margin="4,0"
 							ToolTipService.ToolTip="Refresh Document (Ctrl-R)">
-                        <Image Source="{StaticResource Image_Refresh_Small}"
-							   Stretch="None" />
-                    </Button>
-
-                    <Button Command="{Binding Delete}"
-							IsEnabled="{Binding EditingDatabase,Converter={StaticResource NegatingBool}}"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							Margin="4,0"
-							ToolTipService.ToolTip="Delete Document">
-                        <Image Source="{StaticResource Image_Delete_Tiny}"
-							   Stretch="None" />
-                    </Button>
-
-                        <Button Command="{Binding ToggleSearch}"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							Margin="4,0"
-							ToolTipService.ToolTip="Search (Ctrl-F)">
-                            <Image Source="{StaticResource Image_Search_Small}"
-							   Stretch="None" />
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <Image Source="{StaticResource Image_Refresh_Small}"
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
+                                    <TextBlock Text="Refresh"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0" />
+                                </StackPanel>
+                            </Button.Content>
                         </Button>
 
-                </StackPanel>
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Command="{Binding Delete}"
+                               Margin="4,0"
+							ToolTipService.ToolTip="Delete Document">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <Image Source="{StaticResource Image_Delete_Tiny}"
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
+                                    <TextBlock Text="Delete"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0" />
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Command="{Binding ToggleSearch}"
+                               Margin="4,0"
+							ToolTipService.ToolTip="Search (Ctrl-F)">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <Image Source="{StaticResource Image_Search_Small}"
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
+                                    <TextBlock Text="Search"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0" />
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                    </StackPanel>
 
                     <Border HorizontalAlignment="Center"
                             Visibility="{Binding CanNavigate, Converter={StaticResource BooleanToVisibility}}"
@@ -262,7 +310,7 @@
 								   VerticalAlignment="Center" />
                                 </HyperlinkButton.Content>
                             </HyperlinkButton>
-                            
+
                             <HyperlinkButton Command="{Binding NavigateToPrevious}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
                                      IsEnabled="{Binding HasPrevious}"
@@ -284,7 +332,7 @@
 							   VerticalAlignment="Center" />
                             <TextBlock Text="{Binding TotalItems}"
 							   VerticalAlignment="Center" />
-                            
+
                             <HyperlinkButton Command="{Binding NavigateToNext}"
                                      IsEnabled="{Binding HasNext}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
@@ -372,7 +420,7 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                
+
                 <Controls1:WatermarkedTextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           Watermark="Document Id?"
 					 Grid.Row="0"
@@ -570,6 +618,6 @@
             </ScrollViewer>
         </Grid>
     </toolkit:HeaderedContentControl>
-    
-	
+
+
 </Infrastructure:PageView>
