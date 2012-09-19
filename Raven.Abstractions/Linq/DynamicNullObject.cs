@@ -17,13 +17,19 @@ namespace Raven.Abstractions.Linq
 
 		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
 		{
-			result = this;
+			result = new DynamicNullObject
+			{
+				IsExplicitNull = false
+			};
 			return true;
 		}
 
 		public override bool TryGetMember(GetMemberBinder binder, out object result)
 		{
-			result = this;
+			result = new DynamicNullObject
+			{
+				IsExplicitNull = false
+			};
 			return true;
 		}
 
@@ -40,7 +46,13 @@ namespace Raven.Abstractions.Linq
 					result = 0;
 					return true;
 				case "DefaultIfEmpty":
-					result = new[]{this};
+					result = new[]
+					{
+						new DynamicNullObject
+						{
+							IsExplicitNull = false
+						}
+					};
 					return true;
 				default:
 					return base.TryInvokeMember(binder, args, out result);
@@ -49,7 +61,10 @@ namespace Raven.Abstractions.Linq
 
 		public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
 		{
-			result = this;
+			result = new DynamicNullObject
+			{
+				IsExplicitNull = false
+			};
 			return true;
 		}
 

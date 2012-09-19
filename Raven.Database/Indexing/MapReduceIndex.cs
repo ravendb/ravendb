@@ -54,10 +54,12 @@ namespace Raven.Database.Indexing
 			DateTime minimumTimestamp)
 		{
 			var count = 0;
+			var sourceCount = 0;
 			var sw = Stopwatch.StartNew();
 			var changed = new HashSet<ReduceKeyAndBucket>();
 			var documentsWrapped = documents.Select(doc =>
 			{
+				sourceCount++;
 				var documentId = doc.__document_id;
 				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, name, changed);
 				return doc;
@@ -98,7 +100,8 @@ namespace Raven.Database.Indexing
 			actions.MapReduce.ScheduleReductions(name, 0, changed);
 			AddindexingPerformanceStat(new IndexingPerformanceStats
 			{
-				Count = count,
+				OutputCount = count,
+				InputCount = sourceCount,
 				Operation = "Map",
 				Duration = sw.Elapsed
 			});
@@ -356,6 +359,7 @@ namespace Raven.Database.Indexing
 			public void ExecuteReduction()
 			{
 				var count = 0;
+				var sourceCount = 0;
 				var sw = Stopwatch.StartNew();
 				
 				parent.Write(Context, (indexWriter, analyzer, stats) =>
@@ -369,7 +373,12 @@ namespace Raven.Database.Indexing
 						}
 						foreach (var mappedResults in MappedResultsByBucket)
 						{
-							foreach (var doc in parent.RobustEnumerationReduce(mappedResults, ViewGenerator.ReduceDefinition, Actions, Context, stats))
+							var input = mappedResults.Select(x =>
+							{
+								sourceCount++;
+								return x;
+							});
+							foreach (var doc in parent.RobustEnumerationReduce(input, ViewGenerator.ReduceDefinition, Actions, Context, stats))
 							{
 								count++;
 								string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
@@ -421,7 +430,8 @@ namespace Raven.Database.Indexing
 				});
 				parent.AddindexingPerformanceStat(new IndexingPerformanceStats
 				{
-					Count = count,
+					OutputCount = count,
+					InputCount = sourceCount,
 					Duration = sw.Elapsed,
 					Operation = "Reduce Level " + Level
 				});

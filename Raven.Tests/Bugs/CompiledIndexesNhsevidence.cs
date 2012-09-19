@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Raven.Imports.Newtonsoft.Json;
@@ -25,6 +26,7 @@ namespace Raven.Tests.Bugs
 		{
 			for (int x = 0; x < 50; x++)
 			{
+				Environment.SetEnvironmentVariable("Test", x.ToString(CultureInfo.InvariantCulture));
 				using (var store = CreateStore())
 				{
 					for (int i = 0; i < 12; i++)

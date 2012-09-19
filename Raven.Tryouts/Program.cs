@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Globalization;
+using System.Security.Principal;
 using System.Threading;
+using Raven.Database.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
+using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
 {
@@ -10,12 +14,10 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 10000; i++)
-			{
-				Console.Clear();
-				Console.WriteLine(i);
-				UseMyData();
-			}
+			var x = new AdminFinder.CachingAdminFinder();
+
+			var isAdministrator = x.IsAdministrator(WindowsIdentity.GetCurrent());
+			Console.WriteLine(isAdministrator);
 		}
 
 		private static void UseMyData()

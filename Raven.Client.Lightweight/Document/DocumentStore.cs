@@ -420,14 +420,6 @@ namespace Raven.Client.Document
 			}
 
 			initialized = true;
-
-#if !SILVERLIGHT
-			if (string.IsNullOrEmpty(DefaultDatabase) == false)
-			{
-				DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
-			}
-#endif
-
 			return this;
 		}
 

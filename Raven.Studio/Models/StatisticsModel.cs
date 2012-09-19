@@ -201,11 +201,15 @@ namespace Raven.Studio.Models
 					{
 						performanceMessage += string.Format(@"
 Operation:         {0}
-Count:              {1}
-Duration:          {2}
-Duration in ms: {3}", indexingPerformanceStatse.Operation,
-															indexingPerformanceStatse.Count, indexingPerformanceStatse.Duration,
-															indexingPerformanceStatse.DurationMilliseconds.ToString("#,#"));
+Input:              {1:#,#}
+Output:              {2:#,#}
+Duration:          {3}
+Duration in ms: {4:#,#}
+", indexingPerformanceStatse.Operation,
+						                                    indexingPerformanceStatse.InputCount,
+						                                    indexingPerformanceStatse.OutputCount,
+						                                    indexingPerformanceStatse.Duration,
+						                                    indexingPerformanceStatse.DurationMilliseconds);
 					}
 
 					statInfoItem.ItemData.Add("Performance", performanceMessage);

@@ -858,7 +858,7 @@ more responsive application.
 			if (lastPut == null)
 				return;
 
-			documentStore.UpdateLastWrittenEtag(lastPut.Etag);
+			documentStore.LastEtagHolder.UpdateLastWrittenEtag(lastPut.Etag);
 		}
 
 		/// <summary>

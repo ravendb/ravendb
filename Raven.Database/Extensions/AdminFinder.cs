@@ -24,7 +24,7 @@ namespace Raven.Database.Extensions
 			{
 
 				var current = WindowsIdentity.GetCurrent();
-				var windowsIdentity = ((WindowsIdentity) windowsPrincipal.Identity);
+				var windowsIdentity = ((WindowsIdentity)windowsPrincipal.Identity);
 
 				// if the request was made using the same user as RavenDB is running as, 
 				// we consider this to be an administrator request
@@ -51,7 +51,7 @@ namespace Raven.Database.Extensions
 			{
 				public int Usage;
 				public DateTime Timestamp;
-				public bool Value;
+				public Lazy<bool> Value;
 			}
 
 			private const int CacheMaxSize = 25;
@@ -66,22 +66,24 @@ namespace Raven.Database.Extensions
 				if (cache.TryGetValue(windowsIdentity.User, out value) && (SystemTime.UtcNow - value.Timestamp) <= maxDuration)
 				{
 					Interlocked.Increment(ref value.Usage);
-					return value.Value;
+					return value.Value.Value;
 				}
-				bool isAdministratorNoCache;
-				try
-				{
-					isAdministratorNoCache = IsAdministratorNoCache(windowsIdentity.Name);
-				}
-				catch (Exception e)
-				{
-					log.WarnException("Could not determine whatever user is admin or not, assuming not", e);
-					return false;
-				}
+
 				var cachedResult = new CachedResult
 				{
 					Usage = value == null ? 1 : value.Usage + 1,
-					Value = isAdministratorNoCache,
+					Value = new Lazy<bool>(() =>
+					{
+						try
+						{
+							return IsAdministratorNoCache(windowsIdentity.Name);
+						}
+						catch (Exception e)
+						{
+							log.WarnException("Could not determine whatever user is admin or not, assuming not", e);
+							return false;
+						}
+					}),
 					Timestamp = SystemTime.UtcNow
 				};
 
@@ -89,18 +91,29 @@ namespace Raven.Database.Extensions
 				if (cache.Count > CacheMaxSize)
 				{
 					foreach (var source in cache
+							.Where(x => (SystemTime.UtcNow - x.Value.Timestamp) > maxDuration))
+					{
+						CachedResult ignored;
+						cache.TryRemove(source.Key, out ignored);
+						log.Debug("Removing expired {0} from cache", source.Key);
+					}
+					if (cache.Count > CacheMaxSize)
+					{
+						foreach (var source in cache
 						.OrderByDescending(x => x.Value.Usage)
 						.ThenBy(x => x.Value.Timestamp)
 						.Skip(CacheMaxSize))
-					{
-						if (source.Key == windowsIdentity.User)
-							continue; // we don't want to remove the one we just added
-						CachedResult ignored;
-						cache.TryRemove(source.Key, out ignored);
+						{
+							if (source.Key == windowsIdentity.User)
+								continue; // we don't want to remove the one we just added
+							CachedResult ignored;
+							cache.TryRemove(source.Key, out ignored);
+							log.Debug("Removing least used {0} from cache", source.Key);
+						}
 					}
 				}
 
-				return isAdministratorNoCache;
+				return cachedResult.Value.Value;
 			}
 
 			private static bool IsAdministratorNoCache(string username)
@@ -124,7 +137,7 @@ namespace Raven.Database.Extensions
 					// not in a domain
 					ctx = new PrincipalContext(ContextType.Machine);
 				}
-				var up = UserPrincipal.FindByIdentity(ctx, username);
+				var up = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
 				if (up != null)
 				{
 					PrincipalSearchResult<Principal> authGroups = up.GetAuthorizationGroups();
@@ -136,6 +149,6 @@ namespace Raven.Database.Extensions
 				}
 				return false;
 			}
-		} 
+		}
 	}
 }

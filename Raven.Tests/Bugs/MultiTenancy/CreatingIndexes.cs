@@ -13,6 +13,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
@@ -41,6 +42,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				DefaultDatabase = "Test"
 			}.Initialize())
 			{
+				store.DatabaseCommands.EnsureDatabaseExists("Test");
 				store.DatabaseCommands.PutIndex("TestIndex",
 												new IndexDefinitionBuilder<Test, Test>
 												{
