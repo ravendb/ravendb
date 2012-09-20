@@ -771,6 +771,7 @@
     <Compile Include="Querying\UsingStronglyTypedDocumentQuery.cs" />
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="Storage\Lists.cs" />
+    <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />

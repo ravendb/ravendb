@@ -319,6 +319,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
+		/// <param name="fieldName">The field name for the radius</param>
 		/// <param name = "radius">The radius in KM.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
@@ -331,6 +332,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="fieldName">The name of the field containing the shape to use for filtering</param>
 		/// <param name="shapeWKT">The query shape</param>
 		/// <param name="rel">Spatial relation to check</param>
+		/// <param name="distanceErrorPct">The allowed error precentage</param>
 		/// <returns></returns>
 		TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025);
 

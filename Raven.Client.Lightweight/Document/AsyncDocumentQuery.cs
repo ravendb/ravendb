@@ -437,9 +437,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name="radius">The radius.</param>
-		/// <param name="latitude">The latitude.</param>
-		/// <param name="longitude">The longitude.</param>
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
 		{
 			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);

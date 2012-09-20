@@ -371,9 +371,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name = "radius">The radius.</param>
-		/// <param name = "latitude">The latitude.</param>
-		/// <param name = "longitude">The longitude.</param>
 		protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025);
 
 		protected abstract object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025);
