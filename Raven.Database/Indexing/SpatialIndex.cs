@@ -12,12 +12,16 @@ using Lucene.Net.Spatial.Prefix.Tree;
 using Lucene.Net.Spatial.Queries;
 using Lucene.Net.Spatial.Util;
 using NetTopologySuite;
+using NetTopologySuite.Geometries;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Spatial4n.Core.Context;
 using Spatial4n.Core.Context.Nts;
+using Spatial4n.Core.Distance;
+using Spatial4n.Core.Io;
 using Spatial4n.Core.Shapes;
-using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
+using Point = Spatial4n.Core.Shapes.Point;
+using SpatialRelation = Raven.Abstractions.Indexing.SpatialRelation;
 
 namespace Raven.Database.Indexing
 {
@@ -31,7 +35,8 @@ namespace Raven.Database.Indexing
 			GeometryServiceProvider.Instance = new NtsGeometryServices();
 		}
 
-		public static SpatialStrategy CreateStrategy(string fieldName, SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel)
+		public static SpatialStrategy CreateStrategy(string fieldName, SpatialSearchStrategy spatialSearchStrategy,
+		                                             int maxTreeLevel)
 		{
 			switch (spatialSearchStrategy)
 			{
@@ -43,25 +48,26 @@ namespace Raven.Database.Indexing
 			return null;
 		}
 
-		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, Abstractions.Indexing.SpatialRelation relation, double distanceErrorPct = 0.025)
+		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation,
+		                              double distanceErrorPct = 0.025)
 		{
 			SpatialOperation spatialOperation;
-			var shape = Context.ReadShape(shapeWKT);
+			Shape shape = Context.ReadShape(shapeWKT);
 			switch (relation)
 			{
-				case Abstractions.Indexing.SpatialRelation.Within:
+				case SpatialRelation.Within:
 					spatialOperation = SpatialOperation.IsWithin;
 					break;
-				case Abstractions.Indexing.SpatialRelation.Contains:
+				case SpatialRelation.Contains:
 					spatialOperation = SpatialOperation.Contains;
 					break;
-				case Abstractions.Indexing.SpatialRelation.Disjoint:
+				case SpatialRelation.Disjoint:
 					spatialOperation = SpatialOperation.IsDisjointTo;
 					break;
-				case Abstractions.Indexing.SpatialRelation.Intersects:
+				case SpatialRelation.Intersects:
 					spatialOperation = SpatialOperation.Intersects;
 					break;
-				case Abstractions.Indexing.SpatialRelation.Nearby:
+				case SpatialRelation.Nearby:
 					var nearbyArgs = new SpatialArgs(SpatialOperation.IsWithin, shape);
 					nearbyArgs.SetDistPrecision(distanceErrorPct);
 					// only sort by this, do not filter
@@ -86,8 +92,8 @@ namespace Raven.Database.Indexing
 
 		public static double GetDistance(double fromLat, double fromLng, double toLat, double toLng)
 		{
-			var ptFrom = Context.MakePoint(fromLng, fromLat);
-			var ptTo = Context.MakePoint(toLng, toLat);
+			Point ptFrom = Context.MakePoint(fromLng, fromLat);
+			Point ptTo = Context.MakePoint(toLng, toLat);
 			return Context.GetDistCalc().Distance(ptFrom, ptTo);
 		}
 	}

@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Security.Principal;
 using System.Threading;
+using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -15,7 +16,7 @@ namespace Raven.Tryouts
 		private static void Main()
 		{
 			var x = new AdminFinder.CachingAdminFinder();
-
+		
 			var isAdministrator = x.IsAdministrator(WindowsIdentity.GetCurrent());
 			Console.WriteLine(isAdministrator);
 		}
