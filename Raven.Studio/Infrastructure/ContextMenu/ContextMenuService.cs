@@ -3,9 +3,9 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System.Windows.Input;
+using System.Windows;
 
-namespace System.Windows.Controls
+namespace Raven.Studio.Infrastructure.ContextMenu
 {
     /// <summary>
     /// Provides the system implementation for displaying a ContextMenu.

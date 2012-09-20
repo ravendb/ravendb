@@ -21,7 +21,6 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Linq;
-using Raven.Abstractions.Data;
 
 namespace Raven.Bundles.Replication.Responders
 {

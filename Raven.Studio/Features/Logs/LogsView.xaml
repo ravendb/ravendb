@@ -11,7 +11,7 @@
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
 					 xmlns:Controls="clr-namespace:System.Windows.Controls"
-					 mc:Ignorable="d"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
 					 d:DataContext="{d:DesignInstance Logs:LogsModel}">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}">
@@ -235,13 +235,13 @@
 						 x:Name="LogInstructions"
 						 IsReadOnly="True"
 						 Margin="0,10,0,0">
-					<Controls:ContextMenuService.ContextMenu>
-						<Controls:ContextMenu x:Name="NoLogsContextMenu">
-							<Controls:MenuItem Header="Copy"
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu x:Name="NoLogsContextMenu">
+							<ContextMenu:MenuItem Header="Copy"
 											   Command="{Binding Source={StaticResource CopyToClipboardCommand}}"
 											   CommandParameter="{Binding EnablingLogsInstructions}" />
-						</Controls:ContextMenu>
-					</Controls:ContextMenuService.ContextMenu>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
 				</TextBox>
 			</StackPanel>
 		</Grid>

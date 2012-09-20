@@ -11,6 +11,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Controls.Primitives;
 using System.Linq;
+using ContextMenu = Raven.Studio.Infrastructure.ContextMenu.ContextMenu;
 
 namespace Raven.Studio.Behaviors
 {

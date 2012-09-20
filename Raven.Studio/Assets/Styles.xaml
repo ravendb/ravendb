@@ -11,7 +11,8 @@
 					xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 					xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
-					xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor" mc:Ignorable="d">
+					xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
+                    xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -1721,10 +1722,10 @@
 		</Setter>
 	</Style>
 
-	<Style x:Key="Style_Separator_HeaderLink" TargetType="Controls:Separator">
+	<Style x:Key="Style_Separator_HeaderLink" TargetType="ContextMenu:Separator">
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="Controls:Separator">
+				<ControlTemplate TargetType="ContextMenu:Separator">
 					<StackPanel Orientation="Horizontal">
 						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="True">
 							<Path.Stroke>
@@ -1748,11 +1749,11 @@
 		</Setter>
 	</Style>
 
-	<Style x:Key="Style_Separator_Toolbar" TargetType="Controls:Separator">
+	<Style x:Key="Style_Separator_Toolbar" TargetType="ContextMenu:Separator">
 		<Setter Property="Margin" Value="5,0"/>
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="Controls:Separator">
+				<ControlTemplate TargetType="ContextMenu:Separator">
 					<StackPanel Orientation="Horizontal">
 						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="True">
 							<Path.Stroke>

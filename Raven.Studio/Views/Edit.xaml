@@ -15,7 +15,8 @@
                          xmlns:z="clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions"
                          xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-                         xmlns:Delay="clr-namespace:Delay" mc:Ignorable="d"
+                         xmlns:Delay="clr-namespace:Delay"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
 					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel" 
                          Title="Edit Document">
     <Infrastructure:PageView.Resources>
@@ -83,11 +84,11 @@
                 <i:InvokeCommandAction Command="{Binding DisableSearch}" />
             </Behaviors:StudioKeyTrigger>
         </i:Interaction.Triggers>
-        <Controls:ContextMenuService.ContextMenu>
-            <Controls:ContextMenu>
-                <Controls:MenuItem Header="Copy Document Id to Clipboard" />
-            </Controls:ContextMenu>
-        </Controls:ContextMenuService.ContextMenu>
+        <ContextMenu:ContextMenuService.ContextMenu>
+            <ContextMenu:ContextMenu>
+                <ContextMenu:MenuItem Header="Copy Document Id to Clipboard" />
+            </ContextMenu:ContextMenu>
+        </ContextMenu:ContextMenuService.ContextMenu>
         <toolkit:HeaderedContentControl.Header>
             <StackPanel Orientation="Horizontal">
                 <Infrastructure:FlexibleTemplateItemsControl ItemsSource="{Binding ParentPathSegments}" VerticalAlignment="Center" VerticalContentAlignment="Center">

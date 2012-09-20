@@ -6,7 +6,8 @@
 			 xmlns:b="clr-namespace:Boogaart.Silverlight.Behaviors" xmlns:Controls="clr-namespace:System.Windows.Controls"
              xmlns:Studio="clr-namespace:Raven.Studio"
              xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-             xmlns:Controls1="clr-namespace:Raven.Studio.Controls" xmlns:Delay="clr-namespace:Delay" mc:Ignorable="d"
+             xmlns:Controls1="clr-namespace:Raven.Studio.Controls" xmlns:Delay="clr-namespace:Delay"
+             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
@@ -57,7 +58,7 @@
                                Command="{Binding Path=SetViewSize}"
                                CommandParameter="Details"/>
 
-                        <Controls:Separator HorizontalAlignment="Stretch"
+                        <ContextMenu:Separator HorizontalAlignment="Stretch"
 							   VerticalAlignment="Bottom"
 							   Margin="5,0,5,23"
 							   Grid.Column="1"/>
@@ -71,7 +72,7 @@
                                Command="{Binding Path=SetViewSize}"
                                CommandParameter="IdOnly"/>
 
-                        <Controls:Separator HorizontalAlignment="Stretch"
+                        <ContextMenu:Separator HorizontalAlignment="Stretch"
 							   VerticalAlignment="Bottom"
 							   Margin="5,0,5,49"
 							   Grid.Column="1"/>

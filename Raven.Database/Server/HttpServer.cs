@@ -377,7 +377,7 @@ namespace Raven.Database.Server
 		private void GetContext(IAsyncResult ar)
 		{
 			HttpListenerContextAdpater ctx = null;
-			using (ctx)
+			try
 			{
 				try
 				{
@@ -410,6 +410,11 @@ namespace Raven.Database.Server
 				{
 					concurretRequestSemaphore.Release();
 				}
+			}
+			finally
+			{
+				if(ctx != null)
+					ctx.Dispose();
 			}
 		}
 

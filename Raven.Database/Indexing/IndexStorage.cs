@@ -198,7 +198,7 @@ namespace Raven.Database.Indexing
 			if (indexDefinition.IsTemp || configuration.RunInMemory)
 			{
 				directory = new RAMDirectory();
-				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close(); // creating index structure
+				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
 			}
 			else
 			{
@@ -214,7 +214,7 @@ namespace Raven.Database.Indexing
 					WriteIndexVersion(directory);
 
 					//creating index structure if we need to
-					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
 				}
 				else
 				{
@@ -238,15 +238,10 @@ namespace Raven.Database.Indexing
 
 		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)
 		{
-			var indexOutput = directory.CreateOutput("index.version");
-			try
+			using(var indexOutput = directory.CreateOutput("index.version"))
 			{
 				indexOutput.WriteString(IndexVersion);
 				indexOutput.Flush();
-			}
-			finally
-			{
-				indexOutput.Close();
 			}
 		}
 
@@ -256,17 +251,12 @@ namespace Raven.Database.Indexing
 			{
 				throw new InvalidOperationException("Could not find index.version " + indexName + ", resetting index");
 			}
-			var indexInput = directory.OpenInput("index.version");
-			try
+			using(var indexInput = directory.OpenInput("index.version"))
 			{
 				var versionFromDisk = indexInput.ReadString();
 				if (versionFromDisk != IndexVersion)
 					throw new InvalidOperationException("Index " + indexName + " is of version " + versionFromDisk +
 														" which is not compatible with " + IndexVersion + ", resetting index");
-			}
-			finally
-			{
-				indexInput.Close();
 			}
 		}
 
@@ -614,7 +604,7 @@ namespace Raven.Database.Indexing
 
 		public Index GetIndexInstance(string indexName)
 		{
-			return indexes.Where(index => System.String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
+			return indexes.Where(index => String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
 		}

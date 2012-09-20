@@ -24,13 +24,11 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : PageViewModel, IHasPageTitle
 	{
-        private string error;
         private ICommand executeQuery;
         private RavenQueryStatistics results;
         private bool skipTransformResults;
         private bool hasTransform;
         private TimeSpan queryTime;
-        private bool internalUpdate;
 
         private IEditorDocument queryDocument;
 		public QueryDocumentsCollectionSource CollectionSource { get; private set; }
@@ -574,29 +572,20 @@ namespace Raven.Studio.Models
 	            return;
 	        }
 
-	        internalUpdate = true;
+	        Query = state.Query;
+	        IsSpatialQuery = state.IsSpatialQuery;
+	        Latitude = state.Latitude;
+	        Longitude = state.Longitude;
+	        Radius = state.Radius;
 
-	        try
+	        SortBy.Clear();
+
+	        foreach (var sortOption in state.SortOptions)
 	        {
-	            Query = state.Query;
-	            IsSpatialQuery = state.IsSpatialQuery;
-	            Latitude = state.Latitude;
-	            Longitude = state.Longitude;
-	            Radius = state.Radius;
-
-	            SortBy.Clear();
-
-	            foreach (var sortOption in state.SortOptions)
-	            {
-	                if (SortByOptions.Contains(sortOption))
-	                {
-	                    SortBy.Add(new StringRef() {Value = sortOption});
-	                }
-	            }
-	        }
-	        finally
-	        {
-	            internalUpdate = false;
+		        if (SortByOptions.Contains(sortOption))
+		        {
+			        SortBy.Add(new StringRef() {Value = sortOption});
+		        }
 	        }
 
 	        Requery();

@@ -3,6 +3,8 @@ using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Interactivity;
 using Raven.Studio.Infrastructure;
+using ContextMenu = Raven.Studio.Infrastructure.ContextMenu.ContextMenu;
+using MenuItem = Raven.Studio.Infrastructure.ContextMenu.MenuItem;
 
 namespace Raven.Studio.Commands
 {

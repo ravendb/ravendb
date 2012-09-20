@@ -157,7 +157,7 @@ namespace Raven.Database.Indexing
 
 					try
 					{
-						writer.Close();
+						writer.Dispose();
 					}
 					catch (Exception e)
 					{
@@ -167,7 +167,7 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					directory.Close();
+					directory.Dispose();
 				}
 				catch (Exception e)
 				{

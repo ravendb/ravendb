@@ -30,8 +30,7 @@ namespace Raven.Database.Queries
 			IndexSearcher currentIndexSearcher;
 			using(database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
-				var termEnum = currentIndexSearcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty));
-				try
+				using(var termEnum = currentIndexSearcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty)))
 				{
 					if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
 					{
@@ -53,10 +52,6 @@ namespace Raven.Database.Queries
 						if (termEnum.Next() == false)
 							break;
 					}
-				}
-				finally
-				{
-					termEnum.Close();
 				}
 			}
 

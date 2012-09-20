@@ -9,7 +9,8 @@
 						 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Title="AlertsView Page"
 						 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 						 xmlns:Controls="clr-namespace:System.Windows.Controls"
-                xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity">
+                xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="DataTemplate_List_DetailsView">
@@ -26,17 +27,17 @@
 					<Behaviors:SelectRowOnRightClickBehavior />
 				</i:Interaction.Behaviors>
 				
-				<Controls:ContextMenuService.ContextMenu>
-					<Controls:ContextMenu>
-						<Controls:MenuItem Header="Delete"
+				<ContextMenu:ContextMenuService.ContextMenu>
+					<ContextMenu:ContextMenu>
+						<ContextMenu:MenuItem Header="Delete"
 										   Command="{Binding DeleteSelectedAlert}"
 										   CommandParameter="{Binding SelectedItem, ElementName=AlertsList}">
-							<Controls:MenuItem.Icon>
+							<ContextMenu:MenuItem.Icon>
 								<Image Source="{StaticResource Image_Delete_Tiny}"/>
-							</Controls:MenuItem.Icon>
-						</Controls:MenuItem>
-					</Controls:ContextMenu>
-				</Controls:ContextMenuService.ContextMenu>
+							</ContextMenu:MenuItem.Icon>
+						</ContextMenu:MenuItem>
+					</ContextMenu:ContextMenu>
+				</ContextMenu:ContextMenuService.ContextMenu>
 				
 				<sdk:DataGrid.Columns>
 					<sdk:DataGridTemplateColumn Header="Observed" Width="Auto" CanUserReorder="False" CanUserResize="True" CanUserSort="False" ClipboardContentBinding="{Binding Item.Document.Key}">

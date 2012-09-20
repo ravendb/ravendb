@@ -3,11 +3,13 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
+using System;
 using System.Collections.Specialized;
-using System.Windows.Controls.Primitives;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace System.Windows.Controls
+namespace Raven.Studio.Infrastructure.ContextMenu
 {
     /// <summary>
     /// Represents a selectable item inside a Menu or ContextMenu.

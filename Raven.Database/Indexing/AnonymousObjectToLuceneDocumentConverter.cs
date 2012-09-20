@@ -346,7 +346,7 @@ namespace Raven.Database.Indexing
 				{
 					int hashCode = (name != null ? name.GetHashCode() : 0);
 					hashCode = (hashCode*397) ^ (index != null ? index.GetHashCode() : 0);
-					hashCode = (hashCode*397) ^ (store != null ? store.GetHashCode() : 0);
+					hashCode = (hashCode*397) ^ store.GetHashCode();
 					hashCode = multipleItemsSameField.Aggregate(hashCode, (h, x) => h*397 ^ x);
 					return hashCode;
 				}

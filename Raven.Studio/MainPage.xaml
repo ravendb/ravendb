@@ -11,7 +11,8 @@
 			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-			 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Delay="clr-namespace:Delay">
+			 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Delay="clr-namespace:Delay"
+             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -136,7 +137,7 @@
 						VerticalAlignment="Stretch"
 						Margin="{StaticResource Margin_MainPageLeftRight}">
 
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 			
 				<HyperlinkButton Content="Documents"
 								 Command="{StaticResource NavigateToCommand}"
@@ -148,12 +149,12 @@
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Collections"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/collections"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Indexes"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/indexes"
@@ -164,14 +165,14 @@
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
 				<HyperlinkButton Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" 
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" 
 								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisibleWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
 
 				<HyperlinkButton Content="Alerts"
@@ -180,13 +181,13 @@
 								 Style="{StaticResource Style_Text_HeaderLink}" 
 								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisibleWhenEqual}, ConverterParameter='&lt;system&gt;'}"/>
 				
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				
 				<HyperlinkButton Content="Logs"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/logs"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
 				<Delay:SplitButton Command="{StaticResource NavigateToCommand}"
 								CommandParameter="/edit?mode=new"
@@ -194,22 +195,22 @@
 								   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,5" 
 								   VerticalAlignment="Center">
 					<Delay:SplitButton.ButtonMenuItemsSource>
-						<Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/edit?mode=new">
-							<Controls:MenuItem.Icon>
+						<ContextMenu:MenuItem Header="New Document" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/edit?mode=new">
+							<ContextMenu:MenuItem.Icon>
 								<Image Source="{StaticResource Image_AddDocument_Tiny}"/>
-							</Controls:MenuItem.Icon>
-						</Controls:MenuItem>
-						<Controls:MenuItem Header="New Index" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/indexes/new?mode=new">
-							<Controls:MenuItem.Icon>
+							</ContextMenu:MenuItem.Icon>
+						</ContextMenu:MenuItem>
+						<ContextMenu:MenuItem Header="New Index" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/indexes/new?mode=new">
+							<ContextMenu:MenuItem.Icon>
 								<Image Source="{StaticResource Image_AddIndex_Tiny}"/>
-							</Controls:MenuItem.Icon>
-						</Controls:MenuItem>
-						<Controls:Separator/>
-						<Controls:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/query?mode=dynamic">
-							<Controls:MenuItem.Icon>
+							</ContextMenu:MenuItem.Icon>
+						</ContextMenu:MenuItem>
+						<ContextMenu:Separator/>
+						<ContextMenu:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/query?mode=dynamic">
+							<ContextMenu:MenuItem.Icon>
 								<Image Source="{StaticResource Image_Query_Small}"/>
-							</Controls:MenuItem.Icon>
-						</Controls:MenuItem>
+							</ContextMenu:MenuItem.Icon>
+						</ContextMenu:MenuItem>
 					</Delay:SplitButton.ButtonMenuItemsSource>
 					<StackPanel Orientation="Horizontal" Background="Transparent" ToolTipService.ToolTip="Create a New Document">
 						<Image Source="{StaticResource Image_Add_Tiny}" Width="14" Height="14"
