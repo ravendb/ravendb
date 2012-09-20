@@ -561,12 +561,17 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 #if !SILVERLIGHT
+
+			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
+			rootServicePoint.UseNagleAlgorithm = false;
+
 			databaseCommandsGenerator = () =>
 			{
 				string databaseUrl = Url;
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)
 				{
-					databaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
 				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
