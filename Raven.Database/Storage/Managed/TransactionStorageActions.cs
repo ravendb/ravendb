@@ -41,13 +41,13 @@ namespace Raven.Storage.Managed
 			if (readResult != null) // update
 			{
 				StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
-				AssertValidEtag(key, readResult, storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } }), etag);
+				AssertValidEtag(key, readResult, storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } }), etag, "DELETE");
 
 				var ravenJObject = ((RavenJObject) readResult.Key.CloneToken());
 				ravenJObject["txId"] = transactionInformation.Id.ToByteArray();
 				if (storage.Documents.UpdateKey(readResult.Key) == false)
 					throw new ConcurrencyException("PUT attempted on document '" + key +
-				   		"' that is currently being modified by another transaction");
+												   "' that is currently being modified by another transaction");
 			}
 			else
 			{
@@ -81,7 +81,7 @@ namespace Raven.Storage.Managed
 			return newEtag;
 		}
 
-		private static void AssertValidEtag(string key, Table.ReadResult doc, Table.ReadResult docInTx, Guid? etag)
+		private static void AssertValidEtag(string key, Table.ReadResult doc, Table.ReadResult docInTx, Guid? etag, string operation)
 		{
 			if (doc == null)
 				return;
@@ -93,7 +93,7 @@ namespace Raven.Storage.Managed
 
 			if (etag != null && etag.Value != existingEtag)
 			{
-				throw new ConcurrencyException("PUT attempted on document '" + key +
+				throw new ConcurrencyException(operation + " attempted on document '" + key +
 											   "' using a non current etag")
 				{
 					ActualETag = existingEtag,
@@ -104,14 +104,15 @@ namespace Raven.Storage.Managed
 
 		public bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
 		{
-			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
-			if (readResult == null)
+			var nonTxResult = storage.Documents.Read(new RavenJObject { { "key", key } });
+			if (nonTxResult == null)
 			{
 				return false;
 			}
-			readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
+
+			var readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
-			AssertValidEtag(key, readResult, storage.DocumentsModifiedByTransactions.Read(new RavenJObject {{"key", key}}),etag);
+			AssertValidEtag(key, nonTxResult, readResult, etag, "DELETE");
 
 			if (readResult != null)
 			{
