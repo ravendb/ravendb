@@ -1,4 +1,6 @@
-﻿namespace Raven.Client
+﻿using System;
+
+namespace Raven.Client
 {
 	/// <summary>
 	/// Parameters for the Where Equals call
@@ -30,6 +32,7 @@
 		/// </summary>
 		public bool IsAnalyzed { get; set; }
 
+		internal Type FieldTypeForIdentifier { get; set; }
 
 		/// <summary>
 		/// Should the field allow wildcards

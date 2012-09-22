@@ -45,6 +45,11 @@ namespace Raven.Client.Document
 		protected SpatialRelation spatialRelation;
 		protected double distanceErrorPct;
 		private readonly LinqPathProvider linqPathProvider;
+		protected readonly HashSet<Type> rootTypes = new HashSet<Type>
+		{
+			typeof (T)
+		};
+
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -893,11 +898,18 @@ If you really want to do in memory filtering on the data returned from the query
 			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
 				return whereParams.FieldName;
 
-			var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-			if (identityProperty == null || identityProperty.Name != whereParams.FieldName)
-				return whereParams.FieldName;
-			
-			return whereParams.FieldName = Constants.DocumentIdFieldName;
+			foreach (var rootType in rootTypes)
+			{
+				var identityProperty = theSession.Conventions.GetIdentityProperty(rootType);
+				if (identityProperty != null && identityProperty.Name == whereParams.FieldName)
+				{
+					whereParams.FieldTypeForIdentifier = rootType;
+					return whereParams.FieldName = Constants.DocumentIdFieldName;
+				}
+			}
+
+			return whereParams.FieldName;
+
 		}
 
 		///<summary>
@@ -1563,7 +1575,8 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
-				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, 
+					whereParams.FieldTypeForIdentifier ?? typeof(T), false);
 			}
 
 			if (whereParams.Value is string || whereParams.Value is ValueType)
@@ -1660,6 +1673,11 @@ If you really want to do in memory filtering on the data returned from the query
 		public void Intersect()
 		{
 			theQueryText.Append(Constants.IntersectSeperator);
+		}
+
+		public void AddRootType(Type type)
+		{
+			rootTypes.Add(type);
 		}
 
 		/// <summary>

@@ -630,7 +630,8 @@ namespace Raven.Client.Document
 											includes = new HashSet<string>(includes),
 											negate = negate,
 											queryOperation = queryOperation,
-											queryStats = queryStats
+											queryStats = queryStats,
+											rootTypes = {typeof(T)}
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
