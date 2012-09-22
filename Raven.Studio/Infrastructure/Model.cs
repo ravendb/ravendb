@@ -35,11 +35,15 @@ namespace Raven.Studio.Infrastructure
 				ApplicationModel.Current.Server.Value.DocumentStore
 					.AsyncDatabaseCommands
 					.ForDefaultDatabase()
-					.GetAsync("Raven/Embadded")
+					.GetAsync("Raven/StudioConfig")
 					.ContinueOnSuccessInTheUIThread(doc =>
 					{
-						if(doc == null || doc.DataAsJson == RavenJObject.FromObject(new {IsEmbedded = true}))
-							Command.ExecuteCommand(new CreateDatabaseCommand());							
+						if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+						{
+							if(doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+								return;
+						}
+						Command.ExecuteCommand(new CreateDatabaseCommand());
 					});
 			}
 

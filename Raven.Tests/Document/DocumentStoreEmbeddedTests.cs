@@ -64,15 +64,6 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
-		public void EnsureContainsWellKnownDocument()
-		{
-			WaitForUserToContinueTheTest(documentStore);
-
-			var wellKnownDoc = documentStore.DocumentDatabase.Get("Raven/Embadded", new TransactionInformation());
-			Assert.Equal(wellKnownDoc.DataAsJson, RavenJObject.FromObject(new {IsEmbedded = true}));
-		}
-
-		[Fact]
 		public void CanGetIndexNames()
 		{
 			Assert.Contains("Raven/DocumentsByEntityName", documentStore.DatabaseCommands.GetIndexNames(0, 25));

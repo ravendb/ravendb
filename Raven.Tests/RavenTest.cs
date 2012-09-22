@@ -173,6 +173,8 @@ namespace Raven.Tests
 			if (debug && Debugger.IsAttached == false)
 				return;
 
+			documentStore.SetStudioConfigToAllowSingleDb();
+
 			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
 
 											   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
