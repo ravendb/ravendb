@@ -585,7 +585,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitMethodCall(MethodCallExpression expression)
 		{
-			if (expression.Method.Name == "Equals")
+			if (expression.Method.DeclaringType != typeof(string) && expression.Method.Name == "Equals")
 			{
 				switch (expression.Arguments.Count)
 				{
