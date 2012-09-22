@@ -155,6 +155,9 @@ namespace Raven.Client.Linq
 
 		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query)
 		{
+			if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
+				return;
+
 			var lastEqualityTerm = queryInspector.GetLastEqualityTerm();
 			if (lastEqualityTerm.Key == null)
 				throw new InvalidOperationException("Could not suggest on a query that doesn't have a single equality check");
