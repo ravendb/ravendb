@@ -361,6 +361,7 @@ namespace Raven.Tests
 		{
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
+			ClearDatabaseDirectory();
 		}
 	}
 }
