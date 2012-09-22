@@ -19,6 +19,7 @@ namespace Raven.Studio.Models
 		public StatisticsModel()
 		{
 			ModelUrl = "/statistics";
+		    Breadcrumb = "Documents";
 			Statistics = new Dictionary<string, StatInfo>();
 			StatisticsToView = new Dictionary<string, StatInfo>();
 			ViewOptions = new List<string>();
@@ -33,10 +34,14 @@ namespace Raven.Studio.Models
 		protected override void OnViewLoaded()
 		{
 			var indexToShow = new UrlParser(UrlUtil.Url).GetQueryParam("index");
-			if (indexToShow != null)
-				SeletedViewOption.Value = indexToShow;
-			
-			base.OnViewLoaded();
+            if (indexToShow != null)
+            {
+                SeletedViewOption.Value = indexToShow;
+                Breadcrumb = "Indexes";
+                OnPropertyChanged(() => Breadcrumb);
+            }
+
+		    base.OnViewLoaded();
 		}
 
 		private void UpdateView()
@@ -229,6 +234,7 @@ Duration in ms: {4:#,#}
 		public Dictionary<string, StatInfo> StatisticsToView { get; set; }
 		public List<string> ViewOptions { get; set; }
 		public Observable<string> SeletedViewOption { get; set; }
+        public string Breadcrumb { get; set; }
 	}
 
 	public class StatInfo

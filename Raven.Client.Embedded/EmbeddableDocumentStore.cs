@@ -19,6 +19,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
@@ -34,6 +35,16 @@ namespace Raven.Client.Embedded
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 		}
+
+		///// <summary>
+		///// Constructor
+		///// </summary>
+		//public EmbeddableDocumentStore()
+		//{
+		//	var databaseCommands = DatabaseCommands;
+		//	if (databaseCommands != null)
+		//		databaseCommands.Put("Raven/Embadded", new Guid(), RavenJObject.FromObject(new {IsEmbedded = true}), null);
+		//}
 
 		private RavenConfiguration configuration;
 		private HttpServer httpServer;
@@ -232,6 +243,8 @@ namespace Raven.Client.Embedded
 			{
 				base.InitializeInternal();
 			}
+
+				DocumentDatabase.Put("Raven/Embadded", new Guid(), RavenJObject.FromObject(new { IsEmbedded = true }), new RavenJObject(), new TransactionInformation());
 		}
 
 

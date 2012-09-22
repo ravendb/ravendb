@@ -70,5 +70,8 @@ namespace Raven.Studio.Models
         }
 
         public SettingsModel Settings { get; private set; }
+
+        private ICommand _saveBundlesCommand;
+        public ICommand SaveBundles { get { return _saveBundlesCommand ?? (_saveBundlesCommand = new SaveBundlesCommand(Settings)); } }
     }
 }

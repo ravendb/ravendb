@@ -26,6 +26,7 @@
 		<ResourceDictionary Source="WatermarkedTextBox.xaml" />
 		<ResourceDictionary Source="ComboBoxStyles.xaml" />
 		<ResourceDictionary Source="ProgressBarStyles.xaml" />
+		<ResourceDictionary Source="NumericUpDown.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
@@ -1624,6 +1625,9 @@
 		<Setter Property="Background"
 				Value="{StaticResource Brush_TextBox_Background}" />
 		<Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
+        <!-- Setting TextFormattingMode to Display currently causes a bug in ActiPro's syntax editor: review this
+      when they publish an updated build-->
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
 	</Style>
 
 	<Style TargetType="syntaxeditor:SyntaxEditor" BasedOn="{StaticResource Style_SyntaxEditor_Default}">
@@ -2302,9 +2306,9 @@
 
 	<Style x:Key="Style_ListBoxItem_Replication" TargetType="ListBoxItem">
 		<Setter Property="VerticalContentAlignment" Value="Stretch"/>
-		<Setter Property="HorizontalContentAlignment" Value="Left"/>
-		<Setter Property="Padding" Value="15,6,60,6"/>
-		<Setter Property="Width" Value="Auto"/>
+		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+		<Setter Property="Padding" Value="10"/>
+		<Setter Property="Width" Value="420"/>
 		<Setter Property="MinHeight" Value="60"/>
 		<Setter Property="Template">
 			<Setter.Value>
@@ -3024,7 +3028,33 @@
 		</Setter>
 	</Style>
 
-	<Style x:Key="Style_TextBlock_Breadcrumb" TargetType="TextBlock">
+    <Style x:Key="Style_HeaderedContentControl_Settings" TargetType="toolkit:HeaderedContentControl">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:HeaderedContentControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" MinHeight="30"/>
+                            <RowDefinition Height="*" MinHeight="40"/>
+                        </Grid.RowDefinitions>
+                        <Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="{StaticResource Brush_HeaderBorder}"/>
+                        <Border BorderThickness="0" Margin="1,1,1,0" CornerRadius="4,4,0,0" Background="{StaticResource Brush_SettingsToolbarBackground}">
+                        </Border>
+                        <ContentPresenter Grid.Row="0" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
+                        <ContentPresenter Grid.Row="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Key="Style_Border_SettingsSection" TargetType="Border">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_HeaderBorder}"/>
+    </Style>
+    
+    <Style x:Key="Style_TextBlock_Breadcrumb" TargetType="TextBlock">
 		<Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
 		<Setter Property="FontSize" Value="14"/>
 	</Style>

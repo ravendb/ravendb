@@ -199,7 +199,7 @@
 					<Button.Content>
 						<StackPanel Orientation="Horizontal"
 										VerticalAlignment="Center">
-							<Image Source="{StaticResource Image_Info_Tiny}"
+                            <Image Source="{StaticResource Image_ChangeView_Tiny}"
 									   Stretch="None"
 									   VerticalAlignment="Center" />
 							<TextBlock Text="Index Statistics"

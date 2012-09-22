@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Models;
 
@@ -31,7 +32,15 @@ namespace Raven.Studio.Infrastructure
 			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
 			{
 				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
-				Command.ExecuteCommand(new CreateDatabaseCommand());
+				ApplicationModel.Current.Server.Value.DocumentStore
+					.AsyncDatabaseCommands
+					.ForDefaultDatabase()
+					.GetAsync("Raven/Embadded")
+					.ContinueOnSuccessInTheUIThread(doc =>
+					{
+						if(doc == null || doc.DataAsJson == RavenJObject.FromObject(new {IsEmbedded = true}))
+							Command.ExecuteCommand(new CreateDatabaseCommand());							
+					});
 			}
 
 			ApplicationModel.Current.UpdateAlerts();
