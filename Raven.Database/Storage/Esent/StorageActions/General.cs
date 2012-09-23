@@ -140,10 +140,10 @@ namespace Raven.Storage.Esent.StorageActions
 			transaction = new Transaction(session);
 		}
 
-		public void Commit(CommitTransactionGrbit txMode)
+		public Action Commit(CommitTransactionGrbit txMode)
 		{
 			transaction.Commit(txMode);
-			OnCommit();
+			return OnCommit;
 		}
 
 		public long GetNextIdentityValue(string name)
