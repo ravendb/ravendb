@@ -19,20 +19,20 @@ namespace Raven.Tests.MailingList
 			{
 				using(var session = store.OpenSession())
 				{
-					Assert.Equal(@"FirstName:<<\*Ore\?n\*>>", session.Query<User>()
+					Assert.Equal(@"FirstName:(\*Ore\?n\*)", session.Query<User>()
 						.Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.EscapeAll)
 						.ToString());
 
-					Assert.Equal(@"FirstName:<<*Ore?n*>>", session.Query<User>()
+					Assert.Equal(@"FirstName:(*Ore?n*)", session.Query<User>()
 						.Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.RawQuery)
 						.ToString());
 
 
-					Assert.Equal(@"FirstName:<<*Ore\?n*>>", session.Query<User>()
+					Assert.Equal(@"FirstName:(*Ore\?n*)", session.Query<User>()
 						.Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.AllowAllWildcards)
 						.ToString());
 
-					Assert.Equal(@"FirstName:<<\*Ore\?n*>>", session.Query<User>()
+					Assert.Equal(@"FirstName:(\*Ore\?n*)", session.Query<User>()
 						.Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.AllowPostfixWildcard)
 						.ToString());
 				}
