@@ -91,55 +91,52 @@ namespace Raven.Tests.MailingList
 		private List<LogEntry> PopulateLogEntries()
 		{
 			return new List<LogEntry>
-               {
-                 new LogEntry
-                   {
-                     CreatedUtc = DateTimeOffset.UtcNow.AddDays(-2),
-                     Created = DateTime.Now.AddDays(-2),
-                     ApplicationKey = _appKey,
-                     PrivateKey = _privateKey,
-                     Dictionary = new List<LogEntryDictionaryItem>
-                                    {
-                                      new LogEntryDictionaryItem {Key = "Test", Value = "Test"}
-                                    }
-                   },
-                 new LogEntry
-                   {
-                     CreatedUtc = DateTimeOffset.UtcNow.AddDays(-1),
-                     Created = DateTime.Now.AddDays(-1),
-                     ApplicationKey = _appKey,
-                     PrivateKey = _privateKey,
-                     Dictionary = new List<LogEntryDictionaryItem>
-                                    {
-                                      new LogEntryDictionaryItem {Key = "Test", Value = "Test"}
-                                    }
-                   },
-                 new LogEntry
-                   {
-                     CreatedUtc = DateTimeOffset.UtcNow,
-                     Created = DateTime.Now,
-                     ApplicationKey = _appKey,
-                     PrivateKey = _privateKey,
-                     Dictionary = new List<LogEntryDictionaryItem>
-                                    {
-                                      new LogEntryDictionaryItem {Key = "Test", Value = "Test"}
-                                    }
-                   },
-                 new LogEntry
-                   {
-                     CreatedUtc = DateTimeOffset.UtcNow.AddDays(+1),
-                     Created = DateTime.Now.AddDays(+1),
-                     ApplicationKey = _appKey,
-                     PrivateKey = _privateKey,
-                     Dictionary = new List<LogEntryDictionaryItem>
-                                    {
-                                      new LogEntryDictionaryItem {Key = "Test", Value = "Test"}
-                                    }
-                   }
-
-               };
-
-
+			{
+				new LogEntry
+				{
+					CreatedUtc = DateTimeOffset.UtcNow.AddDays(-2),
+					Created = DateTime.Now.AddDays(-2),
+					ApplicationKey = _appKey,
+					PrivateKey = _privateKey,
+					Dictionary = new List<LogEntryDictionaryItem>
+					{
+						new LogEntryDictionaryItem {Key = "Test", Value = "Test"}
+					}
+				},
+				new LogEntry
+				{
+					CreatedUtc = DateTimeOffset.UtcNow.AddDays(-1),
+					Created = DateTime.Now.AddDays(-1),
+					ApplicationKey = _appKey,
+					PrivateKey = _privateKey,
+					Dictionary = new List<LogEntryDictionaryItem>
+					{
+						new LogEntryDictionaryItem {Key = "Test", Value = "Test"}
+					}
+				},
+				new LogEntry
+				{
+					CreatedUtc = DateTimeOffset.UtcNow,
+					Created = DateTime.Now,
+					ApplicationKey = _appKey,
+					PrivateKey = _privateKey,
+					Dictionary = new List<LogEntryDictionaryItem>
+					{
+						new LogEntryDictionaryItem {Key = "Test", Value = "Test"}
+					}
+				},
+				new LogEntry
+				{
+					CreatedUtc = DateTimeOffset.UtcNow.AddDays(+1),
+					Created = DateTime.Now.AddDays(+1),
+					ApplicationKey = _appKey,
+					PrivateKey = _privateKey,
+					Dictionary = new List<LogEntryDictionaryItem>
+					{
+						new LogEntryDictionaryItem {Key = "Test", Value = "Test"}
+					}
+				}
+			};
 		}
 
 		public class Application
