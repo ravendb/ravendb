@@ -107,6 +107,20 @@ namespace Raven.Studio.Models
 				                   			return;
 
 				                   		firstTick = false;
+
+				                   	    ApplicationModel.Current.Server.Value.DocumentStore
+				                   	        .AsyncDatabaseCommands
+				                   	        .ForDefaultDatabase()
+				                   	        .GetAsync("Raven/StudioConfig")
+				                   	        .ContinueOnSuccessInTheUIThread(doc =>
+				                   	        {
+				                   	            if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+				                   	            {
+				                   	                if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+				                   	                    UrlUtil.Navigate("/documents");
+				                   	            }
+				                   	        });
+
 				                   		if (names.Length == 0 || (names.Length == 1 && names[0] == Constants.SystemDatabase))
 				                   		{
 				                   			CreateNewDatabase = true;
