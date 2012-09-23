@@ -450,6 +450,7 @@
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
+    <Compile Include="MailingList\ChrisMarisic.cs" />
     <Compile Include="MailingList\Gal.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\Nullables.cs" />
