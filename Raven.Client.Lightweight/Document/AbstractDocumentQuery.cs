@@ -1534,8 +1534,6 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
 		{
-			searchTerms = searchTerms.Replace("<<", "").Replace(">>", "");
-			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
 			theQueryText.Append(' ');
 			
 			NegateIfNeeded();
@@ -1557,8 +1555,9 @@ If you really want to do in memory filtering on the data returned from the query
 				default:
 					throw new ArgumentOutOfRangeException("escapeQueryOptions", "Value: "  + escapeQueryOptions);
 			}
+			lastEquality = new KeyValuePair<string, string>(fieldName, "(" + searchTerms + ")");
 
-			theQueryText.Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">>");
+			theQueryText.Append(fieldName).Append(":").Append("(").Append(searchTerms).Append(")");
 		}
 
 		private string TransformToEqualValue(WhereParams whereParams)

@@ -53,22 +53,13 @@ namespace Raven.Database.Queries
 		{
 			if(suggestionQuery.Term.StartsWith("<<") && suggestionQuery.Term.EndsWith(">>"))
 			{
-				var individualTerms = suggestionQuery.Term.Substring(2, suggestionQuery.Term.Length - 4).Split(new[] {' ', '\t', '\r','\n'}, StringSplitOptions.RemoveEmptyEntries);
-				var result = new List<string>();
-
-				foreach (var term in individualTerms)
-				{
-					result.AddRange(spellChecker.SuggestSimilar(term,
-					                                            suggestionQuery.MaxSuggestions,
-					                                            indexReader,
-					                                            suggestionQuery.Field,
-					                                            suggestionQuery.Popularity));
-				}
-
-				return new SuggestionQueryResult
-				{
-					Suggestions = result.ToArray()
-				};
+				return QueryOverMultipleWords(suggestionQuery, indexReader, 
+					suggestionQuery.Term.Substring(2, suggestionQuery.Term.Length - 4));
+			}
+			if (suggestionQuery.Term.StartsWith("(") && suggestionQuery.Term.EndsWith(")"))
+			{
+				return QueryOverMultipleWords(suggestionQuery, indexReader,
+					suggestionQuery.Term.Substring(1, suggestionQuery.Term.Length - 2));
 			}
 			string[] suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term,
 			                                                   suggestionQuery.MaxSuggestions,
@@ -79,6 +70,27 @@ namespace Raven.Database.Queries
 			return new SuggestionQueryResult
 			{
 				Suggestions = suggestions
+			};
+		}
+
+		private SuggestionQueryResult QueryOverMultipleWords(SuggestionQuery suggestionQuery, IndexReader indexReader,
+		                                                     string queryText)
+		{
+			var individualTerms = queryText.Split(new[] {' ', '\t', '\r', '\n'}, StringSplitOptions.RemoveEmptyEntries);
+			var result = new List<string>();
+
+			foreach (var term in individualTerms)
+			{
+				result.AddRange(spellChecker.SuggestSimilar(term,
+				                                            suggestionQuery.MaxSuggestions,
+				                                            indexReader,
+				                                            suggestionQuery.Field,
+				                                            suggestionQuery.Popularity));
+			}
+
+			return new SuggestionQueryResult
+			{
+				Suggestions = result.ToArray()
 			};
 		}
 
