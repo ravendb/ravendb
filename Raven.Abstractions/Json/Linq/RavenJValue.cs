@@ -371,14 +371,13 @@ namespace Raven.Json.Linq
 
 		public bool Equals(RavenJValue other)
 		{
+			if (Type == JTokenType.Null && other == null)
+				return true;
 			return other != null && ValuesEquals(this, other);
 		}
 
 		private static bool ValuesEquals(RavenJValue v1, RavenJValue v2)
 		{
-			if (v1 == v2)
-				return true;
-
 			// HACK: This prevents ValuesEquals from being commutative, need to find a more elegant fix
 			// suggestion: if v1._valueType != v2._valueType and one of the value types is a string do a TryParse on the string v2._valueType
 			switch (v1._valueType)
@@ -558,10 +557,13 @@ namespace Raven.Json.Linq
 
 		internal override bool DeepEquals(RavenJToken node)
 		{
+			if (Type == JTokenType.Null && node == null)
+				return true;
+
 			var other = node as RavenJValue;
 			if (other == null)
 				return false;
-			if (other == this)
+			if (ReferenceEquals(other,this))
 				return true;
 
 			return ValuesEquals(this, other);
