@@ -16,7 +16,7 @@ namespace Raven.Studio.Controls.Editors
 {
     public partial class QuerySyntaxTextBlock : UserControl
     {
-        private static readonly ISyntaxLanguage Language;
+        private new static readonly ISyntaxLanguage Language;
 
         public static readonly DependencyProperty TextProperty =
             DependencyProperty.Register("Text", typeof (string), typeof (QuerySyntaxTextBlock), new PropertyMetadata(default(string), HandleTextChanged));

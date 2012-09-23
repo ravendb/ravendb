@@ -12,6 +12,7 @@ using Raven.Database.Linq;
 
 namespace Raven.Tests.Indexes
 {
+	[CLSCompliant(false)]
 	[DisplayName("Aggregates/ShoppingCart")]
 	public class ShoppingCartEventsToShopingCart : AbstractViewGenerator
 	{

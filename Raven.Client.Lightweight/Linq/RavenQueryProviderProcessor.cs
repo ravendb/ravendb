@@ -585,7 +585,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitMethodCall(MethodCallExpression expression)
 		{
-			if (expression.Method.DeclaringType == typeof(object) && expression.Method.Name == "Equals")
+			if (expression.Method.DeclaringType != typeof(string) && expression.Method.Name == "Equals")
 			{
 				switch (expression.Arguments.Count)
 				{
@@ -826,6 +826,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					}
 				case "Select":
 					{
+						if (expression.Arguments[0].Type.IsGenericType && 
+							expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IQueryable<>) && 
+							expression.Arguments[0].Type != expression.Arguments[1].Type)
+						{
+							luceneQuery.AddRootType(expression.Arguments[0].Type.GetGenericArguments()[0]);
+						}
 						VisitExpression(expression.Arguments[0]);
 						VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
 						break;

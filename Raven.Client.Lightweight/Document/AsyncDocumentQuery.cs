@@ -437,9 +437,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name="radius">The radius.</param>
-		/// <param name="latitude">The latitude.</param>
-		/// <param name="longitude">The longitude.</param>
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
 		{
 			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
@@ -497,6 +494,30 @@ namespace Raven.Client.Document
 			OrderBy(propertySelectors.Select(x => GetMemberQueryPath(x)).ToArray());
 			return this;
 		}
+
+		/// <summary>
+		/// Order the results by the specified fields
+		/// The fields are the names of the fields to sort, defaulting to sorting by descending.
+		/// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name="fields">The fields.</param>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending(params string[] fields)
+		{
+			OrderByDescending(fields);
+			return this;
+		}
+
+		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "propertySelectors">Property selectors for the fields.</param>
+		public IAsyncDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+		{
+			OrderByDescending(propertySelectors.Select(GetMemberQueryPath).ToArray());
+			return this;
+		}		
 
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of now.
@@ -633,7 +654,8 @@ namespace Raven.Client.Document
 											includes = new HashSet<string>(includes),
 											negate = negate,
 											queryOperation = queryOperation,
-											queryStats = queryStats
+											queryStats = queryStats,
+											rootTypes = {typeof(T)}
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;

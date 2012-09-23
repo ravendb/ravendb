@@ -36,16 +36,6 @@ namespace Raven.Client.Embedded
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 		}
 
-		///// <summary>
-		///// Constructor
-		///// </summary>
-		//public EmbeddableDocumentStore()
-		//{
-		//	var databaseCommands = DatabaseCommands;
-		//	if (databaseCommands != null)
-		//		databaseCommands.Put("Raven/Embadded", new Guid(), RavenJObject.FromObject(new {IsEmbedded = true}), null);
-		//}
-
 		private RavenConfiguration configuration;
 		private HttpServer httpServer;
 		private bool wasDisposed;
@@ -220,6 +210,7 @@ namespace Raven.Client.Embedded
 				DocumentDatabase.SpinBackgroundWorkers();
 				if (UseEmbeddedHttpServer)
 				{
+					SetStudioConfigToAllowSingleDb();
 					httpServer = new HttpServer(configuration, DocumentDatabase);
 					httpServer.StartListening();
 				}
@@ -243,8 +234,32 @@ namespace Raven.Client.Embedded
 			{
 				base.InitializeInternal();
 			}
+		}
 
-				DocumentDatabase.Put("Raven/Embadded", new Guid(), RavenJObject.FromObject(new { IsEmbedded = true }), new RavenJObject(), new TransactionInformation());
+		/// <summary>
+		/// Let the studio knows that it shouldn't display the warning about sys db access
+		/// </summary>
+		public void SetStudioConfigToAllowSingleDb()
+		{
+			if (DocumentDatabase == null)
+				return;
+			var jsonDocument = DocumentDatabase.Get("Raven/StudioConfig", null);
+			RavenJObject doc;
+			RavenJObject metadata;
+			if(jsonDocument == null)
+			{
+				doc = new RavenJObject();
+				metadata = new RavenJObject();
+			}
+			else
+			{
+				doc = jsonDocument.DataAsJson;
+				metadata = jsonDocument.Metadata;
+			}
+
+			doc["WarnWhenUsingSystemDatabase"] = false;
+
+			DocumentDatabase.Put("Raven/StudioConfig", null, doc, metadata, null);
 		}
 
 

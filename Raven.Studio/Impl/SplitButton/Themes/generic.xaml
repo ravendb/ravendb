@@ -3,7 +3,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:splitButton="clr-namespace:Delay"
     xmlns:ravenToolKit="clr-namespace:System.Windows.Controls;assembly=Raven.Studio"
-    xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit">
+    xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+    xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
 
     <Style TargetType="splitButton:SplitButton">
         <Setter Property="Background" Value="#FF1F3B53"/>
@@ -84,9 +85,9 @@
                             <ContentPresenter x:Name="contentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}"/>
                             <Rectangle Grid.Column="1" Width="1" Fill="{TemplateBinding Foreground}" Opacity="0.4" Margin="0 4 0 4"/>
                             <Grid x:Name="SplitElement" Grid.Column="2" Background="Transparent" ToolTipService.ToolTip="{TemplateBinding DropDownToolTip}">
-                                <ravenToolKit:ContextMenuService.ContextMenu>
-                                    <ravenToolKit:ContextMenu ItemsSource="{Binding ButtonMenuItemsSource, RelativeSource={RelativeSource TemplatedParent}}" Foreground="{TemplateBinding Foreground}" FlowDirection="{TemplateBinding FlowDirection}"/>
-                                </ravenToolKit:ContextMenuService.ContextMenu>
+                                <ContextMenu:ContextMenuService.ContextMenu>
+                                    <ContextMenu:ContextMenu ItemsSource="{Binding ButtonMenuItemsSource, RelativeSource={RelativeSource TemplatedParent}}" Foreground="{TemplateBinding Foreground}" FlowDirection="{TemplateBinding FlowDirection}"/>
+                                </ContextMenu:ContextMenuService.ContextMenu>
                                 <Path Data="M 0,0 L 8,0 L 4,4 Z" Fill="{TemplateBinding Foreground}" Margin="2 0 4 0" VerticalAlignment="Center"/>
                             </Grid>
                         </Grid>
@@ -173,9 +174,9 @@
                                 <ColumnDefinition/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <ravenToolKit:ContextMenuService.ContextMenu>
-                                <ravenToolKit:ContextMenu ItemsSource="{Binding ButtonMenuItemsSource, RelativeSource={RelativeSource TemplatedParent}}" Foreground="{TemplateBinding Foreground}" FlowDirection="{TemplateBinding FlowDirection}"/>
-                            </ravenToolKit:ContextMenuService.ContextMenu>
+                            <ContextMenu:ContextMenuService.ContextMenu>
+                                <ContextMenu:ContextMenu ItemsSource="{Binding ButtonMenuItemsSource, RelativeSource={RelativeSource TemplatedParent}}" Foreground="{TemplateBinding Foreground}" FlowDirection="{TemplateBinding FlowDirection}"/>
+                            </ContextMenu:ContextMenuService.ContextMenu>
                             <ContentPresenter x:Name="contentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}"/>
                             <Path Grid.Column="1" Data="M 0,0 L 8,0 L 4,4 Z" Fill="{TemplateBinding Foreground}" Margin="2 0 4 0" VerticalAlignment="Center"/>
                         </Grid>

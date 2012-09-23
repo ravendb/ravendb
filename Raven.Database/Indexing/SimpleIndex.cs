@@ -134,7 +134,7 @@ namespace Raven.Database.Indexing
 						},
 						x => x.Dispose());
 				}
-				return count;
+				return sourceCount;
 			});
 			AddindexingPerformanceStat(new IndexingPerformanceStats
 			{

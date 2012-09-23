@@ -109,20 +109,17 @@ namespace Raven.Database.Commercial
 
 		private void AssertForV2(IDictionary<string, string> licenseAttributes, DocumentDatabase database)
 		{
-			if (licenseAttributes["license"] != "1.2")
-				throw new MissingFieldException("This is not a licence for RavenDB 1.2");
+			string version;
+			if (licenseAttributes.TryGetValue("version", out version) == false || version != "1.2")
+				throw new LicenseExpiredException("This is not a licence for RavenDB 1.2");
 
-			if (licenseAttributes.ContainsKey("maxRamUtilization"))
-			{
-				if (licenseAttributes["maxRamUtilization"] != "unlimited")
-					MemoryStatistics.MemoryLimit = int.Parse(licenseAttributes["maxRamUtilization"]);
-			}
-
-			if (licenseAttributes.ContainsKey("maxParallelism"))
-			{
-				if (licenseAttributes["maxParallelism"] != "unlimited")
-					MemoryStatistics.MaxParallelism = int.Parse(licenseAttributes["maxRamUtilization"]);
-			}
+			string maxRam;
+			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam) == false || maxRam != "unlimited")
+				MemoryStatistics.MemoryLimit = int.Parse(licenseAttributes["maxRamUtilization"]);
+			
+			string maxParallel;
+			if (licenseAttributes.TryGetValue("maxParallelism", out maxParallel) == false || maxParallel != "unlimited")
+				MemoryStatistics.MaxParallelism = int.Parse(licenseAttributes["maxRamUtilization"]);
 		}
 
 		private static string GetLicenseText(DocumentDatabase database)

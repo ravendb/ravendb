@@ -7,32 +7,24 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
-#if !NET35
-using System.Collections.Concurrent;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Async;
-#else
-using Raven.Client.Util;
-#endif
 #if SILVERLIGHT
 using System.Net.Browser;
-using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
-using System.Collections.Generic;
-using Raven.Client.Util;
-
 #else
-
+using System.Collections.Concurrent;
+using Raven.Abstractions.Connection;
 #endif
+
 
 namespace Raven.Client.Document
 {
@@ -561,12 +553,17 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 #if !SILVERLIGHT
+
+			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
+			rootServicePoint.UseNagleAlgorithm = false;
+
 			databaseCommandsGenerator = () =>
 			{
 				string databaseUrl = Url;
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)
 				{
-					databaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
 				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);

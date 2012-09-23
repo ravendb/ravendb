@@ -9,7 +9,8 @@
                      xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                            xmlns:Controls="clr-namespace:System.Windows.Controls"
                            xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-                           xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
+                           xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                           xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
                       d:DataContext="{d:DesignInstance Models:StudioErrorListModel}">
 
     <Grid x:Name="LayoutRoot" Margin="2">
@@ -29,17 +30,17 @@
             <i:Interaction.Behaviors>
                 <Behaviors:SelectItemOnRightClick />
             </i:Interaction.Behaviors>
-            <Controls:ContextMenuService.ContextMenu>
-                <Controls:ContextMenu>
-                    <Controls:MenuItem Header="Copy Details to Clipboard" 
+            <ContextMenu:ContextMenuService.ContextMenu>
+                <ContextMenu:ContextMenu>
+                    <ContextMenu:MenuItem Header="Copy Details to Clipboard" 
                                        Command="{Binding CopyErrorDetailsToClipboard}" 
                                        CommandParameter="{Binding SelectedItem}">
-                        <Controls:MenuItem.Icon>
+                        <ContextMenu:MenuItem.Icon>
                             <Image Source="{StaticResource Image_CopyToClipboard_Tiny}" Stretch="None"/>
-                        </Controls:MenuItem.Icon>
-                    </Controls:MenuItem>
-                </Controls:ContextMenu>
-            </Controls:ContextMenuService.ContextMenu>
+                        </ContextMenu:MenuItem.Icon>
+                    </ContextMenu:MenuItem>
+                </ContextMenu:ContextMenu>
+            </ContextMenu:ContextMenuService.ContextMenu>
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="Messages:Notification">
                     <toolkit:Expander IsExpanded="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, Mode=TwoWay}"

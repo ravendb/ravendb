@@ -110,7 +110,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private class CodecIndexInput : IndexInput, IDisposable
+		private class CodecIndexInput : IndexInput
 		{
 			private readonly Stream stream;
 			private readonly bool isStreamOwned;
@@ -178,7 +178,7 @@ namespace Raven.Database.Indexing
 			{
 				lock (stream)
 				{
-					stream.Position = this.position = newPosition;
+					stream.Position = position = newPosition;
 				}
 			}
 
@@ -191,11 +191,6 @@ namespace Raven.Database.Indexing
 			{
 				get { return position; }
 			}
-
-			public void Dispose()
-			{
-				Close();
-			}
 		}
 
 		private class CodecIndexOutput : IndexOutput
@@ -206,7 +201,7 @@ namespace Raven.Database.Indexing
 			public CodecIndexOutput(FileInfo file, Func<Stream, Stream> applyCodecs)
 			{
 				this.file = file;
-				this.stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
+				stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
 			}
 
 			~CodecIndexOutput()
@@ -215,7 +210,7 @@ namespace Raven.Database.Indexing
 				try
 				{
 					log.Log(LogLevel.Error, "~CodecIndexOutput() " + file.FullName + "!");
-					Close();
+					Dispose(false);
 				}
 				catch (Exception e)
 				{

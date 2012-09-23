@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Security.Principal;
 using System.Threading;
+using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -14,10 +15,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var x = new AdminFinder.CachingAdminFinder();
-
-			var isAdministrator = x.IsAdministrator(WindowsIdentity.GetCurrent());
-			Console.WriteLine(isAdministrator);
+			for (int i = 0; i < 100; i++)
+			{
+				Console.WriteLine(i);
+				using(var x= new NullableEnum())
+				{
+					x.CanSerializeAndDeserializeCorrectly();
+				}
+			}
 		}
 
 		private static void UseMyData()

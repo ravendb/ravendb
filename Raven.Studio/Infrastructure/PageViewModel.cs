@@ -11,7 +11,7 @@ namespace Raven.Studio.Infrastructure
 	{
 		public List<string> ModelUrlIgnoreList { get; private set; }
 		public string ModelUrl { get; set; }
-		public bool IsLoaded { get; private set; }
+		public new bool IsLoaded { get; protected set; }
 
 		public PageViewModel()
 		{

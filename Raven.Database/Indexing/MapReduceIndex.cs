@@ -33,6 +33,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
+
 	public class MapReduceIndex : Index
 	{
 		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition,

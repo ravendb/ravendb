@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Json
 {
+	[CLSCompliant(false)]
 	public class ScriptsCache
 	{
 		private class CachedResult

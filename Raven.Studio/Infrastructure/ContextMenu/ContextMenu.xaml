@@ -8,16 +8,17 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="clr-namespace:System.Windows.Controls">
+    xmlns:controls="clr-namespace:System.Windows.Controls"
+    xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
 
-    <Style TargetType="controls:ContextMenu">
+    <Style TargetType="ContextMenu:ContextMenu">
         <Setter Property="Background" Value="#FFF5F5F5"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="#FF959595"/>
         <Setter Property="Padding" Value="2"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="controls:ContextMenu">
+                <ControlTemplate TargetType="ContextMenu:ContextMenu">
                     <Border
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"

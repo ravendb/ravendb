@@ -7,6 +7,8 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using ContextMenu = Raven.Studio.Infrastructure.ContextMenu.ContextMenu;
+using ContextMenuService = Raven.Studio.Infrastructure.ContextMenu.ContextMenuService;
 
 namespace Delay
 {
