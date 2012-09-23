@@ -385,6 +385,43 @@ namespace Raven.Storage.Esent.StorageActions
 			return results.Values;
 		}
 
+		public IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take)
+		{
+			Api.JetSetCurrentIndex(session, MappedResults, "by_view_reduce_key_and_bucket");
+			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
+				yield break;
+
+			try
+			{
+				Api.JetMove(session, MappedResults, start, MoveGrbit.MoveKeyNE);
+			}
+			catch (EsentErrorException e)
+			{
+				if (e.Error == JET_err.NoCurrentRecord)
+				{
+					yield break;
+				}
+				throw;
+			}
+
+			var results = new HashSet<string>();
+			while (take > 0)
+			{
+				take -= 1;
+
+				var indexNameFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
+				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+				if (string.Equals(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false)
+					break;
+
+				if (results.Add(keyFromDb))
+					yield return keyFromDb;
+
+				if (Api.TryMoveNext(session, MappedResults) == false)
+					break;
+			}
+		}
 
 		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int take)
 		{

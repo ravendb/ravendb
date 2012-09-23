@@ -216,9 +216,17 @@ namespace Raven.Database.Server.Responders
 			var key = context.Request.QueryString["key"];
 			if(string.IsNullOrEmpty(key))
 			{
+				List<string> keys = null;
+				Database.TransactionalStorage.Batch(accessor =>
+				{
+					keys = accessor.MapReduce.GetKeysForIndexForDebug(index, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
+						.ToList();
+				});
+
 				context.WriteJson(new
 				{
-					Error = "Query string argument \'key\' is required"
+					Error = "Query string argument \'key\' is required",
+					Keys = keys
 				});
 				context.SetStatusToBadRequest();
 				return;
