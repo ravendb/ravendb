@@ -243,6 +243,8 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public void SetStudioConfigToAllowSingleDb()
 		{
+			if (DocumentDatabase == null)
+				return;
 			var jsonDocument = DocumentDatabase.Get("Raven/StudioConfig", null);
 			RavenJObject doc;
 			RavenJObject metadata;
