@@ -731,6 +731,30 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Order the results by the specified fields
+		/// The fields are the names of the fields to sort, defaulting to sorting by descending.
+		/// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name="fields">The fields.</param>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(params string[] fields)
+		{
+			OrderByDescending(fields);
+			return this;
+		}
+
+		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "propertySelectors">Property selectors for the fields.</param>
+		public IDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+		{
+			OrderByDescending(propertySelectors.Select(GetMemberQueryPath).ToArray());
+			return this;
+		}
+
+		/// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>

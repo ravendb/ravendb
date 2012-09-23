@@ -1242,6 +1242,28 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "fields">The fields.</param>
+		public void OrderByDescending(params string[] fields)
+		{
+			fields = fields.Select(MakeFieldSortDescedning).ToArray();
+			OrderBy(fields);
+		}
+
+		string MakeFieldSortDescedning(string field)
+		{
+			if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
+			{
+				return field;
+			}
+
+			return "-" + field;
+		}	
+
+		/// <summary>
 		///   Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>
