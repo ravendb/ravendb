@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Linq;
 using Raven.Studio.Features.Documents;

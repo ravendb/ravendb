@@ -919,17 +919,14 @@
     <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenDocumentsByEntityName.cs">
       <Link>Imports\Indexes\RavenDocumentsByEntityName.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions_Obsolete.cs">
-      <Link>Imports\Linq\LinqExtensions_Obsolete.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
       <Link>Imports\Indexes\IndexDefinitionHelper.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\LinqPathProvider.cs">
       <Link>Imports\Linq\LinqPathProvider.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\SearchOptions.cs">
-      <Link>Imports\Linq\SearchOptions.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryableExtensions.cs">
+      <Link>Imports\Linq\RavenQueryableExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConversionListener.cs">
       <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>
@@ -942,6 +939,18 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentStoreListener.cs">
       <Link>Imports\Listeners\IDocumentStoreListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\LinqExtensions.cs">
+      <Link>Imports\PublicExtensions\LinqExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\LinqExtensions_Obsolete.cs">
+      <Link>Imports\PublicExtensions\LinqExtensions_Obsolete.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\SearchOptions.cs">
+      <Link>Imports\PublicExtensions\SearchOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
+      <Link>Imports\RavenQueryStatistics.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
@@ -1309,9 +1318,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Linq\IRavenQueryProvider.cs">
       <Link>Imports\Linq\IRavenQueryProvider.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions.cs">
-      <Link>Imports\Linq\LinqExtensions.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryInspector.cs">
       <Link>Imports\Linq\RavenQueryInspector.cs</Link>
     </Compile>
@@ -1320,9 +1326,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryProviderProcessor.cs">
       <Link>Imports\Linq\RavenQueryProviderProcessor.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryStatistics.cs">
-      <Link>Imports\Linq\RavenQueryStatistics.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\ReflectionExtensions.cs">
       <Link>Imports\Linq\ReflectionExtensions.cs</Link>

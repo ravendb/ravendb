@@ -600,7 +600,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				return;
 			}
-			if (expression.Method.DeclaringType == typeof(LinqExtensions))
+			if (expression.Method.DeclaringType == typeof(LinqExtensions) || 
+				expression.Method.DeclaringType == typeof(RavenQueryableExtensions))
 			{
 				VisitLinqExtensionsMethodCall(expression);
 				return;
@@ -623,7 +624,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				return;
 			}
 
-			if (expression.Method.DeclaringType == typeof(LinqExtensions))
+			if (expression.Method.DeclaringType == typeof(LinqExtensions) || 
+				expression.Method.DeclaringType == typeof(RavenQueryableExtensions))
 			{
 				VisitLinqExtensionsMethodCall(expression);
 				return;

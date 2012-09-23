@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
-using Raven.Client.Linq;
+using Raven.Client;
 using Raven.Tests.Document;
 using Raven.Tests.Silverlight.Entities;
 

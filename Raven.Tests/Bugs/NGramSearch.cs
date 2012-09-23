@@ -6,6 +6,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Util;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Database.Indexing;
 using Xunit;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;

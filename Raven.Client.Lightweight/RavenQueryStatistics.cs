@@ -4,10 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.ComponentModel;
 using Raven.Abstractions.Data;
 
-namespace Raven.Client.Linq
+namespace Raven.Client
 {
 	/// <summary>
 	/// Statistics about a raven query.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;

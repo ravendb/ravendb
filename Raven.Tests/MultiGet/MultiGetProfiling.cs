@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
