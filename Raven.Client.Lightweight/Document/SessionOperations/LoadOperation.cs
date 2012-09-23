@@ -7,7 +7,7 @@ namespace Raven.Client.Document.SessionOperations
 {
 	public class LoadOperation
 	{
-		private static readonly ILog log = LogProvider.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly Func<IDisposable> disableAllCaching;
 		private readonly string id;
@@ -26,7 +26,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		public void LogOperation()
 		{
-			log.DebugFormat("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
+			log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
 		}
 
 		public IDisposable EnterLoadContext()

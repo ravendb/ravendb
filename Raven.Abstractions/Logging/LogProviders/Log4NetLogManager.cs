@@ -5,16 +5,16 @@ namespace Raven.Abstractions.Logging.LogProviders
 	using System.Linq.Expressions;
 	using System.Reflection;
 
-	public class NLogLogProvider : ILogProvider
+	public class Log4NetLogManager : ILogManager
 	{
 		private readonly Func<string, object> getLoggerByNameDelegate;
 		private static bool providerIsAvailabileOverride = true;
-		
-		public NLogLogProvider()
+
+		public Log4NetLogManager()
 		{
-			if(!IsLoggerAvailable())
+			if (!IsLoggerAvailable())
 			{
-				throw new InvalidOperationException("NLog.LogManager not found");
+				throw new InvalidOperationException("log4net.LogManager not found");
 			}
 			getLoggerByNameDelegate = GetGetLoggerMethodCall();
 		}
@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		public ILog GetLogger(string name)
 		{
-			return new NLogLogger(getLoggerByNameDelegate(name));
+			return new Log4NetLogger(getLoggerByNameDelegate(name));
 		}
 
 		public static bool IsLoggerAvailable()
@@ -39,10 +39,10 @@ namespace Raven.Abstractions.Logging.LogProviders
 		{
 #if !SL_4
 			Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-			Assembly nlogAssembly = assemblies.FirstOrDefault(assembly => assembly.FullName.StartsWith("NLog,"));
-			return nlogAssembly != null ? nlogAssembly.GetType("NLog.LogManager") : Type.GetType("NLog.LogManager, nlog");
+			Assembly nlogAssembly = assemblies.FirstOrDefault(assembly => assembly.FullName.StartsWith("log4net,"));
+			return nlogAssembly != null ? nlogAssembly.GetType("log4net.LogManager") : Type.GetType("NLog.LogManager, log4net");
 #else
-			return Type.GetType("NLog.LogManager, nlog");
+			return Type.GetType("NLog.LogManager, log4net");
 #endif
 		}
 
@@ -55,55 +55,59 @@ namespace Raven.Abstractions.Logging.LogProviders
 			MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {resultValue = keyParam});
 			return Expression.Lambda<Func<string, object>>(methodCall, new[] {resultValue}).Compile();
 		}
-	 
-		public class NLogLogger : ILog
+
+		public class Log4NetLogger : ILog
 		{
 			private readonly dynamic logger;
 
-			internal NLogLogger(object logger)
+			internal Log4NetLogger(object logger)
 			{
 				this.logger = logger;
 			}
 
+			public bool IsDebugEnabled
+			{
+				get { return logger.IsDebugEnabled; }
+			}
+
+			public bool IsWarnEnabled
+			{
+				get { return logger.IsWarnEnabled; }
+			}
+
 			public void Log(LogLevel logLevel, Func<string> messageFunc)
 			{
-				switch(logLevel)
+				switch (logLevel)
 				{
-					case LogLevel.Debug:
-						if(logger.IsDebugEnabled)
-						{
-							logger.Debug(messageFunc());
-						}
-						break;
 					case LogLevel.Info:
-						if(logger.IsInfoEnabled)
+						if (logger.IsInfoEnabled)
 						{
 							logger.Info(messageFunc());
 						}
 						break;
 					case LogLevel.Warn:
-						if(logger.IsWarnEnabled)
+						if (logger.IsWarnEnabled)
 						{
 							logger.Warn(messageFunc());
 						}
 						break;
 					case LogLevel.Error:
-						if(logger.IsErrorEnabled)
+						if (logger.IsErrorEnabled)
 						{
 							logger.Error(messageFunc());
 						}
 						break;
 					case LogLevel.Fatal:
-						if(logger.IsFatalEnabled)
+						if (logger.IsFatalEnabled)
 						{
 							logger.Fatal(messageFunc());
 						}
 						break;
 					default:
-						if(logger.IsTraceEnabled)
+						if (logger.IsDebugEnabled)
 						{
-							logger.Trace(messageFunc());
-						}
+							logger.Debug(messageFunc()); // Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
+						} 
 						break;
 				}
 			}
@@ -111,42 +115,36 @@ namespace Raven.Abstractions.Logging.LogProviders
 			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
 				where TException : Exception
 			{
-				switch(logLevel)
+				switch (logLevel)
 				{
-					case LogLevel.Debug:
+					case LogLevel.Info:
 						if (logger.IsDebugEnabled)
 						{
-							logger.DebugException(messageFunc(), exception);
-						}
-						break;
-					case LogLevel.Info:
-						if (logger.IsInfoEnabled)
-						{
-							logger.InfoException(messageFunc(), exception);
+							logger.Info(messageFunc(), exception);
 						}
 						break;
 					case LogLevel.Warn:
 						if (logger.IsWarnEnabled)
 						{
-							logger.WarnException(messageFunc(), exception);
+							logger.Warn(messageFunc(), exception);
 						}
 						break;
 					case LogLevel.Error:
 						if (logger.IsErrorEnabled)
 						{
-							logger.ErrorException(messageFunc(), exception);
+							logger.Error(messageFunc(), exception);
 						}
 						break;
 					case LogLevel.Fatal:
 						if (logger.IsFatalEnabled)
 						{
-							logger.FatalException(messageFunc(), exception);
+							logger.Fatal(messageFunc(), exception);
 						}
 						break;
 					default:
-						if (logger.IsTraceEnabled)
+						if (logger.IsDebugEnabled)
 						{
-							logger.TraceException(messageFunc(), exception);
+							logger.Debug(messageFunc(), exception);
 						}
 						break;
 				}

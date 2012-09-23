@@ -2,11 +2,11 @@ namespace Raven.Abstractions.Logging
 {
 	using System;
 	using System.Diagnostics;
-	using Raven.Abstractions.Logging.LogProviders;
+	using LogProviders;
 
-	public static class LogProvider
+	public static class LogManager
 	{
-		private static ILogProvider currentLogProvider;
+		private static ILogManager currentLogManager;
 
 		public static ILog GetCurrentClassLogger()
 		{
@@ -25,30 +25,34 @@ namespace Raven.Abstractions.Logging
 
 		public static ILog GetLogger(string name)
 		{
-			ILogProvider temp = currentLogProvider ?? ResolveLogProvider();
+			ILogManager temp = currentLogManager ?? ResolveLogProvider();
 			return temp == null ? new NoOpLogger() : (ILog)new LoggerExecutionWrapper(temp.GetLogger(name));
 		}
 
-		public static void SetCurrentLogProvider(ILogProvider logProvider)
+		public static void SetCurrentLogManager(ILogManager logManager)
 		{
-			currentLogProvider = logProvider;
+			currentLogManager = logManager;
 		}
 
-		private static ILogProvider ResolveLogProvider()
+		private static ILogManager ResolveLogProvider()
 		{
-			if (NLogLogProvider.IsLoggerAvailable())
+			if (NLogLogManager.IsLoggerAvailable())
 			{
-				return new NLogLogProvider();
+				return new NLogLogManager();
 			}
-			if (Log4NetLogProvider.IsLoggerAvailable())
+			if (Log4NetLogManager.IsLoggerAvailable())
 			{
-				return new Log4NetLogProvider();
+				return new Log4NetLogManager();
 			}
 			return null;
 		}
 
 		public class NoOpLogger : ILog
 		{
+			public bool IsDebugEnabled { get { return false; } }
+
+			public bool IsWarnEnabled { get { return false; } }
+
 			public void Log(LogLevel logLevel, Func<string> messageFunc)
 			{}
 

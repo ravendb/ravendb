@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using NLog;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Database.Util;

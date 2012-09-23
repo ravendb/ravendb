@@ -13,17 +13,16 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using NLog;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Tasks
@@ -38,7 +37,7 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		private DocumentDatabase docDb;
-		private readonly Logger log = LogManager.GetCurrentClassLogger();
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
 		private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 

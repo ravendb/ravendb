@@ -17,6 +17,10 @@
 			_logger = logger;
 		}
 
+		public bool IsDebugEnabled { get { return _logger.IsDebugEnabled; } }
+
+		public bool IsWarnEnabled { get { return _logger.IsWarnEnabled; } }
+
 		public void Log(LogLevel logLevel, Func<string> messageFunc)
 		{
 			Func<string> wrappedMessageFunc = () =>

@@ -56,6 +56,10 @@
 			private string _message;
 			private Exception _exception;
 
+			public bool IsDebugEnabled { get; set; }
+
+			public bool IsWarnEnabled { get; set; }
+
 			public void Log(LogLevel logLevel, Func<string> messageFunc)
 			{
 				messageFunc();

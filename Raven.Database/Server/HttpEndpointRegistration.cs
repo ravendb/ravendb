@@ -1,5 +1,4 @@
 ﻿using System;
-using NLog.Config;
 using Raven.Database.Util;
 
 namespace Raven.Database.Server

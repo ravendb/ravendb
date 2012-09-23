@@ -1,25 +1,25 @@
-﻿namespace Raven.Tests.Abstractions.Logging.LogProviders
-{
-	using System;
-	using System.Linq;
-	using Raven.Abstractions.Logging.LogProviders;
-	using Xunit;
-	using log4net;
-	using log4net.Appender;
-	using log4net.Config;
-	using log4net.Core;
-	using ILog = Raven.Abstractions.Logging.ILog;
+﻿using System;
+using System.Linq;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Logging.LogProviders;
+using Xunit;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Core;
+using LogManager = log4net.LogManager;
 
-	public class Log4NetLogProviderLoggingEnabledTests : IDisposable
+namespace Raven.Tests.Abstractions.Logging.LogProviders
+{
+	public class Log4NetLogManagerLoggingEnabledTests : IDisposable
 	{
 		private readonly MemoryAppender memoryAppender;
 		private readonly ILog sut;
 
-		public Log4NetLogProviderLoggingEnabledTests()
+		public Log4NetLogManagerLoggingEnabledTests()
 		{
 			memoryAppender = new MemoryAppender();
 			BasicConfigurator.Configure(memoryAppender);
-			sut = new Log4NetLogProvider().GetLogger("Test");
+			sut = new Log4NetLogManager().GetLogger("Test");
 		}
 
 		public void Dispose()
