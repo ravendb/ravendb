@@ -234,8 +234,6 @@ namespace Raven.Client.Embedded
 			{
 				base.InitializeInternal();
 			}
-
-				DocumentDatabase.Put("Raven/Embadded", new Guid(), RavenJObject.FromObject(new { IsEmbedded = true }), new RavenJObject(), new TransactionInformation());
 		}
 
 		/// <summary>
