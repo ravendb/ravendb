@@ -1,88 +1,272 @@
 ﻿<UserControl x:Class="Raven.Studio.Features.Settings.AuthorizationSettingSectionView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-             xmlns:Data="clr-namespace:Raven.Bundles.Authorization.Model" mc:Ignorable="d"
+             xmlns:Data="clr-namespace:Raven.Bundles.Authorization.Model" 
              xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-    d:DesignHeight="300" d:DesignWidth="400">
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+			 xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+             xmlns:Controls="clr-namespace:Microsoft.Windows.Controls" mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400" >
 
-
-    <UserControl.Resources>
-        <DataTemplate x:Key="AuthorizationUserTemplate" DataType="Data:AuthorizationUser">
+	<UserControl.Resources>
+		<Style TargetType="sdk:AutoCompleteBox">
+			<Setter Property="IsTabStop" Value="False" />
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="sdk:AutoCompleteBox">
+						<Grid Margin="{TemplateBinding Padding}"
+                      Background="{TemplateBinding Background}">
+							<Controls:WatermarkedTextBox Watermark="Add Rule" IsTabStop="True" x:Name="Text" Margin="0"
+                                                         Padding="3,3,18,3">
+								<i:Interaction.Triggers>
+									<Behaviors:StudioKeyTrigger Key="Enter" >
+										<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+																 PropertyName="IsSelected" 
+																 Value="True"/>
+										<i:InvokeCommandAction Command="{Binding DataContext.AddRuleToUser, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+									</Behaviors:StudioKeyTrigger>
+								</i:Interaction.Triggers>
+							</Controls:WatermarkedTextBox>
+							<Popup x:Name="Popup">
+								<Border x:Name="PopupBorder" HorizontalAlignment="Stretch" Opacity="0.0" BorderThickness="0" CornerRadius="0" TextOptions.TextHintingMode="Animated">
+									<Border.RenderTransform>
+										<TranslateTransform X="1" Y="1" />
+									</Border.RenderTransform>
+									<Border.Background>
+										<SolidColorBrush Color="#11000000" />
+									</Border.Background>
+									<Border
+                                        HorizontalAlignment="Stretch"
+                                        Opacity="1.0"
+                                        Padding="0"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        CornerRadius="0" Background="White">
+										<Border.RenderTransform>
+											<TransformGroup>
+												<TranslateTransform X="-1" Y="-1" />
+											</TransformGroup>
+										</Border.RenderTransform>
+										<ListBox x:Name="Selector" 
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Auto" 
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto" 
+                                                 ItemContainerStyle="{TemplateBinding ItemContainerStyle}" 
+                                                 Background="{TemplateBinding Background}" 
+                                                 Foreground="{TemplateBinding Foreground}" 
+                                                 BorderThickness="0" 
+                                                 ItemTemplate="{TemplateBinding ItemTemplate}" />
+									</Border>
+								</Border>
+							</Popup>
+							<VisualStateManager.VisualStateGroups>
+								<VisualStateGroup x:Name="PopupStates">
+									<VisualStateGroup.Transitions>
+										<VisualTransition GeneratedDuration="0:0:0.1" To="PopupOpened" />
+										<VisualTransition GeneratedDuration="0:0:0.2" To="PopupClosed" />
+									</VisualStateGroup.Transitions>
+									<VisualState x:Name="PopupOpened">
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="PopupBorder" Storyboard.TargetProperty="Opacity" To="1.0" />
+										</Storyboard>
+									</VisualState>
+									<VisualState x:Name="PopupClosed">
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="PopupBorder" Storyboard.TargetProperty="Opacity" To="0.0" />
+										</Storyboard>
+									</VisualState>
+								</VisualStateGroup>
+							</VisualStateManager.VisualStateGroups>
+						</Grid>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		
+		<DataTemplate x:Key="AuthorizationUserTemplate" DataType="Data:AuthorizationUser">
             <Grid Margin="4" x:Name="grid">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition Width="90" />
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="20" />
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Row="0" 
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
-								 Grid.Column="2" 
-								 HorizontalAlignment="Right" 
-								 Command="{Binding DataContext.DeleteAuthorizationUser, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-								 CommandParameter="{Binding}"  
-								 VerticalAlignment="Center" 
-                                ToolTipService.ToolTip="Remove this authorization user">
-                    <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						Grid.Column="2" 
+						HorizontalAlignment="Right" 
+						Command="{Binding DataContext.DeleteAuthorizationUser, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+						CommandParameter="{Binding}"  
+						VerticalAlignment="Center" 
+						ToolTipService.ToolTip="Remove this authorization user">
+					<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
                 </Button>
 
                 <TextBlock Grid.Row="0" 
 						   Text="Id: " 
 						   VerticalAlignment="Center"/>
-                <TextBox Grid.Row="0" 
-									   Grid.Column="1"
-									   Text="{Binding Id, Mode=TwoWay}" 
-									   Margin="5"
-									   MaxWidth="250"/>
+
+				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="5">
+					<TextBlock Text="Authorization/Users/" VerticalAlignment="Center"/>
+					<TextBox Text="{Binding Id, Converter={StaticResource IdStringToIdWithoutHeader}, ConverterParameter='Authorization/Users/', Mode=TwoWay}" 
+							 Margin="5"
+							 Width="130"
+							 VerticalAlignment="Center"/>
+				</StackPanel>
+               
                 <TextBlock Grid.Row="1" 
 						   Text="Name: "
 						   VerticalAlignment="Center"/>
-                <TextBox Grid.Row="1" 
-									   Grid.Column="1"
-									   Text="{Binding Name, Mode=TwoWay}" 
-									   Margin="5"
-									   MaxWidth="250"/>
+                <TextBox Grid.Row="1"
+						 Grid.Column="1"
+						 Text="{Binding Name, Mode=TwoWay}" 
+						 MaxWidth="250"
+						 Margin="-22.5,5,5,5"/>
 
                 <TextBlock Grid.Row="2" 
 						   Text="Roles: " 
-						   VerticalAlignment="Center"/>
-                <ListBox Grid.Row="2" 
-						  Grid.Column="1"
-						  Margin="5"
-						  ItemsSource="{Binding Roles}"
-						  MaxWidth="250"/>
+						   VerticalAlignment="Top"/>
+				<Grid Grid.Row="2"
+					  Grid.Column="1">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="36"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="3" 
+						<sdk:AutoCompleteBox Text="{Binding DataContext.NewRoleForUser, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+											 MinimumPrefixLength="1"
+											 IsTextCompletionEnabled="True"
+											 VerticalAlignment="Center"
+											 Margin="5"
+											 Width="225">
+							<i:Interaction.Behaviors>
+								<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+							</i:Interaction.Behaviors>
+						</sdk:AutoCompleteBox>
+						<Button Style="{StaticResource Style_Button_MouseOverChrome}"
+										Grid.Column="1" 
+										HorizontalAlignment="Right" 
+										Command="{Binding DataContext.AddRuleToUser, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+									
+										VerticalAlignment="Center"
+										ToolTipService.ToolTip="Remove this role">
+							<Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
+							<i:Interaction.Triggers>
+								<i:EventTrigger EventName="Click">
+									<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
+																	 PropertyName="IsSelected" 
+																	 Value="True"/>
+								</i:EventTrigger>
+							</i:Interaction.Triggers>
+
+						</Button>
+					</Grid>
+					
+					<ListBox Grid.Row="2" 
+							 ItemsSource="{Binding Roles}"
+							 Margin="5"
+							 SelectedValue="{Binding DataContext.SelectedRoleInUser, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
+							 Width="250"
+							 HorizontalAlignment="Left">
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Grid Width="240">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="Auto"/>
+								</Grid.ColumnDefinitions>
+								
+								<TextBlock Text="{Binding}"/>
+								<Button Style="{StaticResource Style_Button_MouseOverChrome}"
+										Grid.Column="2" 
+										HorizontalAlignment="Right" 
+										Command="{Binding DataContext.DeleteRoleFromUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+										CommandParameter="{Binding}" 
+										VerticalAlignment="Center"
+										ToolTipService.ToolTip="Remove this role">
+									<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+									<i:Interaction.Triggers>
+										<i:EventTrigger EventName="Click">
+											<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem, AncestorLevel=2}}" 
+																	 PropertyName="IsSelected" 
+																	 Value="True"/>
+										</i:EventTrigger>
+									</i:Interaction.Triggers>
+								</Button>
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+				</Grid>
+
+				<TextBlock Grid.Row="3" 
 						   Text="Permissions: " 
-						   VerticalAlignment="Center"/>
-                <sdk:DataGrid Grid.Row="3" 
-						  Grid.Column="1"
-						  Margin="5"
-						  ItemsSource="{Binding Permissions}"
-						  MaxWidth="250"
+						   VerticalAlignment="Top"/>
+				<sdk:DataGrid Grid.Row="3" 
+							  Grid.Column="1"
+							  Margin="5"
+							  ItemsSource="{Binding Permissions}"
+							  HorizontalAlignment="Left"
                               AutoGenerateColumns="False">
-                    <sdk:DataGrid.Columns>
-                        <sdk:DataGridCheckBoxColumn Header="Allow"
-                                        Binding="{Binding Allow}"/>
-                        <sdk:DataGridTextColumn Header="Operation"
+					<sdk:DataGrid.Columns>
+						<sdk:DataGridCheckBoxColumn Header="Allow"
+													Binding="{Binding Allow}"/>
+						<sdk:DataGridTextColumn Header="Operation"
                                                 Binding="{Binding Operation}"/>
-                        <sdk:DataGridTextColumn Header="Tags"
+						<sdk:DataGridTextColumn Header="Tags"
                                                 Binding="{Binding Tags, Converter={StaticResource StringListToString}}"/>
-                    </sdk:DataGrid.Columns>
-                </sdk:DataGrid>
+						<sdk:DataGridTemplateColumn Header="Priority">
+							<sdk:DataGridTemplateColumn.CellEditingTemplate>
+								<DataTemplate>
+									<toolkit:NumericUpDown Margin="5" Value="{Binding Priority, Mode=TwoWay}" Maximum="214748364"/>
+								</DataTemplate>
+							</sdk:DataGridTemplateColumn.CellEditingTemplate>
+						</sdk:DataGridTemplateColumn>
+					</sdk:DataGrid.Columns>
 
-            </Grid>
-
+					<i:Interaction.Behaviors>
+						<Behaviors:SelectRowOnRightClickBehavior/>
+					</i:Interaction.Behaviors>
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu>
+							<ContextMenu:MenuItem Header="Add new Permission" 
+												  Command="{Binding DataContext.AddPermissionToUser, RelativeSource={RelativeSource AncestorType=UserControl}}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_Add_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+							<ContextMenu:MenuItem Header="Delete Permission" 
+												  Command="{Binding DataContext.DeletePermissionFromUser, RelativeSource={RelativeSource AncestorType=UserControl}}"
+												  CommandParameter="{Binding}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_Delete_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
+				</sdk:DataGrid>
+			</Grid>
         </DataTemplate>
+		
         <DataTemplate x:Key="AuthorizationRoleTemplate" DataType="Data:AuthorizationRole">
             <Grid Margin="4" x:Name="grid">
                 <Grid.RowDefinitions>
@@ -90,7 +274,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition Width="90" />
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="20" />
                 </Grid.ColumnDefinitions>
@@ -109,19 +293,22 @@
                 <TextBlock Grid.Row="0" 
 						   Text="Id: " 
 						   VerticalAlignment="Center"/>
-                <TextBox Grid.Row="0" 
-									   Grid.Column="1"
-									   Text="{Binding Id, Mode=TwoWay}" 
-									   Margin="5"
-									   MaxWidth="250"/>
-                <TextBlock Grid.Row="1" 
+				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="5">
+					<TextBlock Text="Authorization/Roles/" VerticalAlignment="Center"/>
+					<TextBox Text="{Binding Id, Converter={StaticResource IdStringToIdWithoutHeader}, ConverterParameter='Authorization/Roles/', Mode=TwoWay}" 
+							 Margin="5"
+							 Width="130"
+							 VerticalAlignment="Center"/>
+				</StackPanel>
+
+				<TextBlock Grid.Row="1" 
 						   Text="Permissions: " 
 						   VerticalAlignment="Center"/>
                 <sdk:DataGrid Grid.Row="1" 
-						  Grid.Column="1"
-						  Margin="5"
-						  ItemsSource="{Binding Permissions}"
-						  MaxWidth="250"
+							  Grid.Column="1"
+							  Margin="5"
+							  ItemsSource="{Binding Permissions}"
+							  HorizontalAlignment="Left"
                               AutoGenerateColumns="False">
                     <sdk:DataGrid.Columns>
                         <sdk:DataGridCheckBoxColumn Header="Allow"
@@ -130,8 +317,36 @@
                                                 Binding="{Binding Operation}"/>
                         <sdk:DataGridTextColumn Header="Tags"
                                                 Binding="{Binding Tags, Converter={StaticResource StringListToString}}"/>
-                    </sdk:DataGrid.Columns>
-                </sdk:DataGrid>
+						<sdk:DataGridTemplateColumn Header="Priority">
+							<sdk:DataGridTemplateColumn.CellEditingTemplate>
+								<DataTemplate>
+									<toolkit:NumericUpDown Margin="5" Value="{Binding Priority, Mode=TwoWay}" Maximum="214748364"/>
+								</DataTemplate>
+							</sdk:DataGridTemplateColumn.CellEditingTemplate>
+						</sdk:DataGridTemplateColumn>
+					</sdk:DataGrid.Columns>
+
+					<i:Interaction.Behaviors>
+						<Behaviors:SelectRowOnRightClickBehavior/>
+					</i:Interaction.Behaviors>
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu>
+							<ContextMenu:MenuItem Header="Add new Permission" 
+												  Command="{Binding DataContext.AddPermissionToRole, RelativeSource={RelativeSource AncestorType=UserControl}}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_Add_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+							<ContextMenu:MenuItem Header="Delete Permission" 
+												  Command="{Binding DataContext.DeletePermissionFromRole, RelativeSource={RelativeSource AncestorType=UserControl}}"
+												  CommandParameter="{Binding}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_Delete_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
+				</sdk:DataGrid>
 
             </Grid>
 
@@ -162,7 +377,7 @@
                     </toolkit:HeaderedContentControl.Header>
                     <ListBox  Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding AuthorizationUsers}"
-										 SelectedItem="{Binding SeletedAuthorizationUser, Mode=TwoWay}"
+										 SelectedItem="{Binding SeletedUser, Mode=TwoWay}"
 										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
 										 ItemTemplate="{StaticResource AuthorizationUserTemplate}"
 										 ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -192,7 +407,7 @@
                     </toolkit:HeaderedContentControl.Header>
                     <ListBox  Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding AuthorizationRoles}"
-										 SelectedItem="{Binding SeletedAuthorizationRole, Mode=TwoWay}"
+										 SelectedItem="{Binding SeletedRole, Mode=TwoWay}"
 										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
 										 ItemTemplate="{StaticResource AuthorizationRoleTemplate}"
 										 ScrollViewer.VerticalScrollBarVisibility="Auto">

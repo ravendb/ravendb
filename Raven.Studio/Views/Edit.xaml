@@ -278,8 +278,8 @@
 
                         <Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding ToggleSearch}"
-                               Margin="4,0"
-							ToolTipService.ToolTip="Search (Ctrl-F)">
+								Margin="4,0"
+								ToolTipService.ToolTip="Search (Ctrl-F)">
                             <Button.Content>
                                 <StackPanel Orientation="Horizontal"
                                             VerticalAlignment="Center">
@@ -619,6 +619,4 @@
             </ScrollViewer>
         </Grid>
     </toolkit:HeaderedContentControl>
-
-
 </Infrastructure:PageView>

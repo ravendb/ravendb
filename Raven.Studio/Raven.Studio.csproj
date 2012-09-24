@@ -364,6 +364,7 @@
     <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\IdStringToIdWithoutHeader.cs" />
     <Compile Include="Infrastructure\Converters\StringListToStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\TrueWhenAnalyzedConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenEqual.cs" />

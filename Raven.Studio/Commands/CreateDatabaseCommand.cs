@@ -188,10 +188,27 @@ namespace Raven.Studio.Commands
 				session.Store(replicationDocument);
 			}
 
+			var authorizationSection = settingsModel.GetSection<AuthorizationSettingsSectionModel>();
+			if (authorizationSection != null)
+				StoreAuthorizationData(authorizationSection, session);
+
 			session.SaveChangesAsync();
 
 			if (!string.IsNullOrEmpty(encryptionKey))
 				new ShowEncryptionMessage(encryptionKey).Show();
+		}
+
+		private void StoreAuthorizationData(AuthorizationSettingsSectionModel authorizationSection, IAsyncDocumentSession session)
+		{
+			foreach (var authorizationRole in authorizationSection.AuthorizationRoles)
+			{
+				session.Store(authorizationRole);
+			}
+
+			foreach (var authorizationUser in authorizationSection.AuthorizationUsers)
+			{
+				session.Store(authorizationUser);
+			}
 		}
 
 		private void StoreVersioningData(IEnumerable<VersioningConfiguration> versioningData, IAsyncDocumentSession session)

@@ -83,6 +83,36 @@ namespace Raven.Studio.Commands
 				}
 			}
 
+			var authorizationSettings = settingsModel.GetSection<AuthorizationSettingsSectionModel>();
+			if (authorizationSettings != null)
+			{
+				var usersToDelete = authorizationSettings.OriginalAuthorizationUsers
+					.Where(authorizationUser => authorizationSettings.AuthorizationUsers.Contains(authorizationUser) == false)
+					.ToList();
+				foreach (var authorizationUser in usersToDelete)
+				{
+					DatabaseCommands.DeleteDocumentAsync(authorizationUser.Id);
+				}
+
+				var rolesToDelete = authorizationSettings.OriginalAuthorizationRoles
+					.Where(authorizationRole => authorizationSettings.AuthorizationRoles.Contains(authorizationRole) == false)
+					.ToList();
+				foreach (var authorizationRole in rolesToDelete)
+				{
+					DatabaseCommands.DeleteDocumentAsync(authorizationRole.Id);
+				}
+
+				foreach (var authorizationRole in authorizationSettings.AuthorizationRoles)
+				{
+					session.Store(authorizationRole);
+				}
+
+				foreach (var authorizationUser in authorizationSettings.AuthorizationUsers)
+				{
+					session.Store(authorizationUser);
+				}
+			}
+
 			session.SaveChangesAsync()
 				.ContinueOnSuccessInTheUIThread(() =>
 				{
