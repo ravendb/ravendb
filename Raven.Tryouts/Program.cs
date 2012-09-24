@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Security.Principal;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
@@ -15,14 +16,18 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
-			{
-				Console.WriteLine(i);
-				using(var x= new NullableEnum())
-				{
-					x.CanSerializeAndDeserializeCorrectly();
-				}
-			}
+
+			var store = new DocumentStore() { Url = "http://localhost:8080/", DefaultDatabase = "Confabulat" };
+			store.Initialize();
+			store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Regions" },
+			 new ScriptedPatchRequest
+			 {
+				 Script =
+				 @"this.Test = 'test';"
+
+
+			 }
+				, true);
 		}
 
 		private static void UseMyData()

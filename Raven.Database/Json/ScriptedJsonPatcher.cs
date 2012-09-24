@@ -6,12 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using IronJS.Runtime;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System.Reflection;
 using System.IO;
-using IronJS.Hosting;
+using Jint;
 using Raven.Abstractions.Data;
 using Environment = System.Environment;
 
@@ -52,7 +50,7 @@ namespace Raven.Database.Json
 
 		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch)
 		{
-			CSharp.Context ctx;
+			JintEngine ctx;
 			try
 			{
 				ctx = scriptsCache.CheckoutScript(patch);
@@ -69,24 +67,21 @@ namespace Raven.Database.Json
 			loadDocumentStatic = loadDocument;
 			try
 			{
-				ctx.SetGlobal("docAsString", doc.ToString(Formatting.None));
 				foreach (var kvp in patch.Values)
 				{
-					ctx.SetGlobal(kvp.Key, kvp.Value);
+					ctx.SetParameter(kvp.Key, kvp.Value);
 				}
 
-				ctx.Execute();
+				ctx.CallFunction("ExecutePatchScript", doc);
 				foreach (var kvp in patch.Values)
 				{
-					ctx.SetGlobal(kvp.Key, Undefined.Boxed);
+					ctx.SetParameter(kvp.Key, null);
 				}
 				OutputLog(ctx);
-				var result = ctx.GetGlobalAs<string>("json_data");
-				ctx.SetGlobal("json_data", Undefined.Boxed);
 
 				scriptsCache.CheckinScript(patch, ctx);
 
-				return RavenJObject.Parse(result);
+				return doc;
 			}
 			catch (Exception errorEx)
 			{
@@ -100,50 +95,47 @@ namespace Raven.Database.Json
 			}
 		}
 
-		internal static CSharp.Context CreateContext(ScriptedPatchRequest patch)
+		internal static JintEngine CreateEngine(ScriptedPatchRequest patch)
 		{
 			AssertValidScript(patch.Script);
 			var wrapperScript = String.Format(@"
-var doc = JSON.parse(docAsString);
-(function(doc){{
+function ExecutePatchScript(doc){{
 	{0}{1}
-}}).apply(doc);
+}};
+", patch.Script, patch.Script.EndsWith(";") ? String.Empty : ";");
 
-json_data = JSON.stringify(doc);", patch.Script, patch.Script.EndsWith(";") ? String.Empty : ";");
+			var jintEngine = new JintEngine()
+				.AllowClr(false);
 
 
-			var ctx = new CSharp.Context();
+			jintEngine.Run(GetFromResources("Raven.Database.Json.Map.js"));
 
-			ctx.Execute(GetFromResources("Raven.Database.Json.ToJson.js"));
+			jintEngine.Run(GetFromResources("Raven.Database.Json.RavenDB.js"));
 
-			ctx.Execute(GetFromResources("Raven.Database.Json.Map.js"));
+			jintEngine.SetFunction("LoadDocumentInternal", ((Func<string, object>) (value =>
+			{
+				var loadedDoc = loadDocumentStatic(value);
+				if (loadedDoc == null)
+					return null;
+				loadedDoc[Constants.DocumentIdFieldName] = value;
+				return loadedDoc.ToString();
+			})));
 
-			ctx.Execute(GetFromResources("Raven.Database.Json.RavenDB.js"));
+			jintEngine.Run(wrapperScript);
 
-			ctx.SetGlobal("LoadDocumentInternal", IronJS.Native.Utils.CreateFunction<Func<BoxedValue, dynamic>>(ctx.Environment, 1,
-				value =>
-				{
-					var loadedDoc = loadDocumentStatic(value.String);
-					if (loadedDoc == null)
-						return null;
-					loadedDoc[Constants.DocumentIdFieldName] = value.String;
-					return loadedDoc.ToString();
-				}));
-			ctx.Prepare(wrapperScript);
-			return ctx;
+			return jintEngine;
 		}
 
-		private void OutputLog(CSharp.Context ctx)
+		private void OutputLog(JintEngine engine)
 		{
-			var boxedValue = ctx.GetGlobal("debug_outputs");
-			if (boxedValue.IsNull)
+			var boxedValue = engine.GetParameter("debug_outputs") as IEnumerable<object>;
+			if (boxedValue == null)
 				return;
-			if (boxedValue.Array == null)
-				return;
-			for (int i = 0; i < boxedValue.Array.Length; i++)
+			foreach (var o in boxedValue)
 			{
-				var value = boxedValue.Array.Get(i);
-				Debug.Add(value.String);
+				if(o == null)
+					continue;
+				Debug.Add(o.ToString());
 			}
 		}
 
