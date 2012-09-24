@@ -19,7 +19,31 @@ namespace Raven.Tests.MailingList
 					dataDumper.ImportData(stream, smugglerOptions);
 				}
 
+				WaitForUserToContinueTheTest(store);
 				using(var s = store.OpenSession())
+				{
+					var objects = s.Query<object>("LogEntry/CountByDate")
+						.Customize(x => x.WaitForNonStaleResults())
+						.ToList();
+					Assert.Equal(4, objects.Count);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanGetCorrectResult_esent()
+		{
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			{
+				var smugglerOptions = new SmugglerOptions();
+				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
+				using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
+				{
+					dataDumper.ImportData(stream, smugglerOptions);
+				}
+
+				WaitForUserToContinueTheTest(store);
+				using (var s = store.OpenSession())
 				{
 					var objects = s.Query<object>("LogEntry/CountByDate")
 						.Customize(x => x.WaitForNonStaleResults())
