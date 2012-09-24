@@ -9,6 +9,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 	{
 		private readonly Func<string, object> getLoggerByNameDelegate;
 		private static bool providerIsAvailabileOverride = true;
+		private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerType, true); 
 		
 		public NLogLogManager()
 		{
@@ -32,7 +33,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		public static bool IsLoggerAvailable()
 		{
-			return ProviderIsAvailabileOverride && GetLogManagerType() != null;
+			return ProviderIsAvailabileOverride && LazyGetLogManagerType.Value != null;
 		}
 
 		private static Type GetLogManagerType()

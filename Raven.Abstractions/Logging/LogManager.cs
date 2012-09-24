@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Raven.Abstractions.Logging
 {
 	using System;
@@ -7,7 +10,8 @@ namespace Raven.Abstractions.Logging
 	public static class LogManager
 	{
 		private static ILogManager currentLogManager;
-
+		private static HashSet<Target> targets = new HashSet<Target>();
+ 
 		public static ILog GetCurrentClassLogger()
 		{
 #if SILVERLIGHT
@@ -25,8 +29,8 @@ namespace Raven.Abstractions.Logging
 
 		public static ILog GetLogger(string name)
 		{
-			ILogManager temp = currentLogManager ?? ResolveLogProvider();
-			return temp == null ? new NoOpLogger() : (ILog)new LoggerExecutionWrapper(temp.GetLogger(name));
+			ILogManager temp = currentLogManager ?? ResolveExtenalLogManager();
+			return temp == null ? new LoggerExecutionWrapper(new NoOpLogger(), name, targets.ToArray()) : new LoggerExecutionWrapper(temp.GetLogger(name), name, targets.ToArray());
 		}
 
 		public static void SetCurrentLogManager(ILogManager logManager)
@@ -34,7 +38,7 @@ namespace Raven.Abstractions.Logging
 			currentLogManager = logManager;
 		}
 
-		private static ILogManager ResolveLogProvider()
+		private static ILogManager ResolveExtenalLogManager()
 		{
 			if (NLogLogManager.IsLoggerAvailable())
 			{
@@ -45,6 +49,16 @@ namespace Raven.Abstractions.Logging
 				return new Log4NetLogManager();
 			}
 			return null;
+		}
+
+		public static void RegisterTarget<T>() where T: Target, new()
+		{
+			targets.Add(new T());
+		}
+
+		public static T GetTarget<T>() where T: Target
+		{
+			return targets.ToArray().OfType<T>().FirstOrDefault();
 		}
 
 		public class NoOpLogger : ILog
@@ -60,5 +74,19 @@ namespace Raven.Abstractions.Logging
 				where TException : Exception
 			{}
 		}
+	}
+
+	public abstract class Target
+	{
+		public abstract void Write(LogEventInfo logEvent);
+	}
+
+	public class LogEventInfo
+	{
+		public LogLevel Level { get; set; }
+		public DateTime TimeStamp { get; set; }
+		public string FormattedMessage { get; set; }
+		public string LoggerName { get; set; }
+		public Exception Exception { get; set; }
 	}
 }

@@ -1,33 +1,46 @@
 ﻿using System;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Logging.LogProviders;
-using NLog;
 using NLog.Config;
 using NLog.Targets;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Logging.LogProviders;
 using Xunit;
 using LogLevel = NLog.LogLevel;
+using LogManager = NLog.LogManager;
 
 namespace Raven.Tests.Abstractions.Logging.LogProviders
 {
 	public class NLogLogProviderLoggingEnabledTests : IDisposable
 	{
-		private readonly Raven.Abstractions.Logging.ILog sut;
+		private readonly ILog sut;
 		private readonly MemoryTarget target;
 
 		public NLogLogProviderLoggingEnabledTests()
 		{
+			NLogLogManager.ProviderIsAvailabileOverride = true;
 			var config = new LoggingConfiguration();
 			target = new MemoryTarget();
 			target.Layout = "${level:uppercase=true}|${message}|${exception}";
 			config.AddTarget("memory", target);
 			config.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, target));
-			NLog.LogManager.Configuration = config;
+			LogManager.Configuration = config;
 			sut = new NLogLogManager().GetLogger("Test");
 		}
 
 		public void Dispose()
 		{
-			NLog.LogManager.Configuration = null;
+			LogManager.Configuration = null;
+		}
+
+		[Fact]
+		public void Should_be_able_to_get_IsWarnEnabled()
+		{
+			Assert.True(sut.IsWarnEnabled);
+		}
+
+		[Fact]
+		public void Should_be_able_to_get_IsDebugEnabled()
+		{
+			Assert.True(sut.IsDebugEnabled);
 		}
 
 		[Fact]

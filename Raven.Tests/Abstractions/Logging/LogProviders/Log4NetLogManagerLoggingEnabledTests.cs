@@ -17,6 +17,7 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
 		public Log4NetLogManagerLoggingEnabledTests()
 		{
+			Log4NetLogManager.ProviderIsAvailabileOverride = true;
 			memoryAppender = new MemoryAppender();
 			BasicConfigurator.Configure(memoryAppender);
 			sut = new Log4NetLogManager().GetLogger("Test");
@@ -34,6 +35,18 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 			                     loggingEvent.Level,
 			                     loggingEvent.MessageObject,
 			                     loggingEvent.ExceptionObject != null ? loggingEvent.ExceptionObject.Message : string.Empty);
+		}
+
+		[Fact]
+		public void Should_be_able_to_get_IsWarnEnabled()
+		{
+			Assert.True(sut.IsWarnEnabled);
+		}
+
+		[Fact]
+		public void Should_be_able_to_get_IsDebugEnabled()
+		{
+			Assert.True(sut.IsDebugEnabled);
 		}
 
 		[Fact]

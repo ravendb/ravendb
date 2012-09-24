@@ -1,27 +1,27 @@
-﻿namespace Raven.Tests.Abstractions.Logging
-{
-	using System;
-	using Raven.Abstractions.Logging;
-	using Xunit;
+﻿using System;
+using Raven.Abstractions.Logging;
+using Xunit;
 
+namespace Raven.Tests.Abstractions.Logging
+{
 	public class LoggerExecutionWrapperTests
 	{
-		private readonly LoggerExecutionWrapper _sut;
-		private readonly FakeLogger _fakeLogger;
+		private readonly LoggerExecutionWrapper sut;
+		private readonly FakeLogger fakeLogger;
 
 		public LoggerExecutionWrapperTests()
 		{
-			_fakeLogger = new FakeLogger();
-			_sut = new LoggerExecutionWrapper(_fakeLogger);
+			fakeLogger = new FakeLogger();
+			sut = new LoggerExecutionWrapper(fakeLogger, "name", new Target[0]);
 		}
 
 		[Fact]
 		public void When_logging_and_message_factory_throws_Then_should_log_exception()
 		{
 			var loggingException = new Exception("Message");
-			_sut.Log(LogLevel.Info, () => { throw loggingException; });
-			Assert.Same(loggingException, _fakeLogger.Exception);
-			Assert.Equal(LoggerExecutionWrapper.FailedToGenerateLogMessage, _fakeLogger.Message);
+			sut.Log(LogLevel.Info, () => { throw loggingException; });
+			Assert.Same(loggingException, fakeLogger.Exception);
+			Assert.Equal(LoggerExecutionWrapper.FailedToGenerateLogMessage, fakeLogger.Message);
 		}
 
 		[Fact]
@@ -29,32 +29,32 @@
 		{
 			var appException = new Exception("Message");
 			var loggingException = new Exception("Message");
-			_sut.Log(LogLevel.Info, () => { throw loggingException; }, appException);
-			Assert.Same(loggingException, _fakeLogger.Exception);
-			Assert.Equal(LoggerExecutionWrapper.FailedToGenerateLogMessage, _fakeLogger.Message);
+			sut.Log(LogLevel.Info, () => { throw loggingException; }, appException);
+			Assert.Same(loggingException, fakeLogger.Exception);
+			Assert.Equal(LoggerExecutionWrapper.FailedToGenerateLogMessage, fakeLogger.Message);
 		}
 
 		public class FakeLogger : ILog
 		{
-			private LogLevel _logLevel;
+			private LogLevel logLevel;
 
 			public LogLevel LogLevel
 			{
-				get { return _logLevel; }
+				get { return logLevel; }
 			}
 
 			public string Message
 			{
-				get { return _message; }
+				get { return message; }
 			}
 
 			public Exception Exception
 			{
-				get { return _exception; }
+				get { return exception; }
 			}
 
-			private string _message;
-			private Exception _exception;
+			private string message;
+			private Exception exception;
 
 			public bool IsDebugEnabled { get; set; }
 
@@ -70,9 +70,9 @@
 				string message = messageFunc();
 				if (message != null)
 				{
-					_logLevel = logLevel;
-					_message = messageFunc() ?? _message;
-					_exception = exception;
+					this.logLevel = logLevel;
+					this.message = messageFunc() ?? this.message;
+					this.exception = exception;
 				}
 			}
 		}

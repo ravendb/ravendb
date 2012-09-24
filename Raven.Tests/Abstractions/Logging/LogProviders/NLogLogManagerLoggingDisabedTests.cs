@@ -1,7 +1,5 @@
 using System;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.Logging.LogProviders;
-using NLog;
 using NLog.Config;
 using NLog.Targets;
 using Xunit;
@@ -9,7 +7,6 @@ using LogLevel = NLog.LogLevel;
 
 namespace Raven.Tests.Abstractions.Logging.LogProviders
 {
-	
 	public class NLogLogManagerLoggingDisabedTests : IDisposable
 	{
 		private Raven.Abstractions.Logging.ILog sut;
@@ -17,6 +14,7 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
 		private void ConfigureLogger(NLog.LogLevel nlogLogLevel)
 		{
+			NLogLogManager.ProviderIsAvailabileOverride = true;
 			var config = new LoggingConfiguration();
 			target = new MemoryTarget();
 			target.Layout = "${level:uppercase=true}|${message}|${exception}";

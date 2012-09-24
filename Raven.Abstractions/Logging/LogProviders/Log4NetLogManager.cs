@@ -9,6 +9,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 	{
 		private readonly Func<string, object> getLoggerByNameDelegate;
 		private static bool providerIsAvailabileOverride = true;
+		private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerType, true); 
 
 		public Log4NetLogManager()
 		{
@@ -32,7 +33,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		public static bool IsLoggerAvailable()
 		{
-			return ProviderIsAvailabileOverride && GetLogManagerType() != null;
+			return ProviderIsAvailabileOverride && LazyGetLogManagerType.Value != null;
 		}
 
 		private static Type GetLogManagerType()
@@ -40,7 +41,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 #if !SL_4
 			Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 			Assembly nlogAssembly = assemblies.FirstOrDefault(assembly => assembly.FullName.StartsWith("log4net,"));
-			return nlogAssembly != null ? nlogAssembly.GetType("log4net.LogManager") : Type.GetType("NLog.LogManager, log4net");
+			return nlogAssembly != null ? nlogAssembly.GetType("log4net.LogManager") : Type.GetType("log4net.LogManager, log4net");
 #else
 			return Type.GetType("NLog.LogManager, log4net");
 #endif

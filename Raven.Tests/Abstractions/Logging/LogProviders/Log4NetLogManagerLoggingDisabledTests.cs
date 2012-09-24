@@ -2,7 +2,6 @@ using System;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Logging.LogProviders;
 using Xunit;
-using log4net;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Filter;
@@ -17,6 +16,7 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
 		public Log4NetLogManagerLoggingDisabledTests()
 		{
+			Log4NetLogManager.ProviderIsAvailabileOverride = true;
 			memoryAppender = new MemoryAppender();
 			memoryAppender.AddFilter(new DenyAllFilter());
 			BasicConfigurator.Configure(memoryAppender);
