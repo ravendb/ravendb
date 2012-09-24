@@ -5,15 +5,14 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using NLog;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Extensions;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Plugins.Builtins
 {
 	public class CreateFolderIcon : IStartupTask
 	{
-		private static Logger log = LogManager.GetCurrentClassLogger();
+		private static ILog log = LogManager.GetCurrentClassLogger();
 
 		public void Execute(DocumentDatabase database)
 		{

@@ -17,11 +17,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -119,7 +119,7 @@ namespace Raven.Database
 		private readonly TaskScheduler backgroundTaskScheduler;
 		private readonly object idleLocker = new object();
 
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private long currentEtagBase;
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)

@@ -5,8 +5,8 @@ using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
 using System.Security.Principal;
 using System.Threading;
-using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Extensions
 {
@@ -45,7 +45,7 @@ namespace Raven.Database.Extensions
 
 		public class CachingAdminFinder
 		{
-			private static readonly Logger log = LogManager.GetCurrentClassLogger();
+			private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 			private class CachedResult
 			{

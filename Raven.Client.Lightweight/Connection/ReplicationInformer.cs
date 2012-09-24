@@ -41,7 +41,7 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class ReplicationInformer : IDisposable
 	{
-		private readonly ILog log = LogProvider.GetCurrentClassLogger();
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private bool firstTime = true;
 		protected readonly DocumentConvention conventions;

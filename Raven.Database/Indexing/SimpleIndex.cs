@@ -14,6 +14,7 @@ using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;

@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Connections
 	{
 		private readonly Timer heartbeat;
 
-		private readonly Logger log = LogManager.GetCurrentClassLogger();
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private readonly IHttpContext context;
 

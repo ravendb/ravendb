@@ -1,6 +1,6 @@
 namespace Raven.Abstractions.Logging
 {
-	public interface ILogProvider
+	public interface ILogManager
 	{
 		ILog GetLogger(string name);
 	}

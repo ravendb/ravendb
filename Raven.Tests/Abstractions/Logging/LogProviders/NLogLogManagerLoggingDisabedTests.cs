@@ -1,21 +1,20 @@
+using System;
+using Raven.Abstractions.Logging.LogProviders;
+using NLog.Config;
+using NLog.Targets;
+using Xunit;
+using LogLevel = NLog.LogLevel;
+
 namespace Raven.Tests.Abstractions.Logging.LogProviders
 {
-	using System;
-	using Raven.Abstractions.Logging;
-	using Raven.Abstractions.Logging.LogProviders;
-	using NLog;
-	using NLog.Config;
-	using NLog.Targets;
-	using Xunit;
-	using LogLevel = NLog.LogLevel;
-
-	public class NLogLogProviderLoggingDisabedTests : IDisposable
+	public class NLogLogManagerLoggingDisabedTests : IDisposable
 	{
-		private ILog sut;
+		private Raven.Abstractions.Logging.ILog sut;
 		private MemoryTarget target;
 
 		private void ConfigureLogger(NLog.LogLevel nlogLogLevel)
 		{
+			NLogLogManager.ProviderIsAvailabileOverride = true;
 			var config = new LoggingConfiguration();
 			target = new MemoryTarget();
 			target.Layout = "${level:uppercase=true}|${message}|${exception}";
@@ -23,8 +22,8 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 			var loggingRule = new LoggingRule("*", LogLevel.Trace, target);
 			loggingRule.DisableLoggingForLevel(nlogLogLevel);
 			config.LoggingRules.Add(loggingRule);
-			LogManager.Configuration = config;
-			sut = new NLogLogProvider().GetLogger("Test");
+			NLog.LogManager.Configuration = config;
+			sut = new NLogLogManager().GetLogger("Test");
 		}
 
 		[Fact]
@@ -78,7 +77,7 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
 		public void Dispose()
 		{
-			LogManager.Configuration = null;
+			NLog.LogManager.Configuration = null;
 		}
 	}
 }

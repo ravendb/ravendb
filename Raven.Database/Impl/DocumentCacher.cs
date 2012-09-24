@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Runtime.Caching;
-using NLog;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 
@@ -12,7 +12,7 @@ namespace Raven.Database.Impl
 	{
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly MemoryCache cachedSerializedDocuments;
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		
 		[ThreadStatic]
 		private static bool skipSettingDocumentInCache;

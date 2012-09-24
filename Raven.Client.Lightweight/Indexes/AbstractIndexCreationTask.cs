@@ -253,7 +253,7 @@ namespace Raven.Client.Indexes
 				.Unwrap();
 		}
 
-		private ILog Logger = LogProvider.GetCurrentClassLogger();
+		private ILog Logger = LogManager.GetCurrentClassLogger();
 		private Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
 		                                           DocumentConvention documentConvention, IndexDefinition indexDefinition)
 		{

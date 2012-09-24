@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Raven.Abstractions.Logging;
 
 namespace Rhino.Licensing
 {

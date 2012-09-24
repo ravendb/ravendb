@@ -1,6 +1,5 @@
-using System;
 using System.Collections.Generic;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Database.Util;
@@ -22,11 +21,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			BoundedMemoryTarget boundedMemoryTarget = null;
-			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
-			{
-				boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
-			}
+			var boundedMemoryTarget = LogManager.GetTarget<BoundedMemoryTarget>();
 			if(boundedMemoryTarget == null)
 			{
 				context.SetStatusToNotFound();
@@ -51,7 +46,7 @@ namespace Raven.Database.Server.Responders
 				x.TimeStamp,
 				Message = x.FormattedMessage,
 				x.LoggerName,
-				Level = x.Level.Name,
+				Level = x.Level.ToString(),
 				Exception = x.Exception == null ? null : x.Exception.ToString()
 			}));
 		}

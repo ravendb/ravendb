@@ -1,20 +1,18 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
-using Raven.Abstractions.Extensions;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
 	public class DefaultBackgroundTaskExecuter : IBackgroundTaskExecuter
 	{
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		public IList<TResult> Apply<T, TResult>(IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class

@@ -13,8 +13,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
+using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -37,7 +37,7 @@ namespace Raven.Database.Storage
 		private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
 			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
 
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly string path;
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;

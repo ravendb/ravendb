@@ -730,8 +730,8 @@
     <Compile Include="..\Raven.Abstractions\Logging\ILogExtensions.cs">
       <Link>Imports\Logging\ILogExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\ILogProvider.cs">
-      <Link>Imports\Logging\ILogProvider.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Logging\ILogManager.cs">
+      <Link>Imports\Logging\ILogManager.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Logging\LoggerExecutionWrapper.cs">
       <Link>Imports\Logging\LoggerExecutionWrapper.cs</Link>
@@ -739,14 +739,14 @@
     <Compile Include="..\Raven.Abstractions\Logging\LogLevel.cs">
       <Link>Imports\Logging\LogLevel.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProvider.cs">
-      <Link>Imports\Logging\LogProvider.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Logging\LogManager.cs">
+      <Link>Imports\Logging\LogManager.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\Log4NetLogProvider.cs">
-      <Link>Imports\Logging\LogProviders\Log4NetLogProvider.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\Log4NetLogManager.cs">
+      <Link>Imports\Logging\LogProviders\Log4NetLogManager.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogProvider.cs">
-      <Link>Imports\Logging\LogProviders\NLogLogProvider.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
+      <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
