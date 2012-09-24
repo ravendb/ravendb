@@ -460,6 +460,7 @@
     <Compile Include="MailingList\Maxime2.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
+    <Compile Include="MailingList\TroyMapReduceImport.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
     <Compile Include="Spatial\Spatial.cs" />
@@ -1060,6 +1061,7 @@
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
     <EmbeddedResource Include="MailingList\MapReduceIssue\MvcMusicStore_Dump.json" />
+    <EmbeddedResource Include="MailingList\Sandbox.ravendump" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

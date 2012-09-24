@@ -204,6 +204,7 @@
     <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\Responders\Admin\AdminChangeDbId.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
+    <Compile Include="Server\Responders\Admin\AdminGc.cs" />
     <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
