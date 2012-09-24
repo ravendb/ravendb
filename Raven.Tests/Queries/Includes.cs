@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Queries
 {
-	public class Includes : RemoteClientTest, IDisposable
+	public class Includes : RemoteClientTest
 	{
 		private readonly IDocumentStore store;
 		private readonly RavenDbServer server;
@@ -484,7 +484,6 @@ namespace Raven.Tests.Queries
 		{
 			store.Dispose();
 			server.Dispose();
-			ClearDatabaseDirectory();
 			base.Dispose();
 		}
 
