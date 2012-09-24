@@ -175,6 +175,9 @@ namespace Raven.Client
 
 		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query)
 		{
+			if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
+				return;
+
 			var lastEqualityTerm = queryInspector.GetLastEqualityTerm();
 			if (lastEqualityTerm.Key == null)
 				throw new InvalidOperationException("Could not suggest on a query that doesn't have a single equality check");
@@ -269,9 +272,9 @@ namespace Raven.Client
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			Expression expression = self.Expression;
 			if (expression.Type != typeof(IRavenQueryable<T>))
-			{
+		{
 				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-			}
+		}
 			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression,
 			                                                          fieldSelector,
 			                                                          Expression.Constant(searchTerms),
