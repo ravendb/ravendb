@@ -45,8 +45,8 @@ namespace Raven.Storage.Managed
 
 				var muninKey = (RavenJObject) readResult.Key.CloneToken();
 				muninKey["txId"] = transactionInformation.Id.ToByteArray();
-				if (storage.Documents.UpdateKey(readResult.Key) == false)
-					throw new ConcurrencyException("PUT attempted on document '" + muninKey +
+				if (storage.Documents.UpdateKey(muninKey) == false)
+					throw new ConcurrencyException("PUT attempted on document '" + key +
 												   "' that is currently being modified by another transaction");
 			}
 			else
@@ -107,20 +107,29 @@ namespace Raven.Storage.Managed
 			var nonTxResult = storage.Documents.Read(new RavenJObject { { "key", key } });
 			if (nonTxResult == null)
 			{
+
+				if (etag != null && etag.Value != Guid.Empty)
+				{
+					throw new ConcurrencyException("DELETE attempted on document '" + key +
+											   "' using a non current etag")
+					{
+						ActualETag = Guid.Empty,
+						ExpectedETag = etag.Value
+					};
+				}
 				return false;
 			}
 
-			var readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
-			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
-			AssertValidEtag(key, nonTxResult, readResult, etag, "DELETE");
+			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, nonTxResult, transactionInformation);
 
-			if (readResult != null)
-			{
-				((RavenJObject)readResult.Key)["txId"] = transactionInformation.Id.ToByteArray();
-				if (storage.Documents.UpdateKey(readResult.Key) == false)
-					throw new ConcurrencyException("DELETE attempted on document '" + key +
-												   "' that is currently being modified by another transaction");
-			}
+			var muninKey = (RavenJObject)nonTxResult.Key.CloneToken();
+			muninKey["txId"] = transactionInformation.Id.ToByteArray();
+			if (storage.Documents.UpdateKey(muninKey) == false)
+				throw new ConcurrencyException("DELETE attempted on document '" + key +
+				                               "' that is currently being modified by another transaction");
+
+			var readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
+			AssertValidEtag(key, nonTxResult, readResult, etag, "DELETE");
 
 			storage.Transactions.UpdateKey(new RavenJObject
 			                               	{

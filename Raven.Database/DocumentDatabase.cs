@@ -585,56 +585,59 @@ namespace Raven.Database
 			if (key == null) throw new ArgumentNullException("key");
 			key = key.Trim();
 
-			var deleted = false;
-			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
-			RavenJObject metadataVar = null;
-			TransactionalStorage.Batch(actions =>
+			lock(putSerialLock)
 			{
-				if (transactionInformation == null)
+				var deleted = false;
+				log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+				RavenJObject metadataVar = null;
+				TransactionalStorage.Batch(actions =>
 				{
-					AssertDeleteOperationNotVetoed(key, null);
-
-					DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
-
-					if (actions.Documents.DeleteDocument(key, etag, out metadataVar))
+					if (transactionInformation == null)
 					{
-						deleted = true;
-						foreach (var indexName in IndexDefinitionStorage.IndexNames)
+						AssertDeleteOperationNotVetoed(key, null);
+
+						DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
+
+						if (actions.Documents.DeleteDocument(key, etag, out metadataVar))
 						{
-							AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
-							if (abstractViewGenerator == null)
-								continue;
-
-							var token = metadataVar.Value<string>(Constants.RavenEntityName);
-
-							if (token != null && // the document has a entity name
-								abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
+							deleted = true;
+							foreach (var indexName in IndexDefinitionStorage.IndexNames)
 							{
-								if (abstractViewGenerator.ForEntityNames.Contains(token) == false)
+								AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+								if (abstractViewGenerator == null)
 									continue;
+
+								var token = metadataVar.Value<string>(Constants.RavenEntityName);
+
+								if (token != null && // the document has a entity name
+									abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
+								{
+									if (abstractViewGenerator.ForEntityNames.Contains(token) == false)
+										continue;
+								}
+
+								string indexNameCopy = indexName;
+								var task = actions.GetTask<RemoveFromIndexTask>(x => x.Index == indexNameCopy, new RemoveFromIndexTask
+								{
+									Index = indexNameCopy
+								});
+								task.Keys.Add(key);
 							}
-
-							string indexNameCopy = indexName;
-							var task = actions.GetTask<RemoveFromIndexTask>(x => x.Index == indexNameCopy, new RemoveFromIndexTask
-							{
-								Index = indexNameCopy
-							});
-							task.Keys.Add(key);
+							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
 						}
-						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
 					}
-				}
-				else
-				{
-					deleted = actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
-				}
-				workContext.ShouldNotifyAboutWork(() => "DEL " + key);
-			});
-			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
+					else
+					{
+						deleted = actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
+					}
+					workContext.ShouldNotifyAboutWork(() => "DEL " + key);
+				});
+				TransactionalStorage
+					.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
 
-			metadata = metadataVar;
-			return deleted;
+				metadata = metadataVar;
+				return deleted;
+			}
 		}
 
 		public bool HasTransaction(Guid txId)
@@ -1188,7 +1191,7 @@ namespace Raven.Database
 
 			var commandDatas = commands.ToArray();
 			int retries = 128;
-			var shouldLock = commandDatas.Any(x => x is PutCommandData || x is PatchCommandData);
+			var shouldLock = commandDatas.Any(x => x is PutCommandData || x is PatchCommandData || x is DeleteCommandData);
 			var shouldRetryIfGotConcurrencyError = commandDatas.All(x => x is PatchCommandData);
 			bool shouldRetry = false;
 			if (shouldLock)

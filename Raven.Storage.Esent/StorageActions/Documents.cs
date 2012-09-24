@@ -421,6 +421,15 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
+				if(etag != null && etag.Value != Guid.Empty)
+				{
+					throw new ConcurrencyException("DELETE attempted on document '" + key +
+											   "' using a non current etag")
+					{
+						ActualETag = Guid.Empty,
+						ExpectedETag = etag.Value
+					};
+				}
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				return false;
 			}
