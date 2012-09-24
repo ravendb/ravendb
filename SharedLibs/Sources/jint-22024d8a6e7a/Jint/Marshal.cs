@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Jint.Native;
 using System.Reflection;
-using System.Reflection.Emit;
 using Jint.Marshal;
-using Jint.Delegates;
 using System.Text.RegularExpressions;
-using System.Security;
-using System.Security.Permissions;
 
 namespace Jint
 {

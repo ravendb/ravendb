@@ -305,9 +305,5 @@ namespace Jint.Native {
         public override double ToNumber() {
             return Length;
         }
-
-        public override bool Equals(object obj) {
-            return this == obj;
-        }
     }
 }

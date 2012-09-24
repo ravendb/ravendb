@@ -3,12 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using Jint.Expressions;
 using System.Collections;
-using System.Reflection;
 using Jint.Native;
 using Jint.Debugger;
 using System.Security;
-using System.Runtime.Serialization;
-using Jint.Delegates;
 
 namespace Jint {
 

@@ -5,7 +5,7 @@ using System.Text;
 namespace Jint.Native {
     [Serializable]
     public sealed class JsBoolean : JsLiteral {
-        private bool value;
+        private new bool value;
 
 
         public override object Value {

@@ -24,7 +24,6 @@ using Jint.Expressions;
 using Jint.Debugger;
 
 
-using System.Collections.Generic;
 using Antlr.Runtime;
 
 
@@ -32,7 +31,7 @@ using Antlr.Runtime.Tree;
 using RewriteRuleITokenStream = Antlr.Runtime.Tree.RewriteRuleTokenStream;
 
 [System.CodeDom.Compiler.GeneratedCode("ANTLR", "3.3.1.7705")]
-[System.CLSCompliant(false)]
+//[System.CLSCompliant(false)]
 public partial class ES3Parser : Antlr.Runtime.Parser
 {
 	internal static readonly string[] tokenNames = new string[] {

@@ -20,7 +20,7 @@ using System.Collections.Generic;
 using Antlr.Runtime;
 
 [System.CodeDom.Compiler.GeneratedCode("ANTLR", "3.3.1.7705")]
-[System.CLSCompliant(false)]
+//[System.CLSCompliant(false)]
 public partial class ES3Lexer : Antlr.Runtime.Lexer
 {
 	public const int EOF=-1;

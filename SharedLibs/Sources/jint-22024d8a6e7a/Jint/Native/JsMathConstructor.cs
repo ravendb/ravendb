@@ -1,7 +1,7 @@
 ﻿using System;
-using Jint.Delegates;
 
 namespace Jint.Native {
+  
     [Serializable]
     public class JsMathConstructor : JsObject {
         public IGlobal Global { get; set; }

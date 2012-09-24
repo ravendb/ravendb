@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.RegularExpressions;
-using Jint.Delegates;
 using System.Reflection;
 
 namespace Jint.Native {
     [Serializable]
     public class JsClrConstructorInfo : JsObject {
-        private ConstructorInfo value;
+        private new ConstructorInfo value;
 
         public JsClrConstructorInfo() {
             value = null;

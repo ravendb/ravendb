@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.RegularExpressions;
-using Jint.Delegates;
 
 namespace Jint.Native {
     [Serializable]
     public sealed class JsString : JsLiteral {
-        private string value;
+        private new string value;
 
         public override object Value {
             get {

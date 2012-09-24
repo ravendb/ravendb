@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Jint.Expressions;
-using Jint.Delegates;
 using Jint.Marshal;
 
 namespace Jint.Native {
@@ -90,7 +88,7 @@ namespace Jint.Native {
             return function;
         }
 
-        public JsFunction New<T>(Func<T, JsInstance> impl) where T : JsInstance {
+        public JsFunction New<T>(Func<T, JsInstance> impl)  {
             JsFunction function = new ClrImplDefinition<T>(impl, PrototypeProperty);
             function.PrototypeProperty = Global.ObjectClass.New(function);
             //function.Scope = new JsScope(PrototypeProperty);

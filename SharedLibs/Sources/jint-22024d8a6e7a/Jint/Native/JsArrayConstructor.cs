@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Jint.Delegates;
 using Jint.Expressions;
 
 namespace Jint.Native {

@@ -4,24 +4,11 @@ using System.Text;
 using Jint.Expressions;
 using Antlr.Runtime;
 using Jint.Native;
-using Jint.Delegates;
 using Jint.Debugger;
 using System.Security;
 using System.Security.Permissions;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-
-namespace Jint.Delegates {
-    public delegate void Action();
-    public delegate void Action<T1, T2>(T1 t1, T2 t2);
-    public delegate void Action<T1, T2, T3>(T1 t1, T2 t2, T3 t3);
-
-    public delegate TResult Func<TResult>();
-    public delegate TResult Func<T, TResult>(T t);
-    public delegate TResult Func<T1, T2, TResult>(T1 t1, T2 t2);
-    public delegate TResult Func<T1, T2, T3, TResult>(T1 t1, T2 t2, T3 t3);
-    public delegate TResult Func<T1, T2, T3, T4, TResult>(T1 t1, T2 t2, T3 t3, T4 t4);
-}
 
 namespace Jint {
     [Serializable]
@@ -291,6 +278,12 @@ namespace Jint {
         }
 
         #endregion
+
+		public object GetParameter(string name)
+		{
+			var jsInstance = Visitor.GlobalScope[name];
+			return Visitor.Global.Marshaller.MarshalJsValue<object>(jsInstance);
+		}
 
         #region SetParameter overloads
 

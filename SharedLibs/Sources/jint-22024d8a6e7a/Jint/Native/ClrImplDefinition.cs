@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Jint.Expressions;
-using Jint.Delegates;
 using System.Reflection;
 
 namespace Jint.Native {
@@ -10,8 +7,7 @@ namespace Jint.Native {
     /// Wraps a delegate which can be called as a method on an object, with or without parameters.
     /// </summary>
     [Serializable]
-    public class ClrImplDefinition<T> : JsFunction
-        where T : JsInstance {
+    public class ClrImplDefinition<T> : JsFunction {
         Delegate impl;
         private int length;
         bool hasParameters;

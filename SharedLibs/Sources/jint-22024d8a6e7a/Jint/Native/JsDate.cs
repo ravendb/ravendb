@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Jint.Delegates;
 using System.Globalization;
 
 namespace Jint.Native {
@@ -10,7 +7,7 @@ namespace Jint.Native {
         static internal long OFFSET_1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
         static internal int TICKSFACTOR = 10000;
 
-        private DateTime value;
+        private new DateTime value;
 
         public override object Value {
             get {

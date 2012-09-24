@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Jint.Delegates;
 using Jint.Expressions;
 using System.Globalization;
-using System.Web;
 using System.Text.RegularExpressions;
 
 namespace Jint.Native {
