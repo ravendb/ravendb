@@ -27,6 +27,9 @@
         <DataTemplate DataType="Models:VersioningSettingsSectionModel">
             <Settings:VersioningSettingsView/>
         </DataTemplate>
+        <DataTemplate DataType="Models:AuthorizationSettingsSectionModel">
+            <Settings:AuthorizationSettingSectionView/>
+        </DataTemplate>
     </UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot">

@@ -60,6 +60,11 @@ namespace Raven.Studio.Models
 						{
 							Settings.Sections.Add(new VersioningSettingsSectionModel());
 						}
+
+                        if (activeBundles.Contains("Authorization"))
+                        {
+                            Settings.Sections.Add(new AuthorizationSettingsSectionModel());
+                        }
 					}
 
 	                foreach (var settingsSectionModel in Settings.Sections)

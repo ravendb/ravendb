@@ -26,6 +26,7 @@
 	<Converters:StringEmptyToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedForValue"
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />
+    <Converters:StringListToStringConverter x:Key="StringListToString"/>
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:TrueWhenAnalyzedConverter x:Key="TrueWhenAnalyzed"/>
 	<Converters:VisibleWhenDifferent x:Key="VisibleWhenDifferent" />
