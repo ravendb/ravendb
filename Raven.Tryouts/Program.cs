@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Security.Principal;
 using System.Threading;
@@ -19,7 +20,10 @@ namespace Raven.Tryouts
 
 			var store = new DocumentStore() { Url = "http://localhost:8080/", DefaultDatabase = "Confabulat" };
 			store.Initialize();
-			store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Regions" },
+			for (int i = 0; i < 100; i++)
+			{
+				var sp = Stopwatch.StartNew();
+				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Regions" },
 			 new ScriptedPatchRequest
 			 {
 				 Script =
@@ -28,6 +32,8 @@ namespace Raven.Tryouts
 
 			 }
 				, true);
+				Console.WriteLine(sp.ElapsedMilliseconds);
+			}
 		}
 
 		private static void UseMyData()
