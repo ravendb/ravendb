@@ -461,6 +461,7 @@
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
+    <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
     <Compile Include="Spatial\Spatial.cs" />
@@ -1063,6 +1064,7 @@
     <EmbeddedResource Include="MailingList\MapReduceIssue\MvcMusicStore_Dump.json" />
     <EmbeddedResource Include="MailingList\Sandbox.ravendump" />
     <None Include="packages.config" />
+    <EmbeddedResource Include="Patching\failingdump11.ravendump" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
