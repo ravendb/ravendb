@@ -19,7 +19,6 @@ namespace Raven.Tests.MailingList
 					dataDumper.ImportData(stream, smugglerOptions);
 				}
 
-				WaitForUserToContinueTheTest(store);
 				using(var s = store.OpenSession())
 				{
 					var objects = s.Query<object>("LogEntry/CountByDate")
