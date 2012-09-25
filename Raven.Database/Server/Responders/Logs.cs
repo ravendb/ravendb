@@ -27,7 +27,7 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotFound();
 				context.WriteJson(new
 				{
-					Error = "HttpEndpoint was not registered in the log configuration, logs endpoint disable"
+					Error = "HttpEndpoint was not registered in the log configuration, logs endpoint disabled"
 				});
 				return;
 			}
