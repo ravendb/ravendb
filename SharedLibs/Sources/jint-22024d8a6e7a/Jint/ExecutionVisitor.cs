@@ -1226,7 +1226,7 @@ namespace Jint {
         }
 
         public void Visit(MemberExpression expression) {
-            if (expression.Previous != null) {
+	        if (expression.Previous != null) {
                 // the previous part is an property, it will set a callTarget
                 expression.Previous.Accept(this);
             }
@@ -1377,7 +1377,7 @@ namespace Jint {
                 return;
             }
             else {
-                throw new JsException(Global.ErrorClass.New("Function expected."));
+                throw new JsException(Global.ErrorClass.New("Function expected: " + lastIdentifier));
             }
 
         }

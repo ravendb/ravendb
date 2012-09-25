@@ -18,5 +18,12 @@ namespace Jint.Expressions {
         public Statement() {
             Label = String.Empty;
         }
+
+		public override string ToString()
+		{
+			var jsCodeVisitor = new JsCodeVisitor();
+			Accept(jsCodeVisitor);
+			return jsCodeVisitor.Builder.ToString();
+		}
     }
 }

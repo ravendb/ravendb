@@ -15,5 +15,10 @@ namespace Jint.Native {
             //if (value is JsDictionaryObject)
             //    ((JsDictionaryObject)value)["jintException"] = new JsClr(this);
         }
+
+		public override string Message
+		{
+			get { return base.Message + " Error: " + Value; }
+		}
     }
 }

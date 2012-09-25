@@ -115,5 +115,10 @@ namespace Jint.Native {
 
             return desc;
         }
+
+		public override string ToString()
+		{
+			return Name;
+		}
     }
 }

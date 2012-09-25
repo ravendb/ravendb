@@ -285,6 +285,11 @@ namespace Jint {
 			return Visitor.Global.Marshaller.MarshalJsValue<object>(jsInstance);
 		}
 
+		public void RemoveParameter(string name)
+		{
+			Visitor.GlobalScope.Delete(name);
+		}
+
         #region SetParameter overloads
 
         /// <summary>
