@@ -301,6 +301,9 @@ namespace Raven.Database.Indexing
 
 		private Field CreateBinaryFieldWithCaching(string name, byte[] value, Field.Store store, Field.Index index)
 		{
+			if(value.Length > 1024)
+				throw new ArgumentException("Binary values must be smaller than 1Kb");
+
 			var cacheKey = new FieldCacheKey(name, null, store, multipleItemsSameFieldCount.ToArray());
 			Field field;
 			var stringWriter = new StringWriter();
