@@ -30,7 +30,9 @@ namespace Raven.Abstractions.Logging
 		public static ILog GetLogger(string name)
 		{
 			ILogManager temp = currentLogManager ?? ResolveExtenalLogManager();
-			return temp == null ? new LoggerExecutionWrapper(new NoOpLogger(), name, targets.ToArray()) : new LoggerExecutionWrapper(temp.GetLogger(name), name, targets.ToArray());
+			if (temp == null) 
+				return new LoggerExecutionWrapper(new NoOpLogger(), name, targets.ToArray());
+			return new LoggerExecutionWrapper(temp.GetLogger(name), name, targets.ToArray());
 		}
 
 		public static void SetCurrentLogManager(ILogManager logManager)

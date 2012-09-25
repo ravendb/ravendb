@@ -195,6 +195,8 @@ namespace Raven.Database.Indexing
 
 		private class CodecIndexOutput : IndexOutput
 		{
+			static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 			private readonly FileInfo file;
 			private readonly Stream stream;
 
@@ -206,7 +208,6 @@ namespace Raven.Database.Indexing
 
 			~CodecIndexOutput()
 			{
-				var log = LogManager.GetCurrentClassLogger();
 				try
 				{
 					log.Error("~CodecIndexOutput() " + file.FullName + "!");
