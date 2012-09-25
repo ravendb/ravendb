@@ -64,6 +64,9 @@
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Antlr3.Runtime">
+      <HintPath>..\SharedLibs\Sources\jint-22024d8a6e7a\Dependencies\Antlr3.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="BouncyCastle.Crypto, Version=1.7.4137.9688, Culture=neutral, PublicKeyToken=a4292a325f69b123, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
@@ -786,7 +789,7 @@
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
     <ProjectReference Include="..\SharedLibs\Sources\jint-22024d8a6e7a\Jint\Jint.csproj">
-      <Project>{DBF3AEF6-9D13-4E03-899B-561BCFDD9920}</Project>
+      <Project>{dbf3aef6-9d13-4e03-899b-561bcfdd9920}</Project>
       <Name>Jint</Name>
     </ProjectReference>
   </ItemGroup>
