@@ -168,6 +168,7 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
     <Compile Include="Extensions\AdminFinder.cs" />
+    <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
