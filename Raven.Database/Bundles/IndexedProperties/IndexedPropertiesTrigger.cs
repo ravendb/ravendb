@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using Lucene.Net.Documents;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
@@ -18,7 +18,7 @@ namespace Raven.Bundles.IndexedProperties
 	[ExportMetadata("Bundle", "IndexedProperties")]
 	public class IndexedPropertiesTrigger : AbstractIndexUpdateTrigger
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
 		{

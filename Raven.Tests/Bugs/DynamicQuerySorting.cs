@@ -1,5 +1,6 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Database.Server;

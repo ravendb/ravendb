@@ -3,14 +3,15 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System.ComponentModel;
+using System;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using Raven.Studio.Infrastructure;
 
-namespace System.Windows.Controls
+namespace Raven.Studio.Infrastructure.ContextMenu
 {
     /// <summary>
     /// Represents a pop-up menu that enables a control to expose functionality that is specific to the context of the control.

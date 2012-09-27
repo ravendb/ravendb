@@ -305,5 +305,6 @@ namespace Raven.Client.Document
 		KeyValuePair<string, string> GetLastEqualityTerm();
 
 		void Intersect();
+		void AddRootType(Type type);
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client;
 using Raven.Client.Linq;
 using System.Linq;
 using Raven.Client.Document;

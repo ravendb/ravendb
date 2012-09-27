@@ -14,6 +14,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -56,7 +57,7 @@ namespace Raven.Storage.Esent.StorageActions
 			where T : class
 		{
 			bool existsInTx = IsDocumentModifiedInsideTransaction(key);
-
+			
 			if (transactionInformation != null && existsInTx)
 			{
 				var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
@@ -182,7 +183,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
 			if (TryMoveDocumentRecords(start, backward: true)) 
-				return Enumerable.Empty<JsonDocument>();
+					return Enumerable.Empty<JsonDocument>();
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
@@ -274,12 +275,12 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				return Enumerable.Empty<JsonDocument>();
 
-			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
-			if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
-				return Enumerable.Empty<JsonDocument>();
+				Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
+				if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
+					return Enumerable.Empty<JsonDocument>();
 
 			if (TryMoveDocumentRecords(start, backward: false))
-				return Enumerable.Empty<JsonDocument>();
+						return Enumerable.Empty<JsonDocument>();
 
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
@@ -308,7 +309,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				if (etag != null && etag != Guid.Empty) // expected something to be there.
 					throw new ConcurrencyException("PUT attempted on document '" + key +
-												   "' using a non current etag (document deleted)")
+					                               "' using a non current etag (document deleted)")
 					{
 						ExpectedETag = etag.Value
 					};
@@ -441,6 +442,15 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
+				if(etag != null && etag.Value != Guid.Empty)
+				{
+					throw new ConcurrencyException("DELETE attempted on document '" + key +
+											   "' using a non current etag")
+					{
+						ActualETag = Guid.Empty,
+						ExpectedETag = etag.Value
+					};
+				}
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				return false;
 			}

@@ -19,13 +19,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
 using Raven.Database.Util;
 using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -90,7 +90,7 @@ namespace Raven.Database.Server
 
 		private HttpListener listener;
 
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		private int reqNum;
 
@@ -376,40 +376,37 @@ namespace Raven.Database.Server
 
 		private void GetContext(IAsyncResult ar)
 		{
-			HttpListenerContextAdpater ctx = null;
-			using (ctx)
+			HttpListenerContextAdpater ctx;
+			try
 			{
-				try
-				{
-					HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
-					ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration, bufferPool);
-					//setup waiting for the next request
-					listener.BeginGetContext(GetContext, null);
-				}
-				catch (Exception)
-				{
-					// can't get current request / end new one, probably
-					// listener shutdown
-					return;
-				}
+				HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
+				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration, bufferPool);
+				//setup waiting for the next request
+				listener.BeginGetContext(GetContext, null);
+			}
+			catch (Exception)
+			{
+				// can't get current request / end new one, probably
+				// listener shutdown
+				return;
+			}
 
-				if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
-				{
-					HandleTooBusyError(ctx);
-					return;
-				}
-				try
-				{
-					Interlocked.Increment(ref physicalRequestsCount);
-					if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
-						HandleChangesRequest(ctx, () => { });
-					else
-						HandleActualRequest(ctx);
-				}
-				finally
-				{
-					concurretRequestSemaphore.Release();
-				}
+			if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+			{
+				HandleTooBusyError(ctx);
+				return;
+			}
+			try
+			{
+				Interlocked.Increment(ref physicalRequestsCount);
+				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
+					HandleChangesRequest(ctx, () => { });
+				else
+					HandleActualRequest(ctx);
+			}
+			finally
+			{
+				concurretRequestSemaphore.Release();
 			}
 		}
 

@@ -3,7 +3,10 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-namespace System.Windows.Controls.Primitives
+using System.Windows;
+using System.Windows.Controls;
+
+namespace Raven.Studio.Infrastructure.ContextMenu
 {
     /// <summary>
     /// Represents a control that defines choices for users to select.

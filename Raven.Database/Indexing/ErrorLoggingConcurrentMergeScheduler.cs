@@ -1,12 +1,12 @@
 ﻿using System;
 using Lucene.Net.Index;
-using NLog;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Indexing
 {
 	public class ErrorLoggingConcurrentMergeScheduler : ConcurrentMergeScheduler
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		protected override void HandleMergeException(System.Exception exc)
 		{

@@ -9,7 +9,7 @@
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
 			 xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
-			 mc:Ignorable="d"
+             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
 			 x:Name="this"
 			 x:Class="Raven.Studio.Features.Indexes.IndexesListView"
 			 d:DesignWidth="600"
@@ -192,16 +192,16 @@
 				<Behaviors:SelectItemOnRightClick/>
 				<Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
 			</i:Interaction.Behaviors>
-			<Controls:ContextMenuService.ContextMenu>
-				<Controls:ContextMenu x:Name="IndexesContextMenu">
-					<Controls:MenuItem Header="Delete index"
+			<ContextMenu:ContextMenuService.ContextMenu>
+				<ContextMenu:ContextMenu x:Name="IndexesContextMenu">
+					<ContextMenu:MenuItem Header="Delete index"
 									   Command="{Binding DeleteIndex}"/>
-					<Controls:MenuItem Header="Promote to auto index"
+					<ContextMenu:MenuItem Header="Promote to auto index"
 									   Command="{Binding PromoteIndex}"/>
-					<Controls:MenuItem Header="Reset index"
+					<ContextMenu:MenuItem Header="Reset index"
 									   Command="{Binding ResetIndex}"/>
-				</Controls:ContextMenu>
-			</Controls:ContextMenuService.ContextMenu>
+				</ContextMenu:ContextMenu>
+			</ContextMenu:ContextMenuService.ContextMenu>
 		</ListBox>
 	</toolkit:HeaderedContentControl>
 

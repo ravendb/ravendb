@@ -107,7 +107,7 @@ namespace Raven.Studio.Commands
 	    private static CreateSettingsModel ConfigureSettingsModel(NewDatabase newDatabase)
 	    {
 	        CreateSettingsModel bundlesModel;
-	        bundlesModel = new CreateSettingsModel() {Creation = true};
+	        bundlesModel = new CreateSettingsModel();
 
 	        if (newDatabase.Quotas.IsChecked == true)
 	        {
@@ -126,7 +126,7 @@ namespace Raven.Studio.Commands
 	        }
 	        if (newDatabase.Versioning.IsChecked == true)
 	        {
-	            AddSection(bundlesModel, new VersioningSettingsSectionModel()
+	            AddSection(bundlesModel, new VersioningSettingsSectionModel(true)
 	            {
 	                VersioningConfigurations =
 	                {
@@ -194,6 +194,8 @@ namespace Raven.Studio.Commands
 		{
 			foreach (var data in versioningData)
 			{
+				if (data.Id.StartsWith("Raven/Versioning/", StringComparison.InvariantCultureIgnoreCase) == false)
+					data.Id = "Raven/Versioning/" + data.Id;
 				session.Store(data);
 			}
 		}

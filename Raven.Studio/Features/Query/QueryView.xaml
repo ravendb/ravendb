@@ -15,7 +15,8 @@
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Delay="clr-namespace:Delay"
                          xmlns:Query="clr-namespace:Raven.Studio.Features.Query"
-                         xmlns:Controls1="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
+                         xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
                          d:DataContext="{d:DesignInstance Models:QueryModel}">
 	<Infrastructure:PageView.Resources>
 		<Storyboard x:Key="ShowErrorPanel">
@@ -103,7 +104,7 @@
 					</Button.Content>
 				</Button>
 
-				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 				<Button x:Name="AddSortBy"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -180,11 +181,11 @@
 					</StackPanel>
 				</ToggleButton>
 
-				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 				<Controls1:RecentQueriesButton/>
 
-				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 				<Button x:Name="IndexStats"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -198,7 +199,7 @@
 					<Button.Content>
 						<StackPanel Orientation="Horizontal"
 										VerticalAlignment="Center">
-							<Image Source="{StaticResource Image_Info_Tiny}"
+                            <Image Source="{StaticResource Image_ChangeView_Tiny}"
 									   Stretch="None"
 									   VerticalAlignment="Center" />
 							<TextBlock Text="Index Statistics"

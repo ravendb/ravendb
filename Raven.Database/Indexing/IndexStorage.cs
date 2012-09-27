@@ -18,10 +18,10 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -49,8 +49,8 @@ namespace Raven.Database.Indexing
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
-		private static readonly Logger startupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog startupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
 		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 		private DateTime latestPersistedQueryTime;
 		private readonly FileStream crashMarker;
@@ -198,7 +198,7 @@ namespace Raven.Database.Indexing
 			if (indexDefinition.IsTemp || configuration.RunInMemory)
 			{
 				directory = new RAMDirectory();
-				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close(); // creating index structure
+				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
 			}
 			else
 			{
@@ -214,7 +214,7 @@ namespace Raven.Database.Indexing
 					WriteIndexVersion(directory);
 
 					//creating index structure if we need to
-					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
+					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
 				}
 				else
 				{
@@ -238,15 +238,10 @@ namespace Raven.Database.Indexing
 
 		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)
 		{
-			var indexOutput = directory.CreateOutput("index.version");
-			try
+			using(var indexOutput = directory.CreateOutput("index.version"))
 			{
 				indexOutput.WriteString(IndexVersion);
 				indexOutput.Flush();
-			}
-			finally
-			{
-				indexOutput.Close();
 			}
 		}
 
@@ -256,17 +251,12 @@ namespace Raven.Database.Indexing
 			{
 				throw new InvalidOperationException("Could not find index.version " + indexName + ", resetting index");
 			}
-			var indexInput = directory.OpenInput("index.version");
-			try
+			using(var indexInput = directory.OpenInput("index.version"))
 			{
 				var versionFromDisk = indexInput.ReadString();
 				if (versionFromDisk != IndexVersion)
 					throw new InvalidOperationException("Index " + indexName + " is of version " + versionFromDisk +
 														" which is not compatible with " + IndexVersion + ", resetting index");
-			}
-			finally
-			{
-				indexInput.Close();
 			}
 		}
 
@@ -336,7 +326,7 @@ namespace Raven.Database.Indexing
 		{
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly close index storage");
 
-			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => index.Dispose()));
+			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => exceptionAggregator.Execute(index.Dispose)));
 
 			exceptionAggregator.Execute(() => dummyAnalyzer.Close());
 
@@ -614,7 +604,7 @@ namespace Raven.Database.Indexing
 
 		public Index GetIndexInstance(string indexName)
 		{
-			return indexes.Where(index => System.String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
+			return indexes.Where(index => String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
 		}

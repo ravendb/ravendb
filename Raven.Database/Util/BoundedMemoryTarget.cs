@@ -1,12 +1,11 @@
-// //-----------------------------------------------------------------------
-// // <copyright company="Hibernating Rhinos LTD">
-// //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// // </copyright>
-// //-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+// <copyright company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using NLog;
-using NLog.Targets;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Util
 {
@@ -15,14 +14,16 @@ namespace Raven.Database.Util
 		private ConcurrentQueue<LogEventInfo> generalLog = new ConcurrentQueue<LogEventInfo>();
 		private ConcurrentQueue<LogEventInfo> warnLog = new ConcurrentQueue<LogEventInfo>();
 
-		protected override void Write(LogEventInfo logEvent)
+		public override void Write(LogEventInfo logEvent)
 		{
+			if (!logEvent.LoggerName.StartsWith("Raven."))
+				return;
 			AddToQueue(logEvent, generalLog);
 			if(logEvent.Level>=LogLevel.Warn)
 				AddToQueue(logEvent, warnLog);
 		}
 
-		private void AddToQueue(LogEventInfo logEvent, ConcurrentQueue<LogEventInfo> logEventInfos)
+		private static void AddToQueue(LogEventInfo logEvent, ConcurrentQueue<LogEventInfo> logEventInfos)
 		{
 			logEventInfos.Enqueue(logEvent);
 			if (logEventInfos.Count <= 500)

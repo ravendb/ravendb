@@ -4,7 +4,6 @@ Imports Raven.Abstractions.Indexing
 Imports Raven.Client.Linq
 Imports Raven.Client.Indexes
 Imports Raven.Database.Indexing
-Imports Raven.Client.Linq.LinqExtensions
 
 ''' <summary>
 ''' Creates an index on objects private Ids

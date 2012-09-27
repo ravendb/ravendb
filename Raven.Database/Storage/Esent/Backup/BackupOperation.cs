@@ -8,10 +8,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.Isam.Esent.Interop;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Backup;
 using Raven.Database.Extensions;
@@ -26,7 +26,7 @@ namespace Raven.Storage.Esent.Backup
 		private string to;
 		private bool incrementalBackup;
 		private string src;
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, string src, string to, bool incrementalBackup)
 		{

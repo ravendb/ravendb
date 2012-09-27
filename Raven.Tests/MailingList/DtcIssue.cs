@@ -5,6 +5,7 @@
 // //-----------------------------------------------------------------------
 using System.Linq;
 using System.Transactions;
+using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Xunit;

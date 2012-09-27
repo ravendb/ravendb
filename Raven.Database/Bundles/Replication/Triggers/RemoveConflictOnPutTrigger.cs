@@ -34,7 +34,10 @@ namespace Raven.Bundles.Replication.Triggers
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
 				// this is a conflict document, holding document keys in the 
 				// values of the properties
-				foreach (var prop in oldVersion.DataAsJson.Value<RavenJArray>("Conflicts"))
+				var conflicts = oldVersion.DataAsJson.Value<RavenJArray>("Conflicts");
+				if(conflicts == null)
+					return;
+				foreach (var prop in conflicts)
 				{
 					RavenJObject deletedMetadata;
 					Database.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);

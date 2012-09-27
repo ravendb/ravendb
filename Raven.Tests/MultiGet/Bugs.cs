@@ -1,3 +1,4 @@
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Tests.Bugs;

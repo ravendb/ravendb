@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -13,7 +13,7 @@ namespace Raven.Bundles.Replication.Responders
 {
 	public abstract class SingleItemReplicationBehavior<TInternal, TExternal>
 	{
-		private readonly Logger log = LogManager.GetCurrentClassLogger();
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		public DocumentDatabase Database { get; set; }
 		public IStorageActionsAccessor Actions { get; set; }

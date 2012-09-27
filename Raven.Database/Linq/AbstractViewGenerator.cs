@@ -154,6 +154,7 @@ namespace Raven.Database.Linq
 
 		#region Spatial index
 
+		[CLSCompliant(false)]
 		public ConcurrentDictionary<string, SpatialStrategy> SpatialStrategies { get; private set; }
 
 		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
@@ -169,7 +170,7 @@ namespace Raven.Database.Linq
 // ReSharper disable CSharpWarnings::CS0612
 			Shape shape = SpatialIndex.Context.MakePoint(lng ?? 0, lat ?? 0);
 			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.ShapeReadWriter.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
 // ReSharper restore CSharpWarnings::CS0612
 		}
 
@@ -180,11 +181,9 @@ namespace Raven.Database.Linq
 			if (maxTreeLevel == 0) maxTreeLevel = GeohashPrefixTree.GetMaxLevelsPossible();
 			var strategy = SpatialStrategies.GetOrAdd(fieldName, s => SpatialIndex.CreateStrategy(fieldName, spatialSearchStrategy, maxTreeLevel));
 
-// ReSharper disable CSharpWarnings::CS0612
-			var shape = SpatialIndex.Context.ReadShape(shapeWKT);
+			var shape = SpatialIndex.ShapeReadWriter.ReadShape(shapeWKT);
 			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
-// ReSharper restore CSharpWarnings::CS0612
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.ShapeReadWriter.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
 		#endregion

@@ -3,12 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel;
 using System.Linq;
 using Raven.Database.Linq;
 
 namespace Raven.Tests.Indexes
 {
+	[CLSCompliant(false)]
 	[DisplayName("Compiled/View")]
 	public class MapOnlyView : AbstractViewGenerator
 	{

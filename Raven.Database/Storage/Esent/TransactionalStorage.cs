@@ -10,9 +10,9 @@ using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
@@ -41,7 +41,7 @@ namespace Raven.Storage.Esent
 		private IUuidGenerator generator;
 		private readonly IDocumentCacher documentCacher;
 
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[ImportMany]
 		public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
@@ -422,10 +422,11 @@ namespace Raven.Storage.Esent
 					return;
 				}
 			}
+			Action afterCommit = null;
 			disposerLock.EnterReadLock();
 			try
 			{
-				ExecuteBatch(action);
+				afterCommit = ExecuteBatch(action);
 			}
 			catch (EsentErrorException e)
 			{
@@ -452,10 +453,12 @@ namespace Raven.Storage.Esent
 					current.Value = null;
 			}
 			onCommit(); // call user code after we exit the lock
+			if (afterCommit != null)
+				afterCommit();
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
+		private Action ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
@@ -466,7 +469,7 @@ namespace Raven.Storage.Esent
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
-				pht.Commit(txMode);
+				return pht.Commit(txMode);
 			}
 		}
 

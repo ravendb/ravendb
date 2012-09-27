@@ -1,8 +1,15 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.Security.Principal;
 using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
+using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
 {
@@ -10,11 +17,22 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 10000; i++)
+
+			var store = new DocumentStore() { Url = "http://localhost:8080/", DefaultDatabase = "Confabulat" };
+			store.Initialize();
+			for (int i = 0; i < 100; i++)
 			{
-				Console.Clear();
-				Console.WriteLine(i);
-				UseMyData();
+				var sp = Stopwatch.StartNew();
+				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Regions" },
+			 new ScriptedPatchRequest
+			 {
+				 Script =
+				 @"this.Test = 'test';"
+
+
+			 }
+				, true);
+				Console.WriteLine(sp.ElapsedMilliseconds);
 			}
 		}
 

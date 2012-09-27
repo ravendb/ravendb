@@ -155,7 +155,7 @@ namespace Raven.Storage.Managed
 			foreach (RavenJToken token in itemsToDelete)
 			{
 				var readResult = storage.ScheduleReductions.Read(token);
-				if(readResult == null)
+				if (readResult == null)
 					continue;
 
 				var etagBinary = readResult.Key.Value<byte[]>("etag");
@@ -310,7 +310,7 @@ namespace Raven.Storage.Managed
 		{
 			var ms = new MemoryStream();
 
-			using(var stream = documentCodecs.Aggregate((Stream) ms, (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
+			using (var stream = documentCodecs.Aggregate((Stream)ms, (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
 			{
 				data.WriteTo(stream);
 			}
@@ -346,6 +346,17 @@ namespace Raven.Storage.Managed
 			}
 		}
 
+		public IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take)
+		{
+			return storage.MappedResults["ByViewReduceKeyAndBucket"].SkipTo(new RavenJObject
+			{
+				{"view", indexName},
+			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase))
+			.Skip(start)
+			.Take(take)
+			.Select(x => x.Value<string>("reduceKey"));
+		}
+
 		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int take)
 		{
 			var results = storage.MappedResults["ByViewReduceKeyAndBucket"].SkipTo(new RavenJObject
@@ -353,23 +364,23 @@ namespace Raven.Storage.Managed
 				{"view", indexName},
 				{"reduceKey", key},
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
-			                  string.Equals(key, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase))
+							  string.Equals(key, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase))
 				.Take(take);
 
 			return from result in results
-			       select storage.MappedResults.Read(result)
-			       into readResult
-			       where readResult != null
-			       select new MappedResultInfo
-			       {
-			       	ReduceKey = readResult.Key.Value<string>("reduceKey"),
-			       	Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
-			       	Timestamp = readResult.Key.Value<DateTime>("timestamp"),
-			       	Bucket = readResult.Key.Value<int>("bucket"),
-			       	Source = readResult.Key.Value<string>("docId"),
-			       	Size = readResult.Size,
-			       	Data = LoadMappedResult(readResult)
-			       };
+				   select storage.MappedResults.Read(result)
+					   into readResult
+					   where readResult != null
+					   select new MappedResultInfo
+					   {
+						   ReduceKey = readResult.Key.Value<string>("reduceKey"),
+						   Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+						   Timestamp = readResult.Key.Value<DateTime>("timestamp"),
+						   Bucket = readResult.Key.Value<int>("bucket"),
+						   Source = readResult.Key.Value<string>("docId"),
+						   Size = readResult.Size,
+						   Data = LoadMappedResult(readResult)
+					   };
 		}
 
 		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take)
@@ -380,7 +391,7 @@ namespace Raven.Storage.Managed
 				{"reduceKey", key},
 				{"level", level}
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
-							  string.Equals(key, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase) && 
+							  string.Equals(key, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase) &&
 							  level == x.Value<int>("level"))
 				.Take(take);
 

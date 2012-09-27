@@ -5,13 +5,13 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
-using NLog;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Plugins
 {
 	public abstract class AbstractBackgroundTask : IStartupTask
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		public DocumentDatabase Database { get; set; }
 

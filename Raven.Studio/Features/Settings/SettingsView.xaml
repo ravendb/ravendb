@@ -49,5 +49,5 @@
                             HorizontalContentAlignment="Stretch" 
                             VerticalContentAlignment="Stretch"
                             Margin="10,10,0,0"/>
-	</Grid>
+		</Grid>
 </Infrastructure:View>

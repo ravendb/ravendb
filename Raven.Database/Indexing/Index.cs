@@ -18,12 +18,12 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial;
 using Lucene.Net.Store;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -43,8 +43,8 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public abstract class Index : IDisposable
 	{
-		protected static readonly Logger logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
-		protected static readonly Logger logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
+		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
+		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
@@ -133,7 +133,12 @@ namespace Raven.Database.Indexing
 				}
 				if (currentIndexSearcherHolder != null)
 				{
-					currentIndexSearcherHolder.SetIndexSearcher(null);
+					var item = currentIndexSearcherHolder.SetIndexSearcher(null);
+					if(item.WaitOne(TimeSpan.FromSeconds(5)) == false)
+					{
+						logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
+						Console.Beep();
+					}
 				}
 
 				if (indexWriter != null)
@@ -152,7 +157,7 @@ namespace Raven.Database.Indexing
 
 					try
 					{
-						writer.Close();
+						writer.Dispose();
 					}
 					catch (Exception e)
 					{
@@ -162,7 +167,7 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					directory.Close();
+					directory.Dispose();
 				}
 				catch (Exception e)
 				{

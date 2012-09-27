@@ -19,6 +19,7 @@ namespace Raven.Studio.Models
 		public StatisticsModel()
 		{
 			ModelUrl = "/statistics";
+		    Breadcrumb = "Documents";
 			Statistics = new Dictionary<string, StatInfo>();
 			StatisticsToView = new Dictionary<string, StatInfo>();
 			ViewOptions = new List<string>();
@@ -33,10 +34,14 @@ namespace Raven.Studio.Models
 		protected override void OnViewLoaded()
 		{
 			var indexToShow = new UrlParser(UrlUtil.Url).GetQueryParam("index");
-			if (indexToShow != null)
-				SeletedViewOption.Value = indexToShow;
-			
-			base.OnViewLoaded();
+            if (indexToShow != null)
+            {
+                SeletedViewOption.Value = indexToShow;
+                Breadcrumb = "Indexes";
+                OnPropertyChanged(() => Breadcrumb);
+            }
+
+		    base.OnViewLoaded();
 		}
 
 		private void UpdateView()
@@ -196,11 +201,15 @@ namespace Raven.Studio.Models
 					{
 						performanceMessage += string.Format(@"
 Operation:         {0}
-Count:              {1}
-Duration:          {2}
-Duration in ms: {3}", indexingPerformanceStatse.Operation,
-															indexingPerformanceStatse.Count, indexingPerformanceStatse.Duration,
-															indexingPerformanceStatse.DurationMilliseconds.ToString("#,#"));
+Input:              {1:#,#}
+Output:              {2:#,#}
+Duration:          {3}
+Duration in ms: {4:#,#}
+", indexingPerformanceStatse.Operation,
+						                                    indexingPerformanceStatse.InputCount,
+						                                    indexingPerformanceStatse.OutputCount,
+						                                    indexingPerformanceStatse.Duration,
+						                                    indexingPerformanceStatse.DurationMilliseconds);
 					}
 
 					statInfoItem.ItemData.Add("Performance", performanceMessage);
@@ -225,6 +234,7 @@ Duration in ms: {3}", indexingPerformanceStatse.Operation,
 		public Dictionary<string, StatInfo> StatisticsToView { get; set; }
 		public List<string> ViewOptions { get; set; }
 		public Observable<string> SeletedViewOption { get; set; }
+        public string Breadcrumb { get; set; }
 	}
 
 	public class StatInfo

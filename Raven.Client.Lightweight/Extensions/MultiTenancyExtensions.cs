@@ -42,7 +42,7 @@ namespace Raven.Client.Extensions
 			var docId = "Raven/Databases/" + name;
 			try
 			{
-				if (self.Get(docId) != null)
+				if (serverClient.Get(docId) != null)
 					return;
 
 				var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
@@ -87,7 +87,7 @@ namespace Raven.Client.Extensions
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
 
-			return self.GetAsync(docId)
+			return serverClient.GetAsync(docId)
 				.ContinueWith(get =>
 				{
 					if (get.Result != null)
@@ -135,7 +135,7 @@ namespace Raven.Client.Extensions
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
 
-			return self.GetAsync(docId)
+			return serverClient.GetAsync(docId)
 				.ContinueWith(get =>
 				{
 					if (get.Result != null)

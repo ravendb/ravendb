@@ -1,0 +1,176 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="TextBoxStyles.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style TargetType="toolkit:ButtonSpinner">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:ButtonSpinner">
+                    <Grid>
+                        <Grid.Resources>
+                            <ControlTemplate x:Key="IncreaseButton" TargetType="RepeatButton">
+                                <Grid>
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualStateGroup.Transitions>
+                                                <VisualTransition GeneratedDuration="0"/>
+                                                <VisualTransition GeneratedDuration="00:00:00.1" To="MouseOver"/>
+                                                <VisualTransition GeneratedDuration="00:00:00.1" To="Pressed"/>
+                                            </VisualStateGroup.Transitions>
+                                            <VisualState x:Name="Normal"/>
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="BackgroundOver" Storyboard.TargetProperty="Opacity" To="1"/>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="Highlight" Storyboard.TargetProperty="Opacity" To="1"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="BackgroundPress" Storyboard.TargetProperty="Opacity" To="1"/>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="BackgroundPress_highlight" Storyboard.TargetProperty="Opacity" To="1"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                        <VisualStateGroup x:Name="FocusStates">
+                                            <VisualState x:Name="Focused"/>
+                                            <VisualState x:Name="Unfocused"/>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Border x:Name="BackgroundOver" Background="#FFEAEAEA" BorderBrush="#FFEAEAEA" BorderThickness="0" CornerRadius="0,0,0,0" Opacity="0"/>
+                                    <Border x:Name="Highlight" Margin="1" BorderBrush="#FFFFFFFF" BorderThickness="0" CornerRadius="0,0,0,0" Opacity="0"/>
+                                    <Border x:Name="BackgroundPress" Background="#FFEAEAEA" BorderBrush="#FFEAEAEA" BorderThickness="0" CornerRadius="0,0,0,0" Opacity="0"/>
+                                    <Border x:Name="BackgroundPress_highlight" Background="#FFEAEAEA" BorderThickness="10" CornerRadius="0" Opacity="0"/>
+                                    <Path Height="5" Width="7" Stretch="Uniform" Data="F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z " HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          Fill="#FFBFBFBF"/>
+                                </Grid>
+                            </ControlTemplate>
+                            <ControlTemplate x:Key="DecreaseButton" TargetType="RepeatButton">
+                                <Grid>
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualStateGroup.Transitions>
+                                                <VisualTransition GeneratedDuration="0"/>
+                                                <VisualTransition GeneratedDuration="00:00:00.1" To="MouseOver"/>
+                                                <VisualTransition GeneratedDuration="00:00:00.1" To="Pressed"/>
+                                            </VisualStateGroup.Transitions>
+                                            <VisualState x:Name="Normal"/>
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="BackgroundOver" Storyboard.TargetProperty="Opacity" To="1"/>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="Highlight" Storyboard.TargetProperty="Opacity" To="1"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="BackgroundPress" Storyboard.TargetProperty="Opacity" To="1"/>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="BackgroundPress_highlight" Storyboard.TargetProperty="Opacity" To="1"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                        <VisualStateGroup x:Name="FocusStates">
+                                            <VisualState x:Name="Focused"/>
+                                            <VisualState x:Name="Unfocused"/>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Border x:Name="BackgroundOver" Background="#FFEAEAEA" BorderBrush="#FFEAEAEA" BorderThickness="0" CornerRadius="0" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleY="-1"/>
+                                                <SkewTransform/>
+                                                <RotateTransform/>
+                                                <TranslateTransform/>
+                                            </TransformGroup>
+                                        </Border.RenderTransform>
+                                    </Border>
+                                    <Border x:Name="Highlight" Margin="1" BorderBrush="#FFFFFFFF" BorderThickness="0" CornerRadius="0" Opacity="0"/>
+                                    <Border x:Name="BackgroundPress" Background="#FFEAEAEA" BorderBrush="#FFEAEAEA" BorderThickness="0" CornerRadius="0" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleY="-1"/>
+                                                <SkewTransform/>
+                                                <RotateTransform/>
+                                                <TranslateTransform/>
+                                            </TransformGroup>
+                                        </Border.RenderTransform>
+                                    </Border>
+                                    <Border x:Name="BackgroundPress_highlight" Background="#FFEAEAEA" BorderThickness="0" CornerRadius="0" Opacity="0"/>
+                                    <Path Height="5" Width="7" Stretch="Uniform" Data="F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z " HorizontalAlignment="Center" VerticalAlignment="Center" Fill="#FFBFBFBF"/>
+                                </Grid>
+                            </ControlTemplate>
+                        </Grid.Resources>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0"/>
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <RepeatButton x:Name="IncreaseButton" Template="{StaticResource IncreaseButton}" IsTabStop="False" ClickMode="Press"/>
+                            <ContentPresenter Content="{TemplateBinding Content}" Grid.Row="1"/>
+                            <RepeatButton x:Name="DecreaseButton" Grid.Row="2" Template="{StaticResource DecreaseButton}" IsTabStop="False" ClickMode="Press"/>
+                        </Grid>
+                        <Border x:Name="DisabledVisualElement" Background="#A5FFFFFF" CornerRadius="0,3,3,0" IsHitTestVisible="false" Opacity="0"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style TargetType="toolkit:NumericUpDown">
+        <Setter Property="Padding" Value="2"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:NumericUpDown">
+                    <Grid MinWidth="50" Height="22" x:Name="LayoutRoot">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="MouseOver">
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                </VisualState>
+                                <VisualState x:Name="Unfocused"/>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border Background="#FFFFFFFF" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                    </Grid.ColumnDefinitions>
+                                    <toolkit:ButtonSpinner x:Name="Spinner" Margin="0" Grid.Column="1" IsTabStop="False"/>
+                                    <TextBox x:Name="Text" MinWidth="35" Style="{StaticResource Style_TextBox_Default}" BorderThickness="0" Padding="{TemplateBinding Padding}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="Stretch" TextAlignment="Right" Text="{TemplateBinding Value}" TextWrapping="NoWrap" AcceptsReturn="False" />
+                                </Grid>
+                        </Border>
+                        <Border x:Name="DisabledVisualElement" Background="#A5F7F7F7" BorderBrush="#A5F7F7F7" BorderThickness="{TemplateBinding BorderThickness}" Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

@@ -5,7 +5,7 @@
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Controls="clr-namespace:System.Windows.Controls"
-						 Title="Databases"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" Title="Databases"
 					 Style="{StaticResource PageStyle}"
 					 Infrastructure:ModelAttacher.AttachObservableModel="DatabasesListModel">
 
@@ -63,10 +63,10 @@
 						<RowDefinition Height="Auto"/>
 						<RowDefinition Height="Auto"/>
 					</Grid.RowDefinitions>
-					<StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center" >
-						<Image Source="{StaticResource Image_Database_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="6"/>
+					<StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
+                        <Image Source="{StaticResource Image_Database_Tiny}" Style="{StaticResource Style_Image_IndexPageHeader}"/>
 						<TextBlock Text="Databases"
-							   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6"/>
+							   Style="{StaticResource Style_Text_Header}"/>
 					</StackPanel>
 					<Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
 						<Grid VerticalAlignment="Center" Margin="0,4,4,4">
@@ -122,19 +122,19 @@
 					<Behaviors:SelectItemOnRightClick />
 				</i:Interaction.Behaviors>
 
-				<Controls:ContextMenuService.ContextMenu>
-					<Controls:ContextMenu>
-						<Controls:MenuItem Header="Edit Settings"
+				<ContextMenu:ContextMenuService.ContextMenu>
+					<ContextMenu:ContextMenu>
+						<ContextMenu:MenuItem Header="Edit Settings"
 											Command="{StaticResource NavigateToCommand}" 
 										 CommandParameter="/settings"/>
-						<Controls:MenuItem Header="Delete"
+						<ContextMenu:MenuItem Header="Delete"
 											Command="{Binding DeleteSelectedDatabase}">
-							<Controls:MenuItem.Icon>
+							<ContextMenu:MenuItem.Icon>
 								<Image Source="{StaticResource Image_Delete_Tiny}"/>
-							</Controls:MenuItem.Icon>
-						</Controls:MenuItem>
-					</Controls:ContextMenu>
-				</Controls:ContextMenuService.ContextMenu>
+							</ContextMenu:MenuItem.Icon>
+						</ContextMenu:MenuItem>
+					</ContextMenu:ContextMenu>
+				</ContextMenu:ContextMenuService.ContextMenu>
 			</ListBox>
 		</toolkit:HeaderedContentControl>
 	</Grid>

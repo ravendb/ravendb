@@ -46,13 +46,6 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="metadata">The metadata.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="convention">The document conventions governing this request</param>
-		/// <returns></returns>
 		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
 		{
 			var request = new HttpJsonRequest(createHttpJsonRequestParams.Url, createHttpJsonRequestParams.Method, createHttpJsonRequestParams.Metadata, createHttpJsonRequestParams.Convention, this);

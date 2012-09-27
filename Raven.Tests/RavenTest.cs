@@ -46,6 +46,11 @@ namespace Raven.Tests
 			File.Delete("test.log");
 		}
 
+		protected void Consume(object o)
+		{
+			
+		}
+
 		public EmbeddableDocumentStore NewDocumentStore(
 			bool deleteDirectory = true,
 			string requestedStorage = null,
@@ -172,6 +177,8 @@ namespace Raven.Tests
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
+
+			documentStore.SetStudioConfigToAllowSingleDb();
 
 			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
 
@@ -361,6 +368,7 @@ namespace Raven.Tests
 		{
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
+			ClearDatabaseDirectory();
 		}
 	}
 }

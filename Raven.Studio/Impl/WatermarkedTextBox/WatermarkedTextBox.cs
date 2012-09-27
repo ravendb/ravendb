@@ -144,14 +144,14 @@ namespace Microsoft.Windows.Controls
         /// <summary>
         /// Watermark dependency property
         /// </summary>
-        public static readonly DependencyProperty WatermarkProperty = DependencyProperty.Register(
+        public new static readonly DependencyProperty WatermarkProperty = DependencyProperty.Register(
             "Watermark", typeof(object), typeof(WatermarkedTextBox), new PropertyMetadata(OnWatermarkPropertyChanged));
 
         /// <summary>
         /// Watermark content
         /// </summary>
         /// <value>The watermark.</value>
-        public object Watermark
+        public new object Watermark
         {
             get { return (object)GetValue(WatermarkProperty); }
             set { SetValue(WatermarkProperty, value); }
@@ -162,8 +162,6 @@ namespace Microsoft.Windows.Controls
         #endregion
 
         #region Private
-
-        private static string styleXaml;
 
         private T ExtractTemplatePart<T>(string partName) where T : DependencyObject
         {

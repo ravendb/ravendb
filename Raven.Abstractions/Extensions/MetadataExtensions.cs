@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -12,6 +11,9 @@ using Raven.Imports.Newtonsoft.Json;
 using System;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+#if !SILVERLIGHT
+using System.Collections.Specialized;
+#endif
 
 namespace Raven.Abstractions.Extensions
 {
@@ -20,7 +22,7 @@ namespace Raven.Abstractions.Extensions
 	/// </summary>
 	public static class MetadataExtensions
 	{
-		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		private static readonly HashSet<string> headersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Raven internal headers
 			"Raven-Server-Build",
@@ -120,7 +122,7 @@ namespace Raven.Abstractions.Extensions
 					continue;
 				if(header.Key == Constants.DocumentIdFieldName)
 					continue;
-				if (HeadersToIgnoreClient.Contains(header.Key))
+				if (headersToIgnoreClient.Contains(header.Key))
 					continue;
 				var headerName = CaptureHeaderName(header.Key);
 				metadata[headerName] = header.Value;
@@ -140,8 +142,6 @@ namespace Raven.Abstractions.Extensions
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self)
 		  {
@@ -150,7 +150,7 @@ namespace Raven.Abstractions.Extensions
 			{
 				if (header.Key.StartsWith("Temp"))
 					continue;
-				if (HeadersToIgnoreClient.Contains(header.Key))
+				if (headersToIgnoreClient.Contains(header.Key))
 					continue;
 				var values = header.Value;
 				var headerName = CaptureHeaderName(header.Key);
@@ -184,7 +184,7 @@ namespace Raven.Abstractions.Extensions
 				{
 					if(header.StartsWith("Temp"))
 						continue;
-					if (HeadersToIgnoreClient.Contains(header))
+					if (headersToIgnoreClient.Contains(header))
 						continue;
 					var valuesNonDistinct = self.GetValues(header);
 					if(valuesNonDistinct == null)

@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Json;

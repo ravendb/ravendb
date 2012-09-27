@@ -24,15 +24,17 @@
 					<ColumnDefinition Width="20" />
 				</Grid.ColumnDefinitions>
 
-				<HyperlinkButton Grid.Row="0" 
+				<Button Grid.Row="0" 
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
 								 Grid.Column="2" 
 								 HorizontalAlignment="Right" 
 								 Command="{Binding DataContext.DeleteVersioning, RelativeSource={RelativeSource AncestorType=UserControl}}" 
 								 CommandParameter="{Binding}"  
 								 VerticalAlignment="Center" 
-								 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}">
-					<Image Source="{StaticResource Image_Error_Tiny}"/>
-				</HyperlinkButton>
+								 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
+                                ToolTipService.ToolTip="Remove this versioning configuration">
+                    <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+                </Button>
 
 				<TextBlock Grid.Row="0" 
 						   Text="Collection: " 
@@ -40,18 +42,28 @@
 				<sdk:AutoCompleteBox Grid.Row="0" 
 									 Grid.Column="1"
 									 GotFocus="AutoCompleteGotFocus"
-									 Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=Explicit}"
+									 Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MinimumPrefixLength="0"
 									 IsTextCompletionEnabled="True"
 									 Margin="5" 
 									 MaxWidth="250" 
-									 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}">
+									 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
+									 Visibility="{Binding Path=DataContext.IsCreation, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToOppositeVisibility}}">
 					<i:Interaction.Behaviors>
 						<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding Path=DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
 					</i:Interaction.Behaviors>
 				</sdk:AutoCompleteBox>
 
-					<TextBlock Grid.Row="1" 
+				<TextBox Grid.Row="0" 
+									 Grid.Column="1"
+									 Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Margin="5" 
+									 MaxWidth="250" 
+									 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
+									 Visibility="{Binding Path=DataContext.IsCreation, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibility}}">
+				</TextBox>
+
+				<TextBlock Grid.Row="1" 
 						   Text="Max Revisions: "
 						   VerticalAlignment="Center"/>
 				<toolkit:NumericUpDown Grid.Row="1" 
@@ -73,14 +85,32 @@
 		</DataTemplate>
 	</UserControl.Resources>
 	<Grid x:Name="LayoutRoot">
-		<Grid>
-			<ListBox  Style="{StaticResource Databases_FluidList}"
+        <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
+            <toolkit:HeaderedContentControl.Header>
+                <StackPanel Orientation="Horizontal"
+						Margin="0,4,4,4"
+						VerticalAlignment="Center">
+
+                    <Button Command="{Binding AddVersioning}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Add Versioning">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource Image_Add_Tiny}"
+									   Stretch="None"/>
+                                <TextBlock Text="Add Versioning" Margin="2,0,0,0" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+            </toolkit:HeaderedContentControl.Header>
+            <ListBox  Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding VersioningConfigurations}"
 										 SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
 										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
 										 ItemTemplate="{StaticResource VersioningItemTemplate}"
 										 ScrollViewer.VerticalScrollBarVisibility="Auto">
-			</ListBox>
-		</Grid>
-	</Grid>
+            </ListBox>
+        </toolkit:HeaderedContentControl>
+    </Grid>
 </UserControl>

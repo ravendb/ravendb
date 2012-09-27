@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+using System.IO;
+using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -67,8 +69,6 @@ namespace Similarity.Net
 	/// Doug
 	/// </pre></code>
 	/// 
-	/// 
-	/// <p>
 	/// <h3>Initial Usage</h3>
 	/// 
 	/// This class has lots of options to try to make it efficient and flexible.
@@ -104,8 +104,6 @@ namespace Similarity.Net
 	/// 
 	/// You may want to use {@link #SetFieldNames SetFieldNames(...)} so you can examine
 	/// multiple fields (e.g. body and title) for similarity.
-	/// <p>
-	/// 
 	/// Depending on the size of your index and the size and makeup of your documents you
 	/// may want to call the other set methods to control how the similarity queries are
 	/// generated:
@@ -118,8 +116,6 @@ namespace Similarity.Net
 	/// <li> {@link #SetMaxNumTokensParsed SetMaxNumTokensParsed(...)}</li>
 	/// <li> {@link #SetStopWords SetStopWord(...)} </li>
 	/// </ul> 
-	/// 
-	/// <hr/>
 	/// <pre>
 	/// Changes: Mark Harwood 29/02/04
 	/// Some bugfixing, some refactoring, some optimisation.
@@ -129,7 +125,6 @@ namespace Similarity.Net
 	/// - refactor: moved common code into isNoiseWord()
 	/// - optimise: when no termvector support available - used maxNumTermsParsed to limit amount of tokenization
 	/// </pre>
-	/// 
 	/// </summary>
 	/// <author>  David Spencer
 	/// </author>
@@ -141,34 +136,34 @@ namespace Similarity.Net
 	{
 
 		/// <summary> Default maximum number of tokens to parse in each example doc field that is not stored with TermVector support.</summary>
-		/// <seealso cref="#getMaxNumTokensParsed">
+		/// <seealso cref="GetMaxNumTokensParsed">
 		/// </seealso>
 		public const int DEFAULT_MAX_NUM_TOKENS_PARSED = 5000;
 
 
 		/// <summary> Default analyzer to parse source doc with.</summary>
-		/// <seealso cref="#getAnalyzer">
+		/// <seealso cref="GetAnalyzer">
 		/// </seealso>
 		public static readonly Analyzer DEFAULT_ANALYZER = new StandardAnalyzer(Version.LUCENE_29);
 
 		/// <summary> Ignore terms with less than this frequency in the source doc.</summary>
-		/// <seealso cref="#getMinTermFreq">
+		/// <seealso cref="GetMinTermFreq">
 		/// </seealso>
-		/// <seealso cref="#setMinTermFreq">
+		/// <seealso cref="SetMinTermFreq">
 		/// </seealso>
 		public const int DEFAULT_MIN_TERM_FREQ = 2;
 
 		/// <summary> Ignore words which do not occur in at least this many docs.</summary>
-		/// <seealso cref="#getMinDocFreq">
+		/// <seealso cref="GetMinDocFreq">
 		/// </seealso>
-		/// <seealso cref="#setMinDocFreq">
+		/// <seealso cref="SetMinDocFreq">
 		/// </seealso>
 		public const int DEFALT_MIN_DOC_FREQ = 5;
 
 		/// <summary> Boost terms in query based on score.</summary>
-		/// <seealso cref="#isBoost">
+		/// <seealso cref="IsBoost">
 		/// </seealso>
-		/// <seealso cref="#SetBoost">
+		/// <seealso cref="SetBoost">
 		/// </seealso>
 		public const bool DEFAULT_BOOST = false;
 
@@ -178,16 +173,16 @@ namespace Similarity.Net
 		public static readonly System.String[] DEFAULT_FIELD_NAMES = new System.String[] { "contents" };
 
 		/// <summary> Ignore words less than this length or if 0 then this has no effect.</summary>
-		/// <seealso cref="#getMinWordLen">
+		/// <seealso cref="GetMinWordLen">
 		/// </seealso>
-		/// <seealso cref="#setMinWordLen">
+		/// <seealso cref="SetMinWordLen">
 		/// </seealso>
 		public const int DEFAULT_MIN_WORD_LENGTH = 0;
 
 		/// <summary> Ignore words greater than this length or if 0 then this has no effect.</summary>
-		/// <seealso cref="#getMaxWordLen">
+		/// <seealso cref="GetMaxWordLen">
 		/// </seealso>
-		/// <seealso cref="#setMaxWordLen">
+		/// <seealso cref="SetMaxWordLen">
 		/// </seealso>
 		public const int DEFAULT_MAX_WORD_LENGTH = 0;
 
@@ -195,9 +190,9 @@ namespace Similarity.Net
 		/// If null means to allow stop words.
 		/// 
 		/// </summary>
-		/// <seealso cref="#setStopWords">
+		/// <seealso cref="SetStopWords">
 		/// </seealso>
-		/// <seealso cref="#getStopWords">
+		/// <seealso cref="GetStopWords">
 		/// </seealso>
 		public static readonly System.Collections.Hashtable DEFAULT_STOP_WORDS = null;
 
@@ -207,11 +202,11 @@ namespace Similarity.Net
 		/// <summary> Return a Query with no more than this many terms.
 		/// 
 		/// </summary>
-		/// <seealso cref="BooleanQuery#getMaxClauseCount">
+		/// <seealso cref="BooleanQuery.get_MaxClauseCount">
 		/// </seealso>
-		/// <seealso cref="#getMaxQueryTerms">
+		/// <seealso cref="GetMaxQueryTerms">
 		/// </seealso>
-		/// <seealso cref="#setMaxQueryTerms">
+		/// <seealso cref="SetMaxQueryTerms">
 		/// </seealso>
 		public const int DEFAULT_MAX_QUERY_TERMS = 25;
 
@@ -262,7 +257,7 @@ namespace Similarity.Net
 		/// </summary>
 		/// <returns> the analyzer that will be used to parse source doc with.
 		/// </returns>
-		/// <seealso cref="#DEFAULT_ANALYZER">
+		/// <seealso cref="DEFAULT_ANALYZER">
 		/// </seealso>
 		public Analyzer GetAnalyzer()
 		{
@@ -331,7 +326,7 @@ namespace Similarity.Net
 		/// </summary>
 		/// <returns> whether to boost terms in query based on "score" or not.
 		/// </returns>
-		/// <seealso cref="#SetBoost">
+		/// <seealso cref="SetBoost">
 		/// </seealso>
 		public bool IsBoost()
 		{
@@ -343,7 +338,7 @@ namespace Similarity.Net
 		/// </summary>
 		/// <param name="boost">true to boost terms in query based on "score", false otherwise.
 		/// </param>
-		/// <seealso cref="#isBoost">
+		/// <seealso cref="IsBoost">
 		/// </seealso>
 		public void SetBoost(bool boost)
 		{
@@ -425,9 +420,9 @@ namespace Similarity.Net
 		/// <param name="stopWords">set of stopwords, if null it means to allow stop words
 		/// 
 		/// </param>
-		/// <seealso cref="StopFilter.makeStopSet()">
+		/// <seealso cref="StopFilter.MakeStopSet(string[])">
 		/// </seealso>
-		/// <seealso cref="#getStopWords">
+		/// <seealso cref="GetStopWords">
 		/// </seealso>
 		public void SetStopWords(System.Collections.Hashtable stopWords)
 		{
@@ -435,7 +430,7 @@ namespace Similarity.Net
 		}
 
 		/// <summary> Get the current stop words being used.</summary>
-		/// <seealso cref="#setStopWords">
+		/// <seealso cref="SetStopWords">
 		/// </seealso>
 		public System.Collections.Hashtable GetStopWords()
 		{
@@ -467,7 +462,7 @@ namespace Similarity.Net
 
 		/// <returns> The maximum number of tokens to parse in each example doc field that is not stored with TermVector support
 		/// </returns>
-		/// <seealso cref="#DEFAULT_MAX_NUM_TOKENS_PARSED">
+		/// <seealso cref="DEFAULT_MAX_NUM_TOKENS_PARSED">
 		/// </seealso>
 		public int GetMaxNumTokensParsed()
 		{
@@ -813,12 +808,12 @@ namespace Similarity.Net
 		/// Each array has 6 elements.
 		/// The elements are:
 		/// <ol>
-		/// <li> The word (String)
-		/// <li> The top field that this word comes from (String)
-		/// <li> The score for this word (Float)
-		/// <li> The IDF value (Float)
-		/// <li> The frequency of this word in the index (Integer)
-		/// <li> The frequency of this word in the source document (Integer)	 	 
+		/// <li> The word (String)</li>
+		/// <li> The top field that this word comes from (String)</li>	
+		/// <li> The score for this word (Float)</li>	
+		/// <li> The IDF value (Float)</li>	
+		/// <li> The frequency of this word in the index (Integer)</li>	
+		/// <li> The frequency of this word in the source document (Integer)	 	 </li>	
 		/// </ol>
 		/// This is a somewhat "advanced" routine, and in general only the 1st entry in the array is of interest.
 		/// This method is exposed so that you can identify the "interesting words" in a document.
@@ -830,7 +825,7 @@ namespace Similarity.Net
 		/// <returns> the most intresting words in the document ordered by score, with the highest scoring, or best entry, first
 		/// 
 		/// </returns>
-		/// <seealso cref="#retrieveInterestingTerms">
+		/// <seealso cref="RetrieveInterestingTerms">
 		/// </seealso>
 		public PriorityQueue<object[]> RetrieveTerms(System.IO.StreamReader r)
 		{
@@ -851,9 +846,9 @@ namespace Similarity.Net
 		/// <returns> the most interesting words in the document
 		/// 
 		/// </returns>
-		/// <seealso cref="#RetrieveTerms(java.io.Reader)">
+		/// <seealso cref="RetrieveTerms(StreamReader)">
 		/// </seealso>
-		/// <seealso cref="#setMaxQueryTerms">
+		/// <seealso cref="SetMaxQueryTerms">
 		/// </seealso>
 		public System.String[] RetrieveInterestingTerms(System.IO.StreamReader r)
 		{

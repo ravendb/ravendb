@@ -4,9 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
@@ -19,7 +21,7 @@ namespace Raven.Database.Commercial
 		public static LicensingStatus CurrentLicense { get; set; }
 		private static bool alreadyRun;
 		private AbstractLicenseValidator licenseValidator;
-		private readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		static ValidateLicense()
 		{
@@ -75,6 +77,8 @@ namespace Raven.Database.Commercial
 				licenseValidator.AssertValidLicense(()=>
 				{
 					string value;
+
+					AssertForV2(licenseValidator.LicenseAttributes, database);
 					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
 						"true".Equals(value, StringComparison.InvariantCultureIgnoreCase))
 					{
@@ -101,6 +105,21 @@ namespace Raven.Database.Commercial
 					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e
 				};
 			}
+		}
+
+		private void AssertForV2(IDictionary<string, string> licenseAttributes, DocumentDatabase database)
+		{
+			string version;
+			if (licenseAttributes.TryGetValue("version", out version) == false || version != "1.2")
+				throw new LicenseExpiredException("This is not a licence for RavenDB 1.2");
+
+			string maxRam;
+			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam) == false || maxRam != "unlimited")
+				MemoryStatistics.MemoryLimit = int.Parse(licenseAttributes["maxRamUtilization"]);
+			
+			string maxParallel;
+			if (licenseAttributes.TryGetValue("maxParallelism", out maxParallel) == false || maxParallel != "unlimited")
+				MemoryStatistics.MaxParallelism = int.Parse(licenseAttributes["maxRamUtilization"]);
 		}
 
 		private static string GetLicenseText(DocumentDatabase database)

@@ -20,6 +20,7 @@ using Raven.Database.Extensions;
 using Raven.Tests.Indexes;
 using Xunit;
 using System.Linq;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Document
 {
@@ -47,6 +48,7 @@ namespace Raven.Tests.Document
 				using (var tx = new TransactionScope())
 				{
 					session.Store(company);
+
 					session.SaveChanges();
 
 					using (new TransactionScope(TransactionScopeOption.Suppress))

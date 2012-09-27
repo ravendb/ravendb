@@ -8,15 +8,16 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="clr-namespace:System.Windows.Controls">
+    xmlns:controls="clr-namespace:System.Windows.Controls"
+    xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
 
-    <Style TargetType="controls:Separator">
+    <Style TargetType="ContextMenu:Separator">
         <Setter Property="Background" Value="LightGray"/>
         <Setter Property="IsTabStop" Value="False"/>
         <Setter Property="Margin" Value="32,2,2,2"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="controls:Separator">
+                <ControlTemplate TargetType="ContextMenu:Separator">
                     <Border
                         BorderThickness="{TemplateBinding BorderThickness}"
                         BorderBrush="{TemplateBinding BorderBrush}"

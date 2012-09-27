@@ -9,12 +9,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Queries;
@@ -216,9 +216,17 @@ namespace Raven.Database.Server.Responders
 			var key = context.Request.QueryString["key"];
 			if(string.IsNullOrEmpty(key))
 			{
+				List<string> keys = null;
+				Database.TransactionalStorage.Batch(accessor =>
+				{
+					keys = accessor.MapReduce.GetKeysForIndexForDebug(index, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
+						.ToList();
+				});
+
 				context.WriteJson(new
 				{
-					Error = "Query string argument \'key\' is required"
+					Error = "Query string argument \'key\' is required",
+					Keys = keys
 				});
 				context.SetStatusToBadRequest();
 				return;

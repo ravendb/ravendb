@@ -18,6 +18,7 @@ namespace Raven.Bundles.Compression.Plugin
 	[ExportMetadata("Bundle", "Compression")]
 	public class DocumentCompression : AbstractDocumentCodec
 	{
+		[CLSCompliant(false)]
 		public const uint CompressFileMagic = 0x72706D43; // "Cmpr"
 
 		public override Stream Encode(string key, RavenJObject data, RavenJObject metadata, Stream dataStream)

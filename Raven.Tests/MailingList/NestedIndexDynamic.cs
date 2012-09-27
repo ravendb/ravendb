@@ -15,6 +15,7 @@ namespace Raven.Tests.MailingList
 {
 	public class NestedIndexDynamic : RavenTest
 	{
+		[CLSCompliant(false)]
 		public class DynamicIndex : AbstractViewGenerator
 		{
 			public DynamicIndex()

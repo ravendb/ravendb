@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
@@ -14,6 +15,7 @@ namespace Raven.Database.Indexing
 			__document_id = doc.Key;
 		}
 
+		[CLSCompliant(false)]
 		public string __document_id { get; set; }
 	}
 }

@@ -34,7 +34,6 @@ namespace Raven.Studio.Models
 	public class EditableDocumentModel : PageViewModel
 	{
 		private readonly Observable<JsonDocument> document;
-		private bool isLoaded;
 		private int currentIndex;
 		private int totalItems;
 		public string DocumentKey { get; private set; }
@@ -316,7 +315,7 @@ namespace Raven.Studio.Models
 					urlForLast = result.UrlForLast;
 					urlForNext = result.UrlForNext;
 
-					isLoaded = true;
+					IsLoaded = true;
 					document.Value = result.Document;
 					CurrentIndex = (int)result.Index;
 					TotalItems = (int)result.TotalDocuments;

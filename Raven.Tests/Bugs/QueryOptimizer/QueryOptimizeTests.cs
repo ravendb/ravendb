@@ -5,7 +5,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Xunit;
 using System.Linq;
-using RavenQueryStatistics = Raven.Client.Linq.RavenQueryStatistics;
 
 namespace Raven.Tests.Bugs.QueryOptimizer
 {

@@ -10,7 +10,8 @@
              xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-             xmlns:Controls="clr-namespace:System.Windows.Controls" mc:Ignorable="d"
+             xmlns:Controls="clr-namespace:System.Windows.Controls"
+             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Models:IndexDefinitionModel, IsDesignTimeCreatable=False}">
     <UserControl.Resources>
         <DataTemplate x:Key="IndexFieldTemplate">
@@ -166,7 +167,7 @@
                                    Stretch="None" />
                         </Button>
 
-                    <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+                    <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
                     <Button x:Name="AddMap"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -248,7 +249,7 @@
                             </Button.Content>
                         </Button>
 
-                    <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+                    <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
                         
                     <Button x:Name="Terms"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -274,7 +275,7 @@
 					<Button x:Name="Stats"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{StaticResource NavigateToCommand}"
-                                CommandParameter="{Binding Name, StringFormat=/indexstats/\{0\}}"
+                                CommandParameter="{Binding Name, StringFormat='/statistics?index=\{0\}'}"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Left"
                                 Margin="0"
@@ -303,7 +304,7 @@
                                    Stretch="None" />
                     </Button>
 
-                    <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+                    <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
                         
                     <Button x:Name="Reset"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"

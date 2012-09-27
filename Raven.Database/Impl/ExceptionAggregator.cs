@@ -1,17 +1,16 @@
 using System;
-using System.Collections.Generic;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 
 namespace Raven.Database.Impl
 {
 	public class ExceptionAggregator
 	{
-		private readonly Logger log;
+		private readonly ILog log;
 		private readonly string errorMsg;
 		readonly ConcurrentSet<Exception> list = new ConcurrentSet<Exception>();
 
-		public ExceptionAggregator(Logger log, string errorMsg)
+		public ExceptionAggregator(ILog log, string errorMsg)
 		{
 			this.log = log;
 			this.errorMsg = errorMsg;

@@ -398,6 +398,9 @@ namespace Raven.Client.Connection
 					PostedData = postedData
 				});
 
+				if(string.IsNullOrWhiteSpace(readToEnd))
+					return null;// throws
+
 				RavenJObject ravenJObject;
 				try
 				{
@@ -422,7 +425,7 @@ namespace Raven.Client.Connection
 					sb.AppendLine()
 						.AppendLine(ravenJObject.Value<string>("Error"));
 
-					throw new InvalidOperationException(sb.ToString());
+					throw new InvalidOperationException(sb.ToString(), e);
 				}
 				throw new InvalidOperationException(readToEnd, e);
 			}
