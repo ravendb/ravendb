@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Expiration.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -10,9 +10,9 @@ using System.Reflection;
 using Raven.Client.Document;
 using Raven.Server;
 
-namespace Raven.Bundles.Tests.Encryption
+namespace Raven.Bundles.Tests.CompressionAndEncryption
 {
-	public abstract class Encryption : IDisposable
+	public class CompressionAndEncryption
 	{
 		protected readonly string path;
 		protected readonly DocumentStore documentStore;
@@ -20,7 +20,7 @@ namespace Raven.Bundles.Tests.Encryption
 		private bool closed = false;
 		private Raven.Database.Config.RavenConfiguration settings;
 
-		public Encryption()
+		public CompressionAndEncryption()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
@@ -33,7 +33,7 @@ namespace Raven.Bundles.Tests.Encryption
 				Settings =
 					{
 						{"Raven/Encryption/Key", "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="},
-						{"Raven/ActiveBundles", "Encryption"}
+						{"Raven/ActiveBundles", "Compression;Encryption"}
 					}
 			};
 			ConfigureServer(settings);

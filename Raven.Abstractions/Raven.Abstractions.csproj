@@ -556,6 +556,7 @@
     <Compile Include="Connection\HttpRavenRequest.cs" />
     <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />
+    <Compile Include="Connection\OAuthHelper.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
@@ -604,11 +605,12 @@
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
+    <Compile Include="Extensions\CryptoTransformExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\Buffers.cs" />
     <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
-    <Compile Include="Extensions\DictionaryExtensions.cs" />
+    <Compile Include="Extensions\Internal\DictionaryExtensions.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />

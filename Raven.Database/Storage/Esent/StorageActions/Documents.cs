@@ -139,7 +139,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 			{
 				var size = stream.Length;
-				using (var aggregate = documentCodecs.ReverseAggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
 					var data = aggregate.ToJObject();
 					cacher.SetCachedDocument(key, etag, data, metadata, (int)size);
@@ -167,7 +167,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
 				var size = stream.Length;
-				using (var columnStream = documentCodecs.ReverseAggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+				using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
 				{
 					var data = columnStream.ToJObject();
 
@@ -226,7 +226,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (
 				Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
-				using (var aggregate = documentCodecs.ReverseAggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 					dataAsJson = aggregate.ToJObject();
 			}
 
@@ -327,7 +327,7 @@ namespace Raven.Storage.Esent.StorageActions
 				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
 				{
 					data.WriteTo(finalStream);
-					stream.Flush();
+					finalStream.Flush();
 				}
 
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());

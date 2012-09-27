@@ -189,7 +189,6 @@ namespace Raven.Bundles.Encryption
 			{
 				byte[] keyBytes = Encoding.UTF8.GetBytes(key);
 				byte[] readBytes = stream.ReadEntireBlock(keyBytes.Length);
-
 				if (!readBytes.SequenceEqual(keyBytes))
 				{
 					throw new InvalidDataException("The encrypted stream's salt was different than the expected salt.");

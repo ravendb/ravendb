@@ -8,9 +8,9 @@ using Raven.Bundles.Tests.Versioning;
 using Xunit;
 
 
-namespace Raven.Bundles.Tests.Encryption
+namespace Raven.Bundles.Tests.CompressionAndEncryption
 {
-	public class Indexes : Encryption
+	public class Indexes : CompressionAndEncryption
 	{
 		[Fact]
 		public void SimpleIndexes()

@@ -64,8 +64,7 @@ namespace Raven.Database.Config
 		{
 			FilterActiveBundles();
 
-			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
-				SetupOAuth();
+			SetupOAuth();
 		}
 
 		public void Initialize()
@@ -281,7 +280,7 @@ namespace Raven.Database.Config
 		private void SetupOAuth()
 		{
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
-							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/AccessToken" : ServerUrl + "/OAuth/AccessToken");
+							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/API-Key" : ServerUrl + "/OAuth/API-Key");
 			OAuthTokenCertificate = GetCertificate();
 		}
 
