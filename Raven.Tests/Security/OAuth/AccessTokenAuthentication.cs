@@ -93,10 +93,6 @@ namespace Raven.Tests.Security.OAuth
 			using (var response = request.MakeRequest())
 			{
 				Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-				var challenge = response.Headers["WWW-Authenticate"];
-				Assert.NotEmpty(challenge);
-				Assert.True(challenge.StartsWith("Bearer "));
-				Assert.Contains("error=\"invalid_request\"", challenge);
 			}
 		}
 

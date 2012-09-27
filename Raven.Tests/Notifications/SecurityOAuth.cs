@@ -14,6 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Database;
 using Raven.Database.Server;
 using Raven.Database.Server.Security.OAuth;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Notifications
@@ -23,25 +24,9 @@ namespace Raven.Tests.Notifications
 		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DummyAuthenticateClient)));
-
 			configuration.PostInit();
 		}
 
-		public class DummyAuthenticateClient : IAuthenticateClient
-		{
-			public bool Authenticate(DocumentDatabase currentDatabase, string username, string password, out DatabaseAccess[] allowedDatabases)
-			{
-				allowedDatabases = new[]
-				{
-					new DatabaseAccess
-					{
-						TenantId = "*"
-					},
-				};
-				return username == "test" && password == "pass";
-			}
-		}
 
 		protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
 		{
@@ -50,32 +35,46 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuth()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore
+			using (var server = GetNewServer())
 			{
-				Credentials = new NetworkCredential("test", "pass"),
-				Url = "http://localhost:8079",
-			}.Initialize())
-			{
-				var list = new BlockingCollection<DocumentChangeNotification>();
-				var taskObservable = store.Changes();
-				taskObservable.Task.Wait();
-				var documentSubscription = taskObservable.ForDocument("items/1");
-				documentSubscription.Task.Wait();
-				documentSubscription
-					.Subscribe(list.Add);
-
-				using (var session = store.OpenSession())
+				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
-					session.Store(new ClientServer.Item(), "items/1");
-					session.SaveChanges();
+					Name = "test",
+					Secret = "test",
+					Enabled = true,
+					Databases = new[]
+					{
+						new DatabaseAccess {TenantId = "*"},
+					}
+				}), new RavenJObject(), null);
+
+				using (var store = new DocumentStore
+				{
+					ApiKey = "test/test",
+					Url = "http://localhost:8079",
+					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
+				}.Initialize())
+				{
+					var list = new BlockingCollection<DocumentChangeNotification>();
+					var taskObservable = store.Changes();
+					taskObservable.Task.Wait();
+					var documentSubscription = taskObservable.ForDocument("items/1");
+					documentSubscription.Task.Wait();
+					documentSubscription
+						.Subscribe(list.Add);
+
+					using (var session = store.OpenSession())
+					{
+						session.Store(new ClientServer.Item(), "items/1");
+						session.SaveChanges();
+					}
+
+					DocumentChangeNotification changeNotification;
+					Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
+
+					Assert.Equal("items/1", changeNotification.Name);
+					Assert.Equal(changeNotification.Type, DocumentChangeTypes.Put);
 				}
-
-				DocumentChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
-
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}
 	}

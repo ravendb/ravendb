@@ -559,9 +559,6 @@ namespace Raven.Client.Document
 		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
 		{
 			if (oauthSource == null) throw new ArgumentNullException("oauthSource");
-			if (serverRsaExponent == null) throw new ArgumentNullException("serverRsaExponent");
-			if (serverRsaModulus == null) throw new ArgumentNullException("serverRsaModulus");
-			if (challenge == null) throw new ArgumentNullException("challenge");
 
 			var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge);
 			var authRequest = authRequestTuple.Item1;
@@ -600,11 +597,15 @@ namespace Raven.Client.Document
 										(Action<HttpWebRequest>) (request => SetHeader(request.Headers, "Authorization", currentOauthToken)));
 							}
 						}
-						catch (WebException ex)
+						catch (AggregateException ae)
 						{
-							if (tries > 2)
+							var ex = ae.ExtractSingleInnerException() as WebException;
+
+							if (tries > 2 || ex == null)
 								// We've already tried three times and failed
 								throw;
+
+
 
 							var authResponse = ex.Response as HttpWebResponse;
 							if (authResponse == null || authResponse.StatusCode != HttpStatusCode.Unauthorized)
