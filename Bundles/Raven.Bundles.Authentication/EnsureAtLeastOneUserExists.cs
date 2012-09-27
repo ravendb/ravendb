@@ -19,9 +19,6 @@ namespace Raven.Bundles.Authentication
 			if (string.IsNullOrEmpty(database.Name) == false)
 				return;// we don't care about tenant databases
 
-			if (string.Equals(database.Configuration.AuthenticationMode, "OAuth", StringComparison.InvariantCultureIgnoreCase) == false)
-				return; // we don't care if we aren't using oauth
-
 			var array = database.GetDocumentsWithIdStartingWith("Raven/Users/", null, 0, 1);
 			if (array.Length > 0)
 				return; // there is already at least one user in there

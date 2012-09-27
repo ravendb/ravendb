@@ -61,6 +61,10 @@
     <Reference Include="AsyncCtpLibrary_Silverlight5">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
     </Reference>
+    <Reference Include="DH.Scrypt, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\DH.Scrypt.dll.1.0.3\lib\sl40\DH.Scrypt.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\Microsoft.CSharp.dll</HintPath>
@@ -577,8 +581,14 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\WriteState.cs">
       <Link>Imports\Imports\Newtonsoft.Json\WriteState.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
+      <Link>Imports\Connection\OAuthHelper.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\ApiKeyDefinition.cs">
+      <Link>Imports\Data\ApiKeyDefinition.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\BackupStatus.cs">
       <Link>Imports\Data\BackupStatus.cs</Link>
@@ -640,8 +650,14 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
       <Link>Imports\Extensions\Buffers.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\CryptoTransformExtensions.cs">
+      <Link>Imports\Extensions\CryptoTransformExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\ExceptionExtensions.cs">
       <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\Internal\DictionaryExtensions.cs">
+      <Link>Imports\Extensions\Internal\DictionaryExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
       <Link>Imports\Extensions\ListExtensions.cs</Link>
@@ -1342,6 +1358,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\ObjectReferenceEqualityComparerer.cs">
       <Link>Imports\Util\ObjectReferenceEqualityComparerer.cs</Link>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->

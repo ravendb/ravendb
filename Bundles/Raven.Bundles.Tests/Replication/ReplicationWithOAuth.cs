@@ -14,7 +14,6 @@ namespace Raven.Bundles.Tests.Replication.Async
 	{
 		protected override void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
 		{
-			serverConfiguration.AuthenticationMode = "oauth";
 			serverConfiguration.AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.None;
 
 			serverConfiguration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthenticationUser).Assembly));

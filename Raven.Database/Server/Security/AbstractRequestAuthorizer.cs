@@ -6,9 +6,13 @@ namespace Raven.Database.Server.Security
 {
 	public abstract class AbstractRequestAuthorizer
 	{
+		[CLSCompliant(false)]
 		protected Func<InMemoryRavenConfiguration> settings;
+		[CLSCompliant(false)]
 		protected Func<DocumentDatabase> database;
+		[CLSCompliant(false)]
 		protected HttpServer server;
+		[CLSCompliant(false)]
 		protected Func<string> tenantId;
 
 		public DocumentDatabase ResourceStore { get { return database(); } }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Abstractions.Extensions;
@@ -8,9 +9,9 @@ namespace Raven.Bundles.Authentication
 {
 	public class AuthenticateClient : IAuthenticateClient
 	{
-		public bool Authenticate(DocumentDatabase currentStore, string username, string password, out AccessTokenBody.DatabaseAccess[] allowedDatabases)
+		public bool Authenticate(DocumentDatabase currentStore, string username, string password, out DatabaseAccess[] allowedDatabases)
 		{
-			allowedDatabases = new AccessTokenBody.DatabaseAccess[0];
+			allowedDatabases = new DatabaseAccess[0];
 
 			var jsonDocument = currentStore.Get("Raven/Users/" + username, null);
 			if (jsonDocument == null)
@@ -23,10 +24,10 @@ namespace Raven.Bundles.Authentication
 			if (!validatePassword)
 				return false;
 
-			var dbs = Enumerable.Empty<AccessTokenBody.DatabaseAccess>();
+			var dbs = Enumerable.Empty<DatabaseAccess>();
 			if (user.AllowedDatabases != null)
 			{
-				var accesses = user.AllowedDatabases.Select(tenantId => new AccessTokenBody.DatabaseAccess
+				var accesses = user.AllowedDatabases.Select(tenantId => new DatabaseAccess
 				{
 					TenantId = tenantId,
 					Admin = user.Admin,
@@ -37,7 +38,7 @@ namespace Raven.Bundles.Authentication
 
 			if (user.Databases != null)
 			{
-				var accesses = user.Databases.Select(x => new AccessTokenBody.DatabaseAccess
+				var accesses = user.Databases.Select(x => new DatabaseAccess
 				{
 					Admin = user.Admin | x.Admin,
 					ReadOnly = x.ReadOnly,

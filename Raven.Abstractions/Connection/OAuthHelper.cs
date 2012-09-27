@@ -28,7 +28,8 @@ namespace Raven.Abstractions.Connection
 			public const string WWWAuthenticateHeaderKey = "Raven ";
 		}
 
-		private static readonly ThreadLocal<SHA1> sha1 = new ThreadLocal<SHA1>(SHA1.Create);
+		[ThreadStatic]
+		private static SHA1 sha1;
 
 
 		/**** Cryptography *****/
@@ -36,45 +37,77 @@ namespace Raven.Abstractions.Connection
 		public static string Hash(string data)
 		{
 			var bytes = Encoding.UTF8.GetBytes(data);
-			var hash = sha1.Value.ComputeHash(bytes);
+			if (sha1 == null)
+				sha1 = new SHA1Managed();
+			var hash = sha1.ComputeHash(bytes);
 			return BytesToString(hash);
 		}
 
-		public static string EncryptAssymetric(RSAParameters parameters, string data)
+		public static string EncryptAssymetric(Tuple<byte[], byte[]> parameters, string data)
 		{
 			var bytes = Encoding.UTF8.GetBytes(data);
 			var results = new List<byte>();
-			using (var rsa = new RSACryptoServiceProvider())
+
+			using (var aesKeyGen = new AesManaged
 			{
-				rsa.ImportParameters(parameters);
-				using (var aesKeyGen = new AesManaged
-				{
-					KeySize = 256,
-				})
-				{
-					aesKeyGen.GenerateKey();
-					aesKeyGen.GenerateIV();
+				KeySize = 256,
+			})
+			{
+				aesKeyGen.GenerateKey();
+				aesKeyGen.GenerateIV();
 
-					var encryptedKey = rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray(), true);
-					results.AddRange(encryptedKey);
+				results.AddRange(AddEncryptedKeyAndIv(parameters, aesKeyGen));
 
-					using(var encryptor = aesKeyGen.CreateEncryptor())
-					{
-						var encryptedBytes = encryptor.TransformEntireBlock(bytes);
-						results.AddRange(encryptedBytes);
-					}
+				using (var encryptor = aesKeyGen.CreateEncryptor())
+				{
+					var encryptedBytes = encryptor.TransformEntireBlock(bytes);
+					results.AddRange(encryptedBytes);
 				}
 			}
 			return BytesToString(results.ToArray());
 
 		}
 
+#if !SILVERLIGHT
+		private static byte[] AddEncryptedKeyAndIv(Tuple<byte[], byte[]> parameters, AesManaged aesKeyGen)
+		{
+			using (var rsa = new RSACryptoServiceProvider())
+			{
+				rsa.ImportParameters(new RSAParameters
+				{
+					Exponent = parameters.Item1,
+					Modulus = parameters.Item2
+				});
+				return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray(), true);
+			}
+		}
+#else
+		private static byte[] AddEncryptedKeyAndIv(Tuple<byte[], byte[]> parameters, AesManaged aesKeyGen)
+		{
+			var rsa = new RSA.RSACrypto();
+			rsa.ImportParameters(new RSA.RSAParameters
+			{
+				E = parameters.Item1,
+				N = parameters.Item2
+			});
+			return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray());
+		}
+#endif
+
 		/**** On the wire *****/
 
 		public static Dictionary<string, string> ParseDictionary(string data)
 		{
 			return data.Split(',')
-				.Select(item => item.Split(new[] { '=' }, 2))
+				.Select(item =>
+				{
+					var items = item.Split(new[] { '=' }, StringSplitOptions.None);
+					if (items.Length > 2)
+					{
+						return new[] { items[0], string.Join("=", items.Skip(1)) };
+					}
+					return items;
+				})
 				.ToDictionary(
 					item => (item.First()).Trim(),
 					item => (item.Skip(1).FirstOrDefault() ?? "").Trim()

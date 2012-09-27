@@ -6,7 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -23,7 +25,6 @@ using Raven.Client.Silverlight.Connection.Async;
 #else
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
-using Raven.Abstractions.Connection;
 #endif
 
 
@@ -472,7 +473,8 @@ namespace Raven.Client.Document
 
 				return DoOAuthRequest(oauthSource);
 			};
-#if !NET35
+#endif
+
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				if (ApiKey == null)
@@ -485,8 +487,6 @@ namespace Raven.Client.Document
 
 				return DoOAuthRequestAsync(oauthSource, null, null, null, 0);
 			};
-#endif
-#endif
 		}
 
 #if !SILVERLIGHT
@@ -505,7 +505,16 @@ namespace Raven.Client.Document
 			while (true)
 			{
 				tries++;
-				var authRequest = PrepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge);
+				var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge);
+				var authRequest = authRequestTuple.Item1;
+				if (authRequestTuple.Item2 != null)
+				{
+					using (var stream = authRequest.GetRequestStream())
+					using (var writer = new StreamWriter(stream))
+					{
+						writer.Write(authRequestTuple.Item2);
+					}
+				}
 
 				try
 				{
@@ -545,8 +554,8 @@ namespace Raven.Client.Document
 				}
 			}
 		}
+#endif
 
-#if !NET35
 		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
 		{
 			if (oauthSource == null) throw new ArgumentNullException("oauthSource");
@@ -554,49 +563,71 @@ namespace Raven.Client.Document
 			if (serverRsaModulus == null) throw new ArgumentNullException("serverRsaModulus");
 			if (challenge == null) throw new ArgumentNullException("challenge");
 
-			var authRequest = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge);
-			return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
-				.AddUrlIfFaulting(authRequest.RequestUri)
-				.ConvertSecurityExceptionToServerNotFound()
-				.ContinueWith(task =>
+			var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge);
+			var authRequest = authRequestTuple.Item1;
+
+			Task sendDataTask = new CompletedTask();
+			if (authRequestTuple.Item2 != null)
+			{
+				sendDataTask = Task<Stream>.Factory.FromAsync(authRequest.BeginGetRequestStream, authRequest.EndGetRequestStream, null).ContinueWith(task =>
 				{
-					try
+					using (var stream = task.Result)
+					using (var writer = new StreamWriter(stream))
 					{
-						using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
-						using (var reader = new StreamReader(stream))
+						writer.Write(authRequestTuple.Item2);
+					}
+				});
+			}
+
+
+			return sendDataTask.ContinueWith(t =>
+			{
+				t.AssertNotFailed();
+
+				return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
+					.AddUrlIfFaulting(authRequest.RequestUri)
+					.ConvertSecurityExceptionToServerNotFound()
+					.ContinueWith(task =>
+					{
+						try
 						{
-							currentOauthToken = "Bearer " + reader.ReadToEnd();
-							return CompletedTask.With((Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", currentOauthToken)));
+							using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
+							using (var reader = new StreamReader(stream))
+							{
+								currentOauthToken = "Bearer " + reader.ReadToEnd();
+								return
+									CompletedTask.With(
+										(Action<HttpWebRequest>) (request => SetHeader(request.Headers, "Authorization", currentOauthToken)));
+							}
 						}
-					}
-					catch (WebException ex)
-					{
-						if (tries > 2)
-							// We've already tried three times and failed
-							throw;
+						catch (WebException ex)
+						{
+							if (tries > 2)
+								// We've already tried three times and failed
+								throw;
 
-						var authResponse = ex.Response as HttpWebResponse;
-						if (authResponse == null || authResponse.StatusCode != HttpStatusCode.Unauthorized)
-							throw;
+							var authResponse = ex.Response as HttpWebResponse;
+							if (authResponse == null || authResponse.StatusCode != HttpStatusCode.Unauthorized)
+								throw;
 
-						var header = authResponse.Headers[HttpResponseHeader.WwwAuthenticate];
-						if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
-							throw;
+							var header = authResponse.Headers["Www-Authenticate"];
+							if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
+								throw;
 
-						authResponse.Close();
+							authResponse.Close();
 
-						var challengeDictionary = OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
+							var challengeDictionary =
+								OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
 
-						return DoOAuthRequestAsync(oauthSource,
-							challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
-							challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
-							challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
-							tries + 1);
-					}
-				}).Unwrap();
+							return DoOAuthRequestAsync(oauthSource,
+							                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
+							                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
+							                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
+							                           tries + 1);
+						}
+					}).Unwrap();
+			}).Unwrap();
 		}
-#endif
-#endif
 
 		private static void SetHeader(WebHeaderCollection headers, string key, string value)
 		{
@@ -610,8 +641,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT
-		private HttpWebRequest PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
+		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
 		{
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
@@ -621,41 +651,45 @@ namespace Raven.Client.Document
 
 			if (!string.IsNullOrEmpty(serverRSAExponent) && !string.IsNullOrEmpty(serverRSAModulus) && !string.IsNullOrEmpty(challenge))
 			{
-				var rsaParameters = new RSAParameters
-				{
-					Exponent = OAuthHelper.ParseBytes(serverRSAExponent),
-					Modulus = OAuthHelper.ParseBytes(serverRSAModulus)
-				};
+				var parameters = Tuple.Create(OAuthHelper.ParseBytes(serverRSAExponent), OAuthHelper.ParseBytes(serverRSAModulus));
 
-				var apiKeyParts = ApiKey.Split(new[] { '/' }, 2);
-				if (apiKeyParts.Length != 2)
+				var apiKeyParts = ApiKey.Split(new[] { '/' }, StringSplitOptions.None);
+
+				if(apiKeyParts.Length > 2)
+				{
+					apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(1));
+				}
+
+				if (apiKeyParts.Length < 2)
 					throw new InvalidOperationException("Invalid API key");
+
 				var apiKeyName = apiKeyParts[0].Trim();
 				var apiSecret = apiKeyParts[1].Trim();
 
-				using (var stream = authRequest.GetRequestStream())
-				using (var writer = new StreamWriter(stream))
-				{
-					writer.Write(OAuthHelper.DictionaryToString(new Dictionary<string, string>
-					{
-						{ OAuthHelper.Keys.RSAExponent, serverRSAExponent },
-						{ OAuthHelper.Keys.RSAModulus, serverRSAModulus },
-						{ OAuthHelper.Keys.EncryptedData, OAuthHelper.EncryptAssymetric(rsaParameters, OAuthHelper.DictionaryToString(new Dictionary<string,string> {
-							{ OAuthHelper.Keys.APIKeyName, apiKeyName },
-							{ OAuthHelper.Keys.Challenge, challenge },
-							{ OAuthHelper.Keys.Response, OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret)) }
-						} )) }
-					}));
-				}
-			}
-			else
-			{
-				authRequest.ContentLength = 0;
-			}
 
-			return authRequest;
+				var data = OAuthHelper.DictionaryToString(new Dictionary<string, string>
+				{
+					{OAuthHelper.Keys.RSAExponent, serverRSAExponent},
+					{OAuthHelper.Keys.RSAModulus, serverRSAModulus},
+					{
+						OAuthHelper.Keys.EncryptedData,
+						OAuthHelper.EncryptAssymetric(parameters, OAuthHelper.DictionaryToString(new Dictionary<string, string>
+						{
+							{OAuthHelper.Keys.APIKeyName, apiKeyName},
+							{OAuthHelper.Keys.Challenge, challenge},
+							{
+								OAuthHelper.Keys.Response,
+								OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))
+							}
+						}))
+					}
+				});
+
+				return Tuple.Create(authRequest, data);
+			}
+			authRequest.ContentLength = 0;
+			return Tuple.Create(authRequest, (string)null);
 		}
-#endif
 
 
 		/// <summary>

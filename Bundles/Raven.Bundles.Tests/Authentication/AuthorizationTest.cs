@@ -42,7 +42,6 @@ namespace Raven.Bundles.Tests.Authentication
 						Catalog = {Catalogs = {new AssemblyCatalog(typeof (AuthenticationUser).Assembly)}},
 						DataDirectory = "Data",
 						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-						AuthenticationMode = "oauth",
 						Port = 8079,
 						OAuthTokenCertificate = database::Raven.Database.Config.CertGenerator.GenerateNewCertificate("RavenDB.Test")
 					},
@@ -55,9 +54,6 @@ namespace Raven.Bundles.Tests.Authentication
 				Url = embeddedStore.Configuration.ServerUrl,
 			};
 			store.Initialize();
-			store.JsonRequestFactory.
-				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
-				true;
 			foreach (DictionaryEntry de in HttpRuntime.Cache)
 			{
 				HttpRuntime.Cache.Remove((string)de.Key);
