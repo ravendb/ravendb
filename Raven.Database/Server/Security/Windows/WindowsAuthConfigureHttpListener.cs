@@ -12,9 +12,6 @@ namespace Raven.Database.Server.Security.Windows
 
 		public void Configure(HttpListener listener, InMemoryRavenConfiguration config)
 		{
-			if (string.Equals(config.AuthenticationMode, "Windows",StringComparison.InvariantCultureIgnoreCase) == false) 
-				return;
-
 			listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
 												 AuthenticationSchemes.Anonymous;
 			

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
@@ -207,9 +206,6 @@ namespace Raven.Database.Config
 				var type = Type.GetType(taskSchedulerType);
 				CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
 			}
-
-			// OAuth
-			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
 
 			AllowLocalAccessWithoutAuthorization = GetConfigurationValue<bool>("Raven/AllowLocalAccessWithoutAuthorization") ?? false;
 
@@ -544,13 +540,6 @@ namespace Raven.Database.Config
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
 		/// <summary>
-		/// Defines which mode to use to authenticate requests
-		/// Allowed values: Windows, OAuth
-		/// Default: Windows
-		/// </summary>
-		public string AuthenticationMode { get; set; }
-
-		/// <summary>
 		/// If set local request don't require authentication
 		/// Allowed values: true/false
 		/// Default: false
@@ -834,7 +823,6 @@ namespace Raven.Database.Config
 			Port = defaultConfiguration.Port;
 			OAuthTokenCertificate = defaultConfiguration.OAuthTokenCertificate;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
-			AuthenticationMode = defaultConfiguration.AuthenticationMode;
 		}
 	}
 }

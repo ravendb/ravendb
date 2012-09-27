@@ -129,18 +129,7 @@ namespace Raven.Database.Server
 
 			InitializeRequestResponders(SystemDatabase);
 
-			switch (configuration.AuthenticationMode.ToLowerInvariant())
-			{
-				case "windows":
-					requestAuthorizer = new WindowsRequestAuthorizer();
-					break;
-				case "oauth":
-					requestAuthorizer = new OAuthRequestAuthorizer();
-					break;
-				default:
-					throw new InvalidOperationException(
-						string.Format("Unknown AuthenticationMode {0}. Options are Windows and OAuth", configuration.AuthenticationMode));
-			}
+			requestAuthorizer = new WindowsRequestAuthorizer();
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 		}

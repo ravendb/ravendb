@@ -23,7 +23,6 @@ namespace Raven.Tests.Notifications
 		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			configuration.AuthenticationMode = "oauth";
 			configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DummyAuthenticateClient)));
 
 			configuration.PostInit();

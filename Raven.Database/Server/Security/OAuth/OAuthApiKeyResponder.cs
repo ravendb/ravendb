@@ -1,18 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Security.OAuth
 {

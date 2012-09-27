@@ -13,7 +13,7 @@ namespace Raven.Tests.Security.OAuth
 
 		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
 		{
-			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Get;
+			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}
 
 		protected override void ModifyStore(Client.Document.DocumentStore store)

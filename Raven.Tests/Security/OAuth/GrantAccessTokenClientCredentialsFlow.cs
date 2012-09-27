@@ -35,7 +35,6 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			ravenConfiguration.AuthenticationMode = "OAuth";
 			ravenConfiguration.OAuthTokenCertificate = CertGenerator.GenerateNewCertificate("RavenDB.Test");
 			ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
 		}
