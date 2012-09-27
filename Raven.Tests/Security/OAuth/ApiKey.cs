@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
+using Raven.Client.Document;
 using Raven.Database.Server;
 using Xunit;
 
@@ -18,6 +20,8 @@ namespace Raven.Tests.Security.OAuth
 
 		protected override void ModifyStore(Client.Document.DocumentStore store)
 		{
+			store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+			store.Credentials = new NetworkCredential("bad", "bad");
 			store.ApiKey = apiKey;
 		}
 

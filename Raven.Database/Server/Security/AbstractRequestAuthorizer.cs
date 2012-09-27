@@ -6,10 +6,10 @@ namespace Raven.Database.Server.Security
 {
 	public abstract class AbstractRequestAuthorizer
 	{
-		private Func<InMemoryRavenConfiguration> settings;
-		private Func<DocumentDatabase> database;
+		protected Func<InMemoryRavenConfiguration> settings;
+		protected Func<DocumentDatabase> database;
 		protected HttpServer server;
-		private Func<string> tenantId;
+		protected Func<string> tenantId;
 
 		public DocumentDatabase ResourceStore { get { return database(); } }
 		public InMemoryRavenConfiguration Settings { get { return settings(); } }

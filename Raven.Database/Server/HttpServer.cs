@@ -129,7 +129,7 @@ namespace Raven.Database.Server
 
 			InitializeRequestResponders(SystemDatabase);
 
-			requestAuthorizer = new WindowsRequestAuthorizer();
+			requestAuthorizer = new MixedModeRequestAuthorizer();
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 		}

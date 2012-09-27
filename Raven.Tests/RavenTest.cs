@@ -347,12 +347,12 @@ namespace Raven.Tests
 			return timeTaken.TotalMilliseconds;
 		}
 
-		public IDocumentStore NewRemoteDocumentStore()
+		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false)
 		{
 			var ravenDbServer = GetNewServer();
 			var store = new DocumentStore
 			{
-				Url = "http://localhost:8079"
+				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
 			};
 
 			store.AfterDispose += (sender, args) =>

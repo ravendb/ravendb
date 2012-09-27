@@ -12,7 +12,6 @@ namespace Raven.Database.Server.Security.OAuth
 {
 	public class OAuthApiKeyResponder : AbstractRequestResponder
 	{
-
 		private const int MaxOAuthContentLength = 1500;
 		private static readonly TimeSpan MaxChallengeAge = TimeSpan.FromMinutes(10);
 
@@ -140,7 +139,14 @@ namespace Raven.Database.Server.Security.OAuth
 			return AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
 			{
 				UserId = apiKeyName,
-				AuthorizedDatabases = new AccessTokenBody.DatabaseAccess[] { }
+				AuthorizedDatabases = new AccessTokenBody.DatabaseAccess[]
+				{
+					new AccessTokenBody.DatabaseAccess
+					{
+						TenantId = "*",
+
+					},
+				}
 			});
 		}
 

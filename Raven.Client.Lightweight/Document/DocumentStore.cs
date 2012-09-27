@@ -649,7 +649,7 @@ namespace Raven.Client.Document
 		private bool IsLocalHost(HttpWebRequest authRequest)
 		{
 			var host = authRequest.RequestUri.DnsSafeHost;
-			if (host.Equals("localhost"))
+			if (host.Equals("localhost") || host.Equals("localhost.fiddler"))
 				return true;
 #if !SILVERLIGHT
 			if (Environment.MachineName.Equals(host, StringComparison.InvariantCultureIgnoreCase))
