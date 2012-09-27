@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Store;
-using NLog;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Plugins;
 
 namespace Raven.Database.Indexing
@@ -195,6 +195,8 @@ namespace Raven.Database.Indexing
 
 		private class CodecIndexOutput : IndexOutput
 		{
+			static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 			private readonly FileInfo file;
 			private readonly Stream stream;
 
@@ -206,16 +208,15 @@ namespace Raven.Database.Indexing
 
 			~CodecIndexOutput()
 			{
-				var log = LogManager.GetCurrentClassLogger();
 				try
 				{
-					log.Log(LogLevel.Error, "~CodecIndexOutput() " + file.FullName + "!");
+					log.Error("~CodecIndexOutput() " + file.FullName + "!");
 					Dispose(false);
 				}
 				catch (Exception e)
 				{
 					// Can't throw exceptions from the finalizer thread
-					log.LogException(LogLevel.Error, "Cannot dispose of CodecIndexOutput: " + e.Message, e);
+					log.ErrorException("Cannot dispose of CodecIndexOutput: " + e.Message, e);
 				}
 			}
 

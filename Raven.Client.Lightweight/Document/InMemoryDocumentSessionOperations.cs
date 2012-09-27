@@ -50,7 +50,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Guid Id { get; private set; }
 
-		protected static readonly ILog log = LogProvider.GetCurrentClassLogger();
+		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		/// <summary>
 		/// The entities waiting to be deleted

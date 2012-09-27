@@ -1,0 +1,18 @@
+glob:bin
+glob:Bin
+glob:obj
+glob:*ReSharper*
+glob:_Package
+glob:*.patch
+glob:*.hg
+glob:build
+glob:*.sln.cache
+glob:desktop.ini
+glob:*.orig
+glob:*.suo
+glob:TestResults
+glob:*.itrace.csdef
+glob:*.csproj.user
+syntax: glob
+Jint/Parser/ES3.tokens
+*.vsmdi

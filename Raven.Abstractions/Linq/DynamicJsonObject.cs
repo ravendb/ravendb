@@ -176,6 +176,8 @@ namespace Raven.Abstractions.Linq
 						DateTime dateTime;
 						if (DateTime.TryParseExact(s, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
 						{
+							if(s.EndsWith("Z"))
+								return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 							return dateTime;
 						}
 						DateTimeOffset dateTimeOffset;

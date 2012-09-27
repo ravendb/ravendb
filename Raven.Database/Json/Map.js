@@ -5,7 +5,7 @@ if (!Array.prototype.Map) {
 		if (this == null) {
 			throw new TypeError(" this is null or not defined");
 		}
-		var O = Object(this);
+		var O = this;
 		var len = O.length >>> 0;
 		if ({}.toString.call(callback) != "[object Function]") {
 			throw new TypeError(callback + " is not a function");

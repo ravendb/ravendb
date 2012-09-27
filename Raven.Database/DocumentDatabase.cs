@@ -17,11 +17,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -119,7 +119,7 @@ namespace Raven.Database
 		private readonly TaskScheduler backgroundTaskScheduler;
 		private readonly object idleLocker = new object();
 
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private long currentEtagBase;
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
@@ -673,6 +673,8 @@ namespace Raven.Database
 				throw new ArgumentNullException("key");
 			key = key.Trim();
 
+			lock(putSerialLock)
+			{
 			var deleted = false;
 			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
 			RavenJObject metadataVar = null;
@@ -730,9 +732,10 @@ namespace Raven.Database
 				}
 				workContext.ShouldNotifyAboutWork(() => "DEL " + key);
 			});
-			
+
 			metadata = metadataVar;
 			return deleted;
+		}
 		}
 
 		public bool HasTransaction(Guid txId)
@@ -1309,17 +1312,17 @@ namespace Raven.Database
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
 				jsonDoc =>
-				{
+								{
 					scriptedJsonPatcher = new ScriptedJsonPatcher(
 						loadDocument: id =>
-						{
+										{
 							var jsonDocument = Get(id, transactionInformation);
 							return jsonDocument == null ? null : jsonDocument.ToJson();
 						});
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
 				});
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
-		}
+										}
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
 		{
@@ -1388,7 +1391,7 @@ namespace Raven.Database
 
 			var commandDatas = commands.ToArray();
 			int retries = 128;
-			var shouldLock = commandDatas.Any(x => (x is PutCommandData || x is PatchCommandData || x is ScriptedPatchCommandData));
+			var shouldLock = commandDatas.Any(x => (x is PutCommandData || x is PatchCommandData || x is ScriptedPatchCommandData || x is DeleteCommandData));
 			var shouldRetryIfGotConcurrencyError = commandDatas.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
 			bool shouldRetry = false;
 			if (shouldLock)

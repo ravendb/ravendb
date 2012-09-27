@@ -8,8 +8,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
 
@@ -28,7 +28,7 @@ namespace Raven.Database.Backup
 		public event Action<string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
 		private readonly Dictionary<string, long> fileToSize = new Dictionary<string, long>();
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		private readonly string source;
 		private readonly string destination;

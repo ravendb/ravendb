@@ -6,8 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Rhino.Licensing;
@@ -21,7 +21,7 @@ namespace Raven.Database.Commercial
 		public static LicensingStatus CurrentLicense { get; set; }
 		private static bool alreadyRun;
 		private AbstractLicenseValidator licenseValidator;
-		private readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		static ValidateLicense()
 		{

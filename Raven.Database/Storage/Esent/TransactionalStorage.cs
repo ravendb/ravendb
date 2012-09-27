@@ -10,9 +10,9 @@ using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
@@ -41,7 +41,7 @@ namespace Raven.Storage.Esent
 		private IUuidGenerator generator;
 		private readonly IDocumentCacher documentCacher;
 
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[ImportMany]
 		public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }

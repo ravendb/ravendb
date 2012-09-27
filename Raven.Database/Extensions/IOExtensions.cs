@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 
 namespace Raven.Database.Extensions
@@ -58,14 +59,36 @@ namespace Raven.Database.Extensions
 					catch (UnauthorizedAccessException)
 					{
 					}
-					if (i == retries-1)// last try also failed
+					if (i == retries - 1)// last try also failed
+					{
+						foreach (var file in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
+						{
+							var path = Path.GetFullPath(file);
+							try
+							{
+								File.Delete(path);
+							}
+							catch (UnauthorizedAccessException)
+							{
+								var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
+								var stringBuilder = new StringBuilder();
+								stringBuilder.Append("The following processing are locking ").Append(path).AppendLine();
+								foreach (var processesUsingFile in processesUsingFiles)
+								{
+									stringBuilder.Append("\t").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
+										AppendLine();
+								}
+								throw new IOException(stringBuilder.ToString());
+							}
+						}
 						throw new IOException("Could not delete " + Path.GetFullPath(directory), e);
+					}
 
 					GC.Collect();
 					GC.WaitForPendingFinalizers();
 					Thread.Sleep(100);
 				}
-				catch(UnauthorizedAccessException e)
+				catch (UnauthorizedAccessException e)
 				{
 					throw new UnauthorizedAccessException("Could not delete " + Path.GetFullPath(directory), e);
 				}
@@ -114,4 +137,6 @@ namespace Raven.Database.Extensions
 			}
 		}
 	}
+
+
 }

@@ -19,13 +19,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
 using Raven.Database.Util;
 using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -90,7 +90,7 @@ namespace Raven.Database.Server
 
 		private HttpListener listener;
 
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		private int reqNum;
 
