@@ -4,7 +4,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:Settings="clr-namespace:Raven.Studio.Features.Settings" mc:Ignorable="d"
-    d:DesignHeight="300" d:DesignWidth="400" Width="700" Height="500">
+    d:DesignHeight="300" d:DesignWidth="400" Width="800" Height="500">
     
     <Grid x:Name="LayoutRoot">
         <Grid.RowDefinitions>

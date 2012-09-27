@@ -38,7 +38,7 @@ namespace Raven.Studio.Models
 		private ICommand addAuthorizationUserCommand;
 		private ICommand deleteAuthorizationUserCommand;
 	    private ICommand deleteRoleFromUserCommand;
-	    private ICommand addRuleToUserCommand;
+	    private ICommand addRoleToUserCommand;
 	    private ICommand addPermissionToUserCommand;
 	    private ICommand deletePermissionFromUserCommand;
 		private ICommand addPermissionToRoleCommand;
@@ -125,11 +125,11 @@ namespace Raven.Studio.Models
 		    get { return deleteRoleFromUserCommand ?? (deleteRoleFromUserCommand = new ActionCommand(HandleDeleteRoleFromUser)); }
 	    }
 
-	    public ICommand AddRuleToUser
+	    public ICommand AddRoleToUser
 	    {
 			get
 			{
-				return addRuleToUserCommand ?? (addRuleToUserCommand = new ActionCommand(() =>
+				return addRoleToUserCommand ?? (addRoleToUserCommand = new ActionCommand(() =>
 				{
 					if (string.IsNullOrWhiteSpace(NewRoleForUser))
 						return;

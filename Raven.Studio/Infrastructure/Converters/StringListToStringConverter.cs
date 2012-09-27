@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Windows.Data;
 
 namespace Raven.Studio.Infrastructure.Converters
@@ -20,7 +21,7 @@ namespace Raven.Studio.Infrastructure.Converters
             var str = value as string;
             if (str == null)
                 return null;
-            return  str.Split(',');
+            return str.Split(',').ToList();
         }
     }
 }
