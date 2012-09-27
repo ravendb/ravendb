@@ -74,15 +74,7 @@ namespace Raven.Abstractions.Connection
 		{
 			if (data == null)
 				return null;
-
-			try
-			{
-				return Convert.FromBase64String(data);
-			}
-			catch (FormatException)
-			{
-				return null;
-			}
+			return Convert.FromBase64String(data);
 		}
 
 		public static string BytesToString(byte[] data)
