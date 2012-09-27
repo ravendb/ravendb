@@ -1,0 +1,958 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DH.Scrypt</name>
+    </assembly>
+    <members>
+        <member name="M:Utils.Mathematics.BitwiseXOR(System.Byte[],System.Byte[])">
+            <summary>
+            Bitwise XOR for 2 byte arrays.  Arrays must be the same length.
+            </summary>
+            <param name="t1">Left side for comparison</param>
+            <param name="t2">Right side for comparison</param>
+            <returns>Resulting byte array</returns>
+        </member>
+        <member name="M:Utils.Mathematics.BitwiseXOR(System.Byte,System.Byte)">
+            <summary>
+            Bitwise XOR for 2 Bytes.
+            </summary>
+            <param name="t1">Left side for comparison</param>
+            <param name="t2">Right side for comparison</param>
+            <returns>Resulting byte</returns>
+        </member>
+        <member name="M:Utils.Mathematics.I2OSP(System.Int32,System.Int32)">
+            <summary>
+            Convert the input Integer to an Octet String.
+            </summary>
+            <param name="x">input integer</param>
+            <param name="size">size in octets (bytes)</param>
+            <returns>Resulting byte array of specified length</returns>
+        </member>
+        <member name="M:Utils.Mathematics.OAEPMGF(System.Byte[],System.Int32,System.Int32,HashProviders.IHashProvider)">
+            <summary>
+            Mask generation function.
+            </summary>
+            <param name="seed">Seed</param>
+            <param name="maskLen">Length of generated mask</param>
+            <param name="hashLength">Length of the hash produced by the supplied hash provider</param>
+            <param name="hashProvider">Hash provider to use in mask generation</param>
+            <returns>Generated mask of specified length</returns>
+        </member>
+        <member name="T:RSA.RSAPubKey">
+            <summary>
+            RSA public key data
+            </summary>
+            <note>http://msdn.microsoft.com/en-us/library/aa387685(v=VS.85).aspx</note>
+        </member>
+        <member name="F:RSA.RSAPubKey.Magic">
+            <summary>
+            The magic member must be set to 0x31415352 (public only) / 0x32415352 (including private). This hex value is the ASCII encoding of RSA1 / RSA2.
+            </summary>
+        </member>
+        <member name="F:RSA.RSAPubKey.BitLength">
+            <summary>
+            # of bits in modulus
+            </summary>
+        </member>
+        <member name="F:RSA.RSAPubKey.PublicExponent">
+            <summary>
+            Public exponent
+            </summary>
+        </member>
+        <member name="M:RSA.RSAPubKey.FromBinary(System.IO.BinaryReader)">
+            <summary>
+            Create and initialize structure from binary data
+            </summary>
+            <exception cref="T:Exceptions.CryptographicException">On validate errors</exception>
+            <returns>Initialized structure</returns>
+        </member>
+        <member name="M:RSA.RSAPubKey.ToBinary(System.IO.BinaryWriter)">
+            <summary>
+            Serializes structure as binary data
+            </summary>
+        </member>
+        <member name="M:RSA.RSAPubKey.FromRSAParameters(RSA.RSAParameters,System.Boolean)">
+            <summary>
+            Create and initialize structure from RSAParameters
+            </summary>
+            <returns>Initialized structure</returns>
+        </member>
+        <member name="M:RSA.RSAPubKey.ToRSAParameters">
+            <summary>
+            Create and initialize RSAParameters structure
+            </summary>
+            <returns>Initialized structure</returns>
+            <note>http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsaparameters.aspx</note>
+        </member>
+        <member name="M:RSA.RSAPubKey.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="T:RSA.PaddingProviders.IPaddingProvider">
+            <summary>
+            Interface which must be implemented by all custom padding providers. 
+            Padding is used to provide randomness and unpredictability to the data 
+            before it is encrypted.
+            </summary>
+        </member>
+        <member name="M:RSA.PaddingProviders.IPaddingProvider.EncodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Adds padding to the input data and returns the padded data.
+            </summary>
+            <param name="dataBytes">Data to be padded prior to encryption</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Padded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.IPaddingProvider.DecodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Removes padding that was added to the unencrypted data prior to encryption.
+            </summary>
+            <param name="dataBytes">Data to have padding removed</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Unpadded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.IPaddingProvider.GetMaxMessageLength(RSA.RSAParameters)">
+            <summary>
+            Gets the maximum message length for this padding provider.
+            </summary>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Max message length</returns>
+        </member>
+        <member name="T:RSA.PaddingProviders.PKCS1v1_5">
+            <summary>
+            Uses PKCS#1 v 1.5 padding scheme to pad the data.
+            </summary>
+            <remarks></remarks>
+        </member>
+        <member name="M:RSA.PaddingProviders.PKCS1v1_5.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:RSA.PaddingProviders.PKCS1v1_5.EncodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Adds padding to the input data and returns the padded data.
+            </summary>
+            <param name="dataBytes">Data to be padded prior to encryption</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Padded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.PKCS1v1_5.DecodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Removes padding that was added to the unencrypted data prior to encryption.
+            </summary>
+            <param name="dataBytes">Data to have padding removed</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Unpadded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.PKCS1v1_5.GetMaxMessageLength(RSA.RSAParameters)">
+            <summary>
+            Gets the maximum message length for this padding provider.
+            </summary>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Max message length</returns>
+        </member>
+        <member name="T:RSA.PaddingProviders.NoPadding">
+            <summary>
+            The NoPadding class does not add any padding to the data.  
+            This is not recommended.
+            </summary>
+        </member>
+        <member name="M:RSA.PaddingProviders.NoPadding.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:RSA.PaddingProviders.NoPadding.RSA#PaddingProviders#IPaddingProvider#EncodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Adds padding to the input data and returns the padded data.
+            </summary>
+            <param name="dataBytes">Data to be padded prior to encryption</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Padded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.NoPadding.RSA#PaddingProviders#IPaddingProvider#DecodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Removes padding that was added to the unencrypted data prior to encryption.
+            </summary>
+            <param name="dataBytes">Data to have padding removed</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Unpadded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.NoPadding.GetMaxMessageLength(RSA.RSAParameters)">
+            <summary>
+            Gets the maximum message length for this padding provider.
+            </summary>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Max message length</returns>
+        </member>
+        <member name="T:RSA.PaddingProviders.OAEP">
+            <summary>
+            Uses OAEP Padding defined in PKCS#1 v 2.1.  Uses the 
+            default standard SHA1 hash.  This padding provider is 
+            compatible with .NET's OAEP implementation.
+            </summary>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP.#ctor">
+            <summary>
+            Default constructor.  Uses the default SHA1 Hash for OAEP hash calculation.
+            </summary>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP.#ctor(HashProviders.IHashProvider,System.Int32)">
+            <summary>
+            Internal constructor (used to perform OAEP with a different hash and hash output length
+            </summary>
+            <param name="ohashProvider"></param>
+            <param name="hashLength"></param>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP.EncodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Adds padding to the input data and returns the padded data.
+            </summary>
+            <param name="dataBytes">Data to be padded prior to encryption</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Padded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP.DecodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Removes padding that was added to the unencrypted data prior to encryption.
+            </summary>
+            <param name="dataBytes">Data to have padding removed</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Unpadded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP.GetMaxMessageLength(RSA.RSAParameters)">
+            <summary>
+            Gets the maximum message length for this padding provider.
+            </summary>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Max message length</returns>
+        </member>
+        <member name="T:RSA.PaddingProviders.OAEP256">
+            <summary>
+            Uses OAEP Padding Scheme defined in PKCS#1 v 2.1.  Uses a 
+            SHA256 hash.  This padding provider is currently 
+            not compatible with .NET's OAEP implementation.
+            </summary>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP256.#ctor">
+            <summary>
+            Default constructor.  Uses a SHA256 Hash for OAEP hash calculation.
+            This PaddingProvider provides added security to message padding, 
+            however it requires the data to be encrypted to be shorter and 
+            is not compatible with the RSACryptoServiceProvider's implementation 
+            of OAEP.
+            </summary>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP256.EncodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Adds padding to the input data and returns the padded data.
+            </summary>
+            <param name="dataBytes">Data to be padded prior to encryption</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Padded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP256.DecodeMessage(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Removes padding that was added to the unencrypted data prior to encryption.
+            </summary>
+            <param name="dataBytes">Data to have padding removed</param>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Unpadded message</returns>
+        </member>
+        <member name="M:RSA.PaddingProviders.OAEP256.GetMaxMessageLength(RSA.RSAParameters)">
+            <summary>
+            Gets the maximum message length for this padding provider.
+            </summary>
+            <param name="params">RSA Parameters used for padding computation</param>
+            <returns>Max message length</returns>
+        </member>
+        <member name="T:RSA.PublicKeyBlob">
+            <summary>
+            Public-key BLOBs, type PUBLICKEYBLOB, are used to store public keys outside a CSP. Extended provider public-key BLOBs have the following format.
+            </summary>
+        </member>
+        <member name="F:RSA.PublicKeyBlob.Header">
+            <summary>
+            BLOB Header
+            </summary>
+        </member>
+        <member name="F:RSA.PublicKeyBlob.RSAPubKey">
+            <summary>
+            RSA public key data
+            </summary>
+        </member>
+        <member name="F:RSA.PublicKeyBlob.Modulus">
+            <summary>
+            The public-key modulus data
+            </summary>
+        </member>
+        <member name="M:RSA.PublicKeyBlob.FromBinary(System.IO.BinaryReader)">
+            <summary>
+            Create and initialize structure from binary data
+            </summary>
+            <exception cref="T:Exceptions.CryptographicException">On validate errors</exception>
+            <returns>Initialized structure</returns>
+        </member>
+        <member name="M:RSA.PublicKeyBlob.FromBinary(System.IO.BinaryReader,RSA.BlobHeader)">
+            <summary>
+            Create and initialize structure from binary data with defined header
+            </summary>
+            <exception cref="T:Exceptions.CryptographicException">On validate errors</exception>
+            <returns>Initialized structure</returns>
+        </member>
+        <member name="M:RSA.PublicKeyBlob.ToBinary(System.IO.BinaryWriter)">
+            <summary>
+            Serializes structure as binary data
+            </summary>
+        </member>
+        <member name="M:RSA.PublicKeyBlob.FromRSAParameters(RSA.RSAParameters)">
+            <summary>
+            Create and initialize structure from RSAParameters
+            </summary>
+            <returns>Initialized structure</returns>
+            <note>http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsaparameters.aspx</note>
+        </member>
+        <member name="M:RSA.PublicKeyBlob.ToRSAParameters">
+            <summary>
+            Create and initialize RSAParameters structure
+            </summary>
+            <returns>Initialized structure</returns>
+            <note>http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsaparameters.aspx</note>
+        </member>
+        <member name="M:RSA.PublicKeyBlob.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="T:Exceptions.CryptographicException">
+            <summary>
+            Cryptographic Exception
+            </summary>
+        </member>
+        <member name="M:Exceptions.CryptographicException.#ctor(System.String)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="message">Error Message</param>
+        </member>
+        <member name="M:Exceptions.CryptographicException.#ctor(System.String,System.Exception)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="message">Error Message</param>
+            <param name="innerException">Inner Exception</param>
+        </member>
+        <member name="T:RSA.RSAParameters">
+            <summary>
+            RSAParameters for Import / Export
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.E">
+            <summary>
+            Parameter value E
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.N">
+            <summary>
+            Parameter value N
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.P">
+            <summary>
+            Parameter value P
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.Q">
+            <summary>
+            Parameter value Q
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.DP">
+            <summary>
+            Parameter value DP
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.DQ">
+            <summary>
+            Parameter value DQ
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.IQ">
+            <summary>
+            Parameter value IQ
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.D">
+            <summary>
+            Parameter value D
+            </summary>
+        </member>
+        <member name="P:RSA.RSAParameters.Phi">
+            <summary>
+            Parameter value Phi
+            </summary>
+        </member>
+        <member name="T:RSA.PrivateKeyBlob">
+            <summary>
+            Private-key BLOBs, type PRIVATEKEYBLOB, are used to store private keys outside a CSP. Extended provider private-key BLOBs have the following format.
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.Header">
+            <summary>
+            BLOB Header
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.RSAPubKey">
+            <summary>
+            RSA public key data
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.Modulus">
+            <summary>
+            The modulus. This has a value of prime1 * prime2 and is often known as n.
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.Prime1">
+            <summary>
+            Prime number 1, often known as p.
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.Prime2">
+            <summary>
+            Prime number 2, often known as q.
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.Exponent1">
+            <summary>
+            Exponent 1. This has a numeric value of d mod (p - 1).
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.Exponent2">
+            <summary>
+            Exponent 2. This has a numeric value of d mod (q - 1).
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.Coefficient">
+            <summary>
+            Coefficient. This has a numeric value of (inverse of q mod p).
+            </summary>
+        </member>
+        <member name="F:RSA.PrivateKeyBlob.PrivateExponent">
+            <summary>
+            Private exponent, often known as d.
+            </summary>
+        </member>
+        <member name="M:RSA.PrivateKeyBlob.FromBinary(System.IO.BinaryReader)">
+            <summary>
+            Create and initialize structure from binary data
+            </summary>
+            <exception cref="T:Exceptions.CryptographicException">On validate errors</exception>
+            <returns>Initialized structure</returns>
+        </member>
+        <member name="M:RSA.PrivateKeyBlob.FromBinary(System.IO.BinaryReader,RSA.BlobHeader)">
+            <summary>
+            Create and initialize structure from binary data with defined header
+            </summary>
+            <exception cref="T:Exceptions.CryptographicException">On validate errors</exception>
+            <returns>Initialized structure</returns>
+        </member>
+        <member name="M:RSA.PrivateKeyBlob.ToBinary(System.IO.BinaryWriter)">
+            <summary>
+            Serializes structure as binary data
+            </summary>
+        </member>
+        <member name="M:RSA.PrivateKeyBlob.FromRSAParameters(RSA.RSAParameters)">
+            <summary>
+            Create and initialize structure from RSAParameters
+            </summary>
+            <returns>Initialized structure</returns>
+            <note>http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsaparameters.aspx</note>
+        </member>
+        <member name="M:RSA.PrivateKeyBlob.ToRSAParameters">
+            <summary>
+            Create and initialize RSAParameters structure
+            </summary>
+            <returns>Initialized structure</returns>
+            <note>http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsaparameters.aspx</note>
+        </member>
+        <member name="M:RSA.PrivateKeyBlob.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="T:RSA.RSACrypto">
+            <summary>
+            RSA Cryptography class
+            </summary>
+        </member>
+        <member name="M:RSA.RSACrypto.#ctor">
+            <summary>
+            Default constructor for the RSA Class.  A cipher strength of 1024-bit will used by default.  To specify 
+            a higher cipher strength, please use the alternate RSACrypto(cipherStrength) constructor.
+            </summary>
+        </member>
+        <member name="M:RSA.RSACrypto.#ctor(System.Int32)">
+            <summary>
+            RSA Class Constructor
+            </summary>
+            <param name="cipherStrength">
+            Cipher strength in bits.  2048 is recommended.  Must be a multiple of 8.  
+            Max supported by this class is 4096.  Minimum is 256.  Cipher strength only 
+            needs to be specified if generating new key pairs.  It is not necessary to 
+            know the cipher strength when importing existing key pairs.
+            </param>
+        </member>
+        <member name="M:RSA.RSACrypto.ToXmlString(System.Boolean)">
+            <summary>
+            Return the currently loaded key as XML.  This method will automatically 
+            return an empty string if no key has been loaded.
+            </summary>
+            <param name="includePrivate">Signals whether to include the private key in the output data.</param>
+            <returns>XML String with the key data.</returns>
+        </member>
+        <member name="M:RSA.RSACrypto.FromXmlString(System.String)">
+            <summary>
+            Sets the current class internal variables based on the supplied XML. 
+            Attempts to validate the XML prior to setting.
+            </summary>
+            <param name="xmlString">XML String containing key info</param>
+            <remarks></remarks>
+        </member>
+        <member name="M:RSA.RSACrypto.ImportParameters(RSA.RSAParameters)">
+            <summary>
+            Import an existing set of RSA Parameters.  If only the public key is to be loaded, 
+            Do not set the P, Q, DP, DQ, IQ or D values.  If P, Q or D are set, the parameters 
+            will automatically be validated for existence of private key.
+            </summary>
+            <param name="params">RSAParameters object containing key data.</param>
+        </member>
+        <member name="M:RSA.RSACrypto.ExportParameters">
+            <summary>
+            Returns an RSAParameters object that contains the key data for the currently loaded key.  
+            </summary>
+            <returns>Instance of the currently loaded RSAParameters object or null if no key is loaded</returns>
+            <remarks></remarks>
+        </member>
+        <member name="M:RSA.RSACrypto.ImportCspBlob(System.Byte[])">
+            <summary>
+            Imports a blob that represents asymmetric key information.
+            </summary>
+            <param name="rawData">A byte array that represents an asymmetric key blob.</param>
+            <exception cref="T:Exceptions.CryptographicException">Invalid key blob data</exception>
+            <returns>Initialized RSAParameters structure</returns>
+        </member>
+        <member name="M:RSA.RSACrypto.ExportCspBlob(System.Boolean)">
+            <summary>
+            Exports a blob that contains the key information associated with an AsymmetricAlgorithm object.
+            </summary>
+            <param name="includePrivateParameters">true to include the private key; otherwise, false.</param>
+            <returns>A byte array that contains the key information associated with an AsymmetricAlgorithm object</returns>
+        </member>
+        <member name="M:RSA.RSACrypto.GenerateKeys">
+            <summary>
+            Generate the RSA Key Pair using the default exponent of 65537.
+            </summary>
+        </member>
+        <member name="M:RSA.RSACrypto.GenerateKeys(System.Int32)">
+            <summary>
+            Generate the RSA Key Pair using a supplied cipher strength and the default 
+            exponent value of 65537.  If a cipherStrength was specified in the constructor, 
+            the supplied value will override it.
+            </summary>
+            <param name="cipherStrength">The strength of the cipher in bits.  Must be a multiple of 8 
+            and between 256 and 4096</param>
+        </member>
+        <member name="M:RSA.RSACrypto.GenerateKeys(System.Int32,System.Int32)">
+            <summary>
+            Generate the RSA Key Pair using a supplied cipher strength value and exponent value.  
+            A prime number value between 3 and 65537 is recommended for the exponent.  Larger 
+            exponents can increase security but also increase encryption time.  Your supplied 
+            exponent may be automatically adjusted to ensure compatibility with the RSA algorithm 
+            security requirements.  If a cipherStrength was specified in the constructor, 
+            the supplied <paramref name="cipherStrength"/> value will override it.
+            </summary>
+            <param name="cipherStrength">The strength of the cipher in bits.  Must be a multiple of 8 
+            and between 256 and 4096</param>
+            <param name="exponent">Custom exponent value to be used for RSA Calculation</param>
+        </member>
+        <member name="M:RSA.RSACrypto.Encrypt(System.Byte[])">
+            <summary>
+            Encrypt input bytes with the public key.  Data can only be decrypted with 
+            the private key.  If no PaddingProvider is set, the default padding provider of OAEP will be assumed.  To 
+            specify a different padding algorithm, make sure you set the PaddingProvider property.
+            </summary>
+            <param name="dataBytes">Data bytes to be encrypted</param>
+            <returns>Encrypted byte array</returns>
+            <remarks>Key generation is CPU intensive.  It is highly recommended that you create 
+            your key pair in advance and use a predetermined key pair.  If you do choose to allow 
+            the key pair to be automatically generated, it can be exported to XML or an RSAParameter 
+            set after the encryption is complete.</remarks>
+        </member>
+        <member name="M:RSA.RSACrypto.EncryptPrivate(System.Byte[])">
+            <summary>
+            Run the encryption routine using the private key for encryption.  While this may be useful in some 
+            fringe scenarios, if simple verification is needed it is recommended that you use the Sign() method 
+            instead, which signs a hashed version of your data.   If no PaddingProvider is set, the default padding 
+            provider of OAEP will be assumed.  To specify a different padding algorithm, make sure you set the 
+            PaddingProvider property.  
+            </summary>
+            <param name="databytes">Data to be encrypted with the private key</param>
+            <returns>Encrypted data bytes</returns>
+            <remarks>
+            <para>This method uses the PaddingProvider for message verification.  To create signature 
+            hashes, please use the SignData and VerifyData methods.</para>
+            <para>Data encrypted this way can be decrypted using your PUBLIC KEY.  This method of encryption is meant 
+            for verification purposes only and does not secure your data against decryption.</para>
+            </remarks>
+        </member>
+        <member name="M:RSA.RSACrypto.SignData(System.Byte[],RSA.SignatureProviders.ISignatureProvider)">
+            <summary>
+            Sign a hash of the input data using the supplied Signature Provider and encrypt with the private key.    
+            </summary>
+            <param name="dataBytes">Data to be hashed and signed</param>
+            <param name="signatureProvider">The signature provider to use for signature generation.</param>
+            <returns>Signed hash bytes</returns>
+        </member>
+        <member name="M:RSA.RSACrypto.Decrypt(System.Byte[])">
+            <summary>
+            Decrypt data that was encrypted using the Public Key.  If no PaddingProvider is set, the default
+            padding provider of OAEP will be assumed.  To specify a different padding algorithm, make sure 
+            you set the PaddingProvider property.
+            </summary>
+            <param name="encryptedBytes">Encrypted bytes</param>
+            <returns>Decrypted bytes</returns>
+        </member>
+        <member name="M:RSA.RSACrypto.DecryptPublic(System.Byte[])">
+            <summary>
+            Decrypt data that was encrypted with the Private Key.  NOTE:  This method 
+            uses the PaddingProvider for message decoding.  To create signature 
+            hashes, please use the SignData and VerifyData methods.  If no PaddingProvider is set, the default
+            padding provider of OAEP will be assumed.  To specify a different padding algorithm, make sure 
+            you set the PaddingProvider property.
+            </summary>
+            <param name="encryptedBytes">Encrypted bytes</param>
+            <returns>Decrypted bytes</returns>
+        </member>
+        <member name="M:RSA.RSACrypto.VerifyData(System.Byte[],System.Byte[],RSA.SignatureProviders.ISignatureProvider)">
+            <summary>
+            Verify the signature against the unsigned data.  The encryptedData is decrypted using the public key and 
+            the unsignedData is hashed and compared to the un-encrypted signed data using the supplied SignatureProvider.  
+            </summary>
+            <param name="unsignedData">The raw, unencrypted data to be hashed and compared.</param>
+            <param name="encryptedData">The data that has been hashed and encrypted with the private key.</param>
+            <param name="signatureProvider">The signature provider that matches the algorithm used to generate the original signature</param>
+            <returns>Boolean representing whether the signature was valid (verified)</returns>
+        </member>
+        <member name="P:RSA.RSACrypto.PaddingProvider">
+            <summary>
+            Different versions of RSA use different padding schemes.  This property allows you to 
+            set the padding scheme you wish to use.  If not set, the default of OAEP will be 
+            used.  While PKCS1 v1.5 is supported, OAEP is the recommended padding scheme to use.
+            You can create your own padding schemes by implementing the IPaddingProvider interface.
+            </summary>
+            <value>Padding provider instance</value>
+            <returns>Current padding provider</returns>
+        </member>
+        <member name="P:RSA.RSACrypto.MaxMessageLength">
+            <summary>
+            Based on the padding provider, messages are stricted to certain lengths for encryption.  Also,
+            ensure that the key pair has either been generated or imported.
+            </summary>
+        </member>
+        <member name="E:RSA.RSACrypto.OnKeysGenerated">
+            <summary>
+            Fires when key generation is complete.
+            </summary>
+        </member>
+        <member name="T:RSA.RSACrypto.KeysGenerated">
+            <summary>
+            Delegate for OnKeysGenerated event 
+            </summary>
+            <param name="sender">Object</param>
+        </member>
+        <member name="T:RSA.KeyBlobType">
+            <summary>
+            Exported key blob definitions (WinCrypt.h)
+            </summary>
+        </member>
+        <member name="F:RSA.KeyBlobType.SimpleBlob">
+            <summary>
+            Simple Key BLOB
+            </summary>
+        </member>
+        <member name="F:RSA.KeyBlobType.PublicKeyBlob">
+            <summary>
+            Public Key BLOB
+            </summary>
+        </member>
+        <member name="F:RSA.KeyBlobType.PrivateKeyBlob">
+            <summary>
+            Private Key BLOB
+            </summary>
+        </member>
+        <member name="F:RSA.KeyBlobType.PlainTextKeyBlob">
+            <summary>
+            PlainText Key BLOB
+            </summary>
+        </member>
+        <member name="F:RSA.KeyBlobType.OpaqueKeyBlob">
+            <summary>
+            Opaque Key BLOB
+            </summary>
+        </member>
+        <member name="F:RSA.KeyBlobType.PublicKeyBlobEx">
+            <summary>
+            Public Key BLOB Extended
+            </summary>
+        </member>
+        <member name="F:RSA.KeyBlobType.SymmetricWrapKeyBlob">
+            <summary>
+            Symmetric Wrap Key BLOB
+            </summary>
+        </member>
+        <member name="T:RSA.AlgorithmIdentifier">
+            <summary>
+            Algorithm identifier for the key contained by the key BLOB structure
+            </summary>
+            <note>Defined RSA only</note>
+        </member>
+        <member name="F:RSA.AlgorithmIdentifier.CALG_RSA_KEYX">
+            <summary>
+            CALG_RSA_KEYX = (ALG_CLASS_KEY_EXCHANGE|ALG_TYPE_RSA|ALG_SID_RSA_ANY)
+            </summary>
+        </member>
+        <member name="T:Utils.BigInteger">
+            <summary>
+            BigInteger library by Chew Keong TAN (See project source for info).
+            </summary>
+        </member>
+        <member name="T:RSA.SignatureProviders.ISignatureProvider">
+            <summary>
+            All custom signature providers must implement this interface.  The 
+            RSACrypto class handles encryption and decryption of data.  The 
+            SignatureProvider is intended to provide the hashing and signature
+            generation mechanism used to create the comparison data.
+            </summary>
+        </member>
+        <member name="M:RSA.SignatureProviders.ISignatureProvider.EncodeSignature(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Generates a hash for the input data.
+            </summary>
+            <param name="dataBytes">Data to be signed</param>
+            <param name="params">RSA Parameters used for signature calculation</param>
+            <returns>Computed signature (pre-encryption)</returns>
+        </member>
+        <member name="M:RSA.SignatureProviders.ISignatureProvider.VerifySignature(System.Byte[],System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Verifies the signed data against the unsigned data after decryption.
+            </summary>
+            <param name="dataBytes">Unsigned data</param>
+            <param name="signedDataBytes">Signed data (after decryption)</param>
+            <param name="params">RSAParameters used for signature computation</param>
+            <returns>Boolean representing whether the input data matches the signed data</returns>
+        </member>
+        <member name="T:RSA.SignatureProviders.EMSAPKCS1v1_5_SHA1">
+            <summary>
+            Uses the DER (Distinguished Encoding Rules) 
+            and the SHA1 hash provider for encoding generation.
+            </summary>
+        </member>
+        <member name="M:RSA.SignatureProviders.EMSAPKCS1v1_5_SHA1.#ctor">
+            <summary>
+            Default constructor
+            </summary>
+        </member>
+        <member name="M:RSA.SignatureProviders.EMSAPKCS1v1_5_SHA1.EncodeSignature(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Hashes and encodes the signature for encryption.  Uses the DER (Distinguished Encoding Rules) 
+            and the SHA1 hash provider for encoding generation.
+            </summary>
+            <param name="dataBytes">Data to be signed</param>
+            <param name="params">RSA Parameters used for signature calculation</param>
+            <returns>Computed signature (pre-encryption)</returns>
+        </member>
+        <member name="M:RSA.SignatureProviders.EMSAPKCS1v1_5_SHA1.RSA#SignatureProviders#ISignatureProvider#VerifySignature(System.Byte[],System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Verifies the signed data against the unsigned data after decryption.
+            </summary>
+            <param name="dataBytes">Unsigned data</param>
+            <param name="signedDataBytes">Signed data (after decryption)</param>
+            <param name="params">RSAParameters used for signature computation</param>
+            <returns>Boolean representing whether the input data matches the signed data</returns>
+        </member>
+        <member name="T:RSA.SignatureProviders.EMSAPKCS1v1_5_SHA256">
+            <summary>
+            Uses the DER (Distinguished Encoding Rules) 
+            and the SHA256 hash provider for encoding generation.
+            </summary>
+        </member>
+        <member name="M:RSA.SignatureProviders.EMSAPKCS1v1_5_SHA256.#ctor">
+            <summary>
+            Default constructor
+            </summary>
+        </member>
+        <member name="M:RSA.SignatureProviders.EMSAPKCS1v1_5_SHA256.EncodeSignature(System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Hashes and encodes the signature for encryption.  Uses the DER (Distinguished Encoding Rules) 
+            and the SHA256 hash provider for encoding generation.
+            </summary>
+            <param name="dataBytes">Data to be signed</param>
+            <param name="params">RSA Parameters used for signature calculation</param>
+            <returns>Computed signature (pre-encryption)</returns>
+        </member>
+        <member name="M:RSA.SignatureProviders.EMSAPKCS1v1_5_SHA256.RSA#SignatureProviders#ISignatureProvider#VerifySignature(System.Byte[],System.Byte[],RSA.RSAParameters)">
+            <summary>
+            Verifies the signed data against the unsigned data after decryption.
+            </summary>
+            <param name="dataBytes">Unsigned data</param>
+            <param name="signedDataBytes">Signed data (after decryption)</param>
+            <param name="params">RSAParameters used for signature computation</param>
+            <returns>Boolean representing whether the input data matches the signed data</returns>
+        </member>
+        <member name="T:HashProviders.IHashProvider">
+            <summary>
+            Base interface that must be implemented by all hash providers.
+            </summary>
+        </member>
+        <member name="M:HashProviders.IHashProvider.ComputeHash(System.Byte[])">
+            <summary>
+            Compute the hash of the input byte array and return the hashed value as a byte array.
+            </summary>
+            <param name="inputData">Input data</param>
+            <returns>Hashed data.</returns>
+        </member>
+        <member name="T:HashProviders.SHA256">
+            <summary>
+            Hash provider based on SHA256
+            </summary>
+        </member>
+        <member name="M:HashProviders.SHA256.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:HashProviders.SHA256.HashProviders#IHashProvider#ComputeHash(System.Byte[])">
+            <summary>
+            Compute the hash of the input byte array and return the hashed value as a byte array.
+            </summary>
+            <param name="inputData">Input data</param>
+            <returns>SHA256 Hashed data</returns>
+        </member>
+        <member name="T:HashProviders.HMACSHA256">
+            <summary>
+            Hash provider based on HMACSHA256 to allow inclusion of a hash seed value
+            </summary>
+        </member>
+        <member name="M:HashProviders.HMACSHA256.#ctor(System.Byte[])">
+            <summary>
+            Constructor accepting a private key (seed) value
+            </summary>
+            <param name="privateKey">Byte array containing the private hash seed</param>
+        </member>
+        <member name="M:HashProviders.HMACSHA256.HashProviders#IHashProvider#ComputeHash(System.Byte[])">
+            <summary>
+            Compute the hash of the input byte array and return the hashed value as a byte array.
+            </summary>
+            <param name="inputData">Input data</param>
+            <returns>HMACSHA256 Hashed data.</returns>
+        </member>
+        <member name="T:HashProviders.SHA1">
+            <summary>
+            Hash provider based on SHA1
+            </summary>
+        </member>
+        <member name="M:HashProviders.SHA1.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:HashProviders.SHA1.HashProviders#IHashProvider#ComputeHash(System.Byte[])">
+            <summary>
+            Compute the hash of the input byte array and return the hashed value as a byte array.
+            </summary>
+            <param name="inputData">Input data</param>
+            <returns>SHA1 Hashed data.</returns>
+        </member>
+        <member name="T:HashProviders.HMACSHA1">
+            <summary>
+            Hash provider based on HMACSHA1 to allow inclusion of a hash seed value
+            </summary>
+        </member>
+        <member name="M:HashProviders.HMACSHA1.#ctor(System.Byte[])">
+            <summary>
+            Constructor accepting a private key (seed) value
+            </summary>
+            <param name="privateKey">Byte array containing the private hash seed</param>
+        </member>
+        <member name="M:HashProviders.HMACSHA1.HashProviders#IHashProvider#ComputeHash(System.Byte[])">
+            <summary>
+            Compute the hash of the input byte array and return the hashed value as a byte array.
+            </summary>
+            <param name="inputData">Input data</param>
+            <returns>HMACSHA1 Hashed data.</returns>
+        </member>
+        <member name="T:RSA.BlobHeader">
+            <summary>
+            A BLOBHEADER / PUBLICKEYSTRUC structure (Import from WinCrypt.h)
+            </summary>
+            <note>http://msdn.microsoft.com/en-us/library/ms884652.aspx</note>
+        </member>
+        <member name="F:RSA.BlobHeader.BlobType">
+            <summary>
+            Key BLOB type. The only BLOB types currently defined are PUBLICKEYBLOB, PRIVATEKEYBLOB, and SIMPLEBLOB. Other key BLOB types will be defined as needed.
+            </summary>
+        </member>
+        <member name="F:RSA.BlobHeader.Version">
+            <summary>
+            Version number of the key BLOB format. This member currently must always have a value of 0x02.
+            </summary>
+        </member>
+        <member name="F:RSA.BlobHeader.Reserved">
+            <summary>
+            Reserved for future use. This member must be set to zero.
+            </summary>
+        </member>
+        <member name="F:RSA.BlobHeader.KeyAlgorithm">
+            <summary>
+            Algorithm identifier for the key contained by the key BLOB structure
+            </summary>
+        </member>
+        <member name="M:RSA.BlobHeader.FromBinary(System.IO.BinaryReader)">
+            <summary>
+            Create and initialize structure from binary data
+            </summary>
+            <exception cref="T:Exceptions.CryptographicException">On validate errors</exception>
+            <returns>Initialized structure</returns>
+        </member>
+        <member name="M:RSA.BlobHeader.ToBinary(System.IO.BinaryWriter)">
+            <summary>
+            Serializes structure as binary data
+            </summary>
+        </member>
+        <member name="M:RSA.BlobHeader.FromRSAParameters(RSA.KeyBlobType)">
+            <summary>
+            Create and initialize structure from RSAParameters
+            </summary>
+            <returns>Initialized structure</returns>
+        </member>
+        <member name="M:RSA.BlobHeader.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+    </members>
+</doc>
