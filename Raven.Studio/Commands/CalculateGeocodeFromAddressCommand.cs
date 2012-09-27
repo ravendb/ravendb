@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Net;
-using System.Text;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
@@ -13,10 +12,12 @@ namespace Raven.Studio.Commands
 	public class CalculateGeocodeFromAddressCommand : Command
 	{
 		private readonly QueryModel queryModel;
+
 		public CalculateGeocodeFromAddressCommand(QueryModel queryModel)
 		{
 			this.queryModel = queryModel;
 		}
+
 		public override void Execute(object parameter)
 		{
 			var url = "http://where.yahooapis.com/geocode?flags=JC&q=" + queryModel.Address;
@@ -28,7 +29,9 @@ namespace Raven.Studio.Commands
 				{
 					jsonData = RavenJObject.Load(new JsonTextReader(new StreamReader(stream)));
 				}
+
 				var result = jsonData["ResultSet"].SelectToken("Results").Values().FirstOrDefault();
+
 				if (result != null)
 				{
 					queryModel.Latitude = double.Parse(result.Value<string>("latitude"));

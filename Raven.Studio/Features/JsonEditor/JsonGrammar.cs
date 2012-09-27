@@ -1,6 +1,4 @@
-﻿using System;
-using System.Net;
-using ActiproSoftware.Text.Parsing.LLParser;
+﻿using ActiproSoftware.Text.Parsing.LLParser;
 using ActiproSoftware.Text.Parsing.LLParser.Implementation;
 
 namespace Raven.Studio.Features.JsonEditor
@@ -73,20 +71,13 @@ namespace Raven.Studio.Features.JsonEditor
             stringValue.Production = @startString + (@stringCharacters["value"] > AstFrom("value") | @escapedCharacter["value"] > AstFrom("value") | @escapedUnicode["value"] > AstFrom("value")).ZeroOrMore().SetLabel("characters") + @endString.OnErrorContinue()
                 > Ast<JsonStringNode>().SetProperty(a => a.Text, AstChildrenFrom("characters"));
 
-            this.Root = jsonObject;
+            Root = jsonObject;
         }
 
         private IParserErrorResult DontReportBeforeClosingBrace(IParserState state)
         {
             // Commas are not necessary before the closing brace, so ignore it
-            if (state.TokenReader.LookAheadToken.Id == JsonTokenId.CloseCurlyBrace)
-            {
-                return ParserErrorResults.Ignore;
-            }
-            else
-            {
-                return ParserErrorResults.Continue;
-            }
+            return state.TokenReader.LookAheadToken.Id == JsonTokenId.CloseCurlyBrace ? ParserErrorResults.Ignore : ParserErrorResults.Continue;
         }
 
         private IParserErrorResult AdvanceToStringOrClosingBrace(IParserState state)

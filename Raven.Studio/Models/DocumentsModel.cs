@@ -1,18 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
 using System.Reactive;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Documents;
-using System.Windows.Ink;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
@@ -75,9 +66,7 @@ namespace Raven.Studio.Models
         private void HandleDocumentsPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == "Count" && Documents.Count == 0)
-            {
                 mostRecentDocuments.Clear();
-            }
         }
 
         public ItemSelection<VirtualItem<ViewableDocument>> ItemSelection { get; private set; }
@@ -88,9 +77,7 @@ namespace Raven.Studio.Models
             
             // collection may have been reset (and hence the item cleared) since the event was raised, thus the null check
             if (viewableDocument != null)
-            {
                 DocumentsHaveId = !string.IsNullOrEmpty(viewableDocument.Id);
-            }
 
             // When a view is refreshed, items can be realized in different orders (depending on the order the query responses come back from the db)
             // So to stabilise the column set, we keep a list of 60 most recently used documents, and then sort them in index order. 
@@ -101,9 +88,7 @@ namespace Raven.Studio.Models
                 var newColumns = GetCurrentColumnsSuggestion();
 
                 if (!Columns.Columns.Select(c => c.Binding).SequenceEqual(newColumns.Select(c => c.Binding)))
-                {
                     Columns.LoadFromColumnDefinitions(newColumns);
-                }
             }
         }
 
@@ -196,9 +181,7 @@ namespace Raven.Studio.Models
             {
                 documentNavigatorFactory = value;
                 if (editDocument != null)
-                {
                     editDocument.DocumentNavigatorFactory = value;
-                }
             }
         }
 
@@ -283,9 +266,7 @@ namespace Raven.Studio.Models
         private void ObserveSourceChanges()
         {
             if (!IsLoaded)
-            {
                 return;
-            }
 
             StopListeningForChanges();
 
@@ -305,9 +286,7 @@ namespace Raven.Studio.Models
         private void StopListeningForChanges()
         {
             if (changesSubscription != null)
-            {
                 changesSubscription.Dispose();
-            }
         }
 
         public void SetPriorityColumns(IList<string> priorityColumns)
@@ -319,9 +298,7 @@ namespace Raven.Studio.Models
         private void BeginLoadPriorityProperties()
         {
             if (ApplicationModel.Database.Value == null)
-            {
                 return;
-            }
 
             ApplicationModel.Database.Value
                 .AsyncDatabaseCommands
@@ -370,9 +347,7 @@ namespace Raven.Studio.Models
         private void UpdateColumns(JsonDocument columnSetDocument, string contextWhenRequested)
         {
             if (contextWhenRequested != Context)
-            {
                 return;
-            }
 
             if (columnSetDocument != null)
             {

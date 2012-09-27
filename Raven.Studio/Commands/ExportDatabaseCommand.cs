@@ -6,12 +6,9 @@ using System.Threading.Tasks;
 using System.Windows.Controls;
 using Ionic.Zlib;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Client.Silverlight.Connection;
 using Raven.Json.Linq;
-using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
 using Raven.Studio.Models;
 using TaskStatus = Raven.Studio.Models.TaskStatus;
 

@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using System.Windows.Input;
+﻿using System.Windows.Input;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models

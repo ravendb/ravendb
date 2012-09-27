@@ -99,14 +99,7 @@ namespace Raven.Studio.Infrastructure
                 {
                     DecrementOutstandingTasks();
 
-                    if (!t.IsFaulted)
-                    {
-                        SetCount(t.Result, forceCollectionChangeNotification: true);
-                    }
-                    else
-                    {
-                        SetCount(0, forceCollectionChangeNotification: true);
-                    }
+                    SetCount(!t.IsFaulted ? t.Result : 0, forceCollectionChangeNotification: true);
                 },
                 TaskContinuationOptions.ExecuteSynchronously);
         }

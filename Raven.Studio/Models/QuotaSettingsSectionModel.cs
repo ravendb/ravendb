@@ -1,14 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Models
 {
@@ -36,7 +26,7 @@ namespace Raven.Studio.Models
 
         private static int ReadSettingAsInt(DatabaseDocument document, string settingName)
         {
-            int value = 0;
+            var value = 0;
             if (document.Settings.ContainsKey(settingName))
                 int.TryParse(document.Settings[settingName], out value);
             return value;

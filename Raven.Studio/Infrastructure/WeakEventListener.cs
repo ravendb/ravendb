@@ -42,11 +42,9 @@ namespace Raven.Studio.Infrastructure
 		public WeakEventListener(TInstance instance)
 		{
 			if (instance == null)
-			{
 				throw new ArgumentNullException("instance");
-			}
 
-			this._weakInstance = new WeakReference(instance);
+			_weakInstance = new WeakReference(instance);
 		}
 
 		/// <summary>
@@ -56,20 +54,20 @@ namespace Raven.Studio.Infrastructure
 		/// <param name="eventArgs">Event arguments.</param>
 		public void OnEvent(TSource source, TEventArgs eventArgs)
 		{
-			TInstance target = _weakInstance.Target as TInstance;
+			var target = _weakInstance.Target as TInstance;
 
 			if (target != null)
 			{
 				// Call the registered action.
-				if (this.OnEventAction != null)
+				if (OnEventAction != null)
 				{
-					this.OnEventAction(target, source, eventArgs);
+					OnEventAction(target, source, eventArgs);
 				}
 			}
 			else
 			{
 				// Detach from the event.
-				this.Detach();
+				Detach();
 			}
 		}
 
@@ -78,10 +76,10 @@ namespace Raven.Studio.Infrastructure
 		/// </summary>
 		public void Detach()
 		{
-			if (this.OnDetachAction != null)
+			if (OnDetachAction != null)
 			{
-				this.OnDetachAction(this);
-				this.OnDetachAction = null;
+				OnDetachAction(this);
+				OnDetachAction = null;
 			}
 		}
 	}

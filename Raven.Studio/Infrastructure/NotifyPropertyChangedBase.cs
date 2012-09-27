@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -18,7 +17,7 @@ namespace Raven.Studio.Infrastructure
 			}
 			remove
 			{
-				EventState firstOrDefault = PropertyChangedInternal.GetInvocationList()
+				var firstOrDefault = PropertyChangedInternal.GetInvocationList()
 					.Select(x => ((EventState) x.Target))
 					.FirstOrDefault(x => x.Value == value);
 
@@ -35,7 +34,7 @@ namespace Raven.Studio.Infrastructure
 
 			public EventState(PropertyChangedEventHandler value)
 			{
-				this.Value = value;
+				Value = value;
 			}
 
 			public void Invoke(object sender, PropertyChangedEventArgs e)

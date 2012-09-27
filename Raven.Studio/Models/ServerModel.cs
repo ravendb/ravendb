@@ -1,10 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
-using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
-using System.Windows.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
@@ -25,7 +23,7 @@ namespace Raven.Studio.Models
 
 		public DocumentConvention Conventions
 		{
-			get { return this.documentStore.Conventions; }
+			get { return documentStore.Conventions; }
 		}
 		public string BuildNumber
 		{
@@ -51,9 +49,7 @@ namespace Raven.Studio.Models
 		private void Initialize()
 		{
 			if (DesignerProperties.IsInDesignTool)
-			{
 				return;
-			}
 
 			documentStore = new DocumentStore
 			{
@@ -107,10 +103,22 @@ namespace Raven.Studio.Models
 				                   			return;
 
 				                   		firstTick = false;
+
+				                   	    ApplicationModel.Current.Server.Value.DocumentStore
+				                   	        .AsyncDatabaseCommands
+				                   	        .ForDefaultDatabase()
+				                   	        .GetAsync("Raven/StudioConfig")
+				                   	        .ContinueOnSuccessInTheUIThread(doc =>
+				                   	        {
+				                   	            if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+				                   	            {
+				                   	                if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+				                   	                    UrlUtil.Navigate("/documents");
+				                   	            }
+				                   	        });
+
 				                   		if (names.Length == 0 || (names.Length == 1 && names[0] == Constants.SystemDatabase))
-				                   		{
 				                   			CreateNewDatabase = true;
-				                   		}
 
 				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase)) 
 											return;
@@ -148,21 +156,17 @@ namespace Raven.Studio.Models
 		private static string DetermineUri()
 		{
 			if (DesignerProperties.IsInDesignTool)
-			{
 				return string.Empty;
-			}
 
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
-			{
 				return "http://localhost:8080";
-			}
-			var localPath = HtmlPage.Document.DocumentUri.LocalPath;
+			
+            var localPath = HtmlPage.Document.DocumentUri.LocalPath;
 			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);
 			if (lastIndexOfRaven != -1)
-			{
 				localPath = localPath.Substring(0, lastIndexOfRaven);
-			}
-			return new UriBuilder(HtmlPage.Document.DocumentUri)
+			
+            return new UriBuilder(HtmlPage.Document.DocumentUri)
 			{
 				Path = localPath,
 				Fragment = ""
@@ -179,18 +183,10 @@ namespace Raven.Studio.Models
             singleTenant = urlParser.GetQueryParam("api-key") != null;
 
             if (SelectedDatabase.Value != null)
-            {
                 SelectedDatabase.Value.Dispose();
-            }
 
-			if (databaseName == null)
-			{
-				SelectedDatabase.Value = new DatabaseModel(Constants.SystemDatabase, documentStore);
-			}
-            else
-			{
-                SelectedDatabase.Value = new DatabaseModel(databaseName, documentStore);
-			}
+			SelectedDatabase.Value = databaseName == null 
+                ? new DatabaseModel(Constants.SystemDatabase, documentStore) : new DatabaseModel(databaseName, documentStore);
 
             SelectedDatabase.Value.AsyncDatabaseCommands
                 .EnsureSilverlightStartUpAsync()

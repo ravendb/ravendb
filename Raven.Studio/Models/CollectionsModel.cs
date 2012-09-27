@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Linq;
-using System.Net;
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
-using Notification = Raven.Studio.Messages.Notification;
 using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
@@ -27,12 +22,11 @@ namespace Raven.Studio.Models
 
         public CollectionDocumentsCollectionSource CollectionSource
 		{
-			get
-			{
-                if (collectionSource == null)
-                    collectionSource = new CollectionDocumentsCollectionSource { CollectionName  = GetSelectedCollectionName()};
-                return collectionSource;
-			}
+            get
+            {
+                return collectionSource ??
+                       (collectionSource = new CollectionDocumentsCollectionSource {CollectionName = GetSelectedCollectionName()});
+            }
 		}
 
 	    private string GetSelectedCollectionName()

@@ -1,5 +1,4 @@
-﻿using System.Windows.Navigation;
-using Raven.Studio.Infrastructure;
+﻿using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Terms
 {

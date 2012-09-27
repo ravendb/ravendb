@@ -140,7 +140,7 @@ namespace Raven.Studio.Infrastructure
 			{
 				// do it the GC safe way, because an object could potentially be reclaimed 
 				// for garbage collection immediately after the IsAlive property returns true
-				IWeakEventListener target = weakListener.Target as IWeakEventListener;
+				var target = weakListener.Target as IWeakEventListener;
 				if (target != null)
 					target.Detach();
 			}

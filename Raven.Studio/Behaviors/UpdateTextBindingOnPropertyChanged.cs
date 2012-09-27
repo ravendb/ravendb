@@ -21,7 +21,6 @@ namespace Raven.Studio.Behaviors
 			AssociatedObject.TextChanged += this.OnTextChanged;
 		}
 
-
 		protected override void OnDetaching()
 		{
 			base.OnDetaching();

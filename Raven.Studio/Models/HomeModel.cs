@@ -1,20 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Threading.Tasks;
 using System.Windows.Input;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {

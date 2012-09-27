@@ -49,19 +49,16 @@ namespace Raven.Studio.Infrastructure.ContextMenu
         /// <param name="e">Event data for the DependencyPropertyChangedEvent.</param>
         private static void OnContextMenuChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
         {
-            FrameworkElement element = o as FrameworkElement;
+            var element = o as FrameworkElement;
             if (null != element)
             {
-                ContextMenu oldContextMenu = e.OldValue as ContextMenu;
+                var oldContextMenu = e.OldValue as ContextMenu;
                 if (null != oldContextMenu)
-                {
                     oldContextMenu.Owner = null;
-                }
-                ContextMenu newContextMenu = e.NewValue as ContextMenu;
+                
+                var newContextMenu = e.NewValue as ContextMenu;
                 if (null != newContextMenu)
-                {
                     newContextMenu.Owner = element;
-                }
             }
         }
     }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Reactive;
 using System.Reactive.Subjects;
-using Raven.Studio.Commands;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
@@ -24,9 +23,7 @@ namespace Raven.Studio.Infrastructure
             if (IsLoaded)
             {
                 if (unloadedSubject != null)
-                {
                     unloadedSubject.OnNext(Unit.Default);
-                }
 
                 OnViewUnloaded();
 

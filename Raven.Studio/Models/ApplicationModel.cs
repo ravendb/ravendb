@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -9,12 +8,10 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using System.Linq;
-using Raven.Client.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -34,6 +31,7 @@ namespace Raven.Studio.Models
 			{
 				OnPropertyChanged(() => ErrorCount);
 			};
+
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel> { Value = new ServerModel() };
 			Server.Value.SelectedDatabase.Value.Status.PropertyChanged += delegate
@@ -69,10 +67,9 @@ namespace Raven.Studio.Models
 								{
 									Notifications.Add(notification);
 									if (Notifications.Count > 10)
-									{
 										Notifications.RemoveAt(0);
-									}
-									LastNotification.Value = notification.Message;
+									
+                                    LastNotification.Value = notification.Message;
 								});
 		}
 
@@ -122,9 +119,7 @@ namespace Raven.Studio.Models
 					}
 				}
 				if (message == null)
-				{
 					message = exception.Message;
-				}
 			}
 
 			AddNotification(new Notification(message, NotificationLevel.Error, exception, details));

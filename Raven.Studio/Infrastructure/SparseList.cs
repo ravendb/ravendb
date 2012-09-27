@@ -44,9 +44,7 @@ namespace Raven.Studio.Infrastructure
             var pageAndSubIndex = new PageAndSubIndex(index / _pageSize, index % _pageSize);
 
             if (_currentPage == null || _currentPage.PageIndex != pageAndSubIndex.PageIndex)
-            {
                 _currentPage = _allocatedPages.GetOrCreatePage(pageAndSubIndex.PageIndex);
-            }
 
             return pageAndSubIndex;
         }
@@ -55,16 +53,12 @@ namespace Raven.Studio.Infrastructure
         {
             var firstItem = new PageAndSubIndex(firstIndex / _pageSize, firstIndex % _pageSize);
             if (firstItem.SubIndex + count > _pageSize)
-            {
                 throw new NotImplementedException("RemoveRange is only implemented to work within page boundaries");
-            }
 
             if (_allocatedPages.Contains(firstItem.PageIndex))
             {
                 if (_allocatedPages[firstItem.PageIndex].Trim(firstItem.SubIndex, count))
-                {
                     _allocatedPages.Remove(firstItem.PageIndex);
-                }
             }
         }
 
@@ -128,9 +122,7 @@ namespace Raven.Studio.Infrastructure
                 for (int i = 0; i < _items.Length; i++)
                 {
                     if (_items[i] != null)
-                    {
                         return false;
-                    }
                 }
 
                 return true;
@@ -154,9 +146,7 @@ namespace Raven.Studio.Infrastructure
             public Page GetOrCreatePage(int pageIndex)
             {
                 if (!Contains(pageIndex))
-                {
                     Add(new Page(pageIndex, _pageSize));
-                }
 
                 return this[pageIndex];
             }

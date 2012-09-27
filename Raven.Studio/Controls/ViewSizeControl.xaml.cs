@@ -42,9 +42,7 @@ namespace Raven.Studio.Controls
         {
             InitializeComponent();
             
-
             LayoutRoot.DataContext = this;
-
         }
 
         private ICommand setViewSize;
@@ -104,6 +102,5 @@ namespace Raven.Studio.Controls
             public string Key { get; set; }
             public double Size { get; set; }
         }
-
     }
 }

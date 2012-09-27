@@ -5,11 +5,9 @@
 // All other rights reserved.
 -->
 
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="clr-namespace:System.Windows.Controls"
-    xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
 
     <Style TargetType="ContextMenu:MenuItem">
         <Setter Property="Background" Value="Transparent"/>
@@ -38,19 +36,17 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Rectangle
-                            RadiusX="2"
-                            RadiusY="2"
-                            Fill="{TemplateBinding Background}"
-                            Stroke="{TemplateBinding BorderBrush}"
-                            StrokeThickness="1"/>
-                        <Rectangle
-                            x:Name="Bg"
-                            RadiusX="2"
-                            RadiusY="2"
-                            Stroke="#8071CBF1"
-                            StrokeThickness="1"
-                            Opacity="0">
+                        <Rectangle RadiusX="2"
+                                   RadiusY="2"
+                                   Fill="{TemplateBinding Background}"
+                                   Stroke="{TemplateBinding BorderBrush}"
+                                   StrokeThickness="1"/>
+                        <Rectangle x:Name="Bg"
+                                   RadiusX="2"
+                                   RadiusY="2"
+                                   Stroke="#8071CBF1"
+                                   StrokeThickness="1"
+                                   Opacity="0">
                             <Rectangle.Fill>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                     <LinearGradientBrush.GradientStops>
@@ -60,27 +56,24 @@
                                 </LinearGradientBrush>
                             </Rectangle.Fill>
                         </Rectangle>
-                        <Rectangle
-                            x:Name="InnerBorder"
-                            RadiusX="2"
-                            RadiusY="2"
-                            Stroke="Transparent"
-                            Margin="1"/>
+                        <Rectangle x:Name="InnerBorder"
+                                   RadiusX="2"
+                                   RadiusY="2"
+                                   Stroke="Transparent"
+                                   Margin="1"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition
-                                    Width="Auto"
-                                    MinWidth="24"/>
+                                <ColumnDefinition Width="Auto"
+                                                  MinWidth="24"/>
                                 <ColumnDefinition Width="4"/>
                                 <ColumnDefinition Width="*"/>
                                 <!--<ColumnDefinition Width="37"/>
                                 <ColumnDefinition Width="Auto"/>-->
                                 <ColumnDefinition Width="17"/>
                             </Grid.ColumnDefinitions>
-                            <ContentPresenter
-                                Content="{TemplateBinding Icon}"
-                                Margin="1"
-                                VerticalAlignment="Center"/>
+                            <ContentPresenter Content="{TemplateBinding Icon}"
+                                              Margin="1"
+                                              VerticalAlignment="Center"/>
                             <!--<Border
                                 BorderThickness="1"
                                 CornerRadius="3"
@@ -99,12 +92,11 @@
                                     Height="11"
                                     FlowDirection="LeftToRight"/>
                             </Border>-->
-                            <ContentPresenter
-                                x:Name="Presenter"
-                                Content="{TemplateBinding Header}"
-                                ContentTemplate="{TemplateBinding HeaderTemplate}"
-                                Margin="{TemplateBinding Padding}"
-                                Grid.Column="2"/>
+                            <ContentPresenter x:Name="Presenter"
+                                              Content="{TemplateBinding Header}"
+                                              ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                              Margin="{TemplateBinding Padding}"
+                                              Grid.Column="2"/>
                             <!--<TextBlock
                                 Text="{TemplateBinding InputGestureText}"
                                 Margin="{TemplateBinding Padding}"

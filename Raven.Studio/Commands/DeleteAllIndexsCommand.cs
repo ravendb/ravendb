@@ -35,25 +35,19 @@ namespace Raven.Studio.Commands
 					{
 						 if (task.IsFaulted)
 											{
-												ApplicationModel.Current.AddErrorNotification(task.Exception,"index " + indexName +
-																	 " could not be deleted");
+												ApplicationModel.Current.AddErrorNotification(task.Exception,"index " + indexName + " could not be deleted");
 											}
 											else
 											{
 												ApplicationModel.Current.AddInfoNotification("Index " + indexName + " successfully deleted");
-
-												var deletedItem =
-													model.GroupedIndexes.OfType<IndexItem>().FirstOrDefault(
-														item => item.Name == indexName);
-
+												var deletedItem = model.GroupedIndexes.OfType<IndexItem>().FirstOrDefault(item => item.Name == indexName);
 												model.GroupedIndexes.Remove(deletedItem);
 											}
 					}
 
 					UrlUtil.Navigate("/indexes");	 
 				} );
-			}
-			
+			}	
 		}
 	}
 }

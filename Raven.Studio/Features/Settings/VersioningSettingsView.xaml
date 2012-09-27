@@ -7,8 +7,9 @@
 			 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" 
              xmlns:Data="clr-namespace:Raven.Bundles.Versioning.Data" xmlns:Models="clr-namespace:Raven.Studio.Models"
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity" mc:Ignorable="d"
-			 d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:VersioningSettingsSectionModel}">
+             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity" 
+             mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400" 
+             d:DataContext="{d:DesignInstance Models:VersioningSettingsSectionModel}">
 	
 	<UserControl.Resources>
 		<DataTemplate x:Key="VersioningItemTemplate" DataType="Data:VersioningConfiguration">
@@ -25,14 +26,14 @@
 				</Grid.ColumnDefinitions>
 
 				<Button Grid.Row="0" 
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
-								 Grid.Column="2" 
-								 HorizontalAlignment="Right" 
-								 Command="{Binding DataContext.DeleteVersioning, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-								 CommandParameter="{Binding}"  
-								 VerticalAlignment="Center" 
-								 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
-                                ToolTipService.ToolTip="Remove this versioning configuration">
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        Grid.Column="2" 
+                        HorizontalAlignment="Right" 
+                        Command="{Binding DataContext.DeleteVersioning, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                        CommandParameter="{Binding}"  
+                        VerticalAlignment="Center" 
+                        IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
+                        ToolTipService.ToolTip="Remove this versioning configuration">
                     <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
                 </Button>
 
@@ -55,12 +56,12 @@
 				</sdk:AutoCompleteBox>
 
 				<TextBox Grid.Row="0" 
-									 Grid.Column="1"
-									 Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-									 Margin="5" 
-									 MaxWidth="250" 
-									 IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
-									 Visibility="{Binding Path=DataContext.IsCreation, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibility}}">
+                         Grid.Column="1"
+                         Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="5" 
+                         MaxWidth="250" 
+                         IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"
+                         Visibility="{Binding Path=DataContext.IsCreation, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BooleanToVisibility}}">
 				</TextBox>
 
 				<TextBlock Grid.Row="1" 
@@ -105,11 +106,11 @@
                 </StackPanel>
             </toolkit:HeaderedContentControl.Header>
             <ListBox  Style="{StaticResource Databases_FluidList}"
-										 ItemsSource="{Binding VersioningConfigurations}"
-										 SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
-										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
-										 ItemTemplate="{StaticResource VersioningItemTemplate}"
-										 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                      ItemsSource="{Binding VersioningConfigurations}"
+                      SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
+                      ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
+                      ItemTemplate="{StaticResource VersioningItemTemplate}"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
             </ListBox>
         </toolkit:HeaderedContentControl>
     </Grid>

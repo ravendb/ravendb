@@ -23,14 +23,7 @@ namespace Raven.Studio.Infrastructure
 
         protected IEnumerable GetSelectedItems()
         {
-            if (selectedItemsProvider != null)
-            {
-                return selectedItemsProvider();
-            }
-            else
-            {
-                return new object[0];
-            }
+            return selectedItemsProvider != null ? selectedItemsProvider() : new object[0];
         }
 
         protected void SetDesiredSelection(IEnumerable items)

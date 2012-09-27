@@ -5,12 +5,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
-using System.Reactive.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -153,8 +151,7 @@ namespace Raven.Studio.Features.Documents
             var columnSet = new ColumnSet() {Columns = GetCurrentColumnDefinitions()};
             var document = RavenJObject.FromObject(columnSet);
 
-            ApplicationModel.DatabaseCommands.PutAsync("Raven/Studio/Columns/" + context, null, document,
-                                                       new RavenJObject());
+            ApplicationModel.DatabaseCommands.PutAsync("Raven/Studio/Columns/" + context, null, document, new RavenJObject());
         }
 
         private void HandleMoveSelectedColumn(int change)
@@ -162,17 +159,13 @@ namespace Raven.Studio.Features.Documents
             var columnToMove = SelectedColumn;
 
             if (change == 0 || columnToMove == null || columnToMove.IsNewRow)
-            {
                 return;
-            }
 
-            int currentIndex = Columns.IndexOf(columnToMove);
+            var currentIndex = Columns.IndexOf(columnToMove);
             var newIndex = currentIndex + change;
 
             if (newIndex < 0 || newIndex >= Columns.Count - 1)
-            {
                 return;
-            }
 
             if (change < 0)
             {
@@ -216,9 +209,7 @@ namespace Raven.Studio.Features.Documents
         private bool SyncChangesWithColumnsModel()
         {
             if (Columns.Any(c => c.HasErrors))
-            {
                 return false;
-            }
 
             var actualColumns = GetCurrentColumnDefinitions();
 
@@ -251,5 +242,4 @@ namespace Raven.Studio.Features.Documents
             return columnEditorViewModels.Where(c => !c.IsNewRow).Select(c => c.GetColumn()).ToList();
         }
     }
-
 }

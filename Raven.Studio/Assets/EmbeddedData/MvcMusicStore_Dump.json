@@ -5324,6 +5324,20 @@
         "@id": "albums/626",
         "@etag": "c6000000-00a0-bd66-11df-6034a61da15d"
       }
+	  },
+	  {
+      "Max": 700,
+      "@metadata": {
+        "Last-Modified": "Sat, 15 May 2010 15:15:09 GMT",
+        "@id": "Raven/Hilo/Albums",
+      }
+	  },
+	   {
+      "Max": 11,
+      "@metadata": {
+        "Last-Modified": "Sat, 15 May 2010 15:15:09 GMT",
+        "@id": "Raven/Hilo/Genres",
+      }
     }
   ]
 }

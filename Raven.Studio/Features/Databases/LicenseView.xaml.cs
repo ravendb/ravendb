@@ -27,7 +27,7 @@ namespace Raven.Studio.Features.Databases
 
 		private void StartAlert()
 		{
-			Brush originalBrsush = StatusText.Foreground;
+			var originalBrsush = StatusText.Foreground;
 			Brush[] alertBrushes = new[]
 			{
 				new SolidColorBrush(Colors.Magenta),
@@ -37,7 +37,7 @@ namespace Raven.Studio.Features.Databases
 				new SolidColorBrush(Colors.Cyan),
 			};
 
-			int count = 0;
+			var count = 0;
 			Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(2))
 				.ObserveOnDispatcher()
 				.Subscribe(_ => StatusText.Foreground = alertBrushes[count++ % alertBrushes.Length]);
