@@ -350,6 +350,7 @@ namespace Raven.Tests
 		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false)
 		{
 			var ravenDbServer = GetNewServer();
+			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
 				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
@@ -362,6 +363,10 @@ namespace Raven.Tests
 			};
 			ModifyStore(store);
 			return store.Initialize();
+		}
+
+		protected virtual void ModifyServer(RavenDbServer ravenDbServer)
+		{
 		}
 
 		public virtual void Dispose()

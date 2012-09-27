@@ -57,6 +57,7 @@ namespace Raven.Client.Document
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
 
 		private HttpJsonRequestFactory jsonRequestFactory;
+		private string apiKey;
 
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -132,6 +133,7 @@ namespace Raven.Client.Document
 
 		private string identifier;
 
+		private bool defaultCredentials = true;
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
 #else
@@ -145,7 +147,11 @@ namespace Raven.Client.Document
 		public ICredentials Credentials
 		{
 			get { return credentials; }
-			set { credentials = value; }
+			set
+			{
+				credentials = value;
+				defaultCredentials = false;
+			}
 		}
 
 		/// <summary>
@@ -171,7 +177,16 @@ namespace Raven.Client.Document
 		/// The API Key to use when authenticating against a RavenDB server that
 		/// supports API Key authentication
 		/// </summary>
-		public string ApiKey { get; set; }
+		public string ApiKey
+		{
+			get { return apiKey; }
+			set
+			{
+				if(defaultCredentials)
+					credentials = null;
+				apiKey = value;
+			}
+		}
 
 #if !SILVERLIGHT
 		private string connectionStringName;
@@ -281,6 +296,7 @@ namespace Raven.Client.Document
 
 #if DEBUG
 		private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
+
 		~DocumentStore()
 		{
 			var buffer = e.ToString();

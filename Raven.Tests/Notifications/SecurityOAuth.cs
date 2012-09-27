@@ -30,11 +30,11 @@ namespace Raven.Tests.Notifications
 
 		public class DummyAuthenticateClient : IAuthenticateClient
 		{
-			public bool Authenticate(DocumentDatabase currentDatabase, string username, string password, out AccessTokenBody.DatabaseAccess[] allowedDatabases)
+			public bool Authenticate(DocumentDatabase currentDatabase, string username, string password, out DatabaseAccess[] allowedDatabases)
 			{
 				allowedDatabases = new[]
 				{
-					new AccessTokenBody.DatabaseAccess
+					new DatabaseAccess
 					{
 						TenantId = "*"
 					},

@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Client;
 using Raven.Database.Config;
@@ -51,7 +52,7 @@ namespace Raven.Tests.Security.OAuth
 
 			if (expired) issued -= TimeSpan.FromHours(1).TotalMilliseconds;
 
-			var authorizedDatabases = databases.Split(',').Select(tenantId=> new AccessTokenBody.DatabaseAccess{TenantId = tenantId}).ToArray();
+			var authorizedDatabases = databases.Split(',').Select(tenantId=> new DatabaseAccess{TenantId = tenantId}).ToArray();
 			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = user, AuthorizedDatabases = authorizedDatabases, Issued = issued }).ToString(Formatting.None);
 
 			var signature = valid ? CertHelper.Sign(body, server.Database.Configuration.OAuthTokenCertificate) : "InvalidSignature";

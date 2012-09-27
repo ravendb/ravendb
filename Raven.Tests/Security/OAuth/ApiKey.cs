@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Security.OAuth
@@ -18,10 +20,24 @@ namespace Raven.Tests.Security.OAuth
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}
 
-		protected override void ModifyStore(Client.Document.DocumentStore store)
+		protected override void ModifyServer(Server.RavenDbServer ravenDbServer)
+		{
+			ravenDbServer.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			{
+				Name = "test",
+				Secret = "ThisIsMySecret",
+				Enabled = true,
+				Databases = new[]
+				{
+					new DatabaseAccess{TenantId = "*"}, 
+				}
+			}), new RavenJObject(), null);
+		}
+
+		protected override void ModifyStore(DocumentStore store)
 		{
 			store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-			store.Credentials = new NetworkCredential("bad", "bad");
+			store.Credentials = null;
 			store.ApiKey = apiKey;
 		}
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
@@ -72,14 +73,6 @@ namespace Raven.Database.Server.Security.OAuth
 				return;
 			}
 
-			var apiSecret = GetApiKeySecret(apiKeyName);
-			if (string.IsNullOrEmpty(apiSecret))
-			{
-				context.SetStatusToUnauthorized();
-				context.WriteJson(new { error = "unauthorized_client", error_description = "Unknown API Key" });
-				return;
-			}
-
 			var challengeData = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptSymmetric(challenge));
 			var timestampStr = challengeData.GetOrDefault(OAuthHelper.Keys.ChallengeTimestamp);
 			if(string.IsNullOrEmpty(timestampStr))
@@ -87,11 +80,27 @@ namespace Raven.Database.Server.Security.OAuth
 				RespondWithChallenge(context);
 				return;
 			}
+			
 			var challengeTimestamp = OAuthServerHelper.ParseDateTime(timestampStr);
 			if (challengeTimestamp + MaxChallengeAge < SystemTime.UtcNow || challengeTimestamp > SystemTime.UtcNow)
 			{
 				// The challenge is either old or from the future 
 				RespondWithChallenge(context);
+				return;
+			}
+
+			var apiKeyTuple = GetApiKeySecret(apiKeyName);
+			if (apiKeyTuple == null)
+			{
+				context.SetStatusToUnauthorized();
+				context.WriteJson(new { error = "unauthorized_client", error_description = "Unknown API Key" });
+				return;
+			}
+			var apiSecret = apiKeyTuple.Item1;
+			if (string.IsNullOrEmpty(apiKeyName))
+			{
+				context.SetStatusToUnauthorized();
+				context.WriteJson(new { error = "unauthorized_client", error_description = "Invalid API Key" });
 				return;
 			}
 
@@ -103,15 +112,7 @@ namespace Raven.Database.Server.Security.OAuth
 				return;
 			}
 
-			var token = GetAccessTokenFromApiKey(apiKeyName, apiSecret);
-			if (token == null)
-			{
-				context.SetStatusToUnauthorized();
-				context.WriteJson(new { error = "unauthorized_client", error_description = "Invalid client credentials" });
-
-				return;
-			}
-
+			var token = apiKeyTuple.Item2;
 			context.Write(token.Serialize());
 		}
 
@@ -134,14 +135,14 @@ namespace Raven.Database.Server.Security.OAuth
 			context.Response.AddHeader("WWW-Authenticate", OAuthHelper.Keys.WWWAuthenticateHeaderKey + " " + OAuthHelper.DictionaryToString(responseData));
 		}
 
-		private AccessToken GetAccessTokenFromApiKey(string apiKeyName, string apiSecret)
+		private AccessToken GetAccessTokenFromApiKey(string apiKeyName)
 		{
 			return AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
 			{
 				UserId = apiKeyName,
-				AuthorizedDatabases = new AccessTokenBody.DatabaseAccess[]
+				AuthorizedDatabases = new DatabaseAccess[]
 				{
-					new AccessTokenBody.DatabaseAccess
+					new DatabaseAccess
 					{
 						TenantId = "*",
 
@@ -150,9 +151,21 @@ namespace Raven.Database.Server.Security.OAuth
 			});
 		}
 
-		private string GetApiKeySecret(string apiKeyName)
+		private Tuple<string,AccessToken> GetApiKeySecret(string apiKeyName)
 		{
-			return "ThisIsMySecret";
+			var document = SystemDatabase.Get("Raven/ApiKeys/" + apiKeyName, null);
+			if(document == null)
+				return null;
+
+			var apiKeyDefinition = document.DataAsJson.JsonDeserialization<ApiKeyDefinition>();
+			if(apiKeyDefinition.Enabled == false)
+				return null;
+
+			return Tuple.Create(apiKeyDefinition.Secret, AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
+			{
+				UserId = apiKeyName,
+				AuthorizedDatabases = apiKeyDefinition.Databases
+			}));
 		}
 	}
 }
