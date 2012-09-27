@@ -855,6 +855,7 @@ namespace Raven.Database.Server
 						{
 							Error = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.",
 						});
+						return false;
 					}
 				}
 				catch (Exception e)
