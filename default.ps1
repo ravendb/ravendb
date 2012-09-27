@@ -36,13 +36,13 @@ properties {
 			return "$build_dir\$_"
 		}
   
-	$silverlight4_dlls = @("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |
+	$silverlight4_dlls = @("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???", "DH.Scrypt.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
-	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
+	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???", "DH.Scrypt.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
