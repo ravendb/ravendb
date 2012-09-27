@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Security.OAuth
 {
 	internal static class OAuthServerHelper
 	{
-		private const int rsaKeySize = 2560;
+		private const int rsaKeySize = 2048;
 
 		private static readonly ThreadLocal<RNGCryptoServiceProvider> rng = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
 		private static readonly ThreadLocal<RSACryptoServiceProvider> rsa;
@@ -95,8 +95,19 @@ namespace Raven.Database.Server.Security.OAuth
 		public static string DecryptAsymmetric(string data)
 		{
 			var bytes = OAuthHelper.ParseBytes(data);
-			var decrypted = rsa.Value.Decrypt(bytes, true);
-			return Encoding.UTF8.GetString(decrypted);
+
+			var encryptedKeyAndIv = bytes.Take(256).ToArray();
+			var decrypted = rsa.Value.Decrypt(encryptedKeyAndIv, true);
+
+			var key = decrypted.Take(32).ToArray();
+			var iv = decrypted.Skip(32).ToArray();
+		
+			using (var decryptor = aes.Value.CreateDecryptor(key, iv))
+			{
+				var block = decryptor.TransformEntireBlock(bytes.Skip(256).ToArray());
+				return Encoding.UTF8.GetString(block);
+			}
+
 		}
 
 		public static DateTime? ParseDateTime(string data)

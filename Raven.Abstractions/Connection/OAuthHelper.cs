@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Connection
 {
@@ -29,7 +28,7 @@ namespace Raven.Abstractions.Connection
 			public const string WWWAuthenticateHeaderKey = "Raven ";
 		}
 
-		private static readonly ThreadLocal<SHA1> sha1 = new ThreadLocal<SHA1>(() => SHA1.Create());
+		private static readonly ThreadLocal<SHA1> sha1 = new ThreadLocal<SHA1>(SHA1.Create);
 
 
 		/**** Cryptography *****/
@@ -44,13 +43,30 @@ namespace Raven.Abstractions.Connection
 		public static string EncryptAssymetric(RSAParameters parameters, string data)
 		{
 			var bytes = Encoding.UTF8.GetBytes(data);
-
+			var results = new List<byte>();
 			using (var rsa = new RSACryptoServiceProvider())
 			{
 				rsa.ImportParameters(parameters);
-				var encrypted = rsa.Encrypt(bytes, true);
-				return BytesToString(encrypted);
+				using (var aesKeyGen = new AesManaged
+				{
+					KeySize = 256,
+				})
+				{
+					aesKeyGen.GenerateKey();
+					aesKeyGen.GenerateIV();
+
+					var encryptedKey = rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray(), true);
+					results.AddRange(encryptedKey);
+
+					using(var encryptor = aesKeyGen.CreateEncryptor())
+					{
+						var encryptedBytes = encryptor.TransformEntireBlock(bytes);
+						results.AddRange(encryptedBytes);
+					}
+				}
 			}
+			return BytesToString(results.ToArray());
+
 		}
 
 		/**** On the wire *****/
