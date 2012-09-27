@@ -62,7 +62,6 @@ namespace Raven.Bundles.Tests.Replication
 			if (configureStore != null)
 				configureStore(documentStore);
 			documentStore.Initialize();
-			documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
 
 			stores.Add(documentStore);
 			return documentStore;

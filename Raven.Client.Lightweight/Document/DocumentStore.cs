@@ -653,29 +653,10 @@ namespace Raven.Client.Document
 				authRequest.ContentLength = 0;
 			}
 
-			if (authRequest.RequestUri.Scheme.Equals("https", StringComparison.InvariantCultureIgnoreCase) == false &&
-			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false &&
-			   IsLocalHost(authRequest) == false)
-				throw new InvalidOperationException(BasicOAuthOverHttpError);
-
 			return authRequest;
 		}
 #endif
 
-		private bool IsLocalHost(HttpWebRequest authRequest)
-		{
-			var host = authRequest.RequestUri.DnsSafeHost;
-			if (host.Equals("localhost") || host.Equals("localhost.fiddler"))
-				return true;
-#if !SILVERLIGHT
-			if (Environment.MachineName.Equals(host, StringComparison.InvariantCultureIgnoreCase))
-				return true;
-#endif
-			if (host == "::1" || host == "127.0.0.1")
-				return true;
-			return false;
-
-		}
 
 		/// <summary>
 		/// validate the configuration for the document store
@@ -890,12 +871,5 @@ namespace Raven.Client.Document
 		public int MaxNumberOfCachedRequests { get; set; }
 #endif
 
-		private const string BasicOAuthOverHttpError = @"Attempting to authenticate using basic security over HTTP would expose user credentials (including the password) in clear text to anyone sniffing the network.
-Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.
-You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTokenServer' configuration value), or setup your own behavior by providing a value for:
-	documentStore.Conventions.HandleUnauthorizedResponse
-If you are on an internal network or requires this for testing, you can disable this warning by calling:
-	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
-";
 	}
 }

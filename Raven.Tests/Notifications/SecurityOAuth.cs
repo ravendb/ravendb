@@ -57,9 +57,6 @@ namespace Raven.Tests.Notifications
 				Url = "http://localhost:8079",
 			}.Initialize())
 			{
-				store.JsonRequestFactory.
-					EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
-					true;
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
