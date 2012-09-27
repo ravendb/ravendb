@@ -10,7 +10,6 @@ using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Extensions.Internal;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
@@ -53,18 +52,26 @@ namespace Raven.Database.Server.Security.OAuth
 				requestContents = reader.ReadToEnd();
 
 			var requestContentsDictionary = OAuthHelper.ParseDictionary(requestContents);
-			var rsaExponent = requestContentsDictionary.TryGetValue(OAuthHelper.Keys.RSAExponent);
-			var rsaModulus = requestContentsDictionary.TryGetValue(OAuthHelper.Keys.RSAModulus);
-			if (!rsaExponent.SequenceEqual(OAuthServerHelper.RSAExponent) || !rsaModulus.SequenceEqual(OAuthServerHelper.RSAModulus))
+			var rsaExponent = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);
+			var rsaModulus = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus);
+			if (rsaExponent == null || rsaModulus == null || 
+				!rsaExponent.SequenceEqual(OAuthServerHelper.RSAExponent) || !rsaModulus.SequenceEqual(OAuthServerHelper.RSAModulus))
 			{
 				RespondWithChallenge(context);
 				return;
 			}
 
-			var challengeDictionary = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptAsymmetric(requestContentsDictionary.TryGetValue(OAuthHelper.Keys.EncryptedData)));
-			var apiKeyName = challengeDictionary.TryGetValue(OAuthHelper.Keys.APIKeyName);
-			var challenge = challengeDictionary.TryGetValue(OAuthHelper.Keys.Challenge);
-			var response = challengeDictionary.TryGetValue(OAuthHelper.Keys.Response);
+			var encryptedData = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.EncryptedData);
+			if(string.IsNullOrEmpty(encryptedData))
+			{
+				RespondWithChallenge(context);
+				return;
+			}
+
+			var challengeDictionary = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptAsymmetric(encryptedData));
+			var apiKeyName = challengeDictionary.GetOrDefault(OAuthHelper.Keys.APIKeyName);
+			var challenge = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge);
+			var response = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Response);
 
 			if (string.IsNullOrEmpty(apiKeyName) || string.IsNullOrEmpty(challenge) || string.IsNullOrEmpty(response))
 			{
@@ -81,7 +88,13 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 
 			var challengeData = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptSymmetric(challenge));
-			var challengeTimestamp = OAuthServerHelper.ParseDateTime(challengeData.TryGetValue(OAuthHelper.Keys.ChallengeTimestamp));
+			var timestampStr = challengeData.GetOrDefault(OAuthHelper.Keys.ChallengeTimestamp);
+			if(string.IsNullOrEmpty(timestampStr))
+			{
+				RespondWithChallenge(context);
+				return;
+			}
+			var challengeTimestamp = OAuthServerHelper.ParseDateTime(timestampStr);
 			if (challengeTimestamp + MaxChallengeAge < SystemTime.UtcNow || challengeTimestamp > SystemTime.UtcNow)
 			{
 				// The challenge is either old or from the future 

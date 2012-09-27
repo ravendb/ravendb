@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
@@ -7,7 +6,6 @@ using System.Text;
 using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Extensions.Internal;
 
 namespace Raven.Database.Server.Security.OAuth
 {

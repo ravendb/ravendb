@@ -6,8 +6,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Extensions.Internal;
 
 namespace Raven.Abstractions.Connection
 {

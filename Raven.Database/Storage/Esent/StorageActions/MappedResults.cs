@@ -571,7 +571,7 @@ namespace Raven.Storage.Esent.StorageActions
 		private RavenJObject LoadReducedResults(string key)
 		{
 			using (Stream stream = new BufferedStream(new ColumnStream(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["data"])))
-			using (var dataStream = documentCodecs.ReverseAggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
+			using (var dataStream = documentCodecs.Aggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
 			{
 				return dataStream.ToJObject();
 			}
