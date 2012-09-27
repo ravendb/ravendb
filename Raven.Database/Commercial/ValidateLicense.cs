@@ -115,11 +115,11 @@ namespace Raven.Database.Commercial
 
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam) == false || maxRam != "unlimited")
-				MemoryStatistics.MemoryLimit = int.Parse(licenseAttributes["maxRamUtilization"]);
+				MemoryStatistics.MemoryLimit = int.Parse(maxRam);
 			
 			string maxParallel;
 			if (licenseAttributes.TryGetValue("maxParallelism", out maxParallel) == false || maxParallel != "unlimited")
-				MemoryStatistics.MaxParallelism = int.Parse(licenseAttributes["maxRamUtilization"]);
+				MemoryStatistics.MaxParallelism = int.Parse(maxParallel);
 		}
 
 		private static string GetLicenseText(DocumentDatabase database)
