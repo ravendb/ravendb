@@ -1,16 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
+﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Studio.Features.Query;
@@ -63,7 +53,7 @@ namespace Raven.Studio.Features.Documents
                 return
                     DatabaseCommands.QueryAsync(indexName, query, null)
                         .ContinueWith(
-                            t => new DocumentAndNavigationInfo()
+                            t => new DocumentAndNavigationInfo
                                      {
                                          Document = t.Result.Results.Count > 0 ? t.Result.Results[0].ToJsonDocument() : null,
                                          TotalDocuments = t.Result.TotalResults,
@@ -82,7 +72,7 @@ namespace Raven.Studio.Features.Documents
 
                 return TaskEx.WhenAll(getDocumentTask, getStatisticsTask)
                     .ContinueWith(_ =>
-                                  new DocumentAndNavigationInfo()
+                                  new DocumentAndNavigationInfo
                                       {
                                           Document = getDocumentTask.Result,
                                           Index = itemIndex,
@@ -149,33 +139,28 @@ namespace Raven.Studio.Features.Documents
                 {
                     return new[]
                                {
-                                   new PathSegment() {Name = "Documents", Url = "/documents"},
-                                   new PathSegment()
-                                       {Name = collectionName, Url = "/collections?name=" + collectionName}
+                                   new PathSegment {Name = "Documents", Url = "/documents"},
+                                   new PathSegment {Name = collectionName, Url = "/collections?name=" + collectionName}
                                };
                 }
             }
 
             return new[]
                        {
-                           new PathSegment() { Name = "Indexes", Url = "/Indexes"},
-                           new PathSegment() { Name = indexName, Url = "/indexes/" + indexName},
-                           new PathSegment() { Name = "Query", Url = "/query/" + indexName},
+                           new PathSegment { Name = "Indexes", Url = "/Indexes"},
+                           new PathSegment { Name = indexName, Url = "/indexes/" + indexName},
+                           new PathSegment { Name = "Query", Url = "/query/" + indexName},
                        };
         }
 
         private string GetCollectionName(IndexQuery indexQuery)
         {
             if (indexQuery == null || indexQuery.Query == null)
-            {
                 return null;
-            }
 
             var matches = Regex.Match(indexQuery.Query, @"Tag:(\w+)");
             if (matches.Success)
-            {
                 return matches.Groups[1].Value;
-            }
 
             return null;
         }
@@ -188,15 +173,7 @@ namespace Raven.Studio.Features.Documents
             int.TryParse(parser.GetQueryParam("itemIndex"), out itemIndex);
 
             var queryString = parser.GetQueryParam("query");
-            IndexQuery query;
-            if (string.IsNullOrEmpty(queryString))
-            {
-                query = new IndexQuery();
-            }
-            else
-            {
-                query = IndexQueryHelpers.FromQueryString(queryString);
-            }
+            var query = string.IsNullOrEmpty(queryString) ? new IndexQuery() : IndexQueryHelpers.FromQueryString(queryString);
 
             return new IndexDocumentsNavigator(id, itemIndex, parser.GetQueryParam("indexName"), query);
         }

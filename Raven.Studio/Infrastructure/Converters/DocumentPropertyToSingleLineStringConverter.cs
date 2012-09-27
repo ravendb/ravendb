@@ -23,22 +23,14 @@ namespace Raven.Studio.Infrastructure.Converters
                 stringValue = stringValue.Replace(Environment.NewLine, " ").Trim('"');
             }
             else if (value is RavenJToken)
-            {
                 stringValue = (value as RavenJToken).ToString(Formatting.None).Trim('"');
-            }
             else if (value != null)
-            {
                 stringValue = value.ToString();
-            }
             else
-            {
                 stringValue = "";
-            }
 
             if (MaxLength > 0 && stringValue.Length > MaxLength)
-            {
                 stringValue = stringValue.Substring(0,MaxLength) + "...";
-            }
 
             return stringValue;
         }

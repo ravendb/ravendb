@@ -31,7 +31,7 @@ namespace Raven.Studio.Controls
 			if (textblock == null)
 				return;
 
-			var checkbox = this.FindName(textblock.Text.Split(null)[0]) as CheckBox;
+			var checkbox = FindName(textblock.Text.Split(null)[0]) as CheckBox;
 			if (checkbox == null)
 				return;
 			checkbox.IsChecked = !checkbox.IsChecked;
@@ -66,4 +66,3 @@ namespace Raven.Studio.Controls
 		}
 	}
 }
-

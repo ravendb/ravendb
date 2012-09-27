@@ -29,7 +29,7 @@ namespace Raven.Studio.Infrastructure
 				var toRemove = this.Except(items, objectComparer).ToArray();
 				var toDispose = items.Except(toAdd, objectComparer).OfType<IDisposable>().ToArray();
 
-				for (int i = 0; i < toRemove.Length; i++)
+				for (var i = 0; i < toRemove.Length; i++)
 				{
 					var remove = toRemove[i];
 					var add = toAdd.FirstOrDefault(x => Equals(ExtractKey(x), ExtractKey(remove)));
@@ -41,7 +41,7 @@ namespace Raven.Studio.Infrastructure
 					SetItem(Items.IndexOf(remove), add);
 					toAdd.Remove(add);
 				}
-				for (int i = 0; i < toAdd.Count; i++)
+				for (var i = 0; i < toAdd.Count; i++)
 				{
 					var add = toAdd[i];
 					Insert(i, add);

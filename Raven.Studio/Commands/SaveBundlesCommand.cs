@@ -114,10 +114,7 @@ namespace Raven.Studio.Commands
 			}
 
 			session.SaveChangesAsync()
-				.ContinueOnSuccessInTheUIThread(() =>
-				{
-					ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName));
-				});
+				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 	}
 }

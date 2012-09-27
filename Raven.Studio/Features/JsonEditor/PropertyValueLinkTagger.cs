@@ -1,20 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Text.RegularExpressions;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Parsing.LLParser.Implementation;
 using ActiproSoftware.Text.Tagging;
 using ActiproSoftware.Text.Tagging.Implementation;
-using ActiproSoftware.Text.Utility;
 
 namespace Raven.Studio.Features.JsonEditor
 {
@@ -61,9 +49,7 @@ namespace Raven.Studio.Features.JsonEditor
         private LinkTag GetLinkTag(JsonStringNode stringNode)
         {
             if (string.IsNullOrEmpty(stringNode.Text))
-            {
                 return null;
-            }
 
             if (idManager.IsId(stringNode.Text))
             {
@@ -73,14 +59,11 @@ namespace Raven.Studio.Features.JsonEditor
                     Url = stringNode.Text
                 };
             }
-            else if (IsUrl(stringNode.Text))
-            {
+            
+            if (IsUrl(stringNode.Text))
                 return new LinkTag() { NavigationType = LinkTagNavigationType.ExternalUrl, Url = stringNode.Text };
-            }
-            else
-            {
-                return null;
-            }
+             
+            return null;
         }
 
         private bool IsUrl(string text)
@@ -94,14 +77,7 @@ namespace Raven.Studio.Features.JsonEditor
         private ITextSnapshot GetSnapshot(ICodeDocument document)
         {
             var parseData = document.ParseData as LLParseData;
-            if (parseData != null)
-            {
-                return parseData.Snapshot;
-            }
-            else
-            {
-                return document.CurrentSnapshot;
-            }
+            return parseData != null ? parseData.Snapshot : document.CurrentSnapshot;
         }
     }
 }

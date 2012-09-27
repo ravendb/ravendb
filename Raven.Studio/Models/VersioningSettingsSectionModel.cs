@@ -7,7 +7,6 @@ using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Connection.Async;
-using Raven.Client.Linq;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
 

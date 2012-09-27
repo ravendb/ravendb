@@ -1,6 +1,4 @@
-﻿using System;
-using System.Net;
-using ActiproSoftware.Text;
+﻿using ActiproSoftware.Text;
 using ActiproSoftware.Text.Lexing;
 using ActiproSoftware.Text.Parsing.LLParser.Implementation;
 
@@ -14,10 +12,10 @@ namespace Raven.Studio.Features.JsonEditor
 
         protected override IToken GetNextToken()
         {
-            IToken token = base.GetNextToken();
+            var token = base.GetNextToken();
 
             // Loop to skip over tokens that are insignificant to the parser
-            while (!this.IsAtEnd)
+            while (!IsAtEnd)
             {
                 switch (token.Id)
                 {
@@ -31,7 +29,6 @@ namespace Raven.Studio.Features.JsonEditor
             }
 
             return token;
-
         }
     }
 }

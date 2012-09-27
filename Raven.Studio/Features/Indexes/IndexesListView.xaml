@@ -5,8 +5,7 @@
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
 			 xmlns:Models="clr-namespace:Raven.Studio.Models"
-			 xmlns:Controls="clr-namespace:System.Windows.Controls"
-			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
 			 xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
@@ -184,10 +183,10 @@
 		</toolkit:HeaderedContentControl.Header>
 
 		<ListBox x:Name="IndexesList" 
-							   Style="{StaticResource Style_ListBox_Indexes}"
-							   ItemsSource="{Binding GroupedIndexes}"
-							   ItemTemplate="{StaticResource IndexItemTemplate}"
-							   Margin="10,5">
+                 Style="{StaticResource Style_ListBox_Indexes}"
+                 ItemsSource="{Binding GroupedIndexes}"
+                 ItemTemplate="{StaticResource IndexItemTemplate}"
+                 Margin="10,5">
 			<i:Interaction.Behaviors>
 				<Behaviors:SelectItemOnRightClick/>
 				<Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
@@ -195,14 +194,13 @@
 			<ContextMenu:ContextMenuService.ContextMenu>
 				<ContextMenu:ContextMenu x:Name="IndexesContextMenu">
 					<ContextMenu:MenuItem Header="Delete index"
-									   Command="{Binding DeleteIndex}"/>
+                                          Command="{Binding DeleteIndex}"/>
 					<ContextMenu:MenuItem Header="Promote to auto index"
-									   Command="{Binding PromoteIndex}"/>
+                                          Command="{Binding PromoteIndex}"/>
 					<ContextMenu:MenuItem Header="Reset index"
-									   Command="{Binding ResetIndex}"/>
+                                          Command="{Binding ResetIndex}"/>
 				</ContextMenu:ContextMenu>
 			</ContextMenu:ContextMenuService.ContextMenu>
 		</ListBox>
 	</toolkit:HeaderedContentControl>
-
 </UserControl>

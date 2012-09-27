@@ -67,37 +67,30 @@ namespace Raven.Studio.Infrastructure.ContextMenu
         protected override void PrepareContainerForItemOverride(DependencyObject element, object item)
         {
             base.PrepareContainerForItemOverride(element, item);
-            MenuItem menuItem = element as MenuItem;
+            var menuItem = element as MenuItem;
             if (null != menuItem)
             {
                 menuItem.ParentMenuBase = this;
                 if (menuItem != item)
                 {
                     // Copy the ItemsControl properties from parent to child
-                    DataTemplate itemTemplate = ItemTemplate;
-                    Style itemContainerStyle = ItemContainerStyle;
+                    var itemTemplate = ItemTemplate;
+                    var itemContainerStyle = ItemContainerStyle;
                     if (itemTemplate != null)
-                    {
-                        menuItem.SetValue(HeaderedItemsControl.ItemTemplateProperty, itemTemplate);
-                    }
+                        menuItem.SetValue(ItemTemplateProperty, itemTemplate);
+                    
                     if (itemContainerStyle != null && HasDefaultValue(menuItem, HeaderedItemsControl.ItemContainerStyleProperty))
-                    {
                         menuItem.SetValue(HeaderedItemsControl.ItemContainerStyleProperty, itemContainerStyle);
-                    }
 
                     // Copy the Header properties from parent to child
                     if (HasDefaultValue(menuItem, HeaderedItemsControl.HeaderProperty))
-                    {
                         menuItem.Header = item;
-                    }
+                   
                     if (itemTemplate != null)
-                    {
                         menuItem.SetValue(HeaderedItemsControl.HeaderTemplateProperty, itemTemplate);
-                    }
+                    
                     if (itemContainerStyle != null)
-                    {
-                        menuItem.SetValue(HeaderedItemsControl.StyleProperty, itemContainerStyle);
-                    }
+                        menuItem.SetValue(StyleProperty, itemContainerStyle);
                 }
             }
         }

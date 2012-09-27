@@ -40,13 +40,9 @@ namespace Raven.Studio.Infrastructure.Converters
         {
             var enumValuesWhenVisible = GetValuesWhenVisible();
             if (enumValuesWhenVisible.Any())
-            {
                 return enumValuesWhenVisible.Contains(value) ? Visibility.Visible : Visibility.Collapsed;
-            }
-            else
-            {
-                return GetValuesWhenCollapsed().Contains(value) ? Visibility.Collapsed : Visibility.Visible;
-            }
+               
+            return GetValuesWhenCollapsed().Contains(value) ? Visibility.Collapsed : Visibility.Visible;
         }
 
         private object[] GetValuesWhenVisible()
@@ -87,7 +83,5 @@ namespace Raven.Studio.Infrastructure.Converters
         {
             throw new NotImplementedException();
         }
-
-
     }
 }

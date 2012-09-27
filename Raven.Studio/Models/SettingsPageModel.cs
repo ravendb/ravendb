@@ -47,24 +47,16 @@ namespace Raven.Studio.Models
 					if (activeBundles != null)
 					{
 						if (activeBundles.Contains("Quotas"))
-						{
 							Settings.Sections.Add(new QuotaSettingsSectionModel());
-						}
 
 						if (activeBundles.Contains("Replication"))
-						{
 							Settings.Sections.Add(new ReplicationSettingsSectionModel());
-						}
 
 						if (activeBundles.Contains("Versioning"))
-						{
 							Settings.Sections.Add(new VersioningSettingsSectionModel());
-						}
 
                         if (activeBundles.Contains("Authorization"))
-                        {
                             Settings.Sections.Add(new AuthorizationSettingsSectionModel());
-                        }
 					}
 
 	                foreach (var settingsSectionModel in Settings.Sections)

@@ -1,7 +1,5 @@
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 
@@ -18,14 +16,7 @@ namespace Raven.Studio.Models
 
 		public DocumentsModel Documents
 		{
-			get
-			{
-				if (documents == null )
-				{
-				    documents = CreateDocumentsModel();
-				}
-				return documents;
-			}
+			get { return documents ?? (documents = CreateDocumentsModel()); }
 		}
 
 		private static DocumentsModel CreateDocumentsModel()

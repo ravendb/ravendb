@@ -15,32 +15,24 @@ namespace Raven.Studio.Infrastructure
         private void HandleUnloaded(object sender, RoutedEventArgs e)
         {
             if (HasModel)
-            {
                 Model.NotifyViewUnloaded();
-            }
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
         {
             if (HasModel)
-            {
                 Model.NotifyViewLoaded();
-            }
         }
 
         private void HandleDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             var oldModel = e.OldValue as DialogViewModel;
             if (oldModel != null)
-            {
                 oldModel.CloseRequested -= HandleCloseRequested;
-            }
 
             var newModel = e.NewValue as DialogViewModel;
             if (newModel != null)
-            {
                 newModel.CloseRequested += HandleCloseRequested;
-            }
         }
 
         private void HandleCloseRequested(object sender, CloseRequestedEventArgs e)

@@ -23,22 +23,22 @@ namespace Raven.Studio.Controls
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = true;
+			DialogResult = true;
 		}
 
 		private void CancelButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = false;
+			DialogResult = false;
 		}
 
 		private void CheckBox_Checked(object sender, RoutedEventArgs e)
 		{
-			this.AdvancedSettings.Visibility = Visibility.Visible;
+			AdvancedSettings.Visibility = Visibility.Visible;
 		}
 
 		private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
 		{
-			this.AdvancedSettings.Visibility = Visibility.Collapsed;
+			AdvancedSettings.Visibility = Visibility.Collapsed;
 		}
 
 		private void Toggle(object sender, RoutedEventArgs e)
@@ -47,7 +47,7 @@ namespace Raven.Studio.Controls
 			if (textblock == null)
 				return;
 
-			var checkbox = this.FindName("Show" + textblock.Text.Split(null)[0]) as CheckBox;
+			var checkbox = FindName("Show" + textblock.Text.Split(null)[0]) as CheckBox;
 			if (checkbox == null)
 				return;
 			checkbox.IsChecked = !checkbox.IsChecked;
@@ -66,7 +66,7 @@ namespace Raven.Studio.Controls
 			if (textblock == null)
 				return;
 
-			var checkbox = this.FindName(textblock.Text.Split(null)[0]) as CheckBox;
+			var checkbox = FindName(textblock.Text.Split(null)[0]) as CheckBox;
 			if (checkbox == null)
 				return;
 			checkbox.IsChecked = !checkbox.IsChecked;

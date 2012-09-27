@@ -48,9 +48,7 @@ namespace Raven.Studio.Models
 			{
 				var newItem = e.NewItems[0] as INotifyPropertyChanged;
 				if (newItem != null)
-				{
 					newItem.PropertyChanged += HandleChildItemChanged;
-				}
 			}
 		}
 
@@ -64,9 +62,7 @@ namespace Raven.Studio.Models
 			index = indexDefinition;
 
 			if (index.Maps.Count == 0)
-			{
 				index.Maps.Add("");
-			}
 
 			Maps.Set(index.Maps.Select(x => new MapItem { Text = x }));
 
@@ -118,18 +114,11 @@ namespace Raven.Studio.Models
 
 		public override bool CanLeavePage()
 		{
-			if (hasUnsavedChanges)
-			{
-				return AskUser.Confirmation("Edit Index",
-											"There are unsaved changes to this index. Are you sure you want to continue?");
-			}
-			else
-			{
-				return true;
-			}
+		    return !hasUnsavedChanges || AskUser.Confirmation("Edit Index",
+		                                                      "There are unsaved changes to this index. Are you sure you want to continue?");
 		}
 
-		public static void HandleIndexNotFound(string name)
+	    public static void HandleIndexNotFound(string name)
 		{
 			if (string.IsNullOrWhiteSpace(name) == false)
 			{
@@ -203,9 +192,7 @@ namespace Raven.Studio.Models
 		private void MarkAsDirtyIfSignificant(string oldValue, string newValue)
 		{
 			if (!(string.IsNullOrEmpty(oldValue) && string.IsNullOrEmpty(newValue)))
-			{
 				MarkAsDirty();
-			}
 		}
 
 		//public string MapUrl
@@ -471,9 +458,7 @@ namespace Raven.Studio.Models
 			private void PutIndexNameInUrl(string name)
 			{
 				if (index.IsNewIndex || index.Header != name)
-				{
 					UrlUtil.Navigate("/indexes/" + name, true);
-				}
 			}
 		}
 

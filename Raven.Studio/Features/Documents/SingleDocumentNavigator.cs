@@ -1,18 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Abstractions.Data;
 using Raven.Studio.Framework;
-using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -62,15 +51,14 @@ namespace Raven.Studio.Features.Documents
             {
                 return new[]
                            {
-                               new PathSegment() {Name = "Documents", Url = "/documents"},
-                               new PathSegment()
-                                   {Name = entityType, Url = "/collections?name=" + entityType}
+                               new PathSegment {Name = "Documents", Url = "/documents"},
+                               new PathSegment {Name = entityType, Url = "/collections?name=" + entityType}
                            };
             }
 
             return new[]
                        {
-                           new PathSegment() { Name = "Documents", Url = "/documents"}
+                           new PathSegment { Name = "Documents", Url = "/documents"}
                        };
         }
     }

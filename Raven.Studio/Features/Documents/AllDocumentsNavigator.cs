@@ -1,15 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Abstractions.Data;
 using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
@@ -55,8 +45,7 @@ namespace Raven.Studio.Features.Documents
                                                   ParentPath = GetParentPath(t.Result[0]),
                                                   UrlForFirst = GetUrlForIndex(0),
                                                   UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
-                                                  UrlForNext =
-                                                      itemIndex < totalDocuments - 1
+                                                  UrlForNext = itemIndex < totalDocuments - 1
                                                           ? GetUrlForIndex(itemIndex + 1)
                                                           : null,
                                                   UrlForLast = GetUrlForIndex(totalDocuments - 1),
@@ -78,8 +67,7 @@ namespace Raven.Studio.Features.Documents
                                             ParentPath = GetParentPath(t.Result),
                                             UrlForFirst = GetUrlForIndex(0),
                                             UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
-                                            UrlForNext =
-                                                itemIndex < totalDocuments - 1
+                                            UrlForNext = itemIndex < totalDocuments - 1
                                                     ? GetUrlForIndex(itemIndex + 1)
                                                     : null,
                                             UrlForLast = GetUrlForIndex(totalDocuments - 1),
@@ -94,16 +82,11 @@ namespace Raven.Studio.Features.Documents
             // since we're working on a background thread, we have to be prepare for observable to change underneath us.
             var databaseModel = ApplicationModel.Database.Value;
             if (databaseModel == null)
-            {
                 return 0;
-            }
-
 
             var databaseStatistics = databaseModel.Statistics.Value;
             if (databaseStatistics == null)
-            {
                 return 0;
-            }
 
             return databaseStatistics.CountOfDocuments;
         }
@@ -126,9 +109,8 @@ namespace Raven.Studio.Features.Documents
         protected IList<PathSegment> GetParentPath(JsonDocument result)
         {
             if (result == null)
-            {
                 return null;
-            }
+
             var entityType = result.Metadata.IfPresent<string>(Constants.RavenEntityName);
 
             if (entityType != null)

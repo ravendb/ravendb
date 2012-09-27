@@ -1,18 +1,13 @@
 ﻿<Infrastructure:View x:Class="Raven.Studio.Features.Settings.SettingsView" 
-						 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
-						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
-						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-						 mc:Ignorable="d" 
-						 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-						 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-    
-						 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Controls="clr-namespace:System.Windows.Controls"
-						 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-                         xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
-                         xmlns:Models="clr-namespace:Raven.Studio.Models"
-                         xmlns:Settings="clr-namespace:Raven.Studio.Features.Settings" d:DesignWidth="640" d:DesignHeight="480"
-                        d:DataContext="{d:DesignInstance Models:SettingsModel}">
+                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                     mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
+                     xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     xmlns:Models="clr-namespace:Raven.Studio.Models"
+                     xmlns:Settings="clr-namespace:Raven.Studio.Features.Settings" 
+                     d:DataContext="{d:DesignInstance Models:SettingsModel}">
 
 	<UserControl.Resources>
         <DataTemplate DataType="Models:QuotaSettingsSectionModel">
@@ -39,7 +34,7 @@
 			</Grid.ColumnDefinitions>
 
 			<ListBox ItemsSource="{Binding Sections, Mode=OneWay}" SelectedValue="{Binding SelectedSection.Value, Mode=TwoWay}"
-				    Margin="0,10,10,0"
+                     Margin="0,10,10,0"
                      Grid.Column="0">
             <ListBox.ItemTemplate>
                 <DataTemplate>

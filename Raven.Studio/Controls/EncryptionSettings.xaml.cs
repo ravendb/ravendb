@@ -34,4 +34,3 @@ namespace Raven.Studio.Controls
 		}
 	}
 }
-

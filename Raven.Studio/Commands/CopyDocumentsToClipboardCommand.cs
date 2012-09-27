@@ -27,7 +27,6 @@ namespace Raven.Studio.Commands
                 .Select(x => string.IsNullOrEmpty(x.Id) ? "" : x.Id + newLine + x.Document.DataAsJson.ToString(Formatting.Indented))
                 .ToList();
 
-            
             Clipboard.SetText(documents.Count > 1 ? string.Join(newLine+newLine, documents) : documents.First());
         }
 	}

@@ -150,7 +150,6 @@ namespace Raven.Studio.Features.Query
                                     storage.DeleteFile(filePath);
                                 }
                             }
-
                         })
                     .Catch();
             }
@@ -160,6 +159,7 @@ namespace Raven.Studio.Features.Query
         {
 			if (databaseName == Constants.SystemDatabase)
 				return "QueryHistory/System";
+
             return "QueryHistory/" + databaseName;
         }
 
@@ -190,14 +190,7 @@ namespace Raven.Studio.Features.Query
         {
             var savedQuery = recentQueries.FirstOrDefault(q => q.IndexName == indexName);
 
-            if (savedQuery != null)
-            {
-                return ToQueryState(savedQuery);
-            }
-            else
-            {
-                return null;
-            }
+            return savedQuery != null ? ToQueryState(savedQuery) : null;
         }
 
         private static QueryState ToQueryState(SavedQuery savedQuery)
@@ -212,8 +205,9 @@ namespace Raven.Studio.Features.Query
 
         protected void OnQueriesChanged(EventArgs e)
         {
-            EventHandler<EventArgs> handler = QueriesChanged;
-            if (handler != null) handler(this, e);
+            var handler = QueriesChanged;
+            if (handler != null) 
+                handler(this, e);
         }
 
         public bool IsHistoryLoaded
@@ -285,9 +279,7 @@ namespace Raven.Studio.Features.Query
                                                   var lastAccessTime = storage.GetLastAccessTime(path);
 
                                                   if (lastAccessTime > currentTime)
-                                                  {
                                                       continue;
-                                                  }
 
                                                   storage.DeleteFile(path);
                                               }

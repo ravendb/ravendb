@@ -7,8 +7,7 @@
 		  xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks"
 		  xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
           xmlns:MarkupExtensions="clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions" mc:Ignorable="d"
-		  d:DesignWidth="640"
-		  d:DesignHeight="480"
+		  d:DesignWidth="640" d:DesignHeight="480"
 		  Title="Tasks"
 		  DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
 
@@ -17,33 +16,32 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-
         </Grid.RowDefinitions>
 
-
         <Border Background="{StaticResource Brush_HeaderBackground}"
-                    BorderBrush="{StaticResource Brush_HeaderBorder}"
-                    BorderThickness="1,1,1,0"
-					CornerRadius="4,4,0,0"
-					toolkit:DockPanel.Dock="Top"></Border>
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1,1,1,0"
+                CornerRadius="4,4,0,0"
+                toolkit:DockPanel.Dock="Top">
+        </Border>
         <StackPanel Orientation="Horizontal">
             <Image Style="{StaticResource Style_Image_PageHeader}"
-                               Source="{StaticResource Image_Tasks_Small}"/>
+                   Source="{StaticResource Image_Tasks_Small}"/>
             <TextBlock Text="Tasks"
-								   Style="{StaticResource Style_Text_Header}" />
+                       Style="{StaticResource Style_Text_Header}" />
         </StackPanel>
 
         <Border Background="{StaticResource Brush_ToolbarBackground}"
-                    BorderBrush="{StaticResource Brush_HeaderBorder}"
-                    BorderThickness="1,0,1,1"
-					CornerRadius="0"
-					Grid.Row="1"/>
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1,0,1,1"
+                CornerRadius="0"
+                Grid.Row="1"/>
         <ListBox Grid.Row="1"
-							 Margin="5"
-							 ItemsSource="{Binding Tasks}"
-							 SelectedItem="{Binding Path=SelectedTask.Value, Mode=TwoWay}"
-							 Style="{StaticResource Style_ListBox_HeaderOptions}"
-							 Padding="0">
+                 Margin="5"
+                 ItemsSource="{Binding Tasks}"
+                 SelectedItem="{Binding Path=SelectedTask.Value, Mode=TwoWay}"
+                 Style="{StaticResource Style_ListBox_HeaderOptions}"
+                 Padding="0">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal">
@@ -53,7 +51,6 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-
         <Tasks:TaskView  Grid.Row="2"/>
     </Grid>
 </sdk:Page>

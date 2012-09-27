@@ -27,10 +27,10 @@
 					<ColumnDefinition Width="20" />
 				</Grid.ColumnDefinitions>
 				<Button Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" 
-                                 Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteReplication}" 
-                                 CommandParameter="{Binding}" VerticalAlignment="Center"
-                                 Style="{StaticResource Style_Button_MouseOverChrome}"
-                                 ToolTipService.ToolTip="Remove this replication configuration">
+                        Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteReplication}" 
+                        CommandParameter="{Binding}" VerticalAlignment="Center"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Remove this replication configuration">
                     <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
 				</Button>
 
@@ -96,7 +96,7 @@
 				<TextBlock Grid.Row="3" Text="Replication Behavior: " VerticalAlignment="Center"/>
 
 				<ComboBox Grid.Row="3" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}"
-							  ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"/>
+                          ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"/>
 			</Grid>
 		</DataTemplate>
 	</UserControl.Resources>
@@ -105,12 +105,12 @@
         <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
             <toolkit:HeaderedContentControl.Header>
                 <StackPanel Orientation="Horizontal"
-						Margin="0,4,4,4"
-						VerticalAlignment="Center">
+                            Margin="0,4,4,4"
+                            VerticalAlignment="Center">
 
                     <Button Command="{Binding AddReplication}"
-						Style="{StaticResource Style_Button_MouseOverChrome}"
-						ToolTipService.ToolTip="Add Replication">
+                            Style="{StaticResource Style_Button_MouseOverChrome}"
+                            ToolTipService.ToolTip="Add Replication">
                         <Button.Content>
                             <StackPanel Orientation="Horizontal">
                                 <Image Source="{StaticResource Image_Add_Tiny}"
@@ -122,11 +122,11 @@
                 </StackPanel>
             </toolkit:HeaderedContentControl.Header>
                 <ListBox Style="{StaticResource Databases_FluidList}"
-							 ItemsSource="{Binding ReplicationDestinations}"
-							 SelectedItem="{Binding SelectedReplication, Mode=TwoWay}"
-							 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
-							 ItemTemplate="{StaticResource ReplicationItemTemplate}"
-							 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                         ItemsSource="{Binding ReplicationDestinations}"
+                         SelectedItem="{Binding SelectedReplication, Mode=TwoWay}"
+                         ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
+                         ItemTemplate="{StaticResource ReplicationItemTemplate}"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
 
 						<i:Interaction.Behaviors>
 							<Behaviors:SelectItemOnRightClick />

@@ -12,7 +12,6 @@ using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 using Raven.Studio.Models;
-using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -38,8 +37,10 @@ namespace Raven.Studio.Features.Documents
 
 			Id = inner.Metadata.IfPresent<string>("@id");
 			LastModified = inner.LastModified ?? DateTime.MinValue;
+
 			if (LastModified.Kind == DateTimeKind.Utc)
 				LastModified = LastModified.ToLocalTime();
+
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
 		}
@@ -85,11 +86,9 @@ namespace Raven.Studio.Features.Documents
 	    private void ProduceTrimmedDocumentView()
 	    {
             if (DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly)
-            {
                 return;
-            }
-
-	        var widthInCharacters = (int)(DocumentSize.Current.Width/CharacterWidth);
+	        
+            var widthInCharacters = (int)(DocumentSize.Current.Width/CharacterWidth);
 	        var heightInLines = (int)(DocumentSize.Current.Height/LineHeight);
 
 	        Task.Factory.StartNew(
@@ -111,10 +110,9 @@ namespace Raven.Studio.Features.Documents
 
 				Guid guid;
 				if (Guid.TryParse(display, out guid))
-				{
 					display = display.Substring(0, 8);
-				}
-				return display;
+				
+                return display;
 			}
 		}
 
@@ -124,31 +122,25 @@ namespace Raven.Studio.Features.Documents
 			var propertyNames = new[] {"Id", "Name"};
 			foreach (var propertyName in propertyNames)
 			{
-				selectedProperty =
-					inner.DataAsJson.FirstOrDefault(x => x.Key.EndsWith(propertyName, StringComparison.InvariantCultureIgnoreCase));
+				selectedProperty = inner.DataAsJson.FirstOrDefault(x => x.Key.EndsWith(propertyName, StringComparison.InvariantCultureIgnoreCase));
 				if (selectedProperty.Key != null)
-				{
 					break;
-				}
 			}
 
 			if (selectedProperty.Key == null) // couldn't find anything, we will use the first one
-			{
 				selectedProperty = inner.DataAsJson.FirstOrDefault();
-			}
 
 			if (selectedProperty.Key == null) // there aren't any properties 
-			{
 				return "{}";
-			}
-			string value = selectedProperty.Value.Type==JTokenType.String ? 
+			
+            var value = selectedProperty.Value.Type==JTokenType.String ? 
 				selectedProperty.Value.Value<string>() : 
 				selectedProperty.Value.ToString(Formatting.None);
-			if (value.Length > 30)
-			{
+			
+            if (value.Length > 30)
 				value = value.Substring(0, 27) + "...";
-			}
-			return value;
+			
+            return value;
 		}
 
 		private string GetIdWithoutPrefixes()

@@ -1,14 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -59,26 +50,12 @@ namespace Raven.Studio.Infrastructure
 
 		private string GetSettingAsString(string key)
 		{
-			if (currentSettings.ContainsKey(key))
-			{
-				return (string)currentSettings[key];
-			}
-			else
-			{
-				return "";
-			}
+		    return currentSettings.ContainsKey(key) ? (string) currentSettings[key] : "";
 		}
 
-		private int GetSettingAsInt(string key)
-		{
-			if (currentSettings.ContainsKey(key))
-			{
-				return Convert.ToInt32(currentSettings[key]);
-			}
-			else
-			{
-				return 0;
-			}
-		}
+	    private int GetSettingAsInt(string key)
+	    {
+	        return currentSettings.ContainsKey(key) ? Convert.ToInt32(currentSettings[key]) : 0;
+	    }
 	}
 }
