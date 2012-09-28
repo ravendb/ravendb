@@ -36,6 +36,14 @@ namespace Raven.Bundles.Replication.Tasks
 			public int Value;
 		}
 
+		public class FailureCount
+		{
+			public int Count;
+		}
+
+		private readonly ConcurrentDictionary<string, FailureCount> replicationFailureStats =
+			new ConcurrentDictionary<string, FailureCount>(StringComparer.InvariantCultureIgnoreCase);
+
 		private DocumentDatabase docDb;
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
@@ -317,6 +325,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void IncrementFailureCount(ReplicationStrategy destination)
 		{
+			var failureCount = replicationFailureStats.GetOrAdd(destination.ConnectionStringOptions.Url, s => new FailureCount());
+			Interlocked.Increment(ref failureCount.Count);
+
 			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
 			var failureInformation = new DestinationFailureInformation { Destination = destination.ConnectionStringOptions.Url };
 			if (jsonDocument != null)
@@ -330,17 +341,18 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void ResetFailureCount(ReplicationStrategy destination)
 		{
+			FailureCount value;
+			replicationFailureStats.TryRemove(destination.ConnectionStringOptions.Url, out value);
 			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
 						 null);
 		}
 
 		private bool IsFirstFailue(ReplicationStrategy destination)
 		{
-			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
-			if (jsonDocument == null)
-				return true;
-			var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
-			return failureInformation.FailureCount == 0;
+			FailureCount value;
+			if(replicationFailureStats.TryGetValue(destination.ConnectionStringOptions.Url, out value))
+				return value.Count == 0;
+			return false;
 		}
 
 		private bool TryReplicationAttachments(ReplicationStrategy destination, RavenJArray jsonAttachments)
