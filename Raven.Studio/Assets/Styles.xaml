@@ -1783,7 +1783,39 @@
 		</Setter>
 	</Style>
 
-	<Thickness x:Key="Margin_MainPageLeftRight">15,0</Thickness>
+    <Style x:Key="Style_Separator_Horizontal" TargetType="ContextMenu:Separator">
+        <Setter Property="Margin" Value="5,5"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu:Separator">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Path Data="M0,0 L1,0" Stretch="Fill" Height="1"  UseLayoutRounding="True">
+                            <Path.Stroke>
+                                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                    <GradientStop Color="#C9C0C0" Offset="0"/>
+                                    <GradientStop Color="#C9C0C0" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Path.Stroke>
+                        </Path>
+                        <Path Grid.Row="1" Data="M0,0 L1,0" Stretch="Fill" Height="1" UseLayoutRounding="True">
+                            <Path.Stroke>
+                                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                    <GradientStop Color="#F8EFEF" Offset="0"/>
+                                    <GradientStop Color="#F8EFEF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Path.Stroke>
+                        </Path>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Thickness x:Key="Margin_MainPageLeftRight">15,0</Thickness>
 
 	<Thickness x:Key="Margin_ContentPage">0,15,0,0</Thickness>
 		

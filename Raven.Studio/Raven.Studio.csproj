@@ -233,6 +233,9 @@
     <Compile Include="Controls\NewDatabase.xaml.cs">
       <DependentUpon>NewDatabase.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\QueryOptionsButton.xaml.cs">
+      <DependentUpon>QueryOptionsButton.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\RecentQueriesButton.xaml.cs">
       <DependentUpon>RecentQueriesButton.xaml</DependentUpon>
     </Compile>
@@ -772,6 +775,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\QueryOptionsButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\RecentQueriesButton.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1112,6 +1119,7 @@
     <Resource Include="Assets\Images\Image_Uncheck_Tiny.png" />
     <Resource Include="Assets\Images\Image_NotObserved_Tiny.png" />
     <Resource Include="Assets\Images\Image_DeleteObserved_Tiny.png" />
+    <Resource Include="Assets\Images\query_options_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

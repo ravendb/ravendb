@@ -65,5 +65,6 @@
     <BitmapImage x:Key="Image_Import_Tiny" UriSource="import_data_tiny.png"/>
     <BitmapImage x:Key="Image_Export_Tiny" UriSource="export_data_tiny.png"/>
     <BitmapImage x:Key="Image_Backup_Tiny" UriSource="backup_tiny.png"/>
+    <BitmapImage x:Key="Image_QueryOptions_Tiny" UriSource="query_options_tiny.png"/>
     
 </ResourceDictionary>
