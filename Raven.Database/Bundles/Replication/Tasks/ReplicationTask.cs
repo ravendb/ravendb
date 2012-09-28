@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -39,6 +40,7 @@ namespace Raven.Bundles.Replication.Tasks
 		public class FailureCount
 		{
 			public int Count;
+			public DateTime Timestamp;
 		}
 
 		private readonly ConcurrentDictionary<string, FailureCount> replicationFailureStats =
@@ -48,6 +50,11 @@ namespace Raven.Bundles.Replication.Tasks
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
 		private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
+		
+		public ConcurrentDictionary<string, FailureCount> ReplicationFailureStats
+		{
+			get { return replicationFailureStats; }
+		}
 
 		private int replicationAttempts;
 		private int workCounter;
@@ -325,8 +332,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void IncrementFailureCount(ReplicationStrategy destination)
 		{
-			var failureCount = replicationFailureStats.GetOrAdd(destination.ConnectionStringOptions.Url, s => new FailureCount());
+			var failureCount = replicationFailureStats.GetOrAdd(destination.ConnectionStringOptions.Url);
 			Interlocked.Increment(ref failureCount.Count);
+			failureCount.Timestamp = SystemTime.UtcNow;
+
 
 			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
 			var failureInformation = new DestinationFailureInformation { Destination = destination.ConnectionStringOptions.Url };
@@ -341,8 +350,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void ResetFailureCount(ReplicationStrategy destination)
 		{
-			FailureCount value;
-			replicationFailureStats.TryRemove(destination.ConnectionStringOptions.Url, out value);
+			var failureCount = replicationFailureStats.GetOrAdd(destination.ConnectionStringOptions.Url);
+			Interlocked.Exchange(ref failureCount.Count, 0);
+			failureCount.Timestamp = SystemTime.UtcNow;
 			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
 						 null);
 		}
