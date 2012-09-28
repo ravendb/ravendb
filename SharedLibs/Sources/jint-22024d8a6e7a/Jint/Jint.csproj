@@ -1,0 +1,223 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{DBF3AEF6-9D13-4E03-899B-561BCFDD9920}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Jint</RootNamespace>
+    <AssemblyName>Jint</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <TargetFrameworkProfile />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Jint.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Antlr3.Runtime, Version=3.1.3.42154, Culture=neutral, PublicKeyToken=3a9cab8f8d22bfb7, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Dependencies\Antlr3.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CachedTypeResolver.cs" />
+    <Compile Include="JsCodeVisitor.cs" />
+    <Compile Include="Marshal\Delegates.cs" />
+    <Compile Include="Marshal\JsFunctionDelegate.cs" />
+    <Compile Include="Marshal\JsPropertyAttribute.cs" />
+    <Compile Include="Marshal\ProxyHelper.cs" />
+    <Compile Include="Marshal\RawJsMethodAttribute.cs" />
+    <Compile Include="Native\ClrFunction.cs" />
+    <Compile Include="Native\INativeIndexer.cs" />
+    <Compile Include="Native\JsLiteral.cs" />
+    <Compile Include="Native\NativeArrayIndexer.cs" />
+    <Compile Include="Native\NativeIndexer.cs" />
+    <Compile Include="Native\NativeOverloadImpl.cs" />
+    <Compile Include="Native\NativeDescriptor.cs" />
+    <Compile Include="Marshal.cs" />
+    <Compile Include="Native\NativeConstructor.cs" />
+    <Compile Include="Native\NativeMethodOverload.cs" />
+    <Compile Include="Native\ILiteral.cs" />
+    <Compile Include="Native\NativeMethod.cs" />
+    <Compile Include="Native\LinkedDescriptor.cs" />
+    <Compile Include="Native\NativeGenericType.cs" />
+    <Compile Include="Native\NativeTypeConstructor.cs" />
+    <Compile Include="Parser\ES3Lexer.cs" />
+    <Compile Include="Parser\ES3Parser.cs" />
+    <Compile Include="PropertyBags\DictionaryPropertyBag.cs" />
+    <Compile Include="PropertyBags\DoubleListPropertyBag.cs" />
+    <Compile Include="Debugger\BreakPoint.cs" />
+    <Compile Include="Debugger\DebugInformation.cs" />
+    <Compile Include="Debugger\SourceCodeDescriptor.cs" />
+    <Compile Include="Expressions\IFunctionDeclaration.cs" />
+    <Compile Include="Expressions\IGenericExpression.cs" />
+    <Compile Include="Expressions\WithStatement.cs" />
+    <Compile Include="Expressions\PropertyDeclarationExpression.cs" />
+    <Compile Include="IConstructorInvoker.cs" />
+    <Compile Include="PropertyBags\HashedPropertyBag.cs" />
+    <Compile Include="PropertyBags\IPropertyBag.cs" />
+    <Compile Include="Native\IGlobal.cs" />
+    <Compile Include="Native\JsApplyFunction.cs" />
+    <Compile Include="Native\Descriptor.cs" />
+    <Compile Include="Native\JsComparer.cs" />
+    <Compile Include="Native\JsConstructor.cs" />
+    <Compile Include="Native\JsError.cs" />
+    <Compile Include="Native\JsErrorConstructor.cs" />
+    <Compile Include="Native\PropertyDescriptor.cs" />
+    <Compile Include="Native\ValueDescriptor.cs" />
+    <Compile Include="Options.cs" />
+    <Compile Include="ExecutionVisitor.cs" />
+    <Compile Include="Expressions\ArrayDeclaration.cs" />
+    <Compile Include="Expressions\CommaOperatorStatement.cs" />
+    <Compile Include="Expressions\ClrIdentifier.cs" />
+    <Compile Include="Expressions\IAssignable.cs" />
+    <Compile Include="Expressions\Identifier.cs" />
+    <Compile Include="Expressions\PropertyExpression.cs" />
+    <Compile Include="Expressions\IForStatement.cs" />
+    <Compile Include="JintException.cs" />
+    <Compile Include="Native\ClrImplDefinition.cs" />
+    <Compile Include="Native\JsClrConstructorInfo.cs" />
+    <Compile Include="Native\JsClrMethodInfo.cs" />
+    <Compile Include="Native\JsException.cs" />
+    <Compile Include="Native\JsFunctionWrapper.cs" />
+    <Compile Include="Native\JsArguments.cs" />
+    <Compile Include="Native\JsScope.cs" />
+    <Compile Include="Native\JsCallFunction.cs" />
+    <Compile Include="Native\JsDateConstructor.cs" />
+    <Compile Include="Native\JsFunctionConstructor.cs" />
+    <Compile Include="Native\JsNumberConstructor.cs" />
+    <Compile Include="Native\JsRegExpConstructor.cs" />
+    <Compile Include="Native\JsStringConstructor.cs" />
+    <Compile Include="Native\JsBooleanConstructor.cs" />
+    <Compile Include="Native\JsArrayConstructor.cs" />
+    <Compile Include="Native\JsDictionaryObject.cs" />
+    <Compile Include="Native\JsNull.cs" />
+    <Compile Include="Native\JsObjectConstructor.cs" />
+    <Compile Include="Expressions\RegexpExpression.cs" />
+    <Compile Include="Native\JsInstance.cs" />
+    <Compile Include="Native\JsUndefined.cs" />
+    <Compile Include="Native\JsRegExp.cs" />
+    <Compile Include="Native\JsMathConstructor.cs" />
+    <Compile Include="Native\JsBoolean.cs" />
+    <Compile Include="Native\JsString.cs" />
+    <Compile Include="Native\JsNumber.cs" />
+    <Compile Include="Native\JsGlobal.cs" />
+    <Compile Include="Native\JsArray.cs" />
+    <Compile Include="Native\JsDate.cs" />
+    <Compile Include="Native\JsObject.cs" />
+    <Compile Include="Expressions\JsonExpression.cs" />
+    <Compile Include="Expressions\FunctionExpression.cs" />
+    <Compile Include="Native\JsFunction.cs" />
+    <Compile Include="Expressions\MemberExpression.cs" />
+    <Compile Include="Expressions\NewExpression.cs" />
+    <Compile Include="Expressions\MethodCall.cs" />
+    <Compile Include="ITypeResolver.cs" />
+    <Compile Include="JintEngine.cs" />
+    <Compile Include="Expressions\BinaryExpression.cs" />
+    <Compile Include="Expressions\BlockStatement.cs" />
+    <Compile Include="Expressions\CaseClause.cs" />
+    <Compile Include="Expressions\AssignmentExpression.cs" />
+    <Compile Include="Expressions\CatchClause.cs" />
+    <Compile Include="Expressions\ContinueStatement.cs" />
+    <Compile Include="Expressions\BreakStatement.cs" />
+    <Compile Include="Expressions\FinallyClause.cs" />
+    <Compile Include="Expressions\Statement.cs" />
+    <Compile Include="Expressions\EmptyStatement.cs" />
+    <Compile Include="Expressions\DoWhileStatement.cs" />
+    <Compile Include="Expressions\ExpressionStatement.cs" />
+    <Compile Include="Expressions\ForEachInStatement.cs" />
+    <Compile Include="Expressions\ForStatement.cs" />
+    <Compile Include="Expressions\FunctionDeclarationStatement.cs" />
+    <Compile Include="Expressions\IfStatement.cs" />
+    <Compile Include="Expressions\Program.cs" />
+    <Compile Include="Expressions\ReturnStatement.cs" />
+    <Compile Include="Expressions\SwitchStatement.cs" />
+    <Compile Include="Expressions\Expression.cs" />
+    <Compile Include="Expressions\Indexer.cs" />
+    <Compile Include="IJintVisitor.cs" />
+    <Compile Include="Expressions\TernaryExpression.cs" />
+    <Compile Include="Expressions\ThrowStatement.cs" />
+    <Compile Include="Expressions\TryStatement.cs" />
+    <Compile Include="Expressions\UnaryExpression.cs" />
+    <Compile Include="Expressions\ValueExpression.cs" />
+    <Compile Include="Expressions\VariableDeclarationStatement.cs" />
+    <Compile Include="Expressions\WhileStatement.cs" />
+    <Compile Include="Native\PropertyAttributes.cs" />
+    <Compile Include="Number.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PropertyBags\MiniCachedPropertyBag.cs" />
+    <Compile Include="PropertyBags\ScopedPropertyBag.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Jint.snk" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -214,8 +214,11 @@ namespace Raven.Client.Connection
 						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
 						throw;
 
-					if (HandleUnauthorizedResponse(httpWebResponse) == false)
-						throw;
+					using (httpWebResponse)
+					{
+						if (HandleUnauthorizedResponse(httpWebResponse) == false)
+							throw;
+					}
 				}
 			}
 		}
@@ -313,6 +316,7 @@ namespace Raven.Client.Connection
 
 			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
+			using (response)
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
 				var data = RavenJToken.TryLoad(responseStream);
@@ -398,6 +402,9 @@ namespace Raven.Client.Connection
 					PostedData = postedData
 				});
 
+				if(string.IsNullOrWhiteSpace(readToEnd))
+					return null;// throws
+
 				RavenJObject ravenJObject;
 				try
 				{
@@ -422,7 +429,7 @@ namespace Raven.Client.Connection
 					sb.AppendLine()
 						.AppendLine(ravenJObject.Value<string>("Error"));
 
-					throw new InvalidOperationException(sb.ToString());
+					throw new InvalidOperationException(sb.ToString(), e);
 				}
 				throw new InvalidOperationException(readToEnd, e);
 			}

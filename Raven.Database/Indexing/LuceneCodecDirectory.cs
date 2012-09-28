@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Store;
-using NLog;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Plugins;
 
 namespace Raven.Database.Indexing
@@ -110,7 +110,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private class CodecIndexInput : IndexInput, IDisposable
+		private class CodecIndexInput : IndexInput
 		{
 			private readonly Stream stream;
 			private readonly bool isStreamOwned;
@@ -178,7 +178,7 @@ namespace Raven.Database.Indexing
 			{
 				lock (stream)
 				{
-					stream.Position = this.position = newPosition;
+					stream.Position = position = newPosition;
 				}
 			}
 
@@ -191,36 +191,32 @@ namespace Raven.Database.Indexing
 			{
 				get { return position; }
 			}
-
-			public void Dispose()
-			{
-				Close();
-			}
 		}
 
 		private class CodecIndexOutput : IndexOutput
 		{
+			static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 			private readonly FileInfo file;
 			private readonly Stream stream;
 
 			public CodecIndexOutput(FileInfo file, Func<Stream, Stream> applyCodecs)
 			{
 				this.file = file;
-				this.stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
+				stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
 			}
 
 			~CodecIndexOutput()
 			{
-				var log = LogManager.GetCurrentClassLogger();
 				try
 				{
-					log.Log(LogLevel.Error, "~CodecIndexOutput() " + file.FullName + "!");
-					Close();
+					log.Error("~CodecIndexOutput() " + file.FullName + "!");
+					Dispose(false);
 				}
 				catch (Exception e)
 				{
 					// Can't throw exceptions from the finalizer thread
-					log.LogException(LogLevel.Error, "Cannot dispose of CodecIndexOutput: " + e.Message, e);
+					log.ErrorException("Cannot dispose of CodecIndexOutput: " + e.Message, e);
 				}
 			}
 

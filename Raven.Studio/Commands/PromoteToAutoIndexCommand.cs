@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
@@ -23,9 +22,7 @@ namespace Raven.Studio.Commands
 				.FirstOrDefault();
 
             if (index == null)
-            {
                 return false;
-            }
 
 			return index.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase);
 		}

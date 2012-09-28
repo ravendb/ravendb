@@ -6,6 +6,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 

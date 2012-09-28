@@ -1,23 +1,24 @@
 ﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.Edit"
-					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
-					 xmlns:Studio="clr-namespace:Raven.Studio"
-					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-					 xmlns:Controls="clr-namespace:System.Windows.Controls" xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+                         xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+                         xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
+                         xmlns:Models="clr-namespace:Raven.Studio.Models"
                          xmlns:Controls1="clr-namespace:Microsoft.Windows.Controls"
                          xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
                          xmlns:z="clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions"
                          xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-                         xmlns:Delay="clr-namespace:Delay" mc:Ignorable="d"
-					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel" 
+                         xmlns:Delay="clr-namespace:Delay"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
+                         Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel" 
                          Title="Edit Document">
+    
     <Infrastructure:PageView.Resources>
         <LinearGradientBrush x:Key="ErrorAreaBorderBrush" EndPoint="0.5,1" StartPoint="0.5,0">
             <GradientStop Color="#D6D6D6"/>
@@ -61,7 +62,7 @@
         </Storyboard>
     </Infrastructure:PageView.Resources>
     <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}"
-                                   Margin="{StaticResource Margin_ContentPage}" 
+                                    Margin="{StaticResource Margin_ContentPage}" 
                                     DataContext="{Binding Value}"
                                     d:DataContext="{d:DesignInstance Models:EditableDocumentModel}">
         <i:Interaction.Triggers>
@@ -83,11 +84,11 @@
                 <i:InvokeCommandAction Command="{Binding DisableSearch}" />
             </Behaviors:StudioKeyTrigger>
         </i:Interaction.Triggers>
-        <Controls:ContextMenuService.ContextMenu>
-            <Controls:ContextMenu>
-                <Controls:MenuItem Header="Copy Document Id to Clipboard" />
-            </Controls:ContextMenu>
-        </Controls:ContextMenuService.ContextMenu>
+        <ContextMenu:ContextMenuService.ContextMenu>
+            <ContextMenu:ContextMenu>
+                <ContextMenu:MenuItem Header="Copy Document Id to Clipboard" />
+            </ContextMenu:ContextMenu>
+        </ContextMenu:ContextMenuService.ContextMenu>
         <toolkit:HeaderedContentControl.Header>
             <StackPanel Orientation="Horizontal">
                 <Infrastructure:FlexibleTemplateItemsControl ItemsSource="{Binding ParentPathSegments}" VerticalAlignment="Center" VerticalContentAlignment="Center">
@@ -103,11 +104,12 @@
 							       VerticalAlignment="Center"
 							       Margin="4,0" />
                                 <HyperlinkButton Content="{Binding Name, Converter={StaticResource TrimmedString}, ConverterParameter=35}"
-                                         ToolTipService.ToolTip="{Binding Name}"
-									     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									     Command="{StaticResource NavigateToCommand}"
-									     CommandParameter="{Binding Url}"
-                                         Margin="4,0" VerticalAlignment="Center" VerticalContentAlignment="Center"/>
+                                                 ToolTipService.ToolTip="{Binding Name}"
+                                                 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+                                                 Command="{StaticResource NavigateToCommand}"
+                                                 CommandParameter="{Binding Url}"
+                                                 Margin="4,0" VerticalAlignment="Center"
+                                                 VerticalContentAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
                     </Infrastructure:FlexibleTemplateItemsControl.ItemTemplate>
@@ -125,10 +127,10 @@
                                     </i:Interaction.Triggers>
                                 </Image>
                                 <HyperlinkButton Content="{Binding Name}"
-									     Style="{StaticResource Style_Link_Breadcrumb_Header}"
-									     Command="{StaticResource NavigateToCommand}"
-									     CommandParameter="{Binding Url}"
-                                         VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                                 Command="{StaticResource NavigateToCommand}"
+                                                 CommandParameter="{Binding Url}"
+                                                 VerticalAlignment="Center" VerticalContentAlignment="Center"
                                                  Margin="6"/>
                             </StackPanel>
                         </DataTemplate>
@@ -136,18 +138,17 @@
                 </Infrastructure:FlexibleTemplateItemsControl>
 
                 <TextBlock Text=">"
-							   VerticalAlignment="Center"
-							   Margin="4,0"/>
+                           VerticalAlignment="Center"
+                           Margin="4,0"/>
 
                 <TextBlock Text="{Binding DisplayId}"
-							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
-							   VerticalAlignment="Center" />
+                           Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                           VerticalAlignment="Center" />
                 <TextBlock Text="    "/>
                 <TextBlock Text="A Conflict was detected and must be resolved." 
 						   Style="{StaticResource Style_TextBlock_GroupHeader}"
 						   Visibility="{Binding ResolvingConflict, Converter={StaticResource BooleanToVisibility}}"
 						   VerticalAlignment="Center"/>
-
             </StackPanel>
         </toolkit:HeaderedContentControl.Header>
         <Grid>
@@ -162,18 +163,18 @@
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
-				Grid.ColumnSpan="3"
-				Background="{StaticResource Brush_ToolbarBackground}"
-				CornerRadius="0">
+                    Grid.ColumnSpan="3"
+                    Background="{StaticResource Brush_ToolbarBackground}"
+                    CornerRadius="0">
                 <Grid>
                     <StackPanel Orientation="Horizontal"
-							Grid.Column="2"
-							VerticalAlignment="Center"
-                            Margin="0,4">
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Margin="0,4">
                         <Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Save}"
-                               Margin="4,0"
-							ToolTipService.ToolTip="Save Document (Ctrl-S)">
+                                Margin="4,0"
+                                ToolTipService.ToolTip="Save Document (Ctrl-S)">
                             <Button.Content>
                                 <StackPanel Orientation="Horizontal"
                                             VerticalAlignment="Center">
@@ -189,8 +190,8 @@
 
                         <Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Prettify}"
-                               Margin="4,0"
-							ToolTipService.ToolTip="Reformat Document">
+                                Margin="4,0"
+                                ToolTipService.ToolTip="Reformat Document">
                             <Button.Content>
                                 <StackPanel Orientation="Horizontal"
                                             VerticalAlignment="Center">
@@ -205,9 +206,9 @@
                         </Button>
 
                         <Delay:SplitButtonPopup Command="{Binding ToggleExpansion}"
-							Margin="4,0"
-							ToolTipService.ToolTip="Toggle Outlining Expansion"
-                            DropDownToolTip="More Options">
+                                                Margin="4,0"
+                                                ToolTipService.ToolTip="Toggle Outlining Expansion"
+                                                DropDownToolTip="More Options">
                             <StackPanel Orientation="Horizontal">
                                 <Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
                                        Stretch="None" />
@@ -218,9 +219,9 @@
 
                             <Delay:SplitButtonPopup.PopupContent>
                                 <Border Background="White"
-					                BorderThickness="1"
-					                BorderBrush="Gray"
-					                Margin="0,20,0,0">
+                                        BorderThickness="1"
+                                        BorderBrush="Gray"
+                                        Margin="0,20,0,0">
                                     <Border.Effect>
                                         <DropShadowEffect Opacity="0.4" />
                                     </Border.Effect>
@@ -229,7 +230,7 @@
                                             <TextBlock Text="Outlining Mode" FontWeight="Bold" Margin="5,5"/>
                                         </Border>
                                         <ListBox ItemsSource="{Binding OutliningModes}" SelectedItem="{Binding SelectedOutliningMode, Mode=TwoWay}"
-                                             Style="{StaticResource Style_ListBox_RadioButtons}">
+                                                 Style="{StaticResource Style_ListBox_RadioButtons}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding Name}"/>
@@ -243,8 +244,8 @@
 
                         <Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Refresh}"
-                               Margin="4,0"
-							ToolTipService.ToolTip="Refresh Document (Ctrl-R)">
+                                Margin="4,0"
+                                ToolTipService.ToolTip="Refresh Document (Ctrl-R)">
                             <Button.Content>
                                 <StackPanel Orientation="Horizontal"
                                             VerticalAlignment="Center">
@@ -260,8 +261,8 @@
 
                         <Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Delete}"
-                               Margin="4,0"
-							ToolTipService.ToolTip="Delete Document">
+                                Margin="4,0"
+                                ToolTipService.ToolTip="Delete Document">
                             <Button.Content>
                                 <StackPanel Orientation="Horizontal"
                                             VerticalAlignment="Center">
@@ -277,8 +278,8 @@
 
                         <Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding ToggleSearch}"
-                               Margin="4,0"
-							ToolTipService.ToolTip="Search (Ctrl-F)">
+								Margin="4,0"
+								ToolTipService.ToolTip="Search (Ctrl-F)">
                             <Button.Content>
                                 <StackPanel Orientation="Horizontal"
                                             VerticalAlignment="Center">
@@ -299,63 +300,63 @@
                         <StackPanel Orientation="Horizontal" Margin="5,0">
 
                             <HyperlinkButton Command="{Binding NavigateToFirst}"
-									 Style="{StaticResource Style_Link_MouseOverChrome}"
-                                     IsEnabled="{Binding HasPrevious}"
-									 ToolTipService.ToolTip="First Document"
-                                     VerticalAlignment="Center"
-                                     VerticalContentAlignment="Center">
+                                             Style="{StaticResource Style_Link_MouseOverChrome}"
+                                             IsEnabled="{Binding HasPrevious}"
+                                             ToolTipService.ToolTip="First Document"
+                                             VerticalAlignment="Center"
+                                             VerticalContentAlignment="Center">
                                 <HyperlinkButton.Content>
                                     <Image Source="{StaticResource Image_FirstPage_Tiny}"
-								   Stretch="None"
-								   VerticalAlignment="Center" />
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
                                 </HyperlinkButton.Content>
                             </HyperlinkButton>
 
                             <HyperlinkButton Command="{Binding NavigateToPrevious}"
-									 Style="{StaticResource Style_Link_MouseOverChrome}"
-                                     IsEnabled="{Binding HasPrevious}"
-									 ToolTipService.ToolTip="Previous Document"
-                                     VerticalAlignment="Center"
-                                     VerticalContentAlignment="Center">
+                                             Style="{StaticResource Style_Link_MouseOverChrome}"
+                                             IsEnabled="{Binding HasPrevious}"
+                                             ToolTipService.ToolTip="Previous Document"
+                                             VerticalAlignment="Center"
+                                             VerticalContentAlignment="Center">
                                 <HyperlinkButton.Content>
                                     <Image Source="{StaticResource Image_PreviousPage_Tiny}"
-								   Stretch="None"
-								   VerticalAlignment="Center" />
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
                                 </HyperlinkButton.Content>
                             </HyperlinkButton>
 
                             <TextBlock Text="Document "
-							   VerticalAlignment="Center" />
+                                       VerticalAlignment="Center" />
                             <TextBlock Text="{Binding CurrentItemNumber}"
-							   VerticalAlignment="Center" />
+                                       VerticalAlignment="Center" />
                             <TextBlock Text=" of "
-							   VerticalAlignment="Center" />
+                                       VerticalAlignment="Center" />
                             <TextBlock Text="{Binding TotalItems}"
-							   VerticalAlignment="Center" />
+                                       VerticalAlignment="Center" />
 
                             <HyperlinkButton Command="{Binding NavigateToNext}"
-                                     IsEnabled="{Binding HasNext}"
-									 Style="{StaticResource Style_Link_MouseOverChrome}"
-									 ToolTipService.ToolTip="Next Document"
-                                      VerticalAlignment="Center"
-                                      VerticalContentAlignment="Center">
+                                             IsEnabled="{Binding HasNext}"
+                                             Style="{StaticResource Style_Link_MouseOverChrome}"
+                                             ToolTipService.ToolTip="Next Document"
+                                             VerticalAlignment="Center"
+                                             VerticalContentAlignment="Center">
                                 <HyperlinkButton.Content>
                                     <Image Source="{StaticResource Image_NextPage_Tiny}"
-								   Stretch="None"
-								   VerticalAlignment="Center" />
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
                                 </HyperlinkButton.Content>
                             </HyperlinkButton>
 
                             <HyperlinkButton Command="{Binding NavigateToLast}"
-									 Style="{StaticResource Style_Link_MouseOverChrome}"
-                                     IsEnabled="{Binding HasNext}"
-									 ToolTipService.ToolTip="Last Document"
-                                     VerticalAlignment="Center"
-                                     VerticalContentAlignment="Center">
+                                             Style="{StaticResource Style_Link_MouseOverChrome}"
+                                             IsEnabled="{Binding HasNext}"
+                                             ToolTipService.ToolTip="Last Document"
+                                             VerticalAlignment="Center"
+                                             VerticalContentAlignment="Center">
                                 <HyperlinkButton.Content>
                                     <Image Source="{StaticResource Image_LastPage_Tiny}"
-								   Stretch="None"
-								   VerticalAlignment="Center" />
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
                                 </HyperlinkButton.Content>
                             </HyperlinkButton>
 
@@ -383,23 +384,23 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Image Source="{StaticResource Image_Search_Small}"
-							   Stretch="None" 
+                                   Stretch="None" 
                                    VerticalAlignment="Center"
                                    Margin="5,0"/>
                             <TextBox x:Name="searchField"
-					             Grid.Column="1"
-					             HorizontalAlignment="Stretch"
-					             TextWrapping="NoWrap"
-					             VerticalAlignment="Center"
-                                 Padding="2,2,18,2"
-                                 Margin="0,0,5,0"    
-					             Text="{Binding Source={StaticResource WordHighlightTagger}, Path=HighlightedString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                     Grid.Column="1"
+                                     HorizontalAlignment="Stretch"
+                                     TextWrapping="NoWrap"
+                                     VerticalAlignment="Center"
+                                     Padding="2,2,18,2"
+                                     Margin="0,0,5,0"    
+                                     Text="{Binding Source={StaticResource WordHighlightTagger}, Path=HighlightedString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                             <Button HorizontalAlignment="Right"
-					            Grid.Column="1"
-					            Margin="0,0,5,0"
-					            VerticalAlignment="Center"
-                                Command="{Binding ToggleSearch}"    
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                    Grid.Column="1"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding ToggleSearch}" 
+                                    Style="{StaticResource Style_Button_MouseOverChrome}"
                                     ToolTipService.ToolTip="Clear Search">
                                 <Image Source="{StaticResource Image_Remove_Tiny}"
 					                   Stretch="Fill"
@@ -411,8 +412,8 @@
             </Border>
 
             <Grid x:Name="document"
-			  Margin="5,5,0,0"
-			  Grid.Row="2">
+                  Margin="5,5,0,0"
+                  Grid.Row="2">
 
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -422,9 +423,9 @@
                 </Grid.RowDefinitions>
 
                 <Controls1:WatermarkedTextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          Watermark="Document Id?"
-					 Grid.Row="0"
-					 Margin="5,10,10,0" />
+                                              Watermark="Document Id?"
+                                              Grid.Row="0"
+                                              Margin="5,10,10,0" />
 
                 <ListBox Grid.Row="1" ItemsSource="{Binding DocumentSections}" SelectedItem="{Binding CurrentSection, Mode=TwoWay}"
                          Style="{StaticResource Style_ListBox_TabStrip}"
@@ -437,7 +438,7 @@
                 </ListBox>
 
                 <Editors:JsonEditor Grid.Row="2" BoundDocument="{Binding CurrentSection.Document}"
-										x:Name="EditorCtrl" Margin="5,0,10,10" />
+                                    x:Name="EditorCtrl" Margin="5,0,10,10" />
 
                 <Border x:Name="ErrorArea" Height="24" Grid.Row="3" Margin="5,0,10,10">
                     <i:Interaction.Triggers>
@@ -459,8 +460,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <ToggleButton 
-                                    x:Name="ShowErrorsButton"
+                        <ToggleButton x:Name="ShowErrorsButton"
                                       IsChecked="{Binding IsShowingErrors, Mode=TwoWay}" HorizontalAlignment="Left"
                                       Style="{StaticResource Style_ToggleButton_ErrorExpander}"
                                       MinWidth="80"
@@ -529,9 +529,9 @@
             </Grid>
 
             <ScrollViewer Grid.Column="1"
-					  Grid.Row="2"
+                          Grid.Row="2"
                           Margin="5"
-					  Style="{StaticResource Style_ScrollViewer_Unintrusive}" TextOptions.TextHintingMode="Animated">
+                          Style="{StaticResource Style_ScrollViewer_Unintrusive}" TextOptions.TextHintingMode="Animated">
                 <Grid x:Name="details">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -544,71 +544,70 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock Text="Metadata"
-						   Margin="10,10,5,6"
-						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
-						   Grid.Row="1" />
+                               Margin="10,10,5,6"
+                               Style="{StaticResource Style_TextBlock_PagePartHeader}"
+                               Grid.Row="1" />
                     <sdk:DataGrid x:Name="Metadata"
-							  Grid.Row="2"
-							  ItemsSource="{Binding Metadata}"
-							  Margin="10,0,5,12"
-							  Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
-							  FrozenColumnCount="1">
+                                  Grid.Row="2"
+                                  ItemsSource="{Binding Metadata}"
+                                  Margin="10,0,5,12"
+                                  Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
+                                  FrozenColumnCount="1">
                         <sdk:DataGrid.Columns>
                             <sdk:DataGridTextColumn FontStyle="Italic"
-												Binding="{Binding Key}"
-												Foreground="{StaticResource Brush_ContrastColor}" />
+                                                    Binding="{Binding Key}"
+                                                    Foreground="{StaticResource Brush_ContrastColor}" />
                             <sdk:DataGridTextColumn Binding="{Binding Value}" />
                         </sdk:DataGrid.Columns>
                     </sdk:DataGrid>
 
                     <TextBlock Text="{Binding DocumentSize}"
-						   Margin="10,6,5,6"
-						   Grid.Row="4"
-						   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+                               Margin="10,6,5,6"
+                               Grid.Row="4"
+                               Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
                     <Border Grid.Row="5"
-						Visibility="{Binding References.Count, Converter={StaticResource HiddenWhenEmpty}}">
+                            Visibility="{Binding References.Count, Converter={StaticResource HiddenWhenEmpty}}">
                         <StackPanel>
                             <TextBlock Text="References"
-								   Margin="10,6,5,6"
-								   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+                                       Margin="10,6,5,6"
+                                       Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
                             <ItemsControl x:Name="References"
-									  ItemsSource="{Binding References}"
-									  Style="{StaticResource Style_ItemsControl_References}"
-									  Margin="10,0,5,12">
+                                          ItemsSource="{Binding References}"
+                                          Style="{StaticResource Style_ItemsControl_References}"
+                                          Margin="10,0,5,12">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <HyperlinkButton Content="{Binding Title}"
-													 Command="{StaticResource NavigateToCommand}"
-													 CommandParameter="{Binding HRef}"
-													 Style="{StaticResource Style_Link_Shortcut}"
-													 HorizontalAlignment="Left" />
+                                                         Command="{StaticResource NavigateToCommand}"
+                                                         CommandParameter="{Binding HRef}"
+                                                         Style="{StaticResource Style_Link_Shortcut}"
+                                                         HorizontalAlignment="Left" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
                     </Border>
 
-                    <Border 
-						Grid.Row="6"
-						Visibility="{Binding Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
+                    <Border Grid.Row="6"
+                            Visibility="{Binding Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
                         <StackPanel>
                             <TextBlock Text="Related"
-								   Margin="10,6,5,6"
-								   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+                                       Margin="10,6,5,6"
+                                       Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
                             <ItemsControl x:Name="Related"
-									  Style="{StaticResource Style_ItemsControl_References}"
-									  ItemsSource="{Binding Related}"
-									  Margin="10,0,5,10">
+                                          Style="{StaticResource Style_ItemsControl_References}"
+                                          ItemsSource="{Binding Related}"
+                                          Margin="10,0,5,10">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <HyperlinkButton Content="{Binding Title}"
-													 Command="{StaticResource NavigateToCommand}"
-													 CommandParameter="{Binding HRef}"
-													 Style="{StaticResource Style_Link_Shortcut}"
-													 HorizontalAlignment="Left" />
+                                                         Command="{StaticResource NavigateToCommand}"
+                                                         CommandParameter="{Binding HRef}"
+                                                         Style="{StaticResource Style_Link_Shortcut}"
+                                                         HorizontalAlignment="Left" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -618,6 +617,4 @@
             </ScrollViewer>
         </Grid>
     </toolkit:HeaderedContentControl>
-
-
 </Infrastructure:PageView>

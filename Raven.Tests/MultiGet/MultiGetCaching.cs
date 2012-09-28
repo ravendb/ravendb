@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Client.Document;
 using Raven.Server;

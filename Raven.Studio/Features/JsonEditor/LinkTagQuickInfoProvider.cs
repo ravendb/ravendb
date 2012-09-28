@@ -1,14 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Tagging;
 using ActiproSoftware.Windows.Controls.SyntaxEditor;
@@ -47,9 +38,7 @@ namespace Raven.Studio.Features.JsonEditor
         public override object GetContext(IHitTestResult hitTestResult)
         {
             if (hitTestResult.Type == HitTestResultType.ViewTextAreaOverCharacter)
-            {
                 return GetContext(hitTestResult.View, hitTestResult.Offset);
-            }
 
             return null;
         }
@@ -69,9 +58,7 @@ namespace Raven.Studio.Features.JsonEditor
         {
             var linkTagContext = context as LinkTagContext;
             if (linkTagContext == null)
-            {
                 return false;
-            }
 
             var linkTag = linkTagContext.TagRange.Tag;
             var htmlSnippet = linkTag.NavigationType == LinkTagNavigationType.ExternalUrl ? "Shift-Click to navigate to Url " + linkTag.Url

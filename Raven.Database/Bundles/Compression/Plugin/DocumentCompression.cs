@@ -14,10 +14,11 @@ using Raven.Json.Linq;
 namespace Raven.Bundles.Compression.Plugin
 {
 	[InheritedExport(typeof(AbstractDocumentCodec))]
-	[ExportMetadata("Order", 500)]
+	[ExportMetadata("Order", 10000)]
 	[ExportMetadata("Bundle", "Compression")]
 	public class DocumentCompression : AbstractDocumentCodec
 	{
+		[CLSCompliant(false)]
 		public const uint CompressFileMagic = 0x72706D43; // "Cmpr"
 
 		public override Stream Encode(string key, RavenJObject data, RavenJObject metadata, Stream dataStream)

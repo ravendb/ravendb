@@ -20,7 +20,7 @@ namespace Raven.Client.Changes
 {
 	public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
 	{
-		private readonly ILog logger = LogProvider.GetCurrentClassLogger();
+		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		private readonly string url;
 		private readonly ICredentials credentials;

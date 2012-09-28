@@ -134,7 +134,7 @@ namespace SpellChecker.Net.Search.Spell
 				{
 					var writer = new IndexWriter(spellIndexDir, null, true,
 						IndexWriter.MaxFieldLength.UNLIMITED);
-					writer.Close();
+					writer.Dispose();
 				}
 				SwapSearcher(spellIndexDir);
 			}
@@ -361,7 +361,7 @@ namespace SpellChecker.Net.Search.Spell
 				EnsureOpen();
 				Directory dir = this.spellindex;
 				IndexWriter writer = new IndexWriter(dir, null, true, IndexWriter.MaxFieldLength.UNLIMITED);
-				writer.Close();
+				writer.Dispose();
 				SwapSearcher(dir);
 			}
 		}
@@ -427,7 +427,7 @@ namespace SpellChecker.Net.Search.Spell
 				}
 				// close writer
 				writer.Optimize();
-				writer.Close();
+				writer.Dispose();
 				// also re-open the spell index to see our own changes when the next suggestion
 				// is fetched:
 				SwapSearcher(dir);
@@ -538,7 +538,7 @@ namespace SpellChecker.Net.Search.Spell
 				closed = true;
 				if (searcher != null)
 				{
-					searcher.Close();
+					searcher.Dispose();
 				}
 				searcher = null;
 			}
@@ -556,12 +556,12 @@ namespace SpellChecker.Net.Search.Spell
 			{
 				if (closed)
 				{
-					indexSearcher.Close();
+					indexSearcher.Dispose();
 					throw new AlreadyClosedException("Spellchecker has been closed");
 				}
 				if (searcher != null)
 				{
-					searcher.Close();
+					searcher.Dispose();
 				}
 				// set the spellindex in the sync block - ensure consistency.
 				searcher = indexSearcher;

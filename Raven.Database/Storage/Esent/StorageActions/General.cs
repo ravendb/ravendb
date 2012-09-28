@@ -9,9 +9,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
@@ -32,7 +32,7 @@ namespace Raven.Storage.Esent.StorageActions
 		private readonly TransactionalStorage transactionalStorage;
 		protected readonly JET_DBID dbid;
 
-		protected static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		protected static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		protected readonly Session session;
 		private Transaction transaction;
 
@@ -140,10 +140,10 @@ namespace Raven.Storage.Esent.StorageActions
 			transaction = new Transaction(session);
 		}
 
-		public void Commit(CommitTransactionGrbit txMode)
+		public Action Commit(CommitTransactionGrbit txMode)
 		{
 			transaction.Commit(txMode);
-			OnCommit();
+			return OnCommit;
 		}
 
 		public long GetNextIdentityValue(string name)
@@ -259,7 +259,7 @@ namespace Raven.Storage.Esent.StorageActions
 													 tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 				{
 					using (var data = documentCodecs
-						.ReverseAggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
+						.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
 						dataAsJson = data.ToJObject();
 				}
 

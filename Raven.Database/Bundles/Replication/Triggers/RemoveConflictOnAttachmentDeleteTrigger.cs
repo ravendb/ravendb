@@ -29,7 +29,10 @@ namespace Raven.Bundles.Replication.Triggers
 					return;
 
 				var conflictData = oldVersion.Data().ToJObject();
-				foreach (var prop in conflictData.Value<RavenJArray>("Conflicts"))
+				var conflicts = conflictData.Value<RavenJArray>("Conflicts");
+				if(conflicts == null)
+					return;
+				foreach (var prop in conflicts)
 				{
 					Database.DeleteStatic(prop.Value<string>(), null);
 				}

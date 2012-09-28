@@ -1,6 +1,7 @@
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Smuggler;

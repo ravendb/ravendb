@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.Security.OAuth
 {
@@ -33,13 +34,6 @@ namespace Raven.Database.Server.Security.OAuth
 				return false;
 
 			return true;
-		}
-
-		public class DatabaseAccess
-		{
-			public bool Admin { get; set; }
-			public string TenantId { get; set; }
-			public bool ReadOnly { get; set; }
 		}
 	}
 

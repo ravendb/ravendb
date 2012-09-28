@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -63,9 +61,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				if (value == null)
-				{
 					return;
-				}
 
 				if (changeDatabase.CanExecute(value.Name))
 					changeDatabase.Execute(value.Name);

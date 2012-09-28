@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -14,25 +15,18 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
-#if !NET35
-using System.Collections.Concurrent;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Async;
-#else
-using Raven.Client.Util;
-#endif
 #if SILVERLIGHT
 using System.Net.Browser;
-using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
-using System.Collections.Generic;
-using Raven.Client.Util;
-
 #else
-
+using System.Security.Cryptography;
+using System.Collections.Concurrent;
 #endif
+
 
 namespace Raven.Client.Document
 {
@@ -46,6 +40,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		[ThreadStatic]
 		protected static Guid? currentSessionId;
+
+		string currentOauthToken = null;
 
 #if SILVERLIGHT
 		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
@@ -62,6 +58,7 @@ namespace Raven.Client.Document
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
 
 		private HttpJsonRequestFactory jsonRequestFactory;
+		private string apiKey;
 
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -137,6 +134,7 @@ namespace Raven.Client.Document
 
 		private string identifier;
 
+		private bool defaultCredentials = true;
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
 #else
@@ -150,7 +148,11 @@ namespace Raven.Client.Document
 		public ICredentials Credentials
 		{
 			get { return credentials; }
-			set { credentials = value; }
+			set
+			{
+				credentials = value;
+				defaultCredentials = false;
+			}
 		}
 
 		/// <summary>
@@ -176,7 +178,16 @@ namespace Raven.Client.Document
 		/// The API Key to use when authenticating against a RavenDB server that
 		/// supports API Key authentication
 		/// </summary>
-		public string ApiKey { get; set; }
+		public string ApiKey
+		{
+			get { return apiKey; }
+			set
+			{
+				if(defaultCredentials)
+					credentials = null;
+				apiKey = value;
+			}
+		}
 
 #if !SILVERLIGHT
 		private string connectionStringName;
@@ -255,13 +266,13 @@ namespace Raven.Client.Document
 			foreach (var databaseChange in databaseChanges)
 			{
 				var remoteDatabaseChanges = databaseChange.Value as RemoteDatabaseChanges;
-				if(remoteDatabaseChanges != null)
+				if (remoteDatabaseChanges != null)
 				{
 					tasks.Add(remoteDatabaseChanges.DisposeAsync());
 				}
 				else
 				{
-					using(databaseChange.Value as IDisposable){}
+					using (databaseChange.Value as IDisposable) { }
 				}
 			}
 
@@ -286,6 +297,7 @@ namespace Raven.Client.Document
 
 #if DEBUG
 		private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
+
 		~DocumentStore()
 		{
 			var buffer = e.ToString();
@@ -370,7 +382,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public override IDocumentStore Initialize()
 		{
-			if (initialized) return this;
+			if (initialized)
+				return this;
 
 			AssertValidConfiguration();
 
@@ -395,7 +408,7 @@ namespace Raven.Client.Document
 				}
 #endif
 
-#if !NET35 
+#if !NET35
 				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
 				{
 #if !SILVERLIGHT
@@ -420,14 +433,6 @@ namespace Raven.Client.Document
 			}
 
 			initialized = true;
-
-#if !SILVERLIGHT
-			if (string.IsNullOrEmpty(DefaultDatabase) == false)
-			{
-				DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
-			}
-#endif
-
 			return this;
 		}
 
@@ -446,7 +451,6 @@ namespace Raven.Client.Document
 			if (Conventions.HandleUnauthorizedResponse != null)
 				return; // already setup by the user
 
-			string currentOauthToken = null;
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{
 				if (string.IsNullOrEmpty(currentOauthToken))
@@ -454,53 +458,176 @@ namespace Raven.Client.Document
 
 				SetHeader(args.Request.Headers, "Authorization", currentOauthToken);
 			};
-			
+
 #if !SILVERLIGHT
-			
+
 			Conventions.HandleUnauthorizedResponse = (response) =>
 			{
+				if (ApiKey == null)
+					return null;
+
 				var oauthSource = response.Headers["OAuth-Source"];
 				if (string.IsNullOrEmpty(oauthSource))
-					return null;
+					oauthSource = Url + "/OAuth/API-Key";
+				response.Close();
 
-				var authRequest = PrepareOAuthRequest(oauthSource);
-
-				using (var authResponse = authRequest.GetResponse())
-				using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
-				using (var reader = new StreamReader(stream))
-				{
-					currentOauthToken = "Bearer " + reader.ReadToEnd();
-					return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", currentOauthToken));
-
-				}
+				return DoOAuthRequest(oauthSource);
 			};
 #endif
-#if !NET35
+
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
-				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
-				if (string.IsNullOrEmpty(oauthSource))
+				if (ApiKey == null)
 					return null;
 
-				var authRequest = PrepareOAuthRequest(oauthSource);
+				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
+				if (string.IsNullOrEmpty(oauthSource))
+					oauthSource = Url + "/OAuth/API-Key";
+				unauthorizedResponse.Close();
+
+				return DoOAuthRequestAsync(oauthSource, null, null, null, 0);
+			};
+		}
+
+#if !SILVERLIGHT
+		private Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
+		{
+			string serverRSAExponent = null;
+			string serverRSAModulus = null;
+			string challenge = null;
+
+			// Note that at two tries will be needed in the normal case.
+			// The first try will get back a challenge,
+			// the second try will try authentication. If something goes wrong server-side though
+			// (e.g. the server was just rebooted or the challenge timed out for some reason), we
+			// might get a new challenge back, so we try a third time just in case.
+			int tries = 0;
+			while (true)
+			{
+				tries++;
+				var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge);
+				var authRequest = authRequestTuple.Item1;
+				if (authRequestTuple.Item2 != null)
+				{
+					using (var stream = authRequest.GetRequestStream())
+					using (var writer = new StreamWriter(stream))
+					{
+						writer.Write(authRequestTuple.Item2);
+					}
+				}
+
+				try
+				{
+					using (var authResponse = authRequest.GetResponse())
+					using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
+					using (var reader = new StreamReader(stream))
+					{
+						currentOauthToken = "Bearer " + reader.ReadToEnd();
+						return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", currentOauthToken));
+					}
+				}
+				catch (WebException ex)
+				{
+					if (tries > 2)
+						// We've already tried three times and failed
+						throw;
+
+					var authResponse = ex.Response as HttpWebResponse;
+					if (authResponse == null || authResponse.StatusCode != HttpStatusCode.Unauthorized)
+						throw;
+
+					var header = authResponse.Headers[HttpResponseHeader.WwwAuthenticate];
+					if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
+						throw;
+
+					authResponse.Close();
+
+					var challengeDictionary = OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
+					serverRSAExponent = challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);
+					serverRSAModulus = challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus);
+					challenge = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge);
+
+					if (string.IsNullOrEmpty(serverRSAExponent) || string.IsNullOrEmpty(serverRSAModulus) || string.IsNullOrEmpty(challenge))
+					{
+						throw new InvalidOperationException("Invalid response from server, could not parse raven authentication information: " + header);
+					}
+				}
+			}
+		}
+#endif
+
+		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
+		{
+			if (oauthSource == null) throw new ArgumentNullException("oauthSource");
+
+			var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge);
+			var authRequest = authRequestTuple.Item1;
+
+			Task sendDataTask = new CompletedTask();
+			if (authRequestTuple.Item2 != null)
+			{
+				sendDataTask = Task<Stream>.Factory.FromAsync(authRequest.BeginGetRequestStream, authRequest.EndGetRequestStream, null).ContinueWith(task =>
+				{
+					using (var stream = task.Result)
+					using (var writer = new StreamWriter(stream))
+					{
+						writer.Write(authRequestTuple.Item2);
+					}
+				});
+			}
+
+
+			return sendDataTask.ContinueWith(t =>
+			{
+				t.AssertNotFailed();
+
 				return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
 					.AddUrlIfFaulting(authRequest.RequestUri)
 					.ConvertSecurityExceptionToServerNotFound()
 					.ContinueWith(task =>
 					{
-#if !SILVERLIGHT
-						using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
-#else
-						using(var stream = task.Result.GetResponseStream())
-#endif
-						using (var reader = new StreamReader(stream))
+						try
 						{
-							currentOauthToken = "Bearer " + reader.ReadToEnd();
-							return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", currentOauthToken));
+							using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
+							using (var reader = new StreamReader(stream))
+							{
+								currentOauthToken = "Bearer " + reader.ReadToEnd();
+								return
+									CompletedTask.With(
+										(Action<HttpWebRequest>) (request => SetHeader(request.Headers, "Authorization", currentOauthToken)));
+							}
 						}
-					});
-			};
-#endif
+						catch (AggregateException ae)
+						{
+							var ex = ae.ExtractSingleInnerException() as WebException;
+
+							if (tries > 2 || ex == null)
+								// We've already tried three times and failed
+								throw;
+
+
+
+							var authResponse = ex.Response as HttpWebResponse;
+							if (authResponse == null || authResponse.StatusCode != HttpStatusCode.Unauthorized)
+								throw;
+
+							var header = authResponse.Headers["Www-Authenticate"];
+							if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
+								throw;
+
+							authResponse.Close();
+
+							var challengeDictionary =
+								OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
+
+							return DoOAuthRequestAsync(oauthSource,
+							                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
+							                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
+							                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
+							                           tries + 1);
+						}
+					}).Unwrap();
+			}).Unwrap();
 		}
 
 		private static void SetHeader(WebHeaderCollection headers, string key, string value)
@@ -515,44 +642,56 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
+		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
 		{
-#if !SILVERLIGHT
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-			authRequest.Credentials = Credentials;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-#else
-			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource.NoCache()));
-#endif
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
+			authRequest.Method = "POST";
 
-			if (string.IsNullOrEmpty(ApiKey) == false)
-				SetHeader(authRequest.Headers, "Api-Key", ApiKey);
-
-			if (authRequest.RequestUri.Scheme.Equals("https", StringComparison.InvariantCultureIgnoreCase) == false &&
-			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false && 
-			   IsLocalHost(authRequest) == false)
+			if (!string.IsNullOrEmpty(serverRSAExponent) && !string.IsNullOrEmpty(serverRSAModulus) && !string.IsNullOrEmpty(challenge))
 			{
-				throw new InvalidOperationException(BasicOAuthOverHttpError);
+				var parameters = Tuple.Create(OAuthHelper.ParseBytes(serverRSAExponent), OAuthHelper.ParseBytes(serverRSAModulus));
+
+				var apiKeyParts = ApiKey.Split(new[] { '/' }, StringSplitOptions.None);
+
+				if(apiKeyParts.Length > 2)
+				{
+					apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(1));
+				}
+
+				if (apiKeyParts.Length < 2)
+					throw new InvalidOperationException("Invalid API key");
+
+				var apiKeyName = apiKeyParts[0].Trim();
+				var apiSecret = apiKeyParts[1].Trim();
+
+
+				var data = OAuthHelper.DictionaryToString(new Dictionary<string, string>
+				{
+					{OAuthHelper.Keys.RSAExponent, serverRSAExponent},
+					{OAuthHelper.Keys.RSAModulus, serverRSAModulus},
+					{
+						OAuthHelper.Keys.EncryptedData,
+						OAuthHelper.EncryptAssymetric(parameters, OAuthHelper.DictionaryToString(new Dictionary<string, string>
+						{
+							{OAuthHelper.Keys.APIKeyName, apiKeyName},
+							{OAuthHelper.Keys.Challenge, challenge},
+							{
+								OAuthHelper.Keys.Response,
+								OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))
+							}
+						}))
+					}
+				});
+
+				return Tuple.Create(authRequest, data);
 			}
-			return authRequest;
+			authRequest.ContentLength = 0;
+			return Tuple.Create(authRequest, (string)null);
 		}
 
-		private bool IsLocalHost(HttpWebRequest authRequest)
-		{
-			var host = authRequest.RequestUri.DnsSafeHost;
-			if (host.Equals("localhost"))
-				return true;
-#if !SILVERLIGHT
-			if (Environment.MachineName.Equals(host, StringComparison.InvariantCultureIgnoreCase))
-				return true;
-#endif
-			if (host == "::1" || host == "127.0.0.1")
-				return true;
-			return false;
-
-		}
 
 		/// <summary>
 		/// validate the configuration for the document store
@@ -569,12 +708,17 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 #if !SILVERLIGHT
+
+			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
+			rootServicePoint.UseNagleAlgorithm = false;
+
 			databaseCommandsGenerator = () =>
 			{
 				string databaseUrl = Url;
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)
 				{
-					databaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
 				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
@@ -600,8 +744,8 @@ namespace Raven.Client.Document
 			};
 #endif
 		}
-		
-		
+
+
 		public ReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
 		{
 			var key = Url;
@@ -654,7 +798,7 @@ namespace Raven.Client.Document
 		{
 			AssertInitialized();
 
-			return databaseChanges.GetOrAdd(database ?? DefaultDatabase, 
+			return databaseChanges.GetOrAdd(database ?? DefaultDatabase,
 				CreateDatabaseChanges);
 		}
 
@@ -762,12 +906,5 @@ namespace Raven.Client.Document
 		public int MaxNumberOfCachedRequests { get; set; }
 #endif
 
-		private const string BasicOAuthOverHttpError = @"Attempting to authenticate using basic security over HTTP would expose user credentials (including the password) in clear text to anyone sniffing the network.
-Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.
-You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTokenServer' configuration value), or setup your own behavior by providing a value for:
-	documentStore.Conventions.HandleUnauthorizedResponse
-If you are on an internal network or requires this for testing, you can disable this warning by calling:
-	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
-";
 	}
 }

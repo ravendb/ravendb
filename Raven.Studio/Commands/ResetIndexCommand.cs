@@ -2,18 +2,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
 	public class ResetIndexCommand : ItemSelectionCommand<IndexItem>
 	{
-	    private readonly IndexesModel model;
-
 	    public ResetIndexCommand(IndexesModel model) : base(model.ItemSelection)
         {
-            this.model = model;
         }
 
         protected override bool CanExecuteOverride(IEnumerable<IndexItem> items)

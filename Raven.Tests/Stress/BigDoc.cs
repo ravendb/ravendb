@@ -9,9 +9,9 @@ namespace Raven.Tests.Stress
 	public class BigDoc : RavenTest
 	{
 		[Theory]
-		[InlineData(5600)]
-		[InlineData(11200)]
-		[InlineData(56000)]
+		[InlineValue(5600)]
+		[InlineValue(11200)]
+		[InlineValue(56000)]
 		public void CanSaveBigDocwhenUsingEmbedded(int size)
 		{
 			using (var store = NewDocumentStore())
@@ -31,9 +31,9 @@ namespace Raven.Tests.Stress
 		}
 
 		[Theory]
-		[InlineData(5600)]
-		[InlineData(11200)]
-		[InlineData(56000)]
+		[InlineValue(5600)]
+		[InlineValue(11200)]
+		[InlineValue(56000)]
 		public void CanSaveBigDocwhenUsingServer(int size)
 		{
 			using(GetNewServer())

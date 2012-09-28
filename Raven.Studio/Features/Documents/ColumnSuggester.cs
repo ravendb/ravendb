@@ -1,31 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Abstractions.Data;
-using Raven.Json.Linq;
-using Raven.Studio.Infrastructure;
-using Raven.Studio.Models;
+
 namespace Raven.Studio.Features.Documents
 {
     public class ColumnSuggester
     {
         private static PriorityColumn[] DefaultPriorityColumns = new[]
                                                         {
-                                                            new PriorityColumn() { PropertyNamePattern = "Name"},
-                                                            new PriorityColumn() { PropertyNamePattern = "Title"},
-                                                            new PriorityColumn() { PropertyNamePattern = "Description"},
-                                                            new PriorityColumn() { PropertyNamePattern = "Status"},
+                                                            new PriorityColumn { PropertyNamePattern = "Name"},
+                                                            new PriorityColumn { PropertyNamePattern = "Title"},
+                                                            new PriorityColumn{ PropertyNamePattern = "Description"},
+                                                            new PriorityColumn { PropertyNamePattern = "Status"},
                                                         };
 
         public ColumnSuggester()
@@ -68,7 +55,7 @@ namespace Raven.Studio.Features.Documents
                 .Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context, priorityColumns) })
                 .OrderByDescending(p => p.Importance)
                 .ThenBy(p => p.Property)
-                .Select(p => new ColumnDefinition()
+                .Select(p => new ColumnDefinition
                                  {
                                      Binding = p.Property, 
                                      Header = p.Property, 
@@ -80,7 +67,7 @@ namespace Raven.Studio.Features.Documents
             return columns;
         }
 
-        private string GetDefaultColumnWidth(string property, IList<PriorityColumn> priorityColumns)
+        private string GetDefaultColumnWidth(string property, IEnumerable<PriorityColumn> priorityColumns)
         {
             var matchingColumn =
                 priorityColumns.FirstOrDefault(
@@ -94,34 +81,23 @@ namespace Raven.Studio.Features.Documents
         private double ImportanceBoost(string property, string context, IEnumerable<PriorityColumn> priorityColumns)
         {
             if (GetIndexName(context).Contains(property))
-            {
                 return 1;
-            }
-            else if (priorityColumns.Any(column => Regex.IsMatch(property, column.PropertyNamePattern, RegexOptions.IgnoreCase)))
-            {
+            
+            if (priorityColumns.Any(column => Regex.IsMatch(property, column.PropertyNamePattern, RegexOptions.IgnoreCase)))
                 return 0.75;
-            } 
-            else if (property.Contains("."))
+            
+            if (property.Contains("."))
             {
                 // if the property is a nested property, and it isn't a priority column, demote it
                 return -0.5;
             }
-            else
-            {
-                return 0;
-            }
+            
+            return 0;
         }
 
         private string GetIndexName(string context)
         {
-            if (context.StartsWith("Index/"))
-            {
-                return context.Substring("Index/".Length);
-            }
-            else
-            {
-                return "";
-            }
+            return context.StartsWith("Index/") ? context.Substring("Index/".Length) : "";
         }
     }
 }

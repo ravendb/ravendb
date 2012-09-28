@@ -8,6 +8,7 @@ using Raven.Database.Linq;
 
 namespace Raven.Tests.Bugs.CompiledIndexes
 {
+	[CLSCompliant(false)]
 	[DisplayName("Aggregates/NetworkTest")]
 	public class NetworkEventsToNetworkTemp : AbstractViewGenerator
 	{

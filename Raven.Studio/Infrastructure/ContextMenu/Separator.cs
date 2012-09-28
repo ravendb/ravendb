@@ -3,7 +3,9 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-namespace System.Windows.Controls
+using System.Windows.Controls;
+
+namespace Raven.Studio.Infrastructure.ContextMenu
 {
     /// <summary>
     /// Control that is used to separate items in items controls.

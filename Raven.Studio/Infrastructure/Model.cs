@@ -31,7 +31,19 @@ namespace Raven.Studio.Infrastructure
 			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
 			{
 				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
-				Command.ExecuteCommand(new CreateDatabaseCommand());
+				ApplicationModel.Current.Server.Value.DocumentStore
+					.AsyncDatabaseCommands
+					.ForDefaultDatabase()
+					.GetAsync("Raven/StudioConfig")
+					.ContinueOnSuccessInTheUIThread(doc =>
+					{
+						if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+						{
+							if(doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+								return;
+						}
+						Command.ExecuteCommand(new CreateDatabaseCommand());
+					});
 			}
 
 			ApplicationModel.Current.UpdateAlerts();

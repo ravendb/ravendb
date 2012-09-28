@@ -7,8 +7,8 @@ using System.Security.Cryptography.Xml;
 using System.ServiceModel;
 using System.Threading;
 using System.Xml;
-using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 using Rhino.Licensing.Discovery;
 
 namespace Rhino.Licensing
@@ -21,7 +21,7 @@ namespace Rhino.Licensing
 		/// <summary>
 		/// License validator logger
 		/// </summary>
-		protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
+		protected readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
 		private bool licenseInfoLogged;
 

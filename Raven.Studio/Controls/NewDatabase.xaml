@@ -41,10 +41,10 @@
                 <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1" Margin="5">
                     <CheckBox  HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvanced"/>
                     <TextBlock Text="Advanced Settings"
-					   Grid.Column="1"
-					   Grid.Row="1"
-						   Margin="6,0,0,0"
-					   MouseLeftButtonDown="Toggle"/>
+                               Grid.Column="1"
+                               Grid.Row="1"
+                               Margin="6,0,0,0"
+                               MouseLeftButtonDown="Toggle"/>
                 </StackPanel>
 
             </Grid>
@@ -87,87 +87,97 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <CheckBox x:Name="Compression"
-					  Checked="Checked"
-					  Unchecked="UnChecked"
-					  Margin="5"/>
-                <TextBlock Grid.Column="1"
-					   Text="Compression Bundle"
-					   Margin="5"
-					   MouseLeftButtonDown="ToggleBundles"/>
+				<CheckBox x:Name="Compression"
+                          Checked="Checked"
+                          Unchecked="UnChecked"
+                          Margin="5"/>
+				<TextBlock Grid.Column="1"
+                           Text="Compression Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"/>
 
-                <CheckBox x:Name="Encryption"
-					  Checked="Checked"
-					  Unchecked="UnChecked"
-					  Grid.Row="1"
-					  Margin="5"/>
+				<CheckBox x:Name="Encryption"
+                          Checked="Checked"
+                          Unchecked="UnChecked"
+                          Grid.Row="1"
+                          Margin="5"/>
                 <TextBlock Grid.Column="1"
-					   Grid.Row="1"
-					   Text="Encryption Bundle"
-					   Margin="5"
-					   MouseLeftButtonDown="ToggleBundles"/>
+                           Grid.Row="1"
+                           Text="Encryption Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"/>
 
                 <CheckBox x:Name="Expiration"
-					  Checked="Checked"
-					  Unchecked="UnChecked"
-					  Grid.Row="2"
-					  Margin="5"/>
-                <TextBlock Grid.Column="1"
-					   Grid.Row="2"
-					   Text="Expiration Bundle"
-					   Margin="5"
-					   MouseLeftButtonDown="ToggleBundles"/>
+                          Checked="Checked"
+                          Unchecked="UnChecked"
+                          Grid.Row="2"
+                          Margin="5"/>
+				<TextBlock Grid.Column="1"
+                           Grid.Row="2"
+                           Text="Expiration Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"/>
 
-                <CheckBox x:Name="Quotas"
-					  Checked="Checked"
-					  Unchecked="UnChecked"
-					  Grid.Row="3"
-					  Margin="5"/>
-                <TextBlock Grid.Column="1"
-					   Grid.Row="3"
-					   Text="Quotas Bundle"
-					   Margin="5"
-					   MouseLeftButtonDown="ToggleBundles"/>
+				<CheckBox x:Name="Quotas"
+                          Checked="Checked"
+                          Unchecked="UnChecked"
+                          Grid.Row="3"
+                          Margin="5"/>
+				<TextBlock Grid.Column="1"
+                           Grid.Row="3"
+                           Text="Quotas Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"/>
 
-                <CheckBox x:Name="Replication"
-					  Checked="Checked"
-					  Unchecked="UnChecked"
-					  Grid.Row="4"
-					  Margin="5"/>
+				<CheckBox x:Name="Replication"
+                          Checked="Checked"
+                          Unchecked="UnChecked"
+                          Grid.Row="4"
+                          Margin="5"/>
+				<TextBlock Grid.Column="1"
+                           Grid.Row="4"
+                           Text="Replication Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"/>
+				<CheckBox x:Name="Versioning"
+                          Checked="Checked"
+                          Unchecked="UnChecked"
+                          Grid.Row="5"
+                          Margin="5"/>
+				<TextBlock Grid.Column="1"
+                           Grid.Row="5"
+                           Text="Versioning Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"/>
+                <CheckBox x:Name="Authorization"
+                          Checked="Checked"
+                          Unchecked="UnChecked"
+                          Grid.Row="6"
+                          Margin="5"/>
                 <TextBlock Grid.Column="1"
-					   Grid.Row="4"
-					   Text="Replication Bundle"
-					   Margin="5"
-					   MouseLeftButtonDown="ToggleBundles"/>
-                <CheckBox x:Name="Versioning"
-					  Checked="Checked"
-					  Unchecked="UnChecked"
-					  Grid.Row="5"
-					  Margin="5"/>
-                <TextBlock Grid.Column="1"
-					   Grid.Row="5"
-					   Text="Versioning Bundle"
-					   Margin="5"
-					   MouseLeftButtonDown="ToggleBundles"/>
-
+                           Grid.Row="6"
+                           Text="Authorization Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"/>
             </Grid>
-        </Grid>
-
-        <Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="2" Grid.ColumnSpan="3"/>
-        <Button x:Name="OKButton" Content="Next" Click="OKButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="2" IsEnabled="{Binding Text, Converter={StaticResource StringToBoolean}, ElementName=DbName}" Grid.ColumnSpan="3"/>
-    </Grid>
+		</Grid>
+		
+		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="2" Grid.ColumnSpan="3"/>
+		<Button x:Name="OKButton" Content="Next" Click="OKButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="2" IsEnabled="{Binding Path=Text, ElementName=DbName,Converter={StaticResource StringToBoolean}}" Grid.ColumnSpan="3"/>
+	</Grid>
 </controls:ChildWindow>

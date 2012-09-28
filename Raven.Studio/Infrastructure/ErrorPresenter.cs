@@ -8,7 +8,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
-using Raven.Json.Linq;
 using Raven.Studio.Features.Util;
 
 namespace Raven.Studio.Infrastructure
@@ -22,13 +21,9 @@ namespace Raven.Studio.Infrastructure
 			var writer = new StringWriter();
 
 			if (customMessage != null)
-			{
 				WriteCustomMessage(customMessage, writer);
-			}
 			else
-			{
 				SetCustomMessageBasedOnTheActualError(writer, e);
-			}
 
 			writer.Write("Message: ");
 			writer.WriteLine(e.Message);

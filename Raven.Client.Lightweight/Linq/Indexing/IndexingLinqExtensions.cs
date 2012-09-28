@@ -9,7 +9,6 @@ namespace Raven.Client.Linq.Indexing
 	/// </summary>
 	public static class IndexingLinqExtensions
 	{
-
 		/// <summary>
 		/// Marker method for allowing complex (multi entity) queries on the server.
 		/// </summary>

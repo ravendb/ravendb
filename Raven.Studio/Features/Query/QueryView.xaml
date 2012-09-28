@@ -1,22 +1,21 @@
 ﻿<Infrastructure:PageView x:Name="this"
-					 x:Class="Raven.Studio.Features.Query.QueryView"
-					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
-					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
-					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-					 xmlns:Controls="clr-namespace:System.Windows.Controls"
+                         x:Class="Raven.Studio.Features.Query.QueryView"
+                         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                         xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                         xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+                         xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+                         xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
-                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Delay="clr-namespace:Delay"
-                         xmlns:Query="clr-namespace:Raven.Studio.Features.Query"
-                         xmlns:Controls1="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
-                         d:DataContext="{d:DesignInstance Models:QueryModel}">
+                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                         xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+                         mc:Ignorable="d" d:DataContext="{d:DesignInstance Models:QueryModel}">
 	<Infrastructure:PageView.Resources>
 		<Storyboard x:Key="ShowErrorPanel">
 			<DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="50" Duration="0:0:0.1"/>
@@ -46,41 +45,41 @@
 			<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
 				<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
 				<HyperlinkButton Content="Indexes"
-									 Style="{StaticResource Style_Link_Breadcrumb_Header}"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="/Indexes"
-									 VerticalAlignment="Center" />
+                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                 Command="{StaticResource NavigateToCommand}"
+                                 CommandParameter="/Indexes"
+                                 VerticalAlignment="Center" />
 				<TextBlock Text=">"
-							   VerticalAlignment="Center"
-							   Margin="4,0" />
+                           VerticalAlignment="Center"
+                           Margin="4,0" />
 
 				<StackPanel Orientation="Horizontal"
-								Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToVisibility}}">
+                            Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToVisibility}}">
 					<TextBlock Text="Dynamic/"
-								   Margin="0,0,0,0"
-								   VerticalAlignment="Center"
-								   Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}" />
+                               Margin="0,0,0,0"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}" />
 					<ComboBox ItemsSource="{Binding DynamicOptions}"
-								  SelectedItem="{Binding DynamicSelectedOption, Mode=TwoWay}"
-								  Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
+                              SelectedItem="{Binding DynamicSelectedOption, Mode=TwoWay}"
+                              Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
 				</StackPanel>
 
 				<StackPanel Orientation="Horizontal"
-								Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}">
+                            Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}">
 					<HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
-										 ToolTipService.ToolTip="{Binding IndexName}"
-										 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-										 Command="{StaticResource NavigateToCommand}"
-										 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
-										 VerticalAlignment="Center" />
+                                     ToolTipService.ToolTip="{Binding IndexName}"
+                                     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+                                     Command="{StaticResource NavigateToCommand}"
+                                     CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+                                     VerticalAlignment="Center" />
 				</StackPanel>
 
 				<TextBlock Text=">"
-							   VerticalAlignment="Center"
-							   Margin="4,0" />
+                           VerticalAlignment="Center"
+                           Margin="4,0" />
 				<TextBlock Text="Query"
-							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
-							   VerticalAlignment="Center" />
+                           Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                           VerticalAlignment="Center" />
 			</StackPanel>
 		</toolkit:DockPanel>
 
@@ -91,37 +90,37 @@
 						VerticalAlignment="Center">
 
 				<Button Command="{Binding Execute}"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Show the Results of the Query (Ctrl+Enter)">
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Show the Results of the Query (Ctrl+Enter)">
 					<Button.Content>
 						<StackPanel Orientation="Horizontal">
 							<Image Source="{StaticResource Image_ExecuteQuery_Small}"
-									   Stretch="None"
+                                   Stretch="None"
 								   />
 							<TextBlock Text="Execute" Margin="2,0,0,0" />
 						</StackPanel>
 					</Button.Content>
 				</Button>
 
-				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 				<Button x:Name="AddSortBy"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Add sort by option for this query"
-							VerticalAlignment="Center"
-							Margin="0,0,6,0"
-							Command="{Binding AddSortBy}"
-							Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
-							VerticalContentAlignment="Center">
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Add sort by option for this query"
+                        VerticalAlignment="Center"
+                        Margin="0,0,6,0"
+                        Command="{Binding AddSortBy}"
+                        Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
+                        VerticalContentAlignment="Center">
 					<Button.Content>
 						<StackPanel Orientation="Horizontal"
-										VerticalAlignment="Center">
+                                    VerticalAlignment="Center">
 							<Image Source="{StaticResource Image_Add_Tiny}"
-									   Stretch="None"
-									   VerticalAlignment="Center" />
+                                   Stretch="None"
+                                   VerticalAlignment="Center" />
 							<TextBlock Text="Add Sort By"
-										   VerticalAlignment="Center"
-										   Margin="2,0,0,0" />
+                                       VerticalAlignment="Center"
+                                       Margin="2,0,0,0" />
 						</StackPanel>
 					</Button.Content>
 				</Button>
@@ -141,7 +140,6 @@
 					</ComboBox>
 				</StackPanel>
 
-
 				<ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}"
                               Style="{StaticResource Style_ToggleButton_MouseOverChrome}"
                               ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents"
@@ -150,7 +148,7 @@
 						<Image Source="{StaticResource Image_IndexFields_Tiny}"
                                Stretch="None" VerticalAlignment="Center"/>
 						<TextBlock VerticalAlignment="Center"
-										   Margin="2,0,0,0" >Show fields</TextBlock>
+                                   Margin="2,0,0,0" >Show fields</TextBlock>
 					</StackPanel>
 				</ToggleButton>
 
@@ -163,7 +161,7 @@
 						<Image Source="{StaticResource Image_IndexFields_Tiny}"
                                Stretch="None" VerticalAlignment="Center"/>
 						<TextBlock VerticalAlignment="Center"
-										   Margin="2,0,0,0" >Index entries</TextBlock>
+                                   Margin="2,0,0,0" >Index entries</TextBlock>
 					</StackPanel>
 				</ToggleButton>
 
@@ -176,34 +174,34 @@
 						<Image Source="{StaticResource Image_SkipTransform_Tiny}"
                                Stretch="None" VerticalAlignment="Center"/>
 						<TextBlock VerticalAlignment="Center"
-										   Margin="2,0,0,0" >Skip Transform</TextBlock>
+                                   Margin="2,0,0,0" >Skip Transform</TextBlock>
 					</StackPanel>
 				</ToggleButton>
 
-				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 				<Controls1:RecentQueriesButton/>
 
-				<Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 				<Button x:Name="IndexStats"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Index Statistics"
-							VerticalAlignment="Center"
-							Margin="0,0,6,0"
-							Command="{StaticResource NavigateToCommand}"
-						CommandParameter="{Binding IndexName, StringFormat='/statistics?index=\{0\}'}"
-							Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"
-							VerticalContentAlignment="Center">
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Index Statistics"
+                        VerticalAlignment="Center"
+                        Margin="0,0,6,0"
+                        Command="{StaticResource NavigateToCommand}"
+                        CommandParameter="{Binding IndexName, StringFormat='/statistics?index=\{0\}'}"
+                        Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"
+                        VerticalContentAlignment="Center">
 					<Button.Content>
 						<StackPanel Orientation="Horizontal"
-										VerticalAlignment="Center">
+                                    VerticalAlignment="Center">
                             <Image Source="{StaticResource Image_ChangeView_Tiny}"
-									   Stretch="None"
-									   VerticalAlignment="Center" />
+                                   Stretch="None"
+                                   VerticalAlignment="Center" />
 							<TextBlock Text="Index Statistics"
-										   VerticalAlignment="Center"
-										   Margin="2,0,0,0" />
+                                       VerticalAlignment="Center"
+                                       Margin="2,0,0,0" />
 						</StackPanel>
 					</Button.Content>
 				</Button>
@@ -234,8 +232,7 @@
 				<Editors:QueryEditor x:Name="QueryEditor"
 									 Grid.Row="1"
                                      IsTextDataBindingEnabled="False"
-                                     BoundDocument="{Binding QueryDocument}"
-                                     >
+                                     BoundDocument="{Binding QueryDocument}">
 					<i:Interaction.Triggers>
 						<Behaviors:StudioKeyTrigger Key="Enter"
 									   Modifiers="Control">
@@ -318,7 +315,6 @@
 											 Command="{Binding CalculateFromAddress}" VerticalAlignment="Center"/>
 						</StackPanel>
 					</StackPanel>
-
 				</Grid>
 
 				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"
@@ -389,23 +385,23 @@
 								   Margin="0,80,0,0"
 								   Grid.RowSpan="2"/>
 
-						<ItemsControl 
-							Grid.RowSpan="2"
-							VerticalAlignment="Top" HorizontalAlignment="Center"
-							Margin="0,120,0,0"
-							ItemsSource="{Binding Suggestions}"
-							Visibility="{Binding Path=DocumentsResult.Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}">
+						<ItemsControl Grid.RowSpan="2"
+                                      VerticalAlignment="Top" 
+                                      HorizontalAlignment="Center"
+                                      Margin="0,120,0,0"
+                                      ItemsSource="{Binding Suggestions}"
+                                      Visibility="{Binding Path=DocumentsResult.Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate>
 									<StackPanel Orientation="Horizontal">
 										<TextBlock Text="Did you mean " />
 										<HyperlinkButton Content="{Binding SuggestedTerm}"
-													 FontStyle="Italic"
-													 Command="{Binding Path=DataContext.RepairTermInQuery, ElementName=this}"
-													 CommandParameter="{Binding}" />
+                                                         FontStyle="Italic"
+                                                         Command="{Binding Path=DataContext.RepairTermInQuery, ElementName=this}"
+                                                         CommandParameter="{Binding}" />
 										<TextBlock Text=" for the field " />
 										<TextBlock Text="{Binding Field}"
-											   FontStyle="Italic" />
+                                                   FontStyle="Italic" />
 										<TextBlock Text=" ?" />
 									</StackPanel>
 								</DataTemplate>
@@ -415,13 +411,12 @@
 				</Grid>
 
 				<Border Grid.Row="1"
-								VerticalAlignment="Bottom"
+                        VerticalAlignment="Bottom"
 						Background="{StaticResource Brush_HeaderBackground}"
 						BorderBrush="{StaticResource Brush_HeaderBorder}"
 						BorderThickness="1"
 						CornerRadius="2"
 						Margin="0,5,0,0">
-
 					<Grid>
 						<Grid.RowDefinitions>
 							<RowDefinition Height="Auto"/>
@@ -452,10 +447,10 @@
 							<StackPanel Orientation="Horizontal" Margin="0,2,25,2" VerticalAlignment="Center">
 								<TextBlock Text="Index: " Margin="0"/>
 								<HyperlinkButton Content="{Binding Results.IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
-										 ToolTipService.ToolTip="{Binding Results.IndexName}"
-										 Command="{StaticResource NavigateToCommand}"
-										 CommandParameter="{Binding Results.IndexName, StringFormat=/indexes/\{0\}}"
-										 VerticalAlignment="Center" />
+                                                 ToolTipService.ToolTip="{Binding Results.IndexName}"
+                                                 Command="{StaticResource NavigateToCommand}"
+                                                 CommandParameter="{Binding Results.IndexName, StringFormat=/indexes/\{0\}}"
+                                                 VerticalAlignment="Center" />
 							</StackPanel>
 							<TextBlock>
 					    <Run Text="Etag: " />

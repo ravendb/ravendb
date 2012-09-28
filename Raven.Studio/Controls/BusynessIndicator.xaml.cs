@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using Microsoft.Expression.Interactivity.Core;
-using Raven.Abstractions.Extensions;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Controls

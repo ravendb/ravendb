@@ -3,102 +3,146 @@
 						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
 						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-						 mc:Ignorable="d" 
-						 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" d:DesignWidth="640" d:DesignHeight="480"
+						 mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
+						 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" 
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-						 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Title="AlertsView Page"
+						 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" 
+                         Title="AlertsView Page"
 						 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-						 xmlns:Controls="clr-namespace:System.Windows.Controls"
-                xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity">
+                         xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="DataTemplate_List_DetailsView">
 			<sdk:DataGrid x:Name="AlertsList"
-						ItemsSource="{Binding AlertsToSee}"
-                        AutoGenerateColumns="False"
-                        IsReadOnly="True"
-                        ColumnWidth="170"
-                        RowHeight="28" 
-                        ClipboardCopyMode="IncludeHeader"
-                        SelectionMode="Extended">
+                          ItemsSource="{Binding AlertsToSee}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          ColumnWidth="170"
+                          RowHeight="28" 
+                          ClipboardCopyMode="IncludeHeader"
+                          SelectionMode="Extended">
 
 				<i:Interaction.Behaviors>
 					<Behaviors:SelectRowOnRightClickBehavior />
 				</i:Interaction.Behaviors>
 				
-				<Controls:ContextMenuService.ContextMenu>
-					<Controls:ContextMenu>
-						<Controls:MenuItem Header="Delete"
-										   Command="{Binding DeleteSelectedAlert}"
-										   CommandParameter="{Binding SelectedItem, ElementName=AlertsList}">
-							<Controls:MenuItem.Icon>
+				<ContextMenu:ContextMenuService.ContextMenu>
+					<ContextMenu:ContextMenu>
+						<ContextMenu:MenuItem Header="Delete"
+                                              Command="{Binding DeleteSelectedAlert}"
+                                              CommandParameter="{Binding SelectedItem, ElementName=AlertsList}">
+							<ContextMenu:MenuItem.Icon>
 								<Image Source="{StaticResource Image_Delete_Tiny}"/>
-							</Controls:MenuItem.Icon>
-						</Controls:MenuItem>
-					</Controls:ContextMenu>
-				</Controls:ContextMenuService.ContextMenu>
+							</ContextMenu:MenuItem.Icon>
+						</ContextMenu:MenuItem>
+					</ContextMenu:ContextMenu>
+				</ContextMenu:ContextMenuService.ContextMenu>
 				
 				<sdk:DataGrid.Columns>
-					<sdk:DataGridTemplateColumn Header="Observed" Width="Auto" CanUserReorder="False" CanUserResize="True" CanUserSort="False" ClipboardContentBinding="{Binding Item.Document.Key}">
+					<sdk:DataGridTemplateColumn Header="Observed" 
+                                                Width="Auto" 
+                                                CanUserReorder="False" 
+                                                CanUserResize="True" 
+                                                CanUserSort="False" 
+                                                ClipboardContentBinding="{Binding Item.Document.Key}">
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
 									<Rectangle Margin="0"
-                                           HorizontalAlignment="Left"
-                                           Fill="#06000000"
-                                           Width="8"
-                                           RadiusX="1"
-					                       RadiusY="1"/>
+                                               HorizontalAlignment="Left"
+                                               Fill="#06000000"
+                                               Width="8"
+                                               RadiusX="1"
+                                               RadiusY="1"/>
 
 									<Rectangle HorizontalAlignment="Left"
-					                       Width="4"
-					                       Margin="2"
-                                           Height="22"          
-					                       RadiusX="1"
-					                       RadiusY="1">
+                                               Width="4"
+                                               Margin="2"
+                                               Height="22" 
+                                               RadiusX="1"
+                                               RadiusY="1">
 									</Rectangle>
-									<Rectangle Fill="Black" Height="1" HorizontalAlignment="Stretch" Margin="0,0,0,0" Visibility="{Binding  Observed.Value, Converter={StaticResource BooleanToVisibility}}"/>
+									<Rectangle Fill="Black" 
+                                               Height="1" 
+                                               HorizontalAlignment="Stretch" 
+                                               Margin="0,0,0,0" 
+                                               Visibility="{Binding  Observed.Value, Converter={StaticResource BooleanToVisibility}}"/>
 
-									<CheckBox IsChecked="{Binding Observed.Value, Mode=TwoWay}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
-                                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
+									<CheckBox IsChecked="{Binding Observed.Value, Mode=TwoWay}" 
+                                              Behaviors:FadeTrimming.IsEnabled="True" 
+                                              Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                              VerticalAlignment="Center" Margin="10,0,0,0"/>
 								</Grid>
 							</DataTemplate>
 						</sdk:DataGridTemplateColumn.CellTemplate>
 					</sdk:DataGridTemplateColumn>
 
-					<sdk:DataGridTemplateColumn Header="From Database" Width="Auto" CanUserReorder="False" CanUserResize="True" CanUserSort="False" ClipboardContentBinding="{Binding Item.Document.Key}">
+					<sdk:DataGridTemplateColumn Header="From Database" 
+                                                Width="Auto" 
+                                                CanUserReorder="False" 
+                                                CanUserResize="True" 
+                                                CanUserSort="False" 
+                                                ClipboardContentBinding="{Binding Item.Document.Key}">
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
-									<TextBlock Text="{Binding Database}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
-                                                   VerticalAlignment="Center"/>
-									<Rectangle Fill="Black" Height="1" HorizontalAlignment="Stretch" Margin="0,0,0,0" Visibility="{Binding Observed.Value, Converter={StaticResource BooleanToVisibility}}"/>
+									<TextBlock Text="{Binding Database}" 
+                                               Behaviors:FadeTrimming.IsEnabled="True" 
+                                               Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                               VerticalAlignment="Center"/>
+									<Rectangle Fill="Black" 
+                                               Height="1" 
+                                               HorizontalAlignment="Stretch" 
+                                               Margin="0,0,0,0" 
+                                               Visibility="{Binding Observed.Value, Converter={StaticResource BooleanToVisibility}}"/>
+								</Grid>
+							</DataTemplate>
+						</sdk:DataGridTemplateColumn.CellTemplate>
+					</sdk:DataGridTemplateColumn>
+
+					<sdk:DataGridTemplateColumn Header="Title" 
+                                                Width="Auto" 
+                                                CanUserReorder="False" 
+                                                CanUserResize="True" 
+                                                CanUserSort="False" 
+                                                ClipboardContentBinding="{Binding Item.Document.Key}">
+						<sdk:DataGridTemplateColumn.CellTemplate>
+							<DataTemplate>
+								<Grid>
+									<TextBlock Text="{Binding Title}" 
+                                               Behaviors:FadeTrimming.IsEnabled="True" 
+                                               Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                               VerticalAlignment="Center"/>
+									<Rectangle Fill="Black" 
+                                               Height="1" 
+                                               HorizontalAlignment="Stretch" 
+                                               Margin="0,0,0,0" 
+                                               Visibility="{Binding  Observed.Value, Converter={StaticResource BooleanToVisibility}}"/>
 
 								</Grid>
 							</DataTemplate>
 						</sdk:DataGridTemplateColumn.CellTemplate>
 					</sdk:DataGridTemplateColumn>
 
-					<sdk:DataGridTemplateColumn Header="Title" Width="Auto" CanUserReorder="False" CanUserResize="True" CanUserSort="False" ClipboardContentBinding="{Binding Item.Document.Key}">
+					<sdk:DataGridTemplateColumn Header="Message" 
+                                                Width="Auto" 
+                                                CanUserReorder="False" 
+                                                CanUserResize="True" 
+                                                CanUserSort="False" 
+                                                ClipboardContentBinding="{Binding Item.Document.Key}">
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
-									<TextBlock Text="{Binding Title}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
-                                                   VerticalAlignment="Center"/>
-									<Rectangle Fill="Black" Height="1" HorizontalAlignment="Stretch" Margin="0,0,0,0" Visibility="{Binding  Observed.Value, Converter={StaticResource BooleanToVisibility}}"/>
-
-								</Grid>
-							</DataTemplate>
-						</sdk:DataGridTemplateColumn.CellTemplate>
-					</sdk:DataGridTemplateColumn>
-
-					<sdk:DataGridTemplateColumn Header="Message" Width="Auto" CanUserReorder="False" CanUserResize="True" CanUserSort="False" ClipboardContentBinding="{Binding Item.Document.Key}">
-						<sdk:DataGridTemplateColumn.CellTemplate>
-							<DataTemplate>
-								<Grid>
-									<TextBlock Text="{Binding Message}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
-                                                   VerticalAlignment="Center"/>
-									<Rectangle Fill="Black" Height="1" HorizontalAlignment="Stretch" Margin="0,0,0,0" Visibility="{Binding  Observed.Value, Converter={StaticResource BooleanToVisibility}}"/>
+									<TextBlock Text="{Binding Message}" 
+                                               Behaviors:FadeTrimming.IsEnabled="True" 
+                                               Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                               VerticalAlignment="Center"/>
+									<Rectangle Fill="Black" 
+                                               Height="1" 
+                                               HorizontalAlignment="Stretch" 
+                                               Margin="0,0,0,0" 
+                                               Visibility="{Binding  Observed.Value, Converter={StaticResource BooleanToVisibility}}"/>
 								</Grid>
 							</DataTemplate>
 						</sdk:DataGridTemplateColumn.CellTemplate>
@@ -163,11 +207,11 @@
 									<StackPanel Orientation="Horizontal"
                                             VerticalAlignment="Center">
 										<Image Source="{StaticResource Image_Observed_Tiny}"
-                                           Stretch="None"
-                                           VerticalAlignment="Center" />
+                                               Stretch="None"
+                                               VerticalAlignment="Center" />
 										<TextBlock Text="Show Observed"
-                                               VerticalAlignment="Center"
-                                               Margin="2,0,0,0" />
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,0,0" />
 									</StackPanel>
 								</Button.Content>
 							</Button>
@@ -180,13 +224,13 @@
 									VerticalContentAlignment="Center">
 								<Button.Content>
 									<StackPanel Orientation="Horizontal"
-                                            VerticalAlignment="Center">
+                                                VerticalAlignment="Center">
 										<Image Source="{StaticResource Image_Check_Tiny}"
-                                           Stretch="None"
-                                           VerticalAlignment="Center" />
+                                               Stretch="None"
+                                               VerticalAlignment="Center" />
 										<TextBlock Text="Mark as Observed"
-                                               VerticalAlignment="Center"
-                                               Margin="2,0,0,0" />
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,0,0" />
 									</StackPanel>
 								</Button.Content>
 							</Button>
@@ -199,13 +243,13 @@
 									VerticalContentAlignment="Center">
 								<Button.Content>
 									<StackPanel Orientation="Horizontal"
-                                            VerticalAlignment="Center">
+                                                VerticalAlignment="Center">
 										<Image Source="{StaticResource Image_Uncheck_Tiny}"
-                                           Stretch="None"
-                                           VerticalAlignment="Center" />
+                                               Stretch="None"
+                                               VerticalAlignment="Center" />
 										<TextBlock Text="Mark as Unobserved"
-                                               VerticalAlignment="Center"
-                                               Margin="2,0,0,0" />
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,0,0" />
 									</StackPanel>
 								</Button.Content>
 							</Button>
@@ -218,13 +262,13 @@
 									VerticalContentAlignment="Center">
 								<Button.Content>
 									<StackPanel Orientation="Horizontal"
-                                            VerticalAlignment="Center">
+                                                VerticalAlignment="Center">
 										<Image Source="{StaticResource Image_DeleteObserved_Tiny}"
-                                           Stretch="None"
-                                           VerticalAlignment="Center" />
+                                               Stretch="None"
+                                               VerticalAlignment="Center" />
 										<TextBlock Text="Delete All Observed"
-                                               VerticalAlignment="Center"
-                                               Margin="2,0,0,0" />
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,0,0" />
 									</StackPanel>
 								</Button.Content>
 							</Button>

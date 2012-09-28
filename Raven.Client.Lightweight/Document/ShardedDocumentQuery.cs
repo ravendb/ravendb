@@ -115,7 +115,8 @@ namespace Raven.Client.Document
 				groupByFields = groupByFields,
 				aggregationOp = aggregationOp,
 				transformResultsFunc = transformResultsFunc,
-				includes = new HashSet<string>(includes)
+				includes = new HashSet<string>(includes),
+				rootTypes = {typeof(T)}
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;

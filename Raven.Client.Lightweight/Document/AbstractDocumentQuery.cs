@@ -45,6 +45,11 @@ namespace Raven.Client.Document
 		protected SpatialRelation spatialRelation;
 		protected double distanceErrorPct;
 		private readonly LinqPathProvider linqPathProvider;
+		protected readonly HashSet<Type> rootTypes = new HashSet<Type>
+		{
+			typeof (T)
+		};
+
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -371,9 +376,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name = "radius">The radius.</param>
-		/// <param name = "latitude">The latitude.</param>
-		/// <param name = "longitude">The longitude.</param>
 		protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025);
 
 		protected abstract object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025);
@@ -896,11 +898,18 @@ If you really want to do in memory filtering on the data returned from the query
 			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
 				return whereParams.FieldName;
 
-			var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-			if (identityProperty == null || identityProperty.Name != whereParams.FieldName)
-				return whereParams.FieldName;
-			
-			return whereParams.FieldName = Constants.DocumentIdFieldName;
+			foreach (var rootType in rootTypes)
+			{
+				var identityProperty = theSession.Conventions.GetIdentityProperty(rootType);
+				if (identityProperty != null && identityProperty.Name == whereParams.FieldName)
+				{
+					whereParams.FieldTypeForIdentifier = rootType;
+					return whereParams.FieldName = Constants.DocumentIdFieldName;
+				}
+			}
+
+			return whereParams.FieldName;
+
 		}
 
 		///<summary>
@@ -1233,6 +1242,28 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "fields">The fields.</param>
+		public void OrderByDescending(params string[] fields)
+		{
+			fields = fields.Select(MakeFieldSortDescending).ToArray();
+			OrderBy(fields);
+		}
+
+		string MakeFieldSortDescending(string field)
+		{
+			if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
+			{
+				return field;
+			}
+
+			return "-" + field;
+		}	
+
+		/// <summary>
 		///   Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>
@@ -1503,8 +1534,6 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
 		{
-			searchTerms = searchTerms.Replace("<<", "").Replace(">>", "");
-			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
 			theQueryText.Append(' ');
 			
 			NegateIfNeeded();
@@ -1526,8 +1555,9 @@ If you really want to do in memory filtering on the data returned from the query
 				default:
 					throw new ArgumentOutOfRangeException("escapeQueryOptions", "Value: "  + escapeQueryOptions);
 			}
+			lastEquality = new KeyValuePair<string, string>(fieldName, "(" + searchTerms + ")");
 
-			theQueryText.Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">>");
+			theQueryText.Append(fieldName).Append(":").Append("(").Append(searchTerms).Append(")");
 		}
 
 		private string TransformToEqualValue(WhereParams whereParams)
@@ -1566,7 +1596,8 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
-				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, 
+					whereParams.FieldTypeForIdentifier ?? typeof(T), false);
 			}
 
 			if (whereParams.Value is string || whereParams.Value is ValueType)
@@ -1663,6 +1694,11 @@ If you really want to do in memory filtering on the data returned from the query
 		public void Intersect()
 		{
 			theQueryText.Append(Constants.IntersectSeperator);
+		}
+
+		public void AddRootType(Type type)
+		{
+			rootTypes.Add(type);
 		}
 
 		/// <summary>

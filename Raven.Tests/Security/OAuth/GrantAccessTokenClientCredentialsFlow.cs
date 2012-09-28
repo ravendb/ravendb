@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Net;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Database;
 using Raven.Database.Config;
@@ -35,7 +36,6 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			ravenConfiguration.AuthenticationMode = "OAuth";
 			ravenConfiguration.OAuthTokenCertificate = CertGenerator.GenerateNewCertificate("RavenDB.Test");
 			ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
 		}
@@ -47,11 +47,11 @@ namespace Raven.Tests.Security.OAuth
 
 		public class FakeAuthenticateClient : IAuthenticateClient
 		{
-			public bool Authenticate(DocumentDatabase documentDatabase, string username, string password, out AccessTokenBody.DatabaseAccess[] allowedDatabases)
+			public bool Authenticate(DocumentDatabase documentDatabase, string username, string password, out DatabaseAccess[] allowedDatabases)
 			{
 				allowedDatabases = new[]
 				{
-					new AccessTokenBody.DatabaseAccess
+					new DatabaseAccess
 					{
 						TenantId = "*"
 					},

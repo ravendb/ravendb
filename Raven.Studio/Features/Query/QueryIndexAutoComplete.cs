@@ -5,11 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
@@ -53,7 +51,7 @@ namespace Raven.Studio.Features.Query
                 this.queryDocument = queryDocument;
                 queryDocument.ObserveTextChanged()
                     .Throttle(TimeSpan.FromSeconds(0.2))
-                    .ObserveOnDispatcher<EventPattern<TextSnapshotChangedEventArgs>>()
+                    .ObserveOnDispatcher()
                     .SubscribeWeakly(this, (target, _) => target.GetTermsForUsedFields());
 
                 CompletionProvider = new QueryIntelliPromptProvider(fields, indexName, fieldsTermsDictionary);

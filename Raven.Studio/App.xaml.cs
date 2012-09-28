@@ -12,9 +12,9 @@ namespace Raven.Studio
 	{
 		public App()
 		{
-			this.Exit += HandleExit;
-			this.Startup += this.Application_Startup;
-			this.UnhandledException += this.Application_UnhandledException;
+			Exit += HandleExit;
+			Startup += Application_Startup;
+			UnhandledException += Application_UnhandledException;
 
 			LoadDefaults();
 			InitializeComponent();
@@ -28,7 +28,7 @@ namespace Raven.Studio
 
 			var rootVisual = new MainPage();
 			ApplicationModel.Current.Setup(rootVisual);
-			this.RootVisual = rootVisual;
+			RootVisual = rootVisual;
 		}
 
 		private void LoadDefaults()
@@ -46,7 +46,8 @@ namespace Raven.Studio
 
 		private void Application_UnhandledException(object sender, ApplicationUnhandledExceptionEventArgs e)
 		{
-			if (System.Diagnostics.Debugger.IsAttached) return;
+			if (System.Diagnostics.Debugger.IsAttached) 
+                return;
 			
 			e.Handled = true;
 			ApplicationModel.Current.AddErrorNotification(e.ExceptionObject, "An unhandled exception occurred: " + e.ExceptionObject.Message);

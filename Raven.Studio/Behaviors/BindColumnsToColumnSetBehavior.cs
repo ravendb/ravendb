@@ -1,25 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Net;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Interactivity;
 using System.Windows.Markup;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Studio.Extensions;
 using Raven.Studio.Features.Documents;
 using System.Linq;
-using Raven.Studio.Infrastructure;
 using Raven.Studio.Infrastructure.Converters;
 using ColumnDefinition = Raven.Studio.Features.Documents.ColumnDefinition;
 
@@ -71,8 +63,6 @@ namespace Raven.Studio.Behaviors
             AssociatedObject.Loaded += HandleLoaded;
             AssociatedObject.Unloaded += HandleUnloaded;
 
-            
-
             ScheduleColumnReset();
         }
 
@@ -105,7 +95,6 @@ namespace Raven.Studio.Behaviors
 
             AssociatedObject.Loaded -= HandleLoaded;
             AssociatedObject.Unloaded -= HandleUnloaded;
-
         }
 
         private void HandleUnloaded(object sender, RoutedEventArgs e)

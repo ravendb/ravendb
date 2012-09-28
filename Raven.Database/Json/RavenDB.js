@@ -1,22 +1,12 @@
 ﻿var debug_outputs = [];
 
 function output(msg) {
-	debug_outputs.push(msg.toString());
-}
-
-function LoadDocument(id) {
-	var data = LoadDocumentInternal(id);
-	return JSON.parse(data);
+	debug_outputs.push(msg);
 }
 
 Array.prototype.Remove = function (val /*, thisp*/) {
 
-	var res = this.indexOf(val);
-	if (res == -1)
-		return;
-	this.splice(res, 1);
-
-	return this;
+	return this.RemoveWhere(function(it) { return val == it; });
 };
 
 Array.prototype.Where = Array.prototype.filter;

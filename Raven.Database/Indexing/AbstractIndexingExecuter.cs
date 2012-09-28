@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
 using System.Linq;
-using Raven.Database.Tasks;
 using Task = Raven.Database.Tasks.Task;
 using Raven.Abstractions.Extensions;
 
@@ -15,7 +14,7 @@ namespace Raven.Database.Indexing
 	{
 		protected WorkContext context;
 		protected TaskScheduler scheduler;
-		protected static readonly Logger log = LogManager.GetCurrentClassLogger();
+		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
 		protected int lastFlushedWorkCounter;

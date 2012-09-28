@@ -32,7 +32,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static string Static(this string url, string key)
 		{
-			return url + "/static/" + HttpUtility.UrlEncode(key);
+			return url + "/static/" + Uri.EscapeUriString(key);
 		}
 
 		public static string Databases(this string url, int pageSize, int start)
@@ -55,7 +55,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static string Docs(this string url, string key)
 		{
-			return url + "/docs/" + HttpUtility.UrlEncode(key);
+            return url + "/docs/" + Uri.EscapeUriString(key);
 		}
 
 		public static string Docs(this string url, int start, int pageSize, bool metadataOnly)
@@ -68,7 +68,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static string DocsStartingWith(this string url, string prefix, int start, int pageSize, bool metadataOnly)
 		{
-			return Docs(url, start, pageSize, metadataOnly) + "&startsWith=" + HttpUtility.UrlEncode(prefix);
+			return Docs(url, start, pageSize, metadataOnly) + "&startsWith=" + Uri.EscapeUriString(prefix);
 		}
 
 		public static string Queries(this string url)

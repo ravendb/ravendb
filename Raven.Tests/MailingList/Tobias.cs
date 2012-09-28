@@ -6,6 +6,7 @@
 using System.Linq;
 using Lucene.Net.Analysis;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;

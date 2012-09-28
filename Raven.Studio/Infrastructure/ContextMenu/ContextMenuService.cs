@@ -3,9 +3,9 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System.Windows.Input;
+using System.Windows;
 
-namespace System.Windows.Controls
+namespace Raven.Studio.Infrastructure.ContextMenu
 {
     /// <summary>
     /// Provides the system implementation for displaying a ContextMenu.
@@ -49,19 +49,16 @@ namespace System.Windows.Controls
         /// <param name="e">Event data for the DependencyPropertyChangedEvent.</param>
         private static void OnContextMenuChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
         {
-            FrameworkElement element = o as FrameworkElement;
+            var element = o as FrameworkElement;
             if (null != element)
             {
-                ContextMenu oldContextMenu = e.OldValue as ContextMenu;
+                var oldContextMenu = e.OldValue as ContextMenu;
                 if (null != oldContextMenu)
-                {
                     oldContextMenu.Owner = null;
-                }
-                ContextMenu newContextMenu = e.NewValue as ContextMenu;
+                
+                var newContextMenu = e.NewValue as ContextMenu;
                 if (null != newContextMenu)
-                {
                     newContextMenu.Owner = element;
-                }
             }
         }
     }

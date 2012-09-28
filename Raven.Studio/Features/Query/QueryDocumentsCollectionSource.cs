@@ -5,8 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Connection;
-using Raven.Client.Linq;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -79,9 +79,7 @@ namespace Raven.Studio.Features.Query
             }
 
             if (templateQuery == null || string.IsNullOrEmpty(indexName))
-            {
                 return TaskEx.FromResult(new QueryResult());
-            }
 
             var query = templateQuery.Clone();
             query.Start = start;

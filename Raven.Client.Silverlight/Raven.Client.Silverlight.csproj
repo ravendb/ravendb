@@ -61,6 +61,10 @@
     <Reference Include="AsyncCtpLibrary_Silverlight5">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
     </Reference>
+    <Reference Include="DH.Scrypt, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\DH.Scrypt.dll.1.0.3\lib\sl40\DH.Scrypt.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\Microsoft.CSharp.dll</HintPath>
@@ -577,8 +581,14 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\WriteState.cs">
       <Link>Imports\Imports\Newtonsoft.Json\WriteState.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
+      <Link>Imports\Connection\OAuthHelper.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\ApiKeyDefinition.cs">
+      <Link>Imports\Data\ApiKeyDefinition.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\BackupStatus.cs">
       <Link>Imports\Data\BackupStatus.cs</Link>
@@ -640,8 +650,14 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
       <Link>Imports\Extensions\Buffers.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\CryptoTransformExtensions.cs">
+      <Link>Imports\Extensions\CryptoTransformExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\ExceptionExtensions.cs">
       <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\Internal\DictionaryExtensions.cs">
+      <Link>Imports\Extensions\Internal\DictionaryExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
       <Link>Imports\Extensions\ListExtensions.cs</Link>
@@ -730,8 +746,8 @@
     <Compile Include="..\Raven.Abstractions\Logging\ILogExtensions.cs">
       <Link>Imports\Logging\ILogExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\ILogProvider.cs">
-      <Link>Imports\Logging\ILogProvider.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Logging\ILogManager.cs">
+      <Link>Imports\Logging\ILogManager.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Logging\LoggerExecutionWrapper.cs">
       <Link>Imports\Logging\LoggerExecutionWrapper.cs</Link>
@@ -739,14 +755,14 @@
     <Compile Include="..\Raven.Abstractions\Logging\LogLevel.cs">
       <Link>Imports\Logging\LogLevel.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProvider.cs">
-      <Link>Imports\Logging\LogProvider.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Logging\LogManager.cs">
+      <Link>Imports\Logging\LogManager.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\Log4NetLogProvider.cs">
-      <Link>Imports\Logging\LogProviders\Log4NetLogProvider.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\Log4NetLogManager.cs">
+      <Link>Imports\Logging\LogProviders\Log4NetLogManager.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogProvider.cs">
-      <Link>Imports\Logging\LogProviders\NLogLogProvider.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
+      <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
@@ -919,17 +935,14 @@
     <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenDocumentsByEntityName.cs">
       <Link>Imports\Indexes\RavenDocumentsByEntityName.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions_Obsolete.cs">
-      <Link>Imports\Linq\LinqExtensions_Obsolete.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
       <Link>Imports\Indexes\IndexDefinitionHelper.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\LinqPathProvider.cs">
       <Link>Imports\Linq\LinqPathProvider.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\SearchOptions.cs">
-      <Link>Imports\Linq\SearchOptions.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryableExtensions.cs">
+      <Link>Imports\Linq\RavenQueryableExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConversionListener.cs">
       <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>
@@ -943,11 +956,29 @@
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentStoreListener.cs">
       <Link>Imports\Listeners\IDocumentStoreListener.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\LinqExtensions.cs">
+      <Link>Imports\PublicExtensions\LinqExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\LinqExtensions_Obsolete.cs">
+      <Link>Imports\PublicExtensions\LinqExtensions_Obsolete.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\SearchOptions.cs">
+      <Link>Imports\PublicExtensions\SearchOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
+      <Link>Imports\RavenQueryStatistics.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\GlobalLastEtagHolder.cs">
+      <Link>Imports\Util\GlobalLastEtagHolder.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\JSBeautify.cs">
       <Link>Imports\Util\JSBeautify.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\LastEtagHolder.cs">
+      <Link>Imports\Util\LastEtagHolder.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
@@ -1303,9 +1334,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Linq\IRavenQueryProvider.cs">
       <Link>Imports\Linq\IRavenQueryProvider.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions.cs">
-      <Link>Imports\Linq\LinqExtensions.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryInspector.cs">
       <Link>Imports\Linq\RavenQueryInspector.cs</Link>
     </Compile>
@@ -1314,9 +1342,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryProviderProcessor.cs">
       <Link>Imports\Linq\RavenQueryProviderProcessor.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryStatistics.cs">
-      <Link>Imports\Linq\RavenQueryStatistics.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\ReflectionExtensions.cs">
       <Link>Imports\Linq\ReflectionExtensions.cs</Link>
@@ -1333,6 +1358,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\ObjectReferenceEqualityComparerer.cs">
       <Link>Imports\Util\ObjectReferenceEqualityComparerer.cs</Link>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->

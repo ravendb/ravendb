@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 using Raven.Client.Linq;

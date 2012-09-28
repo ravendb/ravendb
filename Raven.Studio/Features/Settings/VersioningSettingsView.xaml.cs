@@ -15,7 +15,7 @@ namespace Raven.Studio.Features.Settings
 	    {
 		    var autoCompleteBox = (AutoCompleteBox)sender;
 		    var text = autoCompleteBox.Text ?? "";
-			DependencyObject o = VisualTreeHelper.GetChild(autoCompleteBox, 0); 
+			var o = VisualTreeHelper.GetChild(autoCompleteBox, 0); 
 			o = VisualTreeHelper.GetChild(o, 0); 
 			((TextBox)(o)).Text = " ";
 			((TextBox)(o)).Text = text;

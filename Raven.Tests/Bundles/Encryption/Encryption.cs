@@ -56,7 +56,7 @@ namespace Raven.Bundles.Tests.Encryption
 			TestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
 		}
 
-		protected void RecylceServer()
+		protected void RecycleServer()
 		{
 			ravenDbServer.Dispose();
 			ravenDbServer =  new RavenDbServer(settings);

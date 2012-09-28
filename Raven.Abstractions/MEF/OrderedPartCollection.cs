@@ -97,12 +97,6 @@ namespace Raven.Abstractions.MEF
 			return this.Aggregate(seed, (accumulate, lazy) => func(accumulate,lazy.Value));
 		}
 
-
-		public TAccumulate ReverseAggregate<TAccumulate>(TAccumulate seed, Func<TAccumulate, T, TAccumulate> func)
-		{
-			return this.Reverse().Aggregate(seed, (accumulate, lazy) => func(accumulate, lazy.Value));
-		}
-
 		public void Apply(Action<T> action)
 		{
 			foreach (var item in this)

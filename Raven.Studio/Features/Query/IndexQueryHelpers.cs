@@ -87,9 +87,7 @@ namespace Raven.Studio.Features.Query
         {
             var aggAsString = fields["aggregation"].FirstOrDefault();
             if (aggAsString == null)
-            {
                 return AggregationOperation.None;
-            }
 
             return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
         }
@@ -121,6 +119,7 @@ namespace Raven.Studio.Features.Query
                     return result;
                 return null;
             }
+
             return null;
         }
 
@@ -157,7 +156,5 @@ namespace Raven.Studio.Features.Query
             }
             return null;
         }
-
-        
     }
 }

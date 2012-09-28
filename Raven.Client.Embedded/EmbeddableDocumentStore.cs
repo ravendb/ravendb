@@ -19,6 +19,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
@@ -28,7 +29,7 @@ namespace Raven.Client.Embedded
 	/// </summary>
 	public class EmbeddableDocumentStore : DocumentStore
 	{
-		ILog log = Raven.Abstractions.Logging.LogProvider.GetCurrentClassLogger();
+		ILog log = Raven.Abstractions.Logging.LogManager.GetCurrentClassLogger();
 
 		static EmbeddableDocumentStore()
 		{
@@ -209,6 +210,7 @@ namespace Raven.Client.Embedded
 				DocumentDatabase.SpinBackgroundWorkers();
 				if (UseEmbeddedHttpServer)
 				{
+					SetStudioConfigToAllowSingleDb();
 					httpServer = new HttpServer(configuration, DocumentDatabase);
 					httpServer.StartListening();
 				}
@@ -232,6 +234,32 @@ namespace Raven.Client.Embedded
 			{
 				base.InitializeInternal();
 			}
+		}
+
+		/// <summary>
+		/// Let the studio knows that it shouldn't display the warning about sys db access
+		/// </summary>
+		public void SetStudioConfigToAllowSingleDb()
+		{
+			if (DocumentDatabase == null)
+				return;
+			var jsonDocument = DocumentDatabase.Get("Raven/StudioConfig", null);
+			RavenJObject doc;
+			RavenJObject metadata;
+			if(jsonDocument == null)
+			{
+				doc = new RavenJObject();
+				metadata = new RavenJObject();
+			}
+			else
+			{
+				doc = jsonDocument.DataAsJson;
+				metadata = jsonDocument.Metadata;
+			}
+
+			doc["WarnWhenUsingSystemDatabase"] = false;
+
+			DocumentDatabase.Put("Raven/StudioConfig", null, doc, metadata, null);
 		}
 
 

@@ -129,14 +129,21 @@ namespace Raven.Database.Util.Streams
 		{
 			if (disposed)
 				return;
-			Flush();
-			disposed = true;
-			if(internalBuffer != null)
+			try
 			{
-				bufferPool.ReturnBuffer(internalBuffer);
+				Flush();
 			}
-			base.Dispose(disposing);
-			stream.Dispose();
+			finally
+			{
+				disposed = true;
+				if (internalBuffer != null)
+				{
+					bufferPool.ReturnBuffer(internalBuffer);
+				}
+				base.Dispose(disposing);
+				stream.Dispose();
+			}
+			
 		}
 	}
 }

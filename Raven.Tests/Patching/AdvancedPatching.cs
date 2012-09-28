@@ -25,9 +25,9 @@ namespace Raven.Tests.Patching
 
 		//splice(2, 1) will remove 1 elements from position 2 onwards (zero-based)
 		string sampleScript = @"
+	this.Comments.splice(2, 1);
 	this.Id = 'Something new'; 
 	this.Value++; 
-	this.Comments.splice(2, 1);
 	this.newValue = ""err!!"";
 	this.Comments.Map(function(comment) {   
 		return (comment == ""one"") ? comment + "" test"" : comment;

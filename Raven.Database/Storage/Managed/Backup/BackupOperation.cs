@@ -7,10 +7,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Backup;
 using Raven.Database.Extensions;
@@ -26,7 +26,7 @@ namespace Raven.Storage.Managed.Backup
 		private string to;
 		private string src;
 
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, IPersistentSource persistentSource, string src, string to)
 		{

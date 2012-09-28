@@ -3,6 +3,7 @@ using System.ComponentModel.Composition;
 using System.Net;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
@@ -61,7 +62,7 @@ namespace Raven.Database.Server.Security.OAuth
 				return;
 			}
 
-			AccessTokenBody.DatabaseAccess[] authorizedDatabases;
+			DatabaseAccess[] authorizedDatabases;
 			if (!AuthenticateClient.Authenticate(Database, identity.Item1, identity.Item2, out authorizedDatabases))
 			{
 				if ((Database == SystemDatabase ||

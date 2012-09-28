@@ -25,6 +25,7 @@ namespace Raven.Tests.Notifications
 				DefaultDatabase = "test"
 			}.Initialize())
 			{
+				store.DatabaseCommands.EnsureDatabaseExists("test");
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();

@@ -45,13 +45,9 @@ namespace Raven.Studio.Infrastructure
 			                		}
 
                                     if (Url == url && forceRefresh)
-                                    {
                                         Refresh();
-                                    }
                                     else
-                                    {
                                         Navigate((new Uri(url, UriKind.Relative)));
-                                    }
 			                	});
 		}
 
@@ -59,7 +55,7 @@ namespace Raven.Studio.Infrastructure
 		{
 			var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
 			var fregmentIndex = hostUrl.IndexOf('#');
-			string host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex) : hostUrl;
+			var host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex) : hostUrl;
 
 			HtmlPage.Window.Navigate(new Uri(host + "#" + url, UriKind.Absolute), "_blank");
 		}

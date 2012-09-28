@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Raven.Imports.Newtonsoft.Json;
@@ -18,6 +19,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
+	[CLSCompliant(false)]
 	public class CompiledIndexesNhsevidence : RavenTest
 	{
 		[Fact(Skip = "Race condition in munin")]
@@ -25,6 +27,7 @@ namespace Raven.Tests.Bugs
 		{
 			for (int x = 0; x < 50; x++)
 			{
+				Environment.SetEnvironmentVariable("Test", x.ToString(CultureInfo.InvariantCulture));
 				using (var store = CreateStore())
 				{
 					for (int i = 0; i < 12; i++)
@@ -111,6 +114,7 @@ namespace Raven.Tests.Bugs
 			public List<Item> Items { get; set; }
 		}
 
+		[CLSCompliant(false)]
 		public class TestClassView : AbstractViewGenerator
 		{
 			public TestClassView()
