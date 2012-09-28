@@ -358,7 +358,7 @@
         </Setter>
     </Style>
 
-    <Style TargetType="ListBoxItem">
+    <Style x:Key="Style_ListBoxItem_Default"  TargetType="ListBoxItem">
         <Setter Property="Padding" Value="3" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="VerticalContentAlignment" Value="Top" />
@@ -420,6 +420,8 @@
             </Setter.Value>
         </Setter>
     </Style>
+    
+    <Style TargetType="ListBoxItem" BasedOn="{StaticResource Style_ListBoxItem_Default}"/>
 
     <!--<Style TargetType="ListBoxItem">
 		<Setter Property="Padding" Value="3" />
