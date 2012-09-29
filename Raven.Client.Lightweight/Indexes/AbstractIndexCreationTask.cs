@@ -111,6 +111,16 @@ namespace Raven.Client.Indexes
 			public static object Generate(string fieldName, double lat, double lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+			}
+
+			/// <summary>
+			/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
+			/// </summary>
+			/// <param name="lat">Latitude</param>
+			/// <param name="lng">Longitude</param>
+			public static object Generate(double lat, double lng)
+			{
+				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 			} 
 		}
 
