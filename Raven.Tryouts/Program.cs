@@ -18,22 +18,9 @@ namespace Raven.Tryouts
 		private static void Main()
 		{
 
-			var store = new DocumentStore() { Url = "http://localhost:8080/", DefaultDatabase = "Confabulat" };
-			store.Initialize();
-			for (int i = 0; i < 100; i++)
-			{
-				var sp = Stopwatch.StartNew();
-				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Regions" },
-			 new ScriptedPatchRequest
-			 {
-				 Script =
-				 @"this.Test = 'test';"
+			double d = (double) (1000000000000000000000.12992);
 
-
-			 }
-				, true);
-				Console.WriteLine(sp.ElapsedMilliseconds);
-			}
+			Console.WriteLine(d.ToString("############################################   .    #############################################"));
 		}
 
 		private static void UseMyData()
