@@ -559,10 +559,9 @@ namespace Raven.Database
 					{
 						key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions, transactionInformation);
 					}
+					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
 					if (transactionInformation == null)
 					{
-						AssertPutOperationNotVetoed(key, metadata, document, null);
-
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
 						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
@@ -680,10 +679,9 @@ namespace Raven.Database
 				RavenJObject metadataVar = null;
 				TransactionalStorage.Batch(actions =>
 				{
+					AssertDeleteOperationNotVetoed(key, transactionInformation);
 					if (transactionInformation == null)
 					{
-						AssertDeleteOperationNotVetoed(key, null);
-
 						DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
 
 						if (actions.Documents.DeleteDocument(key, etag, out metadataVar))
