@@ -12,7 +12,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
-	public class FailTests
+	public class Holt
 	{
 		[Theory]
 		[InlineValue(100.0, 100.0, 0)]

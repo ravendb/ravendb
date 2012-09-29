@@ -30,15 +30,6 @@ namespace Raven.Database.Indexing
 		private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
 		private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
 
-		static NumberFormatInfo DefaultNumberFormat;
-
-		static  AnonymousObjectToLuceneDocumentConverter()
-		{
-			DefaultNumberFormat = (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
-			DefaultNumberFormat.NumberDecimalDigits = 99;
-			
-		}
-
 		public AnonymousObjectToLuceneDocumentConverter(IndexDefinition indexDefinition)
 		{
 			this.indexDefinition = indexDefinition;
@@ -212,17 +203,17 @@ namespace Raven.Database.Indexing
 							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 
 			}
-			else if(value is decimal || value is float || value is double)
+			else if(value is decimal)
 			{
-				double convert;
-				if (value is decimal)
-					convert = ((double)(decimal)value);
-				else if (value is float)
-					convert = (float) value;
-				else
-					convert = (double) value;
-
-				yield return CreateFieldWithCaching(name, convert.ToString(DefaultNumberFormat), storage,
+				var d = (decimal) value;
+				var s = d.ToString(CultureInfo.InvariantCulture);
+				if(s.Contains('.'))
+				{
+					s = s.TrimEnd('0');
+					if (s.EndsWith("."))
+						s = s.Substring(0, s.Length - 1);
+				}
+				yield return CreateFieldWithCaching(name, s, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
