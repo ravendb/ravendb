@@ -107,24 +107,21 @@ namespace Raven.Database.Indexing
 
 		private class CodecIndexInput : BufferedIndexInput
 		{
-			private readonly Stream stream;
-			private readonly bool isStreamOwned;
-			private long position;
+			private Stream stream;
+			private bool isStreamOwned;
 
 			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs, int bufferSize)
 				: this(
 					stream: applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite)),
-					position: 0,
 					isStreamOwned: true,
 					bufferSize: bufferSize
 				)
 			{ }
 
-			private CodecIndexInput(Stream stream, long position, bool isStreamOwned, int bufferSize)
+			private CodecIndexInput(Stream stream, bool isStreamOwned, int bufferSize)
 				: base(bufferSize)
 			{
 				this.stream = stream;
-				this.position = position;
 				this.isStreamOwned = isStreamOwned;
 
 				if (!isStreamOwned)
@@ -147,22 +144,22 @@ namespace Raven.Database.Indexing
 			{
 				lock (stream)
 				{
-					stream.Position = position;
+					stream.Position = FilePointer;
 
 					stream.ReadEntireBlock(b, offset, length);
-
-					position = stream.Position;
 				}
 			}
 
 			public override void SeekInternal(long pos)
 			{
-				stream.Position = position = pos;
 			}
 
 			public override object Clone()
 			{
-				return new CodecIndexInput(stream, position, false, BufferSize);
+				var codecIndexInput = (CodecIndexInput) base.Clone();
+				codecIndexInput.isStreamOwned = false;
+				codecIndexInput.stream = stream;
+				return codecIndexInput;
 			}
 		}
 
