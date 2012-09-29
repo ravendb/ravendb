@@ -9,7 +9,7 @@ using Raven.Database.Plugins;
 
 namespace Raven.Database.Indexing
 {
-	internal class LuceneCodecDirectory : FSDirectory
+	public class LuceneCodecDirectory : FSDirectory
 	{
 		private readonly IEnumerable<AbstractIndexCodec> codecs;
 
@@ -19,20 +19,15 @@ namespace Raven.Database.Indexing
 			this.codecs = codecs ?? Enumerable.Empty<AbstractIndexCodec>();
 		}
 
-		public override IndexInput OpenInput(string name)
-		{
-			return OpenInputInner(name);
-		}
-
 		public override IndexInput OpenInput(string name, int bufferSize)
 		{
-			return OpenInputInner(name);
+			return OpenInputInner(name, bufferSize);
 		}
 
-		private CodecIndexInput OpenInputInner(string name)
+		private CodecIndexInput OpenInputInner(string name, int bufferSize)
 		{
 			var file = GetFile(name);
-			return new CodecIndexInput(file, s => ApplyReadCodecs(file.Name, s));
+			return new CodecIndexInput(file, s => ApplyReadCodecs(file.Name, s), bufferSize);
 		}
 
 		public override IndexOutput CreateOutput(string name)
@@ -47,7 +42,7 @@ namespace Raven.Database.Indexing
 
 		public override long FileLength(string name)
 		{
-			using (var input = OpenInputInner(name))
+			using (var input = OpenInputInner(name, bufferSize: BufferedIndexInput.BUFFER_SIZE))
 				return input.Length();
 		}
 
@@ -110,21 +105,23 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private class CodecIndexInput : IndexInput
+		private class CodecIndexInput : BufferedIndexInput
 		{
 			private readonly Stream stream;
 			private readonly bool isStreamOwned;
 			private long position;
 
-			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
+			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs, int bufferSize)
 				: this(
 					stream: applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite)),
 					position: 0,
-					isStreamOwned: true
+					isStreamOwned: true,
+					bufferSize: bufferSize
 				)
 			{ }
 
-			private CodecIndexInput(Stream stream, long position, bool isStreamOwned)
+			private CodecIndexInput(Stream stream, long position, bool isStreamOwned, int bufferSize)
+				: base(bufferSize)
 			{
 				this.stream = stream;
 				this.position = position;
@@ -139,34 +136,6 @@ namespace Raven.Database.Indexing
 				return stream.Length;
 			}
 
-			public override byte ReadByte()
-			{
-				// The lock must be on the stream, because it is this object which is shared between the different clones.
-				lock (stream)
-				{
-					stream.Position = position;
-
-					int value = stream.ReadByte();
-					if (value == -1)
-						throw new EndOfStreamException();
-
-					position = stream.Position;
-					return (byte)value;
-				}
-			}
-
-			public override void ReadBytes(byte[] b, int offset, int len)
-			{
-				lock (stream)
-				{
-					stream.Position = position;
-
-					stream.ReadEntireBlock(b, offset, len);
-
-					position = stream.Position;
-				}
-			}
-
 			protected override void Dispose(bool disposing)
 			{
 				GC.SuppressFinalize(this);
@@ -174,26 +143,30 @@ namespace Raven.Database.Indexing
 					stream.Close();
 			}
 
-			public override void Seek(long newPosition)
+			public override void ReadInternal(byte[] b, int offset, int length)
 			{
 				lock (stream)
 				{
-					stream.Position = position = newPosition;
+					stream.Position = position;
+
+					stream.ReadEntireBlock(b, offset, length);
+
+					position = stream.Position;
 				}
+			}
+
+			public override void SeekInternal(long pos)
+			{
+				stream.Position = position = pos;
 			}
 
 			public override object Clone()
 			{
-				return new CodecIndexInput(stream, position, false);
-			}
-
-			public override long FilePointer
-			{
-				get { return position; }
+				return new CodecIndexInput(stream, position, false, BufferSize);
 			}
 		}
 
-		private class CodecIndexOutput : IndexOutput
+		private class CodecIndexOutput : BufferedIndexOutput
 		{
 			static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -220,39 +193,33 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public override void Flush()
+			public override void FlushBuffer(byte[] b, int offset, int len)
 			{
+				stream.Write(b, offset, len);
 				stream.Flush();
 			}
 
 			protected override void Dispose(bool disposing)
 			{
-				GC.SuppressFinalize(this);
+				base.Dispose(disposing);
 				stream.Close();
+				GC.SuppressFinalize(this);
 			}
 
 			public override void Seek(long pos)
 			{
+				base.Seek(pos);
 				stream.Seek(pos, SeekOrigin.Begin);
 			}
 
-			public override long FilePointer
+			public override void SetLength(long length)
 			{
-				get { return stream.Position; }
+				stream.SetLength(length);
 			}
+
 			public override long Length
 			{
 				get { return stream.Length; }
-			}
-
-			public override void WriteByte(byte b)
-			{
-				stream.WriteByte(b);
-			}
-
-			public override void WriteBytes(byte[] bytes, int offset, int length)
-			{
-				stream.Write(bytes, offset, length);
 			}
 		}
 	}
