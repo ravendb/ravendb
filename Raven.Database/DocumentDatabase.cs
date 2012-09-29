@@ -1319,7 +1319,7 @@ namespace Raven.Database
 										});
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
 				});
-			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
+			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 		}
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)

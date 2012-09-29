@@ -267,6 +267,20 @@ this.Value = another.Value;
 			}
 		}
 
+		[Fact]
+		public void WillNotErrorOnMissingDocument()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.Patch("products/1",
+														 new ScriptedPatchRequest
+														 {
+															 Script = "this.Test = 'a';"
+														 });
+
+			}
+		}
+
 		private void ExecuteTest(IDocumentStore store)
 		{
 			using (var s = store.OpenSession())
