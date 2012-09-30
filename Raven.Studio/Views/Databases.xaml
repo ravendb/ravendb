@@ -95,11 +95,23 @@
                                                     Width="Auto" 
                                                     CanUserResize="False"
                                                     CanUserReorder="False"/>
-                        <sdk:DataGridTextColumn Header="Tenant Id"
-                                                Binding="{Binding TenantId}" 
-                                                Width="*"
-                                                IsReadOnly="False"
-                                                CanUserReorder="False"/>
+                        <sdk:DataGridTemplateColumn Header="Tenant Id">
+                            <sdk:DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <sdk:AutoCompleteBox x:Name="TenantId"
+                                                         Text="{Binding TenantId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                         MinimumPrefixLength="1"
+                                                         IsTextCompletionEnabled="True"
+                                                         VerticalAlignment="Center"
+                                                         Margin="5,5,5,0">
+                                        <i:Interaction.Behaviors>
+                                            <Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                                        </i:Interaction.Behaviors>
+                                    </sdk:AutoCompleteBox>
+
+                                </DataTemplate>
+                            </sdk:DataGridTemplateColumn.CellEditingTemplate>
+                        </sdk:DataGridTemplateColumn>
                         <sdk:DataGridCheckBoxColumn Header="Read Only"
                                                     Binding="{Binding ReadOnly}" 
                                                     Width="Auto" 

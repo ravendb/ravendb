@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Extensions;
 using Raven.Studio.Infrastructure;
@@ -14,7 +15,7 @@ using System.Linq;
 
 namespace Raven.Studio.Models
 {
-    public class DatabasesListModel : PageViewModel
+    public class DatabasesListModel : PageViewModel, IAutoCompleteSuggestionProvider
     {
         private readonly ChangeDatabaseCommand changeDatabase;
 
@@ -200,6 +201,11 @@ namespace Raven.Studio.Models
             ApiKeys = new ObservableCollection<ApiKeyDefinition>(ApiKeys);
             OnPropertyChanged(() => ApiKeys);
             ApplicationModel.Current.AddInfoNotification("Api Keys Saved");
+        }
+
+        public Task<IList<object>> ProvideSuggestions(string enteredText)
+        {
+            return new Task<IList<object>>(() => Databases.Select(model => model.Name).Cast<object>().ToList());
         }
     }
 }
