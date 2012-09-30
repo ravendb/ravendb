@@ -8,10 +8,145 @@
                          xmlns:Controls="clr-namespace:System.Windows.Controls"
                          xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" Title="Databases"
                          Style="{StaticResource PageStyle}"
-                         Infrastructure:ModelAttacher.AttachObservableModel="DatabasesListModel">
+                         xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                         Infrastructure:ModelAttacher.AttachObservableModel="DatabasesListModel"
+                         xmlns:Data="clr-namespace:Raven.Abstractions.Data;assembly=Raven.Client.Silverlight"
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+                         xmlns:Controls1="clr-namespace:Microsoft.Windows.Controls">
 
 	<UserControl.Resources>
-		<DataTemplate x:Key="DatabaseItemTemplate">
+        <DataTemplate x:Key="ApiKeyTemplate" DataType="Data:ApiKeyDefinition">
+            <Grid Margin="4" x:Name="grid">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Row="0" 
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						Grid.Column="3" 
+						HorizontalAlignment="Right" 
+						Command="{Binding DataContext.DeleteApiKey, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+						CommandParameter="{Binding}"  
+						VerticalAlignment="Center" 
+						ToolTipService.ToolTip="Remove this api key">
+                    <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+                </Button>
+
+                <TextBlock Grid.Row="0" 
+						   Text="Name:"
+						   VerticalAlignment="Center"/>
+                <TextBox Grid.Row="0"
+						 Grid.Column="1"
+                         Grid.ColumnSpan="2"
+						 Text="{Binding Name, Mode=TwoWay}" 
+                         Margin="5"/>
+
+                <TextBlock Grid.Row="1" 
+						   Text="Secret:" 
+						   VerticalAlignment="Center"/>
+
+                <TextBox Grid.Row="1"
+						 Grid.Column="1"
+                         Grid.ColumnSpan="2"
+						 Text="{Binding Secret, Mode=TwoWay}" 
+                         Margin="5"/>
+                
+                <TextBlock Grid.Row="2" 
+						   Text="Enabled:" 
+						   VerticalAlignment="Center"/>
+
+                <CheckBox Grid.Row="2"
+                          Grid.Column="1"
+                          Grid.ColumnSpan="2"
+                          IsChecked="{Binding Enabled, Mode=TwoWay}"
+                          Margin="5"/>
+
+                <TextBlock Grid.Row="3" 
+						   Text="Databases:"
+                           Margin="5"
+						   VerticalAlignment="Top"/>
+
+                <sdk:DataGrid Margin="5"
+                              Grid.Row="3"
+                              Grid.Column="1"
+                              ItemsSource="{Binding Databases}"
+                              AutoGenerateColumns="False"
+                              MinHeight="56"
+                              MaxHeight="156"
+                              VerticalAlignment="Top"
+                              VerticalScrollBarVisibility="Visible">
+                    <i:Interaction.Behaviors>
+                        <Behaviors:SelectRowOnRightClickBehavior />
+                    </i:Interaction.Behaviors>
+
+                    <sdk:DataGrid.Columns>
+                        <sdk:DataGridCheckBoxColumn Header="Admin"
+                                                    Binding="{Binding Admin}" 
+                                                    Width="Auto" 
+                                                    CanUserResize="False"
+                                                    CanUserReorder="False"/>
+                        <sdk:DataGridTextColumn Header="Tenant Id"
+                                                Binding="{Binding TenantId}" 
+                                                Width="*"
+                                                IsReadOnly="False"
+                                                CanUserReorder="False"/>
+                        <sdk:DataGridCheckBoxColumn Header="Read Only"
+                                                    Binding="{Binding ReadOnly}" 
+                                                    Width="Auto" 
+                                                    CanUserResize="False"
+                                                    CanUserReorder="False"/>
+                        <sdk:DataGridTemplateColumn CanUserReorder="False" CanUserResize="False">
+                            <sdk:DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                                            Command="{Binding DataContext.DeleteDatabaseAccess, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTipService.ToolTip="Delete Database Access">
+                                        <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="Click">
+                                                <ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
+                                                                         PropertyName="IsSelected" 
+                                                                         Value="True"/>
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                    </Button>
+                                </DataTemplate>
+                            </sdk:DataGridTemplateColumn.CellEditingTemplate>
+                        </sdk:DataGridTemplateColumn>
+                    </sdk:DataGrid.Columns>
+                </sdk:DataGrid>
+                <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                            Grid.Row="3"
+                            Grid.Column="2" 
+                            HorizontalAlignment="Right" 
+                            VerticalAlignment="Top"
+                            Margin="0,9,0,0"
+                            Command="{Binding DataContext.AddDatabaseAccess, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                            ToolTipService.ToolTip="Add Database Access">
+                    <Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="Click">
+                            <ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
+																	 PropertyName="IsSelected" 
+																	 Value="True"/>
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </Button>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="DatabaseItemTemplate">
 			<Grid Background="Transparent">
 
 				<i:Interaction.Behaviors>
@@ -56,87 +191,184 @@
 		</DataTemplate>
 	</UserControl.Resources>
 
-	<Grid DataContext="{Binding Value}" Margin="{StaticResource Margin_ContentPage}">
-		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
-			<toolkit:HeaderedContentControl.Header>
-				<Grid>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-					</Grid.RowDefinitions>
-					<StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
-                        <Image Source="{StaticResource Image_Database_Tiny}" Style="{StaticResource Style_Image_IndexPageHeader}"/>
-						<TextBlock Text="Databases"
-							   Style="{StaticResource Style_Text_Header}"/>
-					</StackPanel>
-					<Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
-						<Grid VerticalAlignment="Center" Margin="0,4,4,4">
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="*"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
-                                             CommandParameter="{Binding}"
-                                             Style="{StaticResource Style_Button_MouseOverChrome}"
-                                             VerticalAlignment="Center"
-											 Grid.Column="0">
-								<HyperlinkButton.Content>
-									<StackPanel Orientation="Horizontal">
-										<Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
-										<TextBlock Text="New Database" VerticalAlignment="Center"/>
-									</StackPanel>
-								</HyperlinkButton.Content>
-							</HyperlinkButton>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-							<HyperlinkButton Command="{StaticResource SelectSystemDatabaseCommand}" 
-                                             CommandParameter="{Binding}"
-                                             Style="{StaticResource Style_Button_MouseOverChrome}"
-                                             VerticalAlignment="Center"
-											 Grid.Column="3">
-								<HyperlinkButton.Content>
-									<StackPanel Orientation="Horizontal">
-										<Image Source="{StaticResource Image_Database_System_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
-										<TextBlock Text="System Database" VerticalAlignment="Center"/>
-									</StackPanel>
-								</HyperlinkButton.Content>
-							</HyperlinkButton>
-						</Grid>
-					</Border>
-				</Grid>
-			</toolkit:HeaderedContentControl.Header>
-			<ListBox Style="{StaticResource Databases_FluidList}"
-					 ItemsSource="{Binding Databases}"
-					 SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
-					 ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
-					 ItemTemplate="{StaticResource DatabaseItemTemplate}"
-					 Margin="10">
+        <Grid DataContext="{Binding Value}" Margin="{StaticResource Margin_ContentPage}">
+            <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
+                <toolkit:HeaderedContentControl.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
+                            <Image Source="{StaticResource Image_Database_Tiny}" Style="{StaticResource Style_Image_IndexPageHeader}"/>
+                            <TextBlock Text="Databases"
+                                       Style="{StaticResource Style_Text_Header}"/>
+                        </StackPanel>
+                        <Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
+                            <Grid VerticalAlignment="Center" Margin="0,4,4,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
+                                                 CommandParameter="{Binding}"
+                                                 Style="{StaticResource Style_Button_MouseOverChrome}"
+                                                 VerticalAlignment="Center"
+                                                 Grid.Column="0">
+                                    <HyperlinkButton.Content>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                                            <TextBlock Text="New Database" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </HyperlinkButton.Content>
+                                </HyperlinkButton>
 
-				<i:Interaction.Triggers>
-					<Behaviors:StudioKeyTrigger Key="Delete">
-						<i:InvokeCommandAction Command="{Binding DeleteSelectedDatabase}" />
-					</Behaviors:StudioKeyTrigger>
-				</i:Interaction.Triggers>
+                                <HyperlinkButton Command="{StaticResource SelectSystemDatabaseCommand}" 
+                                                 CommandParameter="{Binding}"
+                                                 Style="{StaticResource Style_Button_MouseOverChrome}"
+                                                 VerticalAlignment="Center"
+                                                 Grid.Column="3">
+                                    <HyperlinkButton.Content>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Source="{StaticResource Image_Database_System_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                                            <TextBlock Text="System Database" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </HyperlinkButton.Content>
+                                </HyperlinkButton>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </toolkit:HeaderedContentControl.Header>
+                <ListBox Style="{StaticResource Databases_FluidList}"
+                         ItemsSource="{Binding Databases}"
+                         SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
+                         ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
+                         ItemTemplate="{StaticResource DatabaseItemTemplate}"
+                         Margin="10">
 
-				<i:Interaction.Behaviors>
-					<Behaviors:SelectItemOnRightClick />
-				</i:Interaction.Behaviors>
+                    <i:Interaction.Triggers>
+                        <Behaviors:StudioKeyTrigger Key="Delete">
+                            <i:InvokeCommandAction Command="{Binding DeleteSelectedDatabase}" />
+                        </Behaviors:StudioKeyTrigger>
+                    </i:Interaction.Triggers>
 
-				<ContextMenu:ContextMenuService.ContextMenu>
-					<ContextMenu:ContextMenu>
-						<ContextMenu:MenuItem Header="Edit Settings"
-                                              Command="{StaticResource NavigateToCommand}" 
-                                              CommandParameter="/settings"/>
-						<ContextMenu:MenuItem Header="Delete"
-                                              Command="{Binding DeleteSelectedDatabase}">
-							<ContextMenu:MenuItem.Icon>
-								<Image Source="{StaticResource Image_Delete_Tiny}"/>
-							</ContextMenu:MenuItem.Icon>
-						</ContextMenu:MenuItem>
-					</ContextMenu:ContextMenu>
-				</ContextMenu:ContextMenuService.ContextMenu>
-			</ListBox>
-		</toolkit:HeaderedContentControl>
-	</Grid>
+                    <i:Interaction.Behaviors>
+                        <Behaviors:SelectItemOnRightClick />
+                    </i:Interaction.Behaviors>
+
+                    <ContextMenu:ContextMenuService.ContextMenu>
+                        <ContextMenu:ContextMenu>
+                            <ContextMenu:MenuItem Header="Edit Settings"
+                                                  Command="{StaticResource NavigateToCommand}" 
+                                                  CommandParameter="/settings"/>
+                            <ContextMenu:MenuItem Header="Delete"
+                                                  Command="{Binding DeleteSelectedDatabase}">
+                                <ContextMenu:MenuItem.Icon>
+                                    <Image Source="{StaticResource Image_Delete_Tiny}"/>
+                                </ContextMenu:MenuItem.Icon>
+                            </ContextMenu:MenuItem>
+                        </ContextMenu:ContextMenu>
+                    </ContextMenu:ContextMenuService.ContextMenu>
+                </ListBox>
+            </toolkit:HeaderedContentControl>
+        </Grid>
+
+        <ScrollViewer Grid.Row="2">
+            <Grid DataContext="{Binding Value}" Margin="{StaticResource Margin_ContentPage}">
+                <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
+                    <toolkit:HeaderedContentControl.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
+                                <Image Source="{StaticResource Image_Database_Tiny}" Style="{StaticResource Style_Image_IndexPageHeader}"/>
+                                <TextBlock Text="API Keys"
+                                       Style="{StaticResource Style_Text_Header}"/>
+                            </StackPanel>
+                            <Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
+                                <Grid VerticalAlignment="Center" Margin="0,4,4,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <HyperlinkButton Command="{Binding AddApiKeyCommand}" 
+                                                 Style="{StaticResource Style_Button_MouseOverChrome}"
+                                                 VerticalAlignment="Center"
+                                                 Grid.Column="0">
+                                        <HyperlinkButton.Content>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                                                <TextBlock Text="New API Key" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </HyperlinkButton.Content>
+                                    </HyperlinkButton>
+                                    <HyperlinkButton Command="{Binding SaveChanges}" 
+                                                 Style="{StaticResource Style_Button_MouseOverChrome}"
+                                                 VerticalAlignment="Center"
+                                                 Grid.Column="1">
+                                        <HyperlinkButton.Content>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="{StaticResource Image_Save_Small}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                                                <TextBlock Text="Save Changes" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </HyperlinkButton.Content>
+                                    </HyperlinkButton>
+                                    
+                                    <StackPanel Orientation="Horizontal" Grid.Column="3">
+                                        <Controls1:WatermarkedTextBox Text="{Binding SearchApiKeys, Mode=TwoWay}" 
+                                                                      Watermark="Search" 
+                                                                      Width="200" 
+                                                                      Margin="5"
+                                                                      x:Name="SearchBox"
+                                                                      KeyDown="EnterClick"/>
+                                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                                                Grid.Row="3"
+                                                Grid.Column="2" 
+                                                HorizontalAlignment="Right" 
+                                                VerticalAlignment="Top"
+                                                Margin="0,9,0,0"
+                                                Command="{Binding Search}" 
+                                                ToolTipService.ToolTip="Search Api Keys">
+                                            <Image Source="{StaticResource Image_Search_Small}"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </toolkit:HeaderedContentControl.Header>
+                    <ListBox Style="{StaticResource Databases_FluidList}"
+                             ItemsSource="{Binding ApiKeys}"
+                             SelectedItem="{Binding SelectedApiKey, Mode=TwoWay}"
+                             ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
+                             ItemTemplate="{StaticResource ApiKeyTemplate}"
+                             Margin="10">
+
+                        <i:Interaction.Triggers>
+                            <Behaviors:StudioKeyTrigger Key="Delete">
+                                <i:InvokeCommandAction Command="{Binding DeleteApiKey}" />
+                            </Behaviors:StudioKeyTrigger>
+                        </i:Interaction.Triggers>
+
+                        <i:Interaction.Behaviors>
+                            <Behaviors:SelectItemOnRightClick />
+                        </i:Interaction.Behaviors>
+                    </ListBox>
+                </toolkit:HeaderedContentControl>
+            </Grid>
+
+        </ScrollViewer>
+    </Grid>
 </Infrastructure:PageView>
