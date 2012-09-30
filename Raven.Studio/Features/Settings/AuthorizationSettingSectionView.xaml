@@ -430,6 +430,25 @@
                                     </StackPanel>
                                 </Button.Content>
                             </Button>
+
+                            <StackPanel Orientation="Horizontal" Grid.Column="3">
+                                <Controls:WatermarkedTextBox Text="{Binding SearchUsers, Mode=TwoWay}" 
+                                                                      Watermark="Search" 
+                                                                      Width="200" 
+                                                                      Margin="5"
+                                                                      x:Name="SearchBox"
+                                                                      KeyDown="EnterClick"/>
+                                <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                                                Grid.Row="3"
+                                                Grid.Column="2" 
+                                                HorizontalAlignment="Right" 
+                                                VerticalAlignment="Top"
+                                                Margin="0,9,0,0"
+                                                Command="{Binding Search}" 
+                                                ToolTipService.ToolTip="Search Api Keys">
+                                    <Image Source="{StaticResource Image_Search_Small}"/>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </toolkit:HeaderedContentControl.Header>
                     <ListBox  Style="{StaticResource Databases_FluidList}"
