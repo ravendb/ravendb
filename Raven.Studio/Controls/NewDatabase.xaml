@@ -1,43 +1,43 @@
-﻿<controls:ChildWindow x:Class="Raven.Studio.Controls.NewDatabase"
-                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
-                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
-                      xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
-                      Width="Auto" Height="270" 
-                      Title="Create a New Database" Style="{StaticResource ChildWindowNoAnimationStyle}">
-    
-	<Grid x:Name="LayoutRoot" >
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="Auto"/>
-			<ColumnDefinition Width="25"/>
-			<ColumnDefinition Width="Auto"/>
-		</Grid.ColumnDefinitions>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition />
-		</Grid.RowDefinitions>
-		<Grid Margin="2">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto"/>
-				<RowDefinition />
-			</Grid.RowDefinitions>
+﻿<controls:ChildWindow
+		   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+		   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+		   xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+		   xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" x:Class="Raven.Studio.Controls.NewDatabase"
+		   Width="500" Height="270" 
+		   Title="Create a New Database" Style="{StaticResource ChildWindowNoAnimationStyle}">
+    <Grid x:Name="LayoutRoot" >
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="25"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid Margin="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition />
+            </Grid.RowDefinitions>
 
-			<Grid>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-				</Grid.RowDefinitions>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="63"/>
-					<ColumnDefinition Width="*"/>
-				</Grid.ColumnDefinitions>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="63"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-				<TextBlock Text="Name: "
-                           Margin="5" VerticalAlignment="Center"/>
-				<TextBox x:Name="DbName"
-                         Grid.Column="1"
-                         Margin="5" KeyDown="DbName_KeyDown" Width="200"/>
+                <TextBlock Text="Name: "
+					   Margin="5" VerticalAlignment="Center"/>
+                <TextBox x:Name="DbName"
+					 Grid.Column="1"
+					 Margin="5" KeyDown="DbName_KeyDown"/>
                 <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1" Margin="5">
                     <CheckBox  HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvanced"/>
                     <TextBlock Text="Advanced Settings"
@@ -47,50 +47,45 @@
                                MouseLeftButtonDown="Toggle"/>
                 </StackPanel>
 
-			</Grid>
-			<Grid Grid.Row="1" x:Name="AdvancedSettings" Visibility="Collapsed">
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-				</Grid.RowDefinitions>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="*"/>
-				</Grid.ColumnDefinitions>
+            </Grid>
+            <Grid Grid.Row="1" x:Name="AdvancedSettings" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
 
-				<TextBlock x:Name="DbPath" 
-                           Text="Path: "
-                           Margin="5" 
-                           VerticalAlignment="Center"/>
-				<TextBox Grid.Column="1"
-                         Margin="5"/>
-				<TextBlock Text="Logs: "
-                           Grid.Row="1"
-                           Margin="5" 
-                           VerticalAlignment="Center"/>
-				<TextBox x:Name="LogsPath" 
-                         Grid.Column="1"
-                         Grid.Row="1"
-                         Margin="5"/>
-				<TextBlock Text="Indexes: "
-                           Grid.Row="2"
-                           Margin="5" 
-                           VerticalAlignment="Center"/>
-				<TextBox x:Name="IndexPath" 
-                         Grid.Column="1"
-                         Grid.Row="2"
-                         Margin="5"/>
-			</Grid>
-		</Grid>
+                <TextBlock x:Name="DbPath" Text="Path: "
+					   Margin="5" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1"
+					 Margin="5"/>
+                <TextBlock Text="Logs: "
+					   Grid.Row="1"
+					   Margin="5" VerticalAlignment="Center"/>
+                <TextBox x:Name="LogsPath" Grid.Column="1"
+					 Grid.Row="1"
+					 Margin="5"/>
+                <TextBlock Text="Indexes: "
+					   Grid.Row="2"
+					   Margin="5" VerticalAlignment="Center"/>
+                <TextBox x:Name="IndexPath" Grid.Column="1"
+					 Grid.Row="2"
+					 Margin="5"/>
+            </Grid>
+        </Grid>
 
-		<Grid Grid.Column="2" Margin="2">
-			<Grid.RowDefinitions>
-				<RowDefinition />
-				<RowDefinition Height="Auto" />
-			</Grid.RowDefinitions>
+
+        <Grid Grid.Column="2" Margin="2">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
 			<Grid>
 				<Grid.ColumnDefinitions>

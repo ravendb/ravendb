@@ -185,6 +185,7 @@
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
     <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
@@ -232,6 +233,9 @@
     </Compile>
     <Compile Include="Controls\NewDatabase.xaml.cs">
       <DependentUpon>NewDatabase.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\QueryOptionsButton.xaml.cs">
+      <DependentUpon>QueryOptionsButton.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\RecentQueriesButton.xaml.cs">
       <DependentUpon>RecentQueriesButton.xaml</DependentUpon>
@@ -772,6 +776,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\QueryOptionsButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\RecentQueriesButton.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1112,6 +1120,7 @@
     <Resource Include="Assets\Images\Image_Uncheck_Tiny.png" />
     <Resource Include="Assets\Images\Image_NotObserved_Tiny.png" />
     <Resource Include="Assets\Images\Image_DeleteObserved_Tiny.png" />
+    <Resource Include="Assets\Images\query_options_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
