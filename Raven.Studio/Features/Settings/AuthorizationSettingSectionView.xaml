@@ -10,7 +10,8 @@
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
              xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
              xmlns:Controls="clr-namespace:Microsoft.Windows.Controls"
-             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400" >
+             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" 
+             mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400" >
 
 	<UserControl.Resources>
 		<Style TargetType="sdk:AutoCompleteBox">
@@ -234,14 +235,18 @@
 
                         <sdk:DataGrid.Columns>
                             <sdk:DataGridCheckBoxColumn Header="Allow"
-                                                        Binding="{Binding Allow}" Width="Auto" CanUserResize="False"
+                                                        Binding="{Binding Allow}" 
+                                                        Width="Auto" 
+                                                        CanUserResize="False"
                                                         CanUserReorder="False"/>
                             <sdk:DataGridTextColumn Header="Operation"
-                                                    Binding="{Binding Operation}" Width="*"
+                                                    Binding="{Binding Operation}" 
+                                                    Width="*"
                                                     CanUserReorder="False"/>
                             <sdk:DataGridTextColumn Header="Tags"
                                                     Binding="{Binding Tags,Mode=TwoWay,  Converter={StaticResource StringListToString}}"
-                                                    IsReadOnly="False" Width="*"
+                                                    IsReadOnly="False" 
+                                                    Width="*"
                                                     CanUserReorder="False"/>
                             <sdk:DataGridTemplateColumn Header="Priority"
                                                         CanUserReorder="False">
@@ -347,11 +352,13 @@
                                                         Binding="{Binding Allow}" Width="Auto"
                                                         CanUserReorder="False" CanUserResize="False"/>
                             <sdk:DataGridTextColumn Header="Operation"
-                                                    Binding="{Binding Operation}" Width="*"
+                                                    Binding="{Binding Operation}" 
+                                                    Width="*"
                                                     CanUserReorder="False"/>
                             <sdk:DataGridTextColumn Header="Tags"
                                                     Binding="{Binding Tags,Mode=TwoWay,  Converter={StaticResource StringListToString}}"
                                                     Width="*"
+                                                    IsReadOnly="False"
                                                     CanUserReorder="False"/>
                         <sdk:DataGridTemplateColumn Header="Priority" CanUserReorder="False" >
                                 <sdk:DataGridTemplateColumn.CellEditingTemplate>
