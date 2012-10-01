@@ -444,6 +444,7 @@
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
+    <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\ChrisMarisic.cs" />
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />
