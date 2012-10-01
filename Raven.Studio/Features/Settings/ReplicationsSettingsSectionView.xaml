@@ -93,7 +93,7 @@
 					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5"/>
 				</Grid>
 
-				<TextBlock Grid.Row="3" Text="Replication Behavior: " VerticalAlignment="Center"/>
+				<TextBlock Grid.Row="3" Text="Transitive Replication:  " VerticalAlignment="Center"/>
 
 				<ComboBox Grid.Row="3" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}"
                           ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"/>
