@@ -135,6 +135,7 @@
     <Compile Include="Extensions\DatabaseCommandsExtensions.cs" />
     <Compile Include="Extensions\MultiDatabase.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />

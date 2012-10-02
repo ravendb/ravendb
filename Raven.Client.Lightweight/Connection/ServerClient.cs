@@ -7,12 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -316,7 +314,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl, Uri.EscapeDataString(keyPrefix), start, pageSize);
+            var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl, Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString());
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -1187,9 +1185,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 													 Uri.EscapeUriString(index),
 													 Uri.EscapeDataString(suggestionQuery.Term),
 													 Uri.EscapeDataString(suggestionQuery.Field),
-													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
+													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
 													 Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
+                                                     Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
@@ -1321,7 +1319,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				var requestUri = operationUrl + string.Format("/terms/{0}?field={1}&pageSize={2}&fromValue={3}",
 													 Uri.EscapeUriString(index),
 													 Uri.EscapeDataString(field),
-													 pageSize,
+                                                     pageSize.ToInvariantString(),
 													 Uri.EscapeDataString(fromValue ?? ""));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(

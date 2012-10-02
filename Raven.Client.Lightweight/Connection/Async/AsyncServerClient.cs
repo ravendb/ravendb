@@ -7,11 +7,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 using Newtonsoft.Json;
@@ -22,7 +20,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -36,7 +33,7 @@ namespace Raven.Client.Connection.Async
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands
 	{
-		private ProfilingInformation profilingInformation;
+		private readonly ProfilingInformation profilingInformation;
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
@@ -154,10 +151,7 @@ namespace Raven.Client.Connection.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite,serializeObject, null)
 						.ContinueWith(writeTask =>  request.ReadResponseJsonAsync()
-													.ContinueWith(readJsonTask =>
-													{
-														return readJsonTask.Result.Value<string>("index");
-													})).Unwrap();
+													.ContinueWith(readJsonTask => readJsonTask.Result.Value<string>("index"))).Unwrap();
 				}).Unwrap();
 		}
 
@@ -480,7 +474,7 @@ namespace Raven.Client.Connection.Async
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+            var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString());
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -609,9 +603,9 @@ namespace Raven.Client.Connection.Async
 				Uri.EscapeUriString(index),
 				Uri.EscapeDataString(suggestionQuery.Term),
 				Uri.EscapeDataString(suggestionQuery.Field),
-				Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString(CultureInfo.InvariantCulture)),
+				Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
 				Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString(CultureInfo.InvariantCulture)));
+				Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()));
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
