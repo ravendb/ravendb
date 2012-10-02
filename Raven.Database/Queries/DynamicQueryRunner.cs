@@ -90,7 +90,12 @@ namespace Raven.Database.Queries
 													GroupBy = query.GroupBy,
 													AggregationOperation = query.AggregationOperation,
 													SortedFields = query.SortedFields,
-													DefaultField = query.DefaultField
+													DefaultField = query.DefaultField,
+													CutoffEtag = query.CutoffEtag,
+													DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
+													DefaultOperator = query.DefaultOperator,
+													SkipTransformResults = query.SkipTransformResults,
+													SkippedResults = query.SkippedResults
 												});
 
 				if (!touchTemporaryIndexResult.Item2 ||
