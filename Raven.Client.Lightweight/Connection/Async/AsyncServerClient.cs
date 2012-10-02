@@ -7,11 +7,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -23,7 +21,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -38,7 +35,7 @@ namespace Raven.Client.Connection.Async
 	/// </summary>
 	public class AsyncServerClient: IAsyncDatabaseCommands
 	{
-		private ProfilingInformation profilingInformation;
+		private readonly ProfilingInformation profilingInformation;
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
@@ -517,7 +514,7 @@ namespace Raven.Client.Connection.Async
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
 		{
 			return ExecuteWithReplication("GET", url =>
-			{
+		{
 			var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
 			Uri.EscapeUriString(index),
 			Uri.EscapeDataString(facetSetupDoc),
@@ -533,7 +530,7 @@ namespace Raven.Client.Connection.Async
 						var json = (RavenJObject)task.Result;
 					return json.JsonDeserialization<FacetResults>();
 				});
-			});
+				});
 		}
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
@@ -663,7 +660,7 @@ namespace Raven.Client.Connection.Async
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 				var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl,
-				                              Uri.EscapeDataString(keyPrefix), start, pageSize);
+				                              Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString());
 				if (metadataOnly)
 					actualUrl += "&metadata-only=true";
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -796,9 +793,9 @@ namespace Raven.Client.Connection.Async
 				Uri.EscapeUriString(index),
 				Uri.EscapeDataString(suggestionQuery.Term),
 				Uri.EscapeDataString(suggestionQuery.Field),
-				Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString(CultureInfo.InvariantCulture)),
+				Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
 				Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString(CultureInfo.InvariantCulture)));
+				Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()));
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
