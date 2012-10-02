@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -8,7 +9,7 @@ namespace Raven.Database.Server.Security.OAuth
 	public class AccessTokenBody
 	{
 		public string UserId { get; set; }
-		public DatabaseAccess[] AuthorizedDatabases { get; set; }
+		public List<DatabaseAccess> AuthorizedDatabases { get; set; }
 		public double Issued { get; set; }
 
 		public bool IsExpired()

@@ -73,7 +73,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 		public static AccessToken Create(X509Certificate2 cert, string userId, string[] databases)
 		{
-			var authorizedDatabases = (databases ?? new string[0]).Select(tenantId => new DatabaseAccess { TenantId = tenantId, ReadOnly = false }).ToArray();
+			var authorizedDatabases = (databases ?? new string[0]).Select(tenantId => new DatabaseAccess { TenantId = tenantId, ReadOnly = false }).ToList();
 
 			return Create(cert, new AccessTokenBody { UserId = userId, AuthorizedDatabases = authorizedDatabases });
 		}
