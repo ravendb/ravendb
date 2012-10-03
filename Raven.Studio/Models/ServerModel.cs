@@ -92,8 +92,8 @@ namespace Raven.Studio.Models
 			if (singleTenant)
 				return null;
 
-			if (SelectedDatabase.Value.HasReplication)
-				SelectedDatabase.Value.UpdateReplicationOnlineStatus();
+            //if (SelectedDatabase.Value.HasReplication)
+            //    SelectedDatabase.Value.UpdateReplicationOnlineStatus();
 
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>

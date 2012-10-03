@@ -346,6 +346,9 @@
     <Compile Include="Features\Settings\VersioningSettingsView.xaml.cs">
       <DependentUpon>VersioningSettingsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Stats\ReplicationStatisticsView.xaml.cs">
+      <DependentUpon>ReplicationStatisticsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Tasks\IndexingTask.cs" />
     <Compile Include="Features\Tasks\SampleDataTask.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
@@ -433,6 +436,7 @@
     <Compile Include="Models\DatabaseSettingsSectionViewModel.cs" />
     <Compile Include="Models\QuotaSettingsSectionModel.cs" />
     <Compile Include="Models\ReplicationSettingsSectionModel.cs" />
+    <Compile Include="Models\ReplicationStatisticsModel.cs" />
     <Compile Include="Models\SettingsModel.cs" />
     <Compile Include="Models\CreateSettingsModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
@@ -453,6 +457,9 @@
     <Compile Include="Models\VersioningSettingsSectionModel.cs" />
     <Compile Include="Views\Alerts.xaml.cs">
       <DependentUpon>Alerts.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ReplicationStatistics.xaml.cs">
+      <DependentUpon>ReplicationStatistics.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Settings.xaml.cs">
       <DependentUpon>Settings.xaml</DependentUpon>
@@ -844,6 +851,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Stats\ReplicationStatisticsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Tasks\TaskView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -861,6 +872,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Alerts.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ReplicationStatistics.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
