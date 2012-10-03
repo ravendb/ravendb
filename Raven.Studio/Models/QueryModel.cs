@@ -160,14 +160,14 @@ namespace Raven.Studio.Models
 		}
 
 		
-		private QueryOperator defualtOperator;
-		public QueryOperator DefualtOperator
+		private QueryOperator defaultOperator;
+		public QueryOperator DefaultOperator
 		{
-			get { return defualtOperator; }
+			get { return defaultOperator; }
 			set
 			{
-				defualtOperator = value;
-				OnPropertyChanged(() => DefualtOperator);
+				defaultOperator = value;
+				OnPropertyChanged(() => DefaultOperator);
 			}
 		}
 

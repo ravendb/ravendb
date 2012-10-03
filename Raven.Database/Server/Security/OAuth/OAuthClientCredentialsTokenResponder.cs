@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Net;
 using System.Text;
@@ -62,7 +63,7 @@ namespace Raven.Database.Server.Security.OAuth
 				return;
 			}
 
-			DatabaseAccess[] authorizedDatabases;
+			List<DatabaseAccess> authorizedDatabases;
 			if (!AuthenticateClient.Authenticate(Database, identity.Item1, identity.Item2, out authorizedDatabases))
 			{
 				if ((Database == SystemDatabase ||

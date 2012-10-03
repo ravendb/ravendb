@@ -140,7 +140,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
 			{
 				UserId = apiKeyName,
-				AuthorizedDatabases = new DatabaseAccess[]
+				AuthorizedDatabases = new List<DatabaseAccess>
 				{
 					new DatabaseAccess
 					{

@@ -1,4 +1,6 @@
-﻿namespace Raven.Abstractions.Data
+﻿using System.Collections.Generic;
+
+namespace Raven.Abstractions.Data
 {
 	public class ApiKeyDefinition
 	{
@@ -7,7 +9,12 @@
 		public string Secret { get; set; }
 		public bool Enabled { get; set; }
 
-		public DatabaseAccess[] Databases { get; set; }
+		public List<DatabaseAccess> Databases { get; set; }
+
+	    public ApiKeyDefinition()
+	    {
+	        Databases = new List<DatabaseAccess>();
+	    }
 	}
 
 	public class DatabaseAccess

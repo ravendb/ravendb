@@ -26,6 +26,7 @@ namespace Raven.Studio.Models
         public AuthorizationUser SeletedUser { get; set; }
 		public string NewRoleForUser { get; set; }
 		public string SelectedRoleInUser { get; set; }
+        public string SearchUsers { get; set; }
 
         public ObservableCollection<AuthorizationRole> OriginalAuthorizationRoles { get; set; }
         public ObservableCollection<AuthorizationRole> AuthorizationRoles { get; set; }
@@ -43,6 +44,9 @@ namespace Raven.Studio.Models
 	    private ICommand deletePermissionFromUserCommand;
 		private ICommand addPermissionToRoleCommand;
 		private ICommand deletePermissionFromRoleCommand;
+        private ICommand searchCommand;
+
+        public ICommand Search { get { return searchCommand ?? (searchCommand = new ActionCommand(HandleSearchUsers)); } }
 
 	    public ICommand AddPermissionToUser
 	    {
@@ -140,6 +144,25 @@ namespace Raven.Studio.Models
 				}));
 			}
 	    }
+
+        private void HandleSearchUsers()
+        {
+            //TODO: update to handle search
+            var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
+            session.Advanced.LoadStartingWithAsync<AuthorizationUser>("Authorization/Users").
+                ContinueOnSuccessInTheUIThread(data =>
+                {
+                    AuthorizationUsers.Clear();
+                    foreach (var authorizationUser in data)
+                    {
+                        AuthorizationUsers.Add(authorizationUser);
+                    }
+                    foreach (var authorizationUser in data)
+                    {
+                        OriginalAuthorizationUsers.Add(authorizationUser);
+                    }
+                });
+        }
 	    
 		private void HandleDeleteRoleFromUser(object parameter)
 		{

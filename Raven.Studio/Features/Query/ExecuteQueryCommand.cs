@@ -80,7 +80,7 @@ namespace Raven.Studio.Features.Query
 			var q = new IndexQuery
 						{
 							Query = query,
-							DefaultOperator = model.DefualtOperator
+							DefaultOperator = model.DefaultOperator
 						};
 
 			if (model.SortBy != null && model.SortBy.Count > 0)
@@ -113,7 +113,7 @@ namespace Raven.Studio.Features.Query
 							QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(model.Latitude.Value, model.Longitude.Value, model.Radius.HasValue ? model.Radius.Value : 1),
 							SpatialRelation = SpatialRelation.Within,
 							SpatialFieldName = Constants.DefaultSpatialFieldName,
-							DefaultOperator = model.DefualtOperator
+							DefaultOperator = model.DefaultOperator
 						};
 			}
 
