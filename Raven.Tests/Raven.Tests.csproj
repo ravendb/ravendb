@@ -456,6 +456,7 @@
     <Compile Include="MailingList\Nullables.cs" />
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
+    <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
