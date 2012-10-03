@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel;
+
 namespace Raven.Abstractions.Replication
 {
 	/// <summary>
@@ -78,10 +80,12 @@ namespace Raven.Abstractions.Replication
 		/// <summary>
 		/// Don't replicate replicated documents
 		/// </summary>
+		[Description("Changed only")]
 		None,
 		/// <summary>
 		/// Replicate replicated documents
 		/// </summary>
+		[Description("Changed and replicated")]
 		Replicate
 	}
 }

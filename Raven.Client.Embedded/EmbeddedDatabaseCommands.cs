@@ -363,14 +363,18 @@ namespace Raven.Client.Embedded
 
 			// metadataOnly is not supported for embedded
 
+			QueryResultWithIncludes queryResult;
 			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase))
 			{
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
 					entityName = index.Substring("dynamic/".Length);
-				return database.ExecuteDynamicQuery(entityName, query.Clone());
+				queryResult = database.ExecuteDynamicQuery(entityName, query.Clone());
 			}
-			var queryResult = database.Query(index, query.Clone());
+			else
+			{
+				queryResult = database.Query(index, query.Clone());
+			}
 			EnsureLocalDate(queryResult.Results);
 
 			var loadedIds = new HashSet<string>(
