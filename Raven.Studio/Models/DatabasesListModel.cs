@@ -147,11 +147,11 @@ namespace Raven.Studio.Models
         private void SearchApiKeysCommand()
         {
             var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
-            session.Advanced.LoadStartingWithAsync<ApiKeyDefinition>("Raven/ApiKeys/").ContinueOnSuccessInTheUIThread(
+            session.Advanced.LoadStartingWithAsync<ApiKeyDefinition>("Raven/ApiKeys/" + SearchApiKeys).ContinueOnSuccessInTheUIThread(
                 apiKeys =>
                 {
-                    OriginalApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeys.Where(definition => definition.Name.IndexOf(SearchApiKeys, StringComparison.InvariantCultureIgnoreCase) >=0));
-                    ApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeys.Where(definition => definition.Name.IndexOf(SearchApiKeys, StringComparison.InvariantCultureIgnoreCase) >=0));
+                    OriginalApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeys);
+                    ApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeys);
                     OnPropertyChanged(() => ApiKeys);
                 });
         }
