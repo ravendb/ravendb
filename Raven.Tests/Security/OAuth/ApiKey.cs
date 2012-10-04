@@ -27,7 +27,7 @@ namespace Raven.Tests.Security.OAuth
 				Name = "test",
 				Secret = "ThisIsMySecret",
 				Enabled = true,
-				Databases = new[]
+				Databases = new List<DatabaseAccess>
 				{
 					new DatabaseAccess{TenantId = "*"}, 
 				}
