@@ -41,7 +41,7 @@ namespace Raven.Abstractions.Json
 			var arrayRank = objectType.GetArrayRank();
 
 			// Retrieve all the values from the Json
-			var arrayValues = ReadRank(reader, serializer);
+			var arrayValues = ReadRank(reader, serializer, arrayItemType);
 
 			// Determine the lengths of all ranks for the array
 			var rankLengthList = GetRankLengthList(arrayValues);
@@ -77,13 +77,15 @@ namespace Raven.Abstractions.Json
 
 
 		#region Helpers
+
 		/// <summary>
 		/// Read in all the values from the Json reader and populate a nested ArrayList
 		/// </summary>
 		/// <param name="reader">JsonReader to use</param>
 		/// <param name="serializer">JsonSerializer to use</param>
+		/// <param name="elementType">The element type</param>
 		/// <returns></returns>
-		private List<object> ReadRank(JsonReader reader, JsonSerializer serializer)
+		private List<object> ReadRank(JsonReader reader, JsonSerializer serializer, Type elementType)
 		{
 			var retVal = new List<object>();
 
@@ -94,9 +96,9 @@ namespace Raven.Abstractions.Json
 				// If another array is found, it is a new rank
 				// Otherwise, we have a value
 				if (reader.TokenType == JsonToken.StartArray)
-					retVal.Add(ReadRank(reader, serializer));
+					retVal.Add(ReadRank(reader, serializer, elementType));
 				else
-					retVal.Add(reader.Value);
+					retVal.Add(serializer.Deserialize(reader, elementType));
 
 				reader.Read();
 			}
