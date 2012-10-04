@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Windows.Controls;
-using Raven.Studio.Infrastructure;
+﻿using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Query
 {

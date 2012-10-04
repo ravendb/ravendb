@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
@@ -39,18 +38,14 @@ namespace Raven.Studio.Commands
 		                                {
 		                                    if (t.IsFaulted)
 		                                    {
-		                                        ApplicationModel.Current.AddErrorNotification(t.Exception,"index " + indexName +
-		                                                             " could not be deleted");
+		                                        ApplicationModel.Current.AddErrorNotification(t.Exception,"index " + indexName + " could not be deleted");
 		                                    }
 		                                    else
 		                                    {
 		                                        ApplicationModel.Current.AddInfoNotification("Index " + indexName + " successfully deleted");
 		                                        UrlUtil.Navigate("/indexes");
 
-		                                        var deletedItem =
-		                                            model.GroupedIndexes.OfType<IndexItem>().FirstOrDefault(
-		                                                item => item.Name == indexName);
-
+		                                        var deletedItem = model.GroupedIndexes.OfType<IndexItem>().FirstOrDefault(item => item.Name == indexName);
                                                 model.GroupedIndexes.Remove(deletedItem);
 		                                    }
 		                                });

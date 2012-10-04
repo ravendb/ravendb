@@ -1,10 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
+﻿using System.Linq;
 using System.Windows.Input;
-using ActiproSoftware.Text;
-using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
-using Raven.Studio.Features.Query;
 
 namespace Raven.Studio.Controls.Editors
 {

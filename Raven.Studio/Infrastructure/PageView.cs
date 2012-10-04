@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Threading;
 
 namespace Raven.Studio.Infrastructure
@@ -92,9 +91,7 @@ namespace Raven.Studio.Infrastructure
             base.OnNavigatedTo(e);
 
             if (DataContext is IObservable && (DataContext as IObservable).Value is PageViewModel)
-            {
                 (((DataContext as IObservable).Value) as PageViewModel).LoadModel(UrlUtil.Url);
-            }
         }
 
         protected override void OnNavigatingFrom(System.Windows.Navigation.NavigatingCancelEventArgs e)
@@ -102,9 +99,7 @@ namespace Raven.Studio.Infrastructure
             base.OnNavigatingFrom(e);
 
             if (DataContext is IObservable && (DataContext as IObservable).Value is PageViewModel)
-            {
                 e.Cancel = !(((DataContext as IObservable).Value) as PageViewModel).CanLeavePage();
-            }
         }
 
         private void HandleDataContectChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -113,15 +108,11 @@ namespace Raven.Studio.Infrastructure
             {
                 var oldViewModel = e.OldValue as ViewModel;
                 if (oldViewModel != null)
-                {
                     oldViewModel.NotifyViewUnloaded();
-                }
 
                 var newViewModel = e.NewValue as ViewModel;
                 if (newViewModel != null)
-                {
                     newViewModel.NotifyViewLoaded();
-                }
 
                 InvokeTimerTicked(e.NewValue);
             }

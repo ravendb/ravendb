@@ -100,6 +100,30 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
+		protected class SpatialIndex
+		{
+			/// <summary>
+			/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
+			/// </summary>
+			/// <param name="fieldName">The field name, will be used for querying</param>
+			/// <param name="lat">Latitude</param>
+			/// <param name="lng">Longitude</param>
+			public static object Generate(string fieldName, double lat, double lng)
+			{
+				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+			}
+
+			/// <summary>
+			/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
+			/// </summary>
+			/// <param name="lat">Latitude</param>
+			/// <param name="lng">Longitude</param>
+			public static object Generate(double lat, double lng)
+			{
+				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+			} 
+		}
+
 		/// <summary>
 		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
 		/// </summary>
@@ -239,7 +263,7 @@ namespace Raven.Client.Indexes
 				.Unwrap();
 		}
 
-		private ILog Logger = LogProvider.GetCurrentClassLogger();
+		private ILog Logger = LogManager.GetCurrentClassLogger();
 		private Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
 		                                           DocumentConvention documentConvention, IndexDefinition indexDefinition)
 		{

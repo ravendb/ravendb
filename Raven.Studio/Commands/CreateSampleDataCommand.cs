@@ -65,7 +65,6 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => output("Sample Data Created") );
 		}
 
-
 		private IEnumerable<Task> CreateSampleData()
 		{
 			var commands = database.Value.AsyncDatabaseCommands;
@@ -109,7 +108,6 @@ namespace Raven.Studio.Commands
 					);
 
 				yield return batch;
-
 			}
 		}
 	}

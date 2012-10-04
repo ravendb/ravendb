@@ -9,7 +9,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Server;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -27,7 +27,7 @@ namespace Raven.Bundles.Replication.Responders
 	[InheritedExport(typeof(AbstractRequestResponder))]
 	public class DocumentReplicationResponder : AbstractRequestResponder
 	{
-		private readonly Logger log = LogManager.GetCurrentClassLogger();
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[ImportMany]
 		public IEnumerable<AbstractDocumentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
@@ -80,6 +80,7 @@ namespace Raven.Bundles.Replication.Responders
 					Database.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
+									 Source = src,
 									 LastDocumentEtag = new Guid(lastEtag),
 									 LastAttachmentEtag = lastAttachmentId,
 									 ServerInstanceId = Database.TransactionalStorage.Id

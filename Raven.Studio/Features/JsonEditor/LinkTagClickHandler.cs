@@ -1,18 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
+﻿using System.Linq;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using ActiproSoftware.Compatibility;
 using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor;
-using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.JsonEditor
@@ -26,30 +16,20 @@ namespace Raven.Studio.Features.JsonEditor
         public void NotifyMouseDown(IEditorView view, MouseButtonEventArgs e)
         {
             if ((Keyboard.Modifiers & ModifierKeys.Shift) != ModifierKeys.Shift)
-            {
                 return;
-            }
 
             var hitTestResult = view.SyntaxEditor.HitTest(e.GetPosition(view.SyntaxEditor));
             if (hitTestResult.Type != HitTestResultType.ViewTextAreaOverCharacter)
-            {
                 return;
-            }
 
             var tag = GetLinkTag(view, hitTestResult.Offset);
             if (tag == null)
-            {
                 return;
-            }
 
             if (tag.NavigationType == LinkTagNavigationType.ExternalUrl)
-            {
                 UrlUtil.NavigateToExternal(tag.Url);
-            }
             else
-            {
                 UrlUtil.Navigate("/Edit?id=" + tag.Url);
-            }
 
             e.Handled = true;
         }

@@ -1,14 +1,14 @@
-﻿namespace Raven.Tests.Abstractions.Logging.LogProviders
-{
-	using System;
-	using Raven.Abstractions.Logging;
-	using Raven.Abstractions.Logging.LogProviders;
-	using NLog;
-	using NLog.Config;
-	using NLog.Targets;
-	using Xunit;
-	using LogLevel = NLog.LogLevel;
+﻿using System;
+using NLog.Config;
+using NLog.Targets;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Logging.LogProviders;
+using Xunit;
+using LogLevel = NLog.LogLevel;
+using LogManager = NLog.LogManager;
 
+namespace Raven.Tests.Abstractions.Logging.LogProviders
+{
 	public class NLogLogProviderLoggingEnabledTests : IDisposable
 	{
 		private readonly ILog sut;
@@ -16,18 +16,31 @@
 
 		public NLogLogProviderLoggingEnabledTests()
 		{
+			NLogLogManager.ProviderIsAvailabileOverride = true;
 			var config = new LoggingConfiguration();
 			target = new MemoryTarget();
 			target.Layout = "${level:uppercase=true}|${message}|${exception}";
 			config.AddTarget("memory", target);
 			config.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, target));
 			LogManager.Configuration = config;
-			sut = new NLogLogProvider().GetLogger("Test");
+			sut = new NLogLogManager().GetLogger("Test");
 		}
 
 		public void Dispose()
 		{
 			LogManager.Configuration = null;
+		}
+
+		[Fact]
+		public void Should_be_able_to_get_IsWarnEnabled()
+		{
+			Assert.True(sut.IsWarnEnabled);
+		}
+
+		[Fact]
+		public void Should_be_able_to_get_IsDebugEnabled()
+		{
+			Assert.True(sut.IsDebugEnabled);
 		}
 
 		[Fact]

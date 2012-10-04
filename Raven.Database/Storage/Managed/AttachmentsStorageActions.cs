@@ -7,10 +7,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
@@ -23,7 +23,7 @@ namespace Raven.Storage.Managed
 	{
 		private readonly TableStorage storage;
 		private readonly IUuidGenerator generator;
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		public AttachmentsStorageActions(TableStorage storage, IUuidGenerator generator)
 		{

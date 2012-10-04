@@ -6,9 +6,9 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using NLog;
 using Raven.Abstractions.Data;
 using System.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
@@ -153,8 +153,8 @@ namespace Raven.Database.Server.Responders
 				// nothing here
 			}
 
-			private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();
-			public void OutputSavedLogItems(Logger logger)
+			private readonly List<Action<ILog>> loggedMessages = new List<Action<ILog>>();
+			public void OutputSavedLogItems(ILog logger)
 			{
 				foreach (var loggedMessage in loggedMessages)
 				{
@@ -162,7 +162,7 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-			public void Log(Action<Logger> loggingAction)
+			public void Log(Action<ILog> loggingAction)
 			{
 				loggedMessages.Add(loggingAction);
 			}
@@ -209,6 +209,11 @@ namespace Raven.Database.Server.Responders
 			public Stream InputStream
 			{
 				get { return Stream.Null; }
+			}
+
+			public long ContentLength
+			{
+				get { return 0; }
 			}
 
 			public NameValueCollection QueryString { get; set; }

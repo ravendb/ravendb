@@ -135,9 +135,7 @@ namespace Raven.Studio.Models
 						var statInfoItem = new StatInfoItem(item);
 
 						if (statInfoItem.ItemType == typeof(IndexStats))
-						{
 							AddIndexStat(statInfoItem);
-						}
 
 						statInfo.ListItems.Add(statInfoItem);
 					}

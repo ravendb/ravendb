@@ -25,9 +25,9 @@ namespace Raven.Tests.Patching
 
 		//splice(2, 1) will remove 1 elements from position 2 onwards (zero-based)
 		string sampleScript = @"
+	this.Comments.splice(2, 1);
 	this.Id = 'Something new'; 
 	this.Value++; 
-	this.Comments.splice(2, 1);
 	this.newValue = ""err!!"";
 	this.Comments.Map(function(comment) {   
 		return (comment == ""one"") ? comment + "" test"" : comment;
@@ -238,6 +238,46 @@ this.Value = another.Value;
 				var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
 				Assert.Equal(1, result.Value);
+			}
+		}
+
+		[Fact]
+		public void CanUpdateOnMissingProperty()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new  { Name = "Ayende"}, "products/1");
+					s.SaveChanges();
+				}
+
+
+				store.DatabaseCommands.Patch("products/1",
+														 new ScriptedPatchRequest
+														 {
+															 Script = "this.Test = 'a';"
+														 });
+
+
+				var resultDoc = store.DatabaseCommands.Get("products/1");
+
+				Assert.Equal("Ayende", resultDoc.DataAsJson.Value<string>("Name"));
+				Assert.Equal("a", resultDoc.DataAsJson.Value<string>("Test"));
+			}
+		}
+
+		[Fact]
+		public void WillNotErrorOnMissingDocument()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.Patch("products/1",
+														 new ScriptedPatchRequest
+														 {
+															 Script = "this.Test = 'a';"
+														 });
+
 			}
 		}
 

@@ -6,11 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Util.Streams;
 
@@ -109,8 +108,8 @@ namespace Raven.Database.Server.Abstractions
 			RequestInternal.InputStream = requestFilter(RequestInternal.InputStream);
 		}
 
-		private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();
-		public void OutputSavedLogItems(Logger logger)
+		private readonly List<Action<ILog>> loggedMessages = new List<Action<ILog>>();
+		public void OutputSavedLogItems(ILog logger)
 		{
 			foreach (var loggedMessage in loggedMessages)
 			{
@@ -118,7 +117,7 @@ namespace Raven.Database.Server.Abstractions
 			}
 		}
 
-		public void Log(Action<Logger> loggingAction)
+		public void Log(Action<ILog> loggingAction)
 		{
 			loggedMessages.Add(loggingAction);
 		}

@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO.IsolatedStorage;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -56,17 +54,11 @@ namespace Raven.Studio.Models
                 indicatorPosition = value;
 
                 if (indicatorPosition < DetailsToIdSwitchover / 2)
-                {
                     indicatorPosition = 0;
-                }
                 else if (indicatorPosition < (IdToCardSwitchover - (IdToCardSwitchover - DetailsToIdSwitchover) / 2))
-                {
                     indicatorPosition = DetailsToIdSwitchover;
-                }
                 else if (indicatorPosition < IdToCardSwitchover)
-                {
                     indicatorPosition = IdToCardSwitchover;
-                }
 
                 Settings.Instance.DocumentSize = (int)IndicatorPosition;
 

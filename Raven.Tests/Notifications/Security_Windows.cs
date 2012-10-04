@@ -19,7 +19,6 @@ namespace Raven.Tests.Notifications
 		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			configuration.AuthenticationMode = "windows";
 		}
 
 		[Fact]

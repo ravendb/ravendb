@@ -46,6 +46,11 @@ namespace Raven.Tests
 			File.Delete("test.log");
 		}
 
+		protected void Consume(object o)
+		{
+			
+		}
+
 		public EmbeddableDocumentStore NewDocumentStore(
 			bool deleteDirectory = true,
 			string requestedStorage = null,
@@ -342,12 +347,13 @@ namespace Raven.Tests
 			return timeTaken.TotalMilliseconds;
 		}
 
-		public IDocumentStore NewRemoteDocumentStore()
+		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false)
 		{
 			var ravenDbServer = GetNewServer();
+			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
-				Url = "http://localhost:8079"
+				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
 			};
 
 			store.AfterDispose += (sender, args) =>
@@ -357,6 +363,10 @@ namespace Raven.Tests
 			};
 			ModifyStore(store);
 			return store.Initialize();
+		}
+
+		protected virtual void ModifyServer(RavenDbServer ravenDbServer)
+		{
 		}
 
 		public virtual void Dispose()

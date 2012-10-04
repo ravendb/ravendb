@@ -41,7 +41,7 @@ namespace Raven.Storage.Managed
 				return;
 			}
 
-			throw new ConcurrencyException("Document '" + key + "' is locked by transacton: " + txId);
+			throw new ConcurrencyException("Document '" + key + "' is locked by transaction: " + txId);
 		}
 	}
 }

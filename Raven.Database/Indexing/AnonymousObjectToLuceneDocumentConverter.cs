@@ -8,8 +8,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
+using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
@@ -87,6 +89,7 @@ namespace Raven.Database.Indexing
 				name = "_" + name;
 			}
 
+			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
 			if (value == null)
 			{
@@ -126,6 +129,7 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
+			
 			var abstractField = value as AbstractField;
 			if (abstractField != null)
 			{
@@ -135,7 +139,7 @@ namespace Raven.Database.Indexing
 			var bytes = value as byte[];
 			if (bytes != null)
 			{
-				yield return CreateBinaryFieldWithCaching(name, bytes, storage);
+				yield return CreateBinaryFieldWithCaching(name, bytes, storage, fieldIndexingOptions);
 				yield break;
 			}
 
@@ -162,7 +166,6 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
 			if (Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED) ||
 			    Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED_NO_NORMS))// explicitly not analyzed
 			{
@@ -202,10 +205,16 @@ namespace Raven.Database.Indexing
 			}
 			else if(value is decimal)
 			{
-				var convert = ((double)(decimal)value);
-				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), storage,
+				var d = (decimal) value;
+				var s = d.ToString(CultureInfo.InvariantCulture);
+				if(s.Contains('.'))
+				{
+					s = s.TrimEnd('0');
+					if (s.EndsWith("."))
+						s = s.Substring(0, s.Length - 1);
+				}
+				yield return CreateFieldWithCaching(name, s, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
-		
 			}
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
@@ -296,15 +305,25 @@ namespace Raven.Database.Indexing
 	        return true;
 	    }
 
-		private Field CreateBinaryFieldWithCaching(string name, byte[] value, Field.Store store)
+		private Field CreateBinaryFieldWithCaching(string name, byte[] value, Field.Store store, Field.Index index)
 		{
+			if(value.Length > 1024)
+				throw new ArgumentException("Binary values must be smaller than 1Kb");
+
 			var cacheKey = new FieldCacheKey(name, null, store, multipleItemsSameFieldCount.ToArray());
 			Field field;
+			var stringWriter = new StringWriter();
+			JsonExtensions.CreateDefaultJsonSerializer().Serialize(stringWriter,value);
+			var sb = stringWriter.GetStringBuilder();
+			sb.Remove(0, 1); // remove prefix "
+			sb.Remove(sb.Length-1, 1); // remove postfix "
+			var val = sb.ToString();
+
 			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
 			{
-				fieldsCache[cacheKey] = field = new Field(name, value, store);
+				fieldsCache[cacheKey] = field = new Field(name, val, store, index);
 			}
-			field.SetValue(value);
+			field.SetValue(val);
 			field.Boost = 1;
 			field.OmitNorms = true;
 			return field;

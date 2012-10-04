@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Net;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
@@ -12,7 +11,6 @@ using ActiproSoftware.Text.Implementation;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
@@ -153,9 +151,7 @@ namespace Raven.Studio.Models
 			private set
 			{
 				if (string.IsNullOrWhiteSpace(value))
-				{
 					UrlUtil.Navigate("/indexes");
-				}
 
 				indexName = value;
 				DocumentsResult.Context = "Index/" + indexName;
@@ -255,13 +251,14 @@ namespace Raven.Studio.Models
 			{
 				if (CanExecute(parameter) == false)
 					return;
-				StringRef firstOrDefault = model.SortBy.FirstOrDefault(x => x.Value == field);
+
+				var firstOrDefault = model.SortBy.FirstOrDefault(x => x.Value == field);
 				if (firstOrDefault != null)
 					model.SortBy.Remove(firstOrDefault);
 			}
 		}
 
-		private void SetSortByOptions(ICollection<string> items)
+		private void SetSortByOptions(IEnumerable<string> items)
 		{
 			SortByOptions.Clear();
 
@@ -388,9 +385,7 @@ namespace Raven.Studio.Models
 		private void HandleQueryError(Exception exception)
 		{
 			if (exception is AggregateException)
-			{
 				exception = ((AggregateException) exception).ExtractSingleInnerException();
-			}
 
 			var indexRaven = exception.Message.IndexOf("at Raven.", System.StringComparison.Ordinal);
 			var indexLucene = exception.Message.IndexOf("at Lucene.", System.StringComparison.Ordinal);
@@ -412,9 +407,7 @@ namespace Raven.Studio.Models
 			{
 				var success = int.TryParse(match.Groups[1].Value, out exceptionLine);
 				if (success)
-				{
 					success = int.TryParse(match.Groups[2].Value, out exceptionColumn);
-				}
 
 				if (!success)
 				{
@@ -423,7 +416,6 @@ namespace Raven.Studio.Models
 				}
 					
 			}
-
 
 			IsErrorVisible.Value = true;
 		}
@@ -437,9 +429,7 @@ namespace Raven.Studio.Models
 	    private void HandleSortByChanged(object sender, NotifyCollectionChangedEventArgs e)
 	    {
 	        if (e.Action == NotifyCollectionChangedAction.Add)
-	        {
 	            (e.NewItems[0] as StringRef).PropertyChanged += delegate { Requery(); };
-	        }
 	    }
 
 		private void Requery()
@@ -465,19 +455,15 @@ namespace Raven.Studio.Models
 
                         string selectedOption = null;
                         if (!string.IsNullOrEmpty(collection))
-                        {
                             selectedOption = DynamicOptions.FirstOrDefault(s => s.Equals(collection));
-                        }
 
                         if (selectedOption == null)
-                        {
                             selectedOption = DynamicOptions[0];
-                        }
 
                         DynamicSelectedOption = selectedOption;
-
-			DocumentsResult.SetChangesObservable(null);
+                        DocumentsResult.SetChangesObservable(null);
                     });
+
                 return;
             }
 
@@ -508,7 +494,7 @@ namespace Raven.Studio.Models
                                  .Where(n =>n.Name.Equals(indexName,StringComparison.InvariantCulture))
                                  .Select(m => Unit.Default));
 		
-			SetSortByOptions(fields);
+                    SetSortByOptions(fields);
                     RestoreHistory();
                 }).Catch();
         }
@@ -558,8 +544,7 @@ namespace Raven.Studio.Models
             {
                 PerDatabaseState.QueryHistoryManager.WaitForHistoryAsync()
                     .ContinueOnUIThread(_ => ApplyQueryState(recentQueryHashCode));
-            }
-		    
+            }	    
 		}
 
         private void ApplyQueryState(string recentQueryHashCode)
@@ -569,9 +554,7 @@ namespace Raven.Studio.Models
                            : PerDatabaseState.QueryHistoryManager.GetStateByHashCode(recentQueryHashCode);
 
 	        if (state == null)
-	        {
 	            return;
-	        }
 
 	        Query = state.Query;
 	        IsSpatialQuery = state.IsSpatialQuery;
@@ -584,9 +567,7 @@ namespace Raven.Studio.Models
 	        foreach (var sortOption in state.SortOptions)
 	        {
 		        if (SortByOptions.Contains(sortOption))
-		        {
 			        SortBy.Add(new StringRef() {Value = sortOption});
-		        }
 	        }
 
 	        Requery();
@@ -661,13 +642,10 @@ namespace Raven.Studio.Models
 
                 string currentVal = null;
                 if (token.Key == "Field")
-                {
                     currentField = txt.Substring(0, txt.Length - 1);
-                }
                 else
-                {
                     currentVal = txt;
-                }
+
                 if (currentField == null || currentVal == null)
                     continue;
 

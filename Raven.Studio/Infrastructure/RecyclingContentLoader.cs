@@ -1,17 +1,9 @@
 ﻿using System;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -65,14 +57,10 @@ namespace Raven.Studio.Infrastructure
         public LoadResult EndLoad(IAsyncResult asyncResult)
         {
             if (asyncResult is Task<UserControl>)
-            {
                 return new LoadResult((asyncResult as Task<UserControl>).Result);
-            }
-            else
-            {
-                var result = innerLoader.EndLoad(asyncResult);
-                return result;
-            }
+
+            var result = innerLoader.EndLoad(asyncResult);
+            return result;
         }
 
         public bool CanLoad(Uri targetUri, Uri currentUri)
@@ -83,14 +71,8 @@ namespace Raven.Studio.Infrastructure
         private string GetFileName(string fullPath)
         {
             var indexOfPeriod = fullPath.IndexOf('.');
-            if (indexOfPeriod < 0)
-            {
-                return fullPath;
-            }
-            else
-            {
-                return fullPath.Substring(0, indexOfPeriod);
-            }
+
+            return indexOfPeriod < 0 ? fullPath : fullPath.Substring(0, indexOfPeriod);
         }
     }
 }

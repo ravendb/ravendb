@@ -1,20 +1,11 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.Net;
 using System.Reactive.Linq;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 using Raven.Abstractions.Extensions;
-using Raven.Studio.Models;
 using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Query
@@ -80,9 +71,7 @@ namespace Raven.Studio.Features.Query
         {
             var query = param as SavedQuery;
             if (query == null)
-            {
                 return;
-            }
 
             PerDatabaseState.QueryHistoryManager.PinQuery(query);
         }
@@ -91,9 +80,7 @@ namespace Raven.Studio.Features.Query
         {
             var query = param as SavedQuery;
             if (query == null)
-            {
                 return;
-            }
 
             PerDatabaseState.QueryHistoryManager.UnPinQuery(query);
         }
@@ -102,9 +89,7 @@ namespace Raven.Studio.Features.Query
         {
             var query = param as SavedQuery;
             if (query == null)
-            {
                 return;
-            }
 
             string url;
             if (query.IndexName.StartsWith("dynamic/"))
@@ -125,7 +110,7 @@ namespace Raven.Studio.Features.Query
 
         protected void OnQuerySelected(EventArgs e)
         {
-            EventHandler<EventArgs> handler = QuerySelected;
+            var handler = QuerySelected;
             if (handler != null) handler(this, e);
         }
     }

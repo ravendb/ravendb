@@ -11,8 +11,8 @@
 	<Grid x:Name="LayoutRoot">
 		<Rectangle Fill="#FFE9E9E9"
 				   Margin="2,0,0,0"
-					Stroke="#FF50504C"
-					Width="Auto"
+                   Stroke="#FF50504C"
+                   Width="Auto"
 				   Style="{StaticResource DividerStyle}"
 				   RadiusY="15"
 				   RadiusX="15"

@@ -20,7 +20,7 @@ namespace Raven.Abstractions.Json
 		public string Resolve(int indent = 1)
 		{
 			var result = new Dictionary<string, object>();
-			for (int index = 0; index < docs.Length; index++)
+			for (var index = 0; index < docs.Length; index++)
 			{
 				var doc = docs[index];
 				foreach (var prop in doc)
@@ -53,7 +53,8 @@ namespace Raven.Abstractions.Json
 			{
 				(RavenJArray)prop.Value
 			};
-			for (int i = 0; i < docs.Length; i++)
+
+			for (var i = 0; i < docs.Length; i++)
 			{
 				if (i == index)
 					continue;
@@ -70,13 +71,14 @@ namespace Raven.Abstractions.Json
 			while (arrays.Count > 0)
 			{
 				var set = new HashSet<RavenJToken>(ravenJTokenEqualityComparer);
-				for (int i = 0; i < arrays.Count; i++)
+				for (var i = 0; i < arrays.Count; i++)
 				{
 					set.Add(arrays[i][0]);
 					arrays[i].RemoveAt(0);
 					if(arrays[i].Length == 0)
 						arrays.RemoveAt(i);
 				}
+
 				foreach (var ravenJToken in set)
 				{
 					mergedArray.Add(ravenJToken);
@@ -99,7 +101,7 @@ namespace Raven.Abstractions.Json
 			{
 				(RavenJObject)prop.Value
 			};
-			for (int i = 0; i < docs.Length; i++)
+			for (var i = 0; i < docs.Length; i++)
 			{
 				if(i == index)
 					continue;
@@ -111,19 +113,19 @@ namespace Raven.Abstractions.Json
 					continue;
 				others.Add((RavenJObject)token);
 			}
+
 			result.Add(prop.Key, new ConflictsResolver(others.ToArray()));
 			return true;
 		}
 
-		private void HandleSimpleValues(Dictionary<string, object> result,
-			KeyValuePair<string, RavenJToken> prop, 
-			int index)
+		private void HandleSimpleValues(Dictionary<string, object> result, KeyValuePair<string, RavenJToken> prop, int index)
 		{
 			var conflicted = new Conflicted
 			{
 				Values = { prop.Value }
 			};
-			for (int i = 0; i < docs.Length; i++)
+
+			for (var i = 0; i < docs.Length; i++)
 			{
 				if(i == index)
 					continue;
@@ -135,6 +137,7 @@ namespace Raven.Abstractions.Json
 				if (ravenJTokenEqualityComparer.Equals(prop.Value, otherVal) == false)
 					conflicted.Values.Add(otherVal);
 			}
+
 			if (conflicted.Values.Count == 1)
 				result.Add(prop.Key, prop.Value);
 			else
@@ -148,6 +151,7 @@ namespace Raven.Abstractions.Json
 			{
 				Formatting = Formatting.Indented
 			};
+
 			writer.WriteStartObject();
 			foreach (var o in result)
 			{
@@ -171,6 +175,7 @@ namespace Raven.Abstractions.Json
 					writer.WriteComment("<<<< conflict end");
 					continue;
 				}
+
 				var arrayWithWarning = o.Value as ArrayWithWarning;
 				if(arrayWithWarning != null)
 				{
@@ -179,12 +184,13 @@ namespace Raven.Abstractions.Json
 					writer.WriteComment("<<<< auto merged array end");
 					continue;
 				}
+
 				var resolver = o.Value as ConflictsResolver;
 				if(resolver != null)
 				{
 					using(var stringReader = new StringReader(resolver.Resolve(indent + 1)))
 					{
-						bool first = true;
+						var first = true;
 						string line ;
 						while((line = stringReader.ReadLine()) != null)
 						{
@@ -219,10 +225,8 @@ namespace Raven.Abstractions.Json
 
 			public ArrayWithWarning(RavenJArray mergedArray)
 			{
-				this.MergedArray = mergedArray;
+				MergedArray = mergedArray;
 			}
 		}
-
 	}
-
 }

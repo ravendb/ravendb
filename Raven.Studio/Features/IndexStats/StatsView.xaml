@@ -3,38 +3,36 @@
 						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
 						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-						 mc:Ignorable="d"
-						 xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
-						 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 						 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-						 d:DesignWidth="640" d:DesignHeight="480"
+						 mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
 						 Title="StatsView Page">
 	<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" Margin="{StaticResource Margin_ContentPage}" >
 		<toolkit:HeaderedContentControl.Header>
 			<StackPanel Orientation="Horizontal">
 				<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
 				<HyperlinkButton Content="Indexes"
-										 Style="{StaticResource Style_Link_Breadcrumb_Header}"
-										 Command="{StaticResource NavigateToCommand}"
-										 CommandParameter="/Indexes"
-										 VerticalAlignment="Center" />
+                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                 Command="{StaticResource NavigateToCommand}"
+                                 CommandParameter="/Indexes"
+                                 VerticalAlignment="Center" />
 				<TextBlock Text=">"
-								   VerticalAlignment="Center"
-								   Margin="4,0" />
+                           VerticalAlignment="Center"
+                           Margin="4,0" />
 
 				<HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
-										 ToolTipService.ToolTip="{Binding IndexName}"
-										 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-										 Command="{StaticResource NavigateToCommand}"
-										 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
-										 VerticalAlignment="Center" />
+                                 ToolTipService.ToolTip="{Binding IndexName}"
+                                 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+                                 Command="{StaticResource NavigateToCommand}"
+                                 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+                                 VerticalAlignment="Center" />
 				<TextBlock Text=">"
-								   VerticalAlignment="Center"
-								   Margin="4,0" />
+                           VerticalAlignment="Center"
+                           Margin="4,0" />
 
 				<TextBlock Text="IndexStats"
-							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
-							   VerticalAlignment="Center" />
+                           Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                           VerticalAlignment="Center" />
 			</StackPanel>
 		</toolkit:HeaderedContentControl.Header>
 		<Grid>
@@ -74,10 +72,14 @@
 			<TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding IndexStats.LastIndexedEtag}" />
 
 			<TextBlock Grid.Row="5" Text="Last Indexed Timestamp" Style="{StaticResource Style_TextBlock_FieldName}"/>
-			<TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding IndexStats.LastIndexedTimestamp, Converter={StaticResource UtcToLocalConverter}, StringFormat='dd/MM/yy HH:mm'}" />
+			<TextBlock Grid.Row="5"
+                       Grid.Column="2" 
+                       Text="{Binding IndexStats.LastIndexedTimestamp, Converter={StaticResource UtcToLocalConverter}, StringFormat='dd/MM/yy HH:mm'}" />
 
 			<TextBlock Grid.Row="6" Text="Last Query Timestamp" Style="{StaticResource Style_TextBlock_FieldName}"/>
-			<TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding IndexStats.LastQueryTimestamp, Converter={StaticResource UtcToLocalConverter}, StringFormat='dd/MM/yy HH:mm'}" />
+			<TextBlock Grid.Row="6" 
+                       Grid.Column="2" 
+                       Text="{Binding IndexStats.LastQueryTimestamp, Converter={StaticResource UtcToLocalConverter}, StringFormat='dd/MM/yy HH:mm'}" />
 
 			<TextBlock Grid.Row="7" Text="Reduce Indexing Attempts" Style="{StaticResource Style_TextBlock_FieldName}"/>
 			<TextBlock Grid.Row="7" Grid.Column="2" Text="{Binding IndexStats.ReduceIndexingAttempts, StringFormat='\{0:#,#;;0\}'}" />
@@ -92,7 +94,9 @@
 			<TextBlock Grid.Row="10" Grid.Column="2" Text="{Binding IndexStats.LastReduceEtag}" />
 
 			<TextBlock Grid.Row="11" Text="Last Reduce Timestamp" Style="{StaticResource Style_TextBlock_FieldName}"/>
-			<TextBlock Grid.Row="11" Grid.Column="2" Text="{Binding IndexStats.LastReduceTimestamp, Converter={StaticResource UtcToLocalConverter}, StringFormat='dd/MM/yy HH:mm'}" />
+			<TextBlock Grid.Row="11" 
+                       Grid.Column="2" 
+                       Text="{Binding IndexStats.LastReduceTimestamp, Converter={StaticResource UtcToLocalConverter}, StringFormat='dd/MM/yy HH:mm'}" />
 		</Grid>
 	</toolkit:HeaderedContentControl>
 </Infrastructure:PageView>

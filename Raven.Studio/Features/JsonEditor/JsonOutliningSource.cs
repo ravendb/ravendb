@@ -1,17 +1,6 @@
-﻿using System;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-using ActiproSoftware.Text;
+﻿using ActiproSoftware.Text;
 using ActiproSoftware.Text.Parsing;
 using ActiproSoftware.Text.Parsing.LLParser;
-using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining.Implementation;
 
 namespace Raven.Studio.Features.JsonEditor
@@ -69,18 +58,13 @@ namespace Raven.Studio.Features.JsonEditor
         private void AddOutliningNode(ITextSnapshot snapshot, IAstNode node, OutliningNodeDefinition outliningNodeDefinition)
         {
             if (!node.StartOffset.HasValue || !node.EndOffset.HasValue)
-            {
                 return;
-            }
 
             var startPosition = snapshot.OffsetToPosition(node.StartOffset.Value);
             var endPosition = snapshot.OffsetToPosition(node.EndOffset.Value);
 
             if (startPosition.Line != endPosition.Line)
-            {
-                AddNode(new TextRange(node.StartOffset.Value + 1, node.EndOffset.Value - 1),
-                        outliningNodeDefinition);
-            }
+                AddNode(new TextRange(node.StartOffset.Value + 1, node.EndOffset.Value - 1), outliningNodeDefinition);
 
         }
 
@@ -88,15 +72,11 @@ namespace Raven.Studio.Features.JsonEditor
         {
             var codeDoc = (snapshot.Document as ICodeDocument);
             if (codeDoc == null)
-            {
                 return null;
-            }
 
             var parseData = codeDoc.ParseData as ILLParseData;
             if (parseData == null)
-            {
                 return null;
-            }
 
             var node = parseData.Ast as JsonObjectNode;
             return node;

@@ -14,7 +14,6 @@
 				 VerticalAlignment="Stretch"
 				 VerticalScrollBarVisibility="Auto" />
 
-
 		<Button x:Name="OKButton"
 				Grid.Row="1"
 				Click="OKButton_Click"

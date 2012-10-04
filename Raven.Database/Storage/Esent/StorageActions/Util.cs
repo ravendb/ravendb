@@ -157,7 +157,7 @@ namespace Raven.Storage.Esent.StorageActions
 				RollbackTransaction(guid);
 				return;
 			}
-			throw new ConcurrencyException("Document '" + key + "' is locked by transacton: " + guid);
+			throw new ConcurrencyException("Document '" + key + "' is locked by transaction: " + guid);
 		}
 	}
 }

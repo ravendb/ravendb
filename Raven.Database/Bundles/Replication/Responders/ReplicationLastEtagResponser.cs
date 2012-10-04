@@ -5,9 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -20,7 +20,7 @@ namespace Raven.Bundles.Replication.Responders
 	[InheritedExport(typeof(AbstractRequestResponder))]
 	public class ReplicationLastEtagResponser : AbstractRequestResponder
 	{
-		private Logger log = LogManager.GetCurrentClassLogger();
+		private ILog log = LogManager.GetCurrentClassLogger();
 
 		public override void Respond(IHttpContext context)
 		{
@@ -67,6 +67,7 @@ namespace Raven.Bundles.Replication.Responders
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
 						ServerInstanceId = Database.TransactionalStorage.Id,
+						Source = src
 					};
 				}
 				else
@@ -107,7 +108,8 @@ namespace Raven.Bundles.Replication.Responders
 					{
 						ServerInstanceId = Database.TransactionalStorage.Id,
 						LastAttachmentEtag = attachmentEtag ?? Guid.Empty,
-						LastDocumentEtag = docEtag??Guid.Empty
+						LastDocumentEtag = docEtag??Guid.Empty,
+						Source = src
 					};
 				}
 				else

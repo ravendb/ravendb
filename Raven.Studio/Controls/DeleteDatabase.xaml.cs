@@ -18,12 +18,12 @@ namespace Raven.Studio.Controls
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = true;
+			DialogResult = true;
 		}
 
 		private void CancelButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = false;
+			DialogResult = false;
 		}
 
 		private void Export_Click(object sender, RoutedEventArgs e)
@@ -32,4 +32,3 @@ namespace Raven.Studio.Controls
 		}
 	}
 }
-

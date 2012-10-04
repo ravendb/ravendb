@@ -137,16 +137,14 @@ namespace Raven.Studio.Features.Query
         {
             var reader = view.GetReader();
 
-            bool hasSkippedWhitespace = false;
+            var hasSkippedWhitespace = false;
 
             while (true)
             {
                 var token = reader.ReadTokenReverse();
 
                 if (token == null)
-                {
                     return new CompletionContext();
-                }
                 
                 if (token.Key == "Whitespace")
                 {
@@ -157,9 +155,7 @@ namespace Raven.Studio.Features.Query
                 var tokenText = reader.PeekText(token.Length);
 
                 if (token.Key == "Field")
-                {
                     return new CompletionContext() {Field = GetFieldName(tokenText), Prefix = ""};
-                }
 
                 if ((token.Key == "Operator" && preTermOperators.Contains(tokenText))
                     || token.Key == "OpenQuotes"
@@ -186,13 +182,10 @@ namespace Raven.Studio.Features.Query
                 var token = reader.ReadTokenReverse();
 
                 if (token == null)
-                {
                     return null;
-                }
-                else if (token.Key == "Field")
-                {
+                
+                if (token.Key == "Field")
                     return GetFieldName(reader.PeekText(token.Length));
-                }
 	        }
 	    }
 
@@ -217,6 +210,4 @@ namespace Raven.Studio.Features.Query
             public string Prefix;
         }
 	}
-
-    
 }

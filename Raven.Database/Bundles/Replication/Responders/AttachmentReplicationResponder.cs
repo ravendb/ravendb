@@ -6,12 +6,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Extensions;
@@ -28,7 +27,7 @@ namespace Raven.Bundles.Replication.Responders
 	[InheritedExport(typeof(AbstractRequestResponder))]
 	public class AttachmentReplicationResponder : AbstractRequestResponder
 	{
-		private Logger log = LogManager.GetCurrentClassLogger();
+		private ILog log = LogManager.GetCurrentClassLogger();
 
 		[ImportMany]
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
@@ -81,6 +80,7 @@ namespace Raven.Bundles.Replication.Responders
 					Database.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
+									 Source = src,
 									 LastDocumentEtag = lastDocId,
 									 LastAttachmentEtag = new Guid(lastEtag),
 									 ServerInstanceId = Database.TransactionalStorage.Id

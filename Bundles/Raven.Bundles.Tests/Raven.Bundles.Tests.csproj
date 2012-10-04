@@ -63,14 +63,6 @@
     <Compile Include="..\Raven.Bundles.UniqueConstraints\Util.cs">
       <Link>UniqueConstraints\Util.cs</Link>
     </Compile>
-    <Compile Include="Authentication\AuthorizationTest.cs" />
-    <Compile Include="Authentication\AsyncSimpleLogin.cs" />
-    <Compile Include="Authentication\Bugs\Mojo2.cs" />
-    <Compile Include="Authentication\Bugs\Mojo2_Failed.cs" />
-    <Compile Include="Authentication\HttpWebRequestExtensions.cs" />
-    <Compile Include="Authentication\SimpleLogin.cs" />
-    <Compile Include="Authentication\SmugglerOAuth.cs" />
-    <Compile Include="Authentication\UsingDatabaseCommands.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\Bugs\fampinheiro.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
@@ -128,10 +120,6 @@
     <ProjectReference Include="..\..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
       <Name>Raven.Tests</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Bundles.Authentication\Raven.Bundles.Authentication.csproj">
-      <Project>{53DA3AE4-1648-43B9-A814-BAFD89AEBF2A}</Project>
-      <Name>Raven.Bundles.Authentication</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
       <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>

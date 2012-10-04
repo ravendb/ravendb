@@ -22,9 +22,8 @@ namespace Raven.Studio.Features.Documents
 			foreach (var item in ravenJObject)
 			{
                 if (sw.LinesWritten > numberOfLines)
-                {
                     break;
-                }
+
 				sw.Write(item.Key);
 				sw.Write(": ");
                 WriteValue(item.Value, sw, width, numberOfLines);
@@ -71,9 +70,7 @@ namespace Raven.Studio.Features.Documents
 			foreach (var token in array.Values())
 			{
                 if (sw.LinesWritten >= numberOfLines)
-                {
                     break;
-                }
 
 				if (isFirstItem)
 					isFirstItem = false;

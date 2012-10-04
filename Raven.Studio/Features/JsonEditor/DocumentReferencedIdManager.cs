@@ -1,14 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 
 namespace Raven.Studio.Features.JsonEditor
 {
@@ -21,7 +12,7 @@ namespace Raven.Studio.Features.JsonEditor
  
         protected void OnChanged(EventArgs e)
         {
-            EventHandler<EventArgs> handler = Changed;
+            var handler = Changed;
             if (handler != null) handler(this, e);
         }
 
@@ -65,9 +56,7 @@ namespace Raven.Studio.Features.JsonEditor
             }
 
             if (any)
-            {
                 OnChanged(EventArgs.Empty);
-            }
         }
 
         public void AddKnownInvalidIds(IEnumerable<string> ids)

@@ -29,10 +29,9 @@ namespace Raven.Studio.Infrastructure.Converters
 		{
 			var item = value as CollectionModel;
 			if (item == null)
-			{
 				return new[] { new SolidColorBrush(Colors.Blue), new SolidColorBrush(Colors.Green) };
-			}
-			Maximum = Math.Max(Maximum, item.Count);
+			
+            Maximum = Math.Max(Maximum, item.Count);
 
 			var percent = (item.Count == 0) ? 0 : (item.Count * 1.0 / Maximum * 1.0);
 			percent = Math.Max(0, percent);

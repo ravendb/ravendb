@@ -1,7 +1,4 @@
-using System;
-using System.Windows.Browser;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {

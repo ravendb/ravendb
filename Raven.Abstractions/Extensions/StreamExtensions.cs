@@ -168,7 +168,7 @@ namespace Raven.Abstractions.Extensions
 						}
 						catch (Exception ex)
 						{
-							LogProvider.GetCurrentClassLogger().ErrorException("Error when disposing a DisposingStream: " + ex.Message, ex);
+							LogManager.GetCurrentClassLogger().ErrorException("Error when disposing a DisposingStream: " + ex.Message, ex);
 						}
 					}
 				}

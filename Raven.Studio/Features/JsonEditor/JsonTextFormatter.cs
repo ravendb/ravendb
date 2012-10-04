@@ -37,10 +37,10 @@ namespace Raven.Studio.Features.JsonEditor
             var change = document.CreateTextChange(TextChangeTypes.AutoFormat, options);
 
             // Keep track of the last non whitespace token Id
-            int lastNonWhitespaceTokenId = -1;
+            var lastNonWhitespaceTokenId = -1;
 
             // Keep track of the indent level
-            int indentLevel = 0;
+            var indentLevel = 0;
 
             // Loop through the document
             while ((reader.Token != null) && (reader.Offset < snapshotRange.EndOffset))
@@ -55,7 +55,7 @@ namespace Raven.Studio.Features.JsonEditor
                     // The token is not whitespace
 
                     // Create a variable that will contain the text to be inserted
-                    string insertText = "";
+                    var insertText = "";
 
                     // Determine the insertText value based on the previous non-whitespace token and the current token
                     switch (lastNonWhitespaceTokenId)

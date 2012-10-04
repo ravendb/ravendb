@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
-using IronJS.Hosting;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 
@@ -15,7 +14,7 @@ namespace Raven.Database.Json
 		{
 			public int Usage;
 			public DateTime Timestamp;
-			public ConcurrentQueue<CSharp.Context> Queue;
+			public ConcurrentQueue<Jint.JintEngine> Queue;
 		}
 
 		private const int CacheMaxSize = 250;
@@ -23,7 +22,7 @@ namespace Raven.Database.Json
 		private readonly ConcurrentDictionary<ScriptedPatchRequest, CachedResult> cacheDic =
 			new ConcurrentDictionary<ScriptedPatchRequest, CachedResult>();
 
-		public void CheckinScript(ScriptedPatchRequest request, CSharp.Context context)
+		public void CheckinScript(ScriptedPatchRequest request, Jint.JintEngine context)
 		{
 			CachedResult value;
 			if (cacheDic.TryGetValue(request, out value))
@@ -33,34 +32,41 @@ namespace Raven.Database.Json
 				value.Queue.Enqueue(context);
 				return;
 			}
-			var queue = new ConcurrentQueue<CSharp.Context>();
-			queue.Enqueue(context);
-			cacheDic.TryAdd(request, new CachedResult
+			cacheDic.AddOrUpdate(request, patchRequest =>
 			{
-				Queue = queue,
-				Timestamp = SystemTime.UtcNow,
-				Usage = 1
+				var queue = new ConcurrentQueue<Jint.JintEngine>();
+				queue.Enqueue(context);
+				return new CachedResult
+				{
+					Queue = queue,
+					Timestamp = SystemTime.UtcNow,
+					Usage = 1
+				};
+			}, (patchRequest, result) =>
+			{
+				result.Queue.Enqueue(context);
+				return result;
 			});
 		}
 
-		public CSharp.Context CheckoutScript(ScriptedPatchRequest request)
+		public Jint.JintEngine CheckoutScript(ScriptedPatchRequest request)
 		{
 			CachedResult value;
 			if (cacheDic.TryGetValue(request, out value))
 			{
 				Interlocked.Increment(ref value.Usage);
-				CSharp.Context context;
+				Jint.JintEngine context;
 				if (value.Queue.TryDequeue(out context))
 				{
 					return context;
 				}
 			}
-			var result = ScriptedJsonPatcher.CreateContext(request);
+			var result = ScriptedJsonPatcher.CreateEngine(request);
 
 			var cachedResult = new CachedResult
 			{
 				Usage = 1,
-				Queue = new ConcurrentQueue<CSharp.Context>(),
+				Queue = new ConcurrentQueue<Jint.JintEngine>(),
 				Timestamp = SystemTime.UtcNow
 			};
 

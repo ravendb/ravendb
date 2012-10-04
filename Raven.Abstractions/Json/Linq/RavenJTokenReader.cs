@@ -20,7 +20,10 @@ namespace Raven.Json.Linq
 			public ReadState(JsonToken type, object val = null)
 			{
 				TokenType = type;
-				Value = val;
+				if(type == JsonToken.String && val != null)
+					Value = val.ToString();
+				else
+					Value = val;
 			}
 			public JsonToken TokenType { get; private set; }
 			public object Value { get; private set; }
@@ -417,6 +420,8 @@ namespace Raven.Json.Linq
 					return JsonToken.Raw;
 				case JTokenType.Bytes:
 					return JsonToken.Bytes;
+				case JTokenType.Guid:
+					return JsonToken.String;
 				default:
 					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("Type", token.Type, "Unexpected JTokenType.");
 			}

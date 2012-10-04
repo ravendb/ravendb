@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Security.Principal;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
@@ -15,14 +17,10 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
-			{
-				Console.WriteLine(i);
-				using(var x= new NullableEnum())
-				{
-					x.CanSerializeAndDeserializeCorrectly();
-				}
-			}
+
+			double d = (double) (1000000000000000000000.12992);
+
+			Console.WriteLine(d.ToString("############################################   .    #############################################"));
 		}
 
 		private static void UseMyData()

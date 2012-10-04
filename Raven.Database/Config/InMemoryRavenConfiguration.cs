@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
@@ -64,8 +63,7 @@ namespace Raven.Database.Config
 		{
 			FilterActiveBundles();
 
-			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
-				SetupOAuth();
+			SetupOAuth();
 		}
 
 		public void Initialize()
@@ -209,9 +207,6 @@ namespace Raven.Database.Config
 				CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
 			}
 
-			// OAuth
-			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
-
 			AllowLocalAccessWithoutAuthorization = GetConfigurationValue<bool>("Raven/AllowLocalAccessWithoutAuthorization") ?? false;
 
 			PostInit();
@@ -281,7 +276,7 @@ namespace Raven.Database.Config
 		private void SetupOAuth()
 		{
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
-							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/AccessToken" : ServerUrl + "/OAuth/AccessToken");
+							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/API-Key" : ServerUrl + "/OAuth/API-Key");
 			OAuthTokenCertificate = GetCertificate();
 		}
 
@@ -337,12 +332,23 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				if (HttpContext.Current != null)// running in IIS, let us figure out how
+				HttpContext httpContext;
+				try
 				{
-					var url = HttpContext.Current.Request.Url;
+					httpContext = HttpContext.Current;
+				}
+				catch (Exception)
+				{
+					// the issue is probably Request is not available in this context
+					// we can safely ignore this, at any rate
+					httpContext = null;
+				}
+				if (httpContext != null)// running in IIS, let us figure out how
+				{
+					var url = httpContext.Request.Url;
 					return new UriBuilder(url)
 					{
-						Path = HttpContext.Current.Request.ApplicationPath,
+						Path = httpContext.Request.ApplicationPath,
 						Query = ""
 					}.Uri.ToString();
 				}
@@ -543,13 +549,6 @@ namespace Raven.Database.Config
 		/// Default: Get
 		/// </summary>
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
-
-		/// <summary>
-		/// Defines which mode to use to authenticate requests
-		/// Allowed values: Windows, OAuth
-		/// Default: Windows
-		/// </summary>
-		public string AuthenticationMode { get; set; }
 
 		/// <summary>
 		/// If set local request don't require authentication
@@ -835,7 +834,6 @@ namespace Raven.Database.Config
 			Port = defaultConfiguration.Port;
 			OAuthTokenCertificate = defaultConfiguration.OAuthTokenCertificate;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
-			AuthenticationMode = defaultConfiguration.AuthenticationMode;
 		}
 	}
 }

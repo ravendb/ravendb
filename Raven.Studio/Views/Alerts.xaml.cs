@@ -14,6 +14,5 @@ namespace Raven.Studio.Views
 		protected override void OnNavigatedTo(NavigationEventArgs e)
 		{
 		}
-
 	}
 }

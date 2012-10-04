@@ -1249,11 +1249,11 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name = "fields">The fields.</param>
 		public void OrderByDescending(params string[] fields)
 		{
-			fields = fields.Select(MakeFieldSortDescedning).ToArray();
+			fields = fields.Select(MakeFieldSortDescending).ToArray();
 			OrderBy(fields);
 		}
 
-		string MakeFieldSortDescedning(string field)
+		string MakeFieldSortDescending(string field)
 		{
 			if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
 			{

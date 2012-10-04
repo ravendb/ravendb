@@ -8,11 +8,10 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Plugins;
 
@@ -23,7 +22,7 @@ namespace Raven.Bundles.Expiration
 	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
 	{
 		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
-		private readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 		public DocumentDatabase Database { get; set; }
 

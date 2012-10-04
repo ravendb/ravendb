@@ -149,6 +149,18 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Bundles\Raven.Bundles.Authorization\Model\AuthorizationRole.cs">
+      <Link>Features\Bundles\AuthorizationRole.cs</Link>
+    </Compile>
+    <Compile Include="..\Bundles\Raven.Bundles.Authorization\Model\AuthorizationUser.cs">
+      <Link>Features\Bundles\AuthorizationUser.cs</Link>
+    </Compile>
+    <Compile Include="..\Bundles\Raven.Bundles.Authorization\Model\IPermission.cs">
+      <Link>Features\Bundles\IPermission.cs</Link>
+    </Compile>
+    <Compile Include="..\Bundles\Raven.Bundles.Authorization\Model\OperationPermission.cs">
+      <Link>Features\Bundles\OperationPermission.cs</Link>
+    </Compile>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
@@ -240,6 +252,9 @@
     <Compile Include="Features\Alerts\AlertProxy.cs" />
     <Compile Include="Features\Alerts\AlertsView.xaml.cs">
       <DependentUpon>AlertsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\AuthorizationSettingSectionView.xaml.cs">
+      <DependentUpon>AuthorizationSettingSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Settings\DatabaseSettingsSectionView.xaml.cs">
       <DependentUpon>DatabaseSettingsSectionView.xaml</DependentUpon>
@@ -349,6 +364,8 @@
     <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\IdStringToIdWithoutHeader.cs" />
+    <Compile Include="Infrastructure\Converters\StringListToStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\TrueWhenAnalyzedConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenEqual.cs" />
     <Compile Include="Infrastructure\Converters\DisableIfDefaultVersioning.cs" />
@@ -408,6 +425,7 @@
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\AlertsModel.cs" />
     <Compile Include="Models\ApplicationState.cs" />
+    <Compile Include="Models\AuthorizationSettingsSectionModel.cs" />
     <Compile Include="Models\DatabaseSettingsSectionViewModel.cs" />
     <Compile Include="Models\QuotaSettingsSectionModel.cs" />
     <Compile Include="Models\ReplicationSettingsSectionModel.cs" />
@@ -767,6 +785,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Alerts\AlertsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\AuthorizationSettingSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

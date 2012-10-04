@@ -7,8 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Transactions;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 
@@ -16,7 +16,7 @@ namespace Raven.Database.Plugins.Builtins
 {
 	public class PendingTransactionRecovery : IStartupTask
 	{
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		public void Execute(DocumentDatabase database)
 		{

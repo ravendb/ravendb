@@ -7,12 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
@@ -258,7 +256,7 @@ namespace Raven.Client.Connection
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={4}&start={2}&pageSize={3}", operationUrl,
-										  Uri.EscapeDataString(keyPrefix), start, pageSize, Uri.EscapeDataString(matches ?? ""));
+										  Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(), Uri.EscapeDataString(matches ?? ""));
 			if (metadataOnly)
 				actualUrl += "&metadata-only=true";
 
@@ -1200,9 +1198,9 @@ namespace Raven.Client.Connection
 													 Uri.EscapeUriString(index),
 													 Uri.EscapeDataString(suggestionQuery.Term),
 													 Uri.EscapeDataString(suggestionQuery.Field),
-													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
+													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
 													 Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
+													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
@@ -1347,7 +1345,7 @@ namespace Raven.Client.Connection
 				var requestUri = operationUrl + string.Format("/terms/{0}?field={1}&pageSize={2}&fromValue={3}",
 													 Uri.EscapeUriString(index),
 													 Uri.EscapeDataString(field),
-													 pageSize,
+													 pageSize.ToInvariantString(),
 													 Uri.EscapeDataString(fromValue ?? ""));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(

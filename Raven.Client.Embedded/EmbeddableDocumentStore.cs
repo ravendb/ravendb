@@ -29,7 +29,7 @@ namespace Raven.Client.Embedded
 	/// </summary>
 	public class EmbeddableDocumentStore : DocumentStore
 	{
-		ILog log = Raven.Abstractions.Logging.LogProvider.GetCurrentClassLogger();
+		ILog log = Raven.Abstractions.Logging.LogManager.GetCurrentClassLogger();
 
 		static EmbeddableDocumentStore()
 		{

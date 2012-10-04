@@ -13,5 +13,13 @@ namespace Raven.Client.Bundles.Versioning
 				.Select(inMemoryDocumentSessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
+
+		public static string[] GetRevisionIdsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
+		{
+			var jsonDocuments = session.DocumentStore.DatabaseCommands.StartsWith(id + "/revisions/", null, start, pageSize, metadataOnly: true);
+			return jsonDocuments
+				.Select(document => document.Key)
+				.ToArray();
+		}
 	}
 }

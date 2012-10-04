@@ -10,7 +10,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
 using Raven.Database.Util.Streams;
@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Abstractions
 {
 	public class HttpListenerResponseAdapter : IHttpResponse, IDisposable
 	{
-		private Logger log = LogManager.GetCurrentClassLogger();
+		private ILog log = LogManager.GetCurrentClassLogger();
 		private readonly HttpListenerResponse response;
 
 		public HttpListenerResponseAdapter(HttpListenerResponse response, IBufferPool bufferPool)

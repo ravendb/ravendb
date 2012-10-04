@@ -5,9 +5,11 @@
 // -----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
+using System.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -29,6 +31,7 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			Guid mostRecentDocumentEtag = Guid.Empty;
 			Guid mostRecentAttachmentEtag = Guid.Empty;
+			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				mostRecentDocumentEtag = accessor.Staleness.GetMostRecentDocumentEtag();
@@ -39,7 +42,14 @@ namespace Raven.Bundles.Replication.Responders
 			{
 				Self = Database.ServerUrl,
 				MostRecentDocumentEtag = mostRecentDocumentEtag,
-				MostRecentAttachmentEtag = mostRecentAttachmentEtag
+				MostRecentAttachmentEtag = mostRecentAttachmentEtag,
+				Stats  = replicationTask == null ? Enumerable.Empty<object>() : 
+					replicationTask.ReplicationFailureStats.Select(pair => new
+					{
+						Url = pair.Key,
+						FailureCount = pair.Value.Count,
+						pair.Value.Timestamp
+					})
 			});
 		}
 	}

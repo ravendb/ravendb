@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Windows;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
 using System.Threading.Tasks;
 using Raven.Studio.Models;
 
@@ -13,8 +10,6 @@ namespace Raven.Studio.Infrastructure
 {
 	public static class InvocationExtensions
 	{
-        
-
 		public static Task ContinueOnSuccess<T>(this Task<T> parent, Action<T> action)
 		{
 			return parent.ContinueWith(task =>
@@ -24,7 +19,6 @@ namespace Raven.Studio.Infrastructure
 				action(task.Result);
 			});
 		}
-
 
 		public static Task<bool> ContinueWhenTrue(this Task<bool> parent, Action action)
 		{
@@ -58,13 +52,7 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task ContinueOnSuccess(this Task parent, Action action)
 		{
-			return parent.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return task;
-
-				return TaskEx.Run(action);
-			}).Unwrap();
+			return parent.ContinueWith(task => task.IsFaulted ? task : TaskEx.Run(action)).Unwrap();
 		}
 
         public static Task ContinueOnUIThread(this Task parent, Action<Task> action)
@@ -89,13 +77,7 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task ContinueOnSuccess(this Task parent, Func<Task> action)
 		{
-			return parent.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return task;
-
-				return action();
-			}).Unwrap();
+			return parent.ContinueWith(task => task.IsFaulted ? task : action()).Unwrap();
 		}
 
 		public static Task Finally(this Task task, Action action)

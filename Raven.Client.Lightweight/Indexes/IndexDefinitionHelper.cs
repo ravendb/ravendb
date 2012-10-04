@@ -50,14 +50,12 @@ namespace Raven.Client.Indexes
 
 			var querySourceName = expr.Parameters.First(x => x.Type != typeof(IClientSideDatabase)).Name;
 
-			if (linqQuery.StartsWith(querySourceName))
-				linqQuery = querySource + linqQuery.Substring(querySourceName.Length);
-			else if (linqQuery.StartsWith("(" + querySourceName +")"))
-				linqQuery = querySource + linqQuery.Substring(querySourceName.Length + 2);
-			else if (linqQuery.StartsWith("(" + querySourceName))
-				linqQuery = "(" + querySource + linqQuery.Substring(querySourceName.Length + 1);
-			else
+			var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.InvariantCulture);
+			if(indexOfQuerySource == -1)
 				throw new InvalidOperationException("Canot understand how to parse the query");
+
+			linqQuery = linqQuery.Substring(0, indexOfQuerySource) + querySource +
+						linqQuery.Substring(indexOfQuerySource + querySourceName.Length);
 
 			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
 			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+(`\d+)?", "new ");// remove anonymous types

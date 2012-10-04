@@ -14,6 +14,5 @@ namespace Raven.Studio.Features.Tasks
 		protected override void OnNavigatedTo(NavigationEventArgs e)
 		{
 		}
-
 	}
 }

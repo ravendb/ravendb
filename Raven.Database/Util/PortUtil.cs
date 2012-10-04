@@ -6,13 +6,13 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Web;
 using System.Xml;
-using NLog;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Util
 {
 	public static class PortUtil
 	{
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		const int DefaultPort = 8080;
 

@@ -16,12 +16,7 @@ namespace Raven.Studio.Controls
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = true;
-		}
-
-		private void CancelButton_Click(object sender, RoutedEventArgs e)
-		{
-			this.DialogResult = false;
+			DialogResult = true;
 		}
 
 		private void KeyValue_TextChanged(object sender, TextChangedEventArgs e)
@@ -30,4 +25,3 @@ namespace Raven.Studio.Controls
 		}
 	}
 }
-

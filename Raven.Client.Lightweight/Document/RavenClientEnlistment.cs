@@ -16,7 +16,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class RavenClientEnlistment : IEnlistmentNotification
 	{
-		private static ILog logger = LogProvider.GetCurrentClassLogger();
+		private static ILog logger = LogManager.GetCurrentClassLogger();
 
 		private readonly ITransactionalDocumentSession session;
 		private readonly Action onTxComplete;

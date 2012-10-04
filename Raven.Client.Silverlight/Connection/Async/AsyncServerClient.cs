@@ -613,7 +613,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 			if (etag != null)
 				metadata["ETag"] = new RavenJValue(etag.Value.ToString());
-				key = HttpUtility.UrlEncode(key);
+				key = Uri.EscapeUriString(key);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/docs/" + key, method, metadata, credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 

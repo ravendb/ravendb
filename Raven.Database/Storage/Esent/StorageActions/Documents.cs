@@ -14,6 +14,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -56,7 +57,7 @@ namespace Raven.Storage.Esent.StorageActions
 			where T : class
 		{
 			bool existsInTx = IsDocumentModifiedInsideTransaction(key);
-
+			
 			if (transactionInformation != null && existsInTx)
 			{
 				var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
@@ -138,7 +139,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 			{
 				var size = stream.Length;
-				using (var aggregate = documentCodecs.ReverseAggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
 					var data = aggregate.ToJObject();
 					cacher.SetCachedDocument(key, etag, data, metadata, (int)size);
@@ -166,7 +167,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
 				var size = stream.Length;
-				using (var columnStream = documentCodecs.ReverseAggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+				using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
 				{
 					var data = columnStream.ToJObject();
 
@@ -182,7 +183,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
 			if (TryMoveDocumentRecords(start, backward: true)) 
-				return Enumerable.Empty<JsonDocument>();
+					return Enumerable.Empty<JsonDocument>();
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
@@ -225,7 +226,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (
 				Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
-				using (var aggregate = documentCodecs.ReverseAggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 					dataAsJson = aggregate.ToJObject();
 			}
 
@@ -274,12 +275,12 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				return Enumerable.Empty<JsonDocument>();
 
-			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
-			if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
-				return Enumerable.Empty<JsonDocument>();
+				Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
+				if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
+					return Enumerable.Empty<JsonDocument>();
 
 			if (TryMoveDocumentRecords(start, backward: false))
-				return Enumerable.Empty<JsonDocument>();
+						return Enumerable.Empty<JsonDocument>();
 
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
@@ -308,7 +309,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				if (etag != null && etag != Guid.Empty) // expected something to be there.
 					throw new ConcurrencyException("PUT attempted on document '" + key +
-												   "' using a non current etag (document deleted)")
+					                               "' using a non current etag (document deleted)")
 					{
 						ExpectedETag = etag.Value
 					};
@@ -326,7 +327,7 @@ namespace Raven.Storage.Esent.StorageActions
 				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
 				{
 					data.WriteTo(finalStream);
-					stream.Flush();
+					finalStream.Flush();
 				}
 
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
@@ -441,6 +442,15 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
+				if(etag != null && etag.Value != Guid.Empty)
+				{
+					throw new ConcurrencyException("DELETE attempted on document '" + key +
+											   "' using a non current etag")
+					{
+						ActualETag = Guid.Empty,
+						ExpectedETag = etag.Value
+					};
+				}
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				return false;
 			}

@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
@@ -18,7 +18,7 @@ namespace Raven.Storage.Managed
 	{
 		private readonly TableStorage storage;
 		private readonly IUuidGenerator generator;
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		public TasksStorageActions(TableStorage storage, IUuidGenerator generator)
 		{

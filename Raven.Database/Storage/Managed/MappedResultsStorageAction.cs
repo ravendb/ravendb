@@ -61,7 +61,7 @@ namespace Raven.Storage.Managed
 			var key = readResult.Key.Value<string>("reduceKey");
 
 			Stream memoryStream = new MemoryStream(readResult.Data());
-			using (var stream = documentCodecs.ReverseAggregate(memoryStream, (ds, codec) => codec.Decode(key, null, ds)))
+			using (var stream = documentCodecs.Aggregate(memoryStream, (ds, codec) => codec.Decode(key, null, ds)))
 			{
 				return stream.ToJObject();
 			}
