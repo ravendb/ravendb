@@ -713,6 +713,7 @@ namespace Raven.Client.Document
 			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
 			rootServicePoint.UseNagleAlgorithm = false;
 
+
 			databaseCommandsGenerator = () =>
 			{
 				string databaseUrl = Url;
