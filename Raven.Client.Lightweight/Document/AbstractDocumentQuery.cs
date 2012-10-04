@@ -50,6 +50,9 @@ namespace Raven.Client.Document
 			typeof (T)
 		};
 
+
+		static Dictionary<Type, Func<object, string>> implicitStringsCache = new Dictionary<Type, Func<object, string>>();
+
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -1610,6 +1613,12 @@ If you really want to do in memory filtering on the data returned from the query
 				return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
 			}
 
+			var result = GetImplicitStringConvertion(whereParams.Value.GetType());
+			if(result != null)
+			{
+				return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+			}
+
 			var stringWriter = new StringWriter();
 			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
 			var sb = stringWriter.GetStringBuilder();
@@ -1619,6 +1628,33 @@ If you really want to do in memory filtering on the data returned from the query
 				sb.Remove(0, 1);
 			}
 			return RavenQuery.Escape(sb.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+		}
+
+		private Func<object,string> GetImplicitStringConvertion(Type type)
+		{
+			Func<object, string> value;
+			if(implicitStringsCache.TryGetValue(type,out value))
+				return value;
+
+			var methodInfo = type.GetMethod("op_Implicit", new[] {type});
+			if(methodInfo.ReturnType != typeof(string))
+			{
+				implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+				{
+					{type, null}
+				};
+				return null;
+			}
+
+			var arg = Expression.Parameter(typeof(object), "self");
+
+			var func = (Func<object, string>) Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
+
+			implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+				{
+					{type, func}
+				};
+			return func;
 		}
 
 		private string TransformToRangeValue(WhereParams whereParams)

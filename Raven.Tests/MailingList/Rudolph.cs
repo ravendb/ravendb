@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Raven.Client.Linq;
 using Xunit;
 
@@ -21,6 +22,24 @@ namespace Raven.Tests.MailingList
 
 		public class Identifier
 		{
+			protected bool Equals(Identifier other)
+			{
+				return string.Equals(str, other.str);
+			}
+
+			public override bool Equals(object obj)
+			{
+				if (ReferenceEquals(null, obj)) return false;
+				if (ReferenceEquals(this, obj)) return true;
+				if (obj.GetType() != this.GetType()) return false;
+				return Equals((Identifier) obj);
+			}
+
+			public override int GetHashCode()
+			{
+				return (str != null ? str.GetHashCode() : 0);
+			}
+
 			private string str;
 
 			public static implicit operator string(Identifier identifier)
@@ -31,6 +50,16 @@ namespace Raven.Tests.MailingList
 			public static implicit operator Identifier(string identifier)
 			{
 				return new Identifier {str = identifier};
+			}
+
+			public static bool operator ==(Identifier id1, Identifier id2)
+			{
+				return ReferenceEquals(id1, id2);
+			}
+
+			public static bool operator !=(Identifier id1, Identifier id2)
+			{
+				return !ReferenceEquals(id2, id1);
 			}
 		}
 
@@ -54,9 +83,10 @@ namespace Raven.Tests.MailingList
 				}
 				using(var s = store.OpenSession())
 				{
-					var query = from u in s.Query<User>()
+					var query = from u in s.Query<User>().Customize(x=>x.WaitForNonStaleResults())
 								where u.Logins.Any(x => x.OpenIdIdentifier == identifier)
 								select u;
+
 					Assert.NotNull(query.SingleOrDefault()); // will throw
 				}
 			}
