@@ -13,5 +13,6 @@ namespace Raven.Database.Server
 	{
 		public static readonly ThreadLocal<IPrincipal> User = new ThreadLocal<IPrincipal>(() => null);
 		public static readonly ThreadLocal<NameValueCollection> Headers = new ThreadLocal<NameValueCollection>(() => new NameValueCollection());
+		public static readonly ThreadLocal<string> DatabaseName = new ThreadLocal<string>();
 	}
 }

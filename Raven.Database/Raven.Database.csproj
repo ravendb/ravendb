@@ -673,7 +673,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
-    <Compile Include="Util\BoundedMemoryTarget.cs" />
+    <Compile Include="Util\DatabaseTarget.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />

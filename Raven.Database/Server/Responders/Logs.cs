@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var boundedMemoryTarget = LogManager.GetTarget<BoundedMemoryTarget>();
+			var boundedMemoryTarget = LogManager.GetTarget<DatabaseTarget>();
 			if(boundedMemoryTarget == null)
 			{
 				context.SetStatusToNotFound();
@@ -31,13 +31,13 @@ namespace Raven.Database.Server.Responders
 				});
 				return;
 			}
-			IEnumerable<LogEventInfo> log = boundedMemoryTarget.GeneralLog;
+			IEnumerable<LogEventInfo> log = boundedMemoryTarget[Database.Name].GeneralLog;
 
 			switch (context.Request.QueryString["type"])
 			{
 				case "error":
 				case "warn":
-					log = boundedMemoryTarget.WarnLog;
+					log = boundedMemoryTarget[Database.Name].WarnLog;
 					break;
 			}
 
