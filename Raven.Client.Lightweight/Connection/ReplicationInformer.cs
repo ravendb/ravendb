@@ -25,6 +25,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using System.Net;
 using System.Net.Sockets;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
 
 #if SILVERLIGHT
@@ -324,6 +325,14 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		private static bool IsInvalidDestinationsDocument(JsonDocument document)
+		{
+			return document == null ||
+				   document.DataAsJson.ContainsKey("Destinations") == false ||
+				   document.DataAsJson["Destinations"] == null ||
+				   document.DataAsJson["Destinations"].Type == JTokenType.Null;
+		}
+
 		/// <summary>
 		/// Refreshes the replication information.
 		/// Expert use only.
@@ -362,13 +371,7 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		private static bool IsInvalidDestinationsDocument(JsonDocument document)
-		{
-			return document == null || 
-			       document.DataAsJson.ContainsKey("Destinations") == false ||
-			       document.DataAsJson["Destinations"] == null ||
-			       document.DataAsJson["Destinations"].Type == JTokenType.Null;
-		}
+		
 #else
 		public void RefreshReplicationInformation(ServerClient commands)
 		{
