@@ -273,12 +273,16 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			foreach (var task in StartupTasks)
+			using(new DisposableAction(() => CurrentOperationContext.DatabaseName.Value = null))
 			{
-				var disposable = task.Value as IDisposable;
-				if (disposable != null)
-					toDispose.Add(disposable);
-				task.Value.Execute(this);
+				CurrentOperationContext.DatabaseName.Value = Name;
+				foreach (var task in StartupTasks)
+				{
+					var disposable = task.Value as IDisposable;
+					if (disposable != null)
+						toDispose.Add(disposable);
+					task.Value.Execute(this);
+				}
 			}
 		}
 
