@@ -1632,12 +1632,16 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private Func<object,string> GetImplicitStringConvertion(Type type)
 		{
+			if(type == null)
+				return null;
+
 			Func<object, string> value;
 			if(implicitStringsCache.TryGetValue(type,out value))
 				return value;
 
 			var methodInfo = type.GetMethod("op_Implicit", new[] {type});
-			if(methodInfo.ReturnType != typeof(string))
+
+			if (methodInfo == null || methodInfo.ReturnType != typeof(string))
 			{
 				implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
 				{
