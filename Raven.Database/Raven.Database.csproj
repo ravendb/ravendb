@@ -187,6 +187,7 @@
     <Compile Include="Queries\MatchNoDocsQuery.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
+    <Compile Include="Server\LogContext.cs" />
     <Compile Include="Server\Responders\Admin\AdminChangeDbId.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminGc.cs" />
@@ -673,7 +674,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
-    <Compile Include="Util\BoundedMemoryTarget.cs" />
+    <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />

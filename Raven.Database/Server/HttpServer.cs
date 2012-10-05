@@ -759,6 +759,7 @@ namespace Raven.Database.Server
 			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			CurrentOperationContext.User.Value = null;
+			LogContext.DatabaseName.Value = CurrentDatabase.Name;
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
@@ -771,6 +772,7 @@ namespace Raven.Database.Server
 			{
 				CurrentOperationContext.Headers.Value = new NameValueCollection();
 				CurrentOperationContext.User.Value = null;
+				LogContext.DatabaseName.Value = null;
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
 			}

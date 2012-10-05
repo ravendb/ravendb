@@ -21,23 +21,42 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var boundedMemoryTarget = LogManager.GetTarget<BoundedMemoryTarget>();
-			if(boundedMemoryTarget == null)
+			var target = LogManager.GetTarget<DatabaseMemoryTarget>();
+			if(target == null)
 			{
 				context.SetStatusToNotFound();
 				context.WriteJson(new
 				{
-					Error = "HttpEndpoint was not registered in the log configuration, logs endpoint disabled"
+					Error = "DatabaseMemoryTarget was not registered in the log manager, logs endpoint disabled"
 				});
 				return;
 			}
-			IEnumerable<LogEventInfo> log = boundedMemoryTarget.GeneralLog;
+			var database = Database;
+			if(database == null)
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				{
+					Error = "No database found."
+				});
+				return;
+			}
+			if(database.Name == null)
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				{
+					Error = "Database name is null."
+				});
+				return;
+			}
+			IEnumerable<LogEventInfo> log = target[Database.Name].GeneralLog;
 
 			switch (context.Request.QueryString["type"])
 			{
 				case "error":
 				case "warn":
-					log = boundedMemoryTarget.WarnLog;
+					log = target[Database.Name].WarnLog;
 					break;
 			}
 
