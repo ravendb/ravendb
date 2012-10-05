@@ -288,16 +288,15 @@ namespace Raven.Tests
 
 		public RavenTest()
 		{
-			DatabaseTarget databaseTarget = null;
+			DatabaseMemoryTarget databaseMemoryTarget = null;
 			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
 			{
-				databaseTarget = LogManager.Configuration.AllTargets.OfType<DatabaseTarget>().FirstOrDefault();
+				databaseMemoryTarget = LogManager.Configuration.AllTargets.OfType<DatabaseMemoryTarget>().FirstOrDefault();
 			}
-			if (databaseTarget != null)
+			if (databaseMemoryTarget != null)
 			{
-				databaseTarget.Clear();
+				databaseMemoryTarget.ClearAll();
 			}
-
 
 			try
 			{

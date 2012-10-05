@@ -10,35 +10,58 @@ using Raven.Database.Server;
 
 namespace Raven.Database.Util
 {
-	public class DatabaseTarget : Target
+	public class DatabaseMemoryTarget : Target
 	{
-		private readonly ConcurrentDictionary<string, BoundedMemoryTarget> databaseTargets = new ConcurrentDictionary<string,BoundedMemoryTarget>(); 
+		private readonly ConcurrentDictionary<string, BoundedMemoryTarget> databaseTargets =
+			new ConcurrentDictionary<string, BoundedMemoryTarget>();
+
+		public BoundedMemoryTarget this[string databaseName]
+		{
+			get { return databaseTargets.GetOrAdd(databaseName, _ => new BoundedMemoryTarget()); }
+		}
+
+		public int DatabaseTargetCount
+		{
+			get { return databaseTargets.Count; }
+		}
 
 		public override void Write(LogEventInfo logEvent)
 		{
 			if (!logEvent.LoggerName.StartsWith("Raven."))
 				return;
 			string databaseName = CurrentOperationContext.DatabaseName.Value;
-			if (databaseName == null)
+			if (string.IsNullOrWhiteSpace(databaseName))
 				return;
 			BoundedMemoryTarget boundedMemoryTarget = databaseTargets.GetOrAdd(databaseName, _ => new BoundedMemoryTarget());
 			boundedMemoryTarget.Write(logEvent);
 		}
 
-		internal BoundedMemoryTarget this[string databaseName]
+		public void Clear(string databaseName)
 		{
-			get
-			{
-				BoundedMemoryTarget boundedMemoryTarget;
-				databaseTargets.TryGetValue(databaseName, out boundedMemoryTarget);
-				return boundedMemoryTarget;
-			}
+			BoundedMemoryTarget _;
+			databaseTargets.TryRemove(databaseName, out _);
 		}
 
-		internal class BoundedMemoryTarget
+		public void ClearAll()
 		{
+			databaseTargets.Clear();
+		}
+
+		public class BoundedMemoryTarget
+		{
+			public const int Limit = 500;
 			private ConcurrentQueue<LogEventInfo> generalLog = new ConcurrentQueue<LogEventInfo>();
 			private ConcurrentQueue<LogEventInfo> warnLog = new ConcurrentQueue<LogEventInfo>();
+
+			public IEnumerable<LogEventInfo> GeneralLog
+			{
+				get { return generalLog; }
+			}
+
+			public IEnumerable<LogEventInfo> WarnLog
+			{
+				get { return warnLog; }
+			}
 
 			internal void Write(LogEventInfo logEvent)
 			{
@@ -50,35 +73,17 @@ namespace Raven.Database.Util
 			private static void AddToQueue(LogEventInfo logEvent, ConcurrentQueue<LogEventInfo> logEventInfos)
 			{
 				logEventInfos.Enqueue(logEvent);
-				if (logEventInfos.Count <= 500)
+				if (logEventInfos.Count <= Limit)
 					return;
 
 				LogEventInfo _;
 				logEventInfos.TryDequeue(out _);
 			}
 
-			internal IEnumerable<LogEventInfo> GeneralLog
-			{
-				get { return generalLog; }
-			}
-
-			internal IEnumerable<LogEventInfo> WarnLog
-			{
-				get { return warnLog; }
-			}
-
 			public void Clear()
 			{
 				generalLog = new ConcurrentQueue<LogEventInfo>();
 				warnLog = new ConcurrentQueue<LogEventInfo>();
-			}
-		}
-
-		public void Clear()
-		{
-			foreach (var boundedMemoryTarget in databaseTargets.Values)
-			{
-				boundedMemoryTarget.Clear();
 			}
 		}
 	}
