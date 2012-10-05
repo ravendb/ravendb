@@ -29,7 +29,7 @@ namespace Raven.Database.Util
 		{
 			if (!logEvent.LoggerName.StartsWith("Raven."))
 				return;
-			string databaseName = CurrentOperationContext.DatabaseName.Value;
+			string databaseName = LogContext.DatabaseName.Value;
 			if (string.IsNullOrWhiteSpace(databaseName))
 				return;
 			BoundedMemoryTarget boundedMemoryTarget = databaseTargets.GetOrAdd(databaseName, _ => new BoundedMemoryTarget());

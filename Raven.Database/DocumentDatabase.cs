@@ -153,13 +153,13 @@ namespace Raven.Database
 
 			workContext = new WorkContext
 			{
+				DatabaseName = Name,
 				IndexUpdateTriggers = IndexUpdateTriggers,
 				ReadTriggers = ReadTriggers,
 				RaiseIndexChangeNotification = RaiseNotifications
 			};
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
-
 
 			try
 			{
@@ -273,9 +273,9 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			using(new DisposableAction(() => CurrentOperationContext.DatabaseName.Value = null))
+			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
-				CurrentOperationContext.DatabaseName.Value = Name;
+				LogContext.DatabaseName.Value = Name;
 				foreach (var task in StartupTasks)
 				{
 					var disposable = task.Value as IDisposable;

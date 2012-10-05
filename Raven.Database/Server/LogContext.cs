@@ -3,15 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections.Specialized;
-using System.Security.Principal;
+
 using System.Threading;
 
 namespace Raven.Database.Server
 {
-	public static class CurrentOperationContext
+	public static class LogContext
 	{
-		public static readonly ThreadLocal<IPrincipal> User = new ThreadLocal<IPrincipal>(() => null);
-		public static readonly ThreadLocal<NameValueCollection> Headers = new ThreadLocal<NameValueCollection>(() => new NameValueCollection());
+		public static readonly ThreadLocal<string> DatabaseName = new ThreadLocal<string>();
 	}
 }
