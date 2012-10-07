@@ -30,7 +30,7 @@ properties {
 		
 	 
 	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", 
-					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Debug.???") |
+					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -430,10 +430,6 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Client.FSharp\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.FSharp.nuspec $nuget_dir\RavenDB.Client.FSharp\RavenDB.Client.FSharp.nuspec
 	@("Raven.Client.Lightweight.FSharp.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.FSharp\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Client.Debug\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Client.Debug.nuspec $nuget_dir\RavenDB.Client.Debug\RavenDB.Client.Debug.nuspec
-	@("Raven.Client.Debug.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.Debug\lib\net40 }
 	
 	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
