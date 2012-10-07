@@ -20,7 +20,7 @@ properties {
 	
 	$web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" )
 	
-	$server_files = @( "Raven.Server.exe", "Raven.Studio.xap", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
+	$server_files = @( "Raven.Server.???", "Raven.Studio.xap", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
 					 "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",  "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", 
 					"Esent.Interop.???", "Jint.???","Antlr3.Runtime.???","Raven.Abstractions.???", "Raven.Database.???" ) |
 		ForEach-Object { 
@@ -28,7 +28,6 @@ properties {
 			return "$build_dir\$_"
 		}
 		
-	 
 	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", 
 					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???") |
 		ForEach-Object { 
@@ -360,7 +359,6 @@ task ResetBuildArtifcats {
 	git checkout "Raven.Database\RavenDB.snk"
 }
 
-
 task DoRelease -depends Compile, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
@@ -449,6 +447,7 @@ task CreateNugetPackages -depends Compile {
 		"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",	"NewtonSoft.Json.???", "NLog.???",
 		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???",
 		"Raven.Studio.xap") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server\tools }
+	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
