@@ -447,6 +447,7 @@
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
+    <Compile Include="MailingList\ChrisDNF.cs" />
     <Compile Include="MailingList\ChrisMarisic.cs" />
     <Compile Include="MailingList\Edin.cs" />
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
@@ -455,6 +456,7 @@
     <Compile Include="MailingList\Holt.cs" />
     <Compile Include="MailingList\linmouhong2.cs" />
     <Compile Include="MailingList\Mare.cs" />
+    <Compile Include="MailingList\Nemitoff.cs" />
     <Compile Include="MailingList\Nullables.cs" />
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
