@@ -36,13 +36,5 @@ namespace Raven.Client
 		/// <param name="fromTxId">From tx id.</param>
 		/// <returns>The token representing the distributed transaction</returns>
 		byte[] PromoteTransaction(Guid fromTxId);
-
-	    /// <summary>
-	    /// Stores the recovery information for the specified transaction
-	    /// </summary>
-	    /// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-	    /// <param name="txId">The tx id.</param>
-	    /// <param name="recoveryInformation">The recovery information.</param>
-	    void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation);
 	}
 }

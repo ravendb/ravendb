@@ -24,6 +24,9 @@ using System.Net.Browser;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
 #else
+using Raven.Client.Listeners;
+using Raven.Client.Document.DTC;
+using Raven.Client.Listeners;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
 #endif
@@ -260,7 +263,7 @@ namespace Raven.Client.Document
 #if DEBUG
 			GC.SuppressFinalize(this);
 #endif
-
+			
 
 			var tasks = new List<Task>();
 			foreach (var databaseChange in databaseChanges)
@@ -425,6 +428,18 @@ namespace Raven.Client.Document
 #endif
 				}
 #endif
+
+			initialized = true;
+
+#if !SILVERLIGHT
+				RecoverPendingTransactions();
+		
+				if (string.IsNullOrEmpty(DefaultDatabase) == false)
+				{
+					DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+				}
+#endif
+
 			}
 			catch (Exception)
 			{
@@ -432,7 +447,6 @@ namespace Raven.Client.Document
 				throw;
 			}
 
-			initialized = true;
 			return this;
 		}
 
@@ -440,12 +454,21 @@ namespace Raven.Client.Document
 		{
 #if !NET35
 			if (Conventions.DisableProfiling == false)
-			{
+				DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+			}
+#endif
 				jsonRequestFactory.LogRequest += profilingContext.RecordAction;
 			}
 #endif
 		}
 
+#if !SILVERLIGHT
+		private void RecoverPendingTransactions()
+		{
+			var pendingTransactionRecovery = new PendingTransactionRecovery();
+			pendingTransactionRecovery.Execute(DatabaseCommands);
+		}
+#endif
 		private void InitializeSecurity()
 		{
 			if (Conventions.HandleUnauthorizedResponse != null)
@@ -483,9 +506,9 @@ namespace Raven.Client.Document
 				unauthorizedResponse.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
-				{
+					{
 					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource);
-				}
+		}
 
 				if (ApiKey == null)
 					return null;
@@ -568,7 +591,7 @@ namespace Raven.Client.Document
 					replicationInformers.Add(key, result);
 				}
 				return result;
-			}
+		}
 #else
 			return replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
 #endif
