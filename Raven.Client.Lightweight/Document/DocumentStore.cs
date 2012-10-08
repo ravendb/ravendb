@@ -26,7 +26,6 @@ using Raven.Client.Silverlight.Connection.Async;
 #else
 using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
-using Raven.Client.Listeners;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
 #endif
@@ -452,14 +451,7 @@ namespace Raven.Client.Document
 
 		public void InitializeProfiling()
 		{
-#if !NET35
-			if (Conventions.DisableProfiling == false)
-				DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
-			}
-#endif
 				jsonRequestFactory.LogRequest += profilingContext.RecordAction;
-			}
-#endif
 		}
 
 #if !SILVERLIGHT
@@ -469,6 +461,7 @@ namespace Raven.Client.Document
 			pendingTransactionRecovery.Execute(DatabaseCommands);
 		}
 #endif
+
 		private void InitializeSecurity()
 		{
 			if (Conventions.HandleUnauthorizedResponse != null)

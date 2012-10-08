@@ -167,6 +167,11 @@ namespace Raven.Client.Shard
 			return Load<T>(documentKey);
 		}
 
+		public T[] LoadInternal<T>(string[] ids)
+		{
+			return LoadInternal<T>(ids, new string[0]);
+		}
+
 		public T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
 			var results = new T[ids.Length];

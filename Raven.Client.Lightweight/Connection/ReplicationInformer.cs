@@ -31,9 +31,7 @@ using Raven.Client.Extensions;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection.Async;
 using Raven.Client.Silverlight.MissingFromSilverlight;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-
 #endif
 
 namespace Raven.Client.Connection
