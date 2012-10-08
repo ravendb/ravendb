@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
+using System.IO.IsolatedStorage;
 using System.Transactions;
 using NLog;
 
@@ -41,8 +43,17 @@ namespace Raven.Client.Document
 			onTxComplete();
 			try
 			{
-				session.StoreRecoveryInformation(session.ResourceManagerId, PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction), 
-				                                 preparingEnlistment.RecoveryInformation());
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					var name = GetTransactionRecoveryInformationFileName();
+					using (var file = machineStoreForApplication.CreateFile(name + ".temp"))
+					{
+						var recoveryInformation = preparingEnlistment.RecoveryInformation();
+						file.Write(recoveryInformation, 0, recoveryInformation.Length);
+						file.Flush(true);
+					}
+					machineStoreForApplication.MoveFile(name + ".temp", name);
+				}
 			}
 			catch (Exception e)
 			{
@@ -51,6 +62,11 @@ namespace Raven.Client.Document
 				return;
 			}
 			preparingEnlistment.Prepared();
+		}
+
+		private string GetTransactionRecoveryInformationFileName()
+		{
+			return session.ResourceManagerId.ToString() + "-$$-" + PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction) + ".recovery-information";
 		}
 
 		/// <summary>
@@ -63,6 +79,11 @@ namespace Raven.Client.Document
 			try
 			{
 				session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+				}
 			}
 			catch (Exception e)
 			{
@@ -70,6 +91,7 @@ namespace Raven.Client.Document
 				return; // nothing to do, DTC will mark tx as hang
 			}
 			enlistment.Done();
+
 		}
 
 		/// <summary>
@@ -82,6 +104,11 @@ namespace Raven.Client.Document
 			try
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+				}
 			}
 			catch (Exception e)
 			{

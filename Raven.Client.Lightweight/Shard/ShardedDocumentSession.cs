@@ -126,17 +126,6 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-		/// <summary>
-		/// Stores the recovery information for the specified transaction
-		/// </summary>
-		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
 		protected override void TryEnlistInAmbientTransaction()
 		{
 			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 

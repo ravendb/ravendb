@@ -972,32 +972,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return ExecuteWithReplication("PUT", u => DirectPromoteTransaction(fromTxId, u));
 		}
 
-		/// <summary>
-		/// Stores the recovery information.
-		/// </summary>
-		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
-		{
-			ExecuteWithReplication<object>("PUT", u =>
-			{
-				var metadata = new RavenJObject
-				{
-					{"Resource-Manager-Id", resourceManagerId.ToString()},
-					{Constants.NotForReplication, true}
-				};
-				var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, u + "/static/transactions/recoveryInformation/" + txId, "PUT", metadata, credentials, convention)
-							.AddOperationHeaders(OperationsHeaders));
-
-				webRequest.Write(new MemoryStream(recoveryInformation));
-
-				webRequest.ExecuteRequest();
-				return null;
-			});
-		}
-
 		private byte[] DirectPromoteTransaction(Guid fromTxId, string operationUrl)
 		{
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(

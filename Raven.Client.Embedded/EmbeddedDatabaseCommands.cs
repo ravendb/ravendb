@@ -461,23 +461,6 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Stores the recovery information.
-		/// </summary>
-		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid resourceManagerId,Guid txId, byte[] recoveryInformation)
-		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jObject = new RavenJObject
-			{
-				{"Resource-Manager-Id", resourceManagerId.ToString()},
-				{Constants.NotForReplication, true}
-			};
-			database.PutStatic("transactions/recoveryInformation/" + txId, null, new MemoryStream(recoveryInformation), jObject);
-		}
-
-		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>

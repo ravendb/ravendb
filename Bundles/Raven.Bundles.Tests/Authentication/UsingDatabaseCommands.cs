@@ -83,13 +83,6 @@ namespace Raven.Bundles.Tests.Authentication
 			}
 		}
 
-		[Fact]
-		public void CanStoreRecoveryInfo()
-		{
-			store.DatabaseCommands.StoreRecoveryInformation(Guid.NewGuid(), Guid.NewGuid(),Guid.NewGuid().ToByteArray());
-		}
-
-
 		public class Item
 		{
 			public string Name { get; set; }

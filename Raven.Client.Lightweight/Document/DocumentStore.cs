@@ -26,6 +26,7 @@ using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
 #else
+using Raven.Client.Document.DTC;
 using Raven.Client.Listeners;
 #endif
 
@@ -376,6 +377,18 @@ namespace Raven.Client.Document
 					};
 #endif
 				}
+
+				initialized = true;
+
+#if !SILVERLIGHT
+				RecoverPendingTransactions();
+		
+				if (string.IsNullOrEmpty(DefaultDatabase) == false)
+				{
+					DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+				}
+#endif
+
 			}
 			catch (Exception)
 			{
@@ -383,18 +396,16 @@ namespace Raven.Client.Document
 				throw;
 			}
 
-			initialized = true;
-
-#if !SILVERLIGHT
-			if (string.IsNullOrEmpty(DefaultDatabase) == false)
-			{
-				DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
-			}
-#endif
-
 			return this;
 		}
 
+#if !SILVERLIGHT
+		private void RecoverPendingTransactions()
+		{
+			var pendingTransactionRecovery = new PendingTransactionRecovery();
+			pendingTransactionRecovery.Execute(DatabaseCommands);
+		}
+#endif
 		private void InitializeSecurity()
 		{
 			if (Conventions.HandleUnauthorizedResponse != null)
