@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Net;
 using System.Reactive.Linq;
@@ -42,7 +43,7 @@ namespace Raven.Tests.Notifications
 					Name = "test",
 					Secret = "test",
 					Enabled = true,
-					Databases = new[]
+					Databases = new List<DatabaseAccess>
 					{
 						new DatabaseAccess {TenantId = "*"},
 					}

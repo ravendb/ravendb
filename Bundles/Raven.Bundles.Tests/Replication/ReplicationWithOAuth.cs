@@ -1,6 +1,7 @@
 ﻿extern alias database;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -38,7 +39,7 @@ namespace Raven.Bundles.Tests.Replication.Async
 			{
 				server.Database.Put("Raven/ApiKeys/Ayende", null, RavenJObject.FromObject(new ApiKeyDefinition
 					{
-						Databases = new DatabaseAccess[]{new DatabaseAccess{TenantId = "*"}, },
+						Databases = new List<DatabaseAccess>{new DatabaseAccess{TenantId = "*"}, },
 						Enabled = true,
 						Name = "Ayende",
 						Secret = "abc"

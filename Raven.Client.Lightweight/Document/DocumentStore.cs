@@ -712,6 +712,8 @@ namespace Raven.Client.Document
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
 			rootServicePoint.UseNagleAlgorithm = false;
+			rootServicePoint.Expect100Continue = false;
+			rootServicePoint.ConnectionLimit = 256;
 
 			databaseCommandsGenerator = () =>
 			{

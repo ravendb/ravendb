@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Net;
 using Raven.Abstractions.Data;
@@ -47,9 +48,10 @@ namespace Raven.Tests.Security.OAuth
 
 		public class FakeAuthenticateClient : IAuthenticateClient
 		{
-			public bool Authenticate(DocumentDatabase documentDatabase, string username, string password, out DatabaseAccess[] allowedDatabases)
+
+			public bool Authenticate(DocumentDatabase currentDatabase, string username, string password, out List<DatabaseAccess> allowedDatabases)
 			{
-				allowedDatabases = new[]
+				allowedDatabases = new List<DatabaseAccess>
 				{
 					new DatabaseAccess
 					{
