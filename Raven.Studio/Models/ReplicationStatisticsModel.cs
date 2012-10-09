@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Bundles.Replication.Data;
 using Raven.Client;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
 using Raven.Client.Silverlight.Connection.Async;
+using Raven.Database.Bundles.Replication;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 
@@ -16,84 +16,49 @@ namespace Raven.Studio.Models
     {
         public ReplicationStatisticsModel()
         {
-            ReplicationOnline = new ObservableCollection<string>();
+			Stats = new List<ReplicationStats>();
             Name = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 
             documentStore = ApplicationModel.Current.Server.Value.DocumentStore;
             asyncDatabaseCommands = Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
                                             ? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
                                             : documentStore.AsyncDatabaseCommands.ForDatabase(Name);
+
+			UpdateReplicationOnlineStatus();
         }
 
-        public void UpdateReplicationOnlineStatus()
-        {
-            ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(Name)
-                .LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
-                .ContinueOnSuccessInTheUIThread(document =>
-                {
-                    ReplicationOnline = new ObservableCollection<string>();
-                    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
-                    if (asyncServerClient == null)
-                        return;
+		public void UpdateReplicationOnlineStatus()
+		{
+			var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
+			if (asyncServerClient == null)
+				return;
 
-                    if (document == null)
-                        return;
+			asyncServerClient.CreateRequest("/replication/info", "GET")
+					.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						if (task.IsFaulted)
+							throw new InvalidOperationException("Could not get replication info");
 
-                    foreach (var replicationDestination in document.Destinations)
-                    {
-                        var destination = replicationDestination;
-                        asyncServerClient.CreateRequest("/replication/info", "GET")
-                            .ReadResponseJsonAsync()
-                            .ContinueWith(task =>
-                            {
-                                if (task.IsFaulted)
-                                    throw new InvalidOperationException("Could not get replication info");
+						var replicationStats = new JsonSerializer().Deserialize<ReplicationStatistic>(new RavenJTokenReader(task.Result));
 
-                                var url = task.Result.SelectToken("Self").ToString();
-                                var lastEtag = task.Result.SelectToken("MostRecentDocumentEtag").ToString();
+						if (replicationStats == null)
+							throw new Exception("Replication info is not as expected");
 
-                                if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(lastEtag))
-                                    throw new Exception("Replication info is not as expected");
+						Stats = replicationStats.Stats;
+						OnPropertyChanged(() => Stats);
+					});
+		}
 
-                                asyncServerClient.DirectGetAsync(destination.Url + "/databases/" + destination.Database, "Raven/Replication/Sources/" + url).
-                                    ContinueOnSuccessInTheUIThread(data =>
-                                    {
-                                        if (data == null)
-                                        {
-                                            ReplicationOnline.Add(destination.Url + " - Offline");
-                                            OnPropertyChanged(() => ReplicationOnline);
-                                            return;
-                                        }
+		public override System.Threading.Tasks.Task TimerTickedAsync()
+		{
+			UpdateReplicationOnlineStatus();
+			return base.TimerTickedAsync();
+		}
 
-                                        var sourceReplicationInformation = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.
-                                            CreateSerializer().Deserialize
-                                            <SourceReplicationInformation>(new RavenJTokenReader(data.DataAsJson));
-                                        if (sourceReplicationInformation == null)
-                                            ReplicationOnline.Add(destination.Url + " - Offline");
-                                        else
-                                        {
-
-                                            if (lastEtag == sourceReplicationInformation.LastDocumentEtag.ToString())
-                                                ReplicationOnline.Add(destination.Url + " - Updated");
-                                            else
-                                                ReplicationOnline.Add(destination.Url + " - Online");
-
-                                        }
-                                        OnPropertyChanged(() => ReplicationOnline);
-                                    })
-                                    .Catch(_ =>
-                                    {
-                                        ReplicationOnline.Add(destination.Url + " - Offline");
-                                        OnPropertyChanged(() => ReplicationOnline);
-                                    });
-                            });
-                    }
-                }).Catch();
-        }
-
-        public ObservableCollection<string> ReplicationOnline { get; set; }
-        public string Name { get; set; }
+	    public string Name { get; set; }
         private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
         private readonly IDocumentStore documentStore;
+		public List<ReplicationStats> Stats { get; set; } 
     }
 }
