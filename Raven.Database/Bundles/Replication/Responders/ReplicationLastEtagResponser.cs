@@ -67,6 +67,7 @@ namespace Raven.Bundles.Replication.Responders
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
 						ServerInstanceId = Database.TransactionalStorage.Id,
+						Source = src
 					};
 				}
 				else
@@ -107,7 +108,8 @@ namespace Raven.Bundles.Replication.Responders
 					{
 						ServerInstanceId = Database.TransactionalStorage.Id,
 						LastAttachmentEtag = attachmentEtag ?? Guid.Empty,
-						LastDocumentEtag = docEtag??Guid.Empty
+						LastDocumentEtag = docEtag??Guid.Empty,
+						Source = src
 					};
 				}
 				else

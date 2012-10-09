@@ -1,12 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Windows;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using ActiproSoftware.Text.Parsing.LLParser.Implementation;
+﻿using ActiproSoftware.Text.Parsing.LLParser.Implementation;
 
 namespace Raven.Studio.Features.JsonEditor
 {

@@ -68,10 +68,14 @@ namespace Raven.Client.Connection
 			webRequest.UseDefaultCredentials = true;
 			webRequest.Credentials = requestParams.Credentials;
 			webRequest.Method = requestParams.Method;
-			if (factory.DisableRequestCompression == false &&
-				(requestParams.Method == "POST" || requestParams.Method == "PUT" || 
-				 requestParams.Method == "PATCH" || requestParams.Method == "EVAL"))
-				webRequest.Headers["Content-Encoding"] = "gzip";
+			if (factory.DisableRequestCompression == false)
+			{
+				if(requestParams.Method == "POST" || requestParams.Method == "PUT" ||
+					requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
+					webRequest.Headers["Content-Encoding"] = "gzip";
+
+				webRequest.Headers["Accept-Encoding"] = "gzip";
+			}
 			webRequest.ContentType = "application/json; charset=utf-8";
 			webRequest.Headers.Add("Raven-Client-Version", ClientVersion);
 			WriteMetadata(requestParams.Metadata);
@@ -214,8 +218,11 @@ namespace Raven.Client.Connection
 						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
 						throw;
 
-					if (HandleUnauthorizedResponse(httpWebResponse) == false)
-						throw;
+					using (httpWebResponse)
+					{
+						if (HandleUnauthorizedResponse(httpWebResponse) == false)
+							throw;
+					}
 				}
 			}
 		}
@@ -313,6 +320,7 @@ namespace Raven.Client.Connection
 
 			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
+			using (response)
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
 				var data = RavenJToken.TryLoad(responseStream);

@@ -153,13 +153,13 @@ namespace Raven.Database
 
 			workContext = new WorkContext
 			{
+				DatabaseName = Name,
 				IndexUpdateTriggers = IndexUpdateTriggers,
 				ReadTriggers = ReadTriggers,
 				RaiseIndexChangeNotification = RaiseNotifications
 			};
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
-
 
 			try
 			{
@@ -180,7 +180,7 @@ namespace Raven.Database
 
 				// Index codecs must be initialized before we try to read an index
 				InitializeIndexCodecTriggers();
-				
+
 				IndexDefinitionStorage = new IndexDefinitionStorage(
 					configuration,
 					TransactionalStorage,
@@ -273,12 +273,16 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			foreach (var task in StartupTasks)
+			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
-				var disposable = task.Value as IDisposable;
-				if (disposable != null)
-					toDispose.Add(disposable);
-				task.Value.Execute(this);
+				LogContext.DatabaseName.Value = Name;
+				foreach (var task in StartupTasks)
+				{
+					var disposable = task.Value as IDisposable;
+					if (disposable != null)
+						toDispose.Add(disposable);
+					task.Value.Execute(this);
+				}
 			}
 		}
 
@@ -457,7 +461,7 @@ namespace Raven.Database
 		{
 			if (backgroundWorkersSpun)
 				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
-			
+
 			backgroundWorkersSpun = true;
 
 			workContext.StartWork();
@@ -491,7 +495,7 @@ namespace Raven.Database
 			}
 			finally
 			{
-				if(tryEnter)
+				if (tryEnter)
 					Monitor.Exit(idleLocker);
 			}
 		}
@@ -559,10 +563,9 @@ namespace Raven.Database
 					{
 						key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions, transactionInformation);
 					}
+					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
 					if (transactionInformation == null)
 					{
-						AssertPutOperationNotVetoed(key, metadata, document, null);
-
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
 						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
@@ -673,69 +676,68 @@ namespace Raven.Database
 				throw new ArgumentNullException("key");
 			key = key.Trim();
 
-			lock(putSerialLock)
+			lock (putSerialLock)
 			{
-			var deleted = false;
-			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
-			RavenJObject metadataVar = null;
-			TransactionalStorage.Batch(actions =>
-			{
-				if (transactionInformation == null)
+				var deleted = false;
+				log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+				RavenJObject metadataVar = null;
+				TransactionalStorage.Batch(actions =>
 				{
-					AssertDeleteOperationNotVetoed(key, null);
-
-					DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
-
-					if (actions.Documents.DeleteDocument(key, etag, out metadataVar))
+					AssertDeleteOperationNotVetoed(key, transactionInformation);
+					if (transactionInformation == null)
 					{
-						deleted = true;
-						foreach (var indexName in IndexDefinitionStorage.IndexNames)
+						DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
+
+						if (actions.Documents.DeleteDocument(key, etag, out metadataVar))
 						{
-							AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
-							if (abstractViewGenerator == null)
-								continue;
-
-							var token = metadataVar.Value<string>(Constants.RavenEntityName);
-
-							if (token != null && // the document has a entity name
-								abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
+							deleted = true;
+							foreach (var indexName in IndexDefinitionStorage.IndexNames)
 							{
-								if (abstractViewGenerator.ForEntityNames.Contains(token) == false)
+								AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+								if (abstractViewGenerator == null)
 									continue;
+
+								var token = metadataVar.Value<string>(Constants.RavenEntityName);
+
+								if (token != null && // the document has a entity name
+									abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
+								{
+									if (abstractViewGenerator.ForEntityNames.Contains(token) == false)
+										continue;
+								}
+
+								string indexNameCopy = indexName;
+								var task = actions.GetTask(x => x.Index == indexNameCopy, new RemoveFromIndexTask
+								{
+									Index = indexNameCopy
+								});
+								task.Keys.Add(key);
 							}
-
-							string indexNameCopy = indexName;
-							var task = actions.GetTask(x => x.Index == indexNameCopy, new RemoveFromIndexTask
-							{
-								Index = indexNameCopy
-							});
-							task.Keys.Add(key);
+							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 						}
-						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
-					}
 
-					TransactionalStorage
-						.ExecuteImmediatelyOrRegisterForSyncronization(() =>
-						{
-							DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-							RaiseNotifications(new DocumentChangeNotification
+						TransactionalStorage
+							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 							{
-								Name = key,
-								Type = DocumentChangeTypes.Delete,
+								DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
+								RaiseNotifications(new DocumentChangeNotification
+								{
+									Name = key,
+									Type = DocumentChangeTypes.Delete,
+								});
 							});
-						});
 
-				}
-				else
-				{
-					deleted = actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
-				}
-				workContext.ShouldNotifyAboutWork(() => "DEL " + key);
-			});
+					}
+					else
+					{
+						deleted = actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
+					}
+					workContext.ShouldNotifyAboutWork(() => "DEL " + key);
+				});
 
-			metadata = metadataVar;
-			return deleted;
-		}
+				metadata = metadataVar;
+				return deleted;
+			}
 		}
 
 		public bool HasTransaction(Guid txId)
@@ -1252,8 +1254,8 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = etag == null ? 
-					actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) : 
+				var documents = etag == null ?
+					actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) :
 					actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents)
@@ -1312,17 +1314,17 @@ namespace Raven.Database
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
 				jsonDoc =>
-								{
+				{
 					scriptedJsonPatcher = new ScriptedJsonPatcher(
 						loadDocument: id =>
 										{
-							var jsonDocument = Get(id, transactionInformation);
-							return jsonDocument == null ? null : jsonDocument.ToJson();
-						});
+											var jsonDocument = Get(id, transactionInformation);
+											return jsonDocument == null ? null : jsonDocument.ToJson();
+										});
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
 				});
-			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
-										}
+			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
+		}
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
 		{
@@ -1340,7 +1342,7 @@ namespace Raven.Database
 			docId = docId.Trim();
 			var result = PatchResult.Patched;
 			bool shouldRetry = false;
-			int[] retries = {128};
+			int[] retries = { 128 };
 			do
 			{
 				TransactionalStorage.Batch(actions =>
@@ -1525,9 +1527,10 @@ namespace Raven.Database
 		static string buildVersion;
 		public static string BuildVersion
 		{
-			get {
+			get
+			{
 				return buildVersion ??
-				       (buildVersion = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location).FileBuildPart.ToString(CultureInfo.InvariantCulture));
+					   (buildVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).FileBuildPart.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1540,7 +1543,7 @@ namespace Raven.Database
 				var serverUrl = Configuration.ServerUrl;
 				if (string.IsNullOrEmpty(Name))
 					return serverUrl;
-				if(serverUrl.EndsWith("/"))
+				if (serverUrl.EndsWith("/"))
 					return serverUrl + "databases/" + Name;
 				return serverUrl + "/databases/" + Name;
 			}
@@ -1548,9 +1551,10 @@ namespace Raven.Database
 
 		public static string ProductVersion
 		{
-			get {
+			get
+			{
 				return productVersion ??
-				       (productVersion = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location).ProductVersion);
+					   (productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion);
 			}
 		}
 

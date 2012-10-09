@@ -259,7 +259,7 @@ namespace Raven.Storage.Esent.StorageActions
 													 tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 				{
 					using (var data = documentCodecs
-						.ReverseAggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
+						.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
 						dataAsJson = data.ToJObject();
 				}
 

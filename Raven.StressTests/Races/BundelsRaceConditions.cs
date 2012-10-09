@@ -1,4 +1,3 @@
-using Raven.Bundles.Tests.Authentication;
 using Raven.Bundles.Tests.Replication;
 using Raven.Tests.Shard.BlogModel;
 using Xunit;
@@ -25,18 +24,6 @@ namespace Raven.StressTests.Races
 			Run<FailoverBetweenTwoMultiTenantDatabases>(x => x.CanFailoverReplicationBetweenTwoMultiTenantDatabases_WithExplicitUrl(), 10);
 		}
 
-		[Fact]
-		public void SimpleLogin()
-		{
-			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 10);
-		}
-
-		[Fact]
-		public void AsyncSimpleLogin()
-		{
-			Run<AsyncSimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 10);
-		}
-		
 		[Fact]
 		public void CanMergeResultFromAllPostsShards()
 		{

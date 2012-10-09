@@ -9,18 +9,18 @@ namespace Raven.Studio.Commands
 	{
 		public override bool CanExecute(object parameter)
 		{
-			if (parameter is DatabasesListModel)
-				return true;
-			return false;
+		    return parameter is DatabasesListModel;
 		}
-		public override void Execute(object parameter)
+
+	    public override void Execute(object parameter)
 		{
 			AskUser.ConfirmationAsync("Are you sure?", "Meddling with the system database could cause irreversible damage")
 				.ContinueWith(task =>
 				{
 					if (!task.Result)
 						return;
-					Command.ExecuteCommand(new ChangeDatabaseCommand(true), Constants.SystemDatabase);
+					
+                    ExecuteCommand(new ChangeDatabaseCommand(true), Constants.SystemDatabase);
 				});
 		}
 	}

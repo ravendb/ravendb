@@ -1,20 +1,11 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Net;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 
 namespace Raven.Studio.Extensions
 {
@@ -98,8 +89,7 @@ namespace Raven.Studio.Extensions
                 int l = -1, r = -1; // the last yielded index from each sequence
                 return Observable.CombineLatest(
                     leftSource.Select(Tuple.Create<TLeft, int>), // create a tuple which marks each item in a sequence with its index
-                    rightSource.Select(Tuple.Create<TRight, int>),
-                        (x, y) => new { x, y })
+                    rightSource.Select(Tuple.Create<TRight, int>), (x, y) => new { x, y })
                     .Where(t => t.x.Item2 != l && t.y.Item2 != r) // don't yield a pair if the left or right has already been yielded
                     .Do(t => { l = t.x.Item2; r = t.y.Item2; }) // record the index of the last item yielded from each sequence
                     .Select(t => selector(t.x.Item1, t.y.Item1));
@@ -118,24 +108,25 @@ namespace Raven.Studio.Extensions
         {
             if (source == null)
                 throw new ArgumentNullException("source");
+
             object gate = new object();
             int count = 0;
             IDisposable connectableSubscription = null;
             return Observable.Create(((Func<IObserver<TSource>, IDisposable>)(observer =>
             {
-                bool isFirst = false;
+                var isFirst = false;
                 lock (gate)
                 {
                     ++count;
                     isFirst = count == 1;
                 }
-                IDisposable subscription = source.Subscribe(observer);
+                var subscription = source.Subscribe(observer);
                 if (isFirst)
                     connectableSubscription = source.Connect();
 
                 return Disposable.Create((Action)(() =>
                 {
-                    bool isLast = false;
+                    var isLast = false;
                     subscription.Dispose();
                     lock (gate)
                     {

@@ -80,6 +80,7 @@ namespace Raven.Bundles.Replication.Responders
 					Database.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
+									 Source = src,
 									 LastDocumentEtag = new Guid(lastEtag),
 									 LastAttachmentEtag = lastAttachmentId,
 									 ServerInstanceId = Database.TransactionalStorage.Id

@@ -8,7 +8,7 @@ using Raven.Json.Linq;
 namespace Raven.Bundles.Encryption.Plugin
 {
 	[InheritedExport(typeof(AbstractDocumentCodec))]
-	[ExportMetadata("Order", 10000)]
+	[ExportMetadata("Order", 5000)]
 	[ExportMetadata("Bundle", "Encryption")]
 	public class DocumentEncryption : AbstractDocumentCodec
 	{

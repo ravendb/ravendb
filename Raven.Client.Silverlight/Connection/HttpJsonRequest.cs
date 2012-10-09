@@ -86,8 +86,11 @@ namespace Raven.Client.Silverlight.Connection
 			webRequest.Method = method;
 			if (method != "GET")
 				webRequest.ContentType = "application/json; charset=utf-8";
-			if ((method == "POST" || method == "PUT") &&
-				factory.DisableRequestCompression == false)
+		
+			if(factory.DisableRequestCompression)
+				return;
+
+			if (method == "POST" || method == "PUT" || method == "PATCH" || method == "EVAL")
 				webRequest.Headers["Content-Encoding"] = "gzip";
 		}
 

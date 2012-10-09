@@ -129,18 +129,7 @@ namespace Raven.Database.Server
 
 			InitializeRequestResponders(SystemDatabase);
 
-			switch (configuration.AuthenticationMode.ToLowerInvariant())
-			{
-				case "windows":
-					requestAuthorizer = new WindowsRequestAuthorizer();
-					break;
-				case "oauth":
-					requestAuthorizer = new OAuthRequestAuthorizer();
-					break;
-				default:
-					throw new InvalidOperationException(
-						string.Format("Unknown AuthenticationMode {0}. Options are Windows and OAuth", configuration.AuthenticationMode));
-			}
+			requestAuthorizer = new MixedModeRequestAuthorizer();
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 		}
@@ -770,6 +759,7 @@ namespace Raven.Database.Server
 			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			CurrentOperationContext.User.Value = null;
+			LogContext.DatabaseName.Value = CurrentDatabase.Name;
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
@@ -782,6 +772,7 @@ namespace Raven.Database.Server
 			{
 				CurrentOperationContext.Headers.Value = new NameValueCollection();
 				CurrentOperationContext.User.Value = null;
+				LogContext.DatabaseName.Value = null;
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
 			}
@@ -855,6 +846,7 @@ namespace Raven.Database.Server
 						{
 							Error = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.",
 						});
+						return false;
 					}
 				}
 				catch (Exception e)

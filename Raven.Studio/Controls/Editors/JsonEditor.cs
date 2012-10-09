@@ -1,7 +1,4 @@
-﻿using System.Windows;
-using System.Windows.Media;
-using ActiproSoftware.Text;
-using ActiproSoftware.Text.Tagging.Implementation;
+﻿using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using Raven.Studio.Features.JsonEditor;
 
@@ -10,8 +7,6 @@ namespace Raven.Studio.Controls.Editors
 	public class JsonEditor : EditorBase
 	{
 		private static readonly ISyntaxLanguage DefaultLanguage;
-
-	    
 
 		static JsonEditor()
 		{

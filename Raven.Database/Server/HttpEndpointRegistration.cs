@@ -7,7 +7,7 @@ namespace Raven.Database.Server
 	{
 		public static void RegisterHttpEndpointTarget()
 		{
-			LogManager.RegisterTarget<BoundedMemoryTarget>();
+			LogManager.RegisterTarget<DatabaseMemoryTarget>();
 		}
 	}
 }

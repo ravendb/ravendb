@@ -288,16 +288,15 @@ namespace Raven.Tests
 
 		public RavenTest()
 		{
-			BoundedMemoryTarget boundedMemoryTarget = null;
+			DatabaseMemoryTarget databaseMemoryTarget = null;
 			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
 			{
-				boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
+				databaseMemoryTarget = LogManager.Configuration.AllTargets.OfType<DatabaseMemoryTarget>().FirstOrDefault();
 			}
-			if (boundedMemoryTarget != null)
+			if (databaseMemoryTarget != null)
 			{
-				boundedMemoryTarget.Clear();
+				databaseMemoryTarget.ClearAll();
 			}
-
 
 			try
 			{
@@ -347,12 +346,13 @@ namespace Raven.Tests
 			return timeTaken.TotalMilliseconds;
 		}
 
-		public IDocumentStore NewRemoteDocumentStore()
+		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false)
 		{
 			var ravenDbServer = GetNewServer();
+			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
-				Url = "http://localhost:8079"
+				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
 			};
 
 			store.AfterDispose += (sender, args) =>
@@ -362,6 +362,10 @@ namespace Raven.Tests
 			};
 			ModifyStore(store);
 			return store.Initialize();
+		}
+
+		protected virtual void ModifyServer(RavenDbServer ravenDbServer)
+		{
 		}
 
 		public virtual void Dispose()

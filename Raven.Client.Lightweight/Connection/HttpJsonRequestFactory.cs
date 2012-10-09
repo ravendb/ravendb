@@ -16,15 +16,6 @@ namespace Raven.Client.Connection
 	public class HttpJsonRequestFactory : IDisposable
 	{
 		/// <summary>
-		/// Advanced: Don't set this unless you know what you are doing!
-		/// 
-		/// Enable using basic authentication using http
-		/// By default, RavenDB only allows basic authentication over HTTPS, setting this property to true
-		/// will instruct RavenDB to make unsecure calls (usually only good for testing / internal networks).
-		/// </summary>
-		public bool EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
-
-		/// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
 		public event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
@@ -151,6 +142,15 @@ namespace Raven.Client.Connection
 			get { return disableHttpCaching.Value; }
 			set { disableHttpCaching.Value = value; }
 		}
+
+		/// <summary>
+		/// Advanced: Don't set this unless you know what you are doing!
+		/// 
+		/// Enable using basic authentication using http
+		/// By default, RavenDB only allows basic authentication over HTTPS, setting this property to true
+		/// will instruct RavenDB to make unsecure calls (usually only good for testing / internal networks).
+		/// </summary>
+		public bool EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
 
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 

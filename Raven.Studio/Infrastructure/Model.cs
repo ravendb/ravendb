@@ -3,7 +3,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
-using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Models;
 

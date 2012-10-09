@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Json.Linq;
@@ -72,9 +73,9 @@ namespace Raven.Database.Server.Security.OAuth
 
 		public static AccessToken Create(X509Certificate2 cert, string userId, string[] databases)
 		{
-			var authorizedDatabases = (databases ?? new string[0]).Select(tenantId=>new AccessTokenBody.DatabaseAccess{TenantId = tenantId, ReadOnly = false}).ToArray();
+			var authorizedDatabases = (databases ?? new string[0]).Select(tenantId => new DatabaseAccess { TenantId = tenantId, ReadOnly = false }).ToList();
 
-			return Create(cert, new AccessTokenBody {UserId = userId, AuthorizedDatabases = authorizedDatabases});
+			return Create(cert, new AccessTokenBody { UserId = userId, AuthorizedDatabases = authorizedDatabases });
 		}
 
 
@@ -93,7 +94,7 @@ namespace Raven.Database.Server.Security.OAuth
 		static string Sign(string body, X509Certificate2 cert)
 		{
 			var csp = (RSACryptoServiceProvider)cert.PrivateKey;
-			if(csp == null)
+			if (csp == null)
 				throw new InvalidOperationException("Could not sign an access token with a certificate lacking a private key");
 
 			var data = Encoding.Unicode.GetBytes(body);

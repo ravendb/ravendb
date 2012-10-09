@@ -7,19 +7,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Reactive.Linq;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Connection;
-using Raven.Client.Linq;
-using Raven.Studio.Controls.Editors;
-using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
-using Raven.Client.Extensions;
 using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Query
@@ -88,7 +80,7 @@ namespace Raven.Studio.Features.Query
 			var q = new IndexQuery
 						{
 							Query = query,
-							DefaultOperator = model.DefualtOperator
+							DefaultOperator = model.DefaultOperator
 						};
 
 			if (model.SortBy != null && model.SortBy.Count > 0)
@@ -109,24 +101,22 @@ namespace Raven.Studio.Features.Query
 			}
 
 			if (model.ShowFields)
-			{
 				q.FieldsToFetch = new[] { Constants.AllFields };
-			}
 
 			q.DebugOptionGetIndexEntries = model.ShowEntries;
 			
 			q.SkipTransformResults = model.SkipTransformResults;
-			if (model.IsSpatialQuerySupported &&
-				model.Latitude.HasValue && model.Longitude.HasValue)
+			if (model.IsSpatialQuerySupported && model.Latitude.HasValue && model.Longitude.HasValue)
 			{
 				q = new SpatialIndexQuery(q)
 						{
 							QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(model.Latitude.Value, model.Longitude.Value, model.Radius.HasValue ? model.Radius.Value : 1),
 							SpatialRelation = SpatialRelation.Within,
 							SpatialFieldName = Constants.DefaultSpatialFieldName,
-							DefaultOperator = model.DefualtOperator
+							DefaultOperator = model.DefaultOperator
 						};
 			}
+
 			return q;
 		}
 

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
@@ -46,7 +45,7 @@ namespace Raven.Database.Config
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
 
-			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2);
+			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory / 2);
 			MaxNumberOfParallelIndexTasks = 8;
 
 			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
@@ -64,8 +63,7 @@ namespace Raven.Database.Config
 		{
 			FilterActiveBundles();
 
-			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
-				SetupOAuth();
+			SetupOAuth();
 		}
 
 		public void Initialize()
@@ -101,7 +99,7 @@ namespace Raven.Database.Config
 
 			// Index settings
 			var maxIndexingRunLatencyStr = Settings["Raven/MaxIndexingRunLatency"];
-			if(maxIndexingRunLatencyStr != null)
+			if (maxIndexingRunLatencyStr != null)
 			{
 				MaxIndexingRunLatency = TimeSpan.Parse(maxIndexingRunLatencyStr);
 			}
@@ -156,22 +154,22 @@ namespace Raven.Database.Config
 
 			var tempMemoryMaxMb = Settings["Raven/TempIndexInMemoryMaxMB"];
 			TempIndexInMemoryMaxBytes = tempMemoryMaxMb != null ? int.Parse(tempMemoryMaxMb) * 1024 * 1024 : 26214400;
-			TempIndexInMemoryMaxBytes = Math.Max(1024*1024, TempIndexInMemoryMaxBytes);
+			TempIndexInMemoryMaxBytes = Math.Max(1024 * 1024, TempIndexInMemoryMaxBytes);
 
 			// Data settings
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
-			if(string.IsNullOrEmpty(DefaultStorageTypeName))
+			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded =
 				GetConfigurationValue<bool>("Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded") ?? true;
 
 			ResetIndexOnUncleanShutdown = GetConfigurationValue<bool>("Raven/ResetIndexOnUncleanShutdown") ?? false;
-			
+
 			SetupTransactionMode();
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
-			
+
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
 			{
 				IndexStoragePath = Settings["Raven/IndexStoragePath"];
@@ -179,7 +177,7 @@ namespace Raven.Database.Config
 
 			// HTTP settings
 			HostName = Settings["Raven/HostName"];
-			if(string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 				Port = PortUtil.GetPort(Settings["Raven/Port"]);
 			SetVirtualDirectory();
 
@@ -203,14 +201,11 @@ namespace Raven.Database.Config
 			PluginsDirectory = (Settings["Raven/PluginsDirectory"] ?? @"~\Plugins").ToFullPath();
 
 			var taskSchedulerType = Settings["Raven/TaskScheduler"];
-			if(taskSchedulerType != null)
+			if (taskSchedulerType != null)
 			{
 				var type = Type.GetType(taskSchedulerType);
 				CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
 			}
-
-			// OAuth
-			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
 
 			AllowLocalAccessWithoutAuthorization = GetConfigurationValue<bool>("Raven/AllowLocalAccessWithoutAuthorization") ?? false;
 
@@ -230,7 +225,7 @@ namespace Raven.Database.Config
 			container = null;
 
 			var bundlesFilteredCatalog = Catalog.Catalogs.OfType<BundlesFilteredCatalog>().FirstOrDefault();
-			if(bundlesFilteredCatalog != null)
+			if (bundlesFilteredCatalog != null)
 			{
 				bundlesFilteredCatalog.Bundles = bundles;
 				return;
@@ -281,7 +276,7 @@ namespace Raven.Database.Config
 		private void SetupOAuth()
 		{
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
-							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/AccessToken" : ServerUrl + "/OAuth/AccessToken");
+							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/API-Key" : ServerUrl + "/OAuth/API-Key");
 			OAuthTokenCertificate = GetCertificate();
 		}
 
@@ -337,12 +332,23 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				if (HttpContext.Current != null)// running in IIS, let us figure out how
+				HttpRequest httpRequest = null;
+				try
 				{
-					var url = HttpContext.Current.Request.Url;
+					if (HttpContext.Current != null)
+						httpRequest = HttpContext.Current.Request;
+				}
+				catch (Exception)
+				{
+					// the issue is probably Request is not available in this context
+					// we can safely ignore this, at any rate
+				}
+				if (httpRequest != null)// running in IIS, let us figure out how
+				{
+					var url = httpRequest.Url;
 					return new UriBuilder(url)
 					{
-						Path = HttpContext.Current.Request.ApplicationPath,
+						Path = httpRequest.ApplicationPath,
 						Query = ""
 					}.Uri.ToString();
 				}
@@ -526,7 +532,7 @@ namespace Raven.Database.Config
 				if (virtualDirectory.EndsWith("/"))
 					virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
 				if (virtualDirectory.StartsWith("/") == false)
-					virtualDirectory = "/" + virtualDirectory; 
+					virtualDirectory = "/" + virtualDirectory;
 			}
 		}
 
@@ -543,13 +549,6 @@ namespace Raven.Database.Config
 		/// Default: Get
 		/// </summary>
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
-
-		/// <summary>
-		/// Defines which mode to use to authenticate requests
-		/// Allowed values: Windows, OAuth
-		/// Default: Windows
-		/// </summary>
-		public string AuthenticationMode { get; set; }
 
 		/// <summary>
 		/// If set local request don't require authentication
@@ -586,7 +585,7 @@ namespace Raven.Database.Config
 		public string DefaultStorageTypeName
 		{
 			get { return defaultStorageTypeName; }
-			set { if(!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
+			set { if (!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
 		}
 		private string defaultStorageTypeName;
 
@@ -759,7 +758,7 @@ namespace Raven.Database.Config
 					storageEngine = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 					break;
 				case "munin":
-					storageEngine = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+					storageEngine = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 					break;
 			}
 			var type = Type.GetType(storageEngine);
@@ -782,7 +781,7 @@ namespace Raven.Database.Config
 					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
-					return typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
 			return DefaultStorageTypeName;
 		}
@@ -835,7 +834,6 @@ namespace Raven.Database.Config
 			Port = defaultConfiguration.Port;
 			OAuthTokenCertificate = defaultConfiguration.OAuthTokenCertificate;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
-			AuthenticationMode = defaultConfiguration.AuthenticationMode;
 		}
 	}
 }

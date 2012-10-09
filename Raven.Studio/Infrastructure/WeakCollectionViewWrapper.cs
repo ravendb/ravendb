@@ -1,19 +1,9 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -141,7 +131,7 @@ namespace Raven.Studio.Infrastructure
 
         private void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
-            NotifyCollectionChangedEventHandler handler = CollectionChanged;
+            var handler = CollectionChanged;
             if (handler != null) handler(this, e);
         }
 
@@ -253,7 +243,7 @@ namespace Raven.Studio.Infrastructure
 
         private void OnCurrentChanging(CurrentChangingEventArgs e)
         {
-            CurrentChangingEventHandler handler = CurrentChanging;
+            var handler = CurrentChanging;
             if (handler != null) handler(this, e);
         }
 
@@ -261,7 +251,7 @@ namespace Raven.Studio.Infrastructure
 
         private void OnCurrentChanged(EventArgs e)
         {
-            EventHandler handler = CurrentChanged;
+            var handler = CurrentChanged;
             if (handler != null) handler(this, e);
         }
 
@@ -289,7 +279,7 @@ namespace Raven.Studio.Infrastructure
 
         protected void OnQueryItemVisibility(QueryItemVisibilityEventArgs e)
         {
-            EventHandler<QueryItemVisibilityEventArgs> handler = QueryItemVisibility;
+            var handler = QueryItemVisibility;
             if (handler != null) handler(this, e);
         }
     }

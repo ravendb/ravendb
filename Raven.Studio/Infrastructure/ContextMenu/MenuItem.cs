@@ -75,16 +75,12 @@ namespace Raven.Studio.Infrastructure.ContextMenu
         private void OnCommandChanged(ICommand oldValue, ICommand newValue)
         {
             if (null != oldValue)
-            {
-                oldValue.CanExecuteChanged -= new EventHandler(HandleCanExecuteChanged);
-            }
+                oldValue.CanExecuteChanged -= HandleCanExecuteChanged;
 
             if (_isLoaded)
             {
                 if (null != newValue)
-                {
-                    newValue.CanExecuteChanged += new EventHandler(HandleCanExecuteChanged);
-                }
+                    newValue.CanExecuteChanged += HandleCanExecuteChanged;
             }
 
             UpdateIsEnabled();
@@ -161,9 +157,7 @@ namespace Raven.Studio.Infrastructure.ContextMenu
         private void HandleUnloaded(object sender, RoutedEventArgs e)
         {
             if (Command != null)
-            {
                 Command.CanExecuteChanged -= HandleCanExecuteChanged;
-            }
 
             _isLoaded = false;
         }
@@ -171,9 +165,7 @@ namespace Raven.Studio.Infrastructure.ContextMenu
         private void HandleLoaded(object sender, RoutedEventArgs e)
         {
             if (Command != null)
-            {
                 Command.CanExecuteChanged += HandleCanExecuteChanged;
-            }
 
             _isLoaded = true;
             UpdateIsEnabled();
@@ -229,9 +221,8 @@ namespace Raven.Studio.Infrastructure.ContextMenu
         {
             base.OnMouseLeave(e);
             if (null != ParentMenuBase)
-            {
                 ParentMenuBase.Focus();
-            }
+
             ChangeVisualState(true);
         }
 
@@ -246,6 +237,7 @@ namespace Raven.Studio.Infrastructure.ContextMenu
                 OnClick();
                 e.Handled = true;
             }
+
             base.OnMouseLeftButtonDown(e);
         }
 
@@ -260,6 +252,7 @@ namespace Raven.Studio.Infrastructure.ContextMenu
                 OnClick();
                 e.Handled = true;
             }
+
             base.OnMouseRightButtonDown(e);
         }
 
@@ -274,6 +267,7 @@ namespace Raven.Studio.Infrastructure.ContextMenu
                 OnClick();
                 e.Handled = true;
             }
+
             base.OnKeyDown(e);
         }
 
@@ -291,24 +285,20 @@ namespace Raven.Studio.Infrastructure.ContextMenu
         /// </summary>
         protected virtual void OnClick()
         {
-            ContextMenu contextMenu = ParentMenuBase as ContextMenu;
+            var contextMenu = ParentMenuBase as ContextMenu;
             if (null != contextMenu)
-            {
                 contextMenu.ChildMenuItemClicked();
-            }
+
             // Wrapping the remaining code in a call to Dispatcher.BeginInvoke provides
             // WPF-compatibility by allowing the ContextMenu to close before the command
             // executes. However, it breaks the Clipboard.SetText scenario because the
             // call to SetText is no longer in direct response to user input.
             RoutedEventHandler handler = Click;
             if (null != handler)
-            {
                 handler(this, new RoutedEventArgs());
-            }
+
             if ((null != Command) && Command.CanExecute(CommandParameter))
-            {
                 Command.Execute(CommandParameter);
-            }
         }
 
         /// <summary>
@@ -340,22 +330,14 @@ namespace Raven.Studio.Infrastructure.ContextMenu
         protected virtual void ChangeVisualState(bool useTransitions)
         {
             if (!IsEnabled)
-            {
                 VisualStateManager.GoToState(this, "Disabled", useTransitions);
-            }
             else
-            {
                 VisualStateManager.GoToState(this, "Normal", useTransitions);
-            }
 
             if (_isFocused && IsEnabled)
-            {
                 VisualStateManager.GoToState(this, "Focused", useTransitions);
-            }
             else
-            {
                 VisualStateManager.GoToState(this, "Unfocused", useTransitions);
-            }
         }
     }
 }

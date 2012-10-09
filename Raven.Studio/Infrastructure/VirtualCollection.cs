@@ -5,10 +5,8 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
-using System.Reactive.Disposables;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
 using VirtualCollection.VirtualCollection;
 
 namespace Raven.Studio.Infrastructure
@@ -63,13 +61,10 @@ namespace Raven.Studio.Infrastructure
                                  IEqualityComparer<T> equalityComparer)
         {
             if (pageSize < 1)
-            {
                 throw new ArgumentException("pageSize must be bigger than 0");
-            }
+            
             if (equalityComparer == null)
-            {
                 throw new ArgumentNullException("equalityComparer");
-            }
 
             _source = source;
             _source.CollectionChanged += HandleSourceCollectionChanged;
@@ -203,9 +198,7 @@ namespace Raven.Studio.Infrastructure
         public void Refresh(RefreshMode mode)
         {
             if (!_isRefreshDeferred)
-            {
                 _source.Refresh(mode);
-            }
         }
 
         private void HandlePageEvicted(object sender, ItemEvictedEventArgs<int> e)
@@ -262,9 +255,7 @@ namespace Raven.Studio.Infrastructure
                 for (int i = startIndex; i < endIndex; i++)
                 {
                     if (_virtualItems[i] != null)
-                    {
                         _virtualItems[i].IsStale = true;
-                    }
                 }
             }
         }
@@ -272,9 +263,7 @@ namespace Raven.Studio.Infrastructure
         private void BeginGetPage(int page)
         {
             if (IsPageAlreadyRequested(page))
-            {
                 return;
-            }
 
             _mostRecentlyRequestedPages.Add(page);
             _requestedPages.Add(page);
@@ -301,9 +290,7 @@ namespace Raven.Studio.Infrastructure
                 // check that the page is still requested (the user might have scrolled, causing the 
                 // page to be ejected from the cache
                 if (!_requestedPages.Contains(request.Page))
-                {
                     break;
-                }
 
                 _inProcessPageRequests++;
 
@@ -311,13 +298,9 @@ namespace Raven.Studio.Infrastructure
                     t =>
                     {
                         if (!t.IsFaulted)
-                        {
                             UpdatePage(request.Page, t.Result, request.StateWhenRequested);
-                        }
                         else
-                        {
                             MarkPageAsError(request.Page, request.StateWhenRequested);
-                        }
 
                         // fire off any further requests
                         _inProcessPageRequests--;
@@ -330,15 +313,11 @@ namespace Raven.Studio.Infrastructure
         private void MarkPageAsError(int page, uint stateWhenRequestInitiated)
         {
             if (stateWhenRequestInitiated != State)
-            {
                 return;
-            }
 
-            bool stillRelevant = _requestedPages.Remove(page);
+            var stillRelevant = _requestedPages.Remove(page);
             if (!stillRelevant)
-            {
                 return;
-            }
 
             var startIndex = page*_pageSize;
 
@@ -347,9 +326,7 @@ namespace Raven.Studio.Infrastructure
                 var index = startIndex + i;
                 var virtualItem = _virtualItems[index];
                 if (virtualItem != null)
-                {
                     virtualItem.ErrorFetchingValue();
-                }
             }
         }
 
@@ -368,9 +345,7 @@ namespace Raven.Studio.Infrastructure
 
             bool stillRelevant = _requestedPages.Remove(page);
             if (!stillRelevant)
-            {
                 return;
-            }
 
             _fetchedPages.Add(page);
 
@@ -380,17 +355,12 @@ namespace Raven.Studio.Infrastructure
             {
                 var index = startIndex + i;
                 var virtualItem = _virtualItems[index] ?? (_virtualItems[index] = new VirtualItem<T>(this, index));
-                if (virtualItem.Item == null || results[i] == null ||
-                    !_equalityComparer.Equals(virtualItem.Item, results[i]))
-                {
+                if (virtualItem.Item == null || results[i] == null || !_equalityComparer.Equals(virtualItem.Item, results[i]))
                     virtualItem.SupplyValue(results[i]);
-                }
             }
 
             if (results.Count > 0)
-            {
                 OnItemsRealized(new ItemsRealizedEventArgs(startIndex, results.Count));
-            }
         }
 
         protected void UpdateData()
@@ -436,9 +406,7 @@ namespace Raven.Studio.Infrastructure
         private void EnsurePageCacheSize(int numberOfPages)
         {
             if (_mostRecentlyRequestedPages.Size < numberOfPages)
-            {
                 _mostRecentlyRequestedPages.Size = numberOfPages;
-            }
         }
 
         private void Reset()
@@ -453,9 +421,7 @@ namespace Raven.Studio.Infrastructure
                 for (int i = startIndex; i < endIndex; i++)
                 {
                     if (_virtualItems[i] != null)
-                    {
                         _virtualItems[i].ClearValue();
-                    }
                 }
             }
             UpdateCount(0);
@@ -469,9 +435,7 @@ namespace Raven.Studio.Infrastructure
         private void UpdateCount(int count)
         {
             if (_itemCount == count)
-            {
                 return;
-            }
 
             var wasCurrentBeyondLast = IsCurrentAfterLast;
 
@@ -480,16 +444,12 @@ namespace Raven.Studio.Infrastructure
             _itemCount = count;
 
             if (IsCurrentAfterLast && !wasCurrentBeyondLast)
-            {
                 UpdateCurrentPosition(_itemCount - 1, allowCancel: false);
-            }
 
             OnPropertyChanged(new PropertyChangedEventArgs("Count"));
 
             if (Math.Abs(delta) > IndividualItemNotificationLimit || _itemCount == 0)
-            {
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-            }
             else if (delta > 0)
             {
                 for (int i = 0; i < delta; i++)
@@ -516,14 +476,7 @@ namespace Raven.Studio.Infrastructure
 
         public bool Contains(object item)
         {
-            if (item is VirtualItem<T>)
-            {
-                return Contains(item as VirtualItem<T>);
-            }
-            else
-            {
-                return false;
-            }
+            return item is VirtualItem<T> && Contains(item as VirtualItem<T>);
         }
 
         object IList.this[int index]
@@ -599,44 +552,44 @@ namespace Raven.Studio.Infrastructure
 
         protected void OnCurrentChanging(CurrentChangingEventArgs e)
         {
-            CurrentChangingEventHandler handler = CurrentChanging;
+            var handler = CurrentChanging;
             if (handler != null) handler(this, e);
         }
 
 
         protected void OnCurrentChanged(EventArgs e)
         {
-            EventHandler handler = CurrentChanged;
+            var handler = CurrentChanged;
             if (handler != null) handler(this, e);
         }
 
         protected void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
-            NotifyCollectionChangedEventHandler handler = CollectionChanged;
+            var handler = CollectionChanged;
             if (handler != null) handler(this, e);
         }
 
         protected void OnPropertyChanged(PropertyChangedEventArgs e)
         {
-            PropertyChangedEventHandler handler = PropertyChanged;
+            var handler = PropertyChanged;
             if (handler != null) handler(this, e);
         }
 
         protected void OnItemsRealized(ItemsRealizedEventArgs e)
         {
-            EventHandler<ItemsRealizedEventArgs> handler = ItemsRealized;
+            var handler = ItemsRealized;
             if (handler != null) handler(this, e);
         }
 
         protected void OnQueryItemVisibility(QueryItemVisibilityEventArgs e)
         {
-            EventHandler<QueryItemVisibilityEventArgs> handler = QueryItemVisibility;
+            var handler = QueryItemVisibility;
             if (handler != null) handler(this, e);
         }
 
         public IEnumerator<VirtualItem<T>> GetEnumerator()
         {
-            for (int i = 0; i < _itemCount; i++)
+            for (var i = 0; i < _itemCount; i++)
             {
                 yield return this[i];
             }
@@ -674,14 +627,7 @@ namespace Raven.Studio.Infrastructure
 
         bool IList.Contains(object value)
         {
-            if (value is VirtualItem<T>)
-            {
-                return Contains(value as VirtualItem<T>);
-            }
-            else
-            {
-                return false;
-            }
+            return value is VirtualItem<T> && Contains(value as VirtualItem<T>);
         }
 
         public void Clear()
@@ -692,14 +638,7 @@ namespace Raven.Studio.Infrastructure
         int IList.IndexOf(object value)
         {
             var virtualItem = value as VirtualItem<T>;
-            if (virtualItem == null)
-            {
-                return -1;
-            }
-            else
-            {
-                return virtualItem.Index;
-            }
+            return virtualItem == null ? -1 : virtualItem.Index;
         }
 
         void IList.Insert(int index, object value)

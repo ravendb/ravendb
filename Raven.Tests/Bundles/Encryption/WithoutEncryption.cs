@@ -51,7 +51,7 @@ namespace Raven.Bundles.Tests.Encryption
 					.ToList();
 			}
 
-			RecylceServer();
+			RecycleServer();
 
 			using (var session = documentStore.OpenSession())
 			{

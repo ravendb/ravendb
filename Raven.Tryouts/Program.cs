@@ -17,23 +17,20 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-
-			var store = new DocumentStore() { Url = "http://localhost:8080/", DefaultDatabase = "Confabulat" };
-			store.Initialize();
-			for (int i = 0; i < 100; i++)
+			var store = new DocumentStore
 			{
-				var sp = Stopwatch.StartNew();
-				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Regions" },
-			 new ScriptedPatchRequest
-			 {
-				 Script =
-				 @"this.Test = 'test';"
+				Url = "https://1.ravenhq.com",
+				ApiKey = "adc19257-fc90-4027-a40d-9dbac1542ce8",
+				DefaultDatabase = "hibernating-rhinos-anothera",
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately
+				}
+			};
 
+			store.Initialize();
 
-			 }
-				, true);
-				Console.WriteLine(sp.ElapsedMilliseconds);
-			}
+			store.DatabaseCommands.Put("users/1", null, new RavenJObject(), new RavenJObject());
 		}
 
 		private static void UseMyData()

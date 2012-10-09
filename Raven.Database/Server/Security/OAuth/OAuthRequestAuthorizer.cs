@@ -12,11 +12,6 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			var httpRequest = ctx.Request;
 
-			var requestUrl = ctx.GetRequestUrl();
-			
-			if (NeverSecret.Urls.Contains(requestUrl))
-				return true;
-
 			var isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
 				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All || 

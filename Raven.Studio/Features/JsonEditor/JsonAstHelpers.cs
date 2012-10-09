@@ -1,14 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
+﻿using System.Collections.Generic;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Parsing;
 using ActiproSoftware.Text.Parsing.LLParser;
@@ -19,7 +9,7 @@ namespace Raven.Studio.Features.JsonEditor
     {
         public static IEnumerable<JsonStringNode> FindAllStringValueNodes(this ICodeDocument codeDocument)
         {
-            Queue<IAstNode> nodeQueue = new Queue<IAstNode>();
+            var nodeQueue = new Queue<IAstNode>();
 
             var rootNode = GetRootAstNode(codeDocument);
             AddChildren(nodeQueue, rootNode);
@@ -29,13 +19,9 @@ namespace Raven.Studio.Features.JsonEditor
                 var node = nodeQueue.Dequeue();
 
                 if (node is JsonStringNode)
-                {
                     yield return (JsonStringNode) node;
-                }
                 else
-                {
                     AddChildren(nodeQueue, node);
-                }
             }
         }
 

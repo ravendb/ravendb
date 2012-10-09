@@ -148,9 +148,15 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], RetrieveColumnGrbit.RetrieveFromIndex).
 						Value;
 
-				if (string.Equals(index, indexFromDb, StringComparison.InvariantCultureIgnoreCase) == false ||
-					levelFromDb != level)
+				var compareResult = string.Compare(index, indexFromDb, StringComparison.InvariantCultureIgnoreCase);
+				if (compareResult < 0) // not yet here
 					continue;
+				if (compareResult > 0) // after the record
+					break;
+				if (levelFromDb < level)
+					continue;
+				if (levelFromDb > level)
+					break;
 
 				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
 				var bucket =
@@ -414,9 +420,6 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
 				yield break;
 
-			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-
 			try
 			{
 				Api.JetMove(session, MappedResults, start, MoveGrbit.MoveKeyNE);
@@ -438,10 +441,11 @@ namespace Raven.Storage.Esent.StorageActions
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
 														   tableColumnsCache.MappedResultsColumns["reduce_key"]);
-				if (string.Equals(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false)
-				{
-					continue;
-				}
+				var comparision = String.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
+				if (comparision < 0)
+					continue; // skip to the next item
+				if (comparision > 0) // after the current item
+					break;
 
 				take -= 1;
 
@@ -465,11 +469,6 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
 				yield break;
 
-			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, MappedResults, key, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.MakeKey(session, MappedResults, int.MaxValue, MakeKeyGrbit.None);
-			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-
 			do
 			{
 
@@ -478,11 +477,19 @@ namespace Raven.Storage.Esent.StorageActions
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
 														   tableColumnsCache.MappedResultsColumns["reduce_key"]);
-				if (string.Equals(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false ||
-					string.Equals(key, keyFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
-				{
+
+				var indexCompare = string.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
+
+				if (indexCompare < 0)
 					continue;
-				}
+				if (indexCompare > 0)
+					break;
+				var keyCompare = string.Compare(key, keyFromDb, StringComparison.InvariantCultureIgnoreCase);
+				if (keyCompare < 0)
+					continue;
+				if (keyCompare > 0)
+					break;
+
 				take -= 1;
 
 				var bucket =
@@ -516,27 +523,31 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, ReducedResults, SeekGrbit.SeekGE) == false)
 				yield break;
 
-			Api.MakeKey(session, ReducedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReducedResults, key, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.JetSetIndexRange(session, ReducedResults, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-
 			do
 			{
 
 				var levelFromDb =
 					Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["level"]).Value;
 				var indexNameFromDb = Api.RetrieveColumnAsString(session, ReducedResults,
-				                                                 tableColumnsCache.ReduceResultsColumns["view"], Encoding.Unicode,
-				                                                 RetrieveColumnGrbit.RetrieveFromIndex);
+																 tableColumnsCache.ReduceResultsColumns["view"], Encoding.Unicode,
+																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, ReducedResults,
-				                                           tableColumnsCache.ReduceResultsColumns["reduce_key"]);
-				if (string.Equals(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false ||
-				    level != levelFromDb ||
-				    string.Equals(key, keyFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
-				{
+														   tableColumnsCache.ReduceResultsColumns["reduce_key"]);
+				var indexCompare = string.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
+
+				if (indexCompare < 0)
 					continue;
-				}
+				if (indexCompare > 0)
+					break;
+				if (levelFromDb < level)
+					continue;
+				if (levelFromDb > level)
+					break;
+				var keyCompare = string.Compare(key, keyFromDb, StringComparison.InvariantCultureIgnoreCase);
+				if (keyCompare < 0)
+					continue;
+				if (keyCompare > 0)
+					break;
 
 				take -= 1;
 
@@ -562,7 +573,7 @@ namespace Raven.Storage.Esent.StorageActions
 		private RavenJObject LoadMappedResults(string key)
 		{
 			using (Stream stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
-			using (var dataStream = documentCodecs.ReverseAggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
+			using (var dataStream = documentCodecs.Aggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
 			{
 				return dataStream.ToJObject();
 			}
@@ -571,7 +582,7 @@ namespace Raven.Storage.Esent.StorageActions
 		private RavenJObject LoadReducedResults(string key)
 		{
 			using (Stream stream = new BufferedStream(new ColumnStream(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["data"])))
-			using (var dataStream = documentCodecs.ReverseAggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
+			using (var dataStream = documentCodecs.Aggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
 			{
 				return dataStream.ToJObject();
 			}

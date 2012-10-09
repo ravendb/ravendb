@@ -1,15 +1,7 @@
-﻿using System;
-using System.ComponentModel;
-using System.Net;
+﻿using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Ink;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -29,7 +21,6 @@ namespace Raven.Studio.Models
         {
             get
             {
-
                 return collectionView ?? (collectionView = new PagedCollectionView(ApplicationModel.Current.Notifications)
                                             {
                                                 Filter = item => ((Notification) item).Level == NotificationLevel.Error
@@ -70,9 +61,7 @@ namespace Raven.Studio.Models
         {
             var notification = parameter as Notification;
             if (notification == null)
-            {
                 return;
-            }
 
             Clipboard.SetText(notification.Details);
         }
@@ -82,10 +71,7 @@ namespace Raven.Studio.Models
             base.OnViewLoaded();
 
             if (SelectedItem == null)
-            {
-                SelectedItem =
-                    ApplicationModel.Current.Notifications.LastOrDefault(n => n.Level == NotificationLevel.Error);
-            }
+                SelectedItem =ApplicationModel.Current.Notifications.LastOrDefault(n => n.Level == NotificationLevel.Error);
         }
     }
 }

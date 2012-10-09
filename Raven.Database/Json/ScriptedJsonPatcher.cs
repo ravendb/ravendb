@@ -39,7 +39,7 @@ namespace Raven.Database.Json
 		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch)
 		{
 			if (document == null)
-				return document;
+				return null;
 
 			if (String.IsNullOrEmpty(patch.Script))
 				throw new InvalidOperationException("Patch script must be non-null and not empty");

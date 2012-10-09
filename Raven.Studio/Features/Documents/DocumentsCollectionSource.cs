@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
-using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Documents
 {

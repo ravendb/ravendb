@@ -4,15 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Infrastructure.Validators;
 using Validation = Raven.Studio.Infrastructure.Validation;
@@ -31,7 +22,7 @@ namespace Raven.Studio.Features.Documents
 
         public string Header
         {
-            get { return this.header; }
+            get { return header; }
             set
             {
                 if (header == value)
@@ -39,17 +30,17 @@ namespace Raven.Studio.Features.Documents
                     return;
                 }
 
-                this.header = value;
+                header = value;
                 OnPropertyChanged(() => Header);
                 OnPropertyChanged(() => IsNewRow);
                 Revalidate();
             }
         }
 
-        [RequiredString()]
+        [RequiredString]
         public string Binding
         {
-            get { return this.binding; }
+            get { return binding; }
             set
             {
                 if (binding == value)
@@ -57,7 +48,7 @@ namespace Raven.Studio.Features.Documents
                     return;
                 }
 
-                this.binding = value;
+                binding = value;
                 if (string.IsNullOrEmpty(Header))
                 {
                     Header = SuggestColumnName(binding);
@@ -71,30 +62,23 @@ namespace Raven.Studio.Features.Documents
         private string SuggestColumnName(string binding)
         {
             if (binding.StartsWith("$Meta:"))
-            {
                 return binding.Substring("$Meta:".Length);
-            }
-            else if (binding.StartsWith("$JsonDocument:"))
-            {
+            if (binding.StartsWith("$JsonDocument:"))
                 return binding.Substring("$JsonDocument:".Length);
-            }
-            else
-            {
-                return binding;
-            }
+            
+            return binding;
         }
 
         [DataGridLength]
         public string DefaultWidth
         {
-            get { return this.defaultWidth; }
+            get { return defaultWidth; }
             set
             {
                 if (defaultWidth == value)
-                {
                     return;
-                }
-                this.defaultWidth = value;
+
+                defaultWidth = value;
                 OnPropertyChanged(() => DefaultWidth);
                 Revalidate();
             }
@@ -131,9 +115,9 @@ namespace Raven.Studio.Features.Documents
         {
             if (column != null)
             {
-                this.header = column.Header;
-                this.binding = column.Binding;
-                this.defaultWidth = column.DefaultWidth;
+                header = column.Header;
+                binding = column.Binding;
+                defaultWidth = column.DefaultWidth;
             }
 
             OnEverythingChanged();
@@ -179,7 +163,7 @@ namespace Raven.Studio.Features.Documents
 
         public ColumnDefinition GetColumn()
         {
-            return new ColumnDefinition()
+            return new ColumnDefinition
                        {
                            Header = header,
                            Binding = binding,
@@ -191,13 +175,13 @@ namespace Raven.Studio.Features.Documents
 
         protected void OnErrorsChanged(DataErrorsChangedEventArgs e)
         {
-            EventHandler<DataErrorsChangedEventArgs> handler = ErrorsChanged;
+            var handler = ErrorsChanged;
             if (handler != null) handler(this, e);
         }
 
         protected void OnChangesCommitted(EventArgs e)
         {
-            EventHandler<EventArgs> handler = ChangesCommitted;
+            var handler = ChangesCommitted;
             if (handler != null) handler(this, e);
         }
 

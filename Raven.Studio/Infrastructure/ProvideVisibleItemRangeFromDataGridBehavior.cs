@@ -1,18 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
 using System.Windows.Interactivity;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-using Raven.Studio.Controls;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -44,17 +35,14 @@ namespace Raven.Studio.Infrastructure
         private void HandleQueryItemVisibility(object sender, QueryItemVisibilityEventArgs e)
         {
             if (_loadedRows.Count > 0)
-            {
                 e.SetVisibleRange(_loadedRows.Min(), _loadedRows.Max());
-            }
         }
 
         protected override void OnAttached()
         {
             base.OnAttached();
 
-            BindingOperations.SetBinding(this, ItemsSourceProperty,
-                                         new Binding("ItemsSource") {Source = AssociatedObject});
+            BindingOperations.SetBinding(this, ItemsSourceProperty, new Binding("ItemsSource") {Source = AssociatedObject});
 
             AssociatedObject.Loaded += HandleLoaded;
             AssociatedObject.Unloaded += HandleUnloaded;
@@ -82,9 +70,7 @@ namespace Raven.Studio.Infrastructure
         {
             _cachedEnquirer = GetValue(ItemsSourceProperty) as IEnquireAboutItemVisibility;
             if (_cachedEnquirer != null)
-            {
                 _cachedEnquirer.QueryItemVisibility += HandleQueryItemVisibility;
-            }
         }
 
         private void HandleUnloaded(object sender, RoutedEventArgs e)
@@ -110,9 +96,7 @@ namespace Raven.Studio.Infrastructure
         private void DetachFromCachedEnquirer()
         {
             if (_cachedEnquirer != null)
-            {
                 _cachedEnquirer.QueryItemVisibility -= HandleQueryItemVisibility;
-            }
         }
     }
 }

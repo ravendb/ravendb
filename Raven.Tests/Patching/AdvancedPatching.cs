@@ -241,6 +241,46 @@ this.Value = another.Value;
 			}
 		}
 
+		[Fact]
+		public void CanUpdateOnMissingProperty()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new  { Name = "Ayende"}, "products/1");
+					s.SaveChanges();
+				}
+
+
+				store.DatabaseCommands.Patch("products/1",
+														 new ScriptedPatchRequest
+														 {
+															 Script = "this.Test = 'a';"
+														 });
+
+
+				var resultDoc = store.DatabaseCommands.Get("products/1");
+
+				Assert.Equal("Ayende", resultDoc.DataAsJson.Value<string>("Name"));
+				Assert.Equal("a", resultDoc.DataAsJson.Value<string>("Test"));
+			}
+		}
+
+		[Fact]
+		public void WillNotErrorOnMissingDocument()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.Patch("products/1",
+														 new ScriptedPatchRequest
+														 {
+															 Script = "this.Test = 'a';"
+														 });
+
+			}
+		}
+
 		private void ExecuteTest(IDocumentStore store)
 		{
 			using (var s = store.OpenSession())

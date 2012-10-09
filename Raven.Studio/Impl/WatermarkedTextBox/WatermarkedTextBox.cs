@@ -11,10 +11,7 @@ namespace Microsoft.Windows.Controls
 {
     using System.Windows;
     using System.Windows.Input;
-    using System.Windows.Markup;
     using System.Diagnostics;
-    using System.Globalization;
-    using System.IO;
     using System.Windows.Controls;
 
     /// <summary>
@@ -41,15 +38,15 @@ namespace Microsoft.Windows.Controls
         /// </summary>
         public WatermarkedTextBox()
         {
-            this.DefaultStyleKey = typeof(WatermarkedTextBox);
+            DefaultStyleKey = typeof(WatermarkedTextBox);
             SetDefaults();
 
-            this.MouseEnter += OnMouseEnter;
-            this.MouseLeave += OnMouseLeave;
-            this.Loaded += OnLoaded;
-            this.LostFocus += OnLostFocus;
-            this.GotFocus += OnGotFocus;
-            this.TextChanged += OnTextChanged;
+            MouseEnter += OnMouseEnter;
+            MouseLeave += OnMouseLeave;
+            Loaded += OnLoaded;
+            LostFocus += OnLostFocus;
+            GotFocus += OnGotFocus;
+            TextChanged += OnTextChanged;
         }
         #endregion
 
@@ -86,37 +83,23 @@ namespace Microsoft.Windows.Controls
         {
             // Update the CommonStates group
             if (!IsEnabled)
-            {
                 VisualStateHelper.GoToState(this, useTransitions, VisualStateHelper.StateDisabled, VisualStateHelper.StateNormal);
-            }
             else if (isHovered)
-            {
                 VisualStateHelper.GoToState(this, useTransitions, VisualStateHelper.StateMouseOver, VisualStateHelper.StateNormal);
-            }
             else
-            {
                 VisualStateHelper.GoToState(this, useTransitions, VisualStateHelper.StateNormal);
-            }
 
             // Update the FocusStates group
             if (hasFocus && IsEnabled)
-            {
                 VisualStateHelper.GoToState(this, useTransitions, VisualStateHelper.StateFocused, VisualStateHelper.StateUnfocused);
-            }
             else
-            {
                 VisualStateHelper.GoToState(this, useTransitions, VisualStateHelper.StateUnfocused);
-            }
 
             // Update the WatermarkStates group
             if (!hasFocus && this.Watermark != null && string.IsNullOrEmpty(this.Text))
-            {
                 VisualStateHelper.GoToState(this, useTransitions, VisualStateHelper.StateWatermarked, VisualStateHelper.StateUnwatermarked);
-            }
             else
-            {
                 VisualStateHelper.GoToState(this, useTransitions, VisualStateHelper.StateUnwatermarked);
-            }
         }
         #endregion
 
@@ -165,7 +148,7 @@ namespace Microsoft.Windows.Controls
 
         private T ExtractTemplatePart<T>(string partName) where T : DependencyObject
         {
-            DependencyObject obj = GetTemplateChild(partName);
+            var obj = GetTemplateChild(partName);
             return ExtractTemplatePart<T>(partName, obj);
         }
 
@@ -192,9 +175,9 @@ namespace Microsoft.Windows.Controls
         /// <param name="args">The <see cref="System.Windows.DependencyPropertyChangedEventArgs"/> instance containing the event data.</param>
         private static void OnIsEnabledPropertyChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
         {
-            WatermarkedTextBox watermarkedTextBox = sender as WatermarkedTextBox;
+            var watermarkedTextBox = sender as WatermarkedTextBox;
             Debug.Assert(watermarkedTextBox != null, "The source is not an instance of a WatermarkedTextBox!");
-            bool newValue = (bool)args.NewValue;
+            var newValue = (bool)args.NewValue;
 
             //MIX-only solution, as IsEnabled is not defined on Control level
             watermarkedTextBox.IsHitTestVisible = newValue;
@@ -215,9 +198,7 @@ namespace Microsoft.Windows.Controls
             isHovered = true;
 
             if (!hasFocus)
-            {
                 ChangeVisualState();
-            }
         }
 
         private void OnMouseLeave(object sender, MouseEventArgs e)
@@ -236,7 +217,7 @@ namespace Microsoft.Windows.Controls
         {
             if (elementContent != null)
             {
-                Control watermarkControl = this.Watermark as Control;
+                var watermarkControl = this.Watermark as Control;
                 if (watermarkControl != null)
                 {
                     watermarkControl.IsTabStop = false;
@@ -252,7 +233,7 @@ namespace Microsoft.Windows.Controls
         /// <param name="args">The <see cref="System.Windows.DependencyPropertyChangedEventArgs"/> instance containing the event data.</param>
         private static void OnWatermarkPropertyChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
         {
-            WatermarkedTextBox watermarkTextBox = sender as WatermarkedTextBox;
+            var watermarkTextBox = sender as WatermarkedTextBox;
             Debug.Assert(watermarkTextBox != null, "The source is not an instance of a WatermarkedTextBox!");
             watermarkTextBox.OnWatermarkChanged();
             watermarkTextBox.ChangeVisualState();
@@ -262,7 +243,7 @@ namespace Microsoft.Windows.Controls
         private void SetDefaults()
         {
             IsEnabled = true;
-            this.Watermark = "Enter text...";
+            Watermark = "Enter text...";
         }
 
         #endregion

@@ -130,7 +130,6 @@
     <Compile Include="Bundles\Compression\Streams\DecompressStream.cs" />
     <Compile Include="Bundles\Compression\Streams\StreamReaderWithUnread.cs" />
     <Compile Include="Bundles\Encryption\Codec.cs" />
-    <Compile Include="Bundles\Encryption\CryptoTransformExtensions.cs" />
     <Compile Include="Bundles\Encryption\Plugin\DocumentEncryption.cs" />
     <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsDeleteTrigger.cs" />
     <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsPutTrigger.cs" />
@@ -145,10 +144,12 @@
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
-    <Compile Include="Bundles\Replication\Responders\AttachmentReplicationBehavior.cs" />
-    <Compile Include="Bundles\Replication\Responders\DocumentReplicationBehavior.cs" />
-    <Compile Include="Bundles\Replication\Responders\SingleItemReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\Behaviors\AttachmentReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\Behaviors\DocumentReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\ReplicationHeartbeat.cs" />
     <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
+    <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
     <Compile Include="Bundles\SpellChecker\IDictionary.cs" />
@@ -186,6 +187,7 @@
     <Compile Include="Queries\MatchNoDocsQuery.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
+    <Compile Include="Server\LogContext.cs" />
     <Compile Include="Server\Responders\Admin\AdminChangeDbId.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminGc.cs" />
@@ -314,13 +316,15 @@
     <Compile Include="Server\Responders\RavenUI.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
     <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
-    <Compile Include="Server\Security\OAuth\OAuthConfigureHttpListener.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
     <Compile Include="Server\Security\Windows\WindowsAuthConfigureHttpListener.cs" />
     <Compile Include="Server\Security\Windows\WindowsRequestAuthorizer.cs" />
     <Compile Include="Impl\CachedDocument.cs" />
@@ -517,7 +521,6 @@
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
-    <Compile Include="Plugins\Builtins\PendingTransactionRecovery.cs" />
     <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
     <Compile Include="Plugins\Builtins\DeleteTemporaryIndexes.cs" />
@@ -670,7 +673,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
-    <Compile Include="Util\BoundedMemoryTarget.cs" />
+    <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />

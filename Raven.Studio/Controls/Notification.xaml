@@ -124,8 +124,8 @@
 								  Color="#FF272727" />
 			</Border.Effect>
 		  <StackPanel Orientation="Horizontal"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center">
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Center">
 				<Grid Margin="5,0,0,0">
 					<Ellipse x:Name="Ellipse"
                              Fill="White"
@@ -134,15 +134,13 @@
 							 Stroke="#FF581129"
 							 HorizontalAlignment="Center"
 							 VerticalAlignment="Center" />
-					<Image 
-                        x:Name="Image"
-                        Stretch="None"
+					<Image x:Name="Image"
+                           Stretch="None"
 						   HorizontalAlignment="Center"
 						   VerticalAlignment="Center">
 					</Image>
 				</Grid>
-				<TextBlock 
-                           x:Name="TextBlock"
+				<TextBlock x:Name="TextBlock"
                            TextWrapping="NoWrap"
 						   Text="{Binding Message, Converter={StaticResource FirstLineOnly}}"
 						   VerticalAlignment="Center"
@@ -152,8 +150,8 @@
                            MaxWidth="650"
                            Behaviors:FadeTrimming.IsEnabled="True"/>
                 <HyperlinkButton Content="Details" Command="{StaticResource ShowErrorListWindowCommand}" CommandParameter="{Binding}" 
-                               Margin="10,0"
-                               Visibility="{Binding Level, Converter={StaticResource VisibleWhenNotificationLevelIsError}}" 
+                                 Margin="10,0"
+                                 Visibility="{Binding Level, Converter={StaticResource VisibleWhenNotificationLevelIsError}}" 
                                  VerticalAlignment="Center"/>
             </StackPanel>
 		</Border>
