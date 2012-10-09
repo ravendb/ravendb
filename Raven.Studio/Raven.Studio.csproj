@@ -1139,6 +1139,8 @@
     <Resource Include="Assets\Images\Image_NotObserved_Tiny.png" />
     <Resource Include="Assets\Images\Image_DeleteObserved_Tiny.png" />
     <Resource Include="Assets\Images\query_options_tiny.png" />
+    <Resource Include="Assets\Images\Image_Key_Add_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Key_Tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

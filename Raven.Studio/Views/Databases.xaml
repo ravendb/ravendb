@@ -304,7 +304,7 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
-                                <Image Source="{StaticResource Image_Database_Tiny}" Style="{StaticResource Style_Image_IndexPageHeader}"/>
+                                <Image Source="{StaticResource Image_Key_Tiny}" Style="{StaticResource Style_Image_IndexPageHeader}"/>
                                 <TextBlock Text="API Keys"
                                        Style="{StaticResource Style_Text_Header}"/>
                             </StackPanel>
@@ -322,7 +322,7 @@
                                                  Grid.Column="0">
                                         <HyperlinkButton.Content>
                                             <StackPanel Orientation="Horizontal">
-                                                <Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                                                <Image Source="{StaticResource Image_Key_Add_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
                                                 <TextBlock Text="New API Key" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </HyperlinkButton.Content>

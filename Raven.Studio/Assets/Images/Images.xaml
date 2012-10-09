@@ -21,6 +21,8 @@
 	<BitmapImage x:Key="Image_DeleteObserved_Tiny" UriSource="Image_DeleteObserved_Tiny.png"/>
 	<BitmapImage x:Key="Image_Check_Tiny" UriSource="Image_Check_Tiny.png"/>
 	<BitmapImage x:Key="Image_Uncheck_Tiny" UriSource="Image_Uncheck_Tiny.png"/>
+	<BitmapImage x:Key="Image_Key_Tiny" UriSource="Image_Key_Tiny.png"/>
+	<BitmapImage x:Key="Image_Key_Add_Tiny" UriSource="Image_Key_Add_Tiny.png"/>
 	<BitmapImage x:Key="Image_Remove_Tiny" UriSource="remove_tiny.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="save_tiny.png"/>
     <BitmapImage x:Key="Image_Search_Small" UriSource="search_tiny.png" />
