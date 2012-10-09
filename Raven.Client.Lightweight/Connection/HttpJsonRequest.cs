@@ -68,10 +68,14 @@ namespace Raven.Client.Connection
 			webRequest.UseDefaultCredentials = true;
 			webRequest.Credentials = requestParams.Credentials;
 			webRequest.Method = requestParams.Method;
-			if (factory.DisableRequestCompression == false &&
-				(requestParams.Method == "POST" || requestParams.Method == "PUT" || 
-				 requestParams.Method == "PATCH" || requestParams.Method == "EVAL"))
-				webRequest.Headers["Content-Encoding"] = "gzip";
+			if (factory.DisableRequestCompression == false)
+			{
+				if(requestParams.Method == "POST" || requestParams.Method == "PUT" ||
+					requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
+					webRequest.Headers["Content-Encoding"] = "gzip";
+
+				webRequest.Headers["Accept-Encoding"] = "gzip";
+			}
 			webRequest.ContentType = "application/json; charset=utf-8";
 			webRequest.Headers.Add("Raven-Client-Version", ClientVersion);
 			WriteMetadata(requestParams.Metadata);

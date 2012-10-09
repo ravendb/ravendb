@@ -4,8 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Replication
@@ -29,6 +31,39 @@ namespace Raven.Bundles.Tests.Replication
 			var company = WaitForDocument<Company>(store2, "companies/1");
 			Assert.Equal("Hibernating Rhinos", company.Name);
 		}
+
+		[Fact]
+		public void Will_limit_replication_history_size_on_items_marked_with_not_for_replication()
+		{
+			var store1 = CreateStore();
+
+			using (var session = store1.OpenSession())
+			{
+				var entity = new Company {Name = "Hibernating Rhinos"};
+				session.Store(entity);
+				session.Advanced.GetMetadataFor(entity)["Raven-Not-For-Replication"] = "true";
+				session.SaveChanges();
+			}
+
+			for (int i = 0; i < 100; i++)
+			{
+				using (var session = store1.OpenSession())
+				{
+					var company = session.Load<Company>(1);
+					company.Name = i%2 == 0 ? "a" : "b";
+					session.SaveChanges();
+				}
+			}
+
+			using (var session = store1.OpenSession())
+			{
+				var company = session.Load<Company>(1);
+				var ravenJArray = session.Advanced.GetMetadataFor(company).Value<RavenJArray>(Constants.RavenReplicationHistory);
+				Assert.Equal(50, ravenJArray.Length);
+			}
+
+		}
+
 
 		[Fact]
 		public void Can_replicate_large_number_of_documents_between_two_instances()
