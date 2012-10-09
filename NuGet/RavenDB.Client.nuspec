@@ -16,8 +16,5 @@
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
 		</frameworkAssemblies>
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
-		<references>
-			<reference file="Raven.Client.Lightweight.dll" />
-		</references>
 	</metadata>
 </package>

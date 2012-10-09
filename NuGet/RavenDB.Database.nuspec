@@ -17,6 +17,7 @@
 		</frameworkAssemblies>
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
 		<references>
+			<reference file="Raven.Abstractions.dll" />
 			<reference file="Raven.Database.dll" />
 		</references>
 	</metadata>
