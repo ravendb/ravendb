@@ -339,7 +339,10 @@ namespace Raven.Bundles.Replication.Tasks
 						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
 					if (TryReplicationAttachments(destination, attachments))// success on second fail
+					{
+						ResetFailureCount(destination.ConnectionStringOptions.Url);
 						return true;
+					}
 				}
 				IncrementFailureCount(destination);
 				return false;
@@ -369,7 +372,10 @@ namespace Raven.Bundles.Replication.Tasks
 						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
 					if (TryReplicationDocuments(destination, jsonDocuments))// success on second fail
+					{
+						ResetFailureCount(destination.ConnectionStringOptions.Url);
 						return true;
+					}
 				}
 				IncrementFailureCount(destination);
 				return false;
