@@ -127,9 +127,14 @@ namespace Raven.Studio.Models
 
 										if (Settings.Instance.SelectedDatabase != null && names.Contains(Settings.Instance.SelectedDatabase))
 										{
-											url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
-											SetCurrentDatabase(url);
-											UrlUtil.Navigate(Settings.Instance.LastUrl);
+											if (url.QueryParams.ContainsKey("database") == false)
+											{
+												url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
+												SetCurrentDatabase(url);
+											}
+
+											if(string.IsNullOrWhiteSpace(url.Path))
+												UrlUtil.Navigate(Settings.Instance.LastUrl);
 										}
 				                   	})
 				.Catch();
