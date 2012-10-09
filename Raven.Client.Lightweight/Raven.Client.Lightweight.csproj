@@ -96,6 +96,9 @@
     <Compile Include="Document\AsyncMultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\AsyncHiLoKeyGenerator.cs" />
     <Compile Include="Document\Async\AsyncDocumentKeyGeneration.cs" />
+    <Compile Include="Document\OAuth\AbstractAuthenticator.cs" />
+    <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
+    <Compile Include="Document\OAuth\SecuredAuthenticator.cs" />
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
@@ -116,6 +119,7 @@
     <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />
     <Compile Include="Document\DocumentStore.cs" />
+    <Compile Include="Document\DTC\PendingTransactionRecovery.cs" />
     <Compile Include="Document\FailoverBehavior.cs" />
     <Compile Include="Document\HiLoKeyGenerator.cs" />
     <Compile Include="Document\HiLoKeyGeneratorBase.cs" />

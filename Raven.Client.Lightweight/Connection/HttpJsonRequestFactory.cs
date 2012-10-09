@@ -143,6 +143,15 @@ namespace Raven.Client.Connection
 			set { disableHttpCaching.Value = value; }
 		}
 
+		/// <summary>
+		/// Advanced: Don't set this unless you know what you are doing!
+		/// 
+		/// Enable using basic authentication using http
+		/// By default, RavenDB only allows basic authentication over HTTPS, setting this property to true
+		/// will instruct RavenDB to make unsecure calls (usually only good for testing / internal networks).
+		/// </summary>
+		public bool EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
+
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);

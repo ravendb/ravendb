@@ -25,11 +25,13 @@ using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using System.Net;
 using System.Net.Sockets;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
 
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection.Async;
 using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Json.Linq;
 #endif
 
 namespace Raven.Client.Connection
@@ -155,7 +157,7 @@ namespace Raven.Client.Connection
 					var serverHash = GetServerHash(serverClient);
 
 					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
-					if (document != null)
+					if (IsInvalidDestinationsDocument(document) == false)
 					{
 						UpdateReplicationInformationFromDocument(document);
 					}
@@ -321,6 +323,14 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		private static bool IsInvalidDestinationsDocument(JsonDocument document)
+		{
+			return document == null ||
+				   document.DataAsJson.ContainsKey("Destinations") == false ||
+				   document.DataAsJson["Destinations"] == null ||
+				   document.DataAsJson["Destinations"].Type == JTokenType.Null;
+		}
+
 		/// <summary>
 		/// Refreshes the replication information.
 		/// Expert use only.
@@ -345,7 +355,7 @@ namespace Raven.Client.Connection
 				}
 
 
-				if (document == null)
+				if (IsInvalidDestinationsDocument(document))
 				{
 					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 					return;
@@ -358,6 +368,8 @@ namespace Raven.Client.Connection
 				lastReplicationUpdate = SystemTime.UtcNow;
 			});
 		}
+
+		
 #else
 		public void RefreshReplicationInformation(ServerClient commands)
 		{

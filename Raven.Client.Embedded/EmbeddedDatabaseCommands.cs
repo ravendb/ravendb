@@ -319,7 +319,7 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			if (overwrite == false && database.IndexStorage.Indexes.Contains(name))
-				throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+				throw new InvalidOperationException("Cannot put index: " + name + ", index already exists"); 
 			return database.PutIndex(name, definition);
 		}
 
@@ -382,21 +382,21 @@ namespace Raven.Client.Embedded
 						.Where(x => x["@metadata"] != null)
 						.Select(x => x["@metadata"].Value<string>("@id"))
 						.Where(x => x != null)
-					);
+					); 
 
 			if (includes != null)
 			{
-				var includeCmd = new AddIncludesCommand(database, TransactionInformation,
-														(etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+			var includeCmd = new AddIncludesCommand(database, TransactionInformation,
+			                                        (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
 
-				foreach (var result in queryResult.Results)
-				{
-					includeCmd.Execute(result);
-				}
+			foreach (var result in queryResult.Results)
+			{
+				includeCmd.Execute(result);
+			}
 
-				includeCmd.AlsoInclude(queryResult.IdsToInclude);
+			includeCmd.AlsoInclude(queryResult.IdsToInclude);
 
-				EnsureLocalDate(queryResult.Includes);
+			EnsureLocalDate(queryResult.Includes);
 			}
 
 			return queryResult;
@@ -423,7 +423,7 @@ namespace Raven.Client.Embedded
 		/// <param name="name">The name.</param>
 		public void DeleteIndex(string name)
 		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			CurrentOperationContext.Headers.Value = OperationsHeaders; 
 			database.DeleteIndex(name);
 		}
 
@@ -451,11 +451,11 @@ namespace Raven.Client.Embedded
 
 			if (includes != null)
 			{
-				var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
-				foreach (var jsonDocument in multiLoadResult.Results)
-				{
-					includeCmd.Execute(jsonDocument);
-				}
+			var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
+			foreach (var jsonDocument in multiLoadResult.Results)
+			{
+				includeCmd.Execute(jsonDocument);
+			}
 			}
 
 			return multiLoadResult;
@@ -471,7 +471,7 @@ namespace Raven.Client.Embedded
 			{
 				commandData.TransactionInformation = TransactionInformation;
 			}
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			CurrentOperationContext.Headers.Value = OperationsHeaders; 
 			return database.Batch(commandDatas);
 		}
 
@@ -491,7 +491,7 @@ namespace Raven.Client.Embedded
 		/// <param name="txId">The tx id.</param>
 		public void Rollback(Guid txId)
 		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			CurrentOperationContext.Headers.Value = OperationsHeaders; 
 			database.Rollback(txId);
 		}
 
@@ -502,25 +502,8 @@ namespace Raven.Client.Embedded
 		/// <returns></returns>
 		public byte[] PromoteTransaction(Guid fromTxId)
 		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			CurrentOperationContext.Headers.Value = OperationsHeaders; 
 			return database.PromoteTransaction(fromTxId);
-		}
-
-		/// <summary>
-		/// Stores the recovery information.
-		/// </summary>
-		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
-		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jObject = new RavenJObject
-			{
-				{"Resource-Manager-Id", resourceManagerId.ToString()},
-				{Constants.NotForReplication, true}
-			};
-			database.PutStatic("transactions/recoveryInformation/" + txId, null, new MemoryStream(recoveryInformation), jObject);
 		}
 
 		/// <summary>
@@ -664,16 +647,16 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.ExecuteGetTermsQuery(index, field, fromValue, pageSize);
-
+	 
 		}
 
-		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
-		/// </summary>
-		/// <param name="index"></param>
-		/// <param name="query"></param>
-		/// <param name="facetSetupDoc"></param>
-		/// <returns></returns>
+	    /// <summary>
+	    /// Using the given Index, calculate the facets as per the specified doc
+	    /// </summary>
+	    /// <param name="index"></param>
+	    /// <param name="query"></param>
+	    /// <param name="facetSetupDoc"></param>
+	    /// <returns></returns>
 		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
