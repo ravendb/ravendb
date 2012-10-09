@@ -19,6 +19,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
 				</Grid.RowDefinitions>
 
 				<TextBlock Text="Url" Style="{StaticResource Style_TextBlock_FieldName}"/>
@@ -29,6 +30,9 @@
 
 				<TextBlock Grid.Row="2" Text="TimeStamp" Style="{StaticResource Style_TextBlock_FieldName}"/>
 				<TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TimeStamp}"/>
+
+				<TextBlock Grid.Row="3" Text="Last Error" Style="{StaticResource Style_TextBlock_FieldName}"/>
+				<TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LastError}"/>
 			</Grid>
 		</DataTemplate>
 	</UserControl.Resources>

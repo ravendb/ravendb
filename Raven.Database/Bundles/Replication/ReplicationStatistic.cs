@@ -21,5 +21,6 @@ namespace Raven.Database.Bundles.Replication
 		public string Url { get; set; }
 		public int FailureCount { get; set; }
 		public DateTime TimeStamp { get; set; }
+		public string LastError { get; set; }
 	}
 }

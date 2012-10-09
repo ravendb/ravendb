@@ -33,7 +33,7 @@ namespace Raven.Studio.Models
 			if (asyncServerClient == null)
 				return;
 
-			asyncServerClient.CreateRequest("/replication/info", "GET")
+			asyncServerClient.CreateRequest("/replication/info?noCache="+Guid.NewGuid(), "GET")
 					.ReadResponseJsonAsync()
 					.ContinueWith(task =>
 					{

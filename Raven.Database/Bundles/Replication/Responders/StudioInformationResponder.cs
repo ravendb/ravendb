@@ -52,7 +52,8 @@ namespace Raven.Bundles.Replication.Responders
 					        {
 						        Url = pair.Key,
 						        FailureCount = pair.Value.Count,
-						        TimeStamp = pair.Value.Timestamp
+						        TimeStamp = pair.Value.Timestamp,
+								LastError = pair.Value.LastError
 					        }).ToList()
 			}));
 		}
