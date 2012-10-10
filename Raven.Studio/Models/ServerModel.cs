@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
@@ -43,7 +44,8 @@ namespace Raven.Studio.Models
             Databases = new BindableCollection<string>(name => name);
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
-			Initialize();
+		    IsConnected = new Observable<bool>();
+		    Initialize();
 		}
 
 		private void Initialize()
@@ -89,6 +91,20 @@ namespace Raven.Studio.Models
 		private static bool firstTick = true;
 		public override Task TimerTickedAsync()
 		{
+            if(IsConnected.Value == false)
+            {
+                DocumentStore.AsyncDatabaseCommands
+                    .GetStatisticsAsync()
+                    .ContinueOnSuccess(stats =>
+                    {
+                        IsConnected.Value = true;
+                        var url = UrlUtil.Url;
+                        SelectedDatabase.Value = new DatabaseModel(Constants.SystemDatabase, documentStore);
+                        Initialize();
+                        SetCurrentDatabase(new UrlParser(url));
+                    });
+            }
+
 			if (singleTenant)
 				return null;
 
@@ -221,5 +237,6 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<LicensingStatus> License { get; private set; }
+        public Observable<bool> IsConnected { get; set; }
 	}
 }

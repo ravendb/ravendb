@@ -59,9 +59,9 @@ namespace Raven.Studio.Models
 											? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
 											: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 
-			DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
-				.SampleResponsive(TimeSpan.FromSeconds(2))
-				.Subscribe(_ => RefreshStatistics());
+		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
+		        .SampleResponsive(TimeSpan.FromSeconds(2))
+		        .Subscribe(_ => RefreshStatistics(), exception => ApplicationModel.Current.Server.Value.IsConnected.Value = false);
 
 			RefreshStatistics();
 		}
@@ -168,8 +168,13 @@ namespace Raven.Studio.Models
 				{
 					Statistics.Value = stats;
 					Status.Value = "Online";
+				  //  ApplicationModel.Current.Server.Value.IsConnected.Value = true;
 				})
-				.Catch(exception => Status.Value = "Offline");
+				.Catch(exception =>
+				{
+				    Status.Value = "Offline";
+				  //  ApplicationModel.Current.Server.Value.IsConnected.Value = false;
+				});
 		}
 
 	    public void Dispose()
