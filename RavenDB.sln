@@ -24,6 +24,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NuGet", "NuGet", "{081F76C1
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6828A6A5-B925-4716-8D08-2B26353C54C2} = {6828A6A5-B925-4716-8D08-2B26353C54C2}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Server", "Raven.Server\Raven.Server.csproj", "{3B90EB20-AEA3-4972-8219-936F1A62768C}"
 EndProject
