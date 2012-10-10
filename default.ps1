@@ -18,9 +18,9 @@ properties {
 			return "$build_dir\$_"
 		}
 	
-	$web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" )
+	$web_files = @("..\DefaultConfigs\web.config" )
 	
-	$server_files = @( "Raven.Server.???", "Raven.Studio.xap", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
+	$server_files = @( "Raven.Server.???", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
 					 "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",  "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", 
 					"Esent.Interop.???", "Jint.???","Antlr3.Runtime.???","Raven.Abstractions.???", "Raven.Database.???" ) |
 		ForEach-Object { 
@@ -50,7 +50,7 @@ properties {
 	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "Jint.???","Antlr3.Runtime.???","ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 						"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",(Get-DependencyPackageFiles 'NLog.2'),
-						   "AsyncCtpLibrary.???", "Raven.Studio.xap"  ) |
+						   "AsyncCtpLibrary.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -445,17 +445,13 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
 	@("BouncyCastle.Crypto.???", "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 		"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",	"NewtonSoft.Json.???", "NLog.???",
-		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???",
-		"Raven.Studio.xap") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server\tools }
+		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server\tools }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
 	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40 }
 	New-Item $nuget_dir\RavenDB.Embedded\tools -Type directory | Out-Null
-	Copy-Item $build_dir\Raven.Studio.xap $nuget_dir\RavenDB.Embedded\tools
-	Copy-Item $base_dir\NuGet\RavenDB.Embedded.install.ps1 $nuget_dir\RavenDB.Embedded\tools\install.ps1
-	Copy-Item $base_dir\NuGet\RavenDB.Embedded.uninstall.ps1 $nuget_dir\RavenDB.Embedded\tools\uninstall.ps1
 		
 	New-Item $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.UniqueConstraints.nuspec $nuget_dir\RavenDB.Client.UniqueConstraints\RavenDB.Client.UniqueConstraints.nuspec
@@ -487,9 +483,6 @@ task CreateNugetPackages -depends Compile {
 	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
 	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
 	New-Item $nuget_dir\RavenDB.AspNetHost\tools -Type directory | Out-Null
-	Copy-Item $build_dir\Raven.Studio.xap $nuget_dir\RavenDB.AspNetHost\tools
-	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.install.ps1 $nuget_dir\RavenDB.AspNetHost\tools\install.ps1
-	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.uninstall.ps1 $nuget_dir\RavenDB.AspNetHost\tools\uninstall.ps1
 	
 	$nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
