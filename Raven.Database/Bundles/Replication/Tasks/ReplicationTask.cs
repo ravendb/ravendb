@@ -341,7 +341,7 @@ namespace Raven.Bundles.Replication.Tasks
 						destination);
 					if (TryReplicationAttachments(destination, attachments, out lastError))// success on second fail
 					{
-						ResetFailureCount(destination.ConnectionStringOptions.Url);
+						ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
 						return true;
 					}
 				}
@@ -375,7 +375,7 @@ namespace Raven.Bundles.Replication.Tasks
 						destination);
 					if (TryReplicationDocuments(destination, jsonDocuments, out lastError))// success on second fail
 					{
-						ResetFailureCount(destination.ConnectionStringOptions.Url);
+						ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
 						return true;
 					}
 				}
