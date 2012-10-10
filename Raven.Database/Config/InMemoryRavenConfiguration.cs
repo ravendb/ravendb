@@ -45,7 +45,7 @@ namespace Raven.Database.Config
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
 
-			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2);
+			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory / 2);
 			MaxNumberOfParallelIndexTasks = 8;
 
 			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
@@ -99,7 +99,7 @@ namespace Raven.Database.Config
 
 			// Index settings
 			var maxIndexingRunLatencyStr = Settings["Raven/MaxIndexingRunLatency"];
-			if(maxIndexingRunLatencyStr != null)
+			if (maxIndexingRunLatencyStr != null)
 			{
 				MaxIndexingRunLatency = TimeSpan.Parse(maxIndexingRunLatencyStr);
 			}
@@ -154,22 +154,22 @@ namespace Raven.Database.Config
 
 			var tempMemoryMaxMb = Settings["Raven/TempIndexInMemoryMaxMB"];
 			TempIndexInMemoryMaxBytes = tempMemoryMaxMb != null ? int.Parse(tempMemoryMaxMb) * 1024 * 1024 : 26214400;
-			TempIndexInMemoryMaxBytes = Math.Max(1024*1024, TempIndexInMemoryMaxBytes);
+			TempIndexInMemoryMaxBytes = Math.Max(1024 * 1024, TempIndexInMemoryMaxBytes);
 
 			// Data settings
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
-			if(string.IsNullOrEmpty(DefaultStorageTypeName))
+			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded =
 				GetConfigurationValue<bool>("Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded") ?? true;
 
 			ResetIndexOnUncleanShutdown = GetConfigurationValue<bool>("Raven/ResetIndexOnUncleanShutdown") ?? false;
-			
+
 			SetupTransactionMode();
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
-			
+
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
 			{
 				IndexStoragePath = Settings["Raven/IndexStoragePath"];
@@ -177,7 +177,7 @@ namespace Raven.Database.Config
 
 			// HTTP settings
 			HostName = Settings["Raven/HostName"];
-			if(string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 				Port = PortUtil.GetPort(Settings["Raven/Port"]);
 			SetVirtualDirectory();
 
@@ -201,7 +201,7 @@ namespace Raven.Database.Config
 			PluginsDirectory = (Settings["Raven/PluginsDirectory"] ?? @"~\Plugins").ToFullPath();
 
 			var taskSchedulerType = Settings["Raven/TaskScheduler"];
-			if(taskSchedulerType != null)
+			if (taskSchedulerType != null)
 			{
 				var type = Type.GetType(taskSchedulerType);
 				CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
@@ -225,7 +225,7 @@ namespace Raven.Database.Config
 			container = null;
 
 			var bundlesFilteredCatalog = Catalog.Catalogs.OfType<BundlesFilteredCatalog>().FirstOrDefault();
-			if(bundlesFilteredCatalog != null)
+			if (bundlesFilteredCatalog != null)
 			{
 				bundlesFilteredCatalog.Bundles = bundles;
 				return;
@@ -332,23 +332,23 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				HttpContext httpContext;
+				HttpRequest httpRequest = null;
 				try
 				{
-					httpContext = HttpContext.Current;
+					if (HttpContext.Current != null)
+						httpRequest = HttpContext.Current.Request;
 				}
 				catch (Exception)
 				{
 					// the issue is probably Request is not available in this context
 					// we can safely ignore this, at any rate
-					httpContext = null;
 				}
-				if (httpContext != null)// running in IIS, let us figure out how
+				if (httpRequest != null)// running in IIS, let us figure out how
 				{
-					var url = httpContext.Request.Url;
+					var url = httpRequest.Url;
 					return new UriBuilder(url)
 					{
-						Path = httpContext.Request.ApplicationPath,
+						Path = httpRequest.ApplicationPath,
 						Query = ""
 					}.Uri.ToString();
 				}
@@ -532,7 +532,7 @@ namespace Raven.Database.Config
 				if (virtualDirectory.EndsWith("/"))
 					virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
 				if (virtualDirectory.StartsWith("/") == false)
-					virtualDirectory = "/" + virtualDirectory; 
+					virtualDirectory = "/" + virtualDirectory;
 			}
 		}
 
@@ -585,7 +585,7 @@ namespace Raven.Database.Config
 		public string DefaultStorageTypeName
 		{
 			get { return defaultStorageTypeName; }
-			set { if(!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
+			set { if (!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
 		}
 		private string defaultStorageTypeName;
 
@@ -758,7 +758,7 @@ namespace Raven.Database.Config
 					storageEngine = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 					break;
 				case "munin":
-					storageEngine = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+					storageEngine = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 					break;
 			}
 			var type = Type.GetType(storageEngine);
@@ -781,7 +781,7 @@ namespace Raven.Database.Config
 					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
-					return typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
 			return DefaultStorageTypeName;
 		}

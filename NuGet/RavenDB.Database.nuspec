@@ -12,12 +12,13 @@
 		<projectUrl>http://www.ravendb.net/</projectUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<tags>nosql ravendb raven document database</tags>
-		<dependencies>
-			<dependency id="NLog" version="[2.0.0.2000]" />
-		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
 		</frameworkAssemblies>
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
+		<references>
+			<reference file="Raven.Abstractions.dll" />
+			<reference file="Raven.Database.dll" />
+		</references>
 	</metadata>
 </package>

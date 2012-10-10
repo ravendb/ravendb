@@ -91,6 +91,10 @@ namespace Raven.Database.Json
 					{
 						ctx.SetParameter(kvp.Key, (double)kvp.Value);
 					}
+					else if(kvp.Value is RavenJObject)
+					{
+						ctx.SetParameter(kvp.Key, ToJsObject(ctx.Global, (RavenJObject)kvp.Value));
+					}
 					else
 					{
 						ctx.SetParameter(kvp.Key, kvp.Value);

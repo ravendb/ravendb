@@ -49,18 +49,37 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
+		public void CanPatchUsingRavenJObjectVars()
+		{
+			var doc = RavenJObject.FromObject(test);
+			var variableSource = new { NewComment = "New Comment" };
+			var variable = RavenJObject.FromObject(variableSource);
+			var script = "this.Comments[0] = variable.NewComment;";
+			var patch = new ScriptedPatchRequest()
+			{
+				Script = script,
+				Values = { { "variable", variable } }
+			};
+
+			var resultJson = new ScriptedJsonPatcher().Apply(doc, patch);
+			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+
+			Assert.Equal(variableSource.NewComment, result.Comments[0]);
+		}
+
+		[Fact]
 		public void CanRemoveFromCollectionByValue()
 		{
 			var doc = RavenJObject.FromObject(test);
 			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-			                                                                              	{
-			                                                                              		Script = @"
+																							{
+																								Script = @"
 this.Comments.Remove('two');
 "
 																							});
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-			Assert.Equal(new[]{"one","seven"}.ToList(), result.Comments);
+			Assert.Equal(new[] { "one", "seven" }.ToList(), result.Comments);
 		}
 
 		[Fact]
@@ -84,10 +103,10 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			var doc = RavenJObject.FromObject(test);
 			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-			                                                                              	{
-			                                                                              		Script = "this.TheName = Name",
-																								Values = {{"Name", "ayende"}}
-			                                                                              	});
+																							{
+																								Script = "this.TheName = Name",
+																								Values = { { "Name", "ayende" } }
+																							});
 			Assert.Equal("ayende", resultJson.Value<string>("TheName"));
 		}
 
@@ -97,9 +116,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			var doc = RavenJObject.FromObject(test);
 			Assert.Throws<NotSupportedException>(
 				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-				                                                                   	{
-				                                                                   		Script = "eval('this.Value = 2')",
-				                                                                   	}));
+																					{
+																						Script = "eval('this.Value = 2')",
+																					}));
 		}
 
 		[Fact]
@@ -116,7 +135,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			var doc = RavenJObject.FromObject(test);
 			var invalidOperationException = Assert.Throws<InvalidOperationException>(
-				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest {Script = "raise 'problem'"}));
+				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "raise 'problem'" }));
 
 			Assert.Contains("problem", invalidOperationException.Message);
 		}
@@ -127,10 +146,10 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
 			advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-			                                                             	{
+																			{
 																				Script = "output(this.Id)"
-			                                                             	});
-		
+																			});
+
 			Assert.Equal("someId", advancedJsonPatcher.Debug[0]);
 		}
 
@@ -140,9 +159,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
 			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-			                                                                         	{
-			                                                                         		Script = "while(true) {}"
-			                                                                         	}));
+																						{
+																							Script = "while(true) {}"
+																						}));
 		}
 
 		[Fact]
@@ -170,7 +189,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CanPerformAdvancedPatching_Remotely()
 		{
-			using (var server = GetNewServer(port:8079))
+			using (var server = GetNewServer(port: 8079))
 			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -193,7 +212,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
 		{
-			using (GetNewServer()) 
+			using (GetNewServer())
 			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -210,7 +229,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			{
 				ExecuteSetBasedTest(store);
 			}
-		}		
+		}
 
 		[Fact]
 		public void CanUpdateBasedOnAnotherDocumentProperty()
@@ -219,19 +238,19 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			{
 				using (var s = store.OpenSession())
 				{
-					s.Store(new CustomType { Value = 2});
-					s.Store(new CustomType {  Value = 1 });
+					s.Store(new CustomType { Value = 2 });
+					s.Store(new CustomType { Value = 1 });
 					s.SaveChanges();
 				}
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
-				                                              	{
-				                                              		Script = @"
+																{
+																	Script = @"
 var another = LoadDocument(anotherId);
 this.Value = another.Value;
 ",
-				                                              		Values = {{"anotherId", "CustomTypes/2"}}
-				                                              	});
+																	Values = { { "anotherId", "CustomTypes/2" } }
+																});
 
 				var resultDoc = store.DatabaseCommands.Get("CustomTypes/1");
 				var resultJson = resultDoc.DataAsJson;
@@ -248,7 +267,7 @@ this.Value = another.Value;
 			{
 				using (var s = store.OpenSession())
 				{
-					s.Store(new  { Name = "Ayende"}, "products/1");
+					s.Store(new { Name = "Ayende" }, "products/1");
 					s.SaveChanges();
 				}
 
@@ -310,16 +329,16 @@ this.Value = another.Value;
 								Id = "someId/",
 								Owner = "bob",
 								Value = 12143,
-								Comments = new List<string>(new[] {"one", "two", "seven"})
+								Comments = new List<string>(new[] { "one", "two", "seven" })
 							};
 			var item2 = new CustomType
 							{
 								Id = "someId/",
 								Owner = "NOT bob",
 								Value = 9999,
-								Comments = new List<string>(new[] {"one", "two", "seven"})
+								Comments = new List<string>(new[] { "one", "two", "seven" })
 							};
-			
+
 			using (var s = store.OpenSession())
 			{
 				s.Store(item1);
@@ -327,7 +346,7 @@ this.Value = another.Value;
 				s.SaveChanges();
 			}
 
-			store.DatabaseCommands.PutIndex("TestIndex", 
+			store.DatabaseCommands.PutIndex("TestIndex",
 					new IndexDefinition
 					{
 						Map = @"from doc in docs 
@@ -342,7 +361,7 @@ this.Value = another.Value;
 											new ScriptedPatchRequest { Script = sampleScript });
 
 			var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
-			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());			
+			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());
 			Assert.Equal(2, item1Result.Comments.Count);
 			Assert.Equal("one test", item1Result.Comments[0]);
 			Assert.Equal("two", item1Result.Comments[1]);
@@ -350,7 +369,7 @@ this.Value = another.Value;
 			Assert.Equal("err!!", item1ResultJson["newValue"]);
 
 			var item2ResultJson = store.DatabaseCommands.Get(item2.Id).DataAsJson;
-			var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());			
+			var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());
 			Assert.Equal(9999, item2Result.Value);
 			Assert.Equal(3, item2Result.Comments.Count);
 			Assert.Equal("one", item2Result.Comments[0]);

@@ -66,13 +66,13 @@ namespace Raven.Client.Shard
 				return document;
 
 			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
-		}
+			}
 
 		protected override string GenerateKey(object entity)
-		{
+			{
 			var shardId = shardStrategy.ShardResolutionStrategy.MetadataShardIdFor(entity);
-			IDatabaseCommands value;
-			if (shardDbCommands.TryGetValue(shardId, out value) == false)
+				IDatabaseCommands value;
+				if (shardDbCommands.TryGetValue(shardId, out value) == false)
 				throw new InvalidOperationException("Could not find shard: " + shardId);
 			return Conventions.GenerateDocumentKey(value, entity);
 		}
@@ -87,7 +87,7 @@ namespace Raven.Client.Shard
 		ISyncAdvancedSessionOperation IDocumentSession.Advanced
 		{
 			get { return this; }
-		}
+			}
 
 		/// <summary>
 		/// Access the lazy operations
@@ -101,9 +101,9 @@ namespace Raven.Client.Shard
 		/// Access the eager operations
 		/// </summary>
 		IEagerSessionOperations ISyncAdvancedSessionOperation.Eagerly
-			{
+		{
 			get { return this; }
-			}
+		}
 
 		#endregion
 
@@ -167,6 +167,11 @@ namespace Raven.Client.Shard
 			return Load<T>(documentKey);
 		}
 
+		public T[] LoadInternal<T>(string[] ids)
+		{
+			return LoadInternal<T>(ids, new string[0]);
+		}
+
 		public T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
 			var results = new T[ids.Length];
@@ -217,11 +222,6 @@ namespace Raven.Client.Shard
 				}
 			}
 			return results;
-		}
-
-		public T[] LoadInternal<T>(string[] ids)
-		{
-			return LoadInternal<T>(ids, null);
 		}
 
 		public ILoaderWithInclude<object> Include(string path)
@@ -474,7 +474,7 @@ namespace Raven.Client.Shard
 		public IDocumentQuery<T> LuceneQuery<T>()
 		{
 			return LuceneQuery<T>(GetDynamicIndexName<T>());
-		}
+			}
 
 		#endregion
 
@@ -597,6 +597,6 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
 			return commands.UrlFor(value.Key);
 		}
-					}
+						}
 }
 #endif

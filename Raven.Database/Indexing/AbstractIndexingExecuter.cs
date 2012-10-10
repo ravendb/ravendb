@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Server;
 using Raven.Database.Storage;
 using System.Linq;
 using Task = Raven.Database.Tasks.Task;
@@ -30,59 +31,62 @@ namespace Raven.Database.Indexing
 
 		public void Execute()
 		{
-			var name = GetType().Name;
-			var workComment = "WORK BY " + name;
-
-			while (context.DoWork)
+			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
-				var foundWork = false;
-				try
+				LogContext.DatabaseName.Value = context.DatabaseName;
+				var name = GetType().Name;
+				var workComment = "WORK BY " + name;
+				while (context.DoWork)
 				{
-					foundWork = ExecuteIndexing();
-					while (context.DoWork) // we want to drain all of the pending tasks before the next run
+					var foundWork = false;
+					try
 					{
-						if (ExecuteTasks() == false)
-							break;
-						foundWork = true;
-					}
+						foundWork = ExecuteIndexing();
+						while (context.DoWork) // we want to drain all of the pending tasks before the next run
+						{
+							if (ExecuteTasks() == false)
+								break;
+							foundWork = true;
+						}
 
-				}
-				catch (OutOfMemoryException oome)
-				{
-					foundWork = true;
-					HandleOutOfMemoryException(oome);
-				}
-				catch (AggregateException ae)
-				{
-					foundWork = true;
-					var oome = ae.ExtractSingleInnerException() as OutOfMemoryException;
-					if (oome == null)
-					{
-						log.ErrorException("Failed to execute indexing", ae);
 					}
-					else
+					catch (OutOfMemoryException oome)
 					{
+						foundWork = true;
 						HandleOutOfMemoryException(oome);
 					}
-				}
-				catch (OperationCanceledException)
-				{
-					log.Info("Got rude cancelation of indexing as a result of shutdown, aborting current indexing run");
-					return;
-				}
-				catch (Exception e)
-				{
-					foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
-					log.ErrorException("Failed to execute indexing", e);
-				}
-				if (foundWork == false)
-				{
-					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
-				}
-				else // notify the tasks executer that it has work to do
-				{
-					context.ShouldNotifyAboutWork(() => workComment);
-					context.NotifyAboutWork();
+					catch (AggregateException ae)
+					{
+						foundWork = true;
+						var oome = ae.ExtractSingleInnerException() as OutOfMemoryException;
+						if (oome == null)
+						{
+							log.ErrorException("Failed to execute indexing", ae);
+						}
+						else
+						{
+							HandleOutOfMemoryException(oome);
+						}
+					}
+					catch (OperationCanceledException)
+					{
+						log.Info("Got rude cancelation of indexing as a result of shutdown, aborting current indexing run");
+						return;
+					}
+					catch (Exception e)
+					{
+						foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
+						log.ErrorException("Failed to execute indexing", e);
+					}
+					if (foundWork == false)
+					{
+						context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
+					}
+					else // notify the tasks executer that it has work to do
+					{
+						context.ShouldNotifyAboutWork(() => workComment);
+						context.NotifyAboutWork();
+					}
 				}
 			}
 		}

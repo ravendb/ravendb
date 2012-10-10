@@ -314,6 +314,19 @@ namespace Jint {
             return this;
         }
 
+
+		/// <summary>
+		/// Defines an external JsObject value to be available inside the script
+		/// </summary>
+		/// <param name="name">Local name of the Double value during the execution of the script</param>
+		/// <param name="value">Available JsObject value</param>
+		/// <returns>The current JintEngine instance</returns>
+		public JintEngine SetParameter(string name, JsObject value)
+		{
+			Visitor.GlobalScope[name] = value;
+			return this;
+		}
+
         /// <summary>
         /// Defines an external String instance to be available inside the script
         /// </summary>

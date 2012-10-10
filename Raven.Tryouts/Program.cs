@@ -17,10 +17,20 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
+			var store = new DocumentStore
+			{
+				Url = "https://1.ravenhq.com",
+				ApiKey = "adc19257-fc90-4027-a40d-9dbac1542ce8",
+				DefaultDatabase = "hibernating-rhinos-anothera",
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately
+				}
+			};
 
-			double d = (double) (1000000000000000000000.12992);
+			store.Initialize();
 
-			Console.WriteLine(d.ToString("############################################   .    #############################################"));
+			store.DatabaseCommands.Put("users/1", null, new RavenJObject(), new RavenJObject());
 		}
 
 		private static void UseMyData()

@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
+using Raven.Database.Server;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
@@ -104,7 +106,14 @@ namespace Raven.Database.Indexing
 				{
 					TaskScheduler = scheduler,
 					MaxDegreeOfParallelism = configuration.MaxNumberOfParallelIndexTasks
-				},(item,_,index)=>action(item, currentStart + index));
+				},(item,_,index)=>
+				{
+					using(new DisposableAction(() => LogContext.DatabaseName.Value = null))
+					{
+						LogContext.DatabaseName.Value = context.DatabaseName;
+						action(item, currentStart + index);
+					}
+				});
 				start += partitioned.Count;
 			}
 		}

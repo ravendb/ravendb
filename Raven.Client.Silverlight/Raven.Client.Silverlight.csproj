@@ -887,6 +887,15 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\IAsyncLoaderWithInclude.cs">
       <Link>Imports\Document\IAsyncLoaderWithInclude.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\AbstractAuthenticator.cs">
+      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\BasicAuthenticator.cs">
+      <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\SecuredAuthenticator.cs">
+      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
       <Link>Imports\Document\OpenSessionOptions.cs</Link>
     </Compile>
