@@ -71,33 +71,15 @@ namespace Raven.Database.Json
 			{
 				foreach (var kvp in patch.Values)
 				{
-					if (kvp.Value is bool)
+					if(kvp.Value is RavenJToken)
 					{
-						ctx.SetParameter(kvp.Key, (bool)kvp.Value);
-					}
-					else if (kvp.Value is DateTime)
-					{
-						ctx.SetParameter(kvp.Key, (DateTime)kvp.Value);
-					}
-					else if (kvp.Value is string)
-					{
-						ctx.SetParameter(kvp.Key, (string)kvp.Value);
-					}
-					else if (kvp.Value is int)
-					{
-						ctx.SetParameter(kvp.Key, (int)kvp.Value);
-					}
-					else if (kvp.Value is double)
-					{
-						ctx.SetParameter(kvp.Key, (double)kvp.Value);
-					}
-					else if(kvp.Value is RavenJObject)
-					{
-						ctx.SetParameter(kvp.Key, ToJsObject(ctx.Global, (RavenJObject)kvp.Value));
+						ctx.SetParameter(kvp.Key, ToJsInstance(ctx.Global, (RavenJToken)kvp.Value));
 					}
 					else
 					{
-						ctx.SetParameter(kvp.Key, kvp.Value);
+						var rjt = RavenJToken.FromObject(kvp.Value);
+						var jsInstance = ToJsInstance(ctx.Global, rjt);
+						ctx.SetParameter(kvp.Key, jsInstance);
 					}
 				}
 				var jsObject = ToJsObject(ctx.Global, doc);
