@@ -57,6 +57,7 @@ namespace Raven.Client.Changes
 									{
 										AvoidCachingRequest = true
 									};
+
 			return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
 				.ServerPullAsync()
 				.ContinueWith(task =>
@@ -68,9 +69,16 @@ namespace Raven.Client.Changes
 										reconnectAttemptsRemaining--;
 										return EstablishConnection();
 									}
+
 									reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
 									connection = (IDisposable)task.Result;
 									task.Result.Subscribe(this);
+
+									foreach (var data in connectionsData)
+									{
+										Send(data.Key, string.IsNullOrWhiteSpace(data.Value) ? null : data.Value);
+									}
+
 									return task;
 								})
 				.Unwrap();
@@ -98,11 +106,11 @@ namespace Raven.Client.Changes
                     return Send("watch-index", indexName);
 			    });
 				
-
 				return new LocalConnectionState(
 					() =>
 					{
-                        connectionsData.AddOrUpdate("unwatch-index", indexName, (s1, s2) => s2);                        
+						string value;
+                        connectionsData.TryRemove("watch-index", out value);                        
 						Send("unwatch-index", indexName);
 						counters.Remove("indexes/" + indexName);
 					},
@@ -169,7 +177,8 @@ namespace Raven.Client.Changes
 				return new LocalConnectionState(
 					() =>
 					{
-                        connectionsData.AddOrUpdate("unwatch-doc", docId, (s1, s2) => s2);
+						string value;
+                        connectionsData.TryRemove("watch-doc", out value);
 						Send("unwatch-doc", docId);
 						counters.Remove("docs/" + docId);
 					},
@@ -204,7 +213,8 @@ namespace Raven.Client.Changes
 				return new LocalConnectionState(
 					() =>
 					{
-                        connectionsData.AddOrUpdate("unwatch-docs", "", (s1, s2) => s2);
+						string value;
+                        connectionsData.TryRemove("watch-docs", out value);
 						Send("unwatch-docs", null);
 						counters.Remove("all-docs");
 					},
@@ -240,7 +250,8 @@ namespace Raven.Client.Changes
 				return new LocalConnectionState(
 					() =>
 					{
-					    connectionsData.AddOrUpdate("unwatch-indexes", "", (s1, s2) => s2);
+						string value;
+					    connectionsData.TryRemove("watch-indexes", out value);
 						Send("unwatch-indexes", null);
 						counters.Remove("all-indexes");
 					},
@@ -276,7 +287,8 @@ namespace Raven.Client.Changes
 				return new LocalConnectionState(
 					() =>
 					{
-                        connectionsData.AddOrUpdate("unwatch-prefix", docIdPrefix, (s1, s2) => s2);
+						string value;
+                        connectionsData.TryRemove("watch-prefix", out value);
 						Send("unwatch-prefix", docIdPrefix);
 						counters.Remove("prefixes/" + docIdPrefix);
 					},
@@ -373,11 +385,6 @@ namespace Raven.Client.Changes
 				.ObserveException()
 				.ContinueWith(task =>
 								{
-								    foreach (var data in connectionsData)
-								    {
-								        Send(data.Key, string.IsNullOrWhiteSpace(data.Value) ? null : data.Value);
-								    }
-
 									if (task.IsFaulted == false)
 										return;
 

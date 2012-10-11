@@ -313,6 +313,39 @@ namespace Raven.Client.Silverlight.Connection.Async
 			});
 		}
 
+		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+		{
+			return UpdateByIndex(indexName, queryToUpdate, patch, false);
+		}
+
+		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		{
+			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
+			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
+		}
+
+		private Task UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+		{
+
+			return ExecuteWithReplication(method, operationUrl =>
+			{
+				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, path, method, credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
+				return request.ExecuteWriteAsync(requestData);
+				//return request.ExecuteRequestAsync();
+			});
+		}
+
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{
 			return ExecuteWithReplication("GET", operationUrl =>

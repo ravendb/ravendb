@@ -581,6 +581,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\WriteState.cs">
       <Link>Imports\Imports\Newtonsoft.Json\WriteState.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Commands\ScriptedPatchCommandData.cs">
+      <Link>Imports\Data\ScriptedPatchCommandData.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
       <Link>Imports\Connection\OAuthHelper.cs</Link>
     </Compile>
@@ -643,6 +646,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\LogItem.cs">
       <Link>Imports\Data\LogItem.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\ScriptedPatchRequest.cs">
+      <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Default.cs">
       <Link>Imports\Default.cs</Link>

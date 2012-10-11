@@ -167,6 +167,13 @@
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
+				
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+
+				<HyperlinkButton Content="Patch"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/patch"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
 				<HyperlinkButton Content="Tasks"
