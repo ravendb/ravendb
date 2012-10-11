@@ -77,7 +77,14 @@ namespace Raven.Server
 		private static void WaitForUserInputAndExitWithError()
 		{
 			Console.WriteLine("Press any key to continue...");
-			Console.ReadKey(true);
+			try
+			{
+				Console.ReadKey(true);
+			}
+			catch
+			{
+				// cannot read key?
+			}
 			Environment.Exit(-1);
 		}
 
