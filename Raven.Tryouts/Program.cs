@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Tests.Bugs;
@@ -19,9 +20,8 @@ namespace Raven.Tryouts
 		{
 			var store = new DocumentStore
 			{
-				Url = "https://1.ravenhq.com",
-				ApiKey = "adc19257-fc90-4027-a40d-9dbac1542ce8",
-				DefaultDatabase = "hibernating-rhinos-anothera",
+				Url = "http://localhost:8080",
+				DefaultDatabase = "facets",
 				Conventions =
 				{
 					FailoverBehavior = FailoverBehavior.FailImmediately
@@ -30,7 +30,10 @@ namespace Raven.Tryouts
 
 			store.Initialize();
 
-			store.DatabaseCommands.Put("users/1", null, new RavenJObject(), new RavenJObject());
+			var facetResults = store.DatabaseCommands.GetFacets("All/QueryByAttribute", new IndexQuery {Query = ""}, "facets/SearchFacets");
+			Console.WriteLine(JsonConvert.SerializeObject(facetResults));
+
+			store.Dispose();
 		}
 
 		private static void UseMyData()
