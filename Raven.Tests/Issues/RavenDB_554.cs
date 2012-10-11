@@ -1,6 +1,7 @@
 ﻿namespace Raven.Tests.Issues
 {
 	using System.IO;
+	using System.Linq;
 	using System.Net;
 	using System.Threading;
 
@@ -31,7 +32,7 @@
 			{
 				server.Database.PutIndex(IndexName, new IndexDefinition
 				{
-					Map = "from doc in docs select new { doc.FirstName, doc.LastName, doc.MiddleName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
+					Map = "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
 				});
 
 				using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
@@ -44,28 +45,19 @@
 						session.SaveChanges();
 					}
 
-					QueryResult queryResult;
-					do
+					using (var session = docStore.OpenSession())
 					{
-						Thread.Sleep(1000);
+						session.Query<Person>(IndexName)
+							.Customize(x => x.WaitForNonStaleResults())
+							.ToList();
 
-						var request = (HttpWebRequest)WebRequest.Create(string.Format("http://localhost:8079/indexes/{0}?query=&start=0&pageSize=128&aggregation=None&debug=entries", IndexName));
-						request.Method = "GET";
-
-						using (var resp = request.GetResponse())
-						using (var stream = resp.GetResponseStream())
+						var queryResult = session.Advanced.DocumentStore.DatabaseCommands.Query(IndexName, new IndexQuery(), null, false, true);
+						foreach (var result in queryResult.Results)
 						{
-							var reader = new StreamReader(stream);
-							queryResult = reader.JsonDeserialization<QueryResult>();
+							var q = result["Query"].ToString();
+							Assert.NotNull(q);
+							Assert.False(q.Contains(Constants.NullValue));
 						}
-					}
-					while (queryResult.IsStale);
-
-					foreach (var result in queryResult.Results)
-					{
-						var q = result["Query"].ToString();
-						Assert.NotNull(q);
-						Assert.False(q.Contains(Constants.NullValue));
 					}
 				}
 			}

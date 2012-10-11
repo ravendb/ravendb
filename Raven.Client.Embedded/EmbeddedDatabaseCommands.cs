@@ -356,12 +356,15 @@ namespace Raven.Client.Embedded
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes are ignored for this implementation.</param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
-		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
+		/// <param name="indexEntriesOnly">Include index entries</param>
+		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
 			query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
 			// metadataOnly is not supported for embedded
+
+			// indexEntriesOnly is not supported for embedded
 
 			QueryResultWithIncludes queryResult;
 			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase))
