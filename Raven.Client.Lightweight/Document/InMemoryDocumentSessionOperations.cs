@@ -575,6 +575,7 @@ more responsive application.
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value))
 			{
+				value.ETag = etag ?? value.ETag;
 				value.ForceConcurrencyCheck = forceConcurrencyCheck;
 				return;
 			}
