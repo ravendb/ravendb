@@ -4,7 +4,6 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.MEF;
-using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server.Abstractions;
@@ -46,7 +45,7 @@ namespace Raven.Database.Server.Responders
 				context.WriteFile(matchingPath);
 				return;
 			}
-			context.SetStatusToNotFound();
+			context.WriteEmbeddedFile(Settings.WebDir, "Raven.Studio.xap");
 		}
 
 		public override bool IsUserInterfaceRequest

@@ -93,6 +93,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Tests", "Bundles\Raven.Bundles.Tests\Raven.Bundles.Tests.csproj", "{35CFAB1C-7934-4481-AC0D-7102F7DEE7F8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6828A6A5-B925-4716-8D08-2B26353C54C2} = {6828A6A5-B925-4716-8D08-2B26353C54C2}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

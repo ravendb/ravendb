@@ -49,6 +49,37 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
+		public void ComplexVariableTest()
+		{
+			const string email = "somebody@somewhere.com";
+			var doc = RavenJObject.Parse("{\"Email\":null}");
+			const string script = "this.Email = data.Email;";
+			var patch = new ScriptedPatchRequest()
+			{
+				Script = script,
+				Values = { { "data", new { Email = email } } }
+			};
+			var result = new ScriptedJsonPatcher().Apply(doc, patch);
+			Assert.Equal(result["Email"].Value<string>(),email);
+		}
+
+		[Fact]
+		public void ComplexVariableTest2()
+		{
+			const string email = "somebody@somewhere.com";
+			var doc = RavenJObject.Parse("{\"Contact\":null}");
+			const string script = "this.Contact = contact;";
+			var patch = new ScriptedPatchRequest()
+			{
+				Script = script,
+				Values = { { "contact", new { Email = email } } }
+			};
+			var result = new ScriptedJsonPatcher().Apply(doc, patch);
+			Assert.NotNull(result["Contact"]);
+		}
+
+
+		[Fact]
 		public void CanPatchUsingRavenJObjectVars()
 		{
 			var doc = RavenJObject.FromObject(test);

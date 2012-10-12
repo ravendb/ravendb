@@ -38,12 +38,6 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			if (context.Request.Url.AbsolutePath == RavenRoot.RootPath && 
-				SilverlightUI.GetPaths(SilverlightXapName, Database.Configuration.WebDir).All(f => File.Exists(f) == false))
-			{
-				context.WriteEmbeddedFile(Settings.WebDir, "studio_not_found.html");
-				return;
-			}
 			var docPath = context.GetRequestUrl().Replace("/raven/", "");
 			context.WriteEmbeddedFile(Settings.WebDir, docPath);
 		}
