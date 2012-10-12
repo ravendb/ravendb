@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Lucene.Net.Index;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -15,24 +16,27 @@ namespace Raven.Database.Indexing
 	{
 		public static void ReadEntriesForFields(IndexReader reader, HashSet<string> fieldsToRead, HashSet<int> docIds, Action<Term> onTermFound)
 		{
-			using (var termEnum = reader.Terms())
 			using (var termDocs = reader.TermDocs())
 			{
-				do
+				foreach (var field in fieldsToRead.OrderBy(x=>x))
 				{
-					if (termEnum.Term == null ||
-						fieldsToRead.Contains(termEnum.Term.Field) == false)
-						continue;
-
-					termDocs.Seek(termEnum.Term);
-					for (int i = 0; i < termEnum.DocFreq() && termDocs.Next(); i++)
+					using(var termEnum = reader.Terms(new Term(field)))
 					{
-						if(docIds.Contains(termDocs.Doc) == false)
-							continue;
-						onTermFound(termEnum.Term);
-					}
-				} while (termEnum.Next());
+						do
+						{
+							if (termEnum.Term == null || field != termEnum.Term.Field)
+								break;
 
+							termDocs.Seek(termEnum.Term);
+							for (int i = 0; i < termEnum.DocFreq() && termDocs.Next(); i++)
+							{
+								if (docIds.Contains(termDocs.Doc) == false)
+									continue;
+								onTermFound(termEnum.Term);
+							}
+						} while (termEnum.Next());
+					}
+				}
 			}
 		}
 
