@@ -5,6 +5,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions.Indexing;
@@ -56,11 +57,31 @@ namespace Raven.Tests.Bugs
 
 		private static void AddRecord(IDocumentStore store,int records)
 		{
+			var ids = new[]
+			{
+				"32cbecf8-6060-4099-90e0-7a2049068568",
+				"121bddd7-11bf-47b6-b31f-83ef7f3d3d7b",
+				"0aa639f0-fb83-45ce-89af-25812f3c2d57",
+				"4a318292-f231-4b41-babe-fd769674af3d",
+				"cf775c2a-e223-45fd-9dde-6c6e65b74f43",
+				"a3bc9e46-f4af-4c12-bf39-023f2b6fedd0",
+				"87602acb-c5ca-4e8e-9c1a-c61b3a664d5b",
+				"de5916dc-48d2-4eb0-97f9-07a13d4aa750",
+				"30f789f5-063d-4bcc-aadb-5e4d73313841",
+				"60a581e0-c637-43f9-b0bd-4ebf32b676f9",
+				"260ea926-4ce5-49f5-a8e8-3d513ad52c0c",
+				"480f9271-9dba-4181-a1e7-2e3e573c6f86"
+			};
+
 			using(var session = store.OpenSession())
 			{
 				for (int i = 0; i < records; i++)
 				{
-					var item = new TestClass {Items = new List<Item>()};
+					var item = new TestClass
+					{
+						Id = ids[i],
+						Items = new List<Item>()
+					};
 					for (int j = 0; j < 5; j++)
 					{
 						item.Items.Add(new Item()
