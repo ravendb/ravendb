@@ -100,13 +100,18 @@
                                 <DataTemplate>
                                     <sdk:AutoCompleteBox x:Name="TenantId"
                                                          Text="{Binding TenantId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                                         MinimumPrefixLength="1"
+                                                         MinimumPrefixLength="0"
                                                          IsTextCompletionEnabled="True"
                                                          VerticalAlignment="Center"
                                                          Margin="5,5,5,0">
                                         <i:Interaction.Behaviors>
                                             <Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
                                         </i:Interaction.Behaviors>
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="GotFocus">
+                                                <Behaviors:ShowAutoCompleteDropDown/>
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
                                     </sdk:AutoCompleteBox>
 
                                 </DataTemplate>
@@ -205,13 +210,13 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="10"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="2*"/>
         </Grid.RowDefinitions>
 
         <Grid DataContext="{Binding Value}" Margin="{StaticResource Margin_ContentPage}">
-            <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
+            <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" Margin="0,0,0,15">
                 <toolkit:HeaderedContentControl.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -294,9 +299,7 @@
             </toolkit:HeaderedContentControl>
         </Grid>
 
-        <ScrollViewer Grid.Row="2">
-            <Grid DataContext="{Binding Value}" Margin="{StaticResource Margin_ContentPage}">
-                <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
+        <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" DataContext="{Binding Value}" Margin="{StaticResource Margin_ContentPage}" Grid.Row="2">
                     <toolkit:HeaderedContentControl.Header>
                         <Grid>
                             <Grid.RowDefinitions>
@@ -366,6 +369,7 @@
                              SelectedItem="{Binding SelectedApiKey, Mode=TwoWay}"
                              ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
                              ItemTemplate="{StaticResource ApiKeyTemplate}"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Margin="10">
 
                         <i:Interaction.Triggers>
@@ -379,8 +383,5 @@
                         </i:Interaction.Behaviors>
                     </ListBox>
                 </toolkit:HeaderedContentControl>
-            </Grid>
-
-        </ScrollViewer>
     </Grid>
 </Infrastructure:PageView>

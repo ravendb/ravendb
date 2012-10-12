@@ -199,6 +199,7 @@
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
     <Compile Include="Behaviors\SelectAllAction.cs" />
     <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
+    <Compile Include="Behaviors\ShowAutoCompleteDropDown.cs" />
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
