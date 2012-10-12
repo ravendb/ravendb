@@ -212,7 +212,7 @@ namespace Raven.Database.Queries
 				{
 					var baseQuery = Database.IndexStorage.GetLuceneQuery(Index, IndexQuery, Database.IndexQueryTriggers);
 					currentIndexSearcher.Search(baseQuery, allCollector);
-					var fieldsToRead = new HashSet<string>(Facets.Values.Select(x => x.Name));
+					var fieldsToRead = new HashSet<string>(Results.Results.Select(x=>x.Key));
 					IndexedTerms.ReadEntriesForFields(currentIndexSearcher.IndexReader,
 						fieldsToRead,
 						allCollector.Documents,
