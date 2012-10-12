@@ -231,6 +231,9 @@ namespace Raven.Storage.Managed
 			if ((SystemTime.UtcNow - lastUsage).TotalSeconds < 30)
 				return;
 
+			if (disposed)
+				return;
+
 			tableStroage.PerformIdleTasks();
 		}
 
