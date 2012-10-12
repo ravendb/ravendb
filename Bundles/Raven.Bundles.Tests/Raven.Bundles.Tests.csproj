@@ -64,6 +64,7 @@
       <Link>UniqueConstraints\Util.cs</Link>
     </Compile>
     <Compile Include="Authorization\AuthorizationTest.cs" />
+    <Compile Include="Authorization\Bugs\DeanWard.cs" />
     <Compile Include="Authorization\Bugs\fampinheiro.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />
