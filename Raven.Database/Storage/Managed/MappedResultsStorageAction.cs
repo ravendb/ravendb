@@ -201,7 +201,7 @@ namespace Raven.Storage.Managed
 					}
 				}
 				itemsToDelete.Add(result);
-				if (--take <= 0)
+				if (take <= 0)
 					break;
 			}
 		}
