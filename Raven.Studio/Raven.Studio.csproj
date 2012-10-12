@@ -1157,6 +1157,7 @@
     <Resource Include="Assets\Images\query_options_tiny.png" />
     <Resource Include="Assets\Images\Image_Key_Add_Tiny.png" />
     <Resource Include="Assets\Images\Image_Key_Tiny.png" />
+    <Resource Include="Assets\Images\delete_by_query.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

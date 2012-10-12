@@ -101,7 +101,7 @@
 						</StackPanel>
 					</Button.Content>
 				</Button>
-
+                
                 <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
                 <Controls1:RecentQueriesButton/>
@@ -154,7 +154,21 @@
 						</StackPanel>
 					</Button.Content>
 				</Button>
-			</StackPanel>
+
+                <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}" Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"/>
+                
+                <Button Command="{Binding DeleteMatchingResults}"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Delete all documents resulting from the query"
+                         Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource Image_DeleteByQuery_Tiny}"
+                                   Stretch="None"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </StackPanel>
 		</Border>
 
 		<Grid Grid.Row="2">
