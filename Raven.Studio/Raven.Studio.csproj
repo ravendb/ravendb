@@ -376,6 +376,7 @@
     <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
     <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\ArrayContainer.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\IdStringToIdWithoutHeader.cs" />
@@ -1158,6 +1159,9 @@
     <Resource Include="Assets\Images\Image_Key_Add_Tiny.png" />
     <Resource Include="Assets\Images\Image_Key_Tiny.png" />
     <Resource Include="Assets\Images\delete_by_query.png" />
+    <Resource Include="Assets\Images\patch_small.png" />
+    <Resource Include="Assets\Images\execute_patch_tiny.png" />
+    <Resource Include="Assets\Images\whatif_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

@@ -196,16 +196,23 @@
         <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
             <toolkit:HeaderedContentControl.Header>
                 <Grid>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Visibility="{Binding MinimalHeader, Converter={StaticResource BooleanToOppositeVisibility}}">
                         <Image Style="{StaticResource Style_Image_DocumentsPageHeader}"/>
-                        <TextBlock x:Name="HeaderText"
-								   Style="{StaticResource Style_Text_Header}"
+                        <TextBlock Style="{StaticResource Style_Text_Header}"
 								   Text="{Binding Header}"
 								   toolkit:DockPanel.Dock="Left"
 								   VerticalAlignment="Center"
 								   Margin="6" />
                     </StackPanel>
 
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Visibility="{Binding MinimalHeader, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Style="{StaticResource Style_TextBlock_PagePartHeader}"
+								   Text="{Binding Header}"
+								   toolkit:DockPanel.Dock="Left"
+								   VerticalAlignment="Center"
+								   Margin="6" />
+                    </StackPanel>
+                    
                     <StackPanel Orientation="Horizontal"
 								VerticalAlignment="Center"
 								Margin="0,0,4,0"

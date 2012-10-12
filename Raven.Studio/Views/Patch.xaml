@@ -8,7 +8,7 @@
 						 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                          xmlns:Patch="clr-namespace:Raven.Studio.Features.Patch"
                          Infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Models.PatchModel"
-						 Title="Patch Page">
+						 Title="Patch Documents">
 	<Grid x:Name="LayoutRoot"  DataContext="{Binding Value}">
 		<Patch:PatchView/>
     </Grid>
