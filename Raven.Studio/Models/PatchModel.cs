@@ -330,6 +330,7 @@ namespace Raven.Studio.Models
                     }
 
                     patchModel.OriginalDoc.SetText(selectedItem.Item.Document.ToJson().ToString());
+			        var docId = selectedItem.Item.Document.Key;
                     //Todo: get a sample of the doc after changes (don't save the changes) and save it to NewDoc
 					break;
 			}
