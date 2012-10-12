@@ -205,7 +205,7 @@ namespace Raven.Studio.Models
 
         public Task<IList<object>> ProvideSuggestions(string enteredText)
         {
-            return new Task<IList<object>>(() => Databases.Select(model => model.Name).Cast<object>().ToList());
+            return TaskEx.FromResult<IList<object>>(Databases.Select(model => model.Name).Cast<object>().ToList());
         }
     }
 }
