@@ -41,7 +41,6 @@
 				CornerRadius="4,4,0,0"
 				BorderThickness="1,1,1,0"
 				Grid.Row="0"/>
-		<toolkit:DockPanel LastChildFill="False" Grid.Row="0">
 			<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
 				<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
 				<HyperlinkButton Content="Indexes"
@@ -81,7 +80,6 @@
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
                            VerticalAlignment="Center" />
 			</StackPanel>
-		</toolkit:DockPanel>
 
 		<Border Background="{StaticResource Brush_ToolbarBackground}"
                 Grid.Row="1">
