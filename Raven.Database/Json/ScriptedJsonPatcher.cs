@@ -204,6 +204,10 @@ namespace Raven.Database.Json
 					return new JsBoolean((bool)boolVal.Value, JsUndefined.Instance);
 				case JTokenType.Float:
 					var fltVal = ((RavenJValue)value);
+					if(fltVal.Value is float)
+						return new JsNumber((float)fltVal.Value, JsUndefined.Instance);
+					if (fltVal.Value is decimal)
+						return new JsNumber((double)(decimal)fltVal.Value, JsUndefined.Instance);
 					return new JsNumber((double)fltVal.Value, JsUndefined.Instance);
 				case JTokenType.Integer:
 					var intVal = ((RavenJValue)value);
