@@ -48,7 +48,7 @@ namespace Raven.Database.Impl
 		{
 			return PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
 			{
-				var patchResult = database.ApplyPatch(docId, null, patch, tx, true);
+				var patchResult = database.ApplyPatch(docId, null, patch, tx);
 				return new { Document = docId, Result = patchResult.Item1, Debug = patchResult.Item2 };
 			});
 		}

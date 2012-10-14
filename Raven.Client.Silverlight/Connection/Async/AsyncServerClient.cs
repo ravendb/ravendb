@@ -342,7 +342,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 					new CreateHttpJsonRequestParams(this, path, method, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 				return request.ExecuteWriteAsync(requestData);
-				//return request.ExecuteRequestAsync();
 			});
 		}
 

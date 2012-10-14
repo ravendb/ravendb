@@ -40,50 +40,79 @@
 			<Grid Margin="5">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="Auto"/>
 					<ColumnDefinition Width="*"/>
 					<ColumnDefinition Width="Auto"/>
-
 				</Grid.ColumnDefinitions>
-				<TextBlock Text="Patch: " VerticalAlignment="Center"/>
+				
+				<StackPanel Orientation="Horizontal">
+					
+					<TextBlock Text="Patch: " VerticalAlignment="Center"/>
+					<ComboBox ItemsSource="{Binding PatchOn, Mode=OneTime, Converter={StaticResource enumerationFromValue}}" 
+							  SelectedValue="{Binding PatchOn, Mode=TwoWay, Converter={StaticResource enumeratedValue}}"
+							  Width="90"
+							  Grid.Column="1"
+							  Margin="5"/>
 
-				<ComboBox ItemsSource="{Binding PatchOn, Mode=OneTime, Converter={StaticResource enumerationFromValue}}" 
-						  SelectedValue="{Binding PatchOn, Mode=TwoWay, Converter={StaticResource enumeratedValue}}"
-						  Width="90"
-						  Grid.Column="1"
-						  Margin="5"/>
+					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
-                <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}" Grid.Column="2"/>
-
-                <Button Command="{Binding Test}"
-						IsEnabled="{Binding ShowBeforeAndAfterPrompt, Converter={StaticResource NegatingBool}}"
-						Style="{StaticResource Style_Button_MouseOverChrome}"
-						ToolTipService.ToolTip="Test Patch"
-						Grid.Column="3">
-                    <Button.Content>
-                        <StackPanel Orientation="Horizontal">
-                            <Image Source="{StaticResource Image_WhatIf_Tiny}"
+					<Button Command="{Binding Test}"
+							IsEnabled="{Binding ShowBeforeAndAfterPrompt, Converter={StaticResource NegatingBool}}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Test Patch">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_WhatIf_Tiny}"
 								   Stretch="None"/>
-                            <TextBlock Text="Test" Margin="2,0,0,0" />
-                        </StackPanel>
-                    </Button.Content>
-                </Button>
-	
-				<Button Command="{Binding Execute}"
-						Style="{StaticResource Style_Button_MouseOverChrome}"
-						ToolTipService.ToolTip="Execute Patch"
-						Grid.Column="5">
-					<Button.Content>
-						<StackPanel Orientation="Horizontal">
-							<Image Source="{StaticResource Image_ExecutePatch_Tiny}"
-								   Stretch="None"/>
-							<TextBlock Text="Execute" Margin="2,0,0,0" />
-						</StackPanel>
-					</Button.Content>
-				</Button>
+								<TextBlock Text="Test" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+				</StackPanel>
 
+				<StackPanel Orientation="Horizontal" Grid.Column="2">
+
+					<Button Command="{Binding PatchSelected}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Execute Patch"
+							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_ExecutePatch_Tiny}"
+								   Stretch="None"/>
+								<TextBlock Text="Patch Selected" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+					
+					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"
+							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
+
+					<Button Command="{Binding Patch}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Execute Patch"
+							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_ExecutePatch_Tiny}"
+								   Stretch="None"/>
+								<TextBlock Text="Patch All" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<Button Command="{Binding Patch}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Execute Patch"
+							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToOppositeVisibility}}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_ExecutePatch_Tiny}"
+								   Stretch="None"/>
+								<TextBlock Text="Patch" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+				</StackPanel>
 			</Grid>
         </Border>
         

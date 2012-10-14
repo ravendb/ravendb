@@ -213,7 +213,7 @@ namespace Raven.Studio.Models
             }
 		}
 
-	    private void UpdateCollectionSource()
+	    public void UpdateCollectionSource()
 	    {
 	        if (PatchOn == PatchOnOptions.Collection)
 	        {
@@ -265,7 +265,8 @@ namespace Raven.Studio.Models
 	    public IEditorDocument Script { get; private set; }
 
 		public const string CollectionsIndex = "Raven/DocumentsByEntityName";
-		public ICommand Execute { get { return new ExecutePatchCommand(this); } }
+		public ICommand Patch { get { return new ExecutePatchCommand(this); } }
+		public ICommand PatchSelected { get { return new PatchSelectedCommand(this); } }
 		public ICommand Test { get { return new TestPatchCommand(this); } }
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
@@ -334,6 +335,41 @@ namespace Raven.Studio.Models
                     UpdateCollectionSource();
                 });
         }
+	}
+
+	public class PatchSelectedCommand : Command
+	{
+		private readonly PatchModel patchModel;
+
+		public PatchSelectedCommand(PatchModel patchModel)
+		{
+			this.patchModel = patchModel;
+		}
+
+		public override void Execute(object parameter)
+		{
+			AskUser.ConfirmationAsync("Patch Documents", "Are you sure you want to apply this patch to all selected documents?")
+				.ContinueWhenTrueInTheUIThread(() =>
+				{
+					var request = new ScriptedPatchRequest {Script = patchModel.Script.CurrentSnapshot.Text};
+					var selectedItems = patchModel.QueryResults.ItemSelection.GetSelectedItems();
+					var commands = new ICommandData[selectedItems.Count()];
+					var counter = 0;
+
+					foreach (var item in selectedItems)
+					{
+						commands[counter] = new ScriptedPatchCommandData
+						{
+							Patch = request,
+							Key = item.Item.Id
+						};
+
+						counter++;
+					}
+
+					ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands).Catch();
+				});
+		}
 	}
 
 	public class TestPatchCommand : Command
@@ -425,13 +461,16 @@ namespace Raven.Studio.Models
 
                         case PatchOnOptions.Collection:
                             ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(PatchModel.CollectionsIndex,
-                                                                                                new IndexQuery { Query = "Tag:" + patchModel.SelectedItem },
-                                                                                                request).Catch();
+                                                                                                new IndexQuery { Query = "Tag:" + patchModel.SelectedItem }, request)
+																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
+																								.Catch();
                             break;
 
                         case PatchOnOptions.Index:
                             ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery() { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
-                                                                                                request).Catch();
+                                                                                                request)
+																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
+																								.Catch();
                             break;
                     }
                 });
