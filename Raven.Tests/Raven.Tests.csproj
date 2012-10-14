@@ -458,6 +458,7 @@
     <Compile Include="MailingList\linmouhong2.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
+    <Compile Include="MailingList\NullableGuidIndexTest.cs" />
     <Compile Include="MailingList\Nullables.cs" />
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
