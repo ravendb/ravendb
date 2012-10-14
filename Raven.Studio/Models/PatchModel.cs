@@ -31,7 +31,7 @@ namespace Raven.Studio.Models
 		private IEditorDocument newDoc;
 
 	    private IEditorDocument queryDoc;
-	    private string selectedItem;
+	    private Observable<string> selectedItem;
 
 	    private static JsonSyntaxLanguageExtended JsonLanguage;
 	    private static ISyntaxLanguage JScriptLanguage;
@@ -47,6 +47,7 @@ namespace Raven.Studio.Models
 
         public PatchModel()
         {
+			selectedItem = new Observable<string>();
             OriginalDoc = new EditorDocument()
             {
                 Language = JsonLanguage,
@@ -74,6 +75,37 @@ namespace Raven.Studio.Models
 
             queryCollectionSource = new QueryDocumentsCollectionSource();
             QueryResults = new DocumentsModel(queryCollectionSource) { Header = "Matching Documents", MinimalHeader = true, HideItemContextMenu = true};
+	        QueryResults.ItemSelection.SelectionChanged += (sender, args) =>
+	        {
+		        var firstOrDefault = QueryResults.ItemSelection.GetSelectedItems().FirstOrDefault();
+				if (firstOrDefault != null)
+				{
+					OriginalDoc.SetText(firstOrDefault.Item.Document.ToJson().ToString());
+					ShowBeforeAndAfterPrompt = false;
+				}
+				else
+				{
+					ClearBeforeAndAfter();
+				}
+	        };
+
+	        selectedItem.PropertyChanged += (sender, args) =>
+	        {
+				if (PatchOn == PatchOnOptions.Document && string.IsNullOrWhiteSpace(SelectedItem) == false)
+					ApplicationModel.Database.Value.AsyncDatabaseCommands.GetAsync(SelectedItem).
+						ContinueOnSuccessInTheUIThread(doc =>
+						{
+							if (doc == null)
+							{
+								ClearBeforeAndAfter();
+							}
+							else
+							{
+								OriginalDoc.SetText(doc.ToJson().ToString());
+								ShowBeforeAndAfterPrompt = false;
+							}
+						});
+	        };
         }
 
         private QueryIndexAutoComplete queryIndexAutoComplete;
@@ -170,10 +202,10 @@ namespace Raven.Studio.Models
 
 		public string SelectedItem
 		{
-		    get { return selectedItem; }
+		    get { return selectedItem.Value; }
             set
             {
-                selectedItem = value;
+                selectedItem.Value = value;
                 OnPropertyChanged(() => SelectedItem);
                 UpdateQueryAutoComplete();
                 UpdateCollectionSource();
@@ -185,19 +217,21 @@ namespace Raven.Studio.Models
 	    {
 	        if (PatchOn == PatchOnOptions.Collection)
 	        {
-                queryCollectionSource.UpdateQuery(PatchModel.CollectionsIndex, new IndexQuery { Query = "Tag:" + SelectedItem });
-                QueryResults.SetChangesObservable(
-                        d => d.IndexChanges
-                                 .Where(n => n.Name.Equals(PatchModel.CollectionsIndex, StringComparison.InvariantCulture))
-                                 .Select(m => Unit.Default));
+                QueryResults.SetChangesObservable(d => d.IndexChanges
+					.Where(n => n.Name.Equals(PatchModel.CollectionsIndex, StringComparison.InvariantCulture))
+					.Select(m => Unit.Default));
+
+				if (string.IsNullOrWhiteSpace(SelectedItem) == false)
+					queryCollectionSource.UpdateQuery(PatchModel.CollectionsIndex, new IndexQuery {Query = "Tag:" + SelectedItem});
 	        }
             else if (PatchOn == PatchOnOptions.Index)
             {
-                queryCollectionSource.UpdateQuery(SelectedItem, new IndexQuery { Query = QueryDoc.CurrentSnapshot.Text, SkipTransformResults = true,});
-                QueryResults.SetChangesObservable(
-                        d => d.IndexChanges
-                                 .Where(n => n.Name.Equals(SelectedItem, StringComparison.InvariantCulture))
-                                 .Select(m => Unit.Default));
+                QueryResults.SetChangesObservable(d => d.IndexChanges
+					.Where(n => n.Name.Equals(SelectedItem, StringComparison.InvariantCulture))
+					.Select(m => Unit.Default));
+
+				if (string.IsNullOrWhiteSpace(SelectedItem) == false)
+					queryCollectionSource.UpdateQuery(SelectedItem, new IndexQuery { Query = QueryDoc.CurrentSnapshot.Text, SkipTransformResults = true, });
             }
 	    }
 
@@ -271,6 +305,7 @@ namespace Raven.Studio.Models
                             AvailableObjects.AddRange(collections.OrderByDescending(x => x.Count)
                                                           .Where(x => x.Count > 0)
                                                           .Select(col => col.Name).ToList());
+	                        SelectedItem = AvailableObjects.FirstOrDefault();
                         });
                     break;
                 case PatchOnOptions.Index:
@@ -279,6 +314,7 @@ namespace Raven.Studio.Models
                         {
                             AvailableObjects.Clear();
                             AvailableObjects.AddRange(indexes.OrderBy(x => x));
+							SelectedItem = AvailableObjects.FirstOrDefault();
                         });
                     break;
             }
@@ -326,9 +362,9 @@ namespace Raven.Studio.Models
 						Key = patchModel.SelectedItem,
 						DebugMode = true
 					};
-					
+
 					ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
-						.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()));
+						.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString())).Catch();
 					break;
 
 				case PatchOnOptions.Collection:
@@ -350,7 +386,7 @@ namespace Raven.Studio.Models
 					};
 					
 					ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
-						.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()));
+						.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString())).Catch();
 					break;
 			}
 
@@ -384,18 +420,18 @@ namespace Raven.Studio.Models
                                 Key = patchModel.SelectedItem
                             };
 
-                            ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands);
+                            ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands).Catch();
                             break;
 
                         case PatchOnOptions.Collection:
                             ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(PatchModel.CollectionsIndex,
                                                                                                 new IndexQuery { Query = "Tag:" + patchModel.SelectedItem },
-                                                                                                request);
+                                                                                                request).Catch();
                             break;
 
                         case PatchOnOptions.Index:
                             ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery() { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
-                                                                                                request);
+                                                                                                request).Catch();
                             break;
                     }
                 });

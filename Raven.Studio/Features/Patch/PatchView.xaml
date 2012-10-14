@@ -15,6 +15,7 @@
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
                          xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" Title="PatchView Page"
                          d:DataContext="{d:DesignInstance Models:PatchModel}">
+	
     <Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -32,46 +33,58 @@
         <StackPanel Orientation="Horizontal" UseLayoutRounding="True">
                     <Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Patch_Small}"/>
 					<TextBlock Text="Patch Documents"
-                                 Style="{StaticResource Style_Text_Header}" />
+							   Style="{StaticResource Style_Text_Header}" />
 				</StackPanel>
 
         <Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
-            <StackPanel  VerticalAlignment="Center" Orientation="Horizontal" Margin="5">
+			<Grid Margin="5">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
 
-                <TextBlock Text="Patch: " VerticalAlignment="Center"/>
+				</Grid.ColumnDefinitions>
+				<TextBlock Text="Patch: " VerticalAlignment="Center"/>
 
-                <ComboBox ItemsSource="{Binding PatchOn, Mode=OneTime, Converter={StaticResource enumerationFromValue}}" 
-								  SelectedValue="{Binding PatchOn, Mode=TwoWay, Converter={StaticResource enumeratedValue}}"
-								  Width="90"
-								  Margin="5"/>
+				<ComboBox ItemsSource="{Binding PatchOn, Mode=OneTime, Converter={StaticResource enumerationFromValue}}" 
+						  SelectedValue="{Binding PatchOn, Mode=TwoWay, Converter={StaticResource enumeratedValue}}"
+						  Width="90"
+						  Grid.Column="1"
+						  Margin="5"/>
 
-                <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
-
-                <Button Command="{Binding Execute}"
-								Style="{StaticResource Style_Button_MouseOverChrome}"
-								ToolTipService.ToolTip="Execute Patch">
-                    <Button.Content>
-                        <StackPanel Orientation="Horizontal">
-                            <Image Source="{StaticResource Image_ExecutePatch_Tiny}"
-										   Stretch="None"/>
-                            <TextBlock Text="Execute" Margin="2,0,0,0" />
-                        </StackPanel>
-                    </Button.Content>
-                </Button>
+                <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}" Grid.Column="2"/>
 
                 <Button Command="{Binding Test}"
-								Style="{StaticResource Style_Button_MouseOverChrome}"
-								ToolTipService.ToolTip="Test Patch">
+						IsEnabled="{Binding ShowBeforeAndAfterPrompt, Converter={StaticResource NegatingBool}}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Test Patch"
+						Grid.Column="3">
                     <Button.Content>
                         <StackPanel Orientation="Horizontal">
                             <Image Source="{StaticResource Image_WhatIf_Tiny}"
-										   Stretch="None"/>
+								   Stretch="None"/>
                             <TextBlock Text="Test" Margin="2,0,0,0" />
                         </StackPanel>
                     </Button.Content>
                 </Button>
+	
+				<Button Command="{Binding Execute}"
+						Style="{StaticResource Style_Button_MouseOverChrome}"
+						ToolTipService.ToolTip="Execute Patch"
+						Grid.Column="5">
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image Source="{StaticResource Image_ExecutePatch_Tiny}"
+								   Stretch="None"/>
+							<TextBlock Text="Execute" Margin="2,0,0,0" />
+						</StackPanel>
+					</Button.Content>
+				</Button>
 
-            </StackPanel>
+			</Grid>
         </Border>
         
 			<Grid Grid.Row="2">
@@ -86,92 +99,122 @@
 
             <StackPanel Orientation="Horizontal" Grid.Row="0">
                 <TextBlock Text="{Binding PatchOn, StringFormat='\{0\} to patch: '}"
-								   VerticalAlignment="Center" Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
+						   VerticalAlignment="Center" Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
 
                 <sdk:AutoCompleteBox Text="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-											 MinimumPrefixLength="1"
-											 IsTextCompletionEnabled="True"
-											 Margin="5" 
-											 Width="350"
+									 MinimumPrefixLength="1"
+									 IsTextCompletionEnabled="True"
+									 Margin="5" 
+									 Width="350"
                                      Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToOppositeVisibility}}">
-
                     <i:Interaction.Behaviors>
                         <Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
                     </i:Interaction.Behaviors>
                 </sdk:AutoCompleteBox>
 
-                <ComboBox 
-							SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-							ItemsSource="{Binding AvailableObjects}"
-							Margin="5" 
-							Width="350"
-                        Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
+                <ComboBox SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+						  ItemsSource="{Binding AvailableObjects}"
+						  Margin="5" 
+						  Width="350"
+						  Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
             </StackPanel>
 
             <toolkit:DockPanel Grid.Row="1" Visibility="{Binding IsQueryVisible, Converter={StaticResource BooleanToVisibility}}">
                 <TextBlock Text="Query"
-						Margin="0,5,5,0"
-						Style="{StaticResource Style_TextBlock_PagePartHeader}"
-						VerticalAlignment="Top"
-                       toolkit:DockPanel.Dock="Top"/>
-                
+						   Margin="0,5,5,0"
+						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+						   VerticalAlignment="Top"
+						   toolkit:DockPanel.Dock="Top"/>
                 <Editors:QueryEditor BoundDocument="{Binding QueryDoc}" Height="75"/>
             </toolkit:DockPanel>
                 
                 <TextBlock Text="Patch Script"
-						Margin="0,5,5,0"
-						Style="{StaticResource Style_TextBlock_PagePartHeader}"
-						VerticalAlignment="Top"
-                       Grid.Row="2"/>
+						   Margin="0,5,5,0"
+						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+						   VerticalAlignment="Top"
+						   Grid.Row="2"/>
 
             <Editors:EditorBase BoundDocument="{Binding Script}" Grid.Row="3" IsSelectionMarginVisible="False" IsLineNumberMarginVisible="False" AreLineModificationMarksVisible="False"/>
 
 				<sdk:GridSplitter Grid.Row="4"
-									Background="Transparent"
-									HorizontalAlignment="Stretch" 
+								  Background="Transparent"
+								  HorizontalAlignment="Stretch" 
                                   Margin="0,10"/>
                 
             <Grid Grid.Row="6">
-                    <Grid.RowDefinitions>
-                    <RowDefinition Height="{Binding IsComboBoxVisible, Converter={StaticResource HiddenWhenFalseStarSizedWhenTrue}}"/>
-                    <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="{Binding IsComboBoxVisible, Converter={StaticResource HiddenWhenFalseStarSizedWhenTrue}}"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+
+				<Border Grid.Row="0" Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}">
+                    <Documents:DocumentsView DataContext="{Binding QueryResults}" />
+                </Border>
+
+				<sdk:GridSplitter Grid.Row="1"
+								  Background="Transparent"
+								  HorizontalAlignment="Stretch" 
+                                  Margin="0,10"
+								  Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
+
+				<Grid Grid.Row="2">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="*"/>
 						<ColumnDefinition Width="Auto"/>
 						<ColumnDefinition Width="*"/>
 					</Grid.ColumnDefinitions>
 
-                <Border Grid.Row="0" Grid.ColumnSpan="3" Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}">
-                    <Documents:DocumentsView DataContext="{Binding QueryResults}" />
-                </Border>
-                
-                <TextBlock Text="Before Patch"
-						Margin="0,5,5,0"
-						Style="{StaticResource Style_TextBlock_PagePartHeader}"
-						VerticalAlignment="Top" Grid.Row="1" />
-                        
-                    <Editors:JsonEditor  Grid.Column="0" Grid.Row="2" BoundDocument="{Binding OriginalDoc}" IsLineNumberMarginVisible="False" IsSelectionMarginVisible="False" AreLineModificationMarksVisible="False" />
+					<TextBlock Text="Before Patch"
+							   Margin="0,5,5,0"
+							   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+							   VerticalAlignment="Top"
+							   Grid.Row="0" />
 
-                    <sdk:GridSplitter Grid.Column="1"
-                                        Grid.Row="1"
-                                        Grid.RowSpan="2"
-										VerticalAlignment="Stretch" 
-										HorizontalAlignment="Center"/>
+					<Editors:JsonEditor  Grid.Column="0" 
+										 Grid.Row="1" 
+										 BoundDocument="{Binding OriginalDoc}" 
+										 IsLineNumberMarginVisible="False" 
+										 IsSelectionMarginVisible="False" 
+										 AreLineModificationMarksVisible="False" />
 
-                    <TextBlock Text="After Patch"
-						Margin="0,5,5,0"
-						Style="{StaticResource Style_TextBlock_PagePartHeader}"
-						VerticalAlignment="Top"
-                               Grid.Row="1"
-                        Grid.Column="2"/>
-                    <Editors:JsonEditor  Grid.Column="2" Grid.Row="2" BoundDocument="{Binding NewDoc}" IsLineNumberMarginVisible="False" IsSelectionMarginVisible="False"/>
-            
-                <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Grid.ColumnSpan="3" Visibility="{Binding ShowBeforeAndAfterPrompt, Converter={StaticResource BooleanToVisibility}}"
-                        Background="#BBFFFFFF">
-                    <TextBlock Text="{Binding BeforeAndAfterPromptText}" VerticalAlignment="Center" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="14"/>
-                </Border>
+					<sdk:GridSplitter Grid.Column="1"
+									  Grid.Row="0"
+									  Grid.RowSpan="2"
+									  VerticalAlignment="Stretch" 
+									  HorizontalAlignment="Center"/>
+
+					<TextBlock Text="After Patch"
+							   Margin="0,5,5,0"
+							   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+							   VerticalAlignment="Top"
+							   Grid.Row="0"
+							   Grid.Column="2"/>
+					<Editors:JsonEditor Grid.Column="2" 
+										Grid.Row="1" 
+										BoundDocument="{Binding NewDoc}" 
+										IsLineNumberMarginVisible="False" 
+										IsSelectionMarginVisible="False"/>
+
+					<Border Grid.Row="0" 
+							Grid.RowSpan="2" 
+							Grid.Column="0" 
+							Grid.ColumnSpan="3" 
+							Visibility="{Binding ShowBeforeAndAfterPrompt, Converter={StaticResource BooleanToVisibility}}"
+							Background="#BBFFFFFF">
+						
+						<TextBlock Text="{Binding BeforeAndAfterPromptText}" 
+								   VerticalAlignment="Center" 
+								   HorizontalAlignment="Center" 
+								   TextWrapping="Wrap" 
+								   FontSize="14"/>
+					</Border>
+				</Grid>
+				
             </Grid>
 			</Grid>
 	</Grid>
