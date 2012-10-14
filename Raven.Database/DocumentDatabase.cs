@@ -107,6 +107,11 @@ namespace Raven.Database
 		private readonly object putSerialLock = new object();
 
 		/// <summary>
+		/// Requires to avoid having serialize writes to the same attachments
+		/// </summary>
+		private readonly ConcurrentDictionary<string, object> putAttachmentSerialLock = new ConcurrentDictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
+
+		/// <summary>
 		/// This is used to hold state associated with this instance by external extensions
 		/// </summary>
 		public AtomicDictionary<object> ExtensionsState { get; private set; }
@@ -1180,23 +1185,33 @@ namespace Raven.Database
 			if (Encoding.Unicode.GetByteCount(name) >= 2048)
 				throw new ArgumentException("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters", "name");
 
-			Guid newEtag = Guid.Empty;
-			TransactionalStorage.Batch(actions =>
+			var locker = putAttachmentSerialLock.GetOrAdd(name, s => new object());
+			Monitor.Enter(locker);
+			try
 			{
-				AssertAttachmentPutOperationNotVetoed(name, metadata, data);
+				Guid newEtag = Guid.Empty;
+				TransactionalStorage.Batch(actions =>
+				{
+					AssertAttachmentPutOperationNotVetoed(name, metadata, data);
 
-				AttachmentPutTriggers.Apply(trigger => trigger.OnPut(name, data, metadata));
+					AttachmentPutTriggers.Apply(trigger => trigger.OnPut(name, data, metadata));
 
-				newEtag = actions.Attachments.AddAttachment(name, etag, data, metadata);
+					newEtag = actions.Attachments.AddAttachment(name, etag, data, metadata);
 
-				AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
+					AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
 
-				workContext.ShouldNotifyAboutWork(() => "PUT ATTACHMENT " + name);
-			});
+					workContext.ShouldNotifyAboutWork(() => "PUT ATTACHMENT " + name);
+				});
 
-			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
-			return newEtag;
+				TransactionalStorage
+					.ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
+				return newEtag;
+			}
+			finally
+			{
+				Monitor.Exit(locker);
+				putAttachmentSerialLock.TryRemove(name, out locker);
+			}
 		}
 
 		public void DeleteStatic(string name, Guid? etag)

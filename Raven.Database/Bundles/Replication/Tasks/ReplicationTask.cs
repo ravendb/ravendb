@@ -769,7 +769,17 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				return new ReplicationStrategy[0];
 			}
-			return document.DataAsJson.JsonDeserialization<ReplicationDocument>()
+			ReplicationDocument jsonDeserialization;
+			try
+			{
+				jsonDeserialization = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+			}
+			catch (Exception e)
+			{
+				log.Warn("Cannot get replication destinations", e);
+				return new ReplicationStrategy[0];
+			}
+			return jsonDeserialization
 				.Destinations.Select(GetConnectionOptionsSafe)
 				.Where(x => x != null)
 				.ToArray();

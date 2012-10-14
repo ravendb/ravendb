@@ -128,7 +128,7 @@ namespace Raven.Database.Indexing
 					return readEntriesFromIndex;
 
 				var indexReader = IndexSearcher.IndexReader;
-				readEntriesFromIndex = IndexedTerms.ReadEntriesFromIndex(indexReader);
+				readEntriesFromIndex = IndexedTerms.ReadAllEntriesFromIndex(indexReader);
 				return readEntriesFromIndex;
 			}
 		}
