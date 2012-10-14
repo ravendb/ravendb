@@ -312,13 +312,23 @@ namespace Raven.Studio.Models
 		public override void Execute(object parameter)
 		{
 			var request = new ScriptedPatchRequest {Script = patchModel.Script.CurrentSnapshot.Text};
+			var commands = new ICommandData[1];
 
 			switch (patchModel.PatchOn)
 			{
 				case PatchOnOptions.Document:
 					ApplicationModel.Database.Value.AsyncDatabaseCommands.GetAsync(patchModel.SelectedItem).
 						ContinueOnSuccessInTheUIThread(doc => patchModel.OriginalDoc.SetText(doc.ToJson().ToString()));
-					//Todo: get a sample of the doc after changes (don't save the changes) and save it to NewDoc
+
+					commands[0] = new ScriptedPatchCommandData
+					{
+						Patch = request,
+						Key = patchModel.SelectedItem,
+						DebugMode = true
+					};
+					
+					ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
+						.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()));
 					break;
 
 				case PatchOnOptions.Collection:
@@ -331,7 +341,16 @@ namespace Raven.Studio.Models
 
                     patchModel.OriginalDoc.SetText(selectedItem.Item.Document.ToJson().ToString());
 			        var docId = selectedItem.Item.Document.Key;
-                    //Todo: get a sample of the doc after changes (don't save the changes) and save it to NewDoc
+
+					commands[0] = new ScriptedPatchCommandData
+					{
+						Patch = request,
+						Key = docId,
+						DebugMode = true
+					};
+					
+					ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
+						.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()));
 					break;
 			}
 

@@ -66,6 +66,8 @@ namespace Raven.Abstractions.Commands
 			get; set;
 		}
 
+		public RavenJObject AdditionalData { get; set; }
+
 		/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
@@ -75,7 +77,8 @@ namespace Raven.Abstractions.Commands
 			       	{
 						{"Key", Key},
 						{"Method", Method},
-						{"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))}
+						{"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))},
+						{"AdditionalData", AdditionalData}
 			       	};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());

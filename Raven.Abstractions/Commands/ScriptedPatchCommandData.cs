@@ -62,6 +62,17 @@ namespace Raven.Abstractions.Commands
 			get; set;
 		}
 
+		public bool DebugMode
+		{
+			get; set;
+		}
+
+		/// <summary>
+		/// Gets the Additional Data.
+		/// </summary>
+		/// <value>The Additional Data.</value>
+		public RavenJObject AdditionalData { get; set; }
+
 		/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
@@ -75,7 +86,9 @@ namespace Raven.Abstractions.Commands
 						{
 							{ "Script", Patch.Script },
 							{ "Values", RavenJObject.FromObject(Patch.Values)}
-						}}
+						}},
+						{"DebugMode", DebugMode},
+						{"AdditionalData", AdditionalData}
 					};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());
