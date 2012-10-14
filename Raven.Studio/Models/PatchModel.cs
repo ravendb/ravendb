@@ -13,6 +13,7 @@ using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Json.Linq;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Input;
@@ -20,6 +21,8 @@ using Raven.Studio.Features.JsonEditor;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
+using Raven.Studio.Messages;
+using Notification = Raven.Studio.Messages.Notification;
 
 namespace Raven.Studio.Models
 {
@@ -36,7 +39,8 @@ namespace Raven.Studio.Models
 	    private static JsonSyntaxLanguageExtended JsonLanguage;
 	    private static ISyntaxLanguage JScriptLanguage;
 	    private static ISyntaxLanguage QueryLanguage;
-
+		public string LoadedDoc { get; set; }
+		public bool ShowDoc { get; set; }
 
 	    static PatchModel()
         {
@@ -82,9 +86,13 @@ namespace Raven.Studio.Models
 				{
 					OriginalDoc.SetText(firstOrDefault.Item.Document.ToJson().ToString());
 					ShowBeforeAndAfterPrompt = false;
+					HasSelection = true;
+					OnPropertyChanged(() => HasSelection);
 				}
 				else
 				{
+					HasSelection = false;
+					OnPropertyChanged(() => HasSelection);
 					ClearBeforeAndAfter();
 				}
 	        };
@@ -111,6 +119,7 @@ namespace Raven.Studio.Models
         private QueryIndexAutoComplete queryIndexAutoComplete;
 	    private QueryDocumentsCollectionSource queryCollectionSource;
 	    private bool showBeforeAndAfterPrompt;
+		public bool HasSelection { get; set; }
 
 	    protected QueryIndexAutoComplete QueryIndexAutoComplete
         {
@@ -268,6 +277,8 @@ namespace Raven.Studio.Models
 		public ICommand Patch { get { return new ExecutePatchCommand(this); } }
 		public ICommand PatchSelected { get { return new PatchSelectedCommand(this); } }
 		public ICommand Test { get { return new TestPatchCommand(this); } }
+		public ICommand Save { get { return new SavePatchCommand(this); } }
+		public ICommand Load { get { return new LoadPatchCommand(this); } }
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
@@ -335,6 +346,87 @@ namespace Raven.Studio.Models
                     UpdateCollectionSource();
                 });
         }
+
+		public void UpdateDoc(string name)
+		{
+			LoadedDoc = name;
+			ShowDoc = true;
+			OnPropertyChanged(() => LoadedDoc);
+			OnPropertyChanged(() => ShowDoc);
+			OnPropertyChanged(() => QueryDoc);
+			OnPropertyChanged(() => Script);
+			OnPropertyChanged(() => PatchOn);
+			OnPropertyChanged(() => SelectedItem);
+		}
+	}
+
+	public class LoadPatchCommand : Command
+	{
+		private readonly PatchModel patchModel;
+
+		public LoadPatchCommand(PatchModel patchModel)
+		{
+			this.patchModel = patchModel;
+		}
+
+		public override void Execute(object parameter)
+		{
+			AskUser.QuestionWithSuggestionAsync("Load", "Choose file to load",
+			                                    ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
+				                                    LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
+					                                    task =>
+					                                    {
+						                                    var objects = (IList<object>) task.Result.Cast<object>().ToList();
+						                                    return objects;
+					                                    }))
+				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().
+					                                          LoadAsync<PatchDocument>("Studio/Patch/" + result)
+					                                          .ContinueOnSuccessInTheUIThread(patch =>
+					                                          {
+																  if (patch == null)
+																	  ApplicationModel.Current.Notifications.Add(new Notification("Could not find Patch document named " + result, NotificationLevel.Error));
+																  else
+																  {
+																	  patchModel.PatchOn = patch.PatchOnOption;
+																	  patchModel.QueryDoc.SetText(patch.Query);
+																	  patchModel.Script.SetText(patch.Script);
+																	  patchModel.SelectedItem = patch.SelectedItem;
+																	  patchModel.UpdateDoc(result);
+																  }
+					                                          }));
+		}
+	}
+
+	public class SavePatchCommand : Command
+	{
+		private readonly PatchModel patchModel;
+
+		public SavePatchCommand(PatchModel patchModel)
+		{
+			this.patchModel = patchModel;
+		}
+
+		public override void Execute(object parameter)
+		{
+			AskUser.QuestionAsync("Save", "Please enter a name").ContinueOnSuccessInTheUIThread(name =>
+			{
+				var doc = new PatchDocument
+				{
+					PatchOnOption = patchModel.PatchOn,
+					Query = patchModel.QueryDoc.CurrentSnapshot.GetText(LineTerminator.Newline),
+					Script = patchModel.Script.CurrentSnapshot.GetText(LineTerminator.Newline),
+					SelectedItem = patchModel.SelectedItem,
+					Id = "Studio/Patch/" + name
+				};
+
+				var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
+				session.Store(doc);
+				session.SaveChangesAsync().ContinueOnSuccessInTheUIThread(() => patchModel.UpdateDoc(name));
+				//ApplicationModel.DatabaseCommands.PutAsync("Studio/Patch/" + name, new Guid(), RavenJObject.FromObject(doc), new RavenJObject());
+
+
+			});
+		}
 	}
 
 	public class PatchSelectedCommand : Command
@@ -482,5 +574,14 @@ namespace Raven.Studio.Models
 		Document,
 		Collection,
 		Index
+	}
+
+	public class PatchDocument
+	{
+		public PatchOnOptions PatchOnOption { get; set; }
+		public string Query { get; set; }
+		public string Script { get; set; }
+		public string SelectedItem { get; set; }
+		public string Id { get; set; }
 	}
 }

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -32,6 +33,33 @@ namespace Raven.Studio.Features.Input
 				Question = question
 			};
 			var inputWindow = new InputWindow
+			{
+				DataContext = dataContext
+			};
+
+			var tcs = new TaskCompletionSource<string>();
+
+			inputWindow.Closed += (sender, args) =>
+			{
+				if (inputWindow.DialogResult == true)
+					tcs.SetResult(dataContext.Answer);
+				else
+					tcs.SetCanceled();
+			};
+
+			inputWindow.Show();
+
+			return tcs.Task;
+		}
+
+		public static Task<string> QuestionWithSuggestionAsync(string title, string question, Task<IList<object>> provideSuggestions)
+		{
+			var dataContext = new InputModelWithSuggetion(provideSuggestions)
+			{
+				Title = title,
+				Question = question
+			};
+			var inputWindow = new InputWindowWithSuggestion
 			{
 				DataContext = dataContext
 			};

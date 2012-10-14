@@ -29,14 +29,22 @@
 				CornerRadius="4,4,0,0"
 				BorderThickness="1,1,1,0"
 				Grid.Row="0"/>
-        
-        <StackPanel Orientation="Horizontal" UseLayoutRounding="True">
-                    <Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Patch_Small}"/>
-					<TextBlock Text="Patch Documents"
-							   Style="{StaticResource Style_Text_Header}" />
-				</StackPanel>
 
-        <Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
+		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+			<Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Patch_Small}"/>
+			<TextBlock Text="Patch Documents"
+					   Style="{StaticResource Style_Text_Header}" />
+			<TextBlock Text=" > " 
+					   Visibility="{Binding ShowDoc, Converter={StaticResource BooleanToVisibility} }" 
+					   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+					   VerticalAlignment="Center"/>
+			<TextBlock Text="{Binding LoadedDoc}" 
+					   Visibility="{Binding ShowDoc, Converter={StaticResource BooleanToVisibility} }"  
+					   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+					   VerticalAlignment="Center"/>
+		</StackPanel>
+
+		<Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
 			<Grid Margin="5">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="Auto"/>
@@ -67,6 +75,32 @@
 							</StackPanel>
 						</Button.Content>
 					</Button>
+
+					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+
+					<Button Command="{Binding Save}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Save Patch">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_Save_Small}"
+								   Stretch="None"/>
+								<TextBlock Text="Save" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<Button Command="{Binding Load}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Load Patch">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_Up_Tiny}"
+								   Stretch="None"/>
+								<TextBlock Text="Load" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
 				</StackPanel>
 
 				<StackPanel Orientation="Horizontal" Grid.Column="2">
@@ -74,7 +108,8 @@
 					<Button Command="{Binding PatchSelected}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							ToolTipService.ToolTip="Execute Patch"
-							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}">
+							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"
+							IsEnabled="{Binding HasSelection}">
 						<Button.Content>
 							<StackPanel Orientation="Horizontal">
 								<Image Source="{StaticResource Image_ExecutePatch_Tiny}"
