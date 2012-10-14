@@ -71,6 +71,10 @@ namespace Raven.Studio.Models
 
         public ItemSelection<VirtualItem<ViewableDocument>> ItemSelection { get; private set; }
 
+        public bool HideItemContextMenu { get; set; }
+
+        public bool MinimalHeader { get; set; }
+
         private void HandleItemsRealized(object sender, ItemsRealizedEventArgs e)
         {
             var viewableDocument = Documents[e.StartingIndex].Item;

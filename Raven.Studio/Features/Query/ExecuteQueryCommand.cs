@@ -46,7 +46,7 @@ namespace Raven.Studio.Features.Query
 							   });
 
             model.DocumentsResult.SetPriorityColumns(GetRelevantFields());
-		    var templateQuery = CreateTemplateQuery();
+		    var templateQuery = model.CreateTemplateQuery();
 		    model.QueryUrl = templateQuery.GetIndexQueryUrl("", model.IndexName, "indexes");
 			var url = ApplicationModel.Current.Server.Value.Url;
 			if (url.EndsWith("/") == false)
@@ -73,51 +73,6 @@ namespace Raven.Studio.Features.Query
 		{
 			model.ClearQueryError();
 			model.Suggestions.Clear();
-		}
-
-		private IndexQuery CreateTemplateQuery()
-		{
-			var q = new IndexQuery
-						{
-							Query = query,
-							DefaultOperator = model.DefaultOperator
-						};
-
-			if (model.SortBy != null && model.SortBy.Count > 0)
-			{
-				var sortedFields = new List<SortedField>();
-				foreach (var sortByRef in model.SortBy)
-				{
-					var sortBy = sortByRef.Value;
-					if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
-					{
-						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length);
-						sortedFields.Add(new SortedField(field) {Descending = true});
-					}
-					else
-						sortedFields.Add(new SortedField(sortBy));
-				}
-				q.SortedFields = sortedFields.ToArray();
-			}
-
-			if (model.ShowFields)
-				q.FieldsToFetch = new[] { Constants.AllFields };
-
-			q.DebugOptionGetIndexEntries = model.ShowEntries;
-			
-			q.SkipTransformResults = model.SkipTransformResults;
-			if (model.IsSpatialQuerySupported && model.Latitude.HasValue && model.Longitude.HasValue)
-			{
-				q = new SpatialIndexQuery(q)
-						{
-							QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(model.Latitude.Value, model.Longitude.Value, model.Radius.HasValue ? model.Radius.Value : 1),
-							SpatialRelation = SpatialRelation.Within,
-							SpatialFieldName = Constants.DefaultSpatialFieldName,
-							DefaultOperator = model.DefaultOperator
-						};
-			}
-
-			return q;
 		}
 
 		private void SuggestResults()
