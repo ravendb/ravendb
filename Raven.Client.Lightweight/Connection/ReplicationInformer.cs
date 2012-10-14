@@ -614,7 +614,8 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 							if (ShouldExecuteUsing(state.ReplicationDestinations[replicationIndex], state.CurrentRequest, state.Method, false))
 							{
 								return AttemptOperationAndOnFailureCallExecuteWithReplication(state.ReplicationDestinations[replicationIndex],
-																							  state.With(ExecuteWithReplicationStates.AfterTryingWithStripedServer));
+																							  state.With(ExecuteWithReplicationStates.AfterTryingWithStripedServer),
+																							  state.ReplicationDestinations.Count > state.LastAttempt +1);
 							}
 						}
 					}
@@ -626,12 +627,14 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 						goto case ExecuteWithReplicationStates.TryAllServers; // skips both checks
 
 					return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
-																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl));
+																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl),
+																					state.ReplicationDestinations.Count > state.LastAttempt + 1);
 
 				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrl:
 					if (IsFirstFailure(state.PrimaryUrl))
 						return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
-																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice));
+																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice),
+																					  state.ReplicationDestinations.Count > state.LastAttempt + 1);
 
 					goto case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice;
 				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice:
@@ -655,12 +658,14 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					}
 
 					return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
-																				  state.With(ExecuteWithReplicationStates.TryAllServersSecondAttempt));
+																				  state.With(ExecuteWithReplicationStates.TryAllServersSecondAttempt),
+																				  state.ReplicationDestinations.Count > state.LastAttempt + 1);
 				case ExecuteWithReplicationStates.TryAllServersSecondAttempt:
 					destination = state.ReplicationDestinations[state.LastAttempt];
 					if (IsFirstFailure(destination))
 						return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
-																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice));
+																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice),
+																					  state.ReplicationDestinations.Count > state.LastAttempt + 1);
 
 					goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
 				case ExecuteWithReplicationStates.TryAllServersFailedTwice:
@@ -679,7 +684,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			}
 		}
 
-		protected virtual Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(string url, ExecuteWithReplicationState<T> state)
+		protected virtual Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(string url, ExecuteWithReplicationState<T> state, bool avoidThrowing)
 		{
 			Task<Task<T>> finalTask = state.Operation(url).ContinueWith(task =>
 			{
@@ -698,7 +703,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 					case TaskStatus.Faulted:
 						Debug.Assert(task.Exception != null);
-						if (IsServerDown(task.Exception))
+						if (IsServerDown(task.Exception) && avoidThrowing)
 							return ExecuteWithReplicationAsync(state);
 
 						tcs = new TaskCompletionSource<T>();

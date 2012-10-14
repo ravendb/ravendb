@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Windows.Browser;
 using Raven.Abstractions.Data;
@@ -9,6 +10,7 @@ using Raven.Client.Document;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -211,9 +213,29 @@ namespace Raven.Studio.Models
 
             SelectedDatabase.Value.AsyncDatabaseCommands
                 .EnsureSilverlightStartUpAsync()
-                .Catch();
-			if(databaseName != null && databaseName != Constants.SystemDatabase)
-				Settings.Instance.SelectedDatabase = databaseName;
+				.ContinueOnSuccess(() =>
+				{
+					if (databaseName != null && databaseName != Constants.SystemDatabase)
+						Settings.Instance.SelectedDatabase = databaseName;
+				})
+                .Catch(exception =>
+                {
+	                var webException = exception.ExtractSingleInnerException() as WebException;
+					if (webException == null)
+						return false;
+
+	                var httpWebResponse = webException.Response as HttpWebResponse;
+
+					if (httpWebResponse == null)
+						return false;
+
+					if (httpWebResponse.StatusCode != HttpStatusCode.ServiceUnavailable)
+						return false;
+
+					ApplicationModel.Current.Notifications.Add(new Notification("Database " + databaseName + " does not exist.", NotificationLevel.Error, webException));
+
+	                return true;
+                });
 		}
 
 		private void DisplayBuildNumber()
