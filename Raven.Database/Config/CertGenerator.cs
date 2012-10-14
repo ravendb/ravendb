@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
@@ -63,20 +64,26 @@ namespace Raven.Database.Config
 
 		}
 		
+		private static readonly ConcurrentDictionary<string, Lazy<X509Certificate2>> cache = new ConcurrentDictionary<string, Lazy<X509Certificate2>>();
+
 		public static X509Certificate2 GenerateNewCertificate(string name)
 		{
-			var memoryStream = new MemoryStream();
-
-			GenerateNewCertificate(name, memoryStream);
-
-			try
+			var lazy = cache.GetOrAdd(name, s => new Lazy<X509Certificate2>(() =>
 			{
-				return new X509Certificate2(memoryStream.ToArray());
-			}
-			catch (Exception)
-			{
-				return new X509Certificate2(memoryStream.ToArray(), string.Empty, X509KeyStorageFlags.MachineKeySet);
-			}
+				var memoryStream = new MemoryStream();
+
+				GenerateNewCertificate(name, memoryStream);
+
+				try
+				{
+					return new X509Certificate2(memoryStream.ToArray());
+				}
+				catch (Exception)
+				{
+					return new X509Certificate2(memoryStream.ToArray(), string.Empty, X509KeyStorageFlags.MachineKeySet);
+				}
+			}));
+			return lazy.Value;
 		}
 	}
 }
