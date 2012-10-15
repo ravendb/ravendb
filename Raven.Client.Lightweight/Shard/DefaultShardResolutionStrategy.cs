@@ -22,11 +22,13 @@ namespace Raven.Client.Shard
 
 		protected readonly List<string> ShardIds;
 
-		private int currentShardCounter;
+		private long currentShardCounter;
 		private readonly Dictionary<Type, Regex> regexToCaptureShardIdFromQueriesByType = new Dictionary<Type, Regex>();
 
-		private readonly Dictionary<Type, Func<object,string>> shardResultToStringByType = new Dictionary<Type, Func<object, string>>();
+		private readonly Dictionary<Type, Func<object, string>> shardResultToStringByType = new Dictionary<Type, Func<object, string>>();
 		private readonly Dictionary<Type, Func<string, string>> queryResultToStringByType = new Dictionary<Type, Func<string, string>>();
+
+		private SessionMetadata lastSessionMetadata;
 
 		public DefaultShardResolutionStrategy(IEnumerable<string> shardIds, ShardStrategy shardStrategy)
 		{
@@ -41,32 +43,32 @@ namespace Raven.Client.Shard
 			ShardingOn(shardingProperty, translator, translator);
 		}
 
-		public void ShardingOn<TEntity, TResult>(Expression<Func<TEntity, TResult>> shardingProperty, 
+		public void ShardingOn<TEntity, TResult>(Expression<Func<TEntity, TResult>> shardingProperty,
 			Func<TResult, string> valueTranslator = null,
 			Func<string, string> queryTranslator = null
 			)
 		{
 			valueTranslator = valueTranslator ?? (result =>
-			                                      	{
-														if (ReferenceEquals(result, null))
-															throw new InvalidOperationException("Got null for the shard id in the value translator for " +
-															                                    typeof (TEntity) + " using " + shardingProperty +
-															                                    ", no idea how to get the shard id from null.");
+			{
+				if (ReferenceEquals(result, null))
+					throw new InvalidOperationException("Got null for the shard id in the value translator for " +
+														typeof(TEntity) + " using " + shardingProperty +
+														", no idea how to get the shard id from null.");
 
-														// by default we assume that if you have a separator in the value we got back
-														// the shard id is the very first value up until the first separator
-			                                      		var str = result.ToString();
-														var start = str.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.InvariantCultureIgnoreCase);
-														if (start == -1)
-															return str;
-			                                      		return str.Substring(0, start);
-			                                      	});
+				// by default we assume that if you have a separator in the value we got back
+				// the shard id is the very first value up until the first separator
+				var str = result.ToString();
+				var start = str.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.InvariantCultureIgnoreCase);
+				if (start == -1)
+					return str;
+				return str.Substring(0, start);
+			});
 
-			queryTranslator = queryTranslator ?? (result => valueTranslator((TResult) Convert.ChangeType(result, typeof (TResult))));
+			queryTranslator = queryTranslator ?? (result => valueTranslator((TResult)Convert.ChangeType(result, typeof(TResult))));
 
 			var shardFieldForQuerying = shardingProperty.ToPropertyPath();
 
-			if(shardStrategy.Conventions.FindIdentityProperty(shardingProperty.ToProperty()))
+			if (shardStrategy.Conventions.FindIdentityProperty(shardingProperty.ToProperty()))
 			{
 				shardFieldForQuerying = Constants.DocumentIdFieldName;
 			}
@@ -75,25 +77,38 @@ namespace Raven.Client.Shard
 {0}: \s* (?<Open>"")(?<shardId>[^""]+)(?<Close-Open>"") |
 {0}: \s* (?<shardId>[^""][^\s]*)", Regex.Escape(shardFieldForQuerying));
 
-			regexToCaptureShardIdFromQueriesByType[typeof (TEntity)] = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+			regexToCaptureShardIdFromQueriesByType[typeof(TEntity)] = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 			var compiled = shardingProperty.Compile();
 
 			shardResultToStringByType[typeof(TEntity)] = o => valueTranslator(compiled((TEntity)o));
-			queryResultToStringByType[typeof (TEntity)] = o => queryTranslator(o);
+			queryResultToStringByType[typeof(TEntity)] = o => queryTranslator(o);
 		}
 
 
 		/// <summary>
 		///  Generate a shard id for the specified entity
 		///  </summary>
-		public virtual string GenerateShardIdFor(object entity)
+		public virtual string GenerateShardIdFor(object entity, SessionMetadata sessionMetadata)
 		{
 			if (shardResultToStringByType.Count == 0)
-			{ 
-				// default, round robin scenario
-				var increment = Interlocked.Increment(ref currentShardCounter);
-				return ShardIds[increment%ShardIds.Count];
+			{
+				bool useDefault = !(this.lastSessionMetadata != null && this.lastSessionMetadata.SaveCounter == sessionMetadata.SaveCounter);
+
+				lastSessionMetadata = sessionMetadata;
+
+				if (useDefault)
+				{
+					// default, round robin scenario
+					var increment = Interlocked.Increment(ref currentShardCounter);
+					return ShardIds[(int)increment % ShardIds.Count];
+				}
+				else
+				{
+					// one shard per save changes
+					var increment = Interlocked.Read(ref currentShardCounter);
+					return ShardIds[(int)increment % ShardIds.Count];
+				}
 			}
 
 			Func<object, string> func;
@@ -124,7 +139,7 @@ namespace Raven.Client.Shard
 				Regex regex;
 				if (regexToCaptureShardIdFromQueriesByType.TryGetValue(requestData.EntityType, out regex) == false)
 					return null; // we have no special knowledge, let us just query everything
-	
+
 				var collection = regex.Matches(requestData.Query.Query);
 				if (collection.Count == 0)
 					return null; // we don't have the sharding field, we have to query over everything
@@ -139,7 +154,7 @@ namespace Raven.Client.Shard
 				return potentialShardsFor;
 			}
 
-			if(requestData.Keys.Count == 0) // we are only optimized for keys
+			if (requestData.Keys.Count == 0) // we are only optimized for keys
 				return null;
 
 
@@ -158,7 +173,7 @@ namespace Raven.Client.Shard
 					list.Add(maybeShardId);
 				else
 					return null; // we couldn't find it there, select from all
-		
+
 			}
 			return list.ToArray();
 		}

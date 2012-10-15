@@ -19,6 +19,8 @@ using System.Linq;
 
 namespace Raven.Tests.Shard.Async
 {
+	using Raven.Abstractions.Data;
+
 	public class WhenUsingShardedServers : RemoteClientTest, IDisposable
 	{
 		readonly string path1;
@@ -56,8 +58,8 @@ namespace Raven.Tests.Shard.Async
 			}.ToDictionary(x => x.Identifier, x => x);
 
 			shardResolution = MockRepository.GenerateStub<IShardResolutionStrategy>();
-			shardResolution.Stub(x => x.GenerateShardIdFor(company1)).Return("Shard1");
-			shardResolution.Stub(x => x.GenerateShardIdFor(company2)).Return("Shard2");
+			shardResolution.Stub(x => x.GenerateShardIdFor(Arg.Is(company1), Arg<SessionMetadata>.Is.Anything)).Return("Shard1");
+			shardResolution.Stub(x => x.GenerateShardIdFor(Arg.Is(company2), Arg<SessionMetadata>.Is.Anything)).Return("Shard2");
 
 			shardResolution.Stub(x => x.MetadataShardIdFor(company1)).Return("Shard1");
 			shardResolution.Stub(x => x.MetadataShardIdFor(company2)).Return("Shard1");

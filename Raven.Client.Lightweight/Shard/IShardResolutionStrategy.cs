@@ -2,6 +2,8 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Shard
 {
+	using Raven.Abstractions.Data;
+
 	/// <summary>
 	/// Implementers of this interface provide a way to decide which shards will be queried
 	/// for a specified operation
@@ -11,7 +13,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		///  Generate a shard id for the specified entity
 		///  </summary>
-		string GenerateShardIdFor(object entity);
+		string GenerateShardIdFor(object entity, SessionMetadata sessionMetadata);
 
 		/// <summary>
 		///  The shard id for the server that contains the metadata (such as the HiLo documents)

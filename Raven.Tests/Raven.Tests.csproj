@@ -446,6 +446,7 @@
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
     <Compile Include="Issues\RavenDB_554.cs" />
+    <Compile Include="Issues\RavenDB_579.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />

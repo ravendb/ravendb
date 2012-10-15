@@ -304,6 +304,10 @@ namespace Raven.Client.Shard
 						cachingScope.Dispose();
 						throw;
 					}
+					finally
+					{
+						sessionMetadata.SaveCounter++;
+					}
 				}).Unwrap();
 		}
 
