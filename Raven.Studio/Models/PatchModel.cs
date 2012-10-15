@@ -371,14 +371,14 @@ namespace Raven.Studio.Models
 
 		public override void Execute(object parameter)
 		{
-			AskUser.QuestionWithSuggestionAsync("Load", "Choose file to load",
-			                                    ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
-				                                    LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
-					                                    task =>
-					                                    {
-						                                    var objects = (IList<object>) task.Result.Cast<object>().ToList();
-						                                    return objects;
-					                                    }))
+			AskUser.QuestionWithSuggestionAsync("Load", "Choose saved patching to load",
+			                                    input => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
+				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/" + input).ContinueWith(
+					                                             task =>
+					                                             {
+						                                             IList<object> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).Cast<object>().ToList();
+						                                             return objects;
+					                                             }))
 				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().
 					                                          LoadAsync<PatchDocument>("Studio/Patch/" + result)
 					                                          .ContinueOnSuccessInTheUIThread(patch =>
