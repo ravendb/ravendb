@@ -19,6 +19,7 @@ using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Tests.Bugs;
 using System.Linq;
+using Raven.Tests.Faceted;
 
 namespace Raven.Tryouts
 {
@@ -31,7 +32,32 @@ namespace Raven.Tryouts
 				Console.Clear();
 				Console.WriteLine(i);
 				Console.WriteLine();
-				new CompiledIndexesNhsevidence().CanGetCorrectResults();
+
+				using(var x = new FacetedIndex())
+				{
+					x.CanPerformFacetedSearch_Embedded();
+				}
+				using (var x = new FacetedIndex())
+				{
+					x.CanPerformFacetedSearch_Embedded_WithStronglyTypedAPI();
+				}
+				using (var x = new FacetedIndex())
+				{
+					x.CanPerformFacetedSearch_Remotely();
+				}
+				using (var x = new FacetedIndex())
+				{
+					x.CanPerformFacetedSearch_Remotely_Lazy();
+				}
+
+				using (var x = new FacetedIndex())
+				{
+					x.CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others();
+				}
+				using (var x = new FacetedIndex())
+				{
+					x.CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI();
+				}
 			}
 		}
 
