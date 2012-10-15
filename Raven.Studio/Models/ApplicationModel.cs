@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
@@ -21,6 +22,7 @@ namespace Raven.Studio.Models
 
 		static ApplicationModel()
 		{
+			ChangesToDispose = new List<IDatabaseChanges>();
 			Current = new ApplicationModel();
 		}
 
@@ -165,6 +167,8 @@ namespace Raven.Studio.Models
 				return version.Split('.')[2];
 			}
 		}
+		public static List<IDatabaseChanges> ChangesToDispose { get; private set; }
+
 		string GetAssemblyVersion()
 		{
 			var firstOrDefault = (AssemblyFileVersionAttribute)typeof(ApplicationModel).Assembly.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true).FirstOrDefault();

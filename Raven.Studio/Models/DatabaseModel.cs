@@ -105,7 +105,10 @@ namespace Raven.Studio.Models
 			{
 				if (documentChanges == null)
 				{
-					documentChanges = Changes()
+					var changes = Changes();
+
+					ApplicationModel.ChangesToDispose.Add(changes);
+					documentChanges = changes
 						.ForAllDocuments()
 						.Publish(); // use a single underlying subscription
 
@@ -125,7 +128,9 @@ namespace Raven.Studio.Models
 			{
 				if (indexChanges == null)
 				{
-					indexChanges = Changes()
+					var changes = Changes();
+					ApplicationModel.ChangesToDispose.Add(changes);
+					indexChanges = changes
 						.ForAllIndexes()
 						.Publish(); // use a single underlying subscription
 
