@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using ActiproSoftware.Text;
@@ -13,7 +12,6 @@ using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
-using Raven.Json.Linq;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Input;
@@ -75,6 +73,7 @@ namespace Raven.Studio.Models
             };
 
             ShowBeforeAndAfterPrompt = true;
+	        ShowAfterPrompt = true;
             AvailableObjects = new ObservableCollection<string>();
 
             queryCollectionSource = new QueryDocumentsCollectionSource();
@@ -118,7 +117,8 @@ namespace Raven.Studio.Models
 
         private QueryIndexAutoComplete queryIndexAutoComplete;
 	    private QueryDocumentsCollectionSource queryCollectionSource;
-	    private bool showBeforeAndAfterPrompt;
+		private bool showBeforeAndAfterPrompt;
+		private bool showAfterPrompt;
 		public bool HasSelection { get; set; }
 
 	    protected QueryIndexAutoComplete QueryIndexAutoComplete
@@ -168,21 +168,43 @@ namespace Raven.Studio.Models
 	        }
 	    }
 
-	    public bool ShowBeforeAndAfterPrompt
+		public string AfterPromptText
+		{
+			get { return "Press Test to try out your patch script"; }
+		}
+
+		public bool ShowBeforeAndAfterPrompt
 	    {
 	        get { return showBeforeAndAfterPrompt; }
             set
             {
                 showBeforeAndAfterPrompt = value;
                 OnPropertyChanged(() => ShowBeforeAndAfterPrompt);
+				OnPropertyChanged(() => ShowAfterPrompt);
             }
 	    }
+
+		public bool ShowAfterPrompt
+		{
+			get
+			{
+				if (ShowBeforeAndAfterPrompt)
+					return false;
+				return showAfterPrompt;
+			}
+			set
+			{
+				showAfterPrompt = value;
+				OnPropertyChanged(() => ShowAfterPrompt);
+			}
+		}
 
 	    private void ClearBeforeAndAfter()
 	    {
 	        OriginalDoc.SetText("");
 	        NewDoc.SetText("");
 	        ShowBeforeAndAfterPrompt = true;
+		    ShowAfterPrompt = true;
 	    }
 
 	    public ObservableCollection<string> AvailableObjects { get; private set; }
@@ -371,12 +393,12 @@ namespace Raven.Studio.Models
 
 		public override void Execute(object parameter)
 		{
-			AskUser.QuestionWithSuggestionAsync("Load", "Choose saved patching to load",
-			                                    input => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
-				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/" + input).ContinueWith(
+			AskUser.SelectItem("Load", "Choose saved patching to load",
+			                                    () => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
+				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
 					                                             task =>
 					                                             {
-						                                             IList<object> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).Cast<object>().ToList();
+						                                             IList<string> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).ToList();
 						                                             return objects;
 					                                             }))
 				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().
@@ -519,6 +541,7 @@ namespace Raven.Studio.Models
 			}
 
 		    patchModel.ShowBeforeAndAfterPrompt = false;
+			patchModel.ShowAfterPrompt = false;
 		}
 	}
 

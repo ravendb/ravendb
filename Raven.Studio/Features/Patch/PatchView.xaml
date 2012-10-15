@@ -101,9 +101,8 @@
 							</StackPanel>
 						</Button.Content>
 					</Button>
-				</StackPanel>
 
-				<StackPanel Orientation="Horizontal" Grid.Column="2">
+					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 					<Button Command="{Binding PatchSelected}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -118,7 +117,7 @@
 							</StackPanel>
 						</Button.Content>
 					</Button>
-					
+
 					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"
 							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
 
@@ -270,8 +269,21 @@
 							Grid.ColumnSpan="3" 
 							Visibility="{Binding ShowBeforeAndAfterPrompt, Converter={StaticResource BooleanToVisibility}}"
 							Background="#BBFFFFFF">
-						
-						<TextBlock Text="{Binding BeforeAndAfterPromptText}" 
+
+							<TextBlock Text="{Binding BeforeAndAfterPromptText}" 
+								   VerticalAlignment="Center" 
+								   HorizontalAlignment="Center" 
+								   TextWrapping="Wrap" 
+								   FontSize="14"/>
+					</Border>
+
+					<Border Grid.Row="0" 
+							Grid.RowSpan="2" 
+							Grid.Column="2"  
+							Visibility="{Binding ShowAfterPrompt, Converter={StaticResource BooleanToVisibility}}"
+							Background="#BBFFFFFF">
+
+						<TextBlock Text="{Binding AfterPromptText}" 
 								   VerticalAlignment="Center" 
 								   HorizontalAlignment="Center" 
 								   TextWrapping="Wrap" 
