@@ -19,6 +19,7 @@ namespace Raven.Bundles.Versioning.Data
 		/// Disable versioning for the impacted document of this document.
 		/// </summary>
 		public bool Exclude { get; set; }
+		public bool PurgeOnDelete { get; set; }
 
 		public VersioningConfiguration()
 		{

@@ -4,8 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
+using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Bundles.Tests.Versioning
 {
@@ -186,6 +191,147 @@ namespace Raven.Bundles.Tests.Versioning
 				{
 					Assert.Null(session.Load<Company>(company.Id + "/revisions/" + i));
 				}
+			}
+		}
+
+		[Fact]
+		public void Will_not_delete_revisions_if_parent_exists()
+		{
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<object>("companies/1/revisions/1");
+				Assert.NotNull(doc);
+
+				session.Advanced.Defer(new DeleteCommandData
+				{
+					Key = "companies/1/revisions/1",
+					TransactionInformation = new TransactionInformation()
+				});
+
+				Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+			}
+		}
+
+		[Fact]
+		public void Will_delete_revisions_if_version_is_deleted()
+		{
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<object>("companies/1/revisions/1");
+				var comp = session.Load<object>("companies/1");
+				Assert.NotNull(doc);
+
+				session.Delete(comp);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<object>("companies/1/revisions/1");
+				Assert.NotNull(doc);
+
+				session.Advanced.Defer(new DeleteCommandData
+				{
+					Key = "companies/1/revisions/1",
+					TransactionInformation = new TransactionInformation()
+				});
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<object>("companies/1/revisions/1");
+				Assert.Null(doc);
+			}
+		}
+
+		[Fact]
+		public void Will_delete_child_revisions_if_purge_is_true()
+		{
+			using(var session = documentStore.OpenSession())
+			{
+				session.Store(new VersioningConfiguration
+				{
+					Exclude = false,
+					PurgeOnDelete = true,
+					Id = "Raven/Versioning/Companies"
+				});
+
+				session.SaveChanges();
+			}
+
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<object>("companies/1");
+				Assert.NotNull(doc);
+
+				session.Delete(doc);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<object>("companies/1/revisions/1");
+				Assert.Null(doc);
+			}
+		}
+
+		[Fact]
+		public void Will_not_delete_child_revisions_if_purge_is_false()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new VersioningConfiguration
+				{
+					Exclude = false,
+					PurgeOnDelete = false,
+					Id = "Raven/Versioning/Companies"
+				});
+
+				session.SaveChanges();
+			}
+
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<object>("companies/1");
+				Assert.NotNull(doc);
+
+				session.Delete(doc);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<object>("companies/1/revisions/1");
+				Assert.NotNull(doc);
 			}
 		}
 
