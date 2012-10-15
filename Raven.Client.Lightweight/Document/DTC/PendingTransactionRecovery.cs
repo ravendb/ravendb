@@ -65,6 +65,21 @@ namespace Raven.Client.Document.DTC
 						logger.WarnException("Could not properly complete recovery of resource manager: " + rm, e);
 					}
 				}
+
+				var errors = new List<Exception>();
+				foreach (var file in store.GetFileNames("*.recovery-information"))
+				{
+					try
+					{
+						store.DeleteFile(file);
+					}
+					catch (Exception e)
+					{
+						errors.Add(e);
+					}
+				}
+				if (errors.Count > 0)
+					throw new AggregateException(errors);
 			}
 		}
 
