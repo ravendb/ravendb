@@ -33,30 +33,9 @@ namespace Raven.Tryouts
 				Console.WriteLine(i);
 				Console.WriteLine();
 
-				using(var x = new FacetedIndex())
+				using(var x = new CompiledIndexesNhsevidence())
 				{
-					x.CanPerformFacetedSearch_Embedded();
-				}
-				using (var x = new FacetedIndex())
-				{
-					x.CanPerformFacetedSearch_Embedded_WithStronglyTypedAPI();
-				}
-				using (var x = new FacetedIndex())
-				{
-					x.CanPerformFacetedSearch_Remotely();
-				}
-				using (var x = new FacetedIndex())
-				{
-					x.CanPerformFacetedSearch_Remotely_Lazy();
-				}
-
-				using (var x = new FacetedIndex())
-				{
-					x.CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others();
-				}
-				using (var x = new FacetedIndex())
-				{
-					x.CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI();
+					x.CanGetCorrectResults();
 				}
 			}
 		}
