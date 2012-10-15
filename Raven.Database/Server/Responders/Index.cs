@@ -377,7 +377,7 @@ namespace Raven.Database.Server.Responders
 			return result;
 		}
 
-		static Regex oldDateTimeFormat = new Regex(@"(\:|\[|TO\s) \s* (\d{17})", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+		static Regex oldDateTimeFormat = new Regex(@"(\:|\[|{|TO\s) \s* (\d{17})", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private void RewriteDateQueriesFromOldClients(IHttpContext context,IndexQuery indexQuery)
 		{
