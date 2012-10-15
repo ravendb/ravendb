@@ -147,12 +147,12 @@ namespace Raven.Studio.Models
 
         private void HandleSearchUsers()
         {
-            //TODO: update to handle search
             var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
-            session.Advanced.LoadStartingWithAsync<AuthorizationUser>("Authorization/Users").
+            session.Advanced.LoadStartingWithAsync<AuthorizationUser>("Authorization/Users/" + SearchUsers).
                 ContinueOnSuccessInTheUIThread(data =>
                 {
                     AuthorizationUsers.Clear();
+                    OriginalAuthorizationUsers.Clear();
                     foreach (var authorizationUser in data)
                     {
                         AuthorizationUsers.Add(authorizationUser);

@@ -115,7 +115,15 @@ namespace Raven.Studio.Models
 		private void AfterUpdate(NameAndCount[] collectionDocumentsCount)
 		{
             // update documents count
-		    var nameToCount = collectionDocumentsCount.ToDictionary(i => i.Name, i => i.Count);
+
+		    var nameToCount = collectionDocumentsCount.OrderByDescending(count => count.Count).ToDictionary(i => i.Name, i => i.Count);
+		    var collections = Collections.OrderByDescending(model => model.Count).ToList();
+            Collections = new BindableCollection<CollectionModel>(model => model.Name);
+		    foreach (var collectionModel in collections)
+		    {
+		        Collections.Add(collectionModel);
+		    }
+		    
 		    foreach (var collectionModel in Collections)
 		    {
 		        collectionModel.Count = nameToCount[collectionModel.Name];
@@ -129,6 +137,8 @@ namespace Raven.Studio.Models
 
 			if (SelectedCollection.Value == null)
 				SelectedCollection.Value = Collections.FirstOrDefault();
+
+            OnPropertyChanged(() => Collections);
 		}
 
 		public string PageTitle

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Net;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Controls
 {
@@ -72,6 +74,10 @@ namespace Raven.Studio.Controls
 
                 if (item != null && item.Level == NotificationLevel.Error)
                 {
+                    if(item.Message == "NotFound ")
+                    {
+                        ApplicationModel.Current.Server.Value.IsConnected.Value = false;
+                    }
                     timer.Interval = TimeSpan.FromSeconds(6);
                 }
                 else

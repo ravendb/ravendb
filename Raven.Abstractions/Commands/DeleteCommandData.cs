@@ -50,6 +50,8 @@ namespace Raven.Abstractions.Commands
 			get { return null; }
 		}
 
+		public RavenJObject AdditionalData { get; set; }
+
 		/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
@@ -59,7 +61,8 @@ namespace Raven.Abstractions.Commands
 			       	{
 			       		{"Key", Key},
 						{"Etag", new RavenJValue(Etag != null ? (object) Etag.ToString() : null)},
-						{"Method", Method}
+						{"Method", Method},
+						{"AdditionalData", AdditionalData}
 			       	};
 		}
 	}

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Windows.Browser;
 using Raven.Abstractions.Data;
@@ -8,6 +9,8 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -43,7 +46,8 @@ namespace Raven.Studio.Models
             Databases = new BindableCollection<string>(name => name);
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
-			Initialize();
+		    IsConnected = new Observable<bool>();
+		    Initialize();
 		}
 
 		private void Initialize()
@@ -89,11 +93,25 @@ namespace Raven.Studio.Models
 		private static bool firstTick = true;
 		public override Task TimerTickedAsync()
 		{
+            if(IsConnected.Value == false)
+            {
+                DocumentStore.AsyncDatabaseCommands
+                    .GetStatisticsAsync()
+                    .ContinueOnSuccess(stats =>
+                    {
+                        IsConnected.Value = true;
+                        var url = UrlUtil.Url;
+                        SelectedDatabase.Value = new DatabaseModel(Constants.SystemDatabase, documentStore);
+                        Initialize();
+                        SetCurrentDatabase(new UrlParser(url));
+                    });
+            }
+
 			if (singleTenant)
 				return null;
 
-			if (SelectedDatabase.Value.HasReplication)
-				SelectedDatabase.Value.UpdateReplicationOnlineStatus();
+            //if (SelectedDatabase.Value.HasReplication)
+            //    SelectedDatabase.Value.UpdateReplicationOnlineStatus();
 
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>
@@ -127,9 +145,14 @@ namespace Raven.Studio.Models
 
 										if (Settings.Instance.SelectedDatabase != null && names.Contains(Settings.Instance.SelectedDatabase))
 										{
-											url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
-											SetCurrentDatabase(url);
-											UrlUtil.Navigate(Settings.Instance.LastUrl);
+											if (url.QueryParams.ContainsKey("database") == false)
+											{
+												url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
+												SetCurrentDatabase(url);
+											}
+
+											if(string.IsNullOrWhiteSpace(url.Path))
+												UrlUtil.Navigate(Settings.Instance.LastUrl);
 										}
 				                   	})
 				.Catch();
@@ -190,9 +213,29 @@ namespace Raven.Studio.Models
 
             SelectedDatabase.Value.AsyncDatabaseCommands
                 .EnsureSilverlightStartUpAsync()
-                .Catch();
-			if(databaseName != null && databaseName != Constants.SystemDatabase)
-				Settings.Instance.SelectedDatabase = databaseName;
+				.ContinueOnSuccess(() =>
+				{
+					if (databaseName != null && databaseName != Constants.SystemDatabase)
+						Settings.Instance.SelectedDatabase = databaseName;
+				})
+                .Catch(exception =>
+                {
+	                var webException = exception.ExtractSingleInnerException() as WebException;
+					if (webException == null)
+						return false;
+
+	                var httpWebResponse = webException.Response as HttpWebResponse;
+
+					if (httpWebResponse == null)
+						return false;
+
+					if (httpWebResponse.StatusCode != HttpStatusCode.ServiceUnavailable)
+						return false;
+
+					ApplicationModel.Current.Notifications.Add(new Notification("Database " + databaseName + " does not exist.", NotificationLevel.Error, webException));
+
+	                return true;
+                });
 		}
 
 		private void DisplayBuildNumber()
@@ -216,5 +259,6 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<LicensingStatus> License { get; private set; }
+        public Observable<bool> IsConnected { get; set; }
 	}
 }

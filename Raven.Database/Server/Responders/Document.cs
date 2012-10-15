@@ -52,13 +52,13 @@ namespace Raven.Database.Server.Responders
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
-					ProcessPatchResult(context, docId, patchResult, null);
+					ProcessPatchResult(context, docId, patchResult.PatchResult, null);
 					break;
 				case "EVAL":
 					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
 					var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
-					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context));
-					ProcessPatchResult(context, docId, advPatchResult.Item1, advPatchResult.Item2);
+					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context), true);
+					ProcessPatchResult(context, docId, advPatchResult.Item1.PatchResult, advPatchResult.Item2);
 					break;
 			}
 		}

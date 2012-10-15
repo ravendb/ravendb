@@ -176,6 +176,9 @@
     <Compile Include="..\Raven.Database\Bundles\Replication\Data\SourceReplicationInformation.cs">
       <Link>Features\Bundles\SourceReplicationInformation.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Bundles\Replication\ReplicationStatistic.cs">
+      <Link>Features\Bundles\ReplicationStatistic.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Bundles\Versioning\Data\VersioningConfiguration.cs">
       <Link>Features\Bundles\VersioningConfiguration.cs</Link>
     </Compile>
@@ -199,6 +202,7 @@
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
     <Compile Include="Behaviors\SelectAllAction.cs" />
     <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
+    <Compile Include="Behaviors\ShowAutoCompleteDropDown.cs" />
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
@@ -259,6 +263,9 @@
     <Compile Include="Features\Alerts\AlertProxy.cs" />
     <Compile Include="Features\Alerts\AlertsView.xaml.cs">
       <DependentUpon>AlertsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Patch\PatchView.xaml.cs">
+      <DependentUpon>PatchView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Settings\AuthorizationSettingSectionView.xaml.cs">
       <DependentUpon>AuthorizationSettingSectionView.xaml</DependentUpon>
@@ -349,6 +356,9 @@
     <Compile Include="Features\Settings\VersioningSettingsView.xaml.cs">
       <DependentUpon>VersioningSettingsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Stats\ReplicationStatisticsView.xaml.cs">
+      <DependentUpon>ReplicationStatisticsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Tasks\IndexingTask.cs" />
     <Compile Include="Features\Tasks\SampleDataTask.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
@@ -369,6 +379,7 @@
     <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
     <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\ArrayContainer.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\IdStringToIdWithoutHeader.cs" />
@@ -434,8 +445,10 @@
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\AuthorizationSettingsSectionModel.cs" />
     <Compile Include="Models\DatabaseSettingsSectionViewModel.cs" />
+    <Compile Include="Models\PatchModel.cs" />
     <Compile Include="Models\QuotaSettingsSectionModel.cs" />
     <Compile Include="Models\ReplicationSettingsSectionModel.cs" />
+    <Compile Include="Models\ReplicationStatisticsModel.cs" />
     <Compile Include="Models\SettingsModel.cs" />
     <Compile Include="Models\CreateSettingsModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
@@ -456,6 +469,12 @@
     <Compile Include="Models\VersioningSettingsSectionModel.cs" />
     <Compile Include="Views\Alerts.xaml.cs">
       <DependentUpon>Alerts.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Patch.xaml.cs">
+      <DependentUpon>Patch.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ReplicationStatistics.xaml.cs">
+      <DependentUpon>ReplicationStatistics.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Settings.xaml.cs">
       <DependentUpon>Settings.xaml</DependentUpon>
@@ -799,6 +818,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Patch\PatchView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Settings\AuthorizationSettingSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -847,6 +870,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Stats\ReplicationStatisticsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Tasks\TaskView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -864,6 +891,14 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Alerts.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Patch.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ReplicationStatistics.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1124,6 +1159,12 @@
     <Resource Include="Assets\Images\Image_NotObserved_Tiny.png" />
     <Resource Include="Assets\Images\Image_DeleteObserved_Tiny.png" />
     <Resource Include="Assets\Images\query_options_tiny.png" />
+    <Resource Include="Assets\Images\Image_Key_Add_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Key_Tiny.png" />
+    <Resource Include="Assets\Images\delete_by_query.png" />
+    <Resource Include="Assets\Images\patch_small.png" />
+    <Resource Include="Assets\Images\execute_patch_tiny.png" />
+    <Resource Include="Assets\Images\whatif_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

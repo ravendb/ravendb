@@ -21,6 +21,8 @@
 	<BitmapImage x:Key="Image_DeleteObserved_Tiny" UriSource="Image_DeleteObserved_Tiny.png"/>
 	<BitmapImage x:Key="Image_Check_Tiny" UriSource="Image_Check_Tiny.png"/>
 	<BitmapImage x:Key="Image_Uncheck_Tiny" UriSource="Image_Uncheck_Tiny.png"/>
+	<BitmapImage x:Key="Image_Key_Tiny" UriSource="Image_Key_Tiny.png"/>
+	<BitmapImage x:Key="Image_Key_Add_Tiny" UriSource="Image_Key_Add_Tiny.png"/>
 	<BitmapImage x:Key="Image_Remove_Tiny" UriSource="remove_tiny.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="save_tiny.png"/>
     <BitmapImage x:Key="Image_Search_Small" UriSource="search_tiny.png" />
@@ -66,5 +68,9 @@
     <BitmapImage x:Key="Image_Export_Tiny" UriSource="export_data_tiny.png"/>
     <BitmapImage x:Key="Image_Backup_Tiny" UriSource="backup_tiny.png"/>
     <BitmapImage x:Key="Image_QueryOptions_Tiny" UriSource="query_options_tiny.png"/>
+    <BitmapImage x:Key="Image_DeleteByQuery_Tiny" UriSource="delete_by_query.png"/>
+    <BitmapImage x:Key="Image_Patch_Small" UriSource="patch_small.png"/>
+    <BitmapImage x:Key="Image_ExecutePatch_Tiny" UriSource="execute_patch_tiny.png"/>
+    <BitmapImage x:Key="Image_WhatIf_Tiny" UriSource="whatif_tiny.png"/>
     
 </ResourceDictionary>
