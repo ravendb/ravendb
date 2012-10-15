@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -52,7 +53,7 @@ namespace Raven.Studio.Features.Input
 			return tcs.Task;
 		}
 
-		public static Task<string> QuestionWithSuggestionAsync(string title, string question, Task<IList<object>> provideSuggestions)
+		public static Task<string> QuestionWithSuggestionAsync(string title, string question, Func<string, Task<IList<object>>> provideSuggestions)
 		{
 			var dataContext = new InputModelWithSuggetion(provideSuggestions)
 			{
