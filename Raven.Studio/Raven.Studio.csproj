@@ -264,6 +264,10 @@
     <Compile Include="Features\Alerts\AlertsView.xaml.cs">
       <DependentUpon>AlertsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Input\InputModelWithSuggetion.cs" />
+    <Compile Include="Features\Input\InputWindowWithSuggestion.xaml.cs">
+      <DependentUpon>InputWindowWithSuggestion.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Patch\PatchView.xaml.cs">
       <DependentUpon>PatchView.xaml</DependentUpon>
     </Compile>
@@ -815,6 +819,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Alerts\AlertsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Input\InputWindowWithSuggestion.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
