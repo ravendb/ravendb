@@ -12,18 +12,19 @@
 						 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 						 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
                          xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+						 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
                          xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" Title="PatchView Page"
                          d:DataContext="{d:DesignInstance Models:PatchModel}">
-	
-    <Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        
-        <Border Background="{StaticResource Brush_HeaderBackground}"
+
+	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<Border Background="{StaticResource Brush_HeaderBackground}"
 				BorderBrush="{StaticResource Brush_HeaderBorder}"
 				Margin="0,0,0,0"
 				CornerRadius="4,4,0,0"
@@ -51,9 +52,9 @@
 					<ColumnDefinition Width="*"/>
 					<ColumnDefinition Width="Auto"/>
 				</Grid.ColumnDefinitions>
-				
+
 				<StackPanel Orientation="Horizontal">
-					
+
 					<TextBlock Text="Patch: " VerticalAlignment="Center"/>
 					<ComboBox ItemsSource="{Binding PatchOn, Mode=OneTime, Converter={StaticResource enumerationFromValue}}" 
 							  SelectedValue="{Binding PatchOn, Mode=TwoWay, Converter={StaticResource enumeratedValue}}"
@@ -101,9 +102,8 @@
 							</StackPanel>
 						</Button.Content>
 					</Button>
-				</StackPanel>
 
-				<StackPanel Orientation="Horizontal" Grid.Column="2">
+					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
 					<Button Command="{Binding PatchSelected}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -118,7 +118,7 @@
 							</StackPanel>
 						</Button.Content>
 					</Button>
-					
+
 					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"
 							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
 
@@ -149,63 +149,127 @@
 					</Button>
 				</StackPanel>
 			</Grid>
-        </Border>
-        
-			<Grid Grid.Row="2">
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="2*"/>
-            </Grid.RowDefinitions>
+		</Border>
 
-            <StackPanel Orientation="Horizontal" Grid.Row="0">
-                <TextBlock Text="{Binding PatchOn, StringFormat='\{0\} to patch: '}"
+		<Grid Grid.Row="2">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="2*"/>
+			</Grid.RowDefinitions>
+
+			<StackPanel Orientation="Horizontal" Grid.Row="0">
+				<TextBlock Text="{Binding PatchOn, StringFormat='\{0\} to patch: '}"
 						   VerticalAlignment="Center" Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
 
-                <sdk:AutoCompleteBox Text="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+				<sdk:AutoCompleteBox Text="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MinimumPrefixLength="1"
 									 IsTextCompletionEnabled="True"
 									 Margin="5" 
 									 Width="350"
                                      Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToOppositeVisibility}}">
-                    <i:Interaction.Behaviors>
-                        <Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
-                    </i:Interaction.Behaviors>
-                </sdk:AutoCompleteBox>
+					<i:Interaction.Behaviors>
+						<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
+					</i:Interaction.Behaviors>
+				</sdk:AutoCompleteBox>
 
-                <ComboBox SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+				<ComboBox SelectedItem="{Binding SelectedItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 						  ItemsSource="{Binding AvailableObjects}"
 						  Margin="5" 
 						  Width="350"
 						  Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
-            </StackPanel>
+			</StackPanel>
 
-            <toolkit:DockPanel Grid.Row="1" Visibility="{Binding IsQueryVisible, Converter={StaticResource BooleanToVisibility}}">
-                <TextBlock Text="Query"
+			<toolkit:DockPanel Grid.Row="1" Visibility="{Binding IsQueryVisible, Converter={StaticResource BooleanToVisibility}}">
+				<TextBlock Text="Query"
 						   Margin="0,5,5,0"
 						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
 						   VerticalAlignment="Top"
 						   toolkit:DockPanel.Dock="Top"/>
-                <Editors:QueryEditor BoundDocument="{Binding QueryDoc}" Height="75"/>
-            </toolkit:DockPanel>
-                
-                <TextBlock Text="Patch Script"
-						   Margin="0,5,5,0"
-						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
-						   VerticalAlignment="Top"
-						   Grid.Row="2"/>
+				<Editors:QueryEditor BoundDocument="{Binding QueryDoc}" Height="75"/>
+			</toolkit:DockPanel>
 
-            <Editors:EditorBase BoundDocument="{Binding Script}" Grid.Row="3" IsSelectionMarginVisible="False" IsLineNumberMarginVisible="False" AreLineModificationMarksVisible="False"/>
+			<TextBlock Text="Patch Script"
+					   Margin="0,5,5,0"
+					   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+					   VerticalAlignment="Top"
+					   Grid.Row="2"/>
 
-				<sdk:GridSplitter Grid.Row="4"
+			<Grid Grid.Row="3">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="3*"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
+				
+				<Editors:EditorBase BoundDocument="{Binding Script}" IsSelectionMarginVisible="False" IsLineNumberMarginVisible="False" AreLineModificationMarksVisible="False"/>
+
+				<sdk:GridSplitter Grid.Column="1"
+								  VerticalAlignment="Stretch" 
+								  HorizontalAlignment="Center"/>
+
+				<Grid Grid.Column="2">
+
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+
+					<sdk:DataGrid Margin="5"
+                                  ItemsSource="{Binding Values}"
+								  SelectedItem="{Binding SelectedValue, Mode=TwoWay}"
+                                  AutoGenerateColumns="False"
+                                  VerticalScrollBarVisibility="Visible">
+						<i:Interaction.Behaviors>
+							<Behaviors:SelectRowOnRightClickBehavior />
+						</i:Interaction.Behaviors>
+
+						<sdk:DataGrid.Columns>
+							<sdk:DataGridTextColumn Header="Key"
+                                                    Binding="{Binding Key}" 
+													IsReadOnly="False"
+                                                    Width="Auto"
+                                                    CanUserReorder="False"/>
+							<sdk:DataGridTextColumn Header="Value"
+                                                    Binding="{Binding Value}"
+                                                    IsReadOnly="False" 
+                                                    Width="*"
+                                                    CanUserReorder="False"/>
+							<sdk:DataGridTemplateColumn Width="Auto" CanUserReorder="False" CanUserResize="False">
+								<sdk:DataGridTemplateColumn.CellEditingTemplate>
+									<DataTemplate>
+										<Button Style="{StaticResource Style_Button_MouseOverChrome}"
+												Command="{Binding DataContext.DeleteValue, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTipService.ToolTip="Delete Permission">
+											<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+										</Button>
+									</DataTemplate>
+								</sdk:DataGridTemplateColumn.CellEditingTemplate>
+							</sdk:DataGridTemplateColumn>
+						</sdk:DataGrid.Columns>
+					</sdk:DataGrid>
+					<Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                            Grid.Column="1" 
+                            HorizontalAlignment="Right" 
+                            VerticalAlignment="Top"
+                            Command="{Binding AddValue}" 
+                            ToolTipService.ToolTip="Add new Permission"
+                            Margin="0,9,5,0">
+						<Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
+					</Button>
+				</Grid>
+			</Grid>
+
+			<sdk:GridSplitter Grid.Row="4"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" 
                                   Margin="0,10"/>
-                
-            <Grid Grid.Row="6">
+
+			<Grid Grid.Row="6">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="{Binding IsComboBoxVisible, Converter={StaticResource HiddenWhenFalseStarSizedWhenTrue}}"/>
 					<RowDefinition Height="Auto"/>
@@ -213,15 +277,14 @@
 				</Grid.RowDefinitions>
 
 				<Border Grid.Row="0" Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}">
-                    <Documents:DocumentsView DataContext="{Binding QueryResults}" />
-                </Border>
+					<Documents:DocumentsView DataContext="{Binding QueryResults}" />
+				</Border>
 
 				<sdk:GridSplitter Grid.Row="1"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" 
                                   Margin="0,10"
 								  Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
-
 				<Grid Grid.Row="2">
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto"/>
@@ -270,16 +333,29 @@
 							Grid.ColumnSpan="3" 
 							Visibility="{Binding ShowBeforeAndAfterPrompt, Converter={StaticResource BooleanToVisibility}}"
 							Background="#BBFFFFFF">
-						
+
 						<TextBlock Text="{Binding BeforeAndAfterPromptText}" 
 								   VerticalAlignment="Center" 
 								   HorizontalAlignment="Center" 
 								   TextWrapping="Wrap" 
 								   FontSize="14"/>
 					</Border>
+
+					<Border Grid.Row="0" 
+							Grid.RowSpan="2" 
+							Grid.Column="2"  
+							Visibility="{Binding ShowAfterPrompt, Converter={StaticResource BooleanToVisibility}}"
+							Background="#BBFFFFFF">
+
+						<TextBlock Text="{Binding AfterPromptText}" 
+								   VerticalAlignment="Center" 
+								   HorizontalAlignment="Center" 
+								   TextWrapping="Wrap" 
+								   FontSize="14"/>
+					</Border>
 				</Grid>
-				
-            </Grid>
+
 			</Grid>
+		</Grid>
 	</Grid>
 </Infrastructure:PageView>

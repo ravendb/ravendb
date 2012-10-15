@@ -4,16 +4,16 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Implementation;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
-using Raven.Json.Linq;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Input;
@@ -75,7 +75,10 @@ namespace Raven.Studio.Models
             };
 
             ShowBeforeAndAfterPrompt = true;
+	        ShowAfterPrompt = true;
             AvailableObjects = new ObservableCollection<string>();
+
+			Values = new ObservableCollection<PatchValue>();
 
             queryCollectionSource = new QueryDocumentsCollectionSource();
             QueryResults = new DocumentsModel(queryCollectionSource) { Header = "Matching Documents", MinimalHeader = true, HideItemContextMenu = true};
@@ -118,7 +121,8 @@ namespace Raven.Studio.Models
 
         private QueryIndexAutoComplete queryIndexAutoComplete;
 	    private QueryDocumentsCollectionSource queryCollectionSource;
-	    private bool showBeforeAndAfterPrompt;
+		private bool showBeforeAndAfterPrompt;
+		private bool showAfterPrompt;
 		public bool HasSelection { get; set; }
 
 	    protected QueryIndexAutoComplete QueryIndexAutoComplete
@@ -168,21 +172,43 @@ namespace Raven.Studio.Models
 	        }
 	    }
 
-	    public bool ShowBeforeAndAfterPrompt
+		public string AfterPromptText
+		{
+			get { return "Press Test to try out your patch script"; }
+		}
+
+		public bool ShowBeforeAndAfterPrompt
 	    {
 	        get { return showBeforeAndAfterPrompt; }
             set
             {
                 showBeforeAndAfterPrompt = value;
                 OnPropertyChanged(() => ShowBeforeAndAfterPrompt);
+				OnPropertyChanged(() => ShowAfterPrompt);
             }
 	    }
+
+		public bool ShowAfterPrompt
+		{
+			get
+			{
+				if (ShowBeforeAndAfterPrompt)
+					return false;
+				return showAfterPrompt;
+			}
+			set
+			{
+				showAfterPrompt = value;
+				OnPropertyChanged(() => ShowAfterPrompt);
+			}
+		}
 
 	    private void ClearBeforeAndAfter()
 	    {
 	        OriginalDoc.SetText("");
 	        NewDoc.SetText("");
 	        ShowBeforeAndAfterPrompt = true;
+		    ShowAfterPrompt = true;
 	    }
 
 	    public ObservableCollection<string> AvailableObjects { get; private set; }
@@ -224,6 +250,8 @@ namespace Raven.Studio.Models
 
 	    public void UpdateCollectionSource()
 	    {
+		    NewDoc.SetText("");
+		    ShowAfterPrompt = true;
 	        if (PatchOn == PatchOnOptions.Collection)
 	        {
                 QueryResults.SetChangesObservable(d => d.IndexChanges
@@ -272,6 +300,8 @@ namespace Raven.Studio.Models
 	    }
 
 	    public IEditorDocument Script { get; private set; }
+		public ObservableCollection<PatchValue> Values { get; set; }
+		public PatchValue SelectedValue { get; set; }
 
 		public const string CollectionsIndex = "Raven/DocumentsByEntityName";
 		public ICommand Patch { get { return new ExecutePatchCommand(this); } }
@@ -279,6 +309,24 @@ namespace Raven.Studio.Models
 		public ICommand Test { get { return new TestPatchCommand(this); } }
 		public ICommand Save { get { return new SavePatchCommand(this); } }
 		public ICommand Load { get { return new LoadPatchCommand(this); } }
+		public ICommand AddValue{get{return new ActionCommand(() =>
+		{
+			Values.Add(new PatchValue(Values));
+			OnPropertyChanged(() => Values);
+		});}}
+		public ICommand DeleteValue
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					if (SelectedValue == null)
+						return;
+					Values.Remove(SelectedValue);
+					OnPropertyChanged(() => Values);
+				});
+			}
+		}
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
@@ -356,7 +404,53 @@ namespace Raven.Studio.Models
 			OnPropertyChanged(() => QueryDoc);
 			OnPropertyChanged(() => Script);
 			OnPropertyChanged(() => PatchOn);
+			OnPropertyChanged(() => Values);
 			OnPropertyChanged(() => SelectedItem);
+		}
+
+		public Dictionary<string, object> GetValues()
+		{
+			var values = new Dictionary<string, object>();
+
+			foreach (var patchValue in Values)
+			{
+				if(values.ContainsKey(patchValue.Key))
+				{
+					MessageBox.Show("You Can not have more then one value for each key. (The key " + patchValue.Key + " apprears more then once");
+					return null;
+				}
+				int integer;
+				if(int.TryParse(patchValue.Value, out integer))
+				{
+					values.Add(patchValue.Key, integer);
+					continue;
+				}
+
+				long longNum;
+				if(long.TryParse(patchValue.Value, out longNum))
+				{
+					values.Add(patchValue.Key, longNum);
+					continue;
+				}
+
+				decimal decimalNum;
+				if (decimal.TryParse(patchValue.Value, out decimalNum))
+				{
+					values.Add(patchValue.Key, decimalNum);
+					continue;
+				}
+
+				bool boolean;
+				if (bool.TryParse(patchValue.Value, out boolean))
+				{
+					values.Add(patchValue.Key, boolean);
+					continue;
+				}
+
+				values.Add(patchValue.Key, patchValue.Value);
+			}
+
+			return values;
 		}
 	}
 
@@ -371,12 +465,12 @@ namespace Raven.Studio.Models
 
 		public override void Execute(object parameter)
 		{
-			AskUser.QuestionWithSuggestionAsync("Load", "Choose saved patching to load",
-			                                    input => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
-				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/" + input).ContinueWith(
+			AskUser.SelectItem("Load", "Choose saved patching to load",
+			                                    () => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
+				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
 					                                             task =>
 					                                             {
-						                                             IList<object> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).Cast<object>().ToList();
+						                                             IList<string> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).ToList();
 						                                             return objects;
 					                                             }))
 				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().
@@ -391,6 +485,7 @@ namespace Raven.Studio.Models
 																	  patchModel.QueryDoc.SetText(patch.Query);
 																	  patchModel.Script.SetText(patch.Script);
 																	  patchModel.SelectedItem = patch.SelectedItem;
+																	  patchModel.Values = new ObservableCollection<PatchValue>(patch.Values);
 																	  patchModel.UpdateDoc(result);
 																  }
 					                                          }));
@@ -416,15 +511,13 @@ namespace Raven.Studio.Models
 					Query = patchModel.QueryDoc.CurrentSnapshot.GetText(LineTerminator.Newline),
 					Script = patchModel.Script.CurrentSnapshot.GetText(LineTerminator.Newline),
 					SelectedItem = patchModel.SelectedItem,
-					Id = "Studio/Patch/" + name
+					Id = "Studio/Patch/" + name,
+					Values = patchModel.Values.ToList()
 				};
 
 				var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
 				session.Store(doc);
 				session.SaveChangesAsync().ContinueOnSuccessInTheUIThread(() => patchModel.UpdateDoc(name));
-				//ApplicationModel.DatabaseCommands.PutAsync("Studio/Patch/" + name, new Guid(), RavenJObject.FromObject(doc), new RavenJObject());
-
-
 			});
 		}
 	}
@@ -443,7 +536,10 @@ namespace Raven.Studio.Models
 			AskUser.ConfirmationAsync("Patch Documents", "Are you sure you want to apply this patch to all selected documents?")
 				.ContinueWhenTrueInTheUIThread(() =>
 				{
-					var request = new ScriptedPatchRequest {Script = patchModel.Script.CurrentSnapshot.Text};
+					var values = patchModel.GetValues();
+					if (values == null)
+						return;
+					var request = new ScriptedPatchRequest {Script = patchModel.Script.CurrentSnapshot.Text, Values = values};
 					var selectedItems = patchModel.QueryResults.ItemSelection.GetSelectedItems();
 					var commands = new ICommandData[selectedItems.Count()];
 					var counter = 0;
@@ -459,7 +555,28 @@ namespace Raven.Studio.Models
 						counter++;
 					}
 
-					ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands).Catch();
+					ApplicationModel.Database.Value.AsyncDatabaseCommands
+						.BatchAsync(commands)
+						.Catch()
+						.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Database.Value
+							.AsyncDatabaseCommands
+							.GetAsync(patchModel.SelectedItem)
+							.ContinueOnSuccessInTheUIThread(doc =>
+							{
+								if (doc != null)
+								{
+									patchModel.OriginalDoc.SetText(doc.ToJson().ToString());
+									patchModel.NewDoc.SetText("");
+									patchModel.ShowAfterPrompt = true;
+								}
+								else
+								{
+									patchModel.OriginalDoc.SetText("");
+									patchModel.NewDoc.SetText("");
+									patchModel.ShowAfterPrompt = true;
+									patchModel.ShowBeforeAndAfterPrompt = true;
+								}
+							}));
 				});
 		}
 	}
@@ -475,7 +592,10 @@ namespace Raven.Studio.Models
 
 		public override void Execute(object parameter)
 		{
-			var request = new ScriptedPatchRequest {Script = patchModel.Script.CurrentSnapshot.Text};
+			var values = patchModel.GetValues();
+			if (values == null)
+				return;
+			var request = new ScriptedPatchRequest {Script = patchModel.Script.CurrentSnapshot.Text, Values = values};
 			var commands = new ICommandData[1];
 
 			switch (patchModel.PatchOn)
@@ -519,6 +639,7 @@ namespace Raven.Studio.Models
 			}
 
 		    patchModel.ShowBeforeAndAfterPrompt = false;
+			patchModel.ShowAfterPrompt = false;
 		}
 	}
 
@@ -536,7 +657,10 @@ namespace Raven.Studio.Models
 		    AskUser.ConfirmationAsync("Patch Documents", "Are you sure you want to apply this patch to all matching documents?")
                 .ContinueWhenTrueInTheUIThread(() =>
                 {
-                    var request = new ScriptedPatchRequest { Script = patchModel.Script.CurrentSnapshot.Text };
+					var values = patchModel.GetValues();
+					if (values == null)
+						return;
+                    var request = new ScriptedPatchRequest { Script = patchModel.Script.CurrentSnapshot.Text, Values = values};
 
                     switch (patchModel.PatchOn)
                     {
@@ -548,7 +672,16 @@ namespace Raven.Studio.Models
                                 Key = patchModel.SelectedItem
                             };
 
-                            ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands).Catch();
+		                    ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands).Catch().
+			                    ContinueOnSuccessInTheUIThread(
+				                    () => ApplicationModel.Database.Value.AsyncDatabaseCommands.GetAsync(patchModel.SelectedItem).
+					                          ContinueOnSuccessInTheUIThread(
+						                          doc =>
+						                          {
+							                          patchModel.OriginalDoc.SetText(doc.ToJson().ToString());
+							                          patchModel.NewDoc.SetText("");
+							                          patchModel.ShowAfterPrompt = true;
+						                          }));
                             break;
 
                         case PatchOnOptions.Collection:
@@ -565,6 +698,8 @@ namespace Raven.Studio.Models
 																								.Catch();
                             break;
                     }
+
+					
                 });
 		}
 	}
@@ -583,5 +718,32 @@ namespace Raven.Studio.Models
 		public string Script { get; set; }
 		public string SelectedItem { get; set; }
 		public string Id { get; set; }
+		public List<PatchValue> Values { get; set; } 
+	}
+
+	public class PatchValue
+	{
+		private readonly ObservableCollection<PatchValue> values;
+		private string key;
+
+		public PatchValue(ObservableCollection<PatchValue> values)
+		{
+			this.values = values;
+		}
+
+		public string Key
+		{
+			get { return key; }
+			set
+			{
+				if (value == key)
+					return;
+				if(values != null && values.Any(patchValue => patchValue.Key == value))
+					MessageBox.Show("You already have an item with the key:  " + value, "Duplicate parameter name detected", MessageBoxButton.OK);
+				else
+					key = value;
+			}
+		}
+		public string Value { get; set; }
 	}
 }

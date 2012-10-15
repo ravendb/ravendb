@@ -80,6 +80,34 @@ namespace Raven.Studio.Features.Input
 			return tcs.Task;
 		}
 
+		public static Task<string> SelectItem(string title, string question, Func<Task<IList<string>>> provideList)
+		{
+			var dataContext = new SelectModel(provideList)
+			{
+				Title = title,
+				Question = question
+			};
+
+			var inputWindow = new SelectWindow
+			{
+				DataContext = dataContext
+			};
+
+			var tcs = new TaskCompletionSource<string>();
+
+			inputWindow.Closed += (sender, args) =>
+			{
+				if (inputWindow.DialogResult == true)
+					tcs.SetResult(dataContext.Answer);
+				else
+					tcs.SetCanceled();
+			};
+
+			inputWindow.Show();
+
+			return tcs.Task;
+		}
+
 		public static Task<bool> ConfirmationAsync(string title, string question)
 		{
 			var dataContext = new ConfirmModel
