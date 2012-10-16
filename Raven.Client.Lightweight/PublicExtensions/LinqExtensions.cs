@@ -117,6 +117,11 @@ namespace Raven.Client
 
 		}
 
+		public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
+		{
+			return queryable.AsProjection<TResult>();
+		}
+
 		/// <summary>
 		/// Project using a different type
 		/// </summary>

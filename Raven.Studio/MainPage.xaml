@@ -167,6 +167,13 @@
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
+				
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+
+				<HyperlinkButton Content="Patch"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/patch"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
 				<HyperlinkButton Content="Tasks"
@@ -337,18 +344,13 @@
 							   LastChildFill="False">
 				<Stats:DatabaseStatisticsView toolkit:DockPanel.Dock="Left" />
 
-				<TextBlock toolkit:DockPanel.Dock="Left" Text="Replication Statistics: " Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"/>
-				<ListBox toolkit:DockPanel.Dock="Left"  Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"
-						 ItemsSource="{Binding Server.Value.SelectedDatabase.Value.ReplicationOnline}"
-						 ScrollViewer.VerticalScrollBarVisibility="Hidden"
-						 Background="Transparent"
-						 BorderThickness="0">
-					<ListBox.ItemsPanel>
-						<ItemsPanelTemplate>
-							<StackPanel Orientation="Horizontal" VerticalAlignment="Top"/>
-						</ItemsPanelTemplate>
-					</ListBox.ItemsPanel>
-				</ListBox>
+				<HyperlinkButton toolkit:DockPanel.Dock="Left" 
+                                 Content="Replication Statistics" 
+                                 Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"
+                                 Command="{StaticResource NavigateToCommand}"
+                                 CommandParameter="/replicationStatistics"
+                                 Style="{StaticResource HyperlinkButton_FooterLinks}"/>
+			
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">
 					<Databases:LicenseView Margin="0,0,15,0"

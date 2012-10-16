@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
 using System.Threading;
@@ -21,6 +23,7 @@ namespace Raven.Client.Changes
 	public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
 	{
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
+		private readonly ConcurrentDictionary<string, string> connectionsData = new ConcurrentDictionary<string, string>();
 
 		private readonly string url;
 		private readonly ICredentials credentials;
@@ -53,6 +56,7 @@ namespace Raven.Client.Changes
 									{
 										AvoidCachingRequest = true
 									};
+
 			return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
 				.ServerPullAsync()
 				.ContinueWith(task =>
@@ -64,9 +68,16 @@ namespace Raven.Client.Changes
 										reconnectAttemptsRemaining--;
 										return EstablishConnection();
 									}
+
 									reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
 									connection = (IDisposable)task.Result;
 									task.Result.Subscribe(this);
+
+									foreach (var data in connectionsData)
+									{
+										Send(data.Key, string.IsNullOrWhiteSpace(data.Value) ? null : data.Value);
+									}
+
 									return task;
 								})
 				.Unwrap();
@@ -89,11 +100,16 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("indexes/" + indexName, s =>
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
-					Send("watch-index", indexName));
+				{
+					connectionsData.AddOrUpdate("watch-index", indexName, (s1, s2) => s2);
+					return Send("watch-index", indexName);
+				});
 
 				return new LocalConnectionState(
 					() =>
 					{
+						string value;
+						connectionsData.TryRemove("watch-index", out value);
 						Send("unwatch-index", indexName);
 						counters.Remove("indexes/" + indexName);
 					},
@@ -152,10 +168,16 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send("watch-doc", docId));
+				{
+					connectionsData.AddOrUpdate("watch-doc", docId, (s1, s2) => s2);
+					return Send("watch-doc", docId);
+				});
+
 				return new LocalConnectionState(
 					() =>
 					{
+						string value;
+						connectionsData.TryRemove("watch-doc", out value);
 						Send("unwatch-doc", docId);
 						counters.Remove("docs/" + docId);
 					},
@@ -166,6 +188,7 @@ namespace Raven.Client.Changes
 				notification => string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
+			counter.OnError = taskedObservable.Error;
 
 			var disposableTask = counter.Task.ContinueWith(task =>
 			{
@@ -182,10 +205,15 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("all-docs", s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send("watch-docs", null));
+				{
+					connectionsData.AddOrUpdate("watch-docs", "", (s1, s2) => s2);
+					return Send("watch-docs", null);
+				});
 				return new LocalConnectionState(
 					() =>
 					{
+						string value;
+						connectionsData.TryRemove("watch-docs", out value);
 						Send("unwatch-docs", null);
 						counters.Remove("all-docs");
 					},
@@ -196,6 +224,7 @@ namespace Raven.Client.Changes
 				notification => true);
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
+			counter.OnError = taskedObservable.Error;
 
 			var disposableTask = counter.Task.ContinueWith(task =>
 			{
@@ -212,10 +241,16 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("all-indexes", s =>
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
-						Send("watch-indexes", null));
+				{
+					connectionsData.AddOrUpdate("watch-indexes", "", (s1, s2) => s2);
+					return Send("watch-indexes", null);
+				});
+
 				return new LocalConnectionState(
 					() =>
 					{
+						string value;
+						connectionsData.TryRemove("watch-indexes", out value);
 						Send("unwatch-indexes", null);
 						counters.Remove("all-indexes");
 					},
@@ -226,6 +261,7 @@ namespace Raven.Client.Changes
 				notification => true);
 
 			counter.OnIndexChangeNotification += taskedObservable.Send;
+			counter.OnError = taskedObservable.Error;
 
 			var disposableTask = counter.Task.ContinueWith(task =>
 			{
@@ -242,10 +278,16 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send("watch-prefix", docIdPrefix));
+				{
+					connectionsData.AddOrUpdate("watch-prefix", docIdPrefix, (s1, s2) => s2);
+					return Send("watch-prefix", docIdPrefix);
+				});
+
 				return new LocalConnectionState(
 					() =>
 					{
+						string value;
+						connectionsData.TryRemove("watch-prefix", out value);
 						Send("unwatch-prefix", docIdPrefix);
 						counters.Remove("prefixes/" + docIdPrefix);
 					},
@@ -256,6 +298,7 @@ namespace Raven.Client.Changes
 				notification => notification.Name.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
 
 			var disposableTask = counter.Task.ContinueWith(task =>
 			{

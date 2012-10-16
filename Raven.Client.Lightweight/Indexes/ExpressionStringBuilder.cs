@@ -1717,9 +1717,7 @@ namespace Raven.Client.Indexes
 					// because the VB compiler like to put converts all over the place, and include
 					// types that we can't really support (only exists on the client)
 					var nonNullableType = Nullable.GetUnderlyingType(node.Type) ?? node.Type;
-					if ((nonNullableType.IsEnum ||
-						 nonNullableType.Assembly == typeof(string).Assembly) &&
-						 (nonNullableType.IsGenericType == false))
+					if (ShouldConvert(nonNullableType))
 					{
 						Out("(");
 						Out("(");
@@ -1765,9 +1763,7 @@ namespace Raven.Client.Indexes
 					// because the VB compiler like to put converts all over the place, and include
 					// types that we can't really support (only exists on the client)
 					var nonNullableType = Nullable.GetUnderlyingType(node.Type) ?? node.Type;
-					if ((nonNullableType.IsEnum ||
-						 nonNullableType.Assembly == typeof(string).Assembly) &&
-						nonNullableType.IsGenericType == false)
+					if (ShouldConvert(nonNullableType))
 					{
 						Out(")");
 					}
@@ -1799,6 +1795,17 @@ namespace Raven.Client.Indexes
 			}
 
 			return node;
+		}
+
+		private static bool ShouldConvert(Type nonNullableType)
+		{
+			if(nonNullableType.IsEnum)
+				return true;
+
+			if (nonNullableType == typeof(Guid))
+				return false;// in the server, represented as string only
+
+			return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
 		}
 	}
 }

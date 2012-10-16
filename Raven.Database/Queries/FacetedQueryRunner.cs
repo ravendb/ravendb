@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
-using Lucene.Net.Documents;
-using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Queries
 {
@@ -173,6 +168,11 @@ namespace Raven.Database.Queries
 
 				return true;
 			}
+
+			public override string ToString()
+			{
+				return string.Format("{0}:{1}", Field, RangeText);
+			}
 		}
 
 		private class QueryForFacets
@@ -186,11 +186,11 @@ namespace Raven.Database.Queries
 				 FacetResults results)
 			{
 				Database = database;
-				this.Index = index;
-				this.Facets = facets;
-				this.Ranges = ranges;
-				this.IndexQuery = indexQuery;
-				this.Results = results;
+				Index = index;
+				Facets = facets;
+				Ranges = ranges;
+				IndexQuery = indexQuery;
+				Results = results;
 			}
 
 			DocumentDatabase Database { get; set; }
@@ -212,7 +212,9 @@ namespace Raven.Database.Queries
 				{
 					var baseQuery = Database.IndexStorage.GetLuceneQuery(Index, IndexQuery, Database.IndexQueryTriggers);
 					currentIndexSearcher.Search(baseQuery, allCollector);
-					var fieldsToRead = new HashSet<string>(Results.Results.Select(x=>x.Key));
+					var fields = Facets.Values.Select(x => x.Name)
+							.Concat(Ranges.Select(x=>x.Key));
+					var fieldsToRead = new HashSet<string>(fields);
 					IndexedTerms.ReadEntriesForFields(currentIndexSearcher.IndexReader,
 						fieldsToRead,
 						allCollector.Documents,
@@ -221,6 +223,7 @@ namespace Raven.Database.Queries
 							List<ParsedRange> list;
 							if (Ranges.TryGetValue(term.Field, out list))
 							{
+								var num = NumericStringToNum(term.Text);
 								for (int i = 0; i < list.Count; i++)
 								{
 									var parsedRange = list[i];
@@ -294,6 +297,50 @@ namespace Raven.Database.Queries
 						Results.Results[facet.Name].RemainingTerms = allTerms.Skip(maxResults).ToList();
 				}
 			}
+
+
+			private static object NumericStringToNum(string value)
+			{
+				try
+				{
+					return NumericUtils.PrefixCodedToDouble(value);
+				}
+				catch (Exception e)
+				{
+
+				}
+
+				try
+				{
+					return NumericUtils.PrefixCodedToFloat(value);
+				}
+				catch (Exception e)
+				{
+
+				}
+
+				try
+				{
+					return NumericUtils.PrefixCodedToLong(value);
+				}
+				catch (Exception e)
+				{
+
+				}
+
+				try
+				{
+					return NumericUtils.PrefixCodedToInt(value);
+				}
+				catch (Exception e)
+				{
+
+				}
+
+				return null;
+			}
+
+
 		}
 	}
 

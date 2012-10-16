@@ -27,7 +27,14 @@
 			<i:Interaction.Behaviors>
 				<Behaviors:SelectItemOnRightClick />
 			</i:Interaction.Behaviors>
-			
+
+			<i:Interaction.Triggers>
+				<Behaviors:StudioKeyTrigger Key="Delete">
+					<i:InvokeCommandAction Command="{Binding Source={StaticResource DeleteAllDocumentsOfCollectionCommand}}"
+										   CommandParameter="{Binding RelativeSource={RelativeSource Self}}"/>
+				</Behaviors:StudioKeyTrigger>
+			</i:Interaction.Triggers>
+
 			<ContextMenu:ContextMenuService.ContextMenu>
 				<ContextMenu:ContextMenu x:Name="CollectionsContextMenu">
 					<ContextMenu:MenuItem Header="Delete"

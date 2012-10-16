@@ -4,17 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Bundles.Replication;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
 using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
 	[ExportMetadata("Bundle", "Replication")]
-	[InheritedExport(typeof(AbstractRequestResponder))]
+	[InheritedExport(typeof (AbstractRequestResponder))]
 	public class StudioInformationResponder : AbstractRequestResponder
 	{
 		public override string UrlPattern
@@ -24,7 +27,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "GET" }; }
+			get { return new[] {"GET"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -38,19 +41,21 @@ namespace Raven.Bundles.Replication.Responders
 				mostRecentAttachmentEtag = accessor.Staleness.GetMostRecentAttachmentEtag();
 			});
 
-			context.WriteJson(new
+			context.WriteJson(RavenJObject.FromObject(new ReplicationStatistic
 			{
 				Self = Database.ServerUrl,
 				MostRecentDocumentEtag = mostRecentDocumentEtag,
 				MostRecentAttachmentEtag = mostRecentAttachmentEtag,
-				Stats  = replicationTask == null ? Enumerable.Empty<object>() : 
-					replicationTask.ReplicationFailureStats.Select(pair => new
-					{
-						Url = pair.Key,
-						FailureCount = pair.Value.Count,
-						pair.Value.Timestamp
-					})
-			});
+				Stats = replicationTask == null
+					        ? new List<ReplicationStats>()
+					        : replicationTask.ReplicationFailureStats.Select(pair => new ReplicationStats
+					        {
+						        Url = pair.Key,
+						        FailureCount = pair.Value.Count,
+						        TimeStamp = pair.Value.Timestamp,
+								LastError = pair.Value.LastError
+					        }).ToList()
+			}));
 		}
 	}
 }

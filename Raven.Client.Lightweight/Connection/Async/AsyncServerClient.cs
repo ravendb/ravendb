@@ -510,6 +510,11 @@ namespace Raven.Client.Connection.Async
 		});
 		}
 
+		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
@@ -716,6 +721,11 @@ namespace Raven.Client.Connection.Async
 						.Unwrap();
 
 			});
+		}
+
+		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+		{
+			return UpdateByIndex(indexName, queryToUpdate, patch, false);
 		}
 
 		/// <summary>

@@ -200,12 +200,10 @@ task ReleaseNoTests -depends Stable,DoRelease {
 }
 
 task Unstable {
-	$global:configuration = "Release"
 	$global:uploadCategory = "RavenDB-Unstable"
 }
 
 task Stable {
-	$global:configuration = "Release"
 	$global:uploadCategory = "RavenDB"
 }
 

@@ -45,6 +45,12 @@ namespace Raven.Abstractions.Commands
 		RavenJObject Metadata { get; }
 
 		/// <summary>
+		/// Gets the Additional Data.
+		/// </summary>
+		/// <value>The Additional Data.</value>
+		RavenJObject AdditionalData { get; set; }
+
+		/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
 		RavenJObject ToJson();

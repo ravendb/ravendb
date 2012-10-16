@@ -338,7 +338,8 @@ namespace Raven.Storage.Managed
 				{"sourceBucket", sourceBucket},
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
 								string.Equals(reduceKey, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase) &&
-								sourceBucket == x.Value<int>("sourceBucket"));
+								sourceBucket == x.Value<int>("sourceBucket") &&
+								level == x.Value<int>("level"));
 
 			foreach (var result in results)
 			{

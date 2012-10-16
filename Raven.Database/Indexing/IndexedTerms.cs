@@ -6,9 +6,9 @@
 using System;
 using System.Collections.Generic;
 using Lucene.Net.Index;
+using Lucene.Net.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -18,26 +18,45 @@ namespace Raven.Database.Indexing
 		{
 			using (var termDocs = reader.TermDocs())
 			{
-				foreach (var field in fieldsToRead.OrderBy(x=>x))
+				foreach (var field in fieldsToRead)
 				{
-					using(var termEnum = reader.Terms(new Term(field)))
+					using (var termEnum = reader.Terms(new Term(field)))
 					{
 						do
 						{
 							if (termEnum.Term == null || field != termEnum.Term.Field)
 								break;
 
+							if(LowPrecisionNumber(termEnum.Term))
+								continue;
+
+							var totalDocCountIncludedDeletes = termEnum.DocFreq();
 							termDocs.Seek(termEnum.Term);
-							for (int i = 0; i < termEnum.DocFreq() && termDocs.Next(); i++)
+							while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
 							{
+								totalDocCountIncludedDeletes -= 1;
+								if (reader.IsDeleted(termDocs.Doc))
+									continue;
 								if (docIds.Contains(termDocs.Doc) == false)
 									continue;
 								onTermFound(termEnum.Term);
 							}
 						} while (termEnum.Next());
-					}
+					} 
 				}
 			}
+		}
+
+		private static bool LowPrecisionNumber(Term term)
+		{
+			if (term.Field.EndsWith("_Range") == false)
+				return false;
+
+			if (string.IsNullOrEmpty(term.Text))
+				return false;
+
+			return term.Text[0] - NumericUtils.SHIFT_START_INT != 0 &&
+			       term.Text[0] - NumericUtils.SHIFT_START_LONG != 0;
 		}
 
 		public static RavenJObject[] ReadAllEntriesFromIndex(IndexReader reader)

@@ -1324,7 +1324,7 @@ namespace Raven.Database
 							}));
 		}
 
-		public Tuple<PatchResult, List<string>> ApplyPatch(string docId, Guid? etag, ScriptedPatchRequest patch, TransactionInformation transactionInformation)
+		public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Guid? etag, ScriptedPatchRequest patch, TransactionInformation transactionInformation, bool debugMode = false)
 		{
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
@@ -1337,25 +1337,29 @@ namespace Raven.Database
 											return jsonDocument == null ? null : jsonDocument.ToJson();
 										});
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
-				});
+				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 		}
 
-		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
+		public PatchResultData ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation, bool debugMode = false)
 		{
 
 			if (docId == null)
 				throw new ArgumentNullException("docId");
-			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc => new JsonPatcher(jsonDoc).Apply(patchDoc));
+			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc => new JsonPatcher(jsonDoc).Apply(patchDoc), debugMode);
 		}
 
-		private PatchResult ApplyPatchInternal(string docId, Guid? etag,
+		private PatchResultData ApplyPatchInternal(string docId, Guid? etag,
 												TransactionInformation transactionInformation,
-												Func<RavenJObject, RavenJObject> patcher)
+												Func<RavenJObject, RavenJObject> patcher, bool debugMode)
 		{
 			if (docId == null) throw new ArgumentNullException("docId");
 			docId = docId.Trim();
-			var result = PatchResult.Patched;
+			var result = new PatchResultData
+			{
+				PatchResult = PatchResult.Patched
+			};
+
 			bool shouldRetry = false;
 			int[] retries = { 128 };
 			do
@@ -1365,7 +1369,7 @@ namespace Raven.Database
 					var doc = actions.Documents.DocumentByKey(docId, transactionInformation);
 					if (doc == null)
 					{
-						result = PatchResult.DocumentDoesNotExists;
+						result.PatchResult = PatchResult.DocumentDoesNotExists;
 					}
 					else if (etag != null && doc.Etag != etag.Value)
 					{
@@ -1379,20 +1383,28 @@ namespace Raven.Database
 					else
 					{
 						var jsonDoc = patcher(doc.ToJson());
-						try
+						if (debugMode)
 						{
-							Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>("@metadata"), transactionInformation);
+							result.Document = jsonDoc;
+							result.PatchResult = PatchResult.Tested;
 						}
-						catch (ConcurrencyException)
+						else
 						{
-							if (retries[0]-- > 0)
+							try
 							{
-								shouldRetry = true;
-								return;
+								Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>("@metadata"), transactionInformation);
 							}
-							throw;
+							catch (ConcurrencyException)
+							{
+								if (retries[0]-- > 0)
+								{
+									shouldRetry = true;
+									return;
+								}
+								throw;
+							}
+							result.PatchResult = PatchResult.Patched;
 						}
-						result = PatchResult.Patched;
 					}
 					if (shouldRetry == false)
 						workContext.ShouldNotifyAboutWork(() => "PATCH " + docId);
@@ -1430,7 +1442,8 @@ namespace Raven.Database
 									Method = command.Method,
 									Key = command.Key,
 									Etag = command.Etag,
-									Metadata = command.Metadata
+									Metadata = command.Metadata,
+									AdditionalData = command.AdditionalData
 								});
 							}
 						});

@@ -52,20 +52,34 @@ namespace Raven.Client.Document.DTC
 					{
 						logger.WarnException("Could not re-enlist in DTC transaction for tx: " + txId, e);
 					}
-
-					foreach (var rm in resourceManagersRequiringRecovery)
-					{
-						try
-						{
-							TransactionManager.RecoveryComplete(rm);
-						}
-						catch (Exception e)
-						{
-							logger.WarnException("Could not properly complete recovery of resource manager: " + rm, e);
-						}
-					}
-
 				}
+
+				foreach (var rm in resourceManagersRequiringRecovery)
+				{
+					try
+					{
+						TransactionManager.RecoveryComplete(rm);
+					}
+					catch (Exception e)
+					{
+						logger.WarnException("Could not properly complete recovery of resource manager: " + rm, e);
+					}
+				}
+
+				var errors = new List<Exception>();
+				foreach (var file in store.GetFileNames("*.recovery-information"))
+				{
+					try
+					{
+						store.DeleteFile(file);
+					}
+					catch (Exception e)
+					{
+						errors.Add(e);
+					}
+				}
+				if (errors.Count > 0)
+					throw new AggregateException(errors);
 			}
 		}
 

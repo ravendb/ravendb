@@ -41,6 +41,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			public int Count;
 			public DateTime Timestamp;
+			public string LastError;
 		}
 
 		private readonly ConcurrentDictionary<string, FailureCount> replicationFailureStats =
@@ -330,24 +331,24 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 				return null;
 			}
-
-			if (TryReplicationAttachments(destination, attachments) == false)// failed to replicate, start error handling strategy
+			string lastError;
+			if (TryReplicationAttachments(destination, attachments, out lastError) == false)// failed to replicate, start error handling strategy
 			{
 				if (IsFirstFailue(destination))
 				{
 					log.Info(
 						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
-					if (TryReplicationAttachments(destination, attachments))// success on second fail
+					if (TryReplicationAttachments(destination, attachments, out lastError))// success on second fail
 					{
-						ResetFailureCount(destination.ConnectionStringOptions.Url);
+						ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
 						return true;
 					}
 				}
-				IncrementFailureCount(destination);
+				IncrementFailureCount(destination, lastError);
 				return false;
 			}
-			ResetFailureCount(destination.ConnectionStringOptions.Url);
+			ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
 
 			return true;
 		}
@@ -364,23 +365,24 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 				return null;
 			}
-			if (TryReplicationDocuments(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
+			string lastError;
+			if (TryReplicationDocuments(destination, jsonDocuments, out lastError) == false)// failed to replicate, start error handling strategy
 			{
 				if (IsFirstFailue(destination))
 				{
 					log.Info(
 						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
-					if (TryReplicationDocuments(destination, jsonDocuments))// success on second fail
+					if (TryReplicationDocuments(destination, jsonDocuments, out lastError))// success on second fail
 					{
-						ResetFailureCount(destination.ConnectionStringOptions.Url);
+						ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
 						return true;
 					}
 				}
-				IncrementFailureCount(destination);
+				IncrementFailureCount(destination, lastError);
 				return false;
 			}
-			ResetFailureCount(destination.ConnectionStringOptions.Url);
+			ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
 			return true;
 		}
 
@@ -412,12 +414,13 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private void IncrementFailureCount(ReplicationStrategy destination)
+		private void IncrementFailureCount(ReplicationStrategy destination, string lastError)
 		{
 			var failureCount = replicationFailureStats.GetOrAdd(destination.ConnectionStringOptions.Url);
 			Interlocked.Increment(ref failureCount.Count);
 			failureCount.Timestamp = SystemTime.UtcNow;
-
+			if (string.IsNullOrWhiteSpace(lastError) == false)
+				failureCount.LastError = lastError;
 
 			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination.ConnectionStringOptions.Url), null);
 			var failureInformation = new DestinationFailureInformation { Destination = destination.ConnectionStringOptions.Url };
@@ -430,11 +433,13 @@ namespace Raven.Bundles.Replication.Tasks
 					  RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
 		}
 
-		private void ResetFailureCount(string url)
+		private void ResetFailureCount(string url, string lastError)
 		{
 			var failureCount = replicationFailureStats.GetOrAdd(url);
 			Interlocked.Exchange(ref failureCount.Count, 0);
 			failureCount.Timestamp = SystemTime.UtcNow;
+			if(string.IsNullOrWhiteSpace(lastError) == false)
+				failureCount.LastError = lastError;
 			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
 						 null);
 		}
@@ -447,7 +452,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return false;
 		}
 
-		private bool TryReplicationAttachments(ReplicationStrategy destination, RavenJArray jsonAttachments)
+		private bool TryReplicationAttachments(ReplicationStrategy destination, RavenJArray jsonAttachments, out string ErrorMessage)
 		{
 			try
 			{
@@ -461,6 +466,7 @@ namespace Raven.Bundles.Replication.Tasks
 				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
+				ErrorMessage = "";
 				return true;
 			}
 			catch (WebException e)
@@ -475,6 +481,7 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							var ravenJObject = RavenJObject.Parse(error);
 							log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
+							ErrorMessage = error;
 							return false;
 						}
 						catch (Exception)
@@ -482,22 +489,25 @@ namespace Raven.Bundles.Replication.Tasks
 						}
 
 						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+						ErrorMessage = error;
 					}
 				}
 				else
 				{
 					log.WarnException("Replication to " + destination + " had failed", e);
+					ErrorMessage = e.Message;
 				}
 				return false;
 			}
 			catch (Exception e)
 			{
 				log.WarnException("Replication to " + destination + " had failed", e);
+				ErrorMessage = e.Message;
 				return false;
 			}
 		}
 
-		private bool TryReplicationDocuments(ReplicationStrategy destination, RavenJArray jsonDocuments)
+		private bool TryReplicationDocuments(ReplicationStrategy destination, RavenJArray jsonDocuments, out string lastError)
 		{
 			try
 			{
@@ -510,6 +520,7 @@ namespace Raven.Bundles.Replication.Tasks
 				request.Write(jsonDocuments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
+				lastError = "";
 				return true;
 			}
 			catch (WebException e)
@@ -535,11 +546,13 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					log.WarnException("Replication to " + destination + " had failed", e);
 				}
+				lastError = e.Message;
 				return false;
 			}
 			catch (Exception e)
 			{
 				log.WarnException("Replication to " + destination + " had failed", e);
+				lastError = e.Message;
 				return false;
 			}
 		}
@@ -839,7 +852,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public void ResetFailureForHeartbeat(string src)
 		{
-			ResetFailureCount(src);
+			ResetFailureCount(src, string.Empty);
 			docDb.WorkContext.ShouldNotifyAboutWork(() => "Replication Heartbeat from " + src);
 			docDb.WorkContext.NotifyAboutWork();
 		}

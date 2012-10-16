@@ -38,7 +38,6 @@ namespace Raven.Studio.Models
 		{
 			this.name = name;
 			this.documentStore = documentStore;
-			ReplicationOnline = new ObservableCollection<string>();
 
 			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
@@ -60,9 +59,9 @@ namespace Raven.Studio.Models
 											? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
 											: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 
-			DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
-				.SampleResponsive(TimeSpan.FromSeconds(2))
-				.Subscribe(_ => RefreshStatistics());
+		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
+		        .SampleResponsive(TimeSpan.FromSeconds(2))
+		        .Subscribe(_ => RefreshStatistics(), exception => ApplicationModel.Current.Server.Value.IsConnected.Value = false);
 
 			RefreshStatistics();
 		}
@@ -84,80 +83,8 @@ namespace Raven.Studio.Models
 								<DatabaseDocument>(new RavenJTokenReader(doc.DataAsJson))
 						};
 						OnPropertyChanged(() => HasReplication);
-						UpdateReplicationOnlineStatus();
 					});
 		}
-
-		public void UpdateReplicationOnlineStatus()
-		{
-			if (HasReplication == false)
-				return;
-			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(Name)
-				.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
-				.ContinueOnSuccessInTheUIThread(document =>
-				{
-					ReplicationOnline = new ObservableCollection<string>();
-					var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
-					if (asyncServerClient == null)
-						return;
-
-					if (document == null)
-						return;
-
-					foreach (var replicationDestination in document.Destinations)
-					{
-						var destination = replicationDestination;
-						asyncServerClient.CreateRequest("/replication/info", "GET")
-							.ReadResponseJsonAsync()
-							.ContinueWith(task =>
-							{
-								if (task.IsFaulted)
-									throw new InvalidOperationException("Could not get replication info");
-
-								var url = task.Result.SelectToken("Self").ToString();
-								var lastEtag = task.Result.SelectToken("MostRecentDocumentEtag").ToString();
-
-								if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(lastEtag))
-									throw new Exception("Replication info is not as expected");
-
-								asyncServerClient.DirectGetAsync(destination.Url + "/databases/" + destination.Database, "Raven/Replication/Sources/" + url).
-									ContinueOnSuccessInTheUIThread(data =>
-									{
-										if (data == null)
-										{
-											ReplicationOnline.Add(destination.Url + " - Offline");
-											OnPropertyChanged(() => ReplicationOnline);
-											return;
-										}
-
-										var sourceReplicationInformation = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.
-											CreateSerializer().Deserialize
-											<SourceReplicationInformation>(new RavenJTokenReader(data.DataAsJson));
-										if (sourceReplicationInformation == null)
-											ReplicationOnline.Add(destination.Url + " - Offline");
-										else
-										{
-
-											if (lastEtag == sourceReplicationInformation.LastDocumentEtag.ToString())
-												ReplicationOnline.Add(destination.Url + " - Updated");
-											else
-												ReplicationOnline.Add(destination.Url + " - Online");
-
-										}
-										OnPropertyChanged(() => ReplicationOnline);
-									})
-									.Catch(_ =>
-									{
-										ReplicationOnline.Add(destination.Url + " - Offline");
-										OnPropertyChanged(() => ReplicationOnline);
-									});
-							});
-					}
-				}).Catch();
-
-		}
-
-		public ObservableCollection<string> ReplicationOnline { get; set; } 
 
 		public bool HasReplication
 		{
@@ -178,7 +105,10 @@ namespace Raven.Studio.Models
 			{
 				if (documentChanges == null)
 				{
-					documentChanges = Changes()
+					var changes = Changes();
+
+					ApplicationModel.ChangesToDispose.Add(changes);
+					documentChanges = changes
 						.ForAllDocuments()
 						.Publish(); // use a single underlying subscription
 
@@ -198,7 +128,9 @@ namespace Raven.Studio.Models
 			{
 				if (indexChanges == null)
 				{
-					indexChanges = Changes()
+					var changes = Changes();
+					ApplicationModel.ChangesToDispose.Add(changes);
+					indexChanges = changes
 						.ForAllIndexes()
 						.Publish(); // use a single underlying subscription
 
@@ -241,8 +173,13 @@ namespace Raven.Studio.Models
 				{
 					Statistics.Value = stats;
 					Status.Value = "Online";
+				  //  ApplicationModel.Current.Server.Value.IsConnected.Value = true;
 				})
-				.Catch(exception => Status.Value = "Offline");
+				.Catch(exception =>
+				{
+				    Status.Value = "Offline";
+				  //  ApplicationModel.Current.Server.Value.IsConnected.Value = false;
+				});
 		}
 
 	    public void Dispose()

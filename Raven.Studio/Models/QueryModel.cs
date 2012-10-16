@@ -9,11 +9,14 @@ using System.Windows.Input;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Implementation;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Studio.Commands;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Extensions;
@@ -381,8 +384,9 @@ namespace Raven.Studio.Models
 		}
 
 		Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
+	    private ICommand deleteMatchingResultsCommand;
 
-		private void HandleQueryError(Exception exception)
+	    private void HandleQueryError(Exception exception)
 		{
 			if (exception is AggregateException)
 				exception = ((AggregateException) exception).ExtractSingleInnerException();
@@ -573,6 +577,12 @@ namespace Raven.Studio.Models
 	        Requery();
 	    }
 
+        public ICommand DeleteMatchingResults { get
+        {
+            return deleteMatchingResultsCommand ??
+                   (deleteMatchingResultsCommand = new ActionCommand(HandleDeleteMatchingResults));
+        } }
+
 	    public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
 
         public Observable<string> QueryErrorMessage { get; private set; }
@@ -661,6 +671,66 @@ namespace Raven.Studio.Models
 		{
 			get { return new RepairTermInQueryCommand(this); }
 		}
+
+	    public IndexQuery CreateTemplateQuery()
+        {
+            var q = new IndexQuery
+            {
+                Query = Query,
+                DefaultOperator = DefaultOperator
+            };
+
+            if (SortBy != null && SortBy.Count > 0)
+            {
+                var sortedFields = new List<SortedField>();
+                foreach (var sortByRef in SortBy)
+                {
+                    var sortBy = sortByRef.Value;
+                    if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
+                    {
+                        var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length);
+                        sortedFields.Add(new SortedField(field) { Descending = true });
+                    }
+                    else
+                        sortedFields.Add(new SortedField(sortBy));
+                }
+                q.SortedFields = sortedFields.ToArray();
+            }
+
+            if (ShowFields)
+                q.FieldsToFetch = new[] { Constants.AllFields };
+
+            q.DebugOptionGetIndexEntries = ShowEntries;
+
+            q.SkipTransformResults = SkipTransformResults;
+            if (IsSpatialQuerySupported && Latitude.HasValue && Longitude.HasValue)
+            {
+                q = new SpatialIndexQuery(q)
+                {
+                    QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(Latitude.Value, Longitude.Value, Radius.HasValue ? Radius.Value : 1),
+                    SpatialRelation = SpatialRelation.Within,
+                    SpatialFieldName = Constants.DefaultSpatialFieldName,
+                    DefaultOperator = DefaultOperator
+                };
+            }
+
+            return q;
+        }
+
+        private void HandleDeleteMatchingResults()
+        {
+            AskUser.ConfirmationAsync("Delete Items",
+                                      "Are you sure you want to delete all documents matching the query?")
+                .ContinueWhenTrueInTheUIThread(
+                    () =>
+                    {
+                        ApplicationModel.Current.AddInfoNotification("Deleting documents");
+                        DatabaseCommands.DeleteByIndexAsync(IndexName, CreateTemplateQuery(), false)
+                            .ContinueOnSuccess(
+                                () => ApplicationModel.Current.AddInfoNotification("Documents successfully deleted"))
+                            .Catch();
+                    });
+        }
 
 		private class RepairTermInQueryCommand : Command
 		{

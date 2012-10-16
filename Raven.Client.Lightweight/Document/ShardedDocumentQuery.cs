@@ -161,6 +161,8 @@ namespace Raven.Client.Document
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];
+			
+			afterQueryExecutedCallback(mergedQueryResult);
 		}
 
 		internal static void AssertNoDuplicateIdsInResults(List<QueryOperation> shardQueryOperations)

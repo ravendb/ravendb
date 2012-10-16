@@ -38,6 +38,12 @@ namespace Raven.Studio
 
 		private void HandleExit(object sender, EventArgs e)
 		{
+			foreach (var databaseChangese in ApplicationModel.ChangesToDispose)
+			{
+				var toDispose = databaseChangese as IDisposable;
+				if(toDispose != null)
+					toDispose.Dispose();
+			}
 			Settings.Instance.LastUrl = UrlUtil.Url;
 			Settings.Instance.SaveSettings(IsolatedStorageSettings.ApplicationSettings);
 

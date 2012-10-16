@@ -33,5 +33,10 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The metadata.</value>
 		public RavenJObject Metadata { get; set; }
+		/// <summary>
+		/// Gets or sets the updated Addotional Data.
+		/// </summary>
+		/// <value>The metadata.</value>
+		public RavenJObject AdditionalData { get; set; }
 	}
 }

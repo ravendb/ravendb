@@ -19,6 +19,7 @@ using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Tests.Bugs;
 using System.Linq;
+using Raven.Tests.Faceted;
 
 namespace Raven.Tryouts
 {
@@ -31,7 +32,11 @@ namespace Raven.Tryouts
 				Console.Clear();
 				Console.WriteLine(i);
 				Console.WriteLine();
-				new CompiledIndexesNhsevidence().CanGetCorrectResults();
+
+				using(var x = new CompiledIndexesNhsevidence())
+				{
+					x.CanGetCorrectResults();
+				}
 			}
 		}
 

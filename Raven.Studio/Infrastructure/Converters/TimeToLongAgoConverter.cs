@@ -12,8 +12,15 @@ namespace Raven.Studio.Infrastructure.Converters
 			if (value is DateTime)
 			{
 				var dateTime = (DateTime) value;
-				if(dateTime.Kind != DateTimeKind.Utc)
-					dateTime = dateTime.ToUniversalTime();
+				switch (dateTime.Kind)
+				{
+					case DateTimeKind.Local:
+						dateTime = dateTime.ToUniversalTime();
+						break;
+					case DateTimeKind.Unspecified:
+						dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+						break;
+				}
 				var timeAgo = SystemTime.UtcNow - dateTime;
 
 				if (timeAgo.TotalDays >= 1)
