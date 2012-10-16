@@ -127,6 +127,11 @@ namespace Raven.Client.Document
 			try
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+				}
 			}
 			catch (Exception e)
 			{
@@ -152,6 +157,11 @@ namespace Raven.Client.Document
 			try
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+				}
 			}
 			catch (Exception e)
 			{
