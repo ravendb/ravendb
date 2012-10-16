@@ -21,6 +21,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Commercial;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
 using Raven.Database.Util;
@@ -38,8 +39,7 @@ using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins.Tenants;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.Security.OAuth;
-using Raven.Database.Server.Security.Windows;
+using Rhino.Licensing;
 
 namespace Raven.Database.Server
 {
@@ -948,6 +948,7 @@ namespace Raven.Database.Server
 			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
 				var documentDatabase = new DocumentDatabase(config);
+				AssertLicenseParameters(config);
 				documentDatabase.SpinBackgroundWorkers();
 				InitializeRequestResponders(documentDatabase);
 
@@ -963,6 +964,41 @@ namespace Raven.Database.Server
 				return task;
 			}).Unwrap());
 			return true;
+		}
+
+		private void AssertLicenseParameters(InMemoryRavenConfiguration config)
+		{
+			string maxDatabases;
+			if (ValidateLicense.LicenseAttributes.TryGetValue("numberOfDatabases", out maxDatabases))
+			{
+				if (string.Equals(maxDatabases, "unlimited", StringComparison.InvariantCultureIgnoreCase) == false)
+				{
+					var numberOfAllowedDbs = int.Parse(maxDatabases);
+
+					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, 0, numberOfAllowedDbs).ToList();
+					if (databases.Count >= numberOfAllowedDbs)
+						throw new InvalidOperationException(
+							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine + 
+							"You can either upgrade your RavenDB license or delete a database from the server");
+				}
+			}
+
+			var bundles = config.Settings["Raven/ActiveBundles"];
+			if (string.IsNullOrWhiteSpace(bundles) == false)
+			{
+				var bundlesList = bundles.Split(';').ToList();
+
+				foreach (var bundle in bundlesList)
+				{
+					string value;
+					if (ValidateLicense.LicenseAttributes.TryGetValue(bundle, out value))
+					{
+						bool active;
+						if (bool.TryParse(value, out active) && active == false)
+							throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
+					}
+				}
+			}
 		}
 
 		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
@@ -1003,6 +1039,7 @@ namespace Raven.Database.Server
 			config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
 			config.DatabaseName = tenantId;
+			config.IsTenantDatabase = true;
 
 			config.Initialize();
 			config.CopyParentSettings(SystemConfiguration);

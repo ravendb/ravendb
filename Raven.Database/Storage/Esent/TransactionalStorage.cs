@@ -15,6 +15,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database;
+using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
@@ -122,7 +123,7 @@ namespace Raven.Storage.Esent
 
 				exceptionAggregator.ThrowIfNeeded();
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
 				log.FatalException("Could not dispose of the transactional storage for " + path, e);
 				throw;
@@ -244,7 +245,7 @@ namespace Raven.Storage.Esent
 				{
 					Api.JetMove(session, details, JET_Move.First, MoveGrbit.None);
 					var columnids = Api.GetColumnDictionary(session, details);
-					using(var update = new Update(session,details, JET_prep.Replace))
+					using (var update = new Update(session, details, JET_prep.Replace))
 					{
 						Api.SetColumn(session, details, columnids["id"], newId.ToByteArray());
 						update.Save();
@@ -351,9 +352,18 @@ namespace Raven.Storage.Esent
 		{
 			using (var session = new Session(instance))
 			{
+				int maxSize = 0;
 				try
 				{
-					Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
+					string value;
+					if (ValidateLicense.LicenseAttributes.TryGetValue("maxSizeInMb", out value))
+					{
+						if (value != "unlimited")
+						{
+							maxSize = (int) ((long.Parse(value)*1024*1024)/SystemParameters.DatabasePageSize);
+						}
+					}
+					Api.JetAttachDatabase2(session, database, maxSize, AttachDatabaseGrbit.None);
 					return false;
 				}
 				catch (EsentErrorException e)
@@ -378,7 +388,7 @@ namespace Raven.Storage.Esent
 						{
 						}
 
-						Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
+						Api.JetAttachDatabase2(session, database, maxSize, AttachDatabaseGrbit.None);
 						return false;
 					}
 					if (e.Error != JET_err.FileNotFound)
@@ -386,7 +396,7 @@ namespace Raven.Storage.Esent
 				}
 
 				new SchemaCreator(session).Create(database);
-				Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
+				Api.JetAttachDatabase2(session, database, maxSize, AttachDatabaseGrbit.None);
 				return true;
 			}
 		}
