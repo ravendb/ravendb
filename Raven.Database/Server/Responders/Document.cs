@@ -154,7 +154,7 @@ namespace Raven.Database.Server.Responders
 			}
 			Debug.Assert(doc.Etag != null);
 			doc.Metadata[Constants.LastModified] = doc.LastModified;
-			doc.Metadata[Constants.DocumentIdFieldName] = Uri.EscapeUriString(doc.Key);
+			doc.Metadata[Constants.DocumentIdFieldName] = Uri.EscapeUriString(doc.Key ?? string.Empty);
 			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag.Value);
 		}
 
