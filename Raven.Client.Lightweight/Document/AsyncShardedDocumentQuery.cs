@@ -38,7 +38,7 @@ namespace Raven.Client.Document
 			{
 				if (databaseCommands == null)
 				{
-					var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery });
+					var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery , IndexName = indexName});
 					databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
 				}
 				return databaseCommands;
@@ -131,7 +131,8 @@ namespace Raven.Client.Document
 					new ShardRequestData
 					{
 						EntityType = typeof(T),
-						Query = IndexQuery
+						Query = IndexQuery,
+						IndexName = indexName
 					}, (commands, i) =>
 					{
 						if (lastResults[i]) // if we already got a good result here, do nothing
