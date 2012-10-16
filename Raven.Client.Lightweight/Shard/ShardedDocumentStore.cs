@@ -181,7 +181,7 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public override IDocumentSession OpenSession()
 		{
-			return OpenSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands));
+			return OpenSessionInternal(null, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands));
 		}
 
 		/// <summary>
@@ -189,7 +189,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override IDocumentSession OpenSession(string database)
 		{
-			return OpenSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands.ForDatabase(database)));
+			return OpenSessionInternal(database, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands.ForDatabase(database)));
 		}
 
 		/// <summary>
@@ -197,17 +197,20 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override IDocumentSession OpenSession(OpenSessionOptions sessionOptions)
 		{
-			return OpenSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands
+			return OpenSessionInternal(sessionOptions.Database, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands
 				.ForDatabase(sessionOptions.Database)
 				.With(sessionOptions.Credentials)));
 		}
 
-		private IDocumentSession OpenSessionInternal(Dictionary<string, IDatabaseCommands> shardDbCommands)
+		private IDocumentSession OpenSessionInternal(string database, Dictionary<string, IDatabaseCommands> shardDbCommands)
 		{
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shardDbCommands);
+			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shardDbCommands)
+				{
+					DatabaseName = database
+				};
 			AfterSessionCreated(session);
 			return session;
 		}

@@ -26,24 +26,22 @@ namespace Raven.Client.Document.DTC
 			{
 				foreach (var file in store.GetFileNames("*.recovery-information"))
 				{
-					var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-					Debug.Assert(fileNameWithoutExtension != null);
-					var parts = fileNameWithoutExtension.Split(new[] { "-$$-" }, StringSplitOptions.RemoveEmptyEntries);
-					if (parts.Length != 2)
-						continue;
-
-					Guid resourceManagerId, txId;
-
-					if (Guid.TryParse(parts[0], out resourceManagerId) == false)
-						continue;
-					if (Guid.TryParse(parts[1], out txId) == false)
-						continue;
-
+					var txId = Guid.Empty;
 					try
 					{
 						using (var fileStream = store.OpenFile(file, FileMode.Open, FileAccess.Read))
+						using(var reader = new BinaryReader(fileStream))
 						{
-							TransactionManager.Reenlist(resourceManagerId, fileStream.ReadData(), new InternalEnlistment(commands, txId));
+							var resourceManagerId = new Guid(reader.ReadString());
+							txId = new Guid(reader.ReadString());
+
+							var db = reader.ReadString();
+
+							var dbCmds = string.IsNullOrEmpty(db) == false ? 
+								commands.ForDatabase(db) : 
+								commands.ForDefaultDatabase();
+
+							TransactionManager.Reenlist(resourceManagerId, fileStream.ReadData(), new InternalEnlistment(dbCmds, txId));
 							resourceManagersRequiringRecovery.Add(resourceManagerId);
 							logger.Info("Recovered transaction {0}", txId);
 						}

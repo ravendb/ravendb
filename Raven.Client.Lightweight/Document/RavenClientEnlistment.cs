@@ -47,9 +47,12 @@ namespace Raven.Client.Document
 				{
 					var name = GetTransactionRecoveryInformationFileName();
 					using (var file = machineStoreForApplication.CreateFile(name + ".temp"))
+					using(var writer = new BinaryWriter(file))
 					{
-						var recoveryInformation = preparingEnlistment.RecoveryInformation();
-						file.Write(recoveryInformation, 0, recoveryInformation.Length);
+						writer.Write(session.ResourceManagerId.ToString());
+						writer.Write(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction).ToString());
+						writer.Write(session.DatabaseName ?? "");
+						writer.Write(preparingEnlistment.RecoveryInformation());
 						file.Flush(true);
 					}
 					machineStoreForApplication.MoveFile(name + ".temp", name);
@@ -66,7 +69,7 @@ namespace Raven.Client.Document
 
 		private string GetTransactionRecoveryInformationFileName()
 		{
-			return session.ResourceManagerId.ToString() + "-$$-" + PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction) + ".recovery-information";
+			return transaction.DistributedIdentifier + "_" + transaction.LocalIdentifier + ".recovery-information";
 		}
 
 		/// <summary>

@@ -19,6 +19,11 @@ namespace Raven.Client
 		Guid ResourceManagerId { get; }
 
 		/// <summary>
+		/// The db name for this session
+		/// </summary>
+		string DatabaseName { get; }
+
+		/// <summary>
 		/// Commits the transaction specified.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>

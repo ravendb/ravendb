@@ -42,6 +42,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Guid Id { get; private set; }
 
+		/// <summary>
+		/// The database name for this session
+		/// </summary>
+		public string DatabaseName { get; internal set; }
+
 		protected static readonly NLog.Logger log = NLog.LogManager.GetCurrentClassLogger();
 
 		/// <summary>
