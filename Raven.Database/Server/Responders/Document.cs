@@ -154,14 +154,14 @@ namespace Raven.Database.Server.Responders
 			}
 			Debug.Assert(doc.Etag != null);
 			doc.Metadata[Constants.LastModified] = doc.LastModified;
-			doc.Metadata[Constants.DocumentIdFieldName] = doc.Key;
+			doc.Metadata[Constants.DocumentIdFieldName] = Uri.EscapeUriString(doc.Key);
 			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag.Value);
 		}
 
 		private void Put(IHttpContext context, string docId)
 		{
 			var json = context.ReadJson();
-			context.SetStatusToCreated("/docs/" + docId);
+			context.SetStatusToCreated("/docs/" + Uri.EscapeUriString(docId));
 			var putResult = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(), GetRequestTransaction(context));
 			context.WriteJson(putResult);
 		}

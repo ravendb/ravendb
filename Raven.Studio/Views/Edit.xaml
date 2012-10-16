@@ -19,6 +19,7 @@
                          Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel" 
                          Title="Edit Document">
     
+	
     <Infrastructure:PageView.Resources>
         <LinearGradientBrush x:Key="ErrorAreaBorderBrush" EndPoint="0.5,1" StartPoint="0.5,0">
             <GradientStop Color="#D6D6D6"/>
