@@ -353,9 +353,10 @@ namespace Raven.Storage.Managed
 			{
 				{"view", indexName},
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase))
-			.Skip(start)
-			.Take(take)
-			.Select(x => x.Value<string>("reduceKey"));
+				.Select(x => x.Value<string>("reduceKey"))
+				.Distinct()
+				.Skip(start)
+				.Take(take);
 		}
 
 		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int take)
