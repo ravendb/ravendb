@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -73,7 +74,7 @@ namespace Raven.Database.Server.Responders
 					                                 context.Request.Headers.FilterHeadersAttachment());
 
 					context.WriteETag(newEtag);
-					context.SetStatusToCreated("/static/" + filename);
+					context.SetStatusToCreated("/static/" + Uri.EscapeUriString(filename));
 					break;
 				case "DELETE":
 					Database.DeleteStatic(filename, etag);

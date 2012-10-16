@@ -47,7 +47,7 @@ namespace Rhino.Licensing
 		private readonly string licenseServerUrl;
 		private readonly Guid clientId;
 		private readonly string publicKey;
-		private readonly Timer nextLeaseTimer;
+		private Timer nextLeaseTimer;
 		private bool disableFutureChecks;
 		private bool currentlyValidatingLicense;
 		private readonly DiscoveryHost discoveryHost;
@@ -173,7 +173,6 @@ namespace Rhino.Licensing
 			LeaseTimeout = TimeSpan.FromMinutes(5);
 			discoveryHost = new DiscoveryHost();
 			LicenseAttributes = new Dictionary<string, string>();
-			nextLeaseTimer = new Timer(LeaseLicenseAgain);
 			this.publicKey = publicKey;
 			discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
 		}
@@ -262,6 +261,7 @@ namespace Rhino.Licensing
 					// we explicitly don't want bad things to happen if we can't do that
 					Logger.ErrorException("Could not setup node discovery", e);
 				}
+				nextLeaseTimer = new Timer(LeaseLicenseAgain);
 
 				discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
 				discoveryClient.PublishMyPresence();
@@ -478,7 +478,7 @@ namespace Rhino.Licensing
 				}
 
 				var result = ValidateXmlDocumentLicense(doc);
-				if (result && disableFutureChecks == false)
+				if (result && disableFutureChecks == false && nextLeaseTimer != null)
 				{
 					nextLeaseTimer.Change(LeaseTimeout, LeaseTimeout);
 				}
@@ -541,7 +541,7 @@ namespace Rhino.Licensing
 					//setup next lease
 					var time = (ExpirationDate.AddMinutes(-5) - SystemTime.UtcNow);
 					Logger.Debug("Will lease license again at {0}", time);
-					if (disableFutureChecks == false)
+					if (disableFutureChecks == false && nextLeaseTimer != null)
 						nextLeaseTimer.Change(time, time);
 				}
 				return validLicense;
@@ -629,7 +629,11 @@ namespace Rhino.Licensing
 		public void DisableFutureChecks()
 		{
 			disableFutureChecks = true;
-			nextLeaseTimer.Dispose();
+			if(nextLeaseTimer != null)
+			{
+				nextLeaseTimer.Dispose();
+
+			}
 		}
 	}
 }

@@ -32,6 +32,11 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public IndexQuery Query { get; set; }
 
+		/// <summary>
+		/// The index name for this query
+		/// </summary>
+		public string IndexName { get; set; }
+
 		public ShardRequestData()
 		{
 			Keys = new List<string>();

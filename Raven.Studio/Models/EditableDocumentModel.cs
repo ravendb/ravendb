@@ -306,6 +306,7 @@ namespace Raven.Studio.Models
 					else
 					{
 						Mode = DocumentMode.DocumentWithId;
+						result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
 						LocalId = result.Document.Key;
 						SetCurrentDocumentKey(result.Document.Key);
 					}

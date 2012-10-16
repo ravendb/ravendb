@@ -395,6 +395,7 @@ namespace Raven.Client.Connection.Async
 						{
 							var requestJson = task.Result;
 							var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
+							docKey = Uri.UnescapeDataString(docKey);
 							request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
 							return SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
 						}

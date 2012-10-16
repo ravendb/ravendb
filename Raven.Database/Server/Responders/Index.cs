@@ -72,7 +72,7 @@ namespace Raven.Database.Server.Responders
 				context.Write("Expected json document with 'Map' or 'Maps' property");
 				return;
 			}
-			context.SetStatusToCreated("/indexes/" + index);
+			context.SetStatusToCreated("/indexes/" + Uri.EscapeUriString(index));
 			context.WriteJson(new { Index = Database.PutIndex(index, data) });
 		}
 

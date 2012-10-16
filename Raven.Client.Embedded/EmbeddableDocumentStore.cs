@@ -206,6 +206,7 @@ namespace Raven.Client.Embedded
 				{
 					ResourceManagerId = Guid.NewGuid(); // avoid conflicts
 				}
+				configuration.SetSystemDatabase();
 				DocumentDatabase = new DocumentDatabase(configuration);
 				DocumentDatabase.SpinBackgroundWorkers();
 				if (UseEmbeddedHttpServer)
