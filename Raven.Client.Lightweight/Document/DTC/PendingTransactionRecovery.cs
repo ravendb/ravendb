@@ -71,7 +71,8 @@ namespace Raven.Client.Document.DTC
 				{
 					try
 					{
-						store.DeleteFile(file);
+						if (store.FileExists(file))
+							store.DeleteFile(file);
 					}
 					catch (Exception e)
 					{

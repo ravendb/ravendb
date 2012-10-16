@@ -18,7 +18,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class RavenClientEnlistment : IEnlistmentNotification
 	{
-		private static ILog logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		private readonly ITransactionalDocumentSession session;
 		private readonly Action onTxComplete;
@@ -127,6 +127,11 @@ namespace Raven.Client.Document
 			try
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+				}
 			}
 			catch (Exception e)
 			{
@@ -152,6 +157,11 @@ namespace Raven.Client.Document
 			try
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+				}
 			}
 			catch (Exception e)
 			{
