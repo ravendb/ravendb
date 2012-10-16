@@ -32,6 +32,7 @@ namespace Raven.Client.Document
 			transaction = Transaction.Current.TransactionInformation;
 			this.session = session;
 			this.onTxComplete = onTxComplete;
+			TransactionRecoveryInformationFileName = Guid.NewGuid() + ".recovery-information";
 		}
 
 		/// <summary>
@@ -45,7 +46,7 @@ namespace Raven.Client.Document
 			{
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					var name = GetTransactionRecoveryInformationFileName();
+					var name = TransactionRecoveryInformationFileName;
 					using (var file = machineStoreForApplication.CreateFile(name + ".temp"))
 					using(var writer = new BinaryWriter(file))
 					{
@@ -67,10 +68,7 @@ namespace Raven.Client.Document
 			preparingEnlistment.Prepared();
 		}
 
-		private string GetTransactionRecoveryInformationFileName()
-		{
-			return transaction.DistributedIdentifier + "_" + transaction.LocalIdentifier + ".recovery-information";
-		}
+		private string TransactionRecoveryInformationFileName { get; set; }
 
 		/// <summary>
 		/// Notifies an enlisted object that a transaction is being committed.
@@ -85,7 +83,7 @@ namespace Raven.Client.Document
 
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
 				}
 			}
 			catch (Exception e)
@@ -110,7 +108,7 @@ namespace Raven.Client.Document
 
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
 				}
 			}
 			catch (Exception e)
@@ -133,7 +131,7 @@ namespace Raven.Client.Document
 
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
 				}
 			}
 			catch (Exception e)
@@ -163,7 +161,7 @@ namespace Raven.Client.Document
 
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
 				}
 			}
 			catch (Exception e)
