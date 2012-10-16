@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs
 	[CLSCompliant(false)]
 	public class CompiledIndexesNhsevidence : RavenTest
 	{
-		[Fact(Skip = "Race condition in munin")]
+		[Fact]
 		public void CanGetCorrectResults()
 		{
 			for (int x = 0; x < 50; x++)
@@ -33,7 +33,7 @@ namespace Raven.Tests.Bugs
 				{
 					for (int i = 0; i < 12; i++)
 					{
-						AddRecord(store, 1);
+						AddRecord(store, 5);
 					}
 					ReadRecords(store, 60);
 				}
