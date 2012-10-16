@@ -198,6 +198,7 @@ namespace Raven.Client.Connection
 			{
 				var responseJson = request.ReadResponseJson();
 				var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
+				docKey = Uri.UnescapeDataString(docKey);
 				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
 				return SerializationHelper.DeserializeJsonDocument(docKey, responseJson, request.ResponseHeaders, request.ResponseStatusCode);
 			}

@@ -178,6 +178,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 						if(request.ResponseHeaders.TryGetValue(Constants.DocumentIdFieldName, out list))
 						{
 							docKey = list.FirstOrDefault() ?? key;
+							docKey = Uri.UnescapeDataString(docKey);
 							request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
 						}
 						return new JsonDocument

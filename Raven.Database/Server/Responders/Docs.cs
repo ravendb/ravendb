@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Responders
 					var id = Database.Put(null, Guid.Empty, json,
 										  context.Request.Headers.FilterHeaders(),
 										  GetRequestTransaction(context));
-					context.SetStatusToCreated("/docs/" + id);
+					context.SetStatusToCreated("/docs/" + Uri.EscapeUriString(id.Key));
 					context.WriteJson(id);
 					break;
 			}
