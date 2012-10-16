@@ -74,9 +74,23 @@ namespace Raven.Studio.Models
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
 
+			RestoreDefaults(index);
+
 			hasUnsavedChanges = false;
 
 			OnEverythingChanged();
+		}
+
+		private void RestoreDefaults(IndexDefinition indexDefinition)
+		{
+			if (indexDefinition.IsMapReduce == false)
+				return;
+
+			foreach (var field in Fields)
+			{
+				if(indexDefinition.Stores.ContainsKey(field.Name) == false)
+					field.Storage = FieldStorage.Yes;
+			}
 		}
 
 		public override void LoadModelParameters(string parameters)
