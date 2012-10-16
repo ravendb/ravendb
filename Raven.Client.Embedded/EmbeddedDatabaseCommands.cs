@@ -52,6 +52,8 @@ namespace Raven.Client.Embedded
 			this.database = database;
 			this.convention = convention;
 			OperationsHeaders = new NameValueCollection();
+			if(database.Configuration.IsSystemDatabase() == false)
+				throw new InvalidOperationException("Database must be a system database");
 		}
 
 		/// <summary>

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
@@ -707,6 +708,22 @@ namespace Raven.Database.Config
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
 
 		public TimeSpan MaxIndexingRunLatency { get; set; }
+		
+		internal bool IsTenantDatabase { get; set; }
+
+		[Browsable(false)]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public void SetSystemDatabase()
+		{
+			IsTenantDatabase = false;
+		}
+
+		[Browsable(false)]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public bool IsSystemDatabase()
+		{
+			return IsTenantDatabase == false;
+		}
 
 		protected void ResetContainer()
 		{

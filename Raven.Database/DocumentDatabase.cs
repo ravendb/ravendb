@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Commercial;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
@@ -129,6 +130,11 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+			if (configuration.IsTenantDatabase == false)
+			{
+				validateLicense = new ValidateLicense();
+				validateLicense.Execute(configuration);
+			}
 			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
 			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
@@ -365,7 +371,6 @@ namespace Raven.Database
 		{
 			if (disposed)
 				return;
-
 			var onDisposing = Disposing;
 			if (onDisposing != null)
 			{
@@ -390,6 +395,9 @@ namespace Raven.Database
 				if (workContext != null)
 					workContext.StopWorkRude();
 			});
+
+			if (validateLicense != null)
+				exceptionAggregator.Execute(validateLicense.Dispose);
 
 			exceptionAggregator.Execute(() =>
 			{
@@ -1564,6 +1572,7 @@ namespace Raven.Database
 
 		static string productVersion;
 		private volatile bool disposed;
+		private ValidateLicense validateLicense;
 		public string ServerUrl
 		{
 			get
