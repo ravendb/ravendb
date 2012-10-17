@@ -27,8 +27,11 @@ namespace Raven.Studio.Models
 				.GetAsync("Raven/Authorization/WindowsSettings")
 				.ContinueOnSuccessInTheUIThread(doc =>
 				{
-					if(doc == null)
+					if (doc == null)
+					{
+						Document.Value = new WindowsAuthDocument();
 						return;
+					}
 					Document.Value = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
 					RequiredUsers = new ObservableCollection<WindowsAuthData>(Document.Value.RequiredUsers);
 					RequiredGroups = new ObservableCollection<WindowsAuthData>(Document.Value.RequiredGroups);

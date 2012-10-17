@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Security
 		[CLSCompliant(false)]
 		protected Func<DocumentDatabase> database;
 		[CLSCompliant(false)]
-		protected static HttpServer server;
+		protected HttpServer server;
 		[CLSCompliant(false)]
 		protected Func<string> tenantId;
 

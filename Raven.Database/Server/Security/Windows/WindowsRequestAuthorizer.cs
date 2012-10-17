@@ -10,29 +10,25 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		private static readonly List<string> requiredGroups = new List<string>();
-		private static readonly List<string> requiredUsers = new List<string>();
+		private readonly List<string> requiredGroups = new List<string>();
+		private readonly List<string> requiredUsers = new List<string>();
+		private static WindowsRequestEvent windowsRequestEvent;
+
+		public static void UpdateSettingsEvent()
+		{
+			windowsRequestEvent.UpdateSettings();
+		}
 
 		protected override void Initialize()
 		{
-			UpdateSettings();
-		}
+			windowsRequestEvent = new WindowsRequestEvent
+			{
+				RequiredUsers = requiredUsers,
+				RequiredGroups = requiredGroups,
+				Server = server
+			};
 
-		public static void UpdateSettings()
-		{
-			var doc = server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
-			requiredGroups.Clear();
-			requiredUsers.Clear();
-
-			if (doc == null)
-				return;
-
-			var required = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
-			if (required == null)
-				return;
-
-			requiredGroups.AddRange(required.RequiredGroups.Select(data => data.Name));
-			requiredUsers.AddRange(required.RequiredUsers.Select(data => data.Name));
+			windowsRequestEvent.UpdateSettings();
 		}
 
 		public override bool Authorize(IHttpContext ctx)
@@ -86,6 +82,30 @@ namespace Raven.Database.Server.Security.Windows
 			}
 			
 			return false;
+		}
+
+		public class WindowsRequestEvent : EventArgs
+		{
+			public HttpServer Server { get; set; }
+			public List<string> RequiredGroups { get; set; }
+			public List<string> RequiredUsers { get; set; }
+
+			public void UpdateSettings()
+			{
+				var doc = Server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
+				RequiredGroups.Clear();
+				RequiredUsers.Clear();
+
+				if (doc == null)
+					return;
+
+				var required = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
+				if (required == null)
+					return;
+
+				RequiredGroups.AddRange(required.RequiredGroups.Select(data => data.Name));
+				RequiredUsers.AddRange(required.RequiredUsers.Select(data => data.Name));
+			}
 		}
 	}
 }
