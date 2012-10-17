@@ -33,7 +33,7 @@ namespace Raven.Tests.Bugs
 				{
 					for (int i = 0; i < 12; i++)
 					{
-						AddRecord(store, 5);
+						AddRecord(store, 1);
 					}
 					ReadRecords(store, 60);
 				}
