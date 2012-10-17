@@ -88,12 +88,13 @@ namespace RavenRepro
 
 
                 Console.Out.WriteLine("Found {0} timeouts", timeoutIds.Count());
-
+	            var random = new Random();
                 //generate duplicates
-                timeoutIds = timeoutIds.Concat(timeoutIds);
-                timeoutIds = timeoutIds.Concat(timeoutIds);
-                timeoutIds = timeoutIds.Concat(timeoutIds);
-                timeoutIds = timeoutIds.Concat(timeoutIds);
+	            for (int i = 0; i < 4; i++)
+	            {
+		            timeoutIds = timeoutIds.Concat(timeoutIds.OrderBy(x => random.Next()));
+	            }
+
 
                 Console.Out.WriteLine("Dispatching {0} timeouts", timeoutIds.Count());
 				int count = 0;
@@ -102,7 +103,7 @@ namespace RavenRepro
 					if (Thread.VolatileRead(ref count) > (NumTimeouts / 3))
 					{
 						Console.Beep();
-						Process.GetCurrentProcess().Kill();
+						Environment.FailFast("blah");
 					}
 					try
 					{
