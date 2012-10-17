@@ -4,6 +4,7 @@ using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Studio.Models;
@@ -25,7 +26,9 @@ namespace Raven.Studio.Commands
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 			if(databaseName == Constants.SystemDatabase)
 			{
-				SaveApiKeys(settingsModel);
+				SaveApiKeys();
+				SaveWindowsAuth();
+				return;
 			}
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
 
@@ -122,11 +125,32 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-		private void SaveApiKeys(SettingsModel model)
+		private void SaveWindowsAuth()
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
 
-			var apiKeysModel =model.Sections
+			var windowsAuthModel = settingsModel.Sections
+				.Where(sectionModel => sectionModel is WindowsAuthSettingsSectionModel)
+				.Cast<WindowsAuthSettingsSectionModel>()
+				.FirstOrDefault();
+
+			if (windowsAuthModel == null)
+				return;
+
+			windowsAuthModel.Document.Value.RequiredGroups = windowsAuthModel.RequiredGroups.ToList();
+			windowsAuthModel.Document.Value.RequiredUsers = windowsAuthModel.RequiredUsers.ToList();
+
+			session.Store(RavenJObject.FromObject(windowsAuthModel.Document.Value), "Raven/Authorization/WindowsSettings");
+
+			session.SaveChangesAsync()
+				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.Notifications.Add(new Notification("Windows Authentication Settings Saved")));
+		}
+
+		private void SaveApiKeys()
+		{
+			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
+
+			var apiKeysModel = settingsModel.Sections
 				.Where(sectionModel => sectionModel is ApiKeysSectionModel)
 				.Cast<ApiKeysSectionModel>()
 				.FirstOrDefault();

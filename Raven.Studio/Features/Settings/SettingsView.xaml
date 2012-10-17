@@ -28,6 +28,9 @@
 		<DataTemplate DataType="Models:ApiKeysSectionModel">
 			<Settings:ApiKeysSettingSectionView/>
 		</DataTemplate>
+		<DataTemplate DataType="Models:WindowsAuthSettingsSectionModel">
+			<Settings:WindowsAuthSettingSectionView/>
+		</DataTemplate>
 	</UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot">

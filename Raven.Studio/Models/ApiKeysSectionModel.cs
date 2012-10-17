@@ -45,7 +45,6 @@ namespace Raven.Studio.Models
 			get { return new ActionCommand(DeleteApi); }
 		}
 
-
 		public ICommand AddDatabaseAccess
 		{
 			get

@@ -29,7 +29,7 @@ namespace Raven.Studio.Models
 
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
-		//		Settings.Sections.Add(new WindowsAuthSectionModel());
+				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
 
 				return; 
 			}
