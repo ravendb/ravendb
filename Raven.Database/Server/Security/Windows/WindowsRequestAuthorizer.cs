@@ -4,6 +4,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Security.Windows
 {
@@ -14,18 +15,15 @@ namespace Raven.Database.Server.Security.Windows
 
 		protected override void Initialize()
 		{
-			var requiredGroupsString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredGroups"];
-			if (requiredGroupsString != null)
-			{
-				var groups = requiredGroupsString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-				requiredGroups.AddRange(groups);
-			}
+			var doc = server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
+			requiredGroups.Clear();
+			requiredUsers.Clear();
 
-			var requiredUsersString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredUsers"];
-			if (requiredUsersString != null)
+			var required = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
+			if (required != null)
 			{
-				var users = requiredUsersString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-				requiredUsers.AddRange(users);
+				requiredGroups.AddRange(required.RequiredGroups);
+				requiredUsers.AddRange(required.RequiredUsers);
 			}
 		}
 

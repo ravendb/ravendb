@@ -327,6 +327,7 @@
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
+    <Compile Include="Server\Security\Windows\WindowsAuthDocument.cs" />
     <Compile Include="Server\Security\Windows\WindowsAuthConfigureHttpListener.cs" />
     <Compile Include="Server\Security\Windows\WindowsRequestAuthorizer.cs" />
     <Compile Include="Impl\CachedDocument.cs" />
