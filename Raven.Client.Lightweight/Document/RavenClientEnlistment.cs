@@ -18,7 +18,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class RavenClientEnlistment : IEnlistmentNotification
 	{
-		private static ILog logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		private readonly ITransactionalDocumentSession session;
 		private readonly Action onTxComplete;
@@ -32,6 +32,7 @@ namespace Raven.Client.Document
 			transaction = Transaction.Current.TransactionInformation;
 			this.session = session;
 			this.onTxComplete = onTxComplete;
+			TransactionRecoveryInformationFileName = Guid.NewGuid() + ".recovery-information";
 		}
 
 		/// <summary>
@@ -45,11 +46,14 @@ namespace Raven.Client.Document
 			{
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					var name = GetTransactionRecoveryInformationFileName();
+					var name = TransactionRecoveryInformationFileName;
 					using (var file = machineStoreForApplication.CreateFile(name + ".temp"))
+					using(var writer = new BinaryWriter(file))
 					{
-						var recoveryInformation = preparingEnlistment.RecoveryInformation();
-						file.Write(recoveryInformation, 0, recoveryInformation.Length);
+						writer.Write(session.ResourceManagerId.ToString());
+						writer.Write(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction).ToString());
+						writer.Write(session.DatabaseName ?? "");
+						writer.Write(preparingEnlistment.RecoveryInformation());
 						file.Flush(true);
 					}
 					machineStoreForApplication.MoveFile(name + ".temp", name);
@@ -64,10 +68,7 @@ namespace Raven.Client.Document
 			preparingEnlistment.Prepared();
 		}
 
-		private string GetTransactionRecoveryInformationFileName()
-		{
-			return session.ResourceManagerId.ToString() + "-$$-" + PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction) + ".recovery-information";
-		}
+		private string TransactionRecoveryInformationFileName { get; set; }
 
 		/// <summary>
 		/// Notifies an enlisted object that a transaction is being committed.
@@ -82,7 +83,7 @@ namespace Raven.Client.Document
 
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
 			}
 			}
 			catch (Exception e)
@@ -107,7 +108,7 @@ namespace Raven.Client.Document
 
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					machineStoreForApplication.DeleteFile(GetTransactionRecoveryInformationFileName());
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
 				}
 			}
 			catch (Exception e)
@@ -127,6 +128,11 @@ namespace Raven.Client.Document
 			try
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
+				}
 			}
 			catch (Exception e)
 			{
@@ -152,6 +158,11 @@ namespace Raven.Client.Document
 			try
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
+				}
 			}
 			catch (Exception e)
 			{

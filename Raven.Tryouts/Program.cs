@@ -1,15 +1,25 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Principal;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.MEF;
 using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
+using Raven.Database.Indexing;
+using Raven.Database.Plugins;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Tests.Bugs;
+using System.Linq;
+using Raven.Tests.Faceted;
 
 namespace Raven.Tryouts
 {
@@ -17,20 +27,89 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var store = new DocumentStore
+			for (int i = 0; i < 100; i++)
 			{
-				Url = "https://1.ravenhq.com",
-				ApiKey = "adc19257-fc90-4027-a40d-9dbac1542ce8",
-				DefaultDatabase = "hibernating-rhinos-anothera",
-				Conventions =
+				Console.Clear();
+				Console.WriteLine(i);
+				Console.WriteLine();
+
+				using(var x = new CompiledIndexesNhsevidence())
 				{
-					FailoverBehavior = FailoverBehavior.FailImmediately
+					x.CanGetCorrectResults();
 				}
-			};
+			}
+		}
 
-			store.Initialize();
+		private static void MyTest()
+		{
+			var tx = new Raven.Storage.Managed.TransactionalStorage(new RavenConfiguration
+			{
+				RunInMemory = true
+			}, () => { });
+			tx.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 
-			store.DatabaseCommands.Put("users/1", null, new RavenJObject(), new RavenJObject());
+			for (int xi = 0; xi < 5; xi++)
+			{
+				var wait = xi;
+				Task.Factory.StartNew(() =>
+				{
+					Thread.Sleep(15*wait);
+					tx.Batch(accessor =>
+					{
+						var reduceKeysAndBuckets = new List<ReduceKeyAndBucket>();
+						for (int i = 0; i < 10; i++)
+						{
+							var docId = "users/" + i;
+							reduceKeysAndBuckets.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), "1"));
+							reduceKeysAndBuckets.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), "2"));
+							accessor.MapReduce.PutMappedResult("test", docId, "1", new RavenJObject());
+							accessor.MapReduce.PutMappedResult("test", docId, "2", new RavenJObject());
+						}
+						accessor.MapReduce.ScheduleReductions("test", 0, reduceKeysAndBuckets);
+					});
+				});
+
+				Task.Factory.StartNew(() =>
+				{
+					Thread.Sleep(15 * wait);
+					tx.Batch(accessor =>
+					{
+						var reduceKeysAndBuckets = new List<ReduceKeyAndBucket>();
+						for (int i = 0; i < 10; i++)
+						{
+							var docId = "users/" + i;
+							reduceKeysAndBuckets.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), "1"));
+							reduceKeysAndBuckets.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), "2"));
+							accessor.MapReduce.PutMappedResult("test3", docId, "1", new RavenJObject());
+							accessor.MapReduce.PutMappedResult("test3", docId, "2", new RavenJObject());
+						}
+						accessor.MapReduce.ScheduleReductions("test3", 0, reduceKeysAndBuckets);
+					});
+				});
+			}
+
+			var items = 0;
+			while (items != 100)
+			{
+				var itemsToDelete = new List<object>();
+				tx.Batch(accessor =>
+				{
+					var list = accessor.MapReduce.GetItemsToReduce(
+						index: "test",
+						level: 0,
+						take: 256,
+						itemsToDelete: itemsToDelete
+						).ToList();
+
+					items += list.Count;
+					Console.WriteLine(list.Count);
+				});
+				tx.Batch(accessor =>
+				{
+					accessor.MapReduce.DeleteScheduledReduction(itemsToDelete);
+				});
+				Thread.Sleep(10);
+			}
 		}
 
 		private static void UseMyData()

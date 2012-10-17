@@ -5,6 +5,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions.Indexing;
@@ -39,7 +40,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		private static void ReadRecords(IDocumentStore store, int shouldBe)
+		private static void ReadRecords(EmbeddableDocumentStore store, int shouldBe)
 		{
 			using(var session = store.OpenSession())
 			{
@@ -60,7 +61,10 @@ namespace Raven.Tests.Bugs
 			{
 				for (int i = 0; i < records; i++)
 				{
-					var item = new TestClass {Items = new List<Item>()};
+					var item = new TestClass
+					{
+						Items = new List<Item>()
+					};
 					for (int j = 0; j < 5; j++)
 					{
 						item.Items.Add(new Item()

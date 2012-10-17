@@ -338,7 +338,8 @@ namespace Raven.Storage.Managed
 				{"sourceBucket", sourceBucket},
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
 								string.Equals(reduceKey, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase) &&
-								sourceBucket == x.Value<int>("sourceBucket"));
+								sourceBucket == x.Value<int>("sourceBucket") &&
+								level == x.Value<int>("level"));
 
 			foreach (var result in results)
 			{
@@ -352,9 +353,10 @@ namespace Raven.Storage.Managed
 			{
 				{"view", indexName},
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase))
-			.Skip(start)
-			.Take(take)
-			.Select(x => x.Value<string>("reduceKey"));
+				.Select(x => x.Value<string>("reduceKey"))
+				.Distinct()
+				.Skip(start)
+				.Take(take);
 		}
 
 		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int take)

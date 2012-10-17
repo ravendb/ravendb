@@ -450,6 +450,7 @@
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
     <Compile Include="MailingList\ChrisMarisic.cs" />
+    <Compile Include="MailingList\DeanWard.cs" />
     <Compile Include="MailingList\Edin.cs" />
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />

@@ -451,9 +451,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 				if (results.Add(keyFromDb))
 					yield return keyFromDb;
-
-				if (Api.TryMoveNext(session, MappedResults) == false)
-					break;
 			} while (Api.TryMoveNext(session, MappedResults) && take > 0);
 		}
 

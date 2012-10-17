@@ -779,7 +779,7 @@ namespace Raven.Database.Indexing
 								start = start + pageSize - (start - indexQuery.Start); // need to "undo" the index adjustment
 								// trying to guesstimate how many results we will need to read from the index
 								// to get enough unique documents to match the page size
-								pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
+								pageSize = Math.Max(2, skippedResultsInCurrentLoop) * pageSize;
 								skippedResultsInCurrentLoop = 0;
 							}
 							TopDocs search;

@@ -343,7 +343,10 @@ namespace Raven.Client.Document
 #if !NET35
 , SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options)
 #endif
-);
+)
+					{
+						DatabaseName = options.Database
+					};
 				AfterSessionCreated(session);
 				return session;
 			}

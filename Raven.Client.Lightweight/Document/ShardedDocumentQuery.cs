@@ -40,7 +40,7 @@ namespace Raven.Client.Document
 			{
 				if (databaseCommands == null)
 				{
-					var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData {EntityType = typeof (T), Query = IndexQuery});
+					var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData {EntityType = typeof (T), Query = IndexQuery, IndexName = indexName});
 					databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
 				}
 				return databaseCommands;
@@ -132,7 +132,8 @@ namespace Raven.Client.Document
 					new ShardRequestData
 					{
 						EntityType = typeof(T),
-						Query = IndexQuery
+						Query = IndexQuery,
+						IndexName = indexName
 					}, (dbCmd, i) =>
 				{
 					if (currentCopy[i]) // if we already got a good result here, do nothing
@@ -161,6 +162,8 @@ namespace Raven.Client.Document
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];
+			
+			afterQueryExecutedCallback(mergedQueryResult);
 		}
 
 		internal static void AssertNoDuplicateIdsInResults(List<QueryOperation> shardQueryOperations)
