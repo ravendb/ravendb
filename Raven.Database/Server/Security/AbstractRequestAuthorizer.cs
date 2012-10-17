@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Security
 		[CLSCompliant(false)]
 		protected Func<DocumentDatabase> database;
 		[CLSCompliant(false)]
-		protected HttpServer server;
+		protected static HttpServer server;
 		[CLSCompliant(false)]
 		protected Func<string> tenantId;
 
@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Security
 
 		public void Initialize(Func<DocumentDatabase> databaseGetter, Func<InMemoryRavenConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
 		{
-			this.server = theServer;
+			server = theServer;
 			this.database = databaseGetter;
 			this.settings = settingsGetter;
 			this.tenantId = tenantIdGetter;

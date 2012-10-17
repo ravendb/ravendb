@@ -10,21 +10,29 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		private readonly List<string> requiredGroups = new List<string>();
-		private readonly List<string> requiredUsers = new List<string>();
+		private static readonly List<string> requiredGroups = new List<string>();
+		private static readonly List<string> requiredUsers = new List<string>();
 
 		protected override void Initialize()
+		{
+			UpdateSettings();
+		}
+
+		public static void UpdateSettings()
 		{
 			var doc = server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
 			requiredGroups.Clear();
 			requiredUsers.Clear();
 
+			if (doc == null)
+				return;
+
 			var required = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
-			if (required != null)
-			{
-				requiredGroups.AddRange(required.RequiredGroups);
-				requiredUsers.AddRange(required.RequiredUsers);
-			}
+			if (required == null)
+				return;
+
+			requiredGroups.AddRange(required.RequiredGroups.Select(data => data.Name));
+			requiredUsers.AddRange(required.RequiredUsers.Select(data => data.Name));
 		}
 
 		public override bool Authorize(IHttpContext ctx)
