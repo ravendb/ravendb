@@ -302,7 +302,7 @@ namespace Raven.Client.Document
 #endif
 )
 					{
-						DatabaseName = options.Database
+						DatabaseName = options.Database ?? DefaultDatabase
 					};
 				AfterSessionCreated(session);
 				return session;
