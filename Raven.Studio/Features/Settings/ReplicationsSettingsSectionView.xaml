@@ -71,26 +71,34 @@
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="130" />
 						<ColumnDefinition Width="*" />
 					</Grid.ColumnDefinitions>
 
-					<TextBlock Grid.Row="0" Text="Database: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5"/>
-					
-					<TextBlock Grid.Row="1" Text="User Name: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" />
-					
-					<TextBlock Grid.Row="2" Text="Password: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" />
+					<TextBlock Grid.Row="0" Text="Client Visible Url: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ClientVisibleUrl, Mode=TwoWay}" Margin="5"/>
 
-					<TextBlock Grid.Row="3" Text="Domain: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="1" Text="Database: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5"/>
 
-					<TextBlock Grid.Row="4" Text="ApiKey: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="2" Text="User Name: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" />
+					
+					<TextBlock Grid.Row="3" Text="Password: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" />
+
+					<TextBlock Grid.Row="4" Text="Domain: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5"/>
+
+					<TextBlock Grid.Row="5" Text="ApiKey: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="5" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5"/>
+
+					<TextBlock Grid.Row="6" Text="Skip Failover: " VerticalAlignment="Center"/>
+					<CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding SkipFailover, Mode=TwoWay}" Margin="5"/>
 				</Grid>
 
 				<TextBlock Grid.Row="3" Text="Transitive Replication:  " VerticalAlignment="Center"/>

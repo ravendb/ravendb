@@ -70,6 +70,9 @@ namespace Raven.Abstractions.Replication
 		/// this destination, or should we replicate only documents that were locally modified.
 		/// </summary>
 		public TransitiveReplicationOptions TransitiveReplicationBehavior { get; set; }
+
+		public bool SkipFailover { get; set; }
+		public string ClientVisibleUrls { get; set; }
 	}
 
 	/// <summary>
