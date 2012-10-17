@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-
 namespace Raven.Client.Converters
 {
 	/// <summary>
@@ -21,7 +20,6 @@ namespace Raven.Client.Converters
 		/// </returns>
 		/// <param name="sourceType">A <see cref="T:System.Type"/> that represents the type you want to convert from.</param>
 		bool CanConvertFrom(Type sourceType);
-
 		/// <summary>
 		/// Converts the given object to the type of this converter.
 		/// </summary>
@@ -33,7 +31,6 @@ namespace Raven.Client.Converters
 		/// <param name="allowNull">Whatever null is a valid value</param>
 		/// <exception cref="T:System.NotSupportedException">The conversion cannot be performed. </exception>
 		string ConvertFrom(string tag, object value, bool allowNull);
-
 		/// <summary>
 		/// Converts the given value object to the specified type, using the specified context and culture information.
 		/// </summary>

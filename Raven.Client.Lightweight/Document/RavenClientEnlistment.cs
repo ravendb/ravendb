@@ -47,7 +47,8 @@ namespace Raven.Client.Document
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
 					var name = TransactionRecoveryInformationFileName;
-					using (var file = machineStoreForApplication.CreateFile(name + ".temp"))
+					var tempFile = name + ".temp";
+					using (var file = machineStoreForApplication.CreateFile(tempFile))
 					using(var writer = new BinaryWriter(file))
 					{
 						writer.Write(session.ResourceManagerId.ToString());
@@ -56,7 +57,7 @@ namespace Raven.Client.Document
 						writer.Write(preparingEnlistment.RecoveryInformation());
 						file.Flush(true);
 					}
-					machineStoreForApplication.MoveFile(name + ".temp", name);
+					machineStoreForApplication.MoveFile(tempFile, name);
 				}
 			}
 			catch (Exception e)
