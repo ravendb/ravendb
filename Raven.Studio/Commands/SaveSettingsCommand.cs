@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -10,11 +11,11 @@ using System.Linq;
 
 namespace Raven.Studio.Commands
 {
-	public class SaveBundlesCommand : Command
+	public class SaveSettingsCommand : Command
 	{
         private readonly SettingsModel settingsModel;
 
-		public SaveBundlesCommand(SettingsModel settingsModel)
+		public SaveSettingsCommand(SettingsModel settingsModel)
 		{
 			this.settingsModel = settingsModel;
 		}
@@ -22,6 +23,10 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+			if(databaseName == Constants.SystemDatabase)
+			{
+				SaveApiKeys(settingsModel);
+			}
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
 
             var quotaSettings = settingsModel.GetSection<QuotaSettingsSectionModel>();
@@ -115,6 +120,38 @@ namespace Raven.Studio.Commands
 
 			session.SaveChangesAsync()
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
+		}
+
+		private void SaveApiKeys(SettingsModel model)
+		{
+			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
+
+			var apiKeysModel =model.Sections
+				.Where(sectionModel => sectionModel is ApiKeysSectionModel)
+				.Cast<ApiKeysSectionModel>()
+				.FirstOrDefault();
+
+			if (apiKeysModel == null)
+				return;
+
+			var apiKeysToDelete = apiKeysModel.OriginalApiKeys
+				  .Where(apiKeyDefinition => apiKeysModel.ApiKeys.Contains(apiKeyDefinition) == false)
+				  .ToList();
+
+			foreach (var apiKeyDefinition in apiKeysToDelete)
+			{
+				ApplicationModel.DatabaseCommands.ForDefaultDatabase().DeleteDocumentAsync(apiKeyDefinition.Id);
+			}
+
+			foreach (var apiKeyDefinition in apiKeysModel.ApiKeys)
+			{
+				apiKeyDefinition.Id = "Raven/ApiKeys/" + apiKeyDefinition.Name;
+				session.Store(apiKeyDefinition);
+			}
+
+			session.SaveChangesAsync();
+			apiKeysModel.ApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeysModel.ApiKeys);
+			ApplicationModel.Current.AddInfoNotification("Api Keys Saved");
 		}
 	}
 }

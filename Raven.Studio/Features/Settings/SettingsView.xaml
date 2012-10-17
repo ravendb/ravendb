@@ -25,7 +25,10 @@
         <DataTemplate DataType="Models:AuthorizationSettingsSectionModel">
             <Settings:AuthorizationSettingSectionView/>
         </DataTemplate>
-    </UserControl.Resources>
+		<DataTemplate DataType="Models:ApiKeysSectionModel">
+			<Settings:ApiKeysSettingSectionView/>
+		</DataTemplate>
+	</UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot">
 			<Grid.ColumnDefinitions>
