@@ -1339,9 +1339,9 @@ more responsive application.
 			knownMissingIds.Add(id);
 		}
 
-		public void RegisterMissingIncludes(IEnumerable<RavenJObject> results, IEnumerable<string> includes)
+		public void RegisterMissingIncludes(IEnumerable<RavenJObject> results, ICollection<string> includes)
 		{
-			if (includes == null || includes.Count() == 0)
+			if (includes == null || includes.Any() == false)
 				return;
 
 			foreach (var result in results)

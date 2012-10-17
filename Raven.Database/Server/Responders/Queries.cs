@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
@@ -41,11 +42,6 @@ namespace Raven.Database.Server.Responders
 		    var includedEtags = new List<byte>();
 			Database.TransactionalStorage.Batch(actions =>
 			{
-				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
-				{
-					includedEtags.AddRange(etag.ToByteArray());
-				    result.Includes.Add(includedDoc);
-				}, includes, loadedIds);
 				foreach (RavenJToken item in itemsToLoad)
 				{
 					var value = item.Value<string>();
@@ -61,7 +57,17 @@ namespace Raven.Database.Server.Responders
 						includedEtags.AddRange(documentByKey.Etag.Value.ToByteArray());
 					}
 					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
-					addIncludesCommand.Execute(documentByKey.DataAsJson);
+				}
+
+				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
+				{
+					includedEtags.AddRange(etag.ToByteArray());
+					result.Includes.Add(includedDoc);
+				}, includes, loadedIds);
+
+				foreach (var item in result.Results.Where(item => item != null))
+				{
+					addIncludesCommand.Execute(item);
 				}
 			});
 

@@ -13,8 +13,6 @@ namespace Raven.Database.Server.Responders
 {
 	public class RavenUI : AbstractRequestResponder
 	{
-		private const string SilverlightXapName = "Raven.Studio.xap";
-
 		public override string UrlPattern
 		{
 			get { return "^/raven/"; }
