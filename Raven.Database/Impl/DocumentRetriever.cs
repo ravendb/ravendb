@@ -187,7 +187,7 @@ namespace Raven.Database.Impl
 			where T : class, IJsonDocumentMetadata, new()
 		{
 			if (document == null)
-				return document;
+				return null;
 			foreach (var readTrigger in triggers)
 			{
 				var readVetoResult = readTrigger.Value.AllowRead(document.Key, document.Metadata, operation, transactionInformation);
