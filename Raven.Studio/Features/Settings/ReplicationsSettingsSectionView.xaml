@@ -79,12 +79,12 @@
 
 					<TextBlock Grid.Row="0" Text="Database: " VerticalAlignment="Center"/>
 					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5"/>
-
-					<TextBlock Grid.Row="1" Text="Password: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" />
-
-					<TextBlock Grid.Row="2" Text="User Name: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" />
+					
+					<TextBlock Grid.Row="1" Text="User Name: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" />
+					
+					<TextBlock Grid.Row="2" Text="Password: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" />
 
 					<TextBlock Grid.Row="3" Text="Domain: " VerticalAlignment="Center"/>
 					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5"/>
