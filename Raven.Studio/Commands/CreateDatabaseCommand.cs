@@ -179,7 +179,7 @@ namespace Raven.Studio.Commands
 			{
 				var replicationDocument = new ReplicationDocument();
                 foreach (var replicationDestination in replicationSection.ReplicationDestinations
-					.Where(replicationDestination => !string.IsNullOrWhiteSpace(replicationDestination.Url) || !string.IsNullOrWhiteSpace(replicationDestination.ConnectionStringName)))
+					.Where(replicationDestination => !string.IsNullOrWhiteSpace(replicationDestination.Url) || !string.IsNullOrWhiteSpace(replicationDestination.ClientVisibleUrl)))
 				{
 					replicationDocument.Destinations.Add(replicationDestination);
 				}

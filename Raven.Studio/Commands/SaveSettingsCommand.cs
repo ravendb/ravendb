@@ -61,7 +61,7 @@ namespace Raven.Studio.Commands
 
 						document.Destinations.Clear();
                         foreach (var destination in replicationSettings.ReplicationDestinations
-							.Where(destination => !string.IsNullOrWhiteSpace(destination.Url) || !string.IsNullOrWhiteSpace(destination.ConnectionStringName)))
+							.Where(destination => !string.IsNullOrWhiteSpace(destination.Url) || !string.IsNullOrWhiteSpace(destination.ClientVisibleUrl)))
 						{
 							document.Destinations.Add(destination);
 						}

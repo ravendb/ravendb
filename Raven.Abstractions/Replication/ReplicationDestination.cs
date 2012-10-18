@@ -17,7 +17,6 @@ namespace Raven.Abstractions.Replication
 		/// server configuration file. 
 		/// Override all other properties of the destination
 		/// </summary>
-		public string ConnectionStringName { get; set; }
 
 		private string url;
 
@@ -33,11 +32,6 @@ namespace Raven.Abstractions.Replication
 				url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
 			}
 		}
-
-		/// <summary>
-		/// Gets or sets if the replication will use ConnectionString or Url
-		/// </summary>
-		public bool UseConnectionString { get; set; }
 
 		/// <summary>
 		/// The replication server username to use
@@ -71,8 +65,15 @@ namespace Raven.Abstractions.Replication
 		/// </summary>
 		public TransitiveReplicationOptions TransitiveReplicationBehavior { get; set; }
 
-		public bool SkipFailover { get; set; }
-		public string ClientVisibleUrls { get; set; }
+		/// <summary>
+		/// Gets or sets if the replication will ignore this destination in the client
+		/// </summary>
+		public bool IgnoredClient { get; set; }
+
+		/// <summary>
+		/// Gets or sets the Client URL of the replication destination
+		/// </summary>
+		public string ClientVisibleUrl { get; set; }
 	}
 
 	/// <summary>
