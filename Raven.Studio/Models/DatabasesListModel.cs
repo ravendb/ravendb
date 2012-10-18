@@ -66,7 +66,7 @@ namespace Raven.Studio.Models
             return TaskEx.WhenAll(
                 new[] {ApplicationModel.Current.Server.Value.TimerTickedAsync()}
                     // Fetch databases names from the server
-                    .Concat(Databases.Select(m => m.TimerTickedAsync()))); // Refresh statistics
+                    .Concat(Databases.Where(model => model == SelectedDatabase).Select(m => m.TimerTickedAsync()))); // Refresh statistics
         }
 
         protected override void OnViewLoaded()
