@@ -114,6 +114,14 @@ namespace Raven.Database.Server
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
+			if(configuration.RunInMemory == false)
+			{
+				if(Directory.Exists(configuration.PluginsDirectory) == false)
+					Directory.CreateDirectory(configuration.PluginsDirectory);
+				if(Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Analyzers")) == false)
+					Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Analyzers"));
+			}
+
 			SystemDatabase = resourceStore;
 			SystemConfiguration = configuration;
 
