@@ -550,7 +550,8 @@ namespace Raven.Database.Indexing
 			foreach (var value in indexes.Values)
 			{
 				value.Flush();
-				value.MergeSegments(); // noop if previously merged
+				// We remove this call because it is very expensive one and the Lucene team recommend avoiding it.
+				//value.MergeSegments(); // noop if previously merged
 			}
 
 			documentDatabase.TransactionalStorage.Batch(accessor =>
