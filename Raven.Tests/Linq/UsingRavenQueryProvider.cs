@@ -599,14 +599,28 @@ namespace Raven.Tests.Linq
 				using (var s = store.OpenSession())
 				{
 					var ravenQueryable = (from item in s.Query<OrderItem>()
-										  .Customize(x => x.WaitForNonStaleResults())
-										  where item.Description.In(new[] { "", "First" })
-										  select item
-										 );
+						                      .Customize(x => x.WaitForNonStaleResults())
+					                      where item.Description.In(new[] {"", "First"})
+					                      select item
+					                     );
 					var items = ravenQueryable.ToArray();
 
 
 					Assert.Equal(items.Length, 1);
+
+				}
+
+				using (var s2 = store.OpenSession())
+				{
+					var ravenQueryable2 = (from item in s2.Query<OrderItem>()
+										  .Customize(x => x.WaitForNonStaleResults())
+										  where item.Description.In(new[] { "First", "" })
+										  select item
+										 );
+					var items2 = ravenQueryable2.ToArray();
+
+
+					Assert.Equal(items2.Length, 1);
 				}
 			}
 		}

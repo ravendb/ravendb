@@ -936,6 +936,9 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WhereIn(string fieldName, IEnumerable<object> values)
 		{
+			if (theQueryText.Length > 0 && char.IsWhiteSpace(theQueryText[theQueryText.Length - 1]) == false)
+				theQueryText.Append(" ");
+
 			NegateIfNeeded();
 
 			theQueryText.Append("@in<")

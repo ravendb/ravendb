@@ -28,6 +28,7 @@ namespace Raven.Database.Indexing
 				return hashSet;
 			var q = QueryBuilder.BuildQuery(query.Query, query, perFieldAnalyzerWrapper);
 			PopulateFields(q, hashSet);
+			hashSet.Remove(string.Empty);
 			return hashSet;
 		}
 

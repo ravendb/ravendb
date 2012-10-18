@@ -12,7 +12,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Mixed()
 		{
-			var bq = (BooleanQuery)Parse("@in:(user,users/1,users/2) AND IsActive:true");
+			var bq = (BooleanQuery)Parse("@in<user>:(users/1,users/2) AND IsActive:true");
 			var q = (TermsMatchQuery)bq.Clauses[0].Query;
 			var b = (TermQuery)bq.Clauses[1].Query;
 			Assert.Equal("user", q.Field);
@@ -24,7 +24,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void MixedWithSpaces()
 		{
-			var bq = (BooleanQuery)Parse("@in:(user,users/1, users/2) AND IsActive:true");
+			var bq = (BooleanQuery)Parse("@in<user>:(users/1, users/2) AND IsActive:true");
 			var q = (TermsMatchQuery)bq.Clauses[0].Query;
 			var b = (TermQuery)bq.Clauses[1].Query;
 			Assert.Equal("user", q.Field);
@@ -36,7 +36,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Simple()
 		{
-			var q = (TermsMatchQuery)Parse("@in:(user,users/1,users/2)");
+			var q = (TermsMatchQuery)Parse("@in<user>:(users/1,users/2)");
 			Assert.Equal("user", q.Field);
 			Assert.Equal(new[] { "users/1", "users/2" }, q.Matches);
 		}
@@ -44,7 +44,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void QueryWithSpaces()
 		{
-			var q = (TermsMatchQuery)Parse("@in:(user, users/1, users/2)");
+			var q = (TermsMatchQuery)Parse("@in<user>:( users/1, users/2)");
 			Assert.Equal("user", q.Field);
 			Assert.Equal(new[] { "users/1", "users/2" }, q.Matches);
 		}
@@ -52,7 +52,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void QueryWithSpacesAndNot()
 		{
-			var q = (TermsMatchQuery)Parse("@in:(user,users/1, users/2)");
+			var q = (TermsMatchQuery)Parse("@in<user>:(users/1, users/2)");
 			Assert.Equal("user", q.Field);
 			Assert.Equal(new[] { "users/1", "users/2" }, q.Matches);
 		}
@@ -60,7 +60,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void QueryWithPhrase()
 		{
-			var q = (TermsMatchQuery)Parse("@in:(user,users/1, \"oren eini\")");
+			var q = (TermsMatchQuery)Parse("@in<user>:(users/1, \"oren eini\")");
 			Assert.Equal("user", q.Field);
 			Assert.Equal(new[] { "oren eini", "users/1" }, q.Matches);
 		}

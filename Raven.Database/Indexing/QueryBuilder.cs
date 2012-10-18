@@ -20,7 +20,7 @@ namespace Raven.Database.Indexing
 {
 	public static class QueryBuilder
 	{
-		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):\s*(\[\[.+?\]\])", RegexOptions.Compiled);
+		static readonly Regex untokenizedQuery = new Regex(@"([\w\d<>_]+?):[\s\(]*(\[\[.+?\]\])|,\s*(\[\[.+?\]\])\s*[,\)]", RegexOptions.Compiled);
 		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7})", RegexOptions.Compiled);
 
@@ -188,11 +188,15 @@ namespace Raven.Database.Indexing
 
 				// specify that term for this field should not be tokenized
 				var value = match.Groups[2].Value;
-
+				var term = match.Groups[2];
+				if (string.IsNullOrEmpty(value))
+				{
+					value = match.Groups[3].Value;
+					term = match.Groups[3];
+				}
 				var rawTerm = value.Substring(2, value.Length - 4);
 				queryParser.SetUntokenized(match.Groups[1].Value, Unescape(rawTerm));
 
-				var term = match.Groups[2];
 
 				// introduce " " around the term
 				var startIndex = term.Index;
