@@ -55,15 +55,30 @@ namespace Raven.Studio.Models
 				Value = "Offline"
 			};
 
+			
+
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
 											? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
 											: documentStore.AsyncDatabaseCommands.ForDatabase(name);
+
 
 		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
 		        .SampleResponsive(TimeSpan.FromSeconds(2))
 		        .Subscribe(_ => RefreshStatistics(), exception => ApplicationModel.Current.Server.Value.IsConnected.Value = false);
 
+			databaseChanges.ConnectionStatusCahnged += (sender, args) =>
+			{
+				ApplicationModel.Current.Server.Value.IsConnected.Value = (sender as IDatabaseChanges).Connected;
+				OnPropertyChanged(() => ApplicationModel.Current.Server.Value.IsConnected);
+				UpdateStatus();
+			};
+
 			RefreshStatistics();
+		}
+
+		private void UpdateStatus()
+		{
+			Status.Value = ApplicationModel.Current.Server.Value.IsConnected.Value ? "Online" : "Offline";
 		}
 
 		public void UpdateDatabaseDocument()
@@ -172,13 +187,6 @@ namespace Raven.Studio.Models
 				.ContinueOnSuccess(stats =>
 				{
 					Statistics.Value = stats;
-					Status.Value = "Online";
-				  //  ApplicationModel.Current.Server.Value.IsConnected.Value = true;
-				})
-				.Catch(exception =>
-				{
-				    Status.Value = "Offline";
-				  //  ApplicationModel.Current.Server.Value.IsConnected.Value = false;
 				});
 		}
 

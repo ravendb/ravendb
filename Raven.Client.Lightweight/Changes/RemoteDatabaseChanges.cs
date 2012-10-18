@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading;
@@ -73,6 +74,8 @@ namespace Raven.Client.Changes
 									if (task.IsFaulted && reconnectAttemptsRemaining > 0)
 									{
 										logger.WarnException("Could not connect to server, will retry", task.Exception);
+										Connected = false;
+										ConnectionStatusCahnged(this, EventArgs.Empty);
 
 										reconnectAttemptsRemaining--;
 
@@ -81,36 +84,30 @@ namespace Raven.Client.Changes
 											.Unwrap();
 									}
 
+									Connected = true;
+									ConnectionStatusCahnged(this, EventArgs.Empty);
 									reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
 									connection = (IDisposable)task.Result;
 									task.Result.Subscribe(this);
 
-									if (watchAllDocs)
-										Send("watch-docs", null);
+									Task prev = watchAllDocs ? Send("watch-docs", null) : new CompletedTask();
 
-									foreach (var watchedDoc in watchedDocs)
-									{
-										Send("watch-doc", watchedDoc);
-									}
+									if (watchAllIndexes)
+										prev = prev.ContinueWith(_ => Send("watch-indexes", null));
 
-									foreach (var watchedPrefix in watchedPrefixes)
-									{
-										Send("watch-prefix", watchedPrefix);
-									}
+									prev = watchedDocs.Aggregate(prev, (cur, docId) => cur.ContinueWith(task1 => Send("watch-doc", docId)));
 
-									if(watchAllIndexes)
-										Send("watch-indexes", null);
+									prev = watchedPrefixes.Aggregate(prev, (cur, prefix) => cur.ContinueWith(task1 => Send("watch-prefix", prefix)));
 
-									foreach (var watchedIndex in watchedIndexes)
-									{
-										Send("watch-indexes", watchedIndex);
-									}
-
-									return task;
+									prev = watchedIndexes.Aggregate(prev, (cur, index) => cur.ContinueWith(task1 => Send("watch-indexes", index)));
+								
+									return prev;
 								})
 				.Unwrap();
 		}
 
+		public bool Connected { get; private set; }
+		public event EventHandler ConnectionStatusCahnged = delegate { }; 
 		public Task Task { get; private set; }
 
 		private Task AfterConnection(Func<Task> action)
@@ -179,6 +176,8 @@ namespace Raven.Client.Changes
 				var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
 				if (string.IsNullOrEmpty(value) == false)
 					sendUrl += "&value=" + Uri.EscapeUriString(value);
+
+				sendUrl = sendUrl.NoCache();
 
 				var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
 				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
