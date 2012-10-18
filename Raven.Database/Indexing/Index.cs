@@ -723,7 +723,7 @@ namespace Raven.Database.Indexing
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
-					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+					AssertQueryDoesNotContainFieldsThatAreNotIndexed();
 					IndexSearcher indexSearcher;
 					RavenJObject[] termsDocs;
 					using (parent.GetSearcherAndTermsDocs(out indexSearcher, out termsDocs))
@@ -751,7 +751,7 @@ namespace Raven.Database.Indexing
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
-					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+					AssertQueryDoesNotContainFieldsThatAreNotIndexed();
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
@@ -827,7 +827,7 @@ namespace Raven.Database.Indexing
 			{
 				using (IndexStorage.EnsureInvariantCulture())
 				{
-					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+					AssertQueryDoesNotContainFieldsThatAreNotIndexed();
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
@@ -940,8 +940,10 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			private void AssertQueryDoesNotContainFieldsThatAreNotIndexes()
+			private void AssertQueryDoesNotContainFieldsThatAreNotIndexed()
 			{
+				if (string.IsNullOrWhiteSpace(indexQuery.Query))
+					return;
 				HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
 				foreach (string field in hashSet)
 				{

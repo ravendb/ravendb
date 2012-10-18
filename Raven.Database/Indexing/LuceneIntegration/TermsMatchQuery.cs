@@ -9,6 +9,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 	public interface IRavenLuceneMethodQuery
 	{
 		IRavenLuceneMethodQuery Merge(Query other);
+		string Field { get; }
 	}
 
 	public class TermsMatchQuery : MultiTermQuery, IRavenLuceneMethodQuery
@@ -102,7 +103,6 @@ namespace Raven.Database.Indexing.LuceneIntegration
 		public IRavenLuceneMethodQuery Merge(Query other)
 		{
 			var termsMatchQuery = (TermsMatchQuery) other;
-			matches.Add(termsMatchQuery.field);
 			matches.AddRange(termsMatchQuery.matches);
 
 			matches = matches.Distinct()

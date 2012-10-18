@@ -13,7 +13,7 @@ namespace Raven.Tests.Issues
 		public void Mixed()
 		{
 			var bq = (BooleanQuery)Parse("@in:(user,users/1,users/2) AND IsActive:true");
-			var q = (TermsMatchQuery) bq.Clauses[0].Query;
+			var q = (TermsMatchQuery)bq.Clauses[0].Query;
 			var b = (TermQuery)bq.Clauses[1].Query;
 			Assert.Equal("user", q.Field);
 			Assert.Equal(new[] { "users/1", "users/2" }, q.Matches);
@@ -34,11 +34,11 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
- 		public void Simple()
+		public void Simple()
 		{
 			var q = (TermsMatchQuery)Parse("@in:(user,users/1,users/2)");
 			Assert.Equal("user", q.Field);
-			Assert.Equal(new[] {"users/1", "users/2"}, q.Matches);
+			Assert.Equal(new[] { "users/1", "users/2" }, q.Matches);
 		}
 
 		[Fact]
@@ -69,7 +69,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var defaultAnalyzer = new KeywordAnalyzer())
 			using (var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer))
-				return QueryBuilder.BuildQuery(q, perFieldAnalyzerWrapper) ;
+				return QueryBuilder.BuildQuery(q, perFieldAnalyzerWrapper);
 		}
 	}
 }

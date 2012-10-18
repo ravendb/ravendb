@@ -938,19 +938,27 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			NegateIfNeeded();
 
-			theQueryText.Append("@in:(")
-				.Append(fieldName);
+			theQueryText.Append("@in<")
+				.Append(fieldName)
+				.Append(">:(");
 
+			var first = true;
 			foreach (var value in values)
 			{
-				theQueryText.Append(",")
-					.Append(TransformToEqualValue((new WhereParams
-					{
-						AllowWildcards = true,
-						IsAnalyzed = true,
-						FieldName = fieldName,
-						Value = value
-					})));
+				if(first == false)
+				{
+					theQueryText.Append(",");
+				}
+				first = false;
+				var whereParams = new WhereParams
+				{
+					AllowWildcards = true, 
+					IsAnalyzed = true, 
+					FieldName = fieldName, 
+					Value = value
+				};
+				EnsureValidFieldName(whereParams);
+				theQueryText.Append(TransformToEqualValue(whereParams));
 			}
 			theQueryText.Append(") ");
 		}
