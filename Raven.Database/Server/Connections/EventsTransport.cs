@@ -55,7 +55,14 @@ namespace Raven.Database.Server.Connections
 
 		private void Heartbeat(object _)
 		{
-			SendAsync(new { Type = "Heartbeat" });
+			try
+			{
+				SendAsync(new { Type = "Heartbeat" });
+			}
+			catch (Exception)
+			{
+				// we expect and should recover from errors
+			}
 		}
 
 		public Task SendAsync(object data)
