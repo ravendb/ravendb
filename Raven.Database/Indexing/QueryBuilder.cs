@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -11,7 +12,9 @@ using Lucene.Net.Analysis;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
+using Raven.Database.Indexing.LuceneIntegration;
 using Version = Lucene.Net.Util.Version;
+using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -20,6 +23,11 @@ namespace Raven.Database.Indexing
 		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):\s*(\[\[.+?\]\])", RegexOptions.Compiled);
 		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7})", RegexOptions.Compiled);
+
+		private static readonly Dictionary<string, Func<string[], Query>> queryMethods = new Dictionary<string, Func<string[], Query>>(StringComparer.InvariantCultureIgnoreCase)
+		{
+			{"in", args => new TermsMatchQuery(args[0], args.Skip(1))}
+		};
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
@@ -35,26 +43,58 @@ namespace Raven.Database.Indexing
 				var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
 				{
 					DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
-					                  	? QueryParser.Operator.OR
-					                  	: QueryParser.Operator.AND,
+										? QueryParser.Operator.OR
+										: QueryParser.Operator.AND,
 					AllowLeadingWildcard = true
 				};
 				query = PreProcessUntokenizedTerms(query, queryParser);
 				query = PreProcessSearchTerms(query);
 				query = PreProcessDateTerms(query, queryParser);
-				return queryParser.Parse(query);
+				var generatedQuery = queryParser.Parse(query);
+				generatedQuery = HandleMethods(generatedQuery);
+				return generatedQuery;
 			}
 			catch (ParseException pe)
 			{
 				if (originalQuery == query)
-					throw new ParseException("Could not parse: '" + query +"'", pe);
-				throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery +"'", pe);
+					throw new ParseException("Could not parse: '" + query + "'", pe);
+				throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery + "'", pe);
 
 			}
 			finally
 			{
 				keywordAnalyzer.Close();
 			}
+		}
+
+		private static Query HandleMethods(Query query)
+		{
+			var termQuery = query as TermQuery;
+			if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
+			{
+				var parts = termQuery.Term.Text.Split(new[] { "," }, StringSplitOptions.None);
+				Func<string[], Query> value;
+				if(queryMethods.TryGetValue(termQuery.Term.Field.Substring(1), out value) == false)
+				{
+					throw new InvalidOperationException("Method call " + termQuery.Term.Field + " is invalid.");
+				}
+				return value(parts);
+			}
+			var booleanQuery = query as BooleanQuery;
+			if(booleanQuery != null)
+			{
+				foreach (BooleanClause c in booleanQuery.Clauses)
+				{
+					c.Query = HandleMethods(c.Query);
+				}
+				var requiresMerging = booleanQuery.Clauses.All(x => x.Query is IRavenLuceneMethodQuery);
+				if (requiresMerging == false)
+					return booleanQuery;
+				var first = (IRavenLuceneMethodQuery) booleanQuery.Clauses[0].Query;
+				var ravenLuceneMethodQuery = booleanQuery.Clauses.Skip(1).Aggregate(first, (methodQuery, clause) => methodQuery.Merge(clause.Query));
+				return (Query)ravenLuceneMethodQuery;
+			}
+			return query;
 		}
 
 		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
