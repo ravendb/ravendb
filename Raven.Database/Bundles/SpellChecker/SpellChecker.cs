@@ -426,7 +426,7 @@ namespace SpellChecker.Net.Search.Spell
 					writer.AddDocument(doc);
 				}
 				// close writer
-				writer.Optimize();
+				writer.Commit();
 				writer.Dispose();
 				// also re-open the spell index to see our own changes when the next suggestion
 				// is fetched:
