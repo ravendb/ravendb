@@ -37,7 +37,7 @@ namespace Raven.Tests.Querying
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereIn("Name", new[] { "ayende" });
-			Assert.Equal("(Name:ayende)", q.ToString());
+			Assert.Equal("@in:(Name,ayende)", q.ToString());
 		}
 
 		[Fact]
@@ -45,7 +45,7 @@ namespace Raven.Tests.Querying
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereIn("Name", new[] { "ryan", "heath" });
-			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
+			Assert.Equal("@in:(Name,ryan,heath)", q.ToString());
 		}
 
 		[Fact]
@@ -54,7 +54,16 @@ namespace Raven.Tests.Querying
 			var array = new[] {"ryan", "heath"};
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereIn("Name", array);
-			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
+			Assert.Equal("@in:(Name,ryan,heath)", q.ToString());
+		}
+
+		[Fact]
+		public void CanUnderstandArrayContainsWithPhrase()
+		{
+			var array = new[] { "ryan", "heath here" };
+			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
+				.WhereIn("Name", array);
+			Assert.Equal("@in:(Name,ryan,\"heath here\")", q.ToString());
 		}
 
 		[Fact]
@@ -63,7 +72,7 @@ namespace Raven.Tests.Querying
 			var array = new[] { "ryan"};
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereIn("Name", array);
-			Assert.Equal("(Name:ryan)", q.ToString());
+			Assert.Equal("@in:(Name,ryan)", q.ToString());
 		}
 
 		[Fact]
@@ -72,7 +81,7 @@ namespace Raven.Tests.Querying
 			var array = new string[0];
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereIn("Name", array);
-			Assert.True(q.ToString().Contains("Name:Empty_In_"));
+			Assert.Equal("@in:(Name)", q.ToString());
 		}
 
 		[Fact]
@@ -81,7 +90,7 @@ namespace Raven.Tests.Querying
 			IEnumerable<string> list = new[] { "ryan", "heath" };
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereIn("Name", list);
-			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
+			Assert.Equal("@in:(Name,ryan,heath)", q.ToString());
 		}
 
 		[Fact]
@@ -90,7 +99,7 @@ namespace Raven.Tests.Querying
 			var ayende = "ayende" + 1;
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereIn("Name", new[] { ayende });
-			Assert.Equal("(Name:ayende1)", q.ToString());
+			Assert.Equal("@in:(Name,ayende1)", q.ToString());
 		}
 
 		[Fact]
