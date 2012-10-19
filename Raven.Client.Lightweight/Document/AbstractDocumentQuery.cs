@@ -936,34 +936,34 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WhereIn(string fieldName, IEnumerable<object> values)
 		{
-			bool first = true;
+			if (theQueryText.Length > 0 && char.IsWhiteSpace(theQueryText[theQueryText.Length - 1]) == false)
+				theQueryText.Append(" ");
 
-			OpenSubclause();
+			NegateIfNeeded();
 
+			theQueryText.Append("@in<")
+				.Append(fieldName)
+				.Append(">:(");
+
+			var first = true;
 			foreach (var value in values)
 			{
-				if (first == false)
+				if(first == false)
 				{
-					OrElse();
+					theQueryText.Append(",");
 				}
-
 				first = false;
-
-				WhereEquals(new WhereParams
+				var whereParams = new WhereParams
 				{
-					AllowWildcards = true,
-					IsAnalyzed = true,
-					FieldName = fieldName,
+					AllowWildcards = true, 
+					IsAnalyzed = true, 
+					FieldName = fieldName, 
 					Value = value
-				});
-
-				
+				};
+				EnsureValidFieldName(whereParams);
+				theQueryText.Append(TransformToEqualValue(whereParams));
 			}
-
-			if(first) // no items
-				WhereEquals(fieldName, "Empty_In_" + Guid.NewGuid());
-
-			CloseSubclause();
+			theQueryText.Append(") ");
 		}
 
 		/// <summary>

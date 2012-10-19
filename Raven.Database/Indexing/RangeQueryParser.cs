@@ -42,7 +42,7 @@ namespace Raven.Database.Indexing
 
 			return tokenReplacement;
 		}
-
+		
 		protected override Query GetFieldQuery(string field, string queryText)
 		{
 			string value;

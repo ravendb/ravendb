@@ -35,7 +35,7 @@ namespace Raven.Database.Linq
 		private readonly HashSet<string> mapFields = new HashSet<string>();
 		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
-		private static readonly Regex selectManyOrFrom = new Regex(@"( (?<!^)\s from \s ) | ( \.SelectMany\( )", 
+		private static readonly Regex selectManyOrFrom = new Regex(@"( (?<!^)\s from \s ) | ( \.SelectMany\( )",
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 		private IndexDefinition indexDefinition;
 
@@ -45,7 +45,7 @@ namespace Raven.Database.Linq
 		{
 			get
 			{
-				if(countOfSelectMany == null)
+				if (countOfSelectMany == null)
 				{
 					countOfSelectMany = selectManyOrFrom.Matches(ViewText).Count;
 				}
@@ -53,20 +53,20 @@ namespace Raven.Database.Linq
 			}
 		}
 
-		public int CountOfFields { get { return fields.Count;  } }
+		public int CountOfFields { get { return fields.Count; } }
 
 		public List<IndexingFunc> MapDefinitions { get; private set; }
-		
+
 		public IndexingFunc ReduceDefinition { get; set; }
 
 		public TranslatorFunc TransformResultsDefinition { get; set; }
-		
+
 		public GroupByKeyFunc GroupByExtraction { get; set; }
-		
+
 		public string ViewText { get; set; }
-		
+
 		public IDictionary<string, FieldStorage> Stores { get; set; }
-		
+
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
 		public HashSet<string> ForEntityNames { get; set; }
@@ -80,7 +80,7 @@ namespace Raven.Database.Linq
 		{
 			get
 			{
-				if(hasWhereClause == null)
+				if (hasWhereClause == null)
 				{
 					hasWhereClause = ViewText.IndexOf("where", StringComparison.OrdinalIgnoreCase) > -1;
 				}
@@ -146,7 +146,7 @@ namespace Raven.Database.Linq
 		{
 			MapDefinitions.Add(mapDef);
 		}
-		
+
 		protected IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
 		{
 			return new RecursiveFunction(item, func).Execute();
@@ -154,8 +154,7 @@ namespace Raven.Database.Linq
 
 		#region Spatial index
 
-		[CLSCompliant(false)]
-		public ConcurrentDictionary<string, SpatialStrategy> SpatialStrategies { get; private set; }
+		private ConcurrentDictionary<string, SpatialStrategy> SpatialStrategies { get; set; }
 
 		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
 		{
@@ -164,14 +163,26 @@ namespace Raven.Database.Linq
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, double? lat, double? lng)
 		{
-			var strategy = SpatialStrategies.GetOrAdd(fieldName, s => SpatialIndex.CreateStrategy(fieldName, SpatialSearchStrategy.GeohashPrefixTree,
-				GeohashPrefixTree.GetMaxLevelsPossible()));
+			var strategy = GetStrategyForField(fieldName);
 
-// ReSharper disable CSharpWarnings::CS0612
+			// ReSharper disable CSharpWarnings::CS0612
 			Shape shape = SpatialIndex.Context.MakePoint(lng ?? 0, lat ?? 0);
 			return strategy.CreateIndexableFields(shape)
 				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.ShapeReadWriter.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
-// ReSharper restore CSharpWarnings::CS0612
+			// ReSharper restore CSharpWarnings::CS0612
+		}
+
+		[CLSCompliant(false)]
+		public SpatialStrategy GetStrategyForField(string fieldName)
+		{
+			return SpatialStrategies.GetOrAdd(fieldName, s =>
+			{
+				if (SpatialStrategies.Count > 1024)
+				{
+					throw new InvalidOperationException("The number of spatial fields in an index is limited ot 1,024");
+				}
+				return SpatialIndex.CreateStrategy(fieldName, SpatialSearchStrategy.GeohashPrefixTree, GeohashPrefixTree.GetMaxLevelsPossible());
+			});
 		}
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, string shapeWKT,
