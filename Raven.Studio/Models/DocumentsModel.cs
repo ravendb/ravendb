@@ -47,6 +47,14 @@ namespace Raven.Studio.Models
         private Func<DatabaseModel, IObservable<Unit>> observableGenerator;
         private IDisposable changesSubscription;
 
+        public event EventHandler<EventArgs> RecentDocumentsChanged;
+
+        protected void OnRecentDocumentsChanged(EventArgs e)
+        {
+            EventHandler<EventArgs> handler = RecentDocumentsChanged;
+            if (handler != null) handler(this, e);
+        }
+
         public DocumentsModel(DocumentsVirtualCollectionSourceBase collectionSource)
         {
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 30, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified, v => v.MetadataOnly));
@@ -94,6 +102,8 @@ namespace Raven.Studio.Models
                 if (!Columns.Columns.Select(c => c.Binding).SequenceEqual(newColumns.Select(c => c.Binding)))
                     Columns.LoadFromColumnDefinitions(newColumns);
             }
+
+            OnRecentDocumentsChanged(EventArgs.Empty);
         }
 
         private IList<ColumnDefinition> GetCurrentColumnsSuggestion()
@@ -115,7 +125,7 @@ namespace Raven.Studio.Models
             return newColumns;
         }
 
-        private IEnumerable<ViewableDocument> GetMostRecentDocuments()
+        public IEnumerable<ViewableDocument> GetMostRecentDocuments()
         {
             return mostRecentDocuments
                 .Where(i => i.IsRealized)

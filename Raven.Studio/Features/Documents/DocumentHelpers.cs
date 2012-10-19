@@ -8,17 +8,17 @@ namespace Raven.Studio.Features.Documents
 {
     public static class DocumentHelpers
     {
-        public static IEnumerable<string> GetPropertiesFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
+        public static IEnumerable<string> GetPropertiesFromDocuments(IEnumerable<JsonDocument> jsonDocuments, bool includeNestedProperties)
         {
             return
                 jsonDocuments.SelectMany(
                     doc =>
                     GetPropertiesFromJObject(doc.DataAsJson, parentPropertyPath: "",
-                                             includeNestedProperties: includeNestedPropeties));
+                                             includeNestedProperties: includeNestedProperties));
 
         }
 
-        public static IEnumerable<string> GetMetadataFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
+        public static IEnumerable<string> GetMetadataFromDocuments(IEnumerable<JsonDocument> jsonDocuments, bool includeNestedPropeties)
         {
             return
                 jsonDocuments.SelectMany(

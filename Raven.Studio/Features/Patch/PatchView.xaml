@@ -67,7 +67,7 @@
 					<Button Command="{Binding Test}"
 							IsEnabled="{Binding ShowBeforeAndAfterPrompt, Converter={StaticResource NegatingBool}}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Test Patch">
+							ToolTipService.ToolTip="Test the patch script on the selected document">
 						<Button.Content>
 							<StackPanel Orientation="Horizontal">
 								<Image Source="{StaticResource Image_WhatIf_Tiny}"
@@ -81,7 +81,7 @@
 
 					<Button Command="{Binding Save}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Save Patch">
+							ToolTipService.ToolTip="Save the current Patch">
 						<Button.Content>
 							<StackPanel Orientation="Horizontal">
 								<Image Source="{StaticResource Image_Save_Small}"
@@ -93,7 +93,7 @@
 
 					<Button Command="{Binding Load}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Load Patch">
+							ToolTipService.ToolTip="Load a saved Patch">
 						<Button.Content>
 							<StackPanel Orientation="Horizontal">
 								<Image Source="{StaticResource Image_Up_Tiny}"
@@ -107,7 +107,7 @@
 
 					<Button Command="{Binding PatchSelected}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Execute Patch"
+							ToolTipService.ToolTip="Patch just the selected documents"
 							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"
 							IsEnabled="{Binding HasSelection}">
 						<Button.Content>
@@ -119,12 +119,9 @@
 						</Button.Content>
 					</Button>
 
-					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"
-							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
-
 					<Button Command="{Binding Patch}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Execute Patch"
+							ToolTipService.ToolTip="Patch all matching documents"
 							Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}">
 						<Button.Content>
 							<StackPanel Orientation="Horizontal">
@@ -153,7 +150,6 @@
 
 		<Grid Grid.Row="2">
 			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="*"/>
@@ -192,33 +188,46 @@
 				<Editors:QueryEditor BoundDocument="{Binding QueryDoc}" Height="75"/>
 			</toolkit:DockPanel>
 
-			<TextBlock Text="Patch Script"
+			<Grid Grid.Row="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="3*" MinWidth="100"/>
+					<ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" MinWidth="100"/>
+				</Grid.ColumnDefinitions>
+
+                <TextBlock Text="Patch Script"
 					   Margin="0,5,5,0"
 					   Style="{StaticResource Style_TextBlock_PagePartHeader}"
 					   VerticalAlignment="Top"
-					   Grid.Row="2"/>
-
-			<Grid Grid.Row="3">
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="3*"/>
-					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="*"/>
-				</Grid.ColumnDefinitions>
-				
-				<Editors:EditorBase BoundDocument="{Binding Script}" IsSelectionMarginVisible="False" IsLineNumberMarginVisible="False" AreLineModificationMarksVisible="False"/>
+					   Grid.Row="0"
+                       Grid.Column="0"/>
+                
+                <Editors:EditorBase Grid.Row="1" BoundDocument="{Binding Script}" IsSelectionMarginVisible="False" IsLineNumberMarginVisible="False" AreLineModificationMarksVisible="False"/>
 
 				<sdk:GridSplitter Grid.Column="1"
+                                  Grid.Row="1" 
 								  VerticalAlignment="Stretch" 
 								  HorizontalAlignment="Center"/>
 
-				<Grid Grid.Column="2">
+                <TextBlock Text="Parameters"
+					   Margin="0,5,5,0"
+					   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+					   VerticalAlignment="Top"
+					   Grid.Row="0"
+                       Grid.Column="2"/>
+
+                <Grid Grid.Column="2" Grid.Row="1" >
 
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="*"/>
 						<ColumnDefinition Width="Auto"/>
 					</Grid.ColumnDefinitions>
 
-					<sdk:DataGrid Margin="5"
+					<sdk:DataGrid Margin="0"
                                   ItemsSource="{Binding Values}"
 								  SelectedItem="{Binding SelectedValue, Mode=TwoWay}"
                                   AutoGenerateColumns="False"
@@ -228,27 +237,30 @@
 						</i:Interaction.Behaviors>
 
 						<sdk:DataGrid.Columns>
-							<sdk:DataGridTextColumn Header="Key"
+                            <sdk:DataGridTextColumn Header="Name"
                                                     Binding="{Binding Key}" 
 													IsReadOnly="False"
-                                                    Width="Auto"
-                                                    CanUserReorder="False"/>
-							<sdk:DataGridTextColumn Header="Value"
+                                                    MinWidth="75"
+                                                    CanUserReorder="False" 
+                                                    ElementStyle="{StaticResource Style_DataGridTextColumn_FadeTrimmingDisplay}"/>
+						    <sdk:DataGridTextColumn Header="Value"
                                                     Binding="{Binding Value}"
                                                     IsReadOnly="False" 
                                                     Width="*"
-                                                    CanUserReorder="False"/>
-							<sdk:DataGridTemplateColumn Width="Auto" CanUserReorder="False" CanUserResize="False">
-								<sdk:DataGridTemplateColumn.CellEditingTemplate>
+                                                    CanUserReorder="False" 
+                                                    ElementStyle="{StaticResource Style_DataGridTextColumn_FadeTrimmingDisplay}"/>
+						    <sdk:DataGridTemplateColumn Width="Auto" CanUserReorder="False" CanUserResize="False" IsReadOnly="True">
+								<sdk:DataGridTemplateColumn.CellTemplate>
 									<DataTemplate>
 										<Button Style="{StaticResource Style_Button_MouseOverChrome}"
 												Command="{Binding DataContext.DeleteValue, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"
                                                 CommandParameter="{Binding}"
-                                                ToolTipService.ToolTip="Delete Permission">
+                                                ToolTipService.ToolTip="Delete Parameter"
+                                                VerticalAlignment="Center">
 											<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
 										</Button>
 									</DataTemplate>
-								</sdk:DataGridTemplateColumn.CellEditingTemplate>
+                                </sdk:DataGridTemplateColumn.CellTemplate>
 							</sdk:DataGridTemplateColumn>
 						</sdk:DataGrid.Columns>
 					</sdk:DataGrid>
@@ -257,19 +269,19 @@
                             HorizontalAlignment="Right" 
                             VerticalAlignment="Top"
                             Command="{Binding AddValue}" 
-                            ToolTipService.ToolTip="Add new Permission"
-                            Margin="0,9,5,0">
+                            ToolTipService.ToolTip="Add new Parameter"
+                            Margin="5,4,5,0">
 						<Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
 					</Button>
 				</Grid>
 			</Grid>
 
-			<sdk:GridSplitter Grid.Row="4"
+			<sdk:GridSplitter Grid.Row="3"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" 
                                   Margin="0,10"/>
 
-			<Grid Grid.Row="6">
+			<Grid Grid.Row="5">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="{Binding IsComboBoxVisible, Converter={StaticResource HiddenWhenFalseStarSizedWhenTrue}}"/>
 					<RowDefinition Height="Auto"/>
@@ -283,7 +295,6 @@
 				<sdk:GridSplitter Grid.Row="1"
 								  Background="Transparent"
 								  HorizontalAlignment="Stretch" 
-                                  Margin="0,10"
 								  Visibility="{Binding IsComboBoxVisible, Converter={StaticResource BooleanToVisibility}}"/>
 				<Grid Grid.Row="2">
 					<Grid.RowDefinitions>

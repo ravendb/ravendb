@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Implementation;
+using ActiproSoftware.Windows.Controls.SyntaxEditor;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Commands;
@@ -18,6 +19,7 @@ using Raven.Studio.Behaviors;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.JsonEditor;
+using Raven.Studio.Features.Patch;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
@@ -34,14 +36,15 @@ namespace Raven.Studio.Models
 		private IEditorDocument newDoc;
 
 	    private IEditorDocument queryDoc;
-	    private Observable<string> selectedItem;
+	    private string selectedItem;
 
 	    private static JsonSyntaxLanguageExtended JsonLanguage;
 	    private static ISyntaxLanguage JScriptLanguage;
 	    private static ISyntaxLanguage QueryLanguage;
 		public string LoadedDoc { get; set; }
 		public bool ShowDoc { get; set; }
-
+        private ObservableCollection<JsonDocument> recentDocuments = new ObservableCollection<JsonDocument>();
+ 
 	    static PatchModel()
         {
             JsonLanguage = new JsonSyntaxLanguageExtended();
@@ -51,7 +54,8 @@ namespace Raven.Studio.Models
 
         public PatchModel()
         {
-			selectedItem = new Observable<string>();
+            Values = new ObservableCollection<PatchValue>();
+
             OriginalDoc = new EditorDocument()
             {
                 Language = JsonLanguage,
@@ -69,6 +73,9 @@ namespace Raven.Studio.Models
                 Language = JScriptLanguage
             };
 
+            Script.Language.RegisterService(new PatchScriptIntelliPromptProvider(Values, recentDocuments));
+            Script.Language.RegisterService<IEditorDocumentTextChangeEventSink>(new AutoCompletionTrigger());
+
             QueryDoc = new EditorDocument()
             {
                 Language = QueryLanguage
@@ -78,8 +85,6 @@ namespace Raven.Studio.Models
 	        ShowAfterPrompt = true;
             AvailableObjects = new ObservableCollection<string>();
 
-			Values = new ObservableCollection<PatchValue>();
-
             queryCollectionSource = new QueryDocumentsCollectionSource();
             QueryResults = new DocumentsModel(queryCollectionSource) { Header = "Matching Documents", MinimalHeader = true, HideItemContextMenu = true};
 	        QueryResults.ItemSelection.SelectionChanged += (sender, args) =>
@@ -87,43 +92,66 @@ namespace Raven.Studio.Models
 		        var firstOrDefault = QueryResults.ItemSelection.GetSelectedItems().FirstOrDefault();
 				if (firstOrDefault != null)
 				{
-					OriginalDoc.SetText(firstOrDefault.Item.Document.ToJson().ToString());
-					ShowBeforeAndAfterPrompt = false;
+                    UpdateBeforeDocument(firstOrDefault.Item.Document);
 					HasSelection = true;
-					OnPropertyChanged(() => HasSelection);
 				}
 				else
 				{
 					HasSelection = false;
-					OnPropertyChanged(() => HasSelection);
 					ClearBeforeAndAfter();
 				}
 	        };
 
-	        selectedItem.PropertyChanged += (sender, args) =>
-	        {
-				if (PatchOn == PatchOnOptions.Document && string.IsNullOrWhiteSpace(SelectedItem) == false)
-					ApplicationModel.Database.Value.AsyncDatabaseCommands.GetAsync(SelectedItem).
-						ContinueOnSuccessInTheUIThread(doc =>
-						{
-							if (doc == null)
-							{
-								ClearBeforeAndAfter();
-							}
-							else
-							{
-								OriginalDoc.SetText(doc.ToJson().ToString());
-								ShowBeforeAndAfterPrompt = false;
-							}
-						});
-	        };
+            QueryResults.RecentDocumentsChanged += delegate
+            {
+                recentDocuments.Clear();
+                recentDocuments.AddRange(QueryResults.GetMostRecentDocuments().Where(d => d.Document != null).Take(5).Select(d => d.Document));
+            };
         }
 
-        private QueryIndexAutoComplete queryIndexAutoComplete;
+	    private void UpdateSpecificDocument()
+	    {
+	        if (PatchOn == PatchOnOptions.Document && string.IsNullOrWhiteSpace(SelectedItem) == false)
+	        {
+	            recentDocuments.Clear();
+	            ApplicationModel.Database.Value.AsyncDatabaseCommands.GetAsync(SelectedItem).
+	                ContinueOnSuccessInTheUIThread(doc =>
+	                {
+	                    if (doc == null)
+	                    {
+	                        ClearBeforeAndAfter();
+	                    }
+	                    else
+	                    {
+	                        UpdateBeforeDocument(doc);
+                            recentDocuments.Add(doc);
+	                    }
+	                });
+	        }
+	    }
+
+	    private void UpdateBeforeDocument(JsonDocument doc)
+	    {
+            recentDocuments.Add(doc);
+	        OriginalDoc.SetText(doc.ToJson().ToString());
+	        NewDoc.SetText("");
+	        ShowBeforeAndAfterPrompt = false;
+	        ShowAfterPrompt = true;
+	    }
+
+	    private QueryIndexAutoComplete queryIndexAutoComplete;
 	    private QueryDocumentsCollectionSource queryCollectionSource;
 		private bool showBeforeAndAfterPrompt;
 		private bool showAfterPrompt;
-		public bool HasSelection { get; set; }
+	    private bool hasSelection;
+	    public bool HasSelection
+	    {
+	        get { return hasSelection; }
+	        private set
+	        {
+	            hasSelection = value; OnPropertyChanged(() => HasSelection);
+	        }
+	    }
 
 	    protected QueryIndexAutoComplete QueryIndexAutoComplete
         {
@@ -237,19 +265,22 @@ namespace Raven.Studio.Models
 
 		public string SelectedItem
 		{
-		    get { return selectedItem.Value; }
+		    get { return selectedItem; }
             set
             {
-                selectedItem.Value = value;
+                selectedItem = value;
                 OnPropertyChanged(() => SelectedItem);
+                recentDocuments.Clear();
                 UpdateQueryAutoComplete();
                 UpdateCollectionSource();
+                UpdateSpecificDocument();
                 ClearBeforeAndAfter();
             }
 		}
 
 	    public void UpdateCollectionSource()
 	    {
+            recentDocuments.Clear();
 		    NewDoc.SetText("");
 		    ShowAfterPrompt = true;
 	        if (PatchOn == PatchOnOptions.Collection)
