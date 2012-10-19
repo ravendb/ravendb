@@ -108,6 +108,8 @@ namespace Raven.Abstractions.Data
 						throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 					embeddedRavenConnectionStringOptions.RunInMemory = result;
 					break;
+				case "resourcemanagerid":
+					break;
 				case "datadir":
 					if(embeddedRavenConnectionStringOptions  == null)
 						goto default;

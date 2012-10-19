@@ -1,30 +1,10 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
+﻿using Raven.Client.Document;
 using Xunit;
 
 namespace Raven.Tests
 {
 	public class ConnectionStrings : RavenTest
 	{
-		[Fact]
-		public void WillNotAffectResourceManagerId()
-		{
-			var resourceManagerId = Guid.NewGuid();
-			using (var store = new DocumentStore
-			{
-				ResourceManagerId = resourceManagerId
-			})
-			{
-				store.ParseConnectionString("Url=http://localhost:8079/;");
-
-				Assert.Equal(resourceManagerId, store.ResourceManagerId);
-			}
-		}
 
 		[Fact]
 		public void check_url()
@@ -52,22 +32,6 @@ namespace Raven.Tests
 		}
 
 		[Fact]
-		public void check_with_rmid()
-		{
-			using (var store = new DocumentStore())
-			{
-				store.ParseConnectionString("ResourceManagerId=d5723e19-92ad-4531-adad-8611e6e05c8a;");
-
-				Assert.Null(store.Url);
-				Assert.Null(store.Identifier);
-				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ResourceManagerId.ToString());
-				Assert.NotNull(store.Credentials);
-				Assert.Null(store.DefaultDatabase);
-				Assert.True(store.EnlistInDistributedTransactions);
-			}
-		}
-
-		[Fact]
 		public void check_url_and_rmid()
 		{
 			using (var store = new DocumentStore())
@@ -76,7 +40,6 @@ namespace Raven.Tests
 
 				Assert.Equal("http://localhost:8079", store.Url);
 				Assert.Equal("http://localhost:8079", store.Identifier);
-				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ResourceManagerId.ToString());
 				Assert.NotNull(store.Credentials);
 				Assert.Null(store.DefaultDatabase);
 				Assert.True(store.EnlistInDistributedTransactions);
@@ -124,7 +87,6 @@ namespace Raven.Tests
 
 				Assert.Equal("http://localhost:8079", store.Url);
 				Assert.Equal("http://localhost:8079 (DB: DevMachine)", store.Identifier);
-				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ResourceManagerId.ToString());
 				Assert.NotNull(store.Credentials);
 				Assert.Equal("DevMachine", store.DefaultDatabase);
 				Assert.True(store.EnlistInDistributedTransactions);
