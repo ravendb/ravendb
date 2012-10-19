@@ -877,6 +877,7 @@ namespace Raven.Database
 			{
 				actions.Indexing.AddIndex(name, definition.IsMapReduce);
 				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+				
 			});
 
 			// The act of adding it here make it visible to other threads
@@ -885,6 +886,13 @@ namespace Raven.Database
 			IndexDefinitionStorage.AddIndex(name, definition);
 
 			workContext.ClearErrorsFor(name);
+
+			TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() => RaiseNotifications(new IndexChangeNotification
+			{
+				Name = name,
+				Type = IndexChangeTypes.IndexAdded,
+			}));
+
 			return name;
 		}
 
@@ -1028,6 +1036,13 @@ namespace Raven.Database
 
 							workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
 						});
+
+						TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() => RaiseNotifications(new IndexChangeNotification
+						{
+							Name = name,
+							Type = IndexChangeTypes.IndexRemoved,
+						}));
+
 						return;
 					}
 					catch (ConcurrencyException)

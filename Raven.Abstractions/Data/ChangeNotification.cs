@@ -39,7 +39,10 @@ namespace Raven.Abstractions.Data
 
 		MapCompleted = 1,
 		ReduceCompleted = 2,
-		RemoveFromIndex = 3,
+		RemoveFromIndex = 4,
+
+		IndexAdded = 8,
+		IndexRemoved = 16
 	}
 
 	public class IndexChangeNotification : EventArgs
