@@ -4227,4 +4227,9 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+    
+    <Style x:Key="Style_DataGridTextColumn_FadeTrimmingDisplay" TargetType="TextBlock">
+        <Setter Property="Behaviors:FadeTrimming.IsEnabled" Value="True"/>
+        <Setter Property="Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed" Value="True"/>
+    </Style>
 </ResourceDictionary>
