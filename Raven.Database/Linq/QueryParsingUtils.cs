@@ -107,7 +107,7 @@ namespace Raven.Database.Linq
 				if (selectClause == null)
 					throw new InvalidOperationException("Variable initializer must be a select query expression");
 
-				var createExpression = selectClause.Projection as ObjectCreateExpression;
+				var createExpression = GetAnonymousCreateExpression(selectClause.Projection) as ObjectCreateExpression;
 				if ((createExpression == null || createExpression.IsAnonymousType == false) && requiresSelectNewAnonymousType)
 					throw new InvalidOperationException(
 						"Variable initializer must be a select query expression returning an anonymous object");
@@ -189,9 +189,17 @@ namespace Raven.Database.Linq
 			var memberReferenceExpression = invocationExpression.TargetObject as MemberReferenceExpression;
 			if (memberReferenceExpression == null)
 				return expression;
+
 			var typeReference = memberReferenceExpression.TargetObject as TypeReferenceExpression;
 			if (typeReference == null)
+			{
+				var objectCreateExpression = memberReferenceExpression.TargetObject as ObjectCreateExpression;
+				if(objectCreateExpression != null && memberReferenceExpression.MemberName == "Boost")
+				{
+					return objectCreateExpression;
+				}
 				return expression;
+			}
 
 			if (typeReference.TypeReference.Type != "Raven.Database.Linq.PrivateExtensions.DynamicExtensionMethods")
 				return expression;
