@@ -42,6 +42,9 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			else
 			{
+				if(data == null)
+					throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
+
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], 1);
 			}
@@ -50,16 +53,19 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
-				long written;
-				using (var stream = new BufferedStream(new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"])))
+				if(data != null)
 				{
-					data.CopyTo(stream);
-					written = stream.Position;
-					stream.Flush();
-				}
-				if(written == 0) // empty attachment
-				{
-					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], new byte[0]);
+					long written;
+					using (var stream = new BufferedStream(new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"])))
+					{
+						data.CopyTo(stream);
+						written = stream.Position;
+						stream.Flush();
+					}
+					if (written == 0) // empty attachment
+					{
+						Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], new byte[0]);
+					}
 				}
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);

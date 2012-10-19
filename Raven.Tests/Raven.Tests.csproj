@@ -446,6 +446,7 @@
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
+    <Compile Include="Issues\RavenDB349.cs" />
     <Compile Include="Issues\RavenDB478.cs" />
     <Compile Include="Issues\RavenDB514.cs" />
     <Compile Include="Issues\RavenDB535.cs" />

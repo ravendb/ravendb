@@ -35,6 +35,15 @@ namespace Raven.Storage.Managed
 		{
 			AssertValidEtag(key, etag, "PUT");
 
+			if(data	== null)
+			{
+				var attachment = GetAttachment(key);
+				if(attachment == null)
+					throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
+				attachment.Metadata = headers;
+				return AddAttachment(key, etag, attachment.Data(), headers);
+			}
+
 			var ms = new MemoryStream();
 			headers.WriteTo(ms);
 			data.CopyTo(ms);

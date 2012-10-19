@@ -77,6 +77,14 @@ namespace Raven.Client.Connection
 		void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
+		/// Updates just the attachment with the specified key's metadata
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="metadata">The metadata.</param>
+		void UpdateAttachmentMetadata(string key, Guid? etag, RavenJObject metadata);
+
+		/// <summary>
 		/// Retrieves the attachment with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>

@@ -58,13 +58,17 @@ namespace Raven.Client.Connection
 		/// Notify when the failover status changed
 		/// </summary>
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
-
+		
+		public List<ReplicationDestinationData> ReplicationDestinations
+		{
+			get { return replicationDestinations; }
+		}
 
 		/// <summary>
 		/// Gets the replication destinations.
 		/// </summary>
 		/// <value>The replication destinations.</value>
-		public List<string> ReplicationDestinations
+		public List<string> ReplicationDestinationsUrls
 		{
 			get
 			{
@@ -528,7 +532,7 @@ namespace Raven.Client.Connection
 		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<string, T> operation)
 		{
 			T result;
-			var localReplicationDestinations = ReplicationDestinations; // thread safe copy
+			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
 
 			var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
 			if (shouldReadFromAllServers && method == "GET")
@@ -606,7 +610,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 			switch (state.State)
 			{
 				case ExecuteWithReplicationStates.Start:
-					state.ReplicationDestinations = ReplicationDestinations;
+					state.ReplicationDestinations = ReplicationDestinationsUrls;
 
 					var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) ==
 													FailoverBehavior.ReadFromAllServers);

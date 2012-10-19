@@ -357,6 +357,44 @@ namespace Raven.Client.Connection
 			ExecuteWithReplication("PUT", operationUrl => DirectPutAttachment(key, metadata, etag, data, operationUrl));
 		}
 
+		/// <summary>
+		/// Updates just the attachment with the specified key's metadata
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="metadata">The metadata.</param>
+		public void UpdateAttachmentMetadata(string key, Guid? etag, RavenJObject metadata)
+		{
+			ExecuteWithReplication("POST", operationUrl => DirectUpdateAttachmentMetadata(key, metadata, etag, operationUrl));
+		}
+
+		private void DirectUpdateAttachmentMetadata(string key, RavenJObject metadata, Guid? etag, string operationUrl)
+		{
+			if (etag != null)
+			{
+				metadata["ETag"] = etag.Value.ToString();
+			}
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "POST", metadata, credentials, convention));
+
+			try
+			{
+				webRequest.ExecuteRequest();
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
+					throw;
+
+				using (var stream = httpWebResponse.GetResponseStreamWithHttpDecompression())
+				using (var reader = new StreamReader(stream))
+				{
+					throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
+				}
+			}
+		}
+
 		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, Stream data, string operationUrl)
 		{
 			if (etag != null)

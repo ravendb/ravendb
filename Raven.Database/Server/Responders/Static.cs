@@ -20,7 +20,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET", "PUT", "DELETE","HEAD"}; }
+			get { return new[] {"GET", "PUT", "POST", "DELETE","HEAD"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -75,6 +75,13 @@ namespace Raven.Database.Server.Responders
 
 					context.WriteETag(newEtag);
 					context.SetStatusToCreated("/static/" + Uri.EscapeUriString(filename));
+					break;
+
+				case "POST":
+					var newEtagPost = Database.PutStatic(filename, context.GetEtag(), null,
+													 context.Request.Headers.FilterHeadersAttachment());
+
+					context.WriteETag(newEtagPost);
 					break;
 				case "DELETE":
 					Database.DeleteStatic(filename, etag);

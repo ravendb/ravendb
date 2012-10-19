@@ -184,6 +184,24 @@ namespace Raven.Client.Embedded
 			database.PutStatic(key, etag, data, metadata);
 		}
 
+
+		/// <summary>
+		/// Updates just the attachment with the specified key's metadata
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="metadata">The metadata.</param>
+		public void UpdateAttachmentMetadata(string key, Guid? etag, RavenJObject metadata)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			// we filter out content length, because getting it wrong will cause errors 
+			// in the server side when serving the wrong value for this header.
+			// worse, if we are using http compression, this value is known to be wrong
+			// instead, we rely on the actual size of the data provided for us
+			metadata.Remove("Content-Length");
+			database.PutStatic(key, etag, null, metadata);
+		}
+
 		/// <summary>
 		/// Gets the attachment by the specified key
 		/// </summary>
