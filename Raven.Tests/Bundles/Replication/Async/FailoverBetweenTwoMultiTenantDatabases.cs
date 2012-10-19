@@ -38,7 +38,7 @@ namespace Raven.Bundles.Tests.Replication.Async
 				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded(databaseCommands)
 					.Wait();
 
-				var replicationDestinations = replicationInformerForDatabase.ReplicationDestinations;
+				var replicationDestinations = replicationInformerForDatabase.ReplicationDestinationsUrls;
 				
 				Assert.NotEmpty(replicationDestinations);
 

@@ -22,7 +22,10 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						"http://localhost:2"
+						new ReplicationDestinationData
+						{
+							Url = "http://localhost:2"
+						},
 					}
 			};
 
@@ -54,9 +57,18 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						"http://localhost:2",
-						"http://localhost:3",
-						"http://localhost:4",
+						new ReplicationDestinationData
+						{
+							Url = "http://localhost:2"
+						},
+						new ReplicationDestinationData
+						{
+							Url = "http://localhost:3"
+						},
+						new ReplicationDestinationData
+						{
+							Url = "http://localhost:4"
+						},
 					}
 			};
 

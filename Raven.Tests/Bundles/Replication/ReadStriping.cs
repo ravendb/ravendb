@@ -38,7 +38,7 @@ namespace Raven.Bundles.Tests.Replication
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
 				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
 					.Wait();
-				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinations.Count);
+				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
 				foreach (var ravenDbServer in servers)
 				{
@@ -90,7 +90,7 @@ namespace Raven.Bundles.Tests.Replication
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
 				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands)
 					.Wait();
-				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinations.Count);
+				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
 				foreach (var ravenDbServer in servers)
 				{

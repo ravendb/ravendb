@@ -46,7 +46,7 @@ namespace Raven.Bundles.Tests.Replication
 				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded(databaseCommands)
 					.Wait();
 
-				var replicationDestinations = replicationInformerForDatabase.ReplicationDestinations;
+				var replicationDestinations = replicationInformerForDatabase.ReplicationDestinationsUrls;
 				
 				Assert.NotEmpty(replicationDestinations);
 
@@ -116,7 +116,7 @@ namespace Raven.Bundles.Tests.Replication
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("FailoverTest");
 				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands).Wait();
 
-				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
+				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinationsUrls);
 
 				using (var session = store.OpenSession())
 				{
