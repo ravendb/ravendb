@@ -2,6 +2,7 @@
 {
 	using System.Collections.Generic;
 
+	using Raven.Abstractions.Data;
 	using Raven.Client;
 	using Raven.Client.Document;
 	using Raven.Client.Shard;
@@ -13,6 +14,13 @@
 	{
 		private readonly RavenDbServer[] servers;
 		private readonly ShardedDocumentStore documentStore;
+
+		private readonly IList<string> shardNames = new List<string>
+		{
+			"1",
+			"2",
+			"3"
+		}; 
 
 		public class Person
 		{
@@ -36,9 +44,9 @@
 
 			documentStore = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
 			{
-				{"1", CreateDocumentStore(8079)},
-				{"2", CreateDocumentStore(8078)},
-				{"3", CreateDocumentStore(8077)}
+				{shardNames[0], CreateDocumentStore(8079)},
+				{shardNames[1], CreateDocumentStore(8078)},
+				{shardNames[2], CreateDocumentStore(8077)}
 			}));
 			documentStore.Initialize();
 		}
@@ -57,18 +65,19 @@
 		}
 
 		[Fact]
-		public void OneShardPerSaveChangesStrategy()
+		public void OneShardPerSessionStrategy()
 		{
 			using (var session = documentStore.OpenSession())
 			{
+				var sessionMetadata = ExtractSessionMetadataFromSession(session);
+
+				var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
+
 				var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity1);
 				var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity2);
 				session.SaveChanges();
-
-				Assert.Equal("2/1", entity1.Id);
-				Assert.Equal("2/2", entity2.Id);
 
 				var entity3 = new Person { Id = "3", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity3);
@@ -76,36 +85,43 @@
 				session.Store(entity4);
 				session.SaveChanges();
 
-				Assert.Equal("3/3", entity3.Id);
-				Assert.Equal("3/4", entity4.Id);
+				Assert.Equal(expectedShard + "/1", entity1.Id);
+				Assert.Equal(expectedShard + "/2", entity2.Id);
+				Assert.Equal(expectedShard + "/3", entity3.Id);
+				Assert.Equal(expectedShard + "/4", entity4.Id);
 			}
 
 			using (var session = documentStore.OpenSession())
 			{
+				var sessionMetadata = ExtractSessionMetadataFromSession(session);
+
+				var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
+
 				var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity1);
 				var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity2);
 				session.SaveChanges();
 
-				Assert.Equal("1/1", entity1.Id);
-				Assert.Equal("1/2", entity2.Id);
+				Assert.Equal(expectedShard + "/1", entity1.Id);
+				Assert.Equal(expectedShard + "/2", entity2.Id);
 			}
 		}
 
 		[Fact]
-		public void OneShardPerSaveChangesStrategyAsync()
+		public void OneShardPerSessionStrategyAsync()
 		{
 			using (var session = documentStore.OpenAsyncSession())
 			{
+				var sessionMetadata = ExtractSessionMetadataFromSession(session);
+
+				var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
+
 				var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity1);
 				var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity2);
 				session.SaveChangesAsync().Wait();
-
-				Assert.Equal("2/1", entity1.Id);
-				Assert.Equal("2/2", entity2.Id);
 
 				var entity3 = new Person { Id = "3", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity3);
@@ -113,20 +129,26 @@
 				session.Store(entity4);
 				session.SaveChangesAsync().Wait();
 
-				Assert.Equal("3/3", entity3.Id);
-				Assert.Equal("3/4", entity4.Id);
+				Assert.Equal(expectedShard + "/1", entity1.Id);
+				Assert.Equal(expectedShard + "/2", entity2.Id);
+				Assert.Equal(expectedShard + "/3", entity3.Id);
+				Assert.Equal(expectedShard + "/4", entity4.Id);
 			}
 
 			using (var session = documentStore.OpenAsyncSession())
 			{
+				var sessionMetadata = ExtractSessionMetadataFromSession(session);
+
+				var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
+
 				var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity1);
 				var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
 				session.Store(entity2);
 				session.SaveChangesAsync().Wait();
 
-				Assert.Equal("1/1", entity1.Id);
-				Assert.Equal("1/2", entity2.Id);
+				Assert.Equal(expectedShard + "/1", entity1.Id);
+				Assert.Equal(expectedShard + "/2", entity2.Id);
 			}
 		}
 
@@ -138,6 +160,16 @@
 				server.Dispose();
 			}
 			base.Dispose();
+		}
+
+		private SessionMetadata ExtractSessionMetadataFromSession(object session)
+		{
+			return
+				(SessionMetadata)
+				session
+				.GetType()
+				.GetField("sessionMetadata", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+				.GetValue(session);
 		}
 	}
 }

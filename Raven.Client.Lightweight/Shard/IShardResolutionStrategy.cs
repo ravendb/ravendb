@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 
+using Raven.Abstractions.Data;
+
 namespace Raven.Client.Shard
 {
-	using Raven.Abstractions.Data;
-
 	/// <summary>
 	/// Implementers of this interface provide a way to decide which shards will be queried
 	/// for a specified operation

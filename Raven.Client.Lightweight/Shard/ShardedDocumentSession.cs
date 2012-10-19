@@ -517,8 +517,6 @@ namespace Raven.Client.Shard
 					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
 					UpdateBatchResults(results, shardAndObjects.Value);
 				}
-
-				sessionMetadata.SaveCounter++;
 			}
 		}
 

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 
@@ -22,13 +21,10 @@ namespace Raven.Client.Shard
 
 		protected readonly List<string> ShardIds;
 
-		private long currentShardCounter;
 		private readonly Dictionary<Type, Regex> regexToCaptureShardIdFromQueriesByType = new Dictionary<Type, Regex>();
 
 		private readonly Dictionary<Type, Func<object, string>> shardResultToStringByType = new Dictionary<Type, Func<object, string>>();
 		private readonly Dictionary<Type, Func<string, string>> queryResultToStringByType = new Dictionary<Type, Func<string, string>>();
-
-		private SessionMetadata lastSessionMetadata;
 
 		public DefaultShardResolutionStrategy(IEnumerable<string> shardIds, ShardStrategy shardStrategy)
 		{
@@ -93,22 +89,8 @@ namespace Raven.Client.Shard
 		{
 			if (shardResultToStringByType.Count == 0)
 			{
-				bool useDefault = !(this.lastSessionMetadata != null && this.lastSessionMetadata.SaveCounter == sessionMetadata.SaveCounter);
-
-				lastSessionMetadata = sessionMetadata;
-
-				if (useDefault)
-				{
-					// default, round robin scenario
-					var increment = Interlocked.Increment(ref currentShardCounter);
-					return ShardIds[(int)increment % ShardIds.Count];
-				}
-				else
-				{
-					// one shard per save changes
-					var increment = Interlocked.Read(ref currentShardCounter);
-					return ShardIds[(int)increment % ShardIds.Count];
-				}
+				// one shard per session
+				return ShardIds[sessionMetadata.GetHashCode() % ShardIds.Count];
 			}
 
 			Func<object, string> func;
