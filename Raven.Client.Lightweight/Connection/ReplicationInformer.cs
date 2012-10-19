@@ -413,7 +413,7 @@ namespace Raven.Client.Connection
 			var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			replicationDestinations = replicationDocument.Destinations.Select(x =>
 			{
-				var url = string.IsNullOrEmpty(x.Url) ? x.ClientVisibleUrl : x.Url;
+				var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.ClientVisibleUrl : x.Url;
 				if (string.IsNullOrEmpty(url))
 					return null;
 				if (string.IsNullOrEmpty(x.Database))
