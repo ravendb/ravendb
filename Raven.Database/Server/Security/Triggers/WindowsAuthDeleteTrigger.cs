@@ -8,7 +8,7 @@ namespace Raven.Database.Server.Security.Triggers
 		public override void AfterDelete(string key, Raven.Abstractions.Data.TransactionInformation transactionInformation)
 		{
 			if (key == "Raven/Authorization/WindowsSettings")
-				WindowsRequestAuthorizer.UpdateSettingsEvent();
+				WindowsRequestAuthorizer.InvokeWindowsSettingsChanged();
 			base.AfterDelete(key, transactionInformation);
 		}
 	}

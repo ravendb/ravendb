@@ -225,6 +225,9 @@ namespace Raven.Database.Server
 				});
 				disposed = true;
 
+				if (requestAuthorizer != null)
+					exceptionAggregator.Execute(requestAuthorizer.Dispose);
+
 				exceptionAggregator.Execute(() =>
 				{
 					using (ResourcesStoresCache.WithAllLocks())

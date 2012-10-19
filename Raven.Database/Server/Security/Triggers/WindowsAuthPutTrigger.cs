@@ -9,7 +9,7 @@ namespace Raven.Database.Server.Security.Triggers
 		public override void AfterPut(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata, Guid etag, Raven.Abstractions.Data.TransactionInformation transactionInformation)
 		{
 			if (key == "Raven/Authorization/WindowsSettings")
-				WindowsRequestAuthorizer.UpdateSettingsEvent();
+				WindowsRequestAuthorizer.InvokeWindowsSettingsChanged();
 			base.AfterPut(key, document, metadata, etag, transactionInformation);
 		}
 	}
