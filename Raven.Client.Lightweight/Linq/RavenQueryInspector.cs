@@ -46,9 +46,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif
-#if !NET35
 			, IAsyncDatabaseCommands asyncDatabaseCommands
-#endif
 			)
 		{
 			if (provider == null)

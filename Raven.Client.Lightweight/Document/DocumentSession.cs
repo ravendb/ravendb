@@ -36,7 +36,6 @@ namespace Raven.Client.Document
 		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
 #if !NET35
-		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 #endif
@@ -47,15 +46,6 @@ namespace Raven.Client.Document
 		public IDatabaseCommands DatabaseCommands { get; private set; }
 
 #if !NET35
-		/// <summary>
-		/// Gets the async database commands.
-		/// </summary>
-		/// <value>The async database commands.</value>
-		public IAsyncDatabaseCommands AsyncDatabaseCommands
-		{
-			get { return asyncDatabaseCommands; }
-		}
-
 		/// <summary>
 		/// Access the lazy operations
 		/// </summary>
@@ -79,16 +69,9 @@ namespace Raven.Client.Document
 		public DocumentSession(DocumentStore documentStore,
 			DocumentSessionListeners listeners,
 			Guid id,
-			IDatabaseCommands databaseCommands
-#if !NET35
-, IAsyncDatabaseCommands asyncDatabaseCommands
-#endif
-)
+			IDatabaseCommands databaseCommands)
 			: base(documentStore, listeners, id)
 		{
-#if !NET35
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
-#endif
 			DatabaseCommands = databaseCommands;
 		}
 
@@ -333,15 +316,8 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands
-#if !NET35
-, AsyncDatabaseCommands
-#endif
-), ravenQueryStatistics, indexName, null, this, DatabaseCommands
-#if !NET35
-, AsyncDatabaseCommands
-#endif
-);
+			var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands, null);
+			return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, indexName, null, this, DatabaseCommands, null);
 		}
 
 		/// <summary>
@@ -403,7 +379,7 @@ namespace Raven.Client.Document
 #if !NET35
 		protected override Task<string> GenerateKeyAsync(object entity)
 		{
-			return Conventions.GenerateDocumentKeyAsync(AsyncDatabaseCommands, entity);
+			throw new NotSupportedException("Cannot use async operation in sync session");
 		}
 #endif
 

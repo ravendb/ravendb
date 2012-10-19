@@ -339,11 +339,7 @@ namespace Raven.Client.Document
 			try
 			{
 				var session = new DocumentSession(this, listeners, sessionId,
-					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options)
-#if !NET35
-, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options)
-#endif
-)
+					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
 					{
 						DatabaseName = options.Database
 					};
