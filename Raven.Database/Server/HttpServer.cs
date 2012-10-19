@@ -114,12 +114,10 @@ namespace Raven.Database.Server
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
-			if(configuration.RunInMemory == false)
+			if (configuration.RunInMemory == false)
 			{
-				if(Directory.Exists(configuration.PluginsDirectory) == false)
-					Directory.CreateDirectory(configuration.PluginsDirectory);
-				if(Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Analyzers")) == false)
-					Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Analyzers"));
+				TryCreateDirectory(configuration.PluginsDirectory);
+				TryCreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Analyzers"));
 			}
 
 			SystemDatabase = resourceStore;
@@ -140,6 +138,21 @@ namespace Raven.Database.Server
 			requestAuthorizer = new MixedModeRequestAuthorizer();
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+		}
+
+		private bool TryCreateDirectory(string path)
+		{
+			try
+			{
+				if (Directory.Exists(path) == false)
+					Directory.CreateDirectory(path);
+				return true;
+			}
+			catch (Exception e)
+			{
+				logger.WarnException("Could not create directory " + path, e);
+				return false;
+			}
 		}
 
 		private void InitializeRequestResponders(DocumentDatabase documentDatabase)
@@ -166,7 +179,7 @@ namespace Raven.Database.Server
 				var activeDatbases = ResourcesStoresCache.Where(x => x.Value.Status == TaskStatus.RanToCompletion).Select(x => new
 				{
 					Name = x.Key,
-					Database =  x.Value.Result
+					Database = x.Value.Result
 				});
 				return new
 				{
@@ -174,7 +187,7 @@ namespace Raven.Database.Server
 					Uptime = SystemTime.UtcNow - startUpTime,
 					LoadedDatabases =
 						from documentDatabase in activeDatbases
-								.Concat(new[] { new { Name  = "System", Database = SystemDatabase} })
+								.Concat(new[] { new { Name = "System", Database = SystemDatabase } })
 						let totalSizeOnDisk = documentDatabase.Database.GetTotalSizeOnDisk()
 						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
 						select new
@@ -933,7 +946,7 @@ namespace Raven.Database.Server
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
 			{
-				if(database.IsFaulted || database.IsCanceled)
+				if (database.IsFaulted || database.IsCanceled)
 				{
 					ResourcesStoresCache.TryRemove(tenantId, out database);
 					DateTime time;
@@ -986,7 +999,7 @@ namespace Raven.Database.Server
 					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, 0, numberOfAllowedDbs).ToList();
 					if (databases.Count >= numberOfAllowedDbs)
 						throw new InvalidOperationException(
-							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine + 
+							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +
 							"You can either upgrade your RavenDB license or delete a database from the server");
 				}
 			}
