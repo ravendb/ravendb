@@ -8,7 +8,7 @@ namespace Raven.Client.Bundles.Versioning
 		public static T[] GetRevisionsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
 		{
 			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)session);
-			var jsonDocuments = session.DocumentStore.DatabaseCommands.StartsWith(id + "/revisions/", null,start, pageSize);
+			var jsonDocuments = ((DocumentSession)session).DatabaseCommands.StartsWith(id + "/revisions/", null, start, pageSize);
 			return jsonDocuments
 				.Select(inMemoryDocumentSessionOperations.TrackEntity<T>)
 				.ToArray();
@@ -16,7 +16,7 @@ namespace Raven.Client.Bundles.Versioning
 
 		public static string[] GetRevisionIdsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
 		{
-			var jsonDocuments = session.DocumentStore.DatabaseCommands.StartsWith(id + "/revisions/", null, start, pageSize, metadataOnly: true);
+			var jsonDocuments = ((DocumentSession)session).DatabaseCommands.StartsWith(id + "/revisions/", null, start, pageSize, metadataOnly: true);
 			return jsonDocuments
 				.Select(document => document.Key)
 				.ToArray();
