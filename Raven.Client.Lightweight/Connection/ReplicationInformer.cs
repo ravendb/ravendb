@@ -71,15 +71,7 @@ namespace Raven.Client.Connection
 				if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
-				var list = new List<string>();
-
-				foreach (var replicationDestinationData in replicationDestinations)
-				{
-					if(replicationDestinationData.Ignore == false)
-						list.Add(replicationDestinationData.Url);
-				}
-
-				return list;
+				return replicationDestinations.Select(replicationDestinationData => replicationDestinationData.Url).ToList();
 			}
 		}
 
@@ -414,18 +406,16 @@ namespace Raven.Client.Connection
 			replicationDestinations = replicationDocument.Destinations.Select(x =>
 			{
 				var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.ClientVisibleUrl : x.Url;
-				if (string.IsNullOrEmpty(url))
+				if (string.IsNullOrEmpty(url) || x.IgnoredClient)
 					return null;
 				if (string.IsNullOrEmpty(x.Database))
 					return new ReplicationDestinationData
 					{
 						Url = url,
-						Ignore = x.IgnoredClient
 					};
 				return new ReplicationDestinationData
 				{
 					Url = MultiDatabase.GetRootDatabaseUrl(x.Url) + "/databases/" + x.Database + "/",
-					Ignore = x.IgnoredClient
 				};
 			})
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
@@ -850,6 +840,5 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 	public class ReplicationDestinationData
 	{
 		public string Url { get; set; }
-		public bool Ignore { get; set; }
 	}
 }
