@@ -40,8 +40,12 @@ namespace Raven.Database.Queries
 
 
 			IndexSearcher currentSearcher;
-			using(_database.IndexStorage.GetCurrentIndexSearcher(indexName,out currentSearcher))
+			using (_database.IndexStorage.GetCurrentIndexSearcher(indexName, out currentSearcher))
 			{
+				if (currentSearcher == null)
+				{
+					throw new InvalidOperationException("Could not find current searcher");
+				}
 				var indexReader = currentSearcher.IndexReader;
 
 				if (indexExtension != null)
@@ -51,8 +55,8 @@ namespace Raven.Database.Queries
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					Path.Combine(_database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
 					indexReader,
-					GetStringDistance(suggestionQuery.Distance), 
-					suggestionQuery.Field, 
+					GetStringDistance(suggestionQuery.Distance),
+					suggestionQuery.Field,
 					suggestionQuery.Accuracy);
 				suggestionQueryIndexExtension.Init(indexReader);
 
