@@ -146,6 +146,20 @@ namespace Raven.Storage.Esent.StorageActions
 			return OnCommit;
 		}
 
+
+		public void SetIdentityValue(string name, long value)
+		{
+			Api.JetSetCurrentIndex(session, Identity, "by_key");
+			Api.MakeKey(session, Identity, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			using (var update = new Update(session, Identity, Api.TrySeek(session, Identity, SeekGrbit.SeekEQ) ? JET_prep.Replace : JET_prep.Insert))
+			{
+				Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["key"], name, Encoding.Unicode);
+				Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["val"], (int)value);
+
+				update.Save();
+			}
+		}
+
 		public long GetNextIdentityValue(string name)
 		{
 			Api.JetSetCurrentIndex(session, Identity, "by_key");

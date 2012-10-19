@@ -613,15 +613,52 @@ namespace Raven.Database
 				ETag = newEtag
 			};
 		}
-
-		private long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, IStorageActionsAccessor actions, TransactionInformation transactionInformation)
+		public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,
+			IStorageActionsAccessor actions,
+			TransactionInformation transactionInformation)
 		{
-			long nextIdentityValue;
-			do
+			int tries;
+			return GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions, transactionInformation, out tries);
+		}
+
+		public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,
+			IStorageActionsAccessor actions,
+			TransactionInformation transactionInformation,
+			out int tries)
+		{
+			long nextIdentityValue = actions.General.GetNextIdentityValue(key);
+
+			if (actions.Documents.DocumentMetadataByKey(key + nextIdentityValue, transactionInformation) == null)
 			{
-				nextIdentityValue = actions.General.GetNextIdentityValue(key);
-			} while (actions.Documents.DocumentMetadataByKey(key + nextIdentityValue, transactionInformation) != null);
-			return nextIdentityValue;
+				tries = 1;
+				return nextIdentityValue;
+			}
+			tries = 1;
+			// there is already a document with this id, this means that we probably need to search
+			// for an opening in potentially large data set. 
+			var lastKnownBusy = nextIdentityValue;
+			var maybeFree = nextIdentityValue*2;
+			var lastKnownFree = long.MaxValue;
+			while (true)
+			{
+				tries++;
+				if(actions.Documents.DocumentMetadataByKey(key + maybeFree, transactionInformation) == null)
+				{
+					if (lastKnownBusy + 1 == maybeFree)
+					{
+						actions.General.SetIdentityValue(key, maybeFree);
+						return maybeFree;
+					}
+					lastKnownFree = maybeFree;
+					maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
+
+				}
+				else
+				{
+					lastKnownBusy = maybeFree;
+					maybeFree = Math.Min(lastKnownFree, maybeFree*2);
+				}
+			}
 		}
 
 		private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document, TransactionInformation transactionInformation)
@@ -877,7 +914,7 @@ namespace Raven.Database
 			{
 				actions.Indexing.AddIndex(name, definition.IsMapReduce);
 				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-				
+
 			});
 
 			// The act of adding it here make it visible to other threads

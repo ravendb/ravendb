@@ -24,12 +24,18 @@ namespace Raven.Storage.Managed
 			var result = storage.Identity.Read(new RavenJObject {{"name", name}});
 			if(result == null)
 			{
-				storage.Identity.UpdateKey(new RavenJObject {{"name", name}, {"id", 1}});
+				storage.Identity.UpdateKey(new RavenJObject {{"name", name}, {"id", 1L}});
 				return 1;
 			}
-			var val = result.Key.Value<int>("id") + 1;
+			var val = result.Key.Value<long>("id") + 1;
 			storage.Identity.UpdateKey(new RavenJObject { { "name", name }, { "id", val } });
 			return val;
+		}
+
+		public void SetIdentityValue(string name, long value)
+		{
+			storage.Identity.UpdateKey(new RavenJObject { { "name", name }, { "id", value } });
+		
 		}
 	}
 }
