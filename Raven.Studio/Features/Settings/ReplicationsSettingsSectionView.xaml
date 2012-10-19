@@ -18,15 +18,13 @@
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="130" />
 					<ColumnDefinition Width="*"/>
 					<ColumnDefinition Width="20" />
 				</Grid.ColumnDefinitions>
-				<Button Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" 
+				<Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" 
                         Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteReplication}" 
                         CommandParameter="{Binding}" VerticalAlignment="Center"
                         Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -34,38 +32,12 @@
                     <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
 				</Button>
 
-				<ComboBox x:Name="UseConnectionCombo" Grid.Row="1" Margin="0,5,0,5" SelectedIndex="{Binding UseConnectionString, Converter={StaticResource BooleanToInt}, Mode=TwoWay}">
-                    <ComboBox.ItemsSource>
-                        <Behaviors:StringCollection>
-                            <System:String>Url</System:String>
-                            <System:String>Connection String</System:String>
-                        </Behaviors:StringCollection>
-                    </ComboBox.ItemsSource>
-				</ComboBox>
-
-				<TextBox x:Name="UrlText" Grid.Row="1" Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Margin="5">
-					<i:Interaction.Triggers>
-						<ei:DataTrigger Binding="{Binding ElementName=UseConnectionCombo, Path=SelectedIndex}" Value="0" Comparison="Equal">
-							<ei:ChangePropertyAction PropertyName="Visibility" Value="Visible"/>
-						</ei:DataTrigger>
-						<ei:DataTrigger Binding="{Binding ElementName=UseConnectionCombo, Path=SelectedIndex}" Value="0" Comparison="NotEqual">
-							<ei:ChangePropertyAction PropertyName="Visibility" Value="Collapsed"/>
-						</ei:DataTrigger>
-					</i:Interaction.Triggers>
-				</TextBox>
-				<TextBox x:Name="ConnectionText" Grid.Row="1" Grid.Column="1" Text="{Binding ConnectionStringName, Mode=TwoWay}" Margin="5">
-					<i:Interaction.Triggers>
-						<ei:DataTrigger Binding="{Binding ElementName=UseConnectionCombo, Path=SelectedIndex}" Value="1" Comparison="Equal">
-							<ei:ChangePropertyAction PropertyName="Visibility" Value="Visible"/>
-						</ei:DataTrigger>
-						<ei:DataTrigger Binding="{Binding ElementName=UseConnectionCombo, Path=SelectedIndex}" Value="1" Comparison="NotEqual">
-							<ei:ChangePropertyAction PropertyName="Visibility" Value="Collapsed"/>
-						</ei:DataTrigger>
-					</i:Interaction.Triggers>
-				</TextBox>
-
-				<Grid Grid.Row="2" Grid.ColumnSpan="2">
+				<Grid Grid.Row="1" Grid.ColumnSpan="2">
 					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
@@ -77,26 +49,35 @@
 						<ColumnDefinition Width="*" />
 					</Grid.ColumnDefinitions>
 
-					<TextBlock Grid.Row="0" Text="Database: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="0" Text="Url: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Margin="5"/>
+					
+					<TextBlock Grid.Row="1" Text="Client Visible Url: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ClientVisibleUrl, Mode=TwoWay}" Margin="5"/>
 
-					<TextBlock Grid.Row="1" Text="Password: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" />
+					<TextBlock Grid.Row="2" Text="Database: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5"/>
 
-					<TextBlock Grid.Row="2" Text="User Name: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" />
+					<TextBlock Grid.Row="3" Text="User Name: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" />
+					
+					<TextBlock Grid.Row="4" Text="Password: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" />
 
-					<TextBlock Grid.Row="3" Text="Domain: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="5" Text="Domain: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5"/>
 
-					<TextBlock Grid.Row="4" Text="ApiKey: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5"/>
-				</Grid>
+					<TextBlock Grid.Row="6" Text="ApiKey: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="6" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5"/>
 
-				<TextBlock Grid.Row="3" Text="Transitive Replication:  " VerticalAlignment="Center"/>
+					<TextBlock Grid.Row="7" Text="Skip Failover: " VerticalAlignment="Center"/>
+					<CheckBox Grid.Row="7" Grid.Column="1" IsChecked="{Binding SkipFailover, Mode=TwoWay}" Margin="5"/>
 
-				<ComboBox Grid.Row="3" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}"
+					<TextBlock Grid.Row="8" Text="Transitive Replication:  " VerticalAlignment="Center"/>
+
+					<ComboBox Grid.Row="8" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}"
                           ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"/>
+				</Grid>	
 			</Grid>
 		</DataTemplate>
 	</UserControl.Resources>

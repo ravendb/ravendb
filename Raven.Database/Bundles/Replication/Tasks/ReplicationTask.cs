@@ -584,7 +584,7 @@ namespace Raven.Bundles.Replication.Tasks
 										}))
 							.OrderBy(x => x.Etag)
 							.ToList();
-						;
+						
 						filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(destinationId, document.Key, document.Metadata)).ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
@@ -668,7 +668,7 @@ namespace Raven.Bundles.Replication.Tasks
 							.OrderBy(x => x.Etag)
 
 							.ToList();
-						;
+						
 						filteredAttachmentsToReplicate = attachmentsToReplicate.Where(attachment => destination.FilterAttachments(attachment, destinationId)).ToList();
 
 						attachmentSinceLastEtag += attachmentsToReplicate.Count;
@@ -794,8 +794,8 @@ namespace Raven.Bundles.Replication.Tasks
 			catch (Exception e)
 			{
 				log.ErrorException(
-					string.Format("IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ConnectionStringName: {2}]",
-					Environment.NewLine, x.Url, x.ConnectionStringName),
+					string.Format("IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ClientVisibleUrl: {2}]",
+					Environment.NewLine, x.Url, x.ClientVisibleUrl),
 					e);
 
 				return null;
@@ -809,24 +809,7 @@ namespace Raven.Bundles.Replication.Tasks
 				ReplicationOptionsBehavior = x.TransitiveReplicationBehavior,
 				CurrentDatabaseId = docDb.TransactionalStorage.Id.ToString()
 			};
-			return string.IsNullOrEmpty(x.ConnectionStringName) ?
-				CreateReplicationStrategyFromDocument(x, replicationStrategy) :
-				CreateReplicationStrategyFromConnectionString(x, replicationStrategy);
-		}
-
-		private static ReplicationStrategy CreateReplicationStrategyFromConnectionString(ReplicationDestination x, ReplicationStrategy replicationStrategy)
-		{
-			var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionStringName(x.ConnectionStringName);
-			connectionStringParser.Parse();
-			var options = connectionStringParser.ConnectionStringOptions;
-			if (string.IsNullOrEmpty(options.Url))
-				throw new InvalidOperationException("Could not figure out what the replication URL is");
-			if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
-			{
-				options.Url += "/databases/" + options.DefaultDatabase;
-			}
-			replicationStrategy.ConnectionStringOptions = options;
-			return replicationStrategy;
+			return CreateReplicationStrategyFromDocument(x, replicationStrategy);
 		}
 
 		private static ReplicationStrategy CreateReplicationStrategyFromDocument(ReplicationDestination x, ReplicationStrategy replicationStrategy)

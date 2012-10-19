@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading;
@@ -15,6 +17,7 @@ using Raven.Client.Extensions;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #endif
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -23,7 +26,11 @@ namespace Raven.Client.Changes
 	public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
 	{
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
-		private readonly ConcurrentDictionary<string, string> connectionsData = new ConcurrentDictionary<string, string>();
+		private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
+		private bool watchAllDocs;
+		private bool watchAllIndexes;
 
 		private readonly string url;
 		private readonly ICredentials credentials;
@@ -52,6 +59,9 @@ namespace Raven.Client.Changes
 
 		private Task EstablishConnection()
 		{
+			if (disposed)
+				return new CompletedTask();
+
 			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
 									{
 										AvoidCachingRequest = true
@@ -64,25 +74,40 @@ namespace Raven.Client.Changes
 									if (task.IsFaulted && reconnectAttemptsRemaining > 0)
 									{
 										logger.WarnException("Could not connect to server, will retry", task.Exception);
+										Connected = false;
+										ConnectionStatusCahnged(this, EventArgs.Empty);
 
 										reconnectAttemptsRemaining--;
-										return EstablishConnection();
+
+										return Time.Delay(TimeSpan.FromSeconds(15))
+											.ContinueWith(_ => EstablishConnection())
+											.Unwrap();
 									}
 
+									Connected = true;
+									ConnectionStatusCahnged(this, EventArgs.Empty);
 									reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
 									connection = (IDisposable)task.Result;
 									task.Result.Subscribe(this);
 
-									foreach (var data in connectionsData)
-									{
-										Send(data.Key, string.IsNullOrWhiteSpace(data.Value) ? null : data.Value);
-									}
+									Task prev = watchAllDocs ? Send("watch-docs", null) : new CompletedTask();
 
-									return task;
+									if (watchAllIndexes)
+										prev = prev.ContinueWith(_ => Send("watch-indexes", null));
+
+									prev = watchedDocs.Aggregate(prev, (cur, docId) => cur.ContinueWith(task1 => Send("watch-doc", docId)));
+
+									prev = watchedPrefixes.Aggregate(prev, (cur, prefix) => cur.ContinueWith(task1 => Send("watch-prefix", prefix)));
+
+									prev = watchedIndexes.Aggregate(prev, (cur, index) => cur.ContinueWith(task1 => Send("watch-indexes", index)));
+								
+									return prev;
 								})
 				.Unwrap();
 		}
 
+		public bool Connected { get; private set; }
+		public event EventHandler ConnectionStatusCahnged = delegate { }; 
 		public Task Task { get; private set; }
 
 		private Task AfterConnection(Func<Task> action)
@@ -101,15 +126,14 @@ namespace Raven.Client.Changes
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
 				{
-					connectionsData.AddOrUpdate("watch-index", indexName, (s1, s2) => s2);
+					watchedIndexes.TryAdd(indexName);
 					return Send("watch-index", indexName);
 				});
 
 				return new LocalConnectionState(
 					() =>
 					{
-						string value;
-						connectionsData.TryRemove("watch-index", out value);
+						watchedIndexes.TryRemove(indexName);
 						Send("unwatch-index", indexName);
 						counters.Remove("indexes/" + indexName);
 					},
@@ -153,6 +177,8 @@ namespace Raven.Client.Changes
 				if (string.IsNullOrEmpty(value) == false)
 					sendUrl += "&value=" + Uri.EscapeUriString(value);
 
+				sendUrl = sendUrl.NoCache();
+
 				var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
 				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
 				return httpJsonRequest.ExecuteRequestAsync().ObserveException();
@@ -169,15 +195,14 @@ namespace Raven.Client.Changes
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
 				{
-					connectionsData.AddOrUpdate("watch-doc", docId, (s1, s2) => s2);
+					watchedDocs.TryAdd(docId);
 					return Send("watch-doc", docId);
 				});
 
 				return new LocalConnectionState(
 					() =>
 					{
-						string value;
-						connectionsData.TryRemove("watch-doc", out value);
+						watchedDocs.TryRemove(docId);
 						Send("unwatch-doc", docId);
 						counters.Remove("docs/" + docId);
 					},
@@ -206,14 +231,13 @@ namespace Raven.Client.Changes
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
 				{
-					connectionsData.AddOrUpdate("watch-docs", "", (s1, s2) => s2);
+					watchAllDocs = true;
 					return Send("watch-docs", null);
 				});
 				return new LocalConnectionState(
 					() =>
 					{
-						string value;
-						connectionsData.TryRemove("watch-docs", out value);
+						watchAllDocs = false;
 						Send("unwatch-docs", null);
 						counters.Remove("all-docs");
 					},
@@ -242,15 +266,14 @@ namespace Raven.Client.Changes
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
 				{
-					connectionsData.AddOrUpdate("watch-indexes", "", (s1, s2) => s2);
+					watchAllIndexes = true;
 					return Send("watch-indexes", null);
 				});
 
 				return new LocalConnectionState(
 					() =>
 					{
-						string value;
-						connectionsData.TryRemove("watch-indexes", out value);
+						watchAllIndexes = false;
 						Send("unwatch-indexes", null);
 						counters.Remove("all-indexes");
 					},
@@ -279,15 +302,14 @@ namespace Raven.Client.Changes
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
 				{
-					connectionsData.AddOrUpdate("watch-prefix", docIdPrefix, (s1, s2) => s2);
+					watchedPrefixes.TryAdd(docIdPrefix);
 					return Send("watch-prefix", docIdPrefix);
 				});
 
 				return new LocalConnectionState(
 					() =>
 					{
-						string value;
-						connectionsData.TryRemove("watch-prefix", out value);
+						watchedPrefixes.TryRemove(docIdPrefix);
 						Send("unwatch-prefix", docIdPrefix);
 						counters.Remove("prefixes/" + docIdPrefix);
 					},

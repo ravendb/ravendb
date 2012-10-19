@@ -23,6 +23,17 @@ namespace Raven.Studio.Models
         {
             var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 
+			if(databaseName == Constants.SystemDatabase)
+			{
+				var apiKeys = new ApiKeysSectionModel();
+
+				Settings.Sections.Add(apiKeys);
+				Settings.SelectedSection.Value = apiKeys;
+				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
+
+				return; 
+			}
+
             ApplicationModel.Current.Server.Value.DocumentStore
                 .AsyncDatabaseCommands
                 .ForDefaultDatabase()
@@ -68,7 +79,7 @@ namespace Raven.Studio.Models
 
         public SettingsModel Settings { get; private set; }
 
-        private ICommand _saveBundlesCommand;
-        public ICommand SaveBundles { get { return _saveBundlesCommand ?? (_saveBundlesCommand = new SaveBundlesCommand(Settings)); } }
+        private ICommand _saveSettingsCommand;
+        public ICommand SaveSettings { get { return _saveSettingsCommand ?? (_saveSettingsCommand = new SaveSettingsCommand(Settings)); } }
     }
 }

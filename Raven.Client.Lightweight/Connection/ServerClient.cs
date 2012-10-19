@@ -290,6 +290,10 @@ namespace Raven.Client.Connection
 			AddTransactionInformation(metadata);
 			if (etag != null)
 				metadata["ETag"] = new RavenJValue(etag.Value.ToString());
+			
+			if (key != null)
+				key = Uri.EscapeUriString(key);
+
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/docs/" + key, method, metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));

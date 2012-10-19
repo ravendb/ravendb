@@ -36,7 +36,7 @@ namespace Raven.Studio.Models
 
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel> { Value = new ServerModel() };
-			Server.Value.SelectedDatabase.Value.Status.PropertyChanged += delegate
+			Server.Value.IsConnected.PropertyChanged += delegate
 			{
 				OnPropertyChanged(() => StatusImage);
 			};

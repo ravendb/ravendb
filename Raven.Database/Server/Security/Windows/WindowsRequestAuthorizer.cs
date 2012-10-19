@@ -4,6 +4,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Security.Windows
 {
@@ -11,22 +12,23 @@ namespace Raven.Database.Server.Security.Windows
 	{
 		private readonly List<string> requiredGroups = new List<string>();
 		private readonly List<string> requiredUsers = new List<string>();
+		private static WindowsRequestEvent windowsRequestEvent;
+
+		public static void UpdateSettingsEvent()
+		{
+			windowsRequestEvent.UpdateSettings();
+		}
 
 		protected override void Initialize()
 		{
-			var requiredGroupsString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredGroups"];
-			if (requiredGroupsString != null)
+			windowsRequestEvent = new WindowsRequestEvent
 			{
-				var groups = requiredGroupsString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-				requiredGroups.AddRange(groups);
-			}
+				RequiredUsers = requiredUsers,
+				RequiredGroups = requiredGroups,
+				Server = server
+			};
 
-			var requiredUsersString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredUsers"];
-			if (requiredUsersString != null)
-			{
-				var users = requiredUsersString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-				requiredUsers.AddRange(users);
-			}
+			windowsRequestEvent.UpdateSettings();
 		}
 
 		public override bool Authorize(IHttpContext ctx)
@@ -80,6 +82,30 @@ namespace Raven.Database.Server.Security.Windows
 			}
 			
 			return false;
+		}
+
+		public class WindowsRequestEvent : EventArgs
+		{
+			public HttpServer Server { get; set; }
+			public List<string> RequiredGroups { get; set; }
+			public List<string> RequiredUsers { get; set; }
+
+			public void UpdateSettings()
+			{
+				var doc = Server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
+				RequiredGroups.Clear();
+				RequiredUsers.Clear();
+
+				if (doc == null)
+					return;
+
+				var required = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
+				if (required == null)
+					return;
+
+				RequiredGroups.AddRange(required.RequiredGroups.Select(data => data.Name));
+				RequiredUsers.AddRange(required.RequiredUsers.Select(data => data.Name));
+			}
 		}
 	}
 }

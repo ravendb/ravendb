@@ -50,7 +50,7 @@ namespace Raven.Client.Connection
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		protected DateTime lastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
-		private List<string> replicationDestinations = new List<string>();
+		private List<ReplicationDestinationData> replicationDestinations = new List<ReplicationDestinationData>();
 		private static readonly List<string> Empty = new List<string>();
 		protected static int readStripingBase;
 
@@ -71,7 +71,15 @@ namespace Raven.Client.Connection
 				if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
-				return replicationDestinations;
+				var list = new List<string>();
+
+				foreach (var replicationDestinationData in replicationDestinations)
+				{
+					if(replicationDestinationData.Ignore == false)
+						list.Add(replicationDestinationData.Url);
+				}
+
+				return list;
 			}
 		}
 
@@ -405,11 +413,20 @@ namespace Raven.Client.Connection
 			var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			replicationDestinations = replicationDocument.Destinations.Select(x =>
 			{
-				if (string.IsNullOrEmpty(x.Url))
+				var url = string.IsNullOrEmpty(x.Url) ? x.ClientVisibleUrl : x.Url;
+				if (string.IsNullOrEmpty(url))
 					return null;
 				if (string.IsNullOrEmpty(x.Database))
-					return x.Url;
-				return MultiDatabase.GetRootDatabaseUrl(x.Url) + "/databases/" + x.Database + "/";
+					return new ReplicationDestinationData
+					{
+						Url = url,
+						Ignore = x.IgnoredClient
+					};
+				return new ReplicationDestinationData
+				{
+					Url = MultiDatabase.GetRootDatabaseUrl(x.Url) + "/databases/" + x.Database + "/",
+					Ignore = x.IgnoredClient
+				};
 			})
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
 				// so we might as well ignore them. Probably private replication destination (using connection string names only)
@@ -418,9 +435,9 @@ namespace Raven.Client.Connection
 			foreach (var replicationDestination in replicationDestinations)
 			{
 				FailureCounter value;
-				if (failureCounts.TryGetValue(replicationDestination, out value))
+				if (failureCounts.TryGetValue(replicationDestination.Url, out value))
 					continue;
-				failureCounts[replicationDestination] = new FailureCounter();
+				failureCounts[replicationDestination.Url] = new FailureCounter();
 			}
 		}
 
@@ -828,5 +845,11 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		/// The url whose failover status changed
 		/// </summary>
 		public string Url { get; set; }
+	}
+
+	public class ReplicationDestinationData
+	{
+		public string Url { get; set; }
+		public bool Ignore { get; set; }
 	}
 }

@@ -125,8 +125,7 @@
 								  Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/settings"
                         Style="{StaticResource Style_Button_MouseOverChrome}"
-                        ToolTipService.ToolTip="Edit Database Settings"
-								 Visibility="{Binding Server.Value.SelectedDatabase.Value.Name,Converter={StaticResource VisibleWhenDifferent}, ConverterParameter='&lt;system&gt;'}">
+                        ToolTipService.ToolTip="Edit Database Settings">
 					<Image Source="{StaticResource Image_Settings_Tiny}"/>
 				</Button>
 

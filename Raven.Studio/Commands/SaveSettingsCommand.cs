@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Studio.Models;
@@ -10,11 +12,11 @@ using System.Linq;
 
 namespace Raven.Studio.Commands
 {
-	public class SaveBundlesCommand : Command
+	public class SaveSettingsCommand : Command
 	{
         private readonly SettingsModel settingsModel;
 
-		public SaveBundlesCommand(SettingsModel settingsModel)
+		public SaveSettingsCommand(SettingsModel settingsModel)
 		{
 			this.settingsModel = settingsModel;
 		}
@@ -22,6 +24,12 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+			if(databaseName == Constants.SystemDatabase)
+			{
+				SaveApiKeys();
+				SaveWindowsAuth();
+				return;
+			}
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
 
             var quotaSettings = settingsModel.GetSection<QuotaSettingsSectionModel>();
@@ -53,7 +61,7 @@ namespace Raven.Studio.Commands
 
 						document.Destinations.Clear();
                         foreach (var destination in replicationSettings.ReplicationDestinations
-							.Where(destination => !string.IsNullOrWhiteSpace(destination.Url) || !string.IsNullOrWhiteSpace(destination.ConnectionStringName)))
+							.Where(destination => !string.IsNullOrWhiteSpace(destination.Url) || !string.IsNullOrWhiteSpace(destination.ClientVisibleUrl)))
 						{
 							document.Destinations.Add(destination);
 						}
@@ -115,6 +123,59 @@ namespace Raven.Studio.Commands
 
 			session.SaveChangesAsync()
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
+		}
+
+		private void SaveWindowsAuth()
+		{
+			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
+
+			var windowsAuthModel = settingsModel.Sections
+				.Where(sectionModel => sectionModel is WindowsAuthSettingsSectionModel)
+				.Cast<WindowsAuthSettingsSectionModel>()
+				.FirstOrDefault();
+
+			if (windowsAuthModel == null)
+				return;
+
+			windowsAuthModel.Document.Value.RequiredGroups = windowsAuthModel.RequiredGroups.ToList();
+			windowsAuthModel.Document.Value.RequiredUsers = windowsAuthModel.RequiredUsers.ToList();
+
+			session.Store(RavenJObject.FromObject(windowsAuthModel.Document.Value), "Raven/Authorization/WindowsSettings");
+
+			session.SaveChangesAsync()
+				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.Notifications.Add(new Notification("Windows Authentication Settings Saved")));
+		}
+
+		private void SaveApiKeys()
+		{
+			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
+
+			var apiKeysModel = settingsModel.Sections
+				.Where(sectionModel => sectionModel is ApiKeysSectionModel)
+				.Cast<ApiKeysSectionModel>()
+				.FirstOrDefault();
+
+			if (apiKeysModel == null)
+				return;
+
+			var apiKeysToDelete = apiKeysModel.OriginalApiKeys
+				  .Where(apiKeyDefinition => apiKeysModel.ApiKeys.Contains(apiKeyDefinition) == false)
+				  .ToList();
+
+			foreach (var apiKeyDefinition in apiKeysToDelete)
+			{
+				ApplicationModel.DatabaseCommands.ForDefaultDatabase().DeleteDocumentAsync(apiKeyDefinition.Id);
+			}
+
+			foreach (var apiKeyDefinition in apiKeysModel.ApiKeys)
+			{
+				apiKeyDefinition.Id = "Raven/ApiKeys/" + apiKeyDefinition.Name;
+				session.Store(apiKeyDefinition);
+			}
+
+			session.SaveChangesAsync();
+			apiKeysModel.ApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeysModel.ApiKeys);
+			ApplicationModel.Current.AddInfoNotification("Api Keys Saved");
 		}
 	}
 }

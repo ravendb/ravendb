@@ -22,6 +22,7 @@ namespace Raven.Studio.Models
 
 		private string buildNumber;
 		private bool singleTenant;
+		private bool isConnected;
 
 
 		public DocumentConvention Conventions
@@ -46,7 +47,7 @@ namespace Raven.Studio.Models
             Databases = new BindableCollection<string>(name => name);
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
-		    IsConnected = new Observable<bool>();
+		    IsConnected = new Observable<bool>{Value = true};
 		    Initialize();
 		}
 
@@ -93,20 +94,6 @@ namespace Raven.Studio.Models
 		private static bool firstTick = true;
 		public override Task TimerTickedAsync()
 		{
-            if(IsConnected.Value == false)
-            {
-                DocumentStore.AsyncDatabaseCommands
-                    .GetStatisticsAsync()
-                    .ContinueOnSuccess(stats =>
-                    {
-                        IsConnected.Value = true;
-                        var url = UrlUtil.Url;
-                        SelectedDatabase.Value = new DatabaseModel(Constants.SystemDatabase, documentStore);
-                        Initialize();
-                        SetCurrentDatabase(new UrlParser(url));
-                    });
-            }
-
 			if (singleTenant)
 				return null;
 
@@ -200,7 +187,8 @@ namespace Raven.Studio.Models
 		{
 			var databaseName = urlParser.GetQueryParam("database");
 
-            if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
+            if (SelectedDatabase.Value != null 
+				&& (SelectedDatabase.Value.Name == databaseName || (SelectedDatabase.Value.Name == Constants.SystemDatabase && databaseName == null)))
                 return;
 
             singleTenant = urlParser.GetQueryParam("api-key") != null;
@@ -259,6 +247,6 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<LicensingStatus> License { get; private set; }
-        public Observable<bool> IsConnected { get; set; }
+		public Observable<bool> IsConnected { get; set; }
 	}
 }

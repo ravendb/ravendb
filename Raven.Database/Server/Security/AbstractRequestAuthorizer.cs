@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Security
 
 		public void Initialize(Func<DocumentDatabase> databaseGetter, Func<InMemoryRavenConfiguration> settingsGetter, Func<string> tenantIdGetter, HttpServer theServer)
 		{
-			this.server = theServer;
+			server = theServer;
 			this.database = databaseGetter;
 			this.settings = settingsGetter;
 			this.tenantId = tenantIdGetter;

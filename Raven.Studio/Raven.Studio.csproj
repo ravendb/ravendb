@@ -68,7 +68,7 @@
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=12.2.140.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Shared.Silverlight.dll</HintPath>
     </Reference>
@@ -182,6 +182,9 @@
     <Compile Include="..\Raven.Database\Bundles\Versioning\Data\VersioningConfiguration.cs">
       <Link>Features\Bundles\VersioningConfiguration.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Server\Security\Windows\WindowsAuthDocument.cs">
+      <Link>Features\Bundles\WindowsAuthDocument.cs</Link>
+    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
@@ -211,7 +214,7 @@
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
     <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
-    <Compile Include="Commands\SaveBundlesCommand.cs" />
+    <Compile Include="Commands\SaveSettingsCommand.cs" />
     <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
     <Compile Include="Commands\ItemSelectionCommand.cs" />
     <Compile Include="Commands\StopIndexingCommand.cs" />
@@ -220,6 +223,7 @@
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
+    <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BundlesSelect.xaml.cs">
       <DependentUpon>BundlesSelect.xaml</DependentUpon>
     </Compile>
@@ -274,6 +278,9 @@
     </Compile>
     <Compile Include="Features\Patch\PatchView.xaml.cs">
       <DependentUpon>PatchView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\ApiKeysSettingSectionView.xaml.cs">
+      <DependentUpon>ApiKeysSettingSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Settings\AuthorizationSettingSectionView.xaml.cs">
       <DependentUpon>AuthorizationSettingSectionView.xaml</DependentUpon>
@@ -364,6 +371,9 @@
     <Compile Include="Features\Settings\VersioningSettingsView.xaml.cs">
       <DependentUpon>VersioningSettingsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Settings\WindowsAuthSettingSectionView.xaml.cs">
+      <DependentUpon>WindowsAuthSettingSectionView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Stats\ReplicationStatisticsView.xaml.cs">
       <DependentUpon>ReplicationStatisticsView.xaml</DependentUpon>
     </Compile>
@@ -450,6 +460,7 @@
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\AlertsModel.cs" />
+    <Compile Include="Models\ApiKeysSectionModel.cs" />
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\AuthorizationSettingsSectionModel.cs" />
     <Compile Include="Models\DatabaseSettingsSectionViewModel.cs" />
@@ -838,6 +849,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Settings\ApiKeysSettingSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Settings\AuthorizationSettingSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -883,6 +898,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Settings\VersioningSettingsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\WindowsAuthSettingSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

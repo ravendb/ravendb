@@ -50,7 +50,7 @@
 						Margin="4,4,4,4"
 						VerticalAlignment="Center">
 
-                <Button Command="{Binding SaveBundles}"
+                <Button Command="{Binding SaveSettings}"
 						Style="{StaticResource Style_Button_MouseOverChrome}"
 						ToolTipService.ToolTip="Save Configuration Changes">
                     <Button.Content>
