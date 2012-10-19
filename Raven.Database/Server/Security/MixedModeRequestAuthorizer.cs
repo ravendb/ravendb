@@ -1,4 +1,5 @@
-﻿using Raven.Database.Server.Abstractions;
+﻿using System;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
 
@@ -29,6 +30,12 @@ namespace Raven.Database.Server.Security
 			}
 
 			return windowsRequestAuthorizer.Authorize(context);
+		}
+
+		public override void Dispose()
+		{
+			windowsRequestAuthorizer.Dispose();
+			oAuthRequestAuthorizer.Dispose();
 		}
 	}
 }

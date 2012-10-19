@@ -10,25 +10,46 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		private readonly List<string> requiredGroups = new List<string>();
-		private readonly List<string> requiredUsers = new List<string>();
-		private static WindowsRequestEvent windowsRequestEvent;
+		private List<string> requiredGroups = new List<string>();
+		private List<string> requiredUsers = new List<string>();
 
-		public static void UpdateSettingsEvent()
+		private static event Action WindowsSettingsChanged = delegate { };
+
+		public static void InvokeWindowsSettingsChanged()
 		{
-			windowsRequestEvent.UpdateSettings();
+			WindowsSettingsChanged();
 		}
 
 		protected override void Initialize()
 		{
-			windowsRequestEvent = new WindowsRequestEvent
-			{
-				RequiredUsers = requiredUsers,
-				RequiredGroups = requiredGroups,
-				Server = server
-			};
+			WindowsSettingsChanged += UpdateSettings;
+		}
 
-			windowsRequestEvent.UpdateSettings();
+		public void UpdateSettings()
+		{
+			var doc = server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
+
+			if (doc == null)
+			{
+				requiredGroups = new List<string>();
+				requiredUsers = new List<string>();
+				return;
+			}
+
+			var required = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
+			if (required == null)
+			{
+				requiredGroups = new List<string>();
+				requiredUsers = new List<string>();
+				return;
+			}
+
+			requiredGroups = required.RequiredGroups != null
+				                 ? required.RequiredGroups.Select(data => data.Name).ToList()
+				                 : new List<string>();
+			requiredUsers = required.RequiredUsers != null
+				                ? required.RequiredUsers.Select(data => data.Name).ToList()
+				                : new List<string>();
 		}
 
 		public override bool Authorize(IHttpContext ctx)
@@ -68,44 +89,24 @@ namespace Raven.Database.Server.Security.Windows
 				return true;
 			}
 
-
 			onRejectingRequest = ctx.SetStatusToUnauthorized;
 
 			if (requiredGroups.Count > 0 || requiredUsers.Count > 0)
 			{
-			
+
 				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup)) ||
 					requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser, StringComparison.InvariantCultureIgnoreCase)))
 					return false;
 
 				return true;
 			}
-			
+
 			return false;
 		}
 
-		public class WindowsRequestEvent : EventArgs
+		public override void Dispose()
 		{
-			public HttpServer Server { get; set; }
-			public List<string> RequiredGroups { get; set; }
-			public List<string> RequiredUsers { get; set; }
-
-			public void UpdateSettings()
-			{
-				var doc = Server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
-				RequiredGroups.Clear();
-				RequiredUsers.Clear();
-
-				if (doc == null)
-					return;
-
-				var required = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
-				if (required == null)
-					return;
-
-				RequiredGroups.AddRange(required.RequiredGroups.Select(data => data.Name));
-				RequiredUsers.AddRange(required.RequiredUsers.Select(data => data.Name));
-			}
+			WindowsSettingsChanged -= UpdateSettings;
 		}
 	}
 }

@@ -69,6 +69,11 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
+		public override void Dispose()
+		{
+			
+		}
+
 		static string GetToken(IHttpContext ctx)
 		{
 			const string bearerPrefix = "Bearer ";

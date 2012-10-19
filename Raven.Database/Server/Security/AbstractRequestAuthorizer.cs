@@ -4,7 +4,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Security
 {
-	public abstract class AbstractRequestAuthorizer
+	public abstract class AbstractRequestAuthorizer : IDisposable
 	{
 		[CLSCompliant(false)]
 		protected Func<InMemoryRavenConfiguration> settings;
@@ -40,5 +40,7 @@ namespace Raven.Database.Server.Security
 			return (httpMethod == "GET" || httpMethod == "HEAD") ||
 				   httpMethod == "POST" && (requestPath == "/multi_get/" || requestPath == "/multi_get");
 		}
+
+		public abstract void Dispose();
 	}
 }
