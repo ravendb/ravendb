@@ -26,17 +26,20 @@ namespace Raven.Database.Indexing
 			this.numberOfConsecutiveErrors = numberOfConsecutiveErrors;
 		}
 
-		public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func)
+		public IEnumerable<object> RobustEnumeration(IEnumerator<object> input, IndexingFunc func)
 		{
 			return RobustEnumeration(input, new[] { func, });
 		}
 
-		public IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs)
+		public IEnumerable<object> RobustEnumeration(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs)
 		{
-			List<object> onlyIterateOverEnumableOnce;
+			var onlyIterateOverEnumableOnce = new List<object>();
 			try
 			{
-				onlyIterateOverEnumableOnce = input.ToList();
+				while (input.MoveNext())
+				{
+					onlyIterateOverEnumableOnce.Add(input.Current);
+				}
 			}
 			catch (Exception e)
 			{

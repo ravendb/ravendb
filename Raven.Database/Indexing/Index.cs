@@ -103,6 +103,7 @@ namespace Raven.Database.Indexing
 				return lastQueryTime;
 			}
 		}
+		public DateTime LastIndexTime { get; set; }
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
@@ -289,6 +290,7 @@ namespace Raven.Database.Indexing
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
+			LastIndexTime = SystemTime.UtcNow;
 			lock (writeLock)
 			{
 				bool shouldRecreateSearcher;
@@ -345,6 +347,7 @@ namespace Raven.Database.Indexing
 						dispose();
 					}
 					waitReason = null;
+					LastIndexTime = SystemTime.UtcNow;
 				}
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
@@ -459,13 +462,13 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs,
-															IStorageActionsAccessor actions, WorkContext context, IndexingWorkStats stats)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs,
+															IStorageActionsAccessor actions, IndexingWorkStats stats)
 		{
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
-				BeforeMoveNext = () => stats.IndexingAttempts++,
-				CancelMoveNext = () => stats.IndexingAttempts--,
+				BeforeMoveNext = () => Interlocked.Increment(ref stats.IndexingAttempts),
+				CancelMoveNext = () => Interlocked.Decrement(ref stats.IndexingAttempts),
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
@@ -482,15 +485,15 @@ namespace Raven.Database.Indexing
 			}.RobustEnumeration(input, funcs);
 		}
 
-		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions, WorkContext context,
+		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func,
+															IStorageActionsAccessor actions,
 			IndexingWorkStats stats)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
-				BeforeMoveNext = () => stats.ReduceAttempts++,
-				CancelMoveNext = () => stats.ReduceAttempts--,
+				BeforeMoveNext = () => Interlocked.Increment(ref stats.ReduceAttempts),
+				CancelMoveNext = () => Interlocked.Decrement(ref stats.ReduceAttempts),
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
@@ -509,7 +512,7 @@ namespace Raven.Database.Indexing
 
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
-		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerable<object> input, IndexingFunc func,
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func,
 															IStorageActionsAccessor actions, WorkContext context)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.

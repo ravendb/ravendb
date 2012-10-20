@@ -15,18 +15,17 @@ namespace Raven.Database.Indexing
 	{
 		protected WorkContext context;
 		protected TaskScheduler scheduler;
-		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+		protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
 		protected int lastFlushedWorkCounter;
 		protected BaseBatchSizeAutoTuner autoTuner;
 
-		protected AbstractIndexingExecuter(
-			ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
+		protected AbstractIndexingExecuter(WorkContext context)
 		{
-			this.transactionalStorage = transactionalStorage;
+			this.transactionalStorage = context.TransactionaStorage;
 			this.context = context;
-			this.scheduler = scheduler;
+			this.scheduler = context.TaskScheduler;
 		}
 
 		public void Execute()
@@ -61,7 +60,7 @@ namespace Raven.Database.Indexing
 						var oome = ae.ExtractSingleInnerException() as OutOfMemoryException;
 						if (oome == null)
 						{
-							log.ErrorException("Failed to execute indexing", ae);
+							Log.ErrorException("Failed to execute indexing", ae);
 						}
 						else
 						{
@@ -70,13 +69,13 @@ namespace Raven.Database.Indexing
 					}
 					catch (OperationCanceledException)
 					{
-						log.Info("Got rude cancelation of indexing as a result of shutdown, aborting current indexing run");
+						Log.Info("Got rude cancelation of indexing as a result of shutdown, aborting current indexing run");
 						return;
 					}
 					catch (Exception e)
 					{
 						foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
-						log.ErrorException("Failed to execute indexing", e);
+						Log.ErrorException("Failed to execute indexing", e);
 					}
 					if (foundWork == false)
 					{
@@ -99,7 +98,7 @@ namespace Raven.Database.Indexing
 
 		private void HandleOutOfMemoryException(OutOfMemoryException oome)
 		{
-			log.WarnException(
+			Log.WarnException(
 				@"Failed to execute indexing because of an out of memory exception. Will force a full GC cycle and then become more conservative with regards to memory",
 				oome);
 
@@ -121,7 +120,7 @@ namespace Raven.Database.Indexing
 
 				context.UpdateFoundWork();
 
-				log.Debug("Executing {0}", task);
+				Log.Debug("Executing {0}", task);
 				foundWork = true;
 				
 				context.CancellationToken.ThrowIfCancellationRequested();
@@ -132,7 +131,7 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
-					log.WarnException(
+					Log.WarnException(
 						string.Format("Task {0} has failed and was deleted without completing any work", task),
 						e);
 				}
@@ -162,7 +161,7 @@ namespace Raven.Database.Indexing
 					var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
 					if (failureRate.IsInvalidIndex)
 					{
-						log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+						Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
 									   indexesStat.Name,
 									   failureRate.FailureRate);
 						continue;

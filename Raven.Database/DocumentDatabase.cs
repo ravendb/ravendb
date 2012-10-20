@@ -168,7 +168,8 @@ namespace Raven.Database
 				IndexUpdateTriggers = IndexUpdateTriggers,
 				ReadTriggers = ReadTriggers,
 				RaiseIndexChangeNotification = RaiseNotifications,
-				TaskScheduler = backgroundTaskScheduler
+				TaskScheduler = backgroundTaskScheduler,
+				Configuration = configuration
 			};
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
@@ -201,7 +202,7 @@ namespace Raven.Database
 					Extensions);
 				IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
 
-				CompleteWorkContextSetup(configuration);
+				CompleteWorkContextSetup();
 
 				InitializeTriggersExceptIndexCodecs();
 
@@ -214,9 +215,8 @@ namespace Raven.Database
 			}
 		}
 
-		private void CompleteWorkContextSetup(InMemoryRavenConfiguration configuration)
+		private void CompleteWorkContextSetup()
 		{
-			workContext.Configuration = configuration;
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionaStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
@@ -480,10 +480,10 @@ namespace Raven.Database
 
 			workContext.StartWork();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+				new IndexingExecuter(workContext).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+				new ReducingExecuter(workContext).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
@@ -1000,7 +1000,7 @@ namespace Raven.Database
 						};
 						results =
 							robustEnumerator.RobustEnumeration(
-								dynamicJsonObjects,
+								dynamicJsonObjects.Cast<object>().GetEnumerator(),
 								source => viewGenerator.TransformResultsDefinition(docRetriever, source))
 								.Select(JsonExtensions.ToJObject);
 					}
