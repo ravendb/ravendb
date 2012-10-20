@@ -60,10 +60,10 @@ namespace Raven.Tests.MailingList
 				Id = "contracts-1",
 				Cno = "ABC123",
 				ContractDetails = new List<ContractDetail>
-                                                 {
-                                                     new ContractDetail {DetailsId = 1, Grade = "Grade1"},
-                                                     new ContractDetail {DetailsId = 2, Grade = "Grade1"}
-                                                 }
+				{
+					new ContractDetail {DetailsId = 1, Grade = "Grade1"},
+					new ContractDetail {DetailsId = 2, Grade = "Grade1"}
+				}
 			};
 		}
 
