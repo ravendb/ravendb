@@ -29,7 +29,7 @@ properties {
 		}
 		
 	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", 
-					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???") |
+					"Raven.Abstractions.???", "Raven.Client.Lightweight.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -47,7 +47,7 @@ properties {
 			return "$build_dir\$_"
 		}
  
-	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
+	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "Jint.???","Antlr3.Runtime.???","ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 						"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",(Get-DependencyPackageFiles 'NLog.2'),
 						   "AsyncCtpLibrary.???") |
@@ -56,7 +56,7 @@ properties {
 			return "$build_dir\$_"
 		}
 	  
-		$test_prjs = @("Raven.Tests.dll","Raven.Tests.FSharp.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll" )
+		$test_prjs = @("Raven.Tests.dll","Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll" )
 }
 include .\psake_ext.ps1
 
@@ -423,17 +423,13 @@ task CreateNugetPackages -depends Compile {
 	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl40 }
 	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl50	}
 		
-	New-Item $nuget_dir\RavenDB.Client.FSharp\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Client.FSharp.nuspec $nuget_dir\RavenDB.Client.FSharp\RavenDB.Client.FSharp.nuspec
-	@("Raven.Client.Lightweight.FSharp.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.FSharp\lib\net40 }
-	
 	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
 	@("Raven.Client.MvcIntegration.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 }
 		
 	New-Item $nuget_dir\RavenDB.Database\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
-	@("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???", "IronJS.??", "FSharp.Core.???",
+	@("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 		 "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 		 "Jint.???","Antlr3.Runtime.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll") `
 		 |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40 }
