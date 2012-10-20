@@ -16,9 +16,14 @@ namespace Raven.Database.Indexing
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		public IList<TResult> Apply<T, TResult>(IEnumerable<T> source, Func<T, TResult> func)
+		public IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class
 		{
+			if(context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			{
+				return source.Select(func).ToList();
+			}
+
 			return source.AsParallel()
 				.Select(func)
 				.Where(x => x != null)

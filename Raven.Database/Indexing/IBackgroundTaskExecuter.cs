@@ -7,7 +7,7 @@ namespace Raven.Database.Indexing
 {
 	public interface IBackgroundTaskExecuter
 	{
-		IList<TResult> Apply<T, TResult>(IEnumerable<T> source, Func<T, TResult> func)
+		IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class;
 
 		void Repeat(IRepeatedAction action);
