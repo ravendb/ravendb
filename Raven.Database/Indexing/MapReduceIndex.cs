@@ -72,11 +72,11 @@ namespace Raven.Database.Indexing
 			foreach (
 				var mappedResultFromDocument in
 					GroupByDocumentId(context,
-									  RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context, stats)))
+									  RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats)))
 			{
 				foreach (
 					var doc in
-						RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
+						RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument.GetEnumerator(), viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
 
@@ -383,7 +383,7 @@ namespace Raven.Database.Indexing
 								sourceCount++;
 								return x;
 							});
-							foreach (var doc in parent.RobustEnumerationReduce(input, ViewGenerator.ReduceDefinition, Actions, Context, stats))
+							foreach (var doc in parent.RobustEnumerationReduce(input.GetEnumerator(), ViewGenerator.ReduceDefinition, Actions, stats))
 							{
 								count++;
 								string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
