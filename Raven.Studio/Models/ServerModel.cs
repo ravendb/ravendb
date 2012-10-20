@@ -22,7 +22,6 @@ namespace Raven.Studio.Models
 
 		private string buildNumber;
 		private bool singleTenant;
-		private bool isConnected;
 
 
 		public DocumentConvention Conventions

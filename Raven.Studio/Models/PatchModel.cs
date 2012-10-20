@@ -35,7 +35,6 @@ namespace Raven.Studio.Models
         private IEditorDocument originalDoc;
 		private IEditorDocument newDoc;
 
-	    private IEditorDocument queryDoc;
 	    private string selectedItem;
 
 	    private static JsonSyntaxLanguageExtended JsonLanguage;
@@ -193,7 +192,6 @@ namespace Raven.Studio.Models
 	                case PatchOnOptions.Collection:
 	                case PatchOnOptions.Index:
                         return "Select a document in the list above, then press Test to try out your patch script";
-	                    break;
 	                default:
 	                    throw new ArgumentOutOfRangeException();
 	            }
