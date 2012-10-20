@@ -13,8 +13,8 @@ namespace Raven.Database.Indexing
 {
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
-		public ReducingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
-			: base(transactionalStorage, context, scheduler)
+		public ReducingExecuter(WorkContext context)
+			: base(context)
 		{
 			autoTuner = new ReduceBatchSizeAutoTuner(context);
 		}
@@ -52,13 +52,13 @@ namespace Raven.Database.Indexing
 						totalCount += persistedResults.Count;
 						totalSize += persistedResults.Sum(x => x.Size);
 
-						if (log.IsDebugEnabled)
+						if (Log.IsDebugEnabled)
 						{
 							if (persistedResults.Count > 0)
-								log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
+								Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
 								persistedResults.Count, string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()), indexToWorkOn.IndexName, level, sp.Elapsed));
 							else
-								log.Debug("No reduce keys found for {0}", indexToWorkOn.IndexName);
+								Log.Debug("No reduce keys found for {0}", indexToWorkOn.IndexName);
 						}
 
 						context.CancellationToken.ThrowIfCancellationRequested();
@@ -88,7 +88,7 @@ namespace Raven.Database.Indexing
 						context.CancellationToken.ThrowIfCancellationRequested();
 						sp = Stopwatch.StartNew();
 						context.IndexStorage.Reduce(indexToWorkOn.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
-						log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4}", reduceKeys.Count, sp.Elapsed,
+						Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4}", reduceKeys.Count, sp.Elapsed,
 										results.Length, indexToWorkOn.IndexName, sp.Elapsed);
 					});
 				}

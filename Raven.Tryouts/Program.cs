@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Client.Document;
+using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -29,194 +30,32 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			using (var f = File.Create("Settings.dat"))
-			using (var aes = new AesManaged())
-			using (var writer1 = new BinaryWriter(f))
+			var documentDatabase = new DocumentDatabase(new RavenConfiguration
 			{
-				writer1.Write(aes.Key);
-				writer1.Write(aes.IV);
+				DataDirectory = @"C:\Work\ravendb-1.2\Raven.Server\bin\Debug\Data\Databases\Imdb",
+				MaxNumberOfParallelIndexTasks = 1
+			});
 
-				using (var cryptoStream = new CryptoStream(f, aes.CreateEncryptor(), CryptoStreamMode.Write))
-				using (var writer = new BinaryWriter(cryptoStream))
-				{
-					writer.Write("Hibernating Rhinos");
-					writer.Write("SIL122-36R2W-4WVJV-GP4VR-6CGG");
-					writer.Flush();
-				}
-			}
-		}
-
-		private static void MyTest()
-		{
-			var tx = new Raven.Storage.Managed.TransactionalStorage(new RavenConfiguration
+			Task.Factory.StartNew(() =>
 			{
-				RunInMemory = true
-			}, () => { });
-			tx.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
-
-			for (int xi = 0; xi < 5; xi++)
-			{
-				var wait = xi;
-				Task.Factory.StartNew(() =>
-				{
-					Thread.Sleep(15 * wait);
-					tx.Batch(accessor =>
-					{
-						var reduceKeysAndBuckets = new List<ReduceKeyAndBucket>();
-						for (int i = 0; i < 10; i++)
-						{
-							var docId = "users/" + i;
-							reduceKeysAndBuckets.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), "1"));
-							reduceKeysAndBuckets.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), "2"));
-							accessor.MapReduce.PutMappedResult("test", docId, "1", new RavenJObject());
-							accessor.MapReduce.PutMappedResult("test", docId, "2", new RavenJObject());
-						}
-						accessor.MapReduce.ScheduleReductions("test", 0, reduceKeysAndBuckets);
-					});
-				});
-
-				Task.Factory.StartNew(() =>
-				{
-					Thread.Sleep(15 * wait);
-					tx.Batch(accessor =>
-					{
-						var reduceKeysAndBuckets = new List<ReduceKeyAndBucket>();
-						for (int i = 0; i < 10; i++)
-						{
-							var docId = "users/" + i;
-							reduceKeysAndBuckets.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), "1"));
-							reduceKeysAndBuckets.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), "2"));
-							accessor.MapReduce.PutMappedResult("test3", docId, "1", new RavenJObject());
-							accessor.MapReduce.PutMappedResult("test3", docId, "2", new RavenJObject());
-						}
-						accessor.MapReduce.ScheduleReductions("test3", 0, reduceKeysAndBuckets);
-					});
-				});
-			}
-
-			var items = 0;
-			while (items != 100)
-			{
-				var itemsToDelete = new List<object>();
-				tx.Batch(accessor =>
-				{
-					var list = accessor.MapReduce.GetItemsToReduce(
-						index: "test",
-						level: 0,
-						take: 256,
-						itemsToDelete: itemsToDelete
-						).ToList();
-
-					items += list.Count;
-					Console.WriteLine(list.Count);
-				});
-				tx.Batch(accessor =>
-				{
-					accessor.MapReduce.DeleteScheduledReduction(itemsToDelete);
-				});
-				Thread.Sleep(10);
-			}
-		}
-
-		private static void UseMyData()
-		{
-			using (var d = new MyData(new MemoryPersistentSource()))
-			{
-				using (d.BeginTransaction())
-				{
-					d.Documents.Put(new RavenJObject
-						{
-							{"key", "items/1"},
-							{"id", "items/1"},
-							{"etag", Guid.NewGuid().ToByteArray()},
-						}, new byte[0]);
-					d.Commit();
-				}
-
-				using (d.BeginTransaction())
-				{
-					d.Documents.Put(new RavenJObject
-						{
-							{"key", "items/1"},
-							{"id", "items/1"},
-							{"etag", Guid.NewGuid().ToByteArray()},
-							{"txId", "1234"}
-						}, new byte[0]);
-					d.Transactions.Put(new RavenJObject
-						{
-							{"id", "1234"},
-						}, new byte[0]);
-
-					d.Commit();
-				}
-
-				ThreadPool.QueueUserWorkItem(state =>
-					{
-						d.BeginTransaction();
-						Table.ReadResult readResult = d.Documents.Read(new RavenJObject { { "key", "items/1" } });
-						var txId = readResult.Key.Value<string>("txId");
-
-						Table.ReadResult txResult = d.Transactions.Read(new RavenJObject { { "id", txId } });
-
-						if (txResult == null)
-						{
-							Environment.Exit(1);
-							return;
-						}
-
-						d.Transactions.Remove(txResult.Key);
-
-						var x = ((RavenJObject)readResult.Key.CloneToken());
-						x.Remove("txId");
-
-						d.Documents.UpdateKey(x);
-						d.CommitCurrentTransaction();
-					});
-
-
 				while (true)
 				{
-					using (d.BeginTransaction())
+					Thread.Sleep(1000);
+					var indexStats = documentDatabase.Statistics.Indexes.First(x => x.Name.StartsWith("Raven/") == false);
+					var indexingPerformanceStats = indexStats.Performance.LastOrDefault();
+					
+					Console.Clear();
+					Console.WriteLine("{0}: {1:#,#} - {2}", indexStats.Name, indexStats.IndexingAttempts, indexStats.LastIndexedEtag);
+					if(indexingPerformanceStats != null)
 					{
-						Table.ReadResult readResult = d.Documents.Read(new RavenJObject { { "key", "items/1" } });
-						var txId = readResult.Key.Value<string>("txId");
-
-						if (txId == null)
-						{
-							return;
-						}
-
-						Table.ReadResult txResult = d.Transactions.Read(new RavenJObject { { "id", txId } });
-						if (txResult == null)
-						{
-							Environment.Exit(1);
-							return;
-						}
-
-						d.Commit();
+						Console.WriteLine("{1:#,#} - {0}", indexingPerformanceStats.Duration, indexingPerformanceStats.InputCount);
 					}
 				}
-			}
+			});
+
+			var indexingExecuter = new IndexingExecuter(documentDatabase.WorkContext);
+
+			indexingExecuter.Execute();
 		}
-	}
-
-	public class MyData : Munin.Database
-	{
-		public MyData(IPersistentSource persistentSource)
-			: base(persistentSource)
-		{
-			Documents = Add(new Table(x => x.Value<string>("key"), "Documents")
-				{
-					{"ByKey", x => x.Value<string>("key")},
-					{"ById", x => x.Value<string>("id")},
-					{"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
-				});
-
-			Transactions = Add(new Table(x => x.Value<string>("txId"), "Transactions"));
-		}
-
-		public Table Transactions { get; set; }
-
-		public Table Documents { get; set; }
 	}
 }

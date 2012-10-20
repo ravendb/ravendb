@@ -146,8 +146,6 @@ namespace Raven.Tests.MailingList
 
 	public class CategoryReference : DenormalizedReference<Category>
 	{
-		public string Id { get; set; }
-		public string Name { get; set; }
 		public string Colour { get; set; }
 
 		public static implicit operator CategoryReference(Category doc)
