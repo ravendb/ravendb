@@ -26,7 +26,8 @@ namespace Raven.Database.Indexing
 
 		private static readonly Dictionary<string, Func<string, string[], Query>> queryMethods = new Dictionary<string, Func<string, string[], Query>>(StringComparer.InvariantCultureIgnoreCase)
 		{
-			{"in", (field, args) => new TermsMatchQuery(field, args)}
+			{"in", (field, args) => new TermsMatchQuery(field, args)},
+			{"emptyIn", (field, args) => new TermsMatchQuery(field, Enumerable.Empty<string>())}
 		};
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)

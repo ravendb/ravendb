@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,15 +29,19 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
+			using (var f = File.Create("Settings.dat"))
+			using (var aes = new AesManaged())
+			using (var writer1 = new BinaryWriter(f))
 			{
-				Console.Clear();
-				Console.WriteLine(i);
-				Console.WriteLine();
+				writer1.Write(aes.Key);
+				writer1.Write(aes.IV);
 
-				using(var x = new CompiledIndexesNhsevidence())
+				using (var cryptoStream = new CryptoStream(f, aes.CreateEncryptor(), CryptoStreamMode.Write))
+				using (var writer = new BinaryWriter(cryptoStream))
 				{
-					x.CanGetCorrectResults();
+					writer.Write("Hibernating Rhinos");
+					writer.Write("SIL122-36R2W-4WVJV-GP4VR-6CGG");
+					writer.Flush();
 				}
 			}
 		}
@@ -53,7 +59,7 @@ namespace Raven.Tryouts
 				var wait = xi;
 				Task.Factory.StartNew(() =>
 				{
-					Thread.Sleep(15*wait);
+					Thread.Sleep(15 * wait);
 					tx.Batch(accessor =>
 					{
 						var reduceKeysAndBuckets = new List<ReduceKeyAndBucket>();
@@ -147,10 +153,10 @@ namespace Raven.Tryouts
 				ThreadPool.QueueUserWorkItem(state =>
 					{
 						d.BeginTransaction();
-						Table.ReadResult readResult = d.Documents.Read(new RavenJObject {{"key", "items/1"}});
+						Table.ReadResult readResult = d.Documents.Read(new RavenJObject { { "key", "items/1" } });
 						var txId = readResult.Key.Value<string>("txId");
 
-						Table.ReadResult txResult = d.Transactions.Read(new RavenJObject {{"id", txId}});
+						Table.ReadResult txResult = d.Transactions.Read(new RavenJObject { { "id", txId } });
 
 						if (txResult == null)
 						{
@@ -160,7 +166,7 @@ namespace Raven.Tryouts
 
 						d.Transactions.Remove(txResult.Key);
 
-						var x = ((RavenJObject) readResult.Key.CloneToken());
+						var x = ((RavenJObject)readResult.Key.CloneToken());
 						x.Remove("txId");
 
 						d.Documents.UpdateKey(x);
@@ -172,7 +178,7 @@ namespace Raven.Tryouts
 				{
 					using (d.BeginTransaction())
 					{
-						Table.ReadResult readResult = d.Documents.Read(new RavenJObject {{"key", "items/1"}});
+						Table.ReadResult readResult = d.Documents.Read(new RavenJObject { { "key", "items/1" } });
 						var txId = readResult.Key.Value<string>("txId");
 
 						if (txId == null)
@@ -180,7 +186,7 @@ namespace Raven.Tryouts
 							return;
 						}
 
-						Table.ReadResult txResult = d.Transactions.Read(new RavenJObject {{"id", txId}});
+						Table.ReadResult txResult = d.Transactions.Read(new RavenJObject { { "id", txId } });
 						if (txResult == null)
 						{
 							Environment.Exit(1);

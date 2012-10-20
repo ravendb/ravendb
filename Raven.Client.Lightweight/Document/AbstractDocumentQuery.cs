@@ -941,12 +941,22 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
+			var list = values.ToList();
+
+			if(list.Count == 0)
+			{
+				theQueryText.Append("@emptyIn<")
+					.Append(fieldName)
+					.Append(">:(no-results)");
+				return;
+			}
+
 			theQueryText.Append("@in<")
 				.Append(fieldName)
 				.Append(">:(");
 
 			var first = true;
-			foreach (var value in values)
+			foreach (var value in list)
 			{
 				if(first == false)
 				{

@@ -459,6 +459,7 @@
     <Compile Include="MailingList\ChrisMarisic.cs" />
     <Compile Include="MailingList\DeanWard.cs" />
     <Compile Include="MailingList\Edin.cs" />
+    <Compile Include="MailingList\Failing_lucene_query_where_in_tests.cs" />
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />
     <Compile Include="MailingList\Georgiosd.cs" />
