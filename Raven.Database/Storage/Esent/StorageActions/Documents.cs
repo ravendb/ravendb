@@ -216,30 +216,38 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private JsonDocument ReadCurrentDocument()
 		{
-			var metadataSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
-			var docSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
+			return ReadCurrentDocument(true);
+		}
 
-			var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+		private JsonDocument ReadCurrentDocument(bool checkTransactionStatus )
+		{
+			int docSize;
+
+			var metadataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]);
+			var metadata = metadataBuffer.ToJObject();
 			var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
 
 			RavenJObject dataAsJson;
-			using (
-				Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
 				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				{
 					dataAsJson = aggregate.ToJObject();
+					docSize = (int)stream.Position;
+				}
 			}
 
+			bool isDocumentModifiedInsideTransaction = false;
+			if(checkTransactionStatus)
+				isDocumentModifiedInsideTransaction = IsDocumentModifiedInsideTransaction(key);
 			return new JsonDocument
 			{
-				SerializedSizeOnDisk = metadataSize + docSize,
+				SerializedSizeOnDisk = metadataBuffer.Length + docSize,
 				Key = key,
 				DataAsJson = dataAsJson,
-				NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
-				LastModified =
-					Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
-				Etag =
-					Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
+				NonAuthoritativeInformation = isDocumentModifiedInsideTransaction,
+				LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
+				Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
 				Metadata = metadata
 			};
 		}
@@ -255,7 +263,7 @@ namespace Raven.Storage.Esent.StorageActions
 			int count = 0;
 			do
 			{
-				var readCurrentDocument = ReadCurrentDocument();
+				var readCurrentDocument = ReadCurrentDocument(checkTransactionStatus: false);
 				totalSize += readCurrentDocument.SerializedSizeOnDisk;
 				if (maxSize != null && totalSize > maxSize.Value)
 				{
