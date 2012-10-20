@@ -86,8 +86,11 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
-			var doc = (RavenJObject)DataAsJson.CloneToken();
-			var metadata = (RavenJObject)Metadata.CloneToken();
+			DataAsJson.EnsureSnapshot();
+			Metadata.EnsureSnapshot();
+
+			var doc = (RavenJObject) DataAsJson.CreateSnapshot();
+			var metadata = (RavenJObject)Metadata.CreateSnapshot();
 
 			if (LastModified != null)
 				metadata[Constants.LastModified] = LastModified.Value;

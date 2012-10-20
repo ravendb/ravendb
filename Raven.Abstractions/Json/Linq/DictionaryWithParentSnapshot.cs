@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Linq;
 using System.Linq;
 
 namespace Raven.Json.Linq
@@ -15,18 +14,26 @@ namespace Raven.Json.Linq
 		private readonly DictionaryWithParentSnapshot parentSnapshot;
 		private bool isSnapshot;
 		private int count = -1;
+		private IDictionary<string, RavenJToken> localChanges;
 
-		protected IDictionary<string, RavenJToken> LocalChanges { get; private set; }
+		protected IDictionary<string, RavenJToken> LocalChanges
+		{
+			get
+			{
+				if(localChanges == null)
+					localChanges = new Dictionary<string, RavenJToken>(comparer);
+				return localChanges;
+			}
+		}
 
 		public DictionaryWithParentSnapshot(IEqualityComparer<string> comparer)
 		{
 			this.comparer = comparer;
-			LocalChanges = new Dictionary<string, RavenJToken>(comparer);
 		}
 
 		private DictionaryWithParentSnapshot(DictionaryWithParentSnapshot previous)
 		{
-			LocalChanges = new Dictionary<string, RavenJToken>(previous.comparer);
+			comparer = previous.comparer;
 			parentSnapshot = previous;
 		}
 
@@ -47,7 +54,7 @@ namespace Raven.Json.Linq
 		public bool ContainsKey(string key)
 		{
 			RavenJToken token;
-			if (LocalChanges != null && LocalChanges.TryGetValue(key, out token))
+			if (localChanges != null && localChanges.TryGetValue(key, out token))
 			{
 				if (token == DeletedMarker)
 					return false;
@@ -60,7 +67,7 @@ namespace Raven.Json.Linq
 		{
 			get
 			{
-				if (LocalChanges == null)
+				if (localChanges == null)
 				{
 					if (parentSnapshot != null)
 					{
@@ -123,7 +130,7 @@ namespace Raven.Json.Linq
 		{
 			value = null;
 			RavenJToken unsafeVal;
-			if (LocalChanges != null && LocalChanges.TryGetValue(key, out unsafeVal))
+			if (localChanges != null && localChanges.TryGetValue(key, out unsafeVal))
 			{
 				if (unsafeVal == DeletedMarker)
 					return false;
