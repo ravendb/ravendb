@@ -18,6 +18,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -549,6 +550,9 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values)
 			{
+				if ((SystemTime.UtcNow - value.LastIndexTime).TotalMinutes < 1)
+					continue;
+
 				value.Flush();
 				// We remove this call because it is very expensive one and the Lucene team recommend avoiding it.
 				//value.MergeSegments(); // noop if previously merged
