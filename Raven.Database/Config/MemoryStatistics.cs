@@ -72,7 +72,7 @@ namespace Raven.Database.Config
 				if (failedToGetAvailablePhysicalMemory)
 					return -1;
 
-				if (Type.GetType("Mono.Runtime") != null)
+				if (RunningOnMono)
 				{
 					// Try /proc/meminfo, which will work on Linux only!
 					if (File.Exists("/proc/meminfo"))
@@ -115,6 +115,13 @@ namespace Raven.Database.Config
 				}
 #endif
 			}
+		}
+
+		static readonly bool runningOnMono = Type.GetType("Mono.Runtime") != null;
+
+		private static bool RunningOnMono
+		{
+			get { return runningOnMono; }
 		}
 	}
 }
