@@ -16,7 +16,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
-using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -25,8 +24,8 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
-		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
-			: base(directory, name, indexDefinition, viewGenerator, configuration)
+		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
+			: base(directory, name, indexDefinition, viewGenerator, context)
 		{
 		}
 
@@ -78,6 +77,7 @@ namespace Raven.Database.Indexing
 					var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 					var luceneDoc = new Document();
 					var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+
 					foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context, stats))
 					{
 
@@ -117,7 +117,6 @@ namespace Raven.Database.Indexing
 				}
 				catch(Exception e)
 				{
-
 					batchers.ApplyAndIgnoreAllErrors(
 						ex =>
 						{

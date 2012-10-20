@@ -153,7 +153,7 @@ namespace Raven.Database.Indexing
 
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, context, indexesToWorkOn, (indexToWorkOn, l) => HandleReduceForIndex(indexToWorkOn));
+			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, l) => HandleReduceForIndex(indexToWorkOn));
 		}
 
 		protected override bool IsValidIndex(IndexStats indexesStat)

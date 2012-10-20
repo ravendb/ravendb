@@ -87,7 +87,7 @@ namespace Raven.Database.Indexing
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
 
-				BackgroundTaskExecuter.Instance.ExecuteAll(configuration, documentDatabase.BackgroundTaskScheduler, documentDatabase.WorkContext, 
+				BackgroundTaskExecuter.Instance.ExecuteAll(documentDatabase.WorkContext, 
 					indexDefinitionStorage.IndexNames, (indexName, _) => OpenIndexOnStartup(indexName));
 			}
 			catch
@@ -300,8 +300,8 @@ namespace Raven.Database.Indexing
 		{
 			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
 			var indexImplementation = indexDefinition.IsMapReduce
-										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, configuration)
-										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, configuration);
+										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext)
+										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext);
 
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 

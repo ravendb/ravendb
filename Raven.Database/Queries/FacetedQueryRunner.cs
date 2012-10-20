@@ -305,7 +305,7 @@ namespace Raven.Database.Queries
 				{
 					return NumericUtils.PrefixCodedToDouble(value);
 				}
-				catch (Exception e)
+				catch (Exception)
 				{
 
 				}
@@ -314,7 +314,7 @@ namespace Raven.Database.Queries
 				{
 					return NumericUtils.PrefixCodedToFloat(value);
 				}
-				catch (Exception e)
+				catch (Exception)
 				{
 
 				}
@@ -323,7 +323,7 @@ namespace Raven.Database.Queries
 				{
 					return NumericUtils.PrefixCodedToLong(value);
 				}
-				catch (Exception e)
+				catch (Exception)
 				{
 
 				}
@@ -332,7 +332,7 @@ namespace Raven.Database.Queries
 				{
 					return NumericUtils.PrefixCodedToInt(value);
 				}
-				catch (Exception e)
+				catch (Exception)
 				{
 
 				}

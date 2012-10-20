@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -48,6 +49,7 @@ namespace Raven.Database.Indexing
 		public InMemoryRavenConfiguration Configuration { get; set; }
 		public IndexStorage IndexStorage { get; set; }
 
+		public TaskScheduler TaskScheduler { get; set; }
 		public IndexDefinitionStorage IndexDefinitionStorage { get; set; }
 
 		public ITransactionalStorage TransactionaStorage { get; set; }

@@ -63,7 +63,7 @@ namespace Raven.Database.Indexing
 		internal readonly string name;
 
 		private readonly AbstractViewGenerator viewGenerator;
-		private readonly InMemoryRavenConfiguration configuration;
+		protected readonly WorkContext context;
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
@@ -71,7 +71,7 @@ namespace Raven.Database.Indexing
 
 		private ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 
-		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
+		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
 			if (directory == null) throw new ArgumentNullException("directory");
 			if (name == null) throw new ArgumentNullException("name");
@@ -81,7 +81,7 @@ namespace Raven.Database.Indexing
 			this.name = name;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
-			this.configuration = configuration;
+			this.context = context;
 			logIndexing.Debug("Creating index for {0}", name);
 			this.directory = directory;
 
@@ -333,8 +333,7 @@ namespace Raven.Database.Indexing
 
 					WriteTempIndexToDiskIfNeeded(context);
 
-					if (configuration.TransactionMode == TransactionMode.Safe)
-						Flush(); // just make sure changes are flushed to disk
+					Flush(); // just make sure changes are flushed to disk
 				}
 				finally
 				{
@@ -377,6 +376,12 @@ namespace Raven.Database.Indexing
 			var indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
 			using (indexWriter.MergeScheduler){}
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+
+			// RavenDB already manages the memory for those, no need for Lucene to do this as well
+
+			indexWriter.MergeFactor = 1024;
+			indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
+			indexWriter.SetRAMBufferSizeMB(1024);
 			return indexWriter;
 		}
 
