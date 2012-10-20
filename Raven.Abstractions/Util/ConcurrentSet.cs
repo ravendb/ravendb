@@ -64,5 +64,10 @@ namespace Raven.Database.Util
 				inner.TryRemove(item.Key, out value);
 			}
 		}
+
+		public void Clear()
+		{
+			inner.Clear();
+		}
 	}
 }

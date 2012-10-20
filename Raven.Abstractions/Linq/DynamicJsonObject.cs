@@ -142,14 +142,14 @@ namespace Raven.Abstractions.Linq
 			{
 				case JTokenType.Object:
 					var jObject = (RavenJObject)jToken;
-					var values = jObject.Value<RavenJArray>("$values");
-					if (values != null)
+					if(jObject.ContainsKey("$values"))
 					{
+						var values = jObject.Value<RavenJArray>("$values");
 						return new DynamicList(this, values.Select(TransformToValue).ToArray());
 					}
-					var refId = jObject.Value<string>("$ref");
-					if (refId != null)
+					if (jObject.ContainsKey("$ref"))
 					{
+						var refId = jObject.Value<string>("$ref");
 						var ravenJObject = FindReference(refId);
 						if (ravenJObject != null)
 							return new DynamicJsonObject(this, ravenJObject);
@@ -173,6 +173,15 @@ namespace Raven.Abstractions.Linq
 					var s = value as string;
 					if (s != null)
 					{
+						//optimizations, don't try to call TryParse if empty
+						if(s.Length == 0)
+							return s;
+
+						//optimizations, don't try to call TryParse if first char isn't a digit
+						if(char.IsDigit(s[0]) == false)
+							return s;
+
+
 						DateTime dateTime;
 						if (DateTime.TryParseExact(s, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
 						{
