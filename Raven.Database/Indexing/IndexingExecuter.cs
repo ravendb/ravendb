@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -22,8 +23,8 @@ namespace Raven.Database.Indexing
 {
 	public class IndexingExecuter : AbstractIndexingExecuter
 	{
-		public IndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
-			: base(transactionalStorage, context, scheduler)
+		public IndexingExecuter(WorkContext context)
+			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 		}
@@ -61,7 +62,7 @@ namespace Raven.Database.Indexing
 
 		private int currentIndexingAge;
 
-		private readonly List<FutureIndexBatch> futureIndexBatches = new List<FutureIndexBatch>();
+		private readonly ConcurrentSet<FutureIndexBatch> futureIndexBatches = new ConcurrentSet<FutureIndexBatch>();
 
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
@@ -78,46 +79,17 @@ namespace Raven.Database.Indexing
 			JsonDocument[] jsonDocs = null;
 			try
 			{
-				var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == lastIndexedGuidForAllIndexes);
-				if (nextBatch != null)
-				{
-					try
-					{
-						jsonDocs = nextBatch.Task.Result;
-					}
-					catch (Exception e)
-					{
-						log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
-					}
-					finally
-					{
-						futureIndexBatches.Remove(nextBatch);
-					}
-				}
-				if(jsonDocs == null)
-				{
-					jsonDocs = GetJsonDocs(lastIndexedGuidForAllIndexes);
-				}
+				jsonDocs = GetJsonDocuments(lastIndexedGuidForAllIndexes);
 
-				log.Debug("Found a total of {0} documents that requires indexing since etag: {1}",
+				Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}",
 										  jsonDocs.Length, lastIndexedGuidForAllIndexes);
 
 				context.CancellationToken.ThrowIfCancellationRequested();
 
+				MaybeAddFutureBatch(jsonDocs);
+
 				if (jsonDocs.Length > 0)
 				{
-					if(jsonDocs.Length == autoTuner.NumberOfItemsToIndexInSingleBatch)
-					{ // we loaded the maximum amount, there are probably more items to read now.
-						var lastByEtag = jsonDocs.OrderByDescending(x => new ComparableByteArray(x.Etag.Value.ToByteArray())).First();
-						var startingEtag = lastByEtag.Etag.Value;
-						futureIndexBatches.Add(new FutureIndexBatch
-						{
-							StartingEtag = startingEtag,
-							Age = currentIndexingAge,
-							Task = System.Threading.Tasks.Task.Factory.StartNew(() => GetJsonDocs(startingEtag))
-						});
-					}
-
 					context.IndexedPerSecIncreaseBy(jsonDocs.Length);
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
@@ -141,15 +113,15 @@ namespace Raven.Database.Indexing
 			{
 				if (operationCancelled == false && jsonDocs != null && jsonDocs.Length > 0)
 				{
-					var last = jsonDocs.OrderByDescending(x => new ComparableByteArray(x.Etag.Value.ToByteArray())).First();
-					
 
-					var lastEtag = last.Etag.Value;
-					var lastModified = last.LastModified.Value;
 
-					if(log.IsDebugEnabled)
+					var lastByEtag = GetHighestEtag(jsonDocs);
+					var lastModified = lastByEtag.LastModified.Value;
+					var lastEtag = lastByEtag.Etag.Value;
+
+					if(Log.IsDebugEnabled)
 					{
-						log.Debug("Aftering indexing {0} documents, the new last etag for is: {1} for {2}",
+						Log.Debug("Aftering indexing {0} documents, the new last etag for is: {1} for {2}",
 						          jsonDocs.Length,
 						          lastEtag,
 								  string.Join(", ", indexesToWorkOn.Select(x => x.IndexName))
@@ -169,12 +141,89 @@ namespace Raven.Database.Indexing
 					autoTuner.AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 				}
 
-				foreach (var source in futureIndexBatches.Where(x => x.Age + 8 < currentIndexingAge).ToList())
+				// make sure that we don't have too much "future cache" items
+				foreach (var source in futureIndexBatches.Where(x => x.Age + 16 < currentIndexingAge).ToList())
 				{
 					ObserveDiscardedTask(source);
-					futureIndexBatches.Remove(source);
+					futureIndexBatches.TryRemove(source);
 				}
 			}
+		}
+
+		private JsonDocument[] GetJsonDocuments(Guid lastIndexedGuidForAllIndexes)
+		{
+			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == lastIndexedGuidForAllIndexes);
+			if (nextBatch != null)
+			{
+				try
+				{
+					return nextBatch.Task.Result;
+				}
+				catch (Exception e)
+				{
+					Log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
+				}
+				finally
+				{
+					futureIndexBatches.TryRemove(nextBatch);
+				}
+			}
+			return GetJsonDocs(lastIndexedGuidForAllIndexes);
+		}
+
+		private void MaybeAddFutureBatch(JsonDocument[] past)
+		{
+			if(context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+				return;
+			if(past.Length == 0)
+				return;
+			if (past.Length < autoTuner.NumberOfItemsToIndexInSingleBatch)
+				return;
+			if(futureIndexBatches.Count > 5) // we limit the number of future calls we do
+				return;
+
+			// ensure we don't do TOO much future cachings
+			if( autoTuner.NumberOfItemsToIndexInSingleBatch > 1024 && 
+				MemoryStatistics.AvailableMemory < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+				return;
+
+			// we loaded the maximum amount, there are probably more items to read now.
+			var lastByEtag = GetHighestEtag(past);
+
+			var lastEtag = lastByEtag.Etag.Value;
+			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == lastEtag);
+
+			if(nextBatch != null)
+				return;
+
+			futureIndexBatches.Add(new FutureIndexBatch
+			{
+				StartingEtag = lastEtag,
+				Age = currentIndexingAge,
+				Task = System.Threading.Tasks.Task.Factory.StartNew(() =>
+				{
+					var jsonDocuments = GetJsonDocs(lastEtag);
+					MaybeAddFutureBatch(jsonDocuments);
+					return jsonDocuments;
+				})
+			});
+		}
+
+		private static JsonDocument GetHighestEtag(JsonDocument[] past)
+		{
+			var highest = new ComparableByteArray(Guid.Empty);
+			JsonDocument highestDoc = null;
+			for (int i = past.Length-1; i >= 0; i--)
+			{
+				var etag = past[i].Etag.Value;
+				if (highest.CompareTo(etag) > 0)
+				{
+					continue;
+				}
+				highest = new ComparableByteArray(etag);
+				highestDoc = past[i];
+			}
+			return highestDoc;
 		}
 
 		private static System.Threading.Tasks.Task ObserveDiscardedTask(FutureIndexBatch source)
@@ -183,11 +232,11 @@ namespace Raven.Database.Indexing
 			{
 				if (task.Exception != null)
 				{
-					log.WarnException("Error happened on discarded future work batch", task.Exception);
+					Log.WarnException("Error happened on discarded future work batch", task.Exception);
 				}
 				else
 				{
-					log.Warn("WASTE: Discarding future work item without using it, to reduce memory usage");
+					Log.Warn("WASTE: Discarding future work item without using it, to reduce memory usage");
 				}
 			});
 		}
@@ -234,7 +283,7 @@ namespace Raven.Database.Indexing
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 
 			var filteredDocs =
-				BackgroundTaskExecuter.Instance.Apply(jsonDocs, doc =>
+				BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>
 				{
 					var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
 					return filteredDoc == null ? new
@@ -248,7 +297,7 @@ namespace Raven.Database.Indexing
 					};
 				});
 
-			log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
+			Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
 			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
@@ -296,13 +345,13 @@ namespace Raven.Database.Indexing
 
 				if (batch.Docs.Count == 0)
 				{
-					log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
+					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
 						lastEtag, lastModified);
 					// we use it this way to batch all the updates together
 					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
 					return;
 				}
-				log.Debug("Going to index {0} documents in {1}", batch.Ids.Count, indexToWorkOn);
+				Log.Debug("Going to index {0} documents in {1}", batch.Ids.Count, indexToWorkOn);
 				results[i] = Tuple.Create(indexToWorkOn, batch);
 
 			});
@@ -350,7 +399,7 @@ namespace Raven.Database.Indexing
 				return; // index was deleted, probably
 			try
 			{
-				if(log.IsDebugEnabled)
+				if(Log.IsDebugEnabled)
 				{
 					string ids;
 					if (batch.Ids.Count < 256) 
@@ -359,7 +408,7 @@ namespace Raven.Database.Indexing
 					{
 						ids = string.Join(", ", batch.Ids.Take(128)) + " ... " + string.Join(", ", batch.Ids.Skip(batch.Ids.Count - 128));
 					}
-					log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
+					Log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
 				}
 				context.CancellationToken.ThrowIfCancellationRequested();
 
@@ -373,7 +422,7 @@ namespace Raven.Database.Indexing
 			{
 				if (actions.IsWriteConflict(e))
 					return;
-				log.WarnException(
+				Log.WarnException(
 					string.Format("Failed to index documents for index: {0}", index),
 					e);
 			}
