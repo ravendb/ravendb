@@ -88,7 +88,13 @@ namespace Raven.Database.Indexing
 						context.NotifyAboutWork();
 					}
 				}
+				Dispose();
 			}
+		}
+
+		protected virtual void Dispose()
+		{
+			
 		}
 
 		private void HandleOutOfMemoryException(OutOfMemoryException oome)

@@ -4,16 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Dynamic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
-using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -56,9 +52,21 @@ namespace Raven.Database.Indexing
 			};
 		}
 
+		private class FutureIndexBatch
+		{
+			public Guid StartingEtag;
+			public Task<JsonDocument[]> Task;
+			public int Age;
+		}
+
+		private int currentIndexingAge;
+
+		private readonly List<FutureIndexBatch> futureIndexBatches = new List<FutureIndexBatch>();
 
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
+			currentIndexingAge++;
+
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
@@ -70,21 +78,26 @@ namespace Raven.Database.Indexing
 			JsonDocument[] jsonDocs = null;
 			try
 			{
-				transactionalStorage.Batch(actions =>
+				var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == lastIndexedGuidForAllIndexes);
+				if (nextBatch != null)
 				{
-					jsonDocs = actions.Documents
-						.GetDocumentsAfter(
-							lastIndexedGuidForAllIndexes, 
-							autoTuner.NumberOfItemsToIndexInSingleBatch,
-							autoTuner.MaximumSizeAllowedToFetchFromStorage)
-						.Where(x => x != null)
-						.Select(doc =>
-						{
-							DocumentRetriever.EnsureIdInMetadata(doc);
-							return doc;
-						})
-						.ToArray();
-				});
+					try
+					{
+						jsonDocs = nextBatch.Task.Result;
+					}
+					catch (Exception e)
+					{
+						log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
+					}
+					finally
+					{
+						futureIndexBatches.Remove(nextBatch);
+					}
+				}
+				if(jsonDocs == null)
+				{
+					jsonDocs = GetJsonDocs(lastIndexedGuidForAllIndexes);
+				}
 
 				log.Debug("Found a total of {0} documents that requires indexing since etag: {1}",
 										  jsonDocs.Length, lastIndexedGuidForAllIndexes);
@@ -93,6 +106,18 @@ namespace Raven.Database.Indexing
 
 				if (jsonDocs.Length > 0)
 				{
+					if(jsonDocs.Length == autoTuner.NumberOfItemsToIndexInSingleBatch)
+					{ // we loaded the maximum amount, there are probably more items to read now.
+						var lastByEtag = jsonDocs.OrderByDescending(x => new ComparableByteArray(x.Etag.Value.ToByteArray())).First();
+						var startingEtag = lastByEtag.Etag.Value;
+						futureIndexBatches.Add(new FutureIndexBatch
+						{
+							StartingEtag = startingEtag,
+							Age = currentIndexingAge,
+							Task = System.Threading.Tasks.Task.Factory.StartNew(() => GetJsonDocs(startingEtag))
+						});
+					}
+
 					context.IndexedPerSecIncreaseBy(jsonDocs.Length);
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
@@ -143,7 +168,55 @@ namespace Raven.Database.Indexing
 
 					autoTuner.AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 				}
+
+				foreach (var source in futureIndexBatches.Where(x => x.Age + 8 < currentIndexingAge).ToList())
+				{
+					ObserveDiscardedTask(source);
+					futureIndexBatches.Remove(source);
+				}
 			}
+		}
+
+		private static System.Threading.Tasks.Task ObserveDiscardedTask(FutureIndexBatch source)
+		{
+			return source.Task.ContinueWith(task =>
+			{
+				if (task.Exception != null)
+				{
+					log.WarnException("Error happened on discarded future work batch", task.Exception);
+				}
+				else
+				{
+					log.Warn("WASTE: Discarding future work item without using it, to reduce memory usage");
+				}
+			});
+		}
+
+		protected override void Dispose()
+		{
+			System.Threading.Tasks.Task.WaitAll(futureIndexBatches.Select(ObserveDiscardedTask).ToArray());
+			futureIndexBatches.Clear();
+		}
+
+		private JsonDocument[] GetJsonDocs(Guid lastIndexed)
+		{
+			JsonDocument[] jsonDocs = null;
+			transactionalStorage.Batch(actions =>
+			{
+				jsonDocs = actions.Documents
+					.GetDocumentsAfter(
+						lastIndexed,
+						autoTuner.NumberOfItemsToIndexInSingleBatch,
+						autoTuner.MaximumSizeAllowedToFetchFromStorage)
+					.Where(x => x != null)
+					.Select(doc =>
+					{
+						DocumentRetriever.EnsureIdInMetadata(doc);
+						return doc;
+					})
+					.ToArray();
+			});
+			return jsonDocs;
 		}
 
 		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)

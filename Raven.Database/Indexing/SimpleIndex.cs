@@ -11,6 +11,7 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -39,6 +40,7 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			var sourceCount = 0;
 			var sw = Stopwatch.StartNew();
+			var start = SystemTime.UtcNow;
 			Write(context, (indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
@@ -142,7 +144,8 @@ namespace Raven.Database.Indexing
 				OutputCount = count,
 				InputCount = sourceCount,
 				Duration = sw.Elapsed,
-				Operation = "Index"
+				Operation = "Index",
+				Started = start
 			});
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}

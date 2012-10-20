@@ -58,6 +58,7 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			var sourceCount = 0;
 			var sw = Stopwatch.StartNew();
+			var start = SystemTime.UtcNow;
 			var changed = new HashSet<ReduceKeyAndBucket>();
 			var documentsWrapped = documents.Select(doc =>
 			{
@@ -105,7 +106,8 @@ namespace Raven.Database.Indexing
 				OutputCount = count,
 				InputCount = sourceCount,
 				Operation = "Map",
-				Duration = sw.Elapsed
+				Duration = sw.Elapsed,
+				Started = start
 			});
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
@@ -363,6 +365,7 @@ namespace Raven.Database.Indexing
 				var count = 0;
 				var sourceCount = 0;
 				var sw = Stopwatch.StartNew();
+				var start = SystemTime.UtcNow;
 				
 				parent.Write(Context, (indexWriter, analyzer, stats) =>
 				{
@@ -435,7 +438,8 @@ namespace Raven.Database.Indexing
 					OutputCount = count,
 					InputCount = sourceCount,
 					Duration = sw.Elapsed,
-					Operation = "Reduce Level " + Level
+					Operation = "Reduce Level " + Level,
+					Started = start
 				});
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", ReduceKeys)));
 			}
