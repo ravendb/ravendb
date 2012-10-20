@@ -19,12 +19,14 @@ namespace Raven.Tests.Bugs.Queries
 					{
 						s.Store(new
 						{
+							Id = "item-"+i,
 							Tags = new[]
-						                    	{
-													
-						                    		new {Id = i%2, Id3 = i%3},
-													new {Id = i%2 +1, Id3 = i%3 +2}
-						                    	}});
+							{
+
+								new {Id = i%2, Id3 = i%3},
+								new {Id = i%2 + 1, Id3 = i%3 + 2}
+							}
+						});
 					}
 					s.SaveChanges();
 				}
@@ -34,6 +36,7 @@ namespace Raven.Tests.Bugs.Queries
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.WaitForNonStaleResults()
 						.SelectFields<RavenJObject>("Tags,Id", "Tags,Id3")
+						.OrderBy("Id")
 						.ToArray();
 
 					Assert.Equal(3, objects.Length);
@@ -42,7 +45,7 @@ namespace Raven.Tests.Bugs.Queries
 					               	{
 					               		"\"Tags\":[{\"Id\":0,\"Id3\":0},{\"Id\":1,\"Id3\":2}]",
 					               		"\"Tags\":[{\"Id\":1,\"Id3\":1},{\"Id\":2,\"Id3\":3}]",
-					               		"\"Tags\":[{\"Id\":0,\"Id3\":2},{\"Id\":1,\"Id3\":4}]"
+					               		"\"Tags\":[{\"Id\":0,\"Id3\":2},{\"Id\":1,\"Id3\":4}]",
 					               	};
 
 					for (int i = 0; i < 3; i++)

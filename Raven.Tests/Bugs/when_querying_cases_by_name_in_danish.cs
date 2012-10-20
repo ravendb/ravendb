@@ -43,10 +43,11 @@ namespace Raven.Tests.Bugs
 				var cases = session.Query<Case>()
 					.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromMinutes(5)))
 					.Where(x => x.Name.StartsWith("da"))
+					.OrderBy(x => x.Name)
 					.ToList();
 
 				Assert.Equal(4, cases.Count);
-				Assert.Equal(new[] { "dacb", "daab", "dacb", "dada" }, cases.Select(x => x.Name).ToArray());
+				Assert.Equal(new[] { "daab", "dacb", "dacb", "dada" }, cases.Select(x => x.Name).ToArray());
 			}
 		}
 
@@ -72,10 +73,12 @@ namespace Raven.Tests.Bugs
 			{
 				var cases = session.Query<Case>()
 					.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
-					.Where(x => x.Name.StartsWith("aa")).ToList();
+					.Where(x => x.Name.StartsWith("aa"))
+					.OrderBy(x=>x.Name)
+					.ToList();
 
 				Assert.Equal(3, cases.Count);
-				Assert.Equal(new[] { "aacb", "aaac", "aaaa" }, cases.Select(x => x.Name).ToArray());
+				Assert.Equal(new[] { "aaaa", "aaac",  "aacb"}, cases.Select(x => x.Name).ToArray());
 			}
 		}
 
@@ -86,10 +89,12 @@ namespace Raven.Tests.Bugs
 			{
 				var cases = session.Query<Case>()
 					.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
-					.Where(x => x.Name.StartsWith("bc")).ToList();
+					.Where(x => x.Name.StartsWith("bc"))
+					.OrderBy(x=>x.Name)
+					.ToList();
 
 				Assert.Equal(2, cases.Count);
-				Assert.Equal(new[] { "bcda", "bcbb" }, cases.Select(x => x.Name).ToArray());
+				Assert.Equal(new[] { "bcbb", "bcda" }, cases.Select(x => x.Name).ToArray());
 			}
 		}
 
@@ -104,6 +109,6 @@ namespace Raven.Tests.Bugs
 			public string Name { get; set; }
 
 		}
-		
+
 	}
 }

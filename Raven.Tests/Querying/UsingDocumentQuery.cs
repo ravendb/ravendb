@@ -81,7 +81,7 @@ namespace Raven.Tests.Querying
 			var array = new string[0];
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null))
 				.WhereIn("Name", array);
-			Assert.Equal("@in<Name>:()", q.ToString());
+			Assert.Equal("@emptyIn<Name>:(no-results)", q.ToString());
 		}
 
 		[Fact]
