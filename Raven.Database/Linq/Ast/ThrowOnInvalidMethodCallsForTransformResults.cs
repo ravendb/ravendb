@@ -4,16 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.Visitors;
+using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
-	public class ThrowOnInvalidMethodCallsForTransformResults : AbstractAstVisitor
+	public class ThrowOnInvalidMethodCallsForTransformResults : DepthFirstAstVisitor<object,object>
 	{
 		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)
 		{
-			var expression = invocationExpression.TargetObject as IdentifierExpression;
+			var expression = invocationExpression.Target as IdentifierExpression;
 			if(expression == null)
 				return base.VisitInvocationExpression(invocationExpression, data);
 

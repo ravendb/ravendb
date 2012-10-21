@@ -1,9 +1,9 @@
-using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.Visitors;
+
+using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
-	public class TransformNullCoalasingOperatorTransformer : AbstractAstTransformer
+	public class TransformNullCoalasingOperatorTransformer : DepthFirstAstVisitor<object,object>
 	{
 		/// <summary>
 		/// We have to replace code such as:
@@ -14,15 +14,15 @@ namespace Raven.Database.Linq.Ast
 		/// </summary>
 		public override object VisitBinaryOperatorExpression(BinaryOperatorExpression binaryOperatorExpression, object data)
 		{
-			if(binaryOperatorExpression.Op==BinaryOperatorType.NullCoalescing)
+			if(binaryOperatorExpression.Operator==BinaryOperatorType.NullCoalescing)
 			{
 				var node = new ConditionalExpression(
-					new BinaryOperatorExpression(binaryOperatorExpression.Left, BinaryOperatorType.ReferenceInequality,
+					new BinaryOperatorExpression(binaryOperatorExpression.Left, BinaryOperatorType.InEquality,
 					                             new PrimitiveExpression(null, null)),
 					binaryOperatorExpression.Left,
 					binaryOperatorExpression.Right
 					);
-				ReplaceCurrentNode(node);
+				binaryOperatorExpression.ReplaceWith(node);
 				return null;
 			}
 

@@ -1,18 +1,16 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Security;
-using System.Threading;
-using System.Threading.Tasks;
-using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.Visitors;
-using System.Linq;
+using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
-	public class ThrowOnInvalidMethodCalls : AbstractAstVisitor
+	public class ThrowOnInvalidMethodCalls : DepthFirstAstVisitor<object,object>
 	{
-		public class ForbiddenMethod
+		public override object VisitQueryFromClause(QueryFromClause queryFromClause, object data)
+		{
+			throw new NotSupportedException();
+		}
+
+		/*public class ForbiddenMethod
 		{
 			public string[] TypeAliases;
 			public string[] Names;
@@ -102,6 +100,6 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 				return GetTarget(mre) + "." + mre.MemberName;
 
 			return null;
-		}
+		}*/
 	}
 }

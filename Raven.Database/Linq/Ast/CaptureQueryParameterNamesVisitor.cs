@@ -1,12 +1,11 @@
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.Visitors;
+using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
-	public class CaptureQueryParameterNamesVisitor : AbstractAstVisitor
+	public class CaptureQueryParameterNamesVisitor : DepthFirstAstVisitor<object, object>
 	{
 		private readonly HashSet<string> queryParameters = new HashSet<string>();
 
@@ -16,10 +15,20 @@ namespace Raven.Database.Linq.Ast
 		{
 			get { return queryParameters; }
 		}
-
-		public override object VisitQueryExpressionFromClause(QueryExpressionFromClause queryExpressionFromClause, object data)
+		
+		public override object VisitQueryFromClause(QueryFromClause queryFromClause, object data)
 		{
-			var memberReferenceExpression = queryExpressionFromClause.InExpression as MemberReferenceExpression;
+			throw new NotSupportedException();
+		}
+	}
+
+/*
+	public class CaptureQueryParameterNamesVisitor : DepthFirstAstVisitor<object, object>
+	{
+		
+		public override object VisitQueryFromClause(QueryFromClause queryFromClause, object data)
+		{
+			var memberReferenceExpression = queryFromClause.InExpression as MemberReferenceExpression;
 			if (memberReferenceExpression != null)
 			{
 				var identifierExpression = memberReferenceExpression.TargetObject as IdentifierExpression;
@@ -33,8 +42,7 @@ namespace Raven.Database.Linq.Ast
 			return base.VisitQueryExpressionFromClause(queryExpressionFromClause, data);
 		}
 
-		public override object VisitQueryExpressionSelectClause(QueryExpressionSelectClause queryExpressionSelectClause,
-															   object data)
+		public override object VisitQuerySelectClause(QuerySelectClause querySelectClause, object data)
 		{
 			ProcessQuery(queryExpressionSelectClause.Projection);
 			return base.VisitQueryExpressionSelectClause(queryExpressionSelectClause, data);
@@ -104,4 +112,5 @@ namespace Raven.Database.Linq.Ast
 			return sb.ToString();
 		}
 	}
+ */
 }

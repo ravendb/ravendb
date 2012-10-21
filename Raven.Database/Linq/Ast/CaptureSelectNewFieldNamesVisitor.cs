@@ -3,16 +3,30 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.Visitors;
+using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
-	public class CaptureSelectNewFieldNamesVisitor : AbstractAstVisitor
+	public class CaptureSelectNewFieldNamesVisitor : DepthFirstAstVisitor<object,object>
 	{
 		public HashSet<string> FieldNames = new HashSet<string>();
+		private bool queryProcessed;
+
+		public override object VisitQueryFromClause(QueryFromClause queryFromClause, object data)
+		{
+			throw new NotSupportedException();
+		}
+
+
+		public void Clear()
+		{
+			queryProcessed = false;
+			FieldNames.Clear();
+		}
+
+	/*
 
 		public override object VisitQueryExpressionSelectClause(QueryExpressionSelectClause queryExpressionSelectClause,
 																object data)
@@ -53,7 +67,6 @@ namespace Raven.Database.Linq.Ast
 			return base.VisitInvocationExpression(invocationExpression, data);
 		}
 
-		private bool queryProcessed;
 
 		private void ProcessQuery(Expression queryExpressionSelectClause)
 		{
@@ -90,10 +103,6 @@ namespace Raven.Database.Linq.Ast
 			}
 		}
 
-		public void Clear()
-		{
-			queryProcessed = false;
-			FieldNames.Clear();
-		}
+		*/
 	}
 }

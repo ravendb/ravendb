@@ -8,7 +8,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using ICSharpCode.NRefactory.Ast;
+using ICSharpCode.NRefactory;
+using ICSharpCode.NRefactory.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
@@ -97,20 +98,23 @@ namespace Raven.Database.Linq
 		{
 			
 			CSharpSafeName = "Index_"+ Regex.Replace(Name, @"[^\w\d]", "_");
-			var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
+			var type = new TypeDeclaration
 			{
+				Modifiers = Modifiers.Public,
 				BaseTypes =
 					{
-						new TypeReference("AbstractViewGenerator")
+						AstType.Create(typeof(AbstractViewGenerator))
 					},
 				Name = CSharpSafeName,
-				Type = ClassType.Class
+				ClassType = ClassType.Class
 			};
 
-			var ctor = new ConstructorDeclaration(CSharpSafeName,
-			                                      Modifiers.Public,
-			                                      new List<ParameterDeclarationExpression>(), null);
-			type.Children.Add(ctor);
+			var ctor = new ConstructorDeclaration
+			{
+				Name = CSharpSafeName,
+				Modifiers = Modifiers.Public,
+			};
+			type.AddChild(ctor, AstNode.Roles.Root);
 			ctor.Body = new BlockStatement();
 		
 			// this.ViewText = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185"; // Will be replaced later
@@ -118,7 +122,7 @@ namespace Raven.Database.Linq
 			                   	new AssignmentExpression(
 			                   		new MemberReferenceExpression(new ThisReferenceExpression(), "ViewText"),
 			                   		AssignmentOperatorType.Assign,
-			                   		new PrimitiveExpression(mapReduceTextToken, mapReduceTextToken))));
+			                   		new PrimitiveExpression(mapReduceTextToken, mapReduceTextToken))), AstNode.Roles.EmbeddedStatement);
 
 			foreach (var map in indexDefinition.Maps)
 			{
@@ -157,7 +161,7 @@ namespace Raven.Database.Linq
 		{
 			string entityName;
 
-			VariableDeclaration mapDefinition = map.Trim().StartsWith("from") ? 
+			VariableInitializer mapDefinition = map.Trim().StartsWith("from") ? 
 				TransformMapDefinitionFromLinqQuerySyntax(map, out entityName) : 
 				TransformMapDefinitionFromLinqMethodSyntax(map, out entityName);
 
@@ -169,20 +173,24 @@ namespace Raven.Database.Linq
 				                   		new MemberReferenceExpression(
 				                   			new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityNames"), "Add"),
 				                   		new List<Expression> {new PrimitiveExpression(entityName, entityName)})
-				                   	));
+				                   	),AstNode.Roles.EmbeddedStatement);
 			}
 			// this.AddMapDefinition(from doc in docs ...);
 			ctor.Body.AddChild(new ExpressionStatement(
-			                   	new InvocationExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "AddMapDefinition"),
-			                   	                         new List<Expression>{new LambdaExpression
-			                   	                         {
-			                   	                         	Parameters =
-			                   	                         		{
-			                   	                         			new ParameterDeclarationExpression(null, "docs")
-			                   	                         		},
-			                   	                         	ExpressionBody = mapDefinition.Initializer
-			                   	                         }}
-			                   		)));
+				                   new InvocationExpression(
+					                   new MemberReferenceExpression(new ThisReferenceExpression(), "AddMapDefinition"),
+					                   new List<Expression>
+					                   {
+						                   new LambdaExpression
+						                   {
+							                   Parameters =
+							                   {
+								                   new ParameterDeclaration(null, "docs")
+							                   },
+							                   Body = mapDefinition.Initializer
+						                   }
+					                   }
+					                   )), AstNode.Roles.EmbeddedStatement);
 
 
 			if(firstMap)
@@ -221,7 +229,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			if (string.IsNullOrEmpty(indexDefinition.TransformResults)) 
 				return;
 
-			VariableDeclaration translatorDeclaration;
+			VariableInitializer translatorDeclaration;
 				
 			if (indexDefinition.TransformResults.Trim().StartsWith("from"))
 			{
@@ -244,46 +252,48 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			                   		{
 			                   			Parameters =
 			                   				{
-			                   					new ParameterDeclarationExpression(null, "Database"),
-			                   					new ParameterDeclarationExpression(null, "results")
+			                   					new ParameterDeclaration(null, "Database"),
+			                   					new ParameterDeclaration(null, "results")
 			                   				},
-			                   			ExpressionBody = translatorDeclaration.Initializer
-			                   		})));
+			                   			Body = translatorDeclaration.Initializer
+			                   		})),AstNode.Roles.EmbeddedStatement);
 		}
 
 		private void HandleReduceDefintion(ConstructorDeclaration ctor)
 		{
 			if (!indexDefinition.IsMapReduce) 
 				return;
-			VariableDeclaration reduceDefiniton;
-			Expression groupBySource;
+			VariableInitializer reduceDefiniton;
+			AstNode groupBySource;
 			string groupByParamter;
 			if (indexDefinition.Reduce.Trim().StartsWith("from"))
 			{
 				reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
-				var sourceSelect = (QueryExpression)((QueryExpression)reduceDefiniton.Initializer).FromClause.InExpression;
-				groupBySource = ((QueryExpressionGroupClause)sourceSelect.SelectOrGroupClause).GroupBy;
-				groupByParamter = sourceSelect.FromClause.Identifier;
+				var queryExpression = ((QueryExpression) reduceDefiniton.Initializer);
+				var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().First();
+				var queryGroupClause = queryExpression.Clauses.OfType<QueryGroupClause>().First();
+				groupBySource = queryGroupClause.Key;
+				groupByParamter = queryContinuationClause.Identifier;
 			}
 			else
 			{
 				reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
 				var invocation = ((InvocationExpression) reduceDefiniton.Initializer);
-				var target = (MemberReferenceExpression) invocation.TargetObject;
+				var target = (MemberReferenceExpression) invocation.Target;
 				while(target.MemberName!="GroupBy")
 				{
-					invocation = (InvocationExpression) target.TargetObject;
-					target = (MemberReferenceExpression)invocation.TargetObject;
+					invocation = (InvocationExpression)target.Target;
+					target = (MemberReferenceExpression)invocation.Target;
 				}
 				var lambdaExpression = GetLambdaExpression(invocation);
-				groupByParamter = lambdaExpression.Parameters[0].ParameterName;
-				groupBySource = lambdaExpression.ExpressionBody;
+				groupByParamter = lambdaExpression.Parameters.First().Name;
+				groupBySource = lambdaExpression.Body;
 			}
 
 			var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
 			captureSelectNewFieldNamesVisitor.Clear();// reduce override the map fields
 			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
-			reduceDefiniton.Initializer.AcceptChildren(captureQueryParameterNamesVisitorForReduce, null);
+			reduceDefiniton.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForReduce, null);
 			reduceDefiniton.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(), null);
 
 			ValidateMapReduceFields(mapFields);
@@ -298,10 +308,10 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			                   		{
 			                   			Parameters =
 			                   				{
-			                   					new ParameterDeclarationExpression(null, "results")
+			                   					new ParameterDeclaration(null, "results")
 			                   				},
-			                   			ExpressionBody = reduceDefiniton.Initializer
-			                   		})));
+			                   			Body = reduceDefiniton.Initializer
+			                   		})),AstNode.Roles.EmbeddedStatement);
 				
 			ctor.Body.AddChild(new ExpressionStatement(
 			                   	new AssignmentExpression(
@@ -312,15 +322,15 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			                   		{
 			                   			Parameters =
 			                   				{
-			                   					new ParameterDeclarationExpression(null, groupByParamter)
+			                   					new ParameterDeclaration(null, groupByParamter)
 			                   				},
-			                   			ExpressionBody = groupBySource
-			                   		})));
+			                   			Body = groupBySource
+			                   		})), AstNode.Roles.EmbeddedStatement);
 		}
 
 		private static LambdaExpression GetLambdaExpression(InvocationExpression invocation)
 		{
-			var expression = invocation.Arguments[0];
+			var expression = invocation.Arguments.First();
 			var castExpression = expression as CastExpression;
 			if(castExpression != null)
 			{
@@ -373,14 +383,14 @@ Reduce only fields: {2}
 								),
 							new List<Expression> { new PrimitiveExpression(fieldName, fieldName) }
 							)
-						)
-					);
+						),
+						AstNode.Roles.EmbeddedStatement);
 			}
 		}
 
 		public bool RequiresSelectNewAnonymousType { get; set; }
 
-		private VariableDeclaration TransformMapDefinitionFromLinqMethodSyntax(string query, out string entityName)
+		private VariableInitializer TransformMapDefinitionFromLinqMethodSyntax(string query, out string entityName)
 		{
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(query, RequiresSelectNewAnonymousType);
 			AddEntityNameFilteringIfNeeded(variableDeclaration, out entityName);
@@ -389,7 +399,7 @@ Reduce only fields: {2}
 			return variableDeclaration;
 		}
 
-		public class AddDocumentIdToLambdas : ICSharpCode.NRefactory.Visitors.AbstractAstTransformer
+		public class AddDocumentIdToLambdas : DepthFirstAstVisitor<object, object>
 		{
 			public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
 			{
@@ -400,49 +410,44 @@ Reduce only fields: {2}
 
 			private bool AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
 			{
-				var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(lambdaExpression.ExpressionBody) as ObjectCreateExpression;
+				var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(lambdaExpression.Body) as AnonymousTypeCreateExpression;
 
-				if (objectCreateExpression == null || objectCreateExpression.IsAnonymousType == false)
+				if (objectCreateExpression == null)
 					return false;
 
-				var objectInitializer = objectCreateExpression.ObjectInitializer;
+				var initializers = objectCreateExpression.Initializers;
 
-				var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
+				var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters.First().Name);
 
-				if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
+				if (initializers.OfType<NamedArgumentExpression>().Any(x => x.Identifier == Constants.DocumentIdFieldName))
 					return false;
 
 
-				objectCreateExpression.ObjectInitializer = new CollectionInitializerExpression(objectInitializer.CreateExpressions.ToList())
+				objectCreateExpression.Initializers.AddRange(initializers);
+				objectCreateExpression.Initializers.Add(new NamedArgumentExpression
 				{
-					CreateExpressions =
-						{
-							new NamedArgumentExpression
-							{
-								Name = Constants.DocumentIdFieldName,
-								Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
-							}
-						}
-				};
+					Identifier= Constants.DocumentIdFieldName,
+					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
+				});
 
 				return true;
 			}
 
 		}
 
-		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration, out string entityName)
+		private void AddEntityNameFilteringIfNeeded(VariableInitializer variableDeclaration, out string entityName)
 		{
 			entityName = null;
 			var invocationExpression = ((InvocationExpression)variableDeclaration.Initializer);
-			var targetExpression = ((MemberReferenceExpression)invocationExpression.TargetObject);
-			while (targetExpression.TargetObject is InvocationExpression)
+			var targetExpression = ((MemberReferenceExpression)invocationExpression.Target);
+			while (targetExpression.Target is InvocationExpression)
 			{
-				invocationExpression = (InvocationExpression) targetExpression.TargetObject;
-				targetExpression = (MemberReferenceExpression)invocationExpression.TargetObject;
+				invocationExpression = (InvocationExpression) targetExpression.Target;
+				targetExpression = (MemberReferenceExpression)invocationExpression.Target;
 			}
-			if (targetExpression.TargetObject is MemberReferenceExpression) // collection
+			if (targetExpression.Target is MemberReferenceExpression) // collection
 			{
-				var mre = (MemberReferenceExpression)targetExpression.TargetObject;
+				var mre = (MemberReferenceExpression)targetExpression.Target;
 				entityName = mre.MemberName;
 				//doc["@metadata"]["Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
@@ -453,81 +458,82 @@ Reduce only fields: {2}
 				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
 				var binaryOperatorExpression =
 					new InvocationExpression(
-						new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference("string", true)), "Equals"),
+						new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType("string")), "Equals"),
 						new List<Expression>
 						{
 							metadata,
 							new PrimitiveExpression(mre.MemberName, mre.MemberName),
-							new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference(typeof(StringComparison).FullName)),"InvariantCultureIgnoreCase")
+							new MemberReferenceExpression(new TypeReferenceExpression(AstType.Create(typeof(StringComparison))),"InvariantCultureIgnoreCase")
 						});
-				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.TargetObject, "Where"),
+				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.Target, "Where"),
 				                                           new List<Expression>
 				                                           {
 				                                           	new LambdaExpression
 				                                           	{
 				                                           		Parameters =
 				                                           			{
-				                                           				new ParameterDeclarationExpression(null, "__document")
+				                                           				new ParameterDeclaration(null, "__document")
 				                                           			},
-				                                           		ExpressionBody = binaryOperatorExpression
+				                                           		Body = binaryOperatorExpression
 				                                           	}
 				                                           });
 
-				invocationExpression.TargetObject = new MemberReferenceExpression(whereMethod, targetExpression.MemberName);
+				invocationExpression.Target = new MemberReferenceExpression(whereMethod, targetExpression.MemberName);
 
 			}
 		}
 
 
-		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax(string query, out string entityName)
+		private VariableInitializer TransformMapDefinitionFromLinqQuerySyntax(string query, out string entityName)
 		{
 			entityName = null;
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(query, RequiresSelectNewAnonymousType);
 			var queryExpression = ((QueryExpression) variableDeclaration.Initializer);
-			var expression = queryExpression.FromClause.InExpression;
+			var fromClause = queryExpression.Clauses.OfType<QueryFromClause>().First();
+			var expression = fromClause.Expression;
 			if(expression is MemberReferenceExpression) // collection
 			{
 				var mre = (MemberReferenceExpression)expression;
 				entityName = mre.MemberName;
-				queryExpression.FromClause.InExpression = mre.TargetObject;
+				fromClause.Expression = mre.Target;
 				//doc["@metadata"]["Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
-					new IndexerExpression(new IdentifierExpression(queryExpression.FromClause.Identifier), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
+					new IndexerExpression(new IdentifierExpression(fromClause.Identifier), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
 					new List<Expression> { new PrimitiveExpression(Constants.RavenEntityName, Constants.RavenEntityName) }
 					);
 
 				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
 				var binaryOperatorExpression =
 					new InvocationExpression(
-						new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference("string", true)), "Equals"),
+						new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType("string")), "Equals"),
 						new List<Expression>
 						{
 							metadata,
 							new PrimitiveExpression(mre.MemberName, mre.MemberName),
-							new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference(typeof(StringComparison).FullName)),"InvariantCultureIgnoreCase")
+							new MemberReferenceExpression(new TypeReferenceExpression(AstType.Create(typeof(StringComparison))),"InvariantCultureIgnoreCase")
 						});
-				queryExpression.MiddleClauses.Insert(0,
-				                                     new QueryExpressionWhereClause
+			
+				queryExpression.Clauses.InsertAfter(fromClause,
+				                                     new QueryWhereClause
 				                                     {
 														 Condition = binaryOperatorExpression
 				                                     });
 			}
-			var selectOrGroupClause = queryExpression.SelectOrGroupClause;
-			var projection = ((QueryExpressionSelectClause) selectOrGroupClause).Projection;
-			if(projection is ObjectCreateExpression == false)
+			var projection = fromClause.Expression;
+			if(projection is AnonymousTypeCreateExpression == false)
 				return variableDeclaration;
 
-			var objectInitializer = ((ObjectCreateExpression) projection).ObjectInitializer;
+			var objectInitializer = ((AnonymousTypeCreateExpression)projection).Initializers;
 
-			var identifierExpression = new IdentifierExpression(queryExpression.FromClause.Identifier);
+			var identifierExpression = new IdentifierExpression(fromClause.Identifier);
 
-			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
+			if (objectInitializer.OfType<NamedArgumentExpression>().Any(x => x.Identifier == Constants.DocumentIdFieldName))
 				return variableDeclaration;
 
-			objectInitializer.CreateExpressions.Add(
+			objectInitializer.Add(
 				new NamedArgumentExpression
 				{
-					Name = Constants.DocumentIdFieldName,
+					Identifier = Constants.DocumentIdFieldName,
 					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
 			return variableDeclaration;

@@ -1,5 +1,6 @@
 using System.IO;
 using ICSharpCode.NRefactory;
+using ICSharpCode.NRefactory.CSharp;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Xunit;
@@ -93,9 +94,9 @@ select new { TagsName = t.Name,  Name = p.Name, UserName = user.Name }");
 
 		private static string[] Translate(string query)
 		{
-			var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
+			var parser = new CSharpParser();
 
-			var block = parser.ParseBlock();
+			var block = parser.ParseExpression(new StringReader(query));
 
 			var captureQueryParameterNamesVisitor = new CaptureQueryParameterNamesVisitor();
 			block.AcceptVisitor(captureQueryParameterNamesVisitor, null);
