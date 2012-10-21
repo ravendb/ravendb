@@ -32,7 +32,7 @@ namespace Raven.Database.Linq
 	{
 		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
-			var unit = new CompilationUnit();
+			var unit = new SyntaxTree();
 
 			var namespaces = new HashSet<string>
 			{
@@ -57,16 +57,17 @@ namespace Raven.Database.Linq
 
 			foreach (var ns in namespaces)
 			{
-				unit.AddChild(new UsingDeclaration(ns), AstNode.Roles.Root);
+				unit.Members.Add(new UsingDeclaration(ns));
 			}
 
-			unit.AddChild(type, AstNode.Roles.Root);
+			unit.Members.Add(new WindowsNewLine());
+			unit.Members.Add(new WindowsNewLine());
+
+			unit.Members.Add(type);
+
 			var stringWriter = new StringWriter();
-			var output = new CSharpOutputVisitor(stringWriter, new CSharpFormattingOptions
-			{
-				
-			} );
-			unit.AcceptVisitor(output, null);
+			var output = new CSharpOutputVisitor(stringWriter, FormattingOptionsFactory.CreateSharpDevelop());
+			unit.AcceptVisitor(output);
 
 			return stringWriter.GetStringBuilder().ToString();
 		}
@@ -74,11 +75,8 @@ namespace Raven.Database.Linq
 		public static string ToText(AstNode node)
 		{
 			var stringWriter = new StringWriter();
-			var output = new CSharpOutputVisitor(stringWriter, new CSharpFormattingOptions
-			{
-
-			});
-			node.AcceptVisitor(output, null);
+			var output = new CSharpOutputVisitor(stringWriter, FormattingOptionsFactory.CreateSharpDevelop());
+			node.AcceptVisitor(output);
 
 			return stringWriter.GetStringBuilder().ToString();
 		}
@@ -88,7 +86,7 @@ namespace Raven.Database.Linq
 			try
 			{
 				var parser = new CSharpParser();
-				var block = parser.ParseStatements(new StringReader("var q = " + query)).ToList();
+				var block = parser.ParseStatements("var q = " + query +";").ToList();
 
 				if (block.Count != 1)
 				{
@@ -140,7 +138,7 @@ namespace Raven.Database.Linq
 
 				var parser = new CSharpParser();
 
-				var block = parser.ParseStatements(new StringReader("var q = " + query)).ToList();
+				var block = parser.ParseStatements("var q = " + query +";").ToList();
 
 				if (block.Count != 1)
 				{

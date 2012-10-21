@@ -27,7 +27,7 @@ namespace Raven.Database.Linq.Ast
 				invocationExpression.Arguments.Add(memberReferenceExpression.Target);
 			var newInvocation = new InvocationExpression(
 				new MemberReferenceExpression(
-					new TypeReferenceExpression(AstType.Create(typeof (DynamicExtensionMethods))),
+					new TypeReferenceExpression(new SimpleType(typeof (DynamicExtensionMethods).FullName)),
 					memberReferenceExpression.MemberName),
 				invocationExpression.Arguments
 				);

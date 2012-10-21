@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
@@ -14,9 +15,10 @@ namespace Raven.Database.Linq.Ast
 		public HashSet<string> FieldNames = new HashSet<string>();
 		private bool queryProcessed;
 
-		public override object VisitQueryFromClause(QueryFromClause queryFromClause, object data)
+		public override object VisitQuerySelectClause(QuerySelectClause querySelectClause, object data)
 		{
-			throw new NotSupportedException();
+			ProcessQuery(querySelectClause.Expression);
+			return base.VisitQuerySelectClause(querySelectClause, data);
 		}
 
 
@@ -26,18 +28,44 @@ namespace Raven.Database.Linq.Ast
 			FieldNames.Clear();
 		}
 
-	/*
 
-		public override object VisitQueryExpressionSelectClause(QueryExpressionSelectClause queryExpressionSelectClause,
-																object data)
+		private void ProcessQuery(AstNode queryExpressionSelectClause)
 		{
-			ProcessQuery(queryExpressionSelectClause.Projection);
-			return base.VisitQueryExpressionSelectClause(queryExpressionSelectClause, data);
+			var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(queryExpressionSelectClause) as AnonymousTypeCreateExpression;
+			if (objectCreateExpression == null)
+				return;
+
+			// we only want the outer most value
+			if (queryProcessed)
+				return;
+
+			queryProcessed = true;
+
+			foreach (var expression in objectCreateExpression.Initializers.OfType<NamedArgumentExpression>())
+			{
+				FieldNames.Add(expression.Name);
+			}
+
+			foreach (var expression in objectCreateExpression.Initializers.OfType<NamedExpression>())
+			{
+				FieldNames.Add(expression.Name);
+			}
+
+
+			foreach (var expression in objectCreateExpression.Initializers.OfType<MemberReferenceExpression>())
+			{
+				FieldNames.Add(expression.MemberName);
+			}
+
+			foreach (var expression in objectCreateExpression.Initializers.OfType<IdentifierExpression>())
+			{
+				FieldNames.Add(expression.Identifier);
+			}
 		}
 
 		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)
 		{
-			var memberReferenceExpression = invocationExpression.TargetObject as MemberReferenceExpression;
+			var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
 
 			if (memberReferenceExpression == null)
 				return base.VisitInvocationExpression(invocationExpression, data);
@@ -48,12 +76,12 @@ namespace Raven.Database.Linq.Ast
 				case "Select":
 					if (invocationExpression.Arguments.Count != 1)
 						return base.VisitInvocationExpression(invocationExpression, data);
-					lambdaExpression = invocationExpression.Arguments[0].AsLambdaExpression();
+					lambdaExpression = invocationExpression.Arguments.First().AsLambdaExpression();
 					break;
 				case "SelectMany":
 					if (invocationExpression.Arguments.Count != 2)
 						return base.VisitInvocationExpression(invocationExpression, data);
-					lambdaExpression = invocationExpression.Arguments[1].AsLambdaExpression();
+					lambdaExpression = invocationExpression.Arguments.ElementAt(0).AsLambdaExpression();
 					break;
 				default:
 					return base.VisitInvocationExpression(invocationExpression, data);
@@ -62,47 +90,9 @@ namespace Raven.Database.Linq.Ast
 			if (lambdaExpression == null)
 				return base.VisitInvocationExpression(invocationExpression, data);
 
-			ProcessQuery(lambdaExpression.ExpressionBody);
+			ProcessQuery(lambdaExpression.Body);
 
 			return base.VisitInvocationExpression(invocationExpression, data);
 		}
-
-
-		private void ProcessQuery(Expression queryExpressionSelectClause)
-		{
-			var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(queryExpressionSelectClause) as ObjectCreateExpression;
-			if (objectCreateExpression == null ||
-				objectCreateExpression.IsAnonymousType == false)
-				return;
-
-			// we only want the outer most value
-			if (queryProcessed)
-				return;
-
-			queryProcessed = true;
-
-			foreach (
-				var expression in
-					objectCreateExpression.ObjectInitializer.CreateExpressions.OfType<NamedArgumentExpression>())
-			{
-				FieldNames.Add(expression.Name);
-			}
-
-			foreach (
-				var expression in
-					objectCreateExpression.ObjectInitializer.CreateExpressions.OfType<MemberReferenceExpression>())
-			{
-				FieldNames.Add(expression.MemberName);
-			}
-
-			foreach (
-			  var expression in
-				  objectCreateExpression.ObjectInitializer.CreateExpressions.OfType<IdentifierExpression>())
-			{
-				FieldNames.Add(expression.Identifier);
-			}
-		}
-
-		*/
 	}
 }

@@ -96,7 +96,7 @@ select new { TagsName = t.Name,  Name = p.Name, UserName = user.Name }");
 		{
 			var parser = new CSharpParser();
 
-			var block = parser.ParseExpression(new StringReader(query));
+			var block = parser.ParseExpression(query);
 
 			var captureQueryParameterNamesVisitor = new CaptureQueryParameterNamesVisitor();
 			block.AcceptVisitor(captureQueryParameterNamesVisitor, null);

@@ -19,7 +19,7 @@ namespace Raven.Database.Linq.Ast
 				return base.VisitLambdaExpression(lambdaExpression, data);
 
 			AstNode node = lambdaExpression;
-			var parenthesizedlambdaExpression = new ParenthesizedExpression(lambdaExpression);
+			var parenthesizedlambdaExpression = new ParenthesizedExpression(lambdaExpression.Clone());
 			switch (target.MemberName)
 			{
 				case "Sum":
@@ -70,7 +70,7 @@ namespace Raven.Database.Linq.Ast
 					return new CastExpression(new SimpleType("Func<IGrouping<dynamic,dynamic>, dynamic>"), parenthesizedlambdaExpression);
 				}
 			}
-			return new CastExpression(AstType.Create(typeof(Func<dynamic, dynamic>)), parenthesizedlambdaExpression);
+			return new CastExpression(new SimpleType("Func<dynamic, dynamic>"), parenthesizedlambdaExpression);
 		}
 
 		private static AstNode ModifyLambdaForSelectMany(LambdaExpression lambdaExpression,
@@ -84,17 +84,17 @@ namespace Raven.Database.Linq.Ast
 				var selectManyExpression = new LambdaExpression
 				{
 					Body =
-						new CastExpression(AstType.Create(typeof(IEnumerable<dynamic>)),
+						new CastExpression(new SimpleType("IEnumerable<dynamic>"), 
 						                   new ParenthesizedExpression((Expression)lambdaExpression.Body)),
 				};
 				selectManyExpression.Parameters.AddRange(lambdaExpression.Parameters);
 
-				node = new CastExpression(AstType.Create(typeof(Func<dynamic, IEnumerable<dynamic>>)),
+				node = new CastExpression(new SimpleType("Func<dynamic, IEnumerable<dynamic>>"),
 				                          new ParenthesizedExpression(selectManyExpression));
 			}
 			else if (invocationExpression.Arguments.Count > 1 && invocationExpression.Arguments.ElementAt(1) == lambdaExpression)// first one, select the collection
 			{
-				node = new CastExpression(AstType.Create(typeof (Func<dynamic, dynamic, dynamic>)), parenthesizedlambdaExpression);
+				node = new CastExpression(new SimpleType("Func<dynamic, dynamic, dynamic>"), parenthesizedlambdaExpression);
 			}
 			return node;
 		}
@@ -102,7 +102,7 @@ namespace Raven.Database.Linq.Ast
 		private static AstNode ModifyLambdaForMinMax(LambdaExpression lambdaExpression,
 		                                           ParenthesizedExpression parenthesizedlambdaExpression)
 		{
-			var node = new CastExpression(AstType.Create(typeof(Func<dynamic, IComparable>)), parenthesizedlambdaExpression);
+			var node = new CastExpression(new SimpleType("Func<dynamic, IComparable>"), parenthesizedlambdaExpression);
 			var castExpression = GetAsCastExpression(lambdaExpression.Body);
 			if (castExpression != null)
 			{
@@ -134,11 +134,11 @@ namespace Raven.Database.Linq.Ast
 			}
 			var expression = new LambdaExpression
 			{
-				Body = new CastExpression(AstType.Create(typeof(decimal)), new ParenthesizedExpression((Expression)lambdaExpression.Body)),
+				Body = new CastExpression(new PrimitiveType("decimal"), new ParenthesizedExpression((Expression)lambdaExpression.Body.Clone())),
 			};
-			expression.Parameters.AddRange(lambdaExpression.Parameters);
+			expression.Parameters.AddRange(lambdaExpression.Parameters.Select(x=>(ParameterDeclaration)x.Clone()));
 
-			return new CastExpression(AstType.Create(typeof(Func<dynamic, decimal>)),
+			return new CastExpression(new SimpleType("Func<dynamic, decimal>"),
 			                          new ParenthesizedExpression(expression));
 
 		}

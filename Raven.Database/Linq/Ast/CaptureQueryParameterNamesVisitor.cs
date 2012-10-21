@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using ICSharpCode.NRefactory.CSharp;
 
@@ -18,54 +18,30 @@ namespace Raven.Database.Linq.Ast
 		
 		public override object VisitQueryFromClause(QueryFromClause queryFromClause, object data)
 		{
-			throw new NotSupportedException();
-		}
-	}
-
-/*
-	public class CaptureQueryParameterNamesVisitor : DepthFirstAstVisitor<object, object>
-	{
-		
-		public override object VisitQueryFromClause(QueryFromClause queryFromClause, object data)
-		{
-			var memberReferenceExpression = queryFromClause.InExpression as MemberReferenceExpression;
+			var memberReferenceExpression = queryFromClause.Expression as MemberReferenceExpression;
 			if (memberReferenceExpression != null)
 			{
-				var identifierExpression = memberReferenceExpression.TargetObject as IdentifierExpression;
+				var identifierExpression = memberReferenceExpression.Target as IdentifierExpression;
 				if (identifierExpression != null && identifierExpression.Identifier != "docs")
 				{
-					var generateExpression = GenerateExpression(queryExpressionFromClause.InExpression);
+					var generateExpression = GenerateExpression(queryFromClause.Expression);
 					if (generateExpression != null)
-						aliasToName[queryExpressionFromClause.Identifier] = generateExpression + ",";
+						aliasToName[queryFromClause.Identifier] = generateExpression + ",";
 				}
 			}
-			return base.VisitQueryExpressionFromClause(queryExpressionFromClause, data);
-		}
 
-		public override object VisitQuerySelectClause(QuerySelectClause querySelectClause, object data)
-		{
-			ProcessQuery(queryExpressionSelectClause.Projection);
-			return base.VisitQueryExpressionSelectClause(queryExpressionSelectClause, data);
-		}
-
-		public override object VisitQueryExpressionLetClause(QueryExpressionLetClause queryExpressionLetClause, object data)
-		{
-			var generateExpression = GenerateExpression(queryExpressionLetClause.Expression);
-			if (generateExpression != null)
-				aliasToName[queryExpressionLetClause.Identifier] = generateExpression + ".";
-			return base.VisitQueryExpressionLetClause(queryExpressionLetClause, data);
+			return base.VisitQueryFromClause(queryFromClause, data);
 		}
 
 		private void ProcessQuery(Expression queryExpressionSelectClause)
 		{
-			var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(queryExpressionSelectClause) as ObjectCreateExpression;
-			if (objectCreateExpression == null ||
-				objectCreateExpression.IsAnonymousType == false)
+			var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(queryExpressionSelectClause) as AnonymousTypeCreateExpression;
+			if (objectCreateExpression == null)
 				return;
 
 			foreach (
 				var expression in
-					objectCreateExpression.ObjectInitializer.CreateExpressions.OfType<NamedArgumentExpression>())
+					objectCreateExpression.Initializers.OfType<NamedArgumentExpression>())
 			{
 				var generateExpression = GenerateExpression(expression.Expression);
 				if (generateExpression != null)
@@ -74,7 +50,7 @@ namespace Raven.Database.Linq.Ast
 
 			foreach (
 				var expression in
-					objectCreateExpression.ObjectInitializer.CreateExpressions.OfType<MemberReferenceExpression>())
+					objectCreateExpression.Initializers.OfType<MemberReferenceExpression>())
 			{
 				var generateExpression = GenerateExpression(expression);
 				if (generateExpression != null)
@@ -93,12 +69,12 @@ namespace Raven.Database.Linq.Ast
 
 				sb.Insert(0, memberReferenceExpression.MemberName);
 
-				expression = memberReferenceExpression.TargetObject;
+				expression = memberReferenceExpression.Target;
 				memberReferenceExpression = expression as MemberReferenceExpression;
 			}
 
 			var identifierExpression = expression as IdentifierExpression;
-			if(identifierExpression != null && sb.Length != 0)
+			if (identifierExpression != null && sb.Length != 0)
 			{
 				string path;
 				if (aliasToName.TryGetValue(identifierExpression.Identifier, out path))
@@ -111,6 +87,20 @@ namespace Raven.Database.Linq.Ast
 
 			return sb.ToString();
 		}
+
+		public override object VisitQuerySelectClause(QuerySelectClause querySelectClause, object data)
+		{
+			ProcessQuery(querySelectClause.Expression);
+			return base.VisitQuerySelectClause(querySelectClause, data);
+		}
+
+		public override object VisitQueryLetClause(QueryLetClause queryExpressionLetClause, object data)
+		{
+			var generateExpression = GenerateExpression(queryExpressionLetClause.Expression);
+			if (generateExpression != null)
+				aliasToName[queryExpressionLetClause.Identifier] = generateExpression + ".";
+			return base.VisitQueryLetClause(queryExpressionLetClause, data);
+		}
+
 	}
- */
 }
