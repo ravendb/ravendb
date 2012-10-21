@@ -39,18 +39,22 @@ namespace Raven.Database.Linq.Ast
 			if (objectCreateExpression == null)
 				return;
 
-			foreach (
-				var expression in
-					objectCreateExpression.Initializers.OfType<NamedArgumentExpression>())
+			foreach (var expression in objectCreateExpression.Initializers.OfType<NamedArgumentExpression>())
 			{
 				var generateExpression = GenerateExpression(expression.Expression);
 				if (generateExpression != null)
 					QueryParameters.Add(generateExpression);
 			}
 
-			foreach (
-				var expression in
-					objectCreateExpression.Initializers.OfType<MemberReferenceExpression>())
+
+			foreach (var expression in objectCreateExpression.Initializers.OfType<NamedExpression>())
+			{
+				var generateExpression = GenerateExpression(expression.Expression);
+				if (generateExpression != null)
+					QueryParameters.Add(generateExpression);
+			}
+
+			foreach (var expression in  objectCreateExpression.Initializers.OfType<MemberReferenceExpression>())
 			{
 				var generateExpression = GenerateExpression(expression);
 				if (generateExpression != null)
