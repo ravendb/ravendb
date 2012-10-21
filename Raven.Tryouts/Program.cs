@@ -10,10 +10,10 @@ namespace Raven.Tryouts
 		{
 			var x = new DynamicViewCompiler("test", new IndexDefinition
 			{
-				Map = "from doc in docs select  new { doc.Name} ",
+				Map = "from doc in docs select  new { Age = Enumerable.Sum(doc.Children, x=> Enumerable.Sum(x, y=>y.Age))} ",
 			}, ".");
 			var abstractViewGenerator = x.GenerateInstance();
-			var viewText = abstractViewGenerator.ViewText;
+			var viewText = abstractViewGenerator.SourceCode;
 			Console.WriteLine(viewText);
 		}
 	}

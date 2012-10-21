@@ -50,12 +50,12 @@ namespace Raven.Database.Linq.Ast
 				case "Where":
 				case "Count":
 				case "SingleOrDefault":
-					node = new CastExpression(new SimpleType("Func<dynamic, bool>"), parenthesizedlambdaExpression);
+					node = new CastExpression(new SimpleType("Func<dynamic, bool>"), parenthesizedlambdaExpression.Clone());
 				break;
 			}
 			lambdaExpression.ReplaceWith(node);
 
-			return base.VisitLambdaExpression(lambdaExpression, data);
+			return node.AcceptVisitor(this, null);
 		}
 
 		private static AstNode ModifyLambdaForSelect(ParenthesizedExpression parenthesizedlambdaExpression,
@@ -87,14 +87,14 @@ namespace Raven.Database.Linq.Ast
 						new CastExpression(new SimpleType("IEnumerable<dynamic>"), 
 						                   new ParenthesizedExpression((Expression)lambdaExpression.Body)),
 				};
-				selectManyExpression.Parameters.AddRange(lambdaExpression.Parameters);
+				selectManyExpression.Parameters.AddRange(lambdaExpression.Parameters.Select(x=>(ParameterDeclaration)x.Clone()));
 
 				node = new CastExpression(new SimpleType("Func<dynamic, IEnumerable<dynamic>>"),
-				                          new ParenthesizedExpression(selectManyExpression));
+				                          new ParenthesizedExpression(selectManyExpression.Clone()));
 			}
 			else if (invocationExpression.Arguments.Count > 1 && invocationExpression.Arguments.ElementAt(1) == lambdaExpression)// first one, select the collection
 			{
-				node = new CastExpression(new SimpleType("Func<dynamic, dynamic, dynamic>"), parenthesizedlambdaExpression);
+				node = new CastExpression(new SimpleType("Func<dynamic, dynamic, dynamic>"), parenthesizedlambdaExpression.Clone());
 			}
 			return node;
 		}
@@ -129,8 +129,8 @@ namespace Raven.Database.Linq.Ast
 			var castExpression = GetAsCastExpression(lambdaExpression.Body);
 			if (castExpression != null)
 			{
-				var castToType = new SimpleType("Func", new SimpleType("dynamic"), castExpression.Type);
-				return new CastExpression(castToType, parenthesizedlambdaExpression);
+				var castToType = new SimpleType("Func", new SimpleType("dynamic"), castExpression.Type.Clone());
+				return new CastExpression(castToType, parenthesizedlambdaExpression.Clone());
 			}
 			var expression = new LambdaExpression
 			{
