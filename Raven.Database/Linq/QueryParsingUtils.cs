@@ -194,6 +194,7 @@ namespace Raven.Database.Linq
 
 		private static string ToQueryStatement(string query)
 		{
+			query = query.Replace("new() {", "new {");
 			if (query.EndsWith(";"))
 				return "var q = " + query;
 			return "var q = " + query + ";";
