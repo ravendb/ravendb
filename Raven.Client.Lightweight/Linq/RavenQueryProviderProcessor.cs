@@ -469,7 +469,7 @@ namespace Raven.Client.Linq
 			});
 		}
 
-		private void VisitContains(MethodCallExpression _)
+		private void VisitStringContains(MethodCallExpression _)
 		{
 			throw new NotSupportedException(@"Contains is not supported, doing a substring match over a text field is a very slow operation, and is not allowed using the Linq API.
 The recommended method is to use full text search (mark the field as Analyzed and use the Search() method to query it.");
@@ -557,9 +557,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		private void VisitAny(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Arguments[0]);
-			String oldPath = currentPath;
+			var oldPath = currentPath;
 			currentPath = memberInfo.Path + ",";
 			VisitExpression(expression.Arguments[1]);
+			currentPath = oldPath;
+		}
+
+		private void VisitNotStringContains(MethodCallExpression expression)
+		{
+			var memberInfo = GetMember(expression.Arguments[0]);
+			var oldPath = currentPath;
+			currentPath = memberInfo.Path + ",";
+			var containsArgument = expression.Arguments[1];
+			VisitExpression(containsArgument);
 			currentPath = oldPath;
 		}
 
@@ -575,6 +585,22 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					Value = boolValue,
 					IsAnalyzed = true,
 					AllowWildcards = false
+				});
+			}
+			else if (memberExpression.Type == typeof(string))
+			{
+				if (currentPath.EndsWith(","))
+					currentPath = currentPath.Substring(0, currentPath.Length - 1);
+
+				var memberInfo = GetMember(memberExpression);
+
+				luceneQuery.WhereEquals(new WhereParams
+				{
+					FieldName = currentPath,
+					Value = GetValueFromExpression(memberExpression, GetMemberType(memberInfo)),
+					IsAnalyzed = true,
+					AllowWildcards = false,
+					IsNestedPath = memberInfo.IsNestedPath
 				});
 			}
 			else
@@ -761,6 +787,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitAny(expression);
 					break;
 				}
+				case "Contains":
+				{
+					if (expression.Arguments.First().Type == typeof(string))
+					{
+						VisitStringContains(expression);
+					}
+					else
+					{
+						VisitNotStringContains(expression);
+					}
+					break;
+				}
 				default:
 				{
 					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
@@ -774,7 +812,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				case "Contains":
 				{
-					VisitContains(expression);
+					VisitStringContains(expression);
 					break;
 				}
 				case "Equals":
