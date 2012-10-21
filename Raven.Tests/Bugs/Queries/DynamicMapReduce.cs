@@ -205,6 +205,7 @@ namespace Raven.Tests.Bugs.Queries
 						.WhereEquals("Active",true)
 						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Name")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+						.OrderBy("Name")
 						.ToArray();
 
 
