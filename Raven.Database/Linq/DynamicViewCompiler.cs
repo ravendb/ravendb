@@ -462,7 +462,7 @@ Reduce only fields: {2}
 				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
 				var binaryOperatorExpression =
 					new InvocationExpression(
-						new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType("string")), "Equals"),
+						new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
 						new List<Expression>
 						{
 							metadata,
@@ -509,7 +509,7 @@ Reduce only fields: {2}
 				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
 				var binaryOperatorExpression =
 					new InvocationExpression(
-						new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType("string")), "Equals"),
+						new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
 						new List<Expression>
 						{
 							metadata,
