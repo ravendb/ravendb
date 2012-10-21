@@ -22,14 +22,14 @@ namespace Raven.Database.Linq.Ast
 
 			var first = invocationExpression.Arguments.FirstOrDefault();
 			if(first != null)
-				invocationExpression.Arguments.InsertBefore(first, memberReferenceExpression.Target);
+				invocationExpression.Arguments.InsertBefore(first, memberReferenceExpression.Target.Clone());
 			else
-				invocationExpression.Arguments.Add(memberReferenceExpression.Target);
+				invocationExpression.Arguments.Add(memberReferenceExpression.Target.Clone());
 			var newInvocation = new InvocationExpression(
 				new MemberReferenceExpression(
 					new TypeReferenceExpression(new SimpleType(typeof (DynamicExtensionMethods).FullName)),
 					memberReferenceExpression.MemberName),
-				invocationExpression.Arguments
+				invocationExpression.Arguments.Select(x=>x.Clone())
 				);
 			invocationExpression.ReplaceWith(newInvocation);
 
