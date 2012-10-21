@@ -11,10 +11,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 
