@@ -88,9 +88,9 @@ namespace Raven.Database.Linq
 				var parser = new CSharpParser();
 				var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
 
-				if (block.Count != 1)
+				if (block.Count == 0 || parser.HasErrors)
 				{
-					var errs = string.Join(Environment.NewLine, parser.ErrorPrinter.Errors.Select(x => x.Region + ": " + x.ErrorType));
+					var errs = string.Join(Environment.NewLine, parser.Errors.Select(x => x.Region + ": " + x.ErrorType + " - " + x.Message));
 					throw new InvalidOperationException("Could not understand query: \r\n" + errs);
 				}
 

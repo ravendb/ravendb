@@ -260,7 +260,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			                   					new ParameterDeclaration(null, "Database"),
 			                   					new ParameterDeclaration(null, "results")
 			                   				},
-			                   			Body = translatorDeclaration.Initializer
+			                   			Body = translatorDeclaration.Initializer.Clone()
 			                   		})));
 		}
 

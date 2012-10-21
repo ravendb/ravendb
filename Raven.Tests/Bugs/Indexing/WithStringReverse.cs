@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs.Indexing
 				                                new IndexDefinition
 				                                	{
 				                                		Map =
-															"from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse())}"
+															"from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}"
 				                                	});
 
 				using (IDocumentSession documentSession = store.OpenSession())
@@ -50,6 +50,11 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			public string ReverseName { get; set; }
 		}
+
+		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
+		{
+		}
+
 		[Fact]
 		public void CanQueryInReverse()
 		{
