@@ -86,12 +86,12 @@ namespace Raven.Database.Linq
 			try
 			{
 				var parser = new CSharpParser();
-				var block = parser.ParseStatements("var q = " + query +";").ToList();
+				var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
 
 				if (block.Count != 1)
 				{
 					var errs = string.Join(Environment.NewLine, parser.ErrorPrinter.Errors.Select(x => x.Region + ": " + x.ErrorType));
-					throw new InvalidOperationException("Could not understand query: \r\n" +errs);
+					throw new InvalidOperationException("Could not understand query: \r\n" + errs);
 				}
 
 				var declaration = block[0] as VariableDeclarationStatement;
@@ -138,7 +138,7 @@ namespace Raven.Database.Linq
 
 				var parser = new CSharpParser();
 
-				var block = parser.ParseStatements("var q = " + query +";").ToList();
+				var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
 
 				if (block.Count != 1)
 				{
@@ -192,6 +192,13 @@ namespace Raven.Database.Linq
 			}
 		}
 
+		private static string ToQueryStatement(string query)
+		{
+			if (query.EndsWith(";"))
+				return "var q = " + query;
+			return "var q = " + query + ";";
+		}
+
 		public static INode GetAnonymousCreateExpression(INode expression)
 		{
 			var invocationExpression = expression as InvocationExpression;
@@ -206,17 +213,16 @@ namespace Raven.Database.Linq
 			if (typeReference == null)
 			{
 				var objectCreateExpression = memberReferenceExpression.Target as ObjectCreateExpression;
-				if(objectCreateExpression != null && memberReferenceExpression.MemberName == "Boost")
+				if (objectCreateExpression != null && memberReferenceExpression.MemberName == "Boost")
 				{
 					return objectCreateExpression;
 				}
 				return expression;
 			}
 
-			//if (typeReference.Type != "Raven.Database.Linq.PrivateExtensions.DynamicExtensionMethods")
-			//	return expression;
-			if(1 != DateTime.Now.Ticks)
-				throw new NotSupportedException();
+			var simpleType = typeReference.Type as SimpleType;
+			if (simpleType != null && simpleType.Identifier != "Raven.Database.Linq.PrivateExtensions.DynamicExtensionMethods")
+				return expression;
 
 			switch (memberReferenceExpression.MemberName)
 			{
@@ -286,7 +292,7 @@ namespace Raven.Database.Linq
 			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
-				GenerateInMemory = true, 
+				GenerateInMemory = true,
 				IncludeDebugInformation = false
 			};
 			if (basePath != null)

@@ -423,12 +423,10 @@ Reduce only fields: {2}
 
 				var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters.First().Name);
 
-				if (initializers.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
+				if (initializers.OfType<NamedExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 					return false;
 
-
-				objectCreateExpression.Initializers.AddRange(initializers);
-				objectCreateExpression.Initializers.Add(new NamedArgumentExpression
+				objectCreateExpression.Initializers.Add(new NamedExpression
 				{
 					Name = Constants.DocumentIdFieldName,
 					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
@@ -469,7 +467,7 @@ Reduce only fields: {2}
 							new StringLiteralExpression(mre.MemberName),
 							new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType(typeof(StringComparison).FullName)),"InvariantCultureIgnoreCase")
 						});
-				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.Target, "Where"),
+				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.Target.Clone(), "Where"),
 				                                           new List<Expression>
 				                                           {
 				                                           	new LambdaExpression
@@ -478,11 +476,11 @@ Reduce only fields: {2}
 				                                           			{
 				                                           				new ParameterDeclaration(null, "__document")
 				                                           			},
-				                                           		Body = binaryOperatorExpression
+				                                           		Body = binaryOperatorExpression.Clone()
 				                                           	}
 				                                           });
 
-				invocationExpression.Target = new MemberReferenceExpression(whereMethod, targetExpression.MemberName);
+				invocationExpression.Target = new MemberReferenceExpression(whereMethod.Clone(), targetExpression.MemberName);
 
 			}
 		}
