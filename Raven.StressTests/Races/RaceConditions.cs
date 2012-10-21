@@ -2,6 +2,7 @@ using Raven.StressTests.Tenants;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Caching;
 using Raven.Tests.Bugs.Indexing;
+using Raven.Tests.Bugs.Queries;
 using Raven.Tests.MailingList.MapReduceIssue;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Shard.BlogModel;
@@ -95,6 +96,12 @@ namespace Raven.StressTests.Races
 		public void WillThrowWhenOptimisticConcurrencyIsOn()
 		{
 			Run<OverwriteDocuments>(x => x.WillThrowWhenOptimisticConcurrencyIsOn(), 10);
+		}
+		
+		[Fact]
+		public void CanGroupByNestedProperty_Dynamic()
+		{
+			Run<DynamicMapReduce>(x => x.CanGroupByNestedProperty_Dynamic(), 20);
 		}
 	}
 }
