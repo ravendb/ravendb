@@ -10,8 +10,8 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		private List<string> requiredGroups = new List<string>();
-		private List<string> requiredUsers = new List<string>();
+		private List<WindowsAuthData> requiredGroups = new List<WindowsAuthData>();
+		private List<WindowsAuthData> requiredUsers = new List<WindowsAuthData>();
 
 		private static event Action WindowsSettingsChanged = delegate { };
 
@@ -31,25 +31,25 @@ namespace Raven.Database.Server.Security.Windows
 
 			if (doc == null)
 			{
-				requiredGroups = new List<string>();
-				requiredUsers = new List<string>();
+				requiredGroups = new List<WindowsAuthData>();
+				requiredUsers = new List<WindowsAuthData>();
 				return;
 			}
 
 			var required = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
 			if (required == null)
 			{
-				requiredGroups = new List<string>();
-				requiredUsers = new List<string>();
+				requiredGroups = new List<WindowsAuthData>();
+				requiredUsers = new List<WindowsAuthData>();
 				return;
 			}
 
 			requiredGroups = required.RequiredGroups != null
-				                 ? required.RequiredGroups.Select(data => data.Name).ToList()
-				                 : new List<string>();
+				                 ? required.RequiredGroups.Where(data => data.Enabled).ToList()
+				                 : new List<WindowsAuthData>();
 			requiredUsers = required.RequiredUsers != null
-				                ? required.RequiredUsers.Select(data => data.Name).ToList()
-				                : new List<string>();
+				                ? required.RequiredUsers.Where(data => data.Enabled).ToList()
+				                : new List<WindowsAuthData>();
 		}
 
 		public override bool Authorize(IHttpContext ctx)
@@ -93,9 +93,8 @@ namespace Raven.Database.Server.Security.Windows
 
 			if (requiredGroups.Count > 0 || requiredUsers.Count > 0)
 			{
-
-				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup)) ||
-					requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser, StringComparison.InvariantCultureIgnoreCase)))
+				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup.Name) && requiredGroup.Databases.Any(access => access.TenantId == database().Name)) ||
+					requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser.Name, StringComparison.InvariantCultureIgnoreCase) && requiredUser.Databases.Any(access => access.TenantId == database().Name)))
 					return false;
 
 				return true;
