@@ -81,7 +81,7 @@ namespace Raven.Database.Linq.Ast
 				case "SelectMany":
 					if (invocationExpression.Arguments.Count != 2)
 						return base.VisitInvocationExpression(invocationExpression, data);
-					lambdaExpression = invocationExpression.Arguments.ElementAt(0).AsLambdaExpression();
+					lambdaExpression = invocationExpression.Arguments.ElementAt(1).AsLambdaExpression();
 					break;
 				default:
 					return base.VisitInvocationExpression(invocationExpression, data);

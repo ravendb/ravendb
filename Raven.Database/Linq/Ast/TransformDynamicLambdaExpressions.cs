@@ -67,10 +67,10 @@ namespace Raven.Database.Linq.Ast
 				var parentTarget = parentInvocation.Target as MemberReferenceExpression;
 				if(parentTarget != null && parentTarget.MemberName == "GroupBy")
 				{
-					return new CastExpression(new SimpleType("Func<IGrouping<dynamic,dynamic>, dynamic>"), parenthesizedlambdaExpression);
+					return new CastExpression(new SimpleType("Func<IGrouping<dynamic,dynamic>, dynamic>"), parenthesizedlambdaExpression.Clone());
 				}
 			}
-			return new CastExpression(new SimpleType("Func<dynamic, dynamic>"), parenthesizedlambdaExpression);
+			return new CastExpression(new SimpleType("Func<dynamic, dynamic>"), parenthesizedlambdaExpression.Clone());
 		}
 
 		private static AstNode ModifyLambdaForSelectMany(LambdaExpression lambdaExpression,
@@ -85,7 +85,7 @@ namespace Raven.Database.Linq.Ast
 				{
 					Body =
 						new CastExpression(new SimpleType("IEnumerable<dynamic>"), 
-						                   new ParenthesizedExpression((Expression)lambdaExpression.Body)),
+						                   new ParenthesizedExpression((Expression)lambdaExpression.Body.Clone())),
 				};
 				selectManyExpression.Parameters.AddRange(lambdaExpression.Parameters.Select(x=>(ParameterDeclaration)x.Clone()));
 
