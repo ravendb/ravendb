@@ -361,7 +361,7 @@ namespace Raven.Tests.Document
 			documentStore.DatabaseCommands.PutIndex("my_index",
 			                                        new IndexDefinition
 			                                        	{
-			                                        		Map = "from doc in docs select new { doc.Language, doc.Type, Value = new{ Answers = 42, Paths = 7 }  }}",
+			                                        		Map = "from doc in docs select new { doc.Language, doc.Type, Value = new{ Answers = 42, Paths = 7 }  }",
 			                                        		Stores = {{"Value", FieldStorage.Yes},}
 			                                        	});
 
