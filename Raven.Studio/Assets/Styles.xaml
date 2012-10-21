@@ -4,7 +4,6 @@
 					xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
-					xmlns:Controls="clr-namespace:System.Windows.Controls"
 					xmlns:System="clr-namespace:System;assembly=mscorlib"
 					xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 					xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
