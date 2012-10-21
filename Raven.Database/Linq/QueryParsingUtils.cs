@@ -140,9 +140,9 @@ namespace Raven.Database.Linq
 
 				var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
 
-				if (block.Count != 1)
+				if (block.Count == 0 || parser.HasErrors)
 				{
-					var errs = string.Join(Environment.NewLine, parser.ErrorPrinter.Errors.Select(x => x.Region + ": " + x.ErrorType));
+					var errs = string.Join(Environment.NewLine, parser.Errors.Select(x => x.Region + ": " + x.ErrorType + " - " + x.Message));
 					throw new InvalidOperationException("Could not understand query: \r\n" + errs);
 				}
 
@@ -213,7 +213,7 @@ namespace Raven.Database.Linq
 			var typeReference = memberReferenceExpression.Target as TypeReferenceExpression;
 			if (typeReference == null)
 			{
-				var objectCreateExpression = memberReferenceExpression.Target as ObjectCreateExpression;
+				var objectCreateExpression = memberReferenceExpression.Target as AnonymousTypeCreateExpression;
 				if (objectCreateExpression != null && memberReferenceExpression.MemberName == "Boost")
 				{
 					return objectCreateExpression;

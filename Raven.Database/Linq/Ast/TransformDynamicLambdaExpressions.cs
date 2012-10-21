@@ -102,12 +102,12 @@ namespace Raven.Database.Linq.Ast
 		private static AstNode ModifyLambdaForMinMax(LambdaExpression lambdaExpression,
 		                                           ParenthesizedExpression parenthesizedlambdaExpression)
 		{
-			var node = new CastExpression(new SimpleType("Func<dynamic, IComparable>"), parenthesizedlambdaExpression);
+			var node = new CastExpression(new SimpleType("Func<dynamic, IComparable>"), parenthesizedlambdaExpression.Clone());
 			var castExpression = GetAsCastExpression(lambdaExpression.Body);
 			if (castExpression != null)
 			{
-				var castToType = new SimpleType("Func", new SimpleType("dynamic"), castExpression.Type);
-				node = new CastExpression(castToType, parenthesizedlambdaExpression);
+				var castToType = new SimpleType("Func", new SimpleType("dynamic"), castExpression.Type.Clone());
+				node = new CastExpression(castToType, parenthesizedlambdaExpression.Clone());
 			}
 			return node;
 		}

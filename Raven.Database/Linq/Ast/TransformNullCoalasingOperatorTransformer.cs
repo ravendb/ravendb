@@ -17,10 +17,10 @@ namespace Raven.Database.Linq.Ast
 			if(binaryOperatorExpression.Operator==BinaryOperatorType.NullCoalescing)
 			{
 				var node = new ConditionalExpression(
-					new BinaryOperatorExpression(binaryOperatorExpression.Left, BinaryOperatorType.InEquality,
+					new BinaryOperatorExpression(binaryOperatorExpression.Left.Clone(), BinaryOperatorType.InEquality,
 					                             new PrimitiveExpression(null, null)),
-					binaryOperatorExpression.Left,
-					binaryOperatorExpression.Right
+					binaryOperatorExpression.Left.Clone(),
+					binaryOperatorExpression.Right.Clone()
 					);
 				binaryOperatorExpression.ReplaceWith(node);
 				return null;

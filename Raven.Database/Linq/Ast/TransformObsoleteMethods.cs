@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using ICSharpCode.NRefactory.CSharp;
+using System.Linq;
 
 namespace Raven.Database.Linq.Ast
 {
@@ -19,7 +20,7 @@ namespace Raven.Database.Linq.Ast
 			if(identifierExpression == null || identifierExpression.Identifier != "SpatialIndex")
 				return base.VisitInvocationExpression(invocationExpression, data);
 
-			invocationExpression.ReplaceWith(new InvocationExpression(new IdentifierExpression("SpatialGenerate"), invocationExpression.Arguments));
+			invocationExpression.ReplaceWith(new InvocationExpression(new IdentifierExpression("SpatialGenerate"), invocationExpression.Arguments.Select(x=>x.Clone())));
 
 			return base.VisitInvocationExpression(invocationExpression, data);
 		}

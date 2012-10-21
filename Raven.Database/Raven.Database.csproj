@@ -175,7 +175,7 @@
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
-    <Compile Include="Linq\Ast\TransformObseleteMethods.cs" />
+    <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
     <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
     <Compile Include="Linq\Mono.Reflection\ByteBuffer.cs" />
