@@ -521,7 +521,7 @@ Reduce only fields: {2}
 														 Condition = binaryOperatorExpression
 				                                     });
 			}
-			var projection = fromClause.Expression;
+			var projection = queryExpression.Clauses.OfType<QuerySelectClause>().First().Expression;
 			if(projection is AnonymousTypeCreateExpression == false)
 				return variableDeclaration;
 
@@ -529,11 +529,11 @@ Reduce only fields: {2}
 
 			var identifierExpression = new IdentifierExpression(fromClause.Identifier);
 
-			if (objectInitializer.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
+			if (objectInitializer.OfType<NamedExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return variableDeclaration;
 
 			objectInitializer.Add(
-				new NamedArgumentExpression
+				new NamedExpression
 				{
 					Name = Constants.DocumentIdFieldName,
 					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)

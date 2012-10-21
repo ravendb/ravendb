@@ -10,8 +10,7 @@ namespace Raven.Tryouts
 		{
 			var x = new DynamicViewCompiler("test", new IndexDefinition
 			{
-				Map = "docs.Items.Select(doc => new { doc.Name, Count = 1 });",
-				Reduce = "results.GroupBy(result=>result.Name).Select(g=> new { Name = g.Key, Count = g.Sum(x=>x.Count) }.Boost(5));"
+				Map = "from doc in docs select  new { doc.Name} ",
 			}, ".");
 			var abstractViewGenerator = x.GenerateInstance();
 			var viewText = abstractViewGenerator.ViewText;
