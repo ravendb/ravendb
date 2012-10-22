@@ -33,7 +33,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 
 		public override string ToString(string fld)
 		{
-			return "@in(" + field + ", " + string.Join(", ", matches) + ")";
+			return "@in<" + field + ">(" + string.Join(", ", matches) + ")";
 		}
 
 		protected override FilteredTermEnum GetEnum(IndexReader reader)
@@ -126,11 +126,11 @@ namespace Raven.Database.Indexing.LuceneIntegration
 
 		public IRavenLuceneMethodQuery Merge(Query other)
 		{
-			var termsMatchQuery = (TermsMatchQuery) other;
+			var termsMatchQuery = (TermsMatchQuery)other;
 			matches.AddRange(termsMatchQuery.matches);
 
 			matches = matches.Distinct()
-				.Where(x=>string.IsNullOrWhiteSpace(x) == false)
+				.Where(x => string.IsNullOrWhiteSpace(x) == false)
 				.OrderBy(s => s, StringComparer.Ordinal).ToList();
 			return this;
 		}
