@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Principal;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
@@ -23,6 +24,7 @@ namespace Raven.Database.Server.Security.Windows
 		protected override void Initialize()
 		{
 			WindowsSettingsChanged += UpdateSettings;
+			UpdateSettings();
 		}
 
 		public void UpdateSettings()
@@ -81,8 +83,7 @@ namespace Raven.Database.Server.Security.Windows
 
 		private bool IsInvalidUser(IHttpContext ctx, out Action onRejectingRequest)
 		{
-			var invalidUser = (ctx.User == null ||
-							   ctx.User.Identity.IsAuthenticated == false);
+			var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
 			{
 				onRejectingRequest = () =>
@@ -95,16 +96,80 @@ namespace Raven.Database.Server.Security.Windows
 
 			onRejectingRequest = ctx.SetStatusToUnauthorized;
 
-			if (requiredGroups.Count > 0 || requiredUsers.Count > 0)
+			
+			List<DatabaseAccess> databasesForGroups;
+			var databasesForUsers = GenerateDatabaseAccessLists(ctx, out databasesForGroups);
+
+			var adminList = GenerateAdminList(databasesForUsers, databasesForGroups);
+
+			ctx.User = new PrincipalWithDatabaseAccess(ctx.User as WindowsPrincipal, adminList);
+
+			var readOnlyList = GenerateReadOnlyList(databasesForUsers, databasesForGroups);
+
+			if ((requiredGroups.Count > 0 || requiredUsers.Count > 0))
 			{
-				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup.Name) && requiredGroup.Databases.Any(access => access.TenantId == database().Name)) ||
-					requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser.Name, StringComparison.InvariantCultureIgnoreCase) && requiredUser.Databases.Any(access => access.TenantId == database().Name)))
+				if (readOnlyList.Any(databaseName => string.Equals(databaseName, database().Name)))
+					return true;
+				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup.Name)
+					&& requiredGroup.Databases.Any(access => access.TenantId == database().Name))
+					|| requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser.Name, StringComparison.InvariantCultureIgnoreCase) 
+						&& requiredUser.Databases.Any(access => access.TenantId == database().Name)))
 					return false;
 
 				return true;
 			}
 
 			return false;
+		}
+
+		private static IEnumerable<string> GenerateReadOnlyList(IEnumerable<DatabaseAccess> databasesForUsers, IEnumerable<DatabaseAccess> databasesForGroups)
+		{
+			var readOnlyList = new List<string>();
+			if (databasesForUsers != null)
+				readOnlyList = databasesForUsers
+					.Where(access => access.ReadOnly)
+					.Select(access => access.TenantId)
+					.ToList();
+
+			if (databasesForGroups != null)
+				readOnlyList
+					.AddRange(databasesForGroups.Where(access => access.ReadOnly)
+						          .Select(access => access.TenantId)
+						          .ToList());
+			return readOnlyList;
+		}
+
+		private static List<string> GenerateAdminList(IEnumerable<DatabaseAccess> databasesForUsers, IEnumerable<DatabaseAccess> databasesForGroups)
+		{
+			var adminList = new List<string>();
+			if (databasesForUsers != null)
+				adminList = databasesForUsers
+					.Where(access => access.Admin)
+					.Select(access => access.TenantId)
+					.ToList();
+
+
+			if (databasesForGroups != null)
+				adminList
+					.AddRange(databasesForGroups.Where(access => access.Admin)
+						          .Select(access => access.TenantId)
+						          .ToList());
+			return adminList;
+		}
+
+		private List<DatabaseAccess> GenerateDatabaseAccessLists(IHttpContext ctx, out List<DatabaseAccess> databasesForGroups)
+		{
+			var databasesForUsers = requiredUsers
+				.Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
+				.Select(data => data.Databases)
+				.FirstOrDefault();
+
+			databasesForGroups = requiredGroups
+				.Where(data => ctx.User.IsInRole(data.Name))
+				.Select(data => data.Databases)
+				.FirstOrDefault();
+
+			return databasesForUsers;
 		}
 
 		public override void Dispose()
