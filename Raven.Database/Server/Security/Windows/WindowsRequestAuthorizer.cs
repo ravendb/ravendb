@@ -85,7 +85,11 @@ namespace Raven.Database.Server.Security.Windows
 							   ctx.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
 			{
-				onRejectingRequest = ctx.SetStatusToForbidden;
+				onRejectingRequest = () =>
+				{
+					ctx.Response.AddHeader("Raven-Required-Auth", "Windows");
+					ctx.SetStatusToForbidden();
+				};
 				return true;
 			}
 

@@ -127,8 +127,14 @@ namespace Raven.Client.Silverlight.Connection
 				return task;
 
 			var webResponse = exception.Response as HttpWebResponse;
-			if (webResponse == null || webResponse.StatusCode != HttpStatusCode.Unauthorized)
+			if (webResponse == null || (webResponse.StatusCode != HttpStatusCode.Unauthorized && webResponse.StatusCode != HttpStatusCode.Forbidden))
 				return task;
+
+			if(webResponse.StatusCode == HttpStatusCode.Forbidden)
+			{
+				HandleForbbidenResponseAsync(webResponse);
+				return task;
+			}
 
 			var authorizeResponse = HandleUnauthorizedResponseAsync(webResponse);
 
@@ -143,6 +149,14 @@ namespace Raven.Client.Silverlight.Connection
 					return generator();
 				})
 				.Unwrap();
+		}
+
+		private void HandleForbbidenResponseAsync(HttpWebResponse forbbidenResponse)
+		{
+			if (conventions.HandleForbiddenResponseAsync == null)
+				return;
+
+			conventions.HandleForbiddenResponseAsync(forbbidenResponse);
 		}
 
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
@@ -378,9 +392,14 @@ namespace Raven.Client.Silverlight.Connection
 						   return task;// effectively throw
 
 					   var httpWebResponse = webException.Response as HttpWebResponse;
-					   if (httpWebResponse == null ||
-						   httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+					   if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
 						   return task; // effectively throw
+
+					   if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+					   {
+						   HandleForbbidenResponseAsync(httpWebResponse);
+						   return task;
+					   }
 
 					   var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
 

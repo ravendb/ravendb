@@ -126,9 +126,14 @@ namespace Raven.Client.Connection
 						return task;// effectively throw
 
 					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse == null ||
-						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
 						return task; // effectively throw
+
+					if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+					{
+						HandleForbiddenResponseAsync(httpWebResponse);
+						return task;
+					}
 
 					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
 
@@ -214,12 +219,16 @@ namespace Raven.Client.Connection
 						throw;
 
 					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse == null ||
-						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
 						throw;
 
 					using (httpWebResponse)
 					{
+						if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+						{
+							HandleForbbidenResponse(httpWebResponse);
+							throw;
+						}
 						if (HandleUnauthorizedResponse(httpWebResponse) == false)
 							throw;
 					}
@@ -239,6 +248,16 @@ namespace Raven.Client.Connection
 			RecreateWebRequest(handleUnauthorizedResponse);
 			return true;
 		}
+
+		private void HandleForbbidenResponse(HttpWebResponse forbbidenResponse)
+		{
+			if (conventions.HandleForbiddenResponse == null)
+				return;
+
+			conventions.HandleForbiddenResponse(forbbidenResponse);
+		}
+
+
 #if !NET35
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
 		{
@@ -251,6 +270,14 @@ namespace Raven.Client.Connection
 				return null;
 
 			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest(unauthorizedResponseAsync.Result));
+		}
+
+		private void HandleForbiddenResponseAsync(HttpWebResponse forbbidenResponse)
+		{
+			if (conventions.HandleForbiddenResponseAsync == null)
+				return;
+
+			conventions.HandleForbiddenResponseAsync(forbbidenResponse);
 		}
 #endif
 
@@ -675,9 +702,14 @@ namespace Raven.Client.Connection
 						return task;// effectively throw
 
 					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse == null ||
-						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
 						return task; // effectively throw
+
+					if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+					{
+						HandleForbiddenResponseAsync(httpWebResponse);
+						return task;
+					}
 
 					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
 
