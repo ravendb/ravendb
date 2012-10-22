@@ -51,7 +51,7 @@ namespace Raven.Tests.MailingList
 						.Distinct()
 						.ToArray();
 
-					Assert.Equal(new[]{"Users", "Admins"}, groups);
+					Assert.Equal(new[] { "Admins", "Users" }, groups);
 				}
 			}
 		}
