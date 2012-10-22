@@ -80,16 +80,13 @@ namespace Raven.Database.Indexing
 						.Where(x => x is FilteredDocument == false);
 
 
-					var orderablePartitioner = Partitioner.Create(documentsWrapped);
-					var partitions = orderablePartitioner.GetPartitions(context.Configuration.MaxNumberOfParallelIndexTasks);
-
-					BackgroundTaskExecuter.Instance.ExecuteAll(context, partitions, (partition, l) =>
+					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
 						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 						var luceneDoc = new Document();
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 
-						foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
+						foreach (var doc in RobustEnumerationIndex(partition.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats))
 						{
 							float boost;
 							var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);

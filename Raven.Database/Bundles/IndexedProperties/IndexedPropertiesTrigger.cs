@@ -8,6 +8,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Document = Lucene.Net.Documents.Document;
 using Raven.Abstractions.Extensions;
@@ -37,7 +38,7 @@ namespace Raven.Bundles.IndexedProperties
 			private readonly IndexedPropertiesSetupDoc setupDoc;
 			private readonly string index;
 			private readonly AbstractViewGenerator viewGenerator;
-			private readonly HashSet<string> itemsToRemove = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			private readonly ConcurrentSet<string> itemsToRemove = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
 			public IndexPropertyBatcher(DocumentDatabase database, IndexedPropertiesSetupDoc setupDoc, string index, AbstractViewGenerator viewGenerator)
 			{
@@ -88,7 +89,7 @@ namespace Raven.Bundles.IndexedProperties
 
 				var documentId = resultDocId.StringValue;
 
-				itemsToRemove.Remove(documentId);
+				itemsToRemove.TryRemove(documentId);
 
 				var resultDoc = database.Get(documentId, null);
 				if (resultDoc == null)

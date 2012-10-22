@@ -13,6 +13,8 @@ namespace Raven.Database.Indexing
 		void Repeat(IRepeatedAction action);
 
 		void ExecuteAll<T>(WorkContext context, IList<T> source, Action<T, long> action);
+
+		void ExecuteAllBuffered<T>(WorkContext context, IEnumerable<T> source, Action<IEnumerable<T>> action);
 	}
 
 	public interface IRepeatedAction

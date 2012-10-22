@@ -99,6 +99,7 @@ namespace Raven.Tests.Bugs
 				{
 					var objects = s.Query<User>("test")
 						.Customize(x => x.WaitForNonStaleResults())
+						.OrderBy(x=>x.Name)
 						.Select(o => new { o.Name })
 						.Distinct()
 						.Skip(1)

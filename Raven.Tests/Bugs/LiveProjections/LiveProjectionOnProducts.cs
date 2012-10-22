@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Raven.Client;
+using Raven.Client.Document;
 
 namespace Raven.Tests.Bugs.LiveProjections
 {
@@ -44,7 +45,11 @@ namespace Raven.Tests.Bugs.LiveProjections
 				using (var session = documentStore.OpenSession())
 				{
 					var rep = session.Query<dynamic, ProductSkuListViewModelReport_ByArticleNumberAndName>()
-						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
+						.Customize(x =>
+						{
+							x.WaitForNonStaleResultsAsOfNow();
+							((IDocumentQuery<ProductSkuListViewModelReport>)x).OrderBy("__document_id");
+						})
 						.As<ProductSkuListViewModelReport>()
 						.ToList();
 

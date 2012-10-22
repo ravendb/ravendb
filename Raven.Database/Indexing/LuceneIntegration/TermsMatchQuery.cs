@@ -65,6 +65,23 @@ namespace Raven.Database.Indexing.LuceneIntegration
 				SetEnum(reader.Terms(new Term(termsMatchQuery.field, termsMatchQuery.matches[pos])));
 			}
 
+			public override bool Next()
+			{
+				if (actualEnum == null)
+					return false; // the actual enumerator is not initialized!
+				currentTerm = null;
+				while (EndEnum() == false && actualEnum.Next())
+				{
+					var term = actualEnum.Term;
+					if (TermCompare(term) == false) 
+						continue;
+					currentTerm = term;
+					return true;
+				}
+				currentTerm = null;
+				return false;
+			}
+
 			protected override bool TermCompare(Term term)
 			{
 				if (term.Field != termsMatchQuery.field)
@@ -84,7 +101,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 				if (last > 0)
 				{
 					MoveToCurrentTerm();
-					return currentTerm != null;
+					return false;
 				}
 				return last == 0;
 			}
