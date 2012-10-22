@@ -33,6 +33,7 @@ namespace Raven.Tests.Bugs
 						.WaitForNonStaleResults()
 						.SelectFields<dynamic>("Name")
 						.GroupBy(AggregationOperation.Distinct)
+						.OrderBy("Name")
 						.ToList();
 
 					Assert.Equal(2, objects.Count);

@@ -55,7 +55,9 @@ namespace Raven.Database.Linq.Ast
 			}
 			lambdaExpression.ReplaceWith(node);
 
-			return node.AcceptVisitor(this, null);
+			if (node != lambdaExpression)
+				return node.AcceptVisitor(this, null);
+			return base.VisitLambdaExpression(lambdaExpression, null);
 		}
 
 		private static AstNode ModifyLambdaForSelect(ParenthesizedExpression parenthesizedlambdaExpression,

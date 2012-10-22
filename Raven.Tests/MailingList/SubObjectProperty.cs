@@ -46,6 +46,7 @@ namespace Raven.Tests.MailingList
 				{
 					var groups = session.Query<SiteModel, Sites_ByAdminData>()
 						.Customize(x=>x.WaitForNonStaleResults())
+						.OrderBy(x => x.Admin.GroupName)
 						.Select(s => s.Admin.GroupName)
 						.Distinct()
 						.ToArray();
