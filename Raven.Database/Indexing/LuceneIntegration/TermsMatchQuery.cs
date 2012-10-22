@@ -63,7 +63,10 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			private void MoveToCurrentTerm()
 			{
 				SetEnum(reader.Terms(new Term(termsMatchQuery.field, termsMatchQuery.matches[pos])));
+				movedEnum = true;
 			}
+
+			private bool movedEnum;
 
 			public override bool Next()
 			{
@@ -72,11 +75,15 @@ namespace Raven.Database.Indexing.LuceneIntegration
 				currentTerm = null;
 				while (EndEnum() == false && actualEnum.Next())
 				{
-					var term = actualEnum.Term;
-					if (TermCompare(term) == false) 
-						continue;
-					currentTerm = term;
-					return true;
+					do
+					{
+						movedEnum = false;
+						var term = actualEnum.Term;
+						if (TermCompare(term) == false)
+							continue;
+						currentTerm = term;
+						return true;
+					} while (movedEnum);
 				}
 				currentTerm = null;
 				return false;
