@@ -38,7 +38,6 @@ namespace Raven.Database.Indexing
 		public static Query BuildQuery(string query, IndexQuery indexQuery, PerFieldAnalyzerWrapper analyzer)
 		{
 			var originalQuery = query;
-			Analyzer keywordAnalyzer = new KeywordAnalyzer();
 			try
 			{
 				var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
@@ -61,10 +60,6 @@ namespace Raven.Database.Indexing
 					throw new ParseException("Could not parse: '" + query + "'", pe);
 				throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery + "'", pe);
 
-			}
-			finally
-			{
-				keywordAnalyzer.Close();
 			}
 		}
 
@@ -102,6 +97,7 @@ namespace Raven.Database.Indexing
 				var ravenLuceneMethodQuery = booleanQuery.Clauses.Skip(1).Aggregate(first, (methodQuery, clause) => methodQuery.Merge(clause.Query));
 				return (Query)ravenLuceneMethodQuery;
 			}
+
 			return query;
 		}
 
