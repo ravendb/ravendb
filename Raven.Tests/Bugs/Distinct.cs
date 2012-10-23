@@ -11,11 +11,11 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanQueryForDistinctItems()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				using (var s = store.OpenSession())
 				{
-					s.Store(new {Name = "ayende"});
+					s.Store(new { Name = "ayende" });
 					s.Store(new { Name = "ayende" });
 					s.Store(new { Name = "rahien" });
 					s.SaveChanges();
@@ -66,7 +66,8 @@ namespace Raven.Tests.Bugs
 				{
 					var objects = s.Query<User>("test")
 						.Customize(x => x.WaitForNonStaleResults())
-						.Select(o => new {o.Name })
+						.OrderBy(x => x.Name)
+						.Select(o => new { o.Name })
 						.Distinct()
 						.ToList();
 
@@ -99,7 +100,7 @@ namespace Raven.Tests.Bugs
 				{
 					var objects = s.Query<User>("test")
 						.Customize(x => x.WaitForNonStaleResults())
-						.OrderBy(x=>x.Name)
+						.OrderBy(x => x.Name)
 						.Select(o => new { o.Name })
 						.Distinct()
 						.Skip(1)
@@ -126,7 +127,7 @@ namespace Raven.Tests.Bugs
 				store.DocumentDatabase.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
-					Stores = {{"Name", FieldStorage.Yes}}
+					Stores = { { "Name", FieldStorage.Yes } }
 				});
 
 				using (var s = store.OpenSession())
@@ -134,6 +135,7 @@ namespace Raven.Tests.Bugs
 					var objects = s.Advanced.LuceneQuery<dynamic>("test")
 						.WaitForNonStaleResults()
 						.Skip(1)
+						.OrderBy("Name")
 						.SelectFields<dynamic>("Name")
 						.GroupBy(AggregationOperation.Distinct)
 						.ToList();
