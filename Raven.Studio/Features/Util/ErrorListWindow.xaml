@@ -49,11 +49,12 @@
                         <toolkit:Expander.Header>
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+									<ColumnDefinition Width="750"/>
+									<ColumnDefinition Width="Auto"/>
+								</Grid.ColumnDefinitions>
                                 <TextBlock Text="{Binding Message, Converter={StaticResource FirstLineOnly}}" Foreground="White" Margin="0,0,15,0"  TextWrapping="Wrap"/>
-                               
-                            </Grid>
+								<TextBlock HorizontalAlignment="Right" Grid.Column="1" Text="{Binding RepeatCount, StringFormat='({0})'}" Foreground="White" Visibility="{Binding RepeatCount, Converter={StaticResource VisibleWhenDifferent}, ConverterParameter='1'}" />
+							</Grid>
                         </toolkit:Expander.Header>
                         <Grid>
                             <TextBox IsReadOnly="True" Style="{StaticResource Style_TextBox_NoChrome}" Text="{Binding Details}" Padding="5" Background="#E3BEBE" 

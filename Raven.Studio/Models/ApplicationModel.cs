@@ -66,13 +66,23 @@ namespace Raven.Studio.Models
 		public void AddNotification(Notification notification)
 		{
 			Execute.OnTheUI(() =>
-								{
-									Notifications.Add(notification);
-									if (Notifications.Count > 10)
-										Notifications.RemoveAt(0);
-									
-                                    LastNotification.Value = notification.Message;
-								});
+			{
+				var originalNotification =
+					Notifications.FirstOrDefault(notification1 => notification1.Message == notification.Message
+					                                              && notification1.Details == notification.Details
+					                                              && notification1.Level == notification.Level);
+				if (originalNotification != null)
+				{
+					notification.RepeatCount = originalNotification.RepeatCount + 1;
+					Notifications.Remove(originalNotification);
+				}
+
+				Notifications.Add(notification);
+				if (Notifications.Count > 10)
+					Notifications.RemoveAt(0);
+
+				LastNotification.Value = notification.Message;
+			});
 		}
 
 		public void AddInfoNotification(string message)

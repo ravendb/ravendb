@@ -16,10 +16,12 @@ namespace Raven.Studio.Messages
 	        Message = message;
 			Level = level;
 			CreatedAt = SystemTime.UtcNow;
+		    RepeatCount = 1;
 		}
 
 		public DateTime CreatedAt { get; private set; }
 		public string Message { get; private set; }
+		public int RepeatCount { get; set; }
 
 	    public NotificationLevel Level { get; private set; }
 
