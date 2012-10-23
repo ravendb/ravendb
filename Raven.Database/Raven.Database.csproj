@@ -81,6 +81,14 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
     </Reference>
+    <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory.CSharp, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+    </Reference>
     <Reference Include="Jint, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Jint.dll</HintPath>
@@ -94,6 +102,10 @@
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="Mono.Cecil, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Mono.Cecil.dll</HintPath>
+    </Reference>
     <Reference Include="NetTopologySuite">
       <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
     </Reference>
@@ -798,18 +810,6 @@
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Mono.Cecil\Mono.Cecil.csproj">
-      <Project>{d68133bd-1e63-496e-9ede-4fbdbf77b486}</Project>
-      <Name>Mono.Cecil</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\NRefactory\ICSharpCode.NRefactory.CSharp\ICSharpCode.NRefactory.CSharp.csproj">
-      <Project>{53dca265-3c3c-42f9-b647-f72ba678122b}</Project>
-      <Name>ICSharpCode.NRefactory.CSharp</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\NRefactory\ICSharpCode.NRefactory\ICSharpCode.NRefactory.csproj">
-      <Project>{3b2a5653-ec97-4001-bb9b-d90f1af2c371}</Project>
-      <Name>ICSharpCode.NRefactory</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
