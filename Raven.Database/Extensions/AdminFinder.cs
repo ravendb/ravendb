@@ -7,6 +7,7 @@ using System.Security.Principal;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Extensions
 {
@@ -19,10 +20,11 @@ namespace Raven.Database.Extensions
 			if (principal == null)
 				return false;
 
-			var windowsPrincipal = principal as WindowsPrincipal;
+			var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
+			var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
+			
 			if (windowsPrincipal != null)
 			{
-
 				var current = WindowsIdentity.GetCurrent();
 				var windowsIdentity = ((WindowsIdentity)windowsPrincipal.Identity);
 
@@ -149,6 +151,18 @@ namespace Raven.Database.Extensions
 				}
 				return false;
 			}
+		}
+
+		public static bool IsAdministrator(this IPrincipal principal, DocumentDatabase database)
+		{
+			var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
+			if (databaseAccessPrincipal != null)
+			{
+				if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, database.Name, StringComparison.InvariantCultureIgnoreCase)))
+					return true;
+			}
+
+			return false;
 		}
 	}
 }

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -185,7 +186,7 @@ namespace Raven.Client.Document
 			get { return apiKey; }
 			set
 			{
-				if(defaultCredentials)
+				if (defaultCredentials)
 					credentials = null;
 				apiKey = value;
 			}
@@ -260,7 +261,7 @@ namespace Raven.Client.Document
 #if DEBUG
 			GC.SuppressFinalize(this);
 #endif
-			
+
 
 			var tasks = new List<Task>();
 			foreach (var databaseChange in databaseChanges)
@@ -425,11 +426,11 @@ namespace Raven.Client.Document
 				}
 #endif
 
-			initialized = true;
+				initialized = true;
 
 #if !SILVERLIGHT
 				RecoverPendingTransactions();
-		
+
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)
 				{
 					DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
@@ -448,7 +449,7 @@ namespace Raven.Client.Document
 
 		public void InitializeProfiling()
 		{
-				jsonRequestFactory.LogRequest += profilingContext.RecordAction;
+			jsonRequestFactory.LogRequest += profilingContext.RecordAction;
 		}
 
 #if !SILVERLIGHT
@@ -483,10 +484,25 @@ namespace Raven.Client.Document
 				}
 
 				if (ApiKey == null)
+				{
+					AssertUnuthorizedCredentialSupportWindowsAuth(response);
+
 					return null;
+				}
 				oauthSource = Url + "/OAuth/API-Key";
 
 				return securedAuthenticator.DoOAuthRequest(oauthSource);
+			};
+
+			Conventions.HandleForbiddenResponseAsync = forbiddenResponse =>
+			{
+				if (ApiKey == null)
+				{
+					AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse);
+					return null;
+				}
+
+				return null;
 			};
 #endif
 
@@ -496,16 +512,64 @@ namespace Raven.Client.Document
 				unauthorizedResponse.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
-					{
+				{
 					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource);
-		}
+				}
 
 				if (ApiKey == null)
+				{
+					AssertUnuthorizedCredentialSupportWindowsAuth(unauthorizedResponse); 
 					return null;
+				}
 				oauthSource = Url + "/OAuth/API-Key";
 
 				return securedAuthenticator.DoOAuthRequestAsync(oauthSource);
 			};
+
+			Conventions.HandleForbiddenResponseAsync = forbiddenResponse =>
+			{
+				if (ApiKey == null)
+				{
+					AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse);
+					return null;
+				}
+
+				return null;
+			};
+		}
+
+		private void AssertUnuthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
+		{
+			if (credentials != null)
+			{
+				var authHeaders = response.Headers["WWW-Authentication"];
+				if (authHeaders == null ||
+					(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
+					)
+				{
+					// we are trying to do windows auth, but we didn't get the windows auth headers
+					throw new SecurityException(
+						"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
+						Environment.NewLine +
+						"If you are running inside IIS, make sure to enable Windows authentication.");
+				}
+			}
+		}
+
+		private void AssertForbiddenCredentialSupportWindowsAuth(HttpWebResponse response)
+		{
+			if (credentials != null)
+			{
+				var requiredAuth = response.Headers["Raven-Required-Auth"];
+				if (requiredAuth == "Windows")
+				{
+					// we are trying to do windows auth, but we didn't get the windows auth headers
+					throw new SecurityException(
+						"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
+						Environment.NewLine +
+						"If you are running inside IIS, make sure to enable Windows authentication.");
+				}
+			}
 		}
 
 		/// <summary>

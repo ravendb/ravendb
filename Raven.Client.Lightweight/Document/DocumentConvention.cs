@@ -499,12 +499,23 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
 
+		/// <summary>
+		/// Handles forbidden responses
+		/// </summary>
+		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleForbiddenResponse { get; set; }
+
 #if !NET35
 		/// <summary>
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
+
+		/// <summary>
+		/// Begins handling of fobbiden responses
+		/// in async manner
+		/// </summary>
+		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
 #endif
 
 		/// <summary>
@@ -561,7 +572,6 @@ namespace Raven.Client.Document
 		/// Default: 5 minutes
 		/// </summary>
 		public TimeSpan MaxFailoverCheckPeriod { get; set; }
-
 	}
 
 

@@ -87,8 +87,7 @@
 				</StackPanel>
 			</toolkit:DockPanel>
 
-		<Grid Grid.Row="1"
-			  Visibility="{Binding IsLogsEnabled, Converter={StaticResource BooleanToVisibility}}">
+		<Grid Grid.Row="1">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="2*" />
 				<RowDefinition Height="Auto" />
@@ -219,30 +218,6 @@
 							 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
 				</Grid>
 			</Border>
-		</Grid>
-
-		<Grid Grid.Row="2"
-			  Visibility="{Binding IsLogsEnabled, Converter={StaticResource BooleanToOppositeVisibility}}">
-			
-			<StackPanel>
-				<TextBlock>
-					<Run Text="Logs end point is not enabled." FontWeight="Bold" />
-					<LineBreak />
-					<Run Text="To enable it, add a file called 'NLog.config' in the same directory as the server, with the following content:" />
-				</TextBlock>
-				<TextBox Text="{Binding EnablingLogsInstructions}"
-						 x:Name="LogInstructions"
-						 IsReadOnly="True"
-						 Margin="0,10,0,0">
-					<ContextMenu:ContextMenuService.ContextMenu>
-						<ContextMenu:ContextMenu x:Name="NoLogsContextMenu">
-							<ContextMenu:MenuItem Header="Copy"
-                                                  Command="{Binding Source={StaticResource CopyToClipboardCommand}}"
-                                                  CommandParameter="{Binding EnablingLogsInstructions}" />
-						</ContextMenu:ContextMenu>
-					</ContextMenu:ContextMenuService.ContextMenu>
-				</TextBox>
-			</StackPanel>
 		</Grid>
 	</Grid>
 </Infrastructure:PageView>

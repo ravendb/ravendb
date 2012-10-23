@@ -29,9 +29,9 @@ namespace Raven.Database.Server.Responders.Admin
 			return false;
 		}
 
-		public override void Respond(Abstractions.IHttpContext context)
+		public override void Respond(IHttpContext context)
 		{
-			if (context.User.IsAdministrator() == false)
+			if (context.User.IsAdministrator() == false && context.User.IsAdministrator(Database) == false)
 			{
 				context.SetStatusToUnauthorized();
 				context.WriteJson(new
