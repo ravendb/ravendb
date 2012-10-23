@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Security;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
@@ -57,7 +58,7 @@ namespace Raven.Tests.MailingList
 		public void CannotUseTaskFactory()
 		{
 			Assert.Throws<SecurityException>(() => Compile(
-				"from doc in docs  select new { doc.Now , die = System.Threading.Tasks.Task.Factory.StartNew(((Func<int>)(()=>{ return 1; }))}"));
+				"from doc in docs  select new { doc.Now , die = System.Threading.Tasks.Task.Factory.StartNew((Func<int>)(()=>{ return 1; }))}"));
 		}
 
 		[Fact]

@@ -125,7 +125,7 @@ namespace Raven.Abstractions.Json
 				yield return Tuple.Create(result, self);
 				yield break;
 			}
-			if(result == null)
+			if(result == null || result.Type == JTokenType.Null)
 			{
 				yield break;
 			}

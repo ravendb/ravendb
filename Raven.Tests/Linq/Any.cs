@@ -1,6 +1,6 @@
-﻿using Raven.Abstractions;
-using System;
+﻿using System;
 using System.Linq;
+using Raven.Abstractions;
 using Xunit;
 
 namespace Raven.Tests.Linq
@@ -14,13 +14,13 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanQueryArray()
+		public void CanQueryArrayWithAny()
 		{
 			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
-					var doc = new TestDoc {StringArray = new string[] {"test", "doc", "foo"}};
+					var doc = new TestDoc {StringArray = new [] {"test", "doc", "foo"}};
 					session.Store(doc);
 					session.SaveChanges();
 				}

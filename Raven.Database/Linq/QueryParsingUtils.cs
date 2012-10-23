@@ -15,13 +15,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using ICSharpCode.NRefactory;
-using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.PrettyPrinter;
+using ICSharpCode.NRefactory.CSharp;
+using ICSharpCode.NRefactory.PatternMatching;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
-using Raven.Database.Indexing;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
@@ -33,7 +32,7 @@ namespace Raven.Database.Linq
 	{
 		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
-			var unit = new CompilationUnit();
+			var unit = new SyntaxTree();
 
 			var namespaces = new HashSet<string>
 			{
@@ -58,43 +57,51 @@ namespace Raven.Database.Linq
 
 			foreach (var ns in namespaces)
 			{
-				unit.AddChild(new Using(ns));
+				unit.Members.Add(new UsingDeclaration(ns));
 			}
 
-			unit.AddChild(type);
-			var output = new CSharpOutputVisitor();
-			unit.AcceptVisitor(output, null);
+			unit.Members.Add(new WindowsNewLine());
+			unit.Members.Add(new WindowsNewLine());
 
-			return output.Text;
+			unit.Members.Add(type);
+
+			var stringWriter = new StringWriter();
+			var output = new CSharpOutputVisitor(stringWriter, FormattingOptionsFactory.CreateSharpDevelop());
+			unit.AcceptVisitor(output);
+
+			return stringWriter.GetStringBuilder().ToString();
 		}
 
-		public static string ToText(INode node)
+		public static string ToText(AstNode node)
 		{
-			var output = new CSharpOutputVisitor();
-			node.AcceptVisitor(output, null);
+			var stringWriter = new StringWriter();
+			var output = new CSharpOutputVisitor(stringWriter, FormattingOptionsFactory.CreateSharpDevelop());
+			node.AcceptVisitor(output);
 
-			return output.Text;
+			return stringWriter.GetStringBuilder().ToString();
 		}
 
-		public static VariableDeclaration GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
+		public static VariableInitializer GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
 		{
 			try
 			{
-				var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
+				var parser = new CSharpParser();
+				var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
 
-				var block = parser.ParseBlock();
+				if (block.Count == 0 || parser.HasErrors)
+				{
+					var errs = string.Join(Environment.NewLine, parser.Errors.Select(x => x.Region + ": " + x.ErrorType + " - " + x.Message));
+					throw new InvalidOperationException("Could not understand query: \r\n" + errs);
+				}
 
-				if (block.Children.Count != 1)
-					throw new InvalidOperationException("Could not understand query: \r\n" + parser.Errors.ErrorOutput);
-
-				var declaration = block.Children[0] as LocalVariableDeclaration;
+				var declaration = block[0] as VariableDeclarationStatement;
 				if (declaration == null)
 					throw new InvalidOperationException("Only local variable declaration are allowed");
 
 				if (declaration.Variables.Count != 1)
 					throw new InvalidOperationException("Only one variable declaration is allowed");
 
-				var variable = declaration.Variables[0];
+				var variable = declaration.Variables.First();
 
 				if (variable.Initializer == null)
 					throw new InvalidOperationException("Variable declaration must have an initializer");
@@ -103,12 +110,12 @@ namespace Raven.Database.Linq
 				if (queryExpression == null)
 					throw new InvalidOperationException("Variable initializer must be a query expression");
 
-				var selectClause = queryExpression.SelectOrGroupClause as QueryExpressionSelectClause;
+				var selectClause = queryExpression.Clauses.OfType<QuerySelectClause>().FirstOrDefault();
 				if (selectClause == null)
 					throw new InvalidOperationException("Variable initializer must be a select query expression");
 
-				var createExpression = GetAnonymousCreateExpression(selectClause.Projection) as ObjectCreateExpression;
-				if ((createExpression == null || createExpression.IsAnonymousType == false) && requiresSelectNewAnonymousType)
+				var createExpression = GetAnonymousCreateExpression(selectClause.Expression) as AnonymousTypeCreateExpression;
+				if ((createExpression == null) && requiresSelectNewAnonymousType)
 					throw new InvalidOperationException(
 						"Variable initializer must be a select query expression returning an anonymous object");
 
@@ -124,30 +131,34 @@ namespace Raven.Database.Linq
 			}
 		}
 
-		public static VariableDeclaration GetVariableDeclarationForLinqMethods(string query, bool requiresSelectNewAnonymousType)
+		public static VariableInitializer GetVariableDeclarationForLinqMethods(string query, bool requiresSelectNewAnonymousType)
 		{
 			try
 			{
-				var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
 
-				var block = parser.ParseBlock();
+				var parser = new CSharpParser();
 
-				if (block.Children.Count != 1)
-					throw new InvalidOperationException("Could not understand query: \r\n" + parser.Errors.ErrorOutput);
+				var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
 
-				var declaration = block.Children[0] as LocalVariableDeclaration;
+				if (block.Count == 0 || parser.HasErrors)
+				{
+					var errs = string.Join(Environment.NewLine, parser.Errors.Select(x => x.Region + ": " + x.ErrorType + " - " + x.Message));
+					throw new InvalidOperationException("Could not understand query: \r\n" + errs);
+				}
+
+				var declaration = block[0] as VariableDeclarationStatement;
 				if (declaration == null)
 					throw new InvalidOperationException("Only local variable declaration are allowed");
 
 				if (declaration.Variables.Count != 1)
 					throw new InvalidOperationException("Only one variable declaration is allowed");
 
-				var variable = declaration.Variables[0];
+				var variable = declaration.Variables.First();
 
 				if (variable.Initializer as InvocationExpression == null)
 					throw new InvalidOperationException("Variable declaration must have an initializer which is a method invocation expression");
 
-				var targetObject = ((InvocationExpression)variable.Initializer).TargetObject as MemberReferenceExpression;
+				var targetObject = ((InvocationExpression)variable.Initializer).Target as MemberReferenceExpression;
 				if (targetObject == null)
 					throw new InvalidOperationException("Variable initializer must be invoked on a method reference expression");
 
@@ -163,14 +174,15 @@ namespace Raven.Database.Linq
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 
-				var expressionBody = GetAnonymousCreateExpression(lambdaExpression.ExpressionBody);
+				var expressionBody = GetAnonymousCreateExpression(lambdaExpression.Body);
 
-				var objectCreateExpression = expressionBody as ObjectCreateExpression;
-				if (objectCreateExpression == null && requiresSelectNewAnonymousType)
+				var anonymousTypeCreateExpression = expressionBody as AnonymousTypeCreateExpression;
+				if (anonymousTypeCreateExpression == null && requiresSelectNewAnonymousType)
 					throw new InvalidOperationException("Variable initializer select must have a lambda expression with an object create expression");
 
-				if (objectCreateExpression != null && objectCreateExpression.IsAnonymousType == false && objectCreateExpression.CreateType.Type.Contains("Anonymous") == false && requiresSelectNewAnonymousType)
-					throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.CreateType.Type);
+				var objectCreateExpression = expressionBody as ObjectCreateExpression;
+				if (objectCreateExpression != null && requiresSelectNewAnonymousType)
+					throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.Type);
 
 				return variable;
 			}
@@ -180,34 +192,43 @@ namespace Raven.Database.Linq
 			}
 		}
 
-		public static Expression GetAnonymousCreateExpression(Expression expression)
+		private static string ToQueryStatement(string query)
+		{
+			query = query.Replace("new() {", "new {");
+			if (query.EndsWith(";"))
+				return "var q = " + query;
+			return "var q = " + query + ";";
+		}
+
+		public static INode GetAnonymousCreateExpression(INode expression)
 		{
 			var invocationExpression = expression as InvocationExpression;
 
 			if (invocationExpression == null)
 				return expression;
-			var memberReferenceExpression = invocationExpression.TargetObject as MemberReferenceExpression;
+			var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
 			if (memberReferenceExpression == null)
 				return expression;
 
-			var typeReference = memberReferenceExpression.TargetObject as TypeReferenceExpression;
+			var typeReference = memberReferenceExpression.Target as TypeReferenceExpression;
 			if (typeReference == null)
 			{
-				var objectCreateExpression = memberReferenceExpression.TargetObject as ObjectCreateExpression;
-				if(objectCreateExpression != null && memberReferenceExpression.MemberName == "Boost")
+				var objectCreateExpression = memberReferenceExpression.Target as AnonymousTypeCreateExpression;
+				if (objectCreateExpression != null && memberReferenceExpression.MemberName == "Boost")
 				{
 					return objectCreateExpression;
 				}
 				return expression;
 			}
 
-			if (typeReference.TypeReference.Type != "Raven.Database.Linq.PrivateExtensions.DynamicExtensionMethods")
+			var simpleType = typeReference.Type as SimpleType;
+			if (simpleType != null && simpleType.Identifier != "Raven.Database.Linq.PrivateExtensions.DynamicExtensionMethods")
 				return expression;
 
 			switch (memberReferenceExpression.MemberName)
 			{
 				case "Boost":
-					return invocationExpression.Arguments[0];
+					return invocationExpression.Arguments.First();
 			}
 			return expression;
 		}
@@ -272,7 +293,7 @@ namespace Raven.Database.Linq
 			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
-				GenerateInMemory = true, 
+				GenerateInMemory = true,
 				IncludeDebugInformation = false
 			};
 			if (basePath != null)

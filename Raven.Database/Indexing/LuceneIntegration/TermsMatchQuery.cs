@@ -33,7 +33,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 
 		public override string ToString(string fld)
 		{
-			return "@in(" + field + ", " + string.Join(", ", matches) + ")";
+			return "@in<" + field + ">(" + string.Join(", ", matches) + ")";
 		}
 
 		protected override FilteredTermEnum GetEnum(IndexReader reader)
@@ -63,6 +63,30 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			private void MoveToCurrentTerm()
 			{
 				SetEnum(reader.Terms(new Term(termsMatchQuery.field, termsMatchQuery.matches[pos])));
+				movedEnum = true;
+			}
+
+			private bool movedEnum;
+
+			public override bool Next()
+			{
+				if (actualEnum == null)
+					return false; // the actual enumerator is not initialized!
+				currentTerm = null;
+				while (EndEnum() == false && actualEnum.Next())
+				{
+					do
+					{
+						movedEnum = false;
+						var term = actualEnum.Term;
+						if (TermCompare(term) == false)
+							continue;
+						currentTerm = term;
+						return true;
+					} while (movedEnum);
+				}
+				currentTerm = null;
+				return false;
 			}
 
 			protected override bool TermCompare(Term term)
@@ -84,7 +108,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 				if (last > 0)
 				{
 					MoveToCurrentTerm();
-					return currentTerm != null;
+					return false;
 				}
 				return last == 0;
 			}
@@ -102,11 +126,11 @@ namespace Raven.Database.Indexing.LuceneIntegration
 
 		public IRavenLuceneMethodQuery Merge(Query other)
 		{
-			var termsMatchQuery = (TermsMatchQuery) other;
+			var termsMatchQuery = (TermsMatchQuery)other;
 			matches.AddRange(termsMatchQuery.matches);
 
 			matches = matches.Distinct()
-				.Where(x=>string.IsNullOrWhiteSpace(x) == false)
+				.Where(x => string.IsNullOrWhiteSpace(x) == false)
 				.OrderBy(s => s, StringComparer.Ordinal).ToList();
 			return this;
 		}

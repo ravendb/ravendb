@@ -82,6 +82,48 @@ namespace Raven.Database.Indexing
 		}
 
 		/// <summary>
+		/// Note that here we assume that  source may be very large (number of documents)
+		/// </summary>
+		public void ExecuteAllBuffered<T>(WorkContext context, IEnumerable<T> source, Action<IEnumerable<T>> action)
+		{
+			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			{
+				action(source);
+				return;
+			}
+
+			const int bufferSize = 8192;
+			var tasks = new List<Task>();
+			var enumerator = source.GetEnumerator();
+			var hasMore = true;
+			while (hasMore)
+			{
+				var items = new List<T>(bufferSize);
+				while ((hasMore = enumerator.MoveNext()) && items.Count < bufferSize)
+				{
+					items.Add(enumerator.Current);
+				}
+				if(hasMore == false && tasks.Count == 0)
+				{
+					action(items);
+					return;
+				}
+				var task = Task.Factory.StartNew(() => action(items));
+				tasks.Add(task);
+
+				if(tasks.Count >= context.Configuration.MaxNumberOfParallelIndexTasks)
+				{
+					Task.WaitAll(tasks.ToArray());
+					tasks.Clear();
+				}
+			}
+			if (tasks.Count == 0)
+				return;
+
+			Task.WaitAll(tasks.ToArray());
+		}
+
+		/// <summary>
 		/// Note that we assume that source is a relatively small number, expected to be 
 		/// the number of indexes, not the number of documents.
 		/// </summary>

@@ -1,16 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Security;
-using System.Threading;
-using System.Threading.Tasks;
-using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.Visitors;
 using System.Linq;
+using System.Security;
+using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
-	public class ThrowOnInvalidMethodCalls : AbstractAstVisitor
+	public class ThrowOnInvalidMethodCalls : DepthFirstAstVisitor<object,object>
 	{
 		public class ForbiddenMethod
 		{
@@ -36,9 +32,9 @@ The map or reduce functions must be referentially transparent, that is, for the 
 Using {0} invalidate that premise, and is not allowed"),
 		};
 
-		public override object VisitQueryExpressionOrderClause(QueryExpressionOrderClause queryExpressionOrderClause, object data)
+		public override object VisitQueryOrderClause(QueryOrderClause queryOrderClause, object data)
 		{
-			var text = QueryParsingUtils.ToText(queryExpressionOrderClause);
+			var text = QueryParsingUtils.ToText(queryOrderClause);
 			throw new InvalidOperationException(
 				@"OrderBy calls are not valid during map or reduce phase, but the following was found:
 " + text + @"
@@ -46,23 +42,16 @@ OrderBy calls modify the indexing output, but doesn't actually impact the order 
 You should be calling OrderBy on the QUERY, not on the index, if you want to specify ordering.");
 		}
 
-		public override object VisitQueryExpressionLetClause(QueryExpressionLetClause queryExpressionLetClause, object data)
+		public override object VisitQueryLetClause(QueryLetClause queryLetClause, object data)
 		{
-			if (SimplifyLetExpression(queryExpressionLetClause.Expression) is LambdaExpression)
+
+			if (SimplifyLetExpression(queryLetClause.Expression) is LambdaExpression)
 			{
-				var text = QueryParsingUtils.ToText(queryExpressionLetClause);
+				var text = QueryParsingUtils.ToText(queryLetClause);
 				throw new SecurityException("Let expression cannot contain labmda expressions, but got: " + text);
 			}
 
-			return base.VisitQueryExpressionLetClause(queryExpressionLetClause, data);
-		}
-
-		public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
-		{
-			if (lambdaExpression.StatementBody == null || lambdaExpression.StatementBody.IsNull)
-				return base.VisitLambdaExpression(lambdaExpression, data);
-			var text = QueryParsingUtils.ToText(lambdaExpression);
-			throw new SecurityException("Lambda expression can only consist of a single expression, not a statement, but got: " + text);
+			return base.VisitQueryLetClause(queryLetClause, data);
 		}
 
 		private Expression SimplifyLetExpression(Expression expression)
@@ -76,12 +65,23 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			return expression;
 		}
 
+		public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
+		{
+			if (lambdaExpression.Body == null || lambdaExpression.Body.IsNull)
+				return base.VisitLambdaExpression(lambdaExpression, data);
+			if(lambdaExpression.Body is BlockStatement == false)
+				return base.VisitLambdaExpression(lambdaExpression, data);
+
+			var text = QueryParsingUtils.ToText(lambdaExpression);
+			throw new SecurityException("Lambda expression can only consist of a single expression, not a statement, but got: " + text);
+		}
+
 		public override object VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression, object data)
 		{
 			foreach (var forbidden in Members.Where(x => x.Names.Contains(memberReferenceExpression.MemberName)))
 			{
 				var identifierExpression = GetTarget(memberReferenceExpression);
-				if(forbidden.TypeAliases.Contains(identifierExpression) == false)
+				if (forbidden.TypeAliases.Contains(identifierExpression) == false)
 					continue;
 
 				var text = QueryParsingUtils.ToText(memberReferenceExpression);
@@ -93,11 +93,11 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 
 		private static string GetTarget(MemberReferenceExpression memberReferenceExpression)
 		{
-			var identifierExpression = memberReferenceExpression.TargetObject as IdentifierExpression;
+			var identifierExpression = memberReferenceExpression.Target as IdentifierExpression;
 			if(identifierExpression!=null)
 				return identifierExpression.Identifier;
 
-			var mre = memberReferenceExpression.TargetObject as MemberReferenceExpression;
+			var mre = memberReferenceExpression.Target as MemberReferenceExpression;
 			if(mre != null)
 				return GetTarget(mre) + "." + mre.MemberName;
 

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Configuration;
 using System.Data;
 using System.Data.Common;
@@ -40,147 +41,157 @@ namespace Raven.Bundles.IndexReplication
 
 			var providerFactory = DbProviderFactories.GetFactory(connectionString.ProviderName);
 
-			var connection = providerFactory.CreateConnection();
-			connection.ConnectionString = connectionString.ConnectionString;
 			return new ReplicateToSqlIndexUpdateBatcher(
-				connection,
+				providerFactory,
+				connectionString.ConnectionString,
 				destination);
 		}
 
 		public class ReplicateToSqlIndexUpdateBatcher : AbstractIndexUpdateTriggerBatcher
 		{
-			private readonly DbConnection connection;
+			private readonly DbProviderFactory _providerFactory;
+			private readonly string _connectionString;
+			private readonly IndexReplicationDestination _destination;
 			private readonly IndexReplicationDestination destination;
-			private DbTransaction tx;
-			private static Regex datePattern = new Regex(@"\d{17}", RegexOptions.Compiled);
+			private static readonly Regex datePattern = new Regex(@"\d{17}", RegexOptions.Compiled);
 
-			public ReplicateToSqlIndexUpdateBatcher(DbConnection connection, IndexReplicationDestination destination)
+			private readonly ConcurrentQueue<IDbCommand> commands = new ConcurrentQueue<IDbCommand>();
+
+
+			public ReplicateToSqlIndexUpdateBatcher(
+				DbProviderFactory providerFactory, 
+				string connectionString, 
+				IndexReplicationDestination destination)
 			{
-				this.connection = connection;
-				this.destination = destination;
+				_providerFactory = providerFactory;
+				_connectionString = connectionString;
+				_destination = destination;
 			}
 
-			private DbConnection Connection
-			{
-				get
-				{
-					if (connection.State != ConnectionState.Open)
-					{
-						connection.Open();
-						tx = connection.BeginTransaction(IsolationLevel.ReadCommitted);
-					}
-					return connection;
-				}
-			}
 
 			public override void OnIndexEntryCreated(string entryKey, Document document)
 			{
-				using (var cmd = Connection.CreateCommand())
+				var cmd = _providerFactory.CreateCommand();
+				var pkParam = cmd.CreateParameter();
+				pkParam.ParameterName = GetParameterName("entryKey");
+				pkParam.Value = entryKey;
+				cmd.Parameters.Add(pkParam);
+
+				var sb = new StringBuilder("INSERT INTO ")
+					.Append(destination.TableName)
+					.Append(" (")
+					.Append(destination.PrimaryKeyColumnName)
+					.Append(", ");
+
+				foreach (var mapping in destination.ColumnsMapping)
 				{
-					cmd.Transaction = tx;
-					var pkParam = cmd.CreateParameter();
-					pkParam.ParameterName = GetParameterName("entryKey");
-					pkParam.Value = entryKey;
-					cmd.Parameters.Add(pkParam);
+					sb.Append(mapping.Value).Append(", ");
+				}
+				sb.Length = sb.Length - 2;
 
-					var sb = new StringBuilder("INSERT INTO ")
-						.Append(destination.TableName)
-						.Append(" (")
-						.Append(destination.PrimaryKeyColumnName)
-						.Append(", ");
+				sb.Append(") \r\nVALUES (")
+					.Append(pkParam.ParameterName)
+					.Append(", ");
 
-					foreach (var mapping in destination.ColumnsMapping)
+				foreach (var mapping in destination.ColumnsMapping)
+				{
+					var parameter = cmd.CreateParameter();
+					parameter.ParameterName = GetParameterName(mapping.Key);
+					var field = document.GetFieldable(mapping.Key);
+
+					var numericfield = document.GetFieldable(String.Concat(mapping.Key, "_Range"));
+					if (numericfield != null)
+						field = numericfield;
+
+					if (field == null || field.StringValue == Constants.NullValue)
+						parameter.Value = DBNull.Value;
+					else if (field is NumericField)
 					{
-						sb.Append(mapping.Value).Append(", ");
+						var numField = (NumericField) field;
+						parameter.Value = numField.NumericValue;
 					}
-					sb.Length = sb.Length - 2;
-
-					sb.Append(") \r\nVALUES (")
-						.Append(pkParam.ParameterName)
-						.Append(", ");
-
-					foreach (var mapping in destination.ColumnsMapping)
+					else
 					{
-						var parameter = cmd.CreateParameter();
-						parameter.ParameterName = GetParameterName(mapping.Key);
-						var field = document.GetFieldable(mapping.Key);
-
-						var numericfield = document.GetFieldable(String.Concat(mapping.Key, "_Range"));
-						if (numericfield != null)
-							field = numericfield;
-
-						if (field == null || field.StringValue == Constants.NullValue)
-							parameter.Value = DBNull.Value;
-						else if (field is NumericField)
+						var stringValue = field.StringValue;
+						if (datePattern.IsMatch(stringValue))
 						{
-							var numField = (NumericField)field;
-							parameter.Value = numField.NumericValue;
+							try
+							{
+								parameter.Value = DateTools.StringToDate(stringValue);
+							}
+							catch
+							{
+								parameter.Value = stringValue;
+							}
 						}
 						else
 						{
-							var stringValue = field.StringValue;
-							if (datePattern.IsMatch(stringValue))
+							DateTime time;
+							if (DateTime.TryParseExact(stringValue, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+							                           DateTimeStyles.None, out time))
 							{
-								try
-								{
-									parameter.Value = DateTools.StringToDate(stringValue);
-								}
-								catch
-								{
-									parameter.Value = stringValue;
-								}
+								parameter.Value = time;
 							}
 							else
 							{
-								DateTime time;
-								if (DateTime.TryParseExact(stringValue, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-														   DateTimeStyles.None, out time))
-								{
-									parameter.Value = time;
-								}
-								else
-								{
-									parameter.Value = stringValue;
-								}
+								parameter.Value = stringValue;
 							}
 						}
-
-						cmd.Parameters.Add(parameter);
-						sb.Append(parameter.ParameterName).Append(", ");
 					}
-					sb.Length = sb.Length - 2;
-					sb.Append(")");
-					cmd.CommandText = sb.ToString();
-					cmd.ExecuteNonQuery();
+
+					cmd.Parameters.Add(parameter);
+					sb.Append(parameter.ParameterName).Append(", ");
 				}
+				sb.Length = sb.Length - 2;
+				sb.Append(")");
+				cmd.CommandText = sb.ToString();
+
+				commands.Enqueue(cmd);
 			}
 
 			public override void OnIndexEntryDeleted(string entryKey)
 			{
-				using (var cmd = Connection.CreateCommand())
-				{
-					cmd.Transaction = tx;
-					var parameter = cmd.CreateParameter();
-					parameter.ParameterName = GetParameterName("entryKey");
-					parameter.Value = entryKey;
-					cmd.Parameters.Add(parameter);
-					cmd.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}", destination.TableName, destination.PrimaryKeyColumnName, parameter.ParameterName);
+				var cmd = _providerFactory.CreateCommand();
+				var parameter = cmd.CreateParameter();
+				parameter.ParameterName = GetParameterName("entryKey");
+				parameter.Value = entryKey;
+				cmd.Parameters.Add(parameter);
+				cmd.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}", destination.TableName,
+				                                destination.PrimaryKeyColumnName, parameter.ParameterName);
 
-					cmd.ExecuteNonQuery();
-				}
+				commands.Enqueue(cmd);
 			}
 
 			private string GetParameterName(string paramName)
 			{
-				if (connection is SqlConnection)
+				if (_providerFactory is SqlClientFactory)
 					return "@" + paramName;
 				return ":" + paramName;
 			}
 
 			public override void Dispose()
 			{
-				tx.Commit();
-				connection.Dispose();
+				if (commands.Count == 0)
+					return;
+
+				using(var con = _providerFactory.CreateConnection())
+				{
+					con.ConnectionString = _connectionString;
+					con.Open();
+
+					using (var tx = con.BeginTransaction())
+					{
+						IDbCommand result;
+						while (commands.TryDequeue(out result))
+						{
+							result.Connection = con;
+							result.Transaction = tx;
+							result.ExecuteNonQuery();
+						}
+
+						tx.Commit();
+					}
+				}
 			}
 		}
 	}
