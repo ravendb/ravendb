@@ -256,8 +256,17 @@ namespace Raven.Database.Data
 				})
 			};
 			dynamicQueryMapping.SetupFieldsToIndex(query, fields);
+			dynamicQueryMapping.SetupSortDescriptors(dynamicQueryMapping.SortDescriptors);
 			dynamicQueryMapping.FindIndexName(database, dynamicQueryMapping, query);
 			return dynamicQueryMapping;
+		}
+
+		private void SetupSortDescriptors(DynamicSortInfo[] sortDescriptors)
+		{
+			foreach (var dynamicSortInfo in sortDescriptors)
+			{
+				dynamicSortInfo.Field = ReplaceIndavlidCharactersForFields(dynamicSortInfo.Field);
+			}
 		}
 
 		static readonly Regex replaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
@@ -295,8 +304,6 @@ namespace Raven.Database.Data
 						query.FieldsToFetch.Concat(groupBys).ToArray();
 				}
 			}
-
-			
 		}
 
 		public static string ReplaceIndavlidCharactersForFields(string field)
