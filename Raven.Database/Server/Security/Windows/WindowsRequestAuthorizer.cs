@@ -96,13 +96,13 @@ namespace Raven.Database.Server.Security.Windows
 
 			onRejectingRequest = ctx.SetStatusToUnauthorized;
 
-			
 			List<DatabaseAccess> databasesForGroups;
 			var databasesForUsers = GenerateDatabaseAccessLists(ctx, out databasesForGroups);
 
 			var adminList = GenerateAdminList(databasesForUsers, databasesForGroups);
 
-			ctx.User = new PrincipalWithDatabaseAccess(ctx.User as WindowsPrincipal, adminList);
+			if (ctx.User is PrincipalWithDatabaseAccess == false)
+				ctx.User = new PrincipalWithDatabaseAccess(ctx.User as WindowsPrincipal, adminList);
 
 			var readOnlyList = GenerateReadOnlyList(databasesForUsers, databasesForGroups);
 
