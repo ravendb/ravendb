@@ -449,6 +449,7 @@
     <Compile Include="Issues\RavenDB535.cs" />
     <Compile Include="Issues\RavenDB626.cs" />
     <Compile Include="Issues\RavenDB_554.cs" />
+    <Compile Include="Linq\Contains.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\chad.cs" />

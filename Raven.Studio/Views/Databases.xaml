@@ -5,7 +5,6 @@
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
-                         xmlns:Controls="clr-namespace:System.Windows.Controls"
                          xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" Title="Databases"
                          Style="{StaticResource PageStyle}"
                          Infrastructure:ModelAttacher.AttachObservableModel="DatabasesListModel">

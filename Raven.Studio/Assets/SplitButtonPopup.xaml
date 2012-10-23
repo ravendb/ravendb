@@ -1,6 +1,6 @@
 ﻿<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ravenToolKit="clr-namespace:System.Windows.Controls"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:splitButton="clr-namespace:Delay" xmlns:b="clr-namespace:Boogaart.Silverlight.Behaviors">
 
     <Style TargetType="splitButton:SplitButtonPopup">
