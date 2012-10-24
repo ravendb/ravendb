@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -113,8 +114,6 @@ namespace Raven.Database.Indexing
 			{
 				if (operationCancelled == false && jsonDocs != null && jsonDocs.Length > 0)
 				{
-
-
 					var lastByEtag = GetHighestEtag(jsonDocs);
 					var lastModified = lastByEtag.LastModified.Value;
 					var lastEtag = lastByEtag.Etag.Value;
@@ -138,7 +137,7 @@ namespace Raven.Database.Indexing
 						}
 					});
 
-					autoTuner.AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
+					UpdateAutoThrottler(jsonDocs, indexingDuration);
 				}
 
 				// make sure that we don't have too much "future cache" items
@@ -150,25 +149,88 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		private void UpdateAutoThrottler(JsonDocument[] jsonDocs, TimeSpan indexingDuration)
+		{
+			var futureLen = futureIndexBatches.Sum(x =>
+			{
+				if (x.Task.IsCompleted)
+					return x.Task.Result.Length;
+				return autoTuner.NumberOfItemsToIndexInSingleBatch/15;
+			});
+
+			var futureSize = futureIndexBatches.Sum(x =>
+			{
+				if (x.Task.IsCompleted)
+					return x.Task.Result.Sum(s=>s.SerializedSizeOnDisk);
+				return autoTuner.NumberOfItemsToIndexInSingleBatch * 256;
+		
+			});
+			autoTuner.AutoThrottleBatchSize(jsonDocs.Length + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
+		}
+
 		private JsonDocument[] GetJsonDocuments(Guid lastIndexedGuidForAllIndexes)
 		{
+			var futureResults = GetFutureJsonDocuments(lastIndexedGuidForAllIndexes, Timeout.Infinite);
+			if (futureResults != null)
+				return futureResults;
+			return GetJsonDocs(lastIndexedGuidForAllIndexes);
+		}
+
+		private JsonDocument[] GetFutureJsonDocuments(Guid lastIndexedGuidForAllIndexes, int timeToWait)
+		{
 			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == lastIndexedGuidForAllIndexes);
-			if (nextBatch != null)
+			if (nextBatch == null)
+				return null;
+			
+			try
 			{
-				try
+				if (nextBatch.Task.IsCompleted == false)
 				{
-					return nextBatch.Task.Result;
+					if (nextBatch.Task.Wait(timeToWait) == false)
+						return null;
 				}
-				catch (Exception e)
+				if (timeToWait == Timeout.Infinite)
+					timeToWait = 500;
+
+				var documents = nextBatch.Task.Result;
+
+				var items = new List<JsonDocument[]>
 				{
-					Log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
-				}
-				finally
+					documents
+				};
+				while (true)
 				{
-					futureIndexBatches.TryRemove(nextBatch);
+					var highestEtag = GetHighestEtag(documents);
+					var current = GetFutureJsonDocuments(highestEtag.Etag.Value, timeToWait/2);
+					if(current == null)
+					{
+						if (items.Count == 1)
+							return items[0];
+
+						var result = new JsonDocument[items.Sum(x => x.Length)];
+						int pos = 0;
+						foreach (var docs in items)
+						{
+							Array.Copy(docs, 0, result, pos, docs.Length);
+							pos += docs.Length;
+						}
+						return result;
+					}
+					else
+					{
+						items.Add(current);
+					}
 				}
 			}
-			return GetJsonDocs(lastIndexedGuidForAllIndexes);
+			catch (Exception e)
+			{
+				Log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
+				return null;
+			}
+			finally
+			{
+				futureIndexBatches.TryRemove(nextBatch);
+			}
 		}
 
 		private void MaybeAddFutureBatch(JsonDocument[] past)
@@ -176,8 +238,6 @@ namespace Raven.Database.Indexing
 			if(context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 				return;
 			if(past.Length == 0)
-				return;
-			if (past.Length < autoTuner.NumberOfItemsToIndexInSingleBatch)
 				return;
 			if(futureIndexBatches.Count > 5) // we limit the number of future calls we do
 				return;
@@ -203,6 +263,18 @@ namespace Raven.Database.Indexing
 				Task = System.Threading.Tasks.Task.Factory.StartNew(() =>
 				{
 					var jsonDocuments = GetJsonDocs(lastEtag);
+					int localWork = workCounter;
+					int retries = 15;
+					while (jsonDocuments.Length == 0 && retries>=0)
+					{
+						retries--;
+
+						if(context.WaitForWork(TimeSpan.FromMinutes(1), ref localWork, "PreFetching") == false)
+							continue;
+
+						jsonDocuments = GetJsonDocs(lastEtag);
+					}
+
 					MaybeAddFutureBatch(jsonDocuments);
 					return jsonDocuments;
 				})
