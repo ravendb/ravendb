@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -85,6 +86,7 @@ namespace Raven.Database.Indexing
 				Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}",
 										  jsonDocs.Length, lastIndexedGuidForAllIndexes);
 
+				context.ReportIndexingActualBatchSize(jsonDocs.Length);
 				context.CancellationToken.ThrowIfCancellationRequested();
 
 				MaybeAddFutureBatch(jsonDocs);
@@ -240,11 +242,20 @@ namespace Raven.Database.Indexing
 			if(past.Length == 0)
 				return;
 			if(futureIndexBatches.Count > 5) // we limit the number of future calls we do
-				return;
+			{
+				var alreadyLoaded = futureIndexBatches.Sum(x =>
+				{
+					if (x.Task.IsCompleted)
+						return x.Task.Result.Length;
+					return 0;
+				});
+
+				if (alreadyLoaded > autoTuner.NumberOfItemsToIndexInSingleBatch)
+					return;
+			}
 
 			// ensure we don't do TOO much future cachings
-			if( autoTuner.NumberOfItemsToIndexInSingleBatch > 1024 && 
-				MemoryStatistics.AvailableMemory < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			if( MemoryStatistics.AvailableMemory < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit )
 				return;
 
 			// we loaded the maximum amount, there are probably more items to read now.
@@ -256,6 +267,12 @@ namespace Raven.Database.Indexing
 			if(nextBatch != null)
 				return;
 
+			var futureBatchStat = new FutureBatchStats
+			{
+				Timestamp = SystemTime.UtcNow,
+			};
+			var sp = Stopwatch.StartNew();
+			context.AddFutureBatch(futureBatchStat);
 			futureIndexBatches.Add(new FutureIndexBatch
 			{
 				StartingEtag = lastEtag,
@@ -264,17 +281,17 @@ namespace Raven.Database.Indexing
 				{
 					var jsonDocuments = GetJsonDocs(lastEtag);
 					int localWork = workCounter;
-					int retries = 15;
-					while (jsonDocuments.Length == 0 && retries>=0)
+					while (jsonDocuments.Length == 0  && context.DoWork)
 					{
-						retries--;
+						futureBatchStat.Retries++;
 
 						if(context.WaitForWork(TimeSpan.FromMinutes(1), ref localWork, "PreFetching") == false)
 							continue;
 
 						jsonDocuments = GetJsonDocs(lastEtag);
 					}
-
+					futureBatchStat.Duration = sp.Elapsed;
+					futureBatchStat.Size = jsonDocuments.Length;
 					MaybeAddFutureBatch(jsonDocuments);
 					return jsonDocuments;
 				})
