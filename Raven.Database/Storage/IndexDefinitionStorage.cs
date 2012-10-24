@@ -268,8 +268,8 @@ namespace Raven.Database.Storage
 
 		public IDisposable TryRemoveIndexContext()
 		{
-			if(currentlyIndexingLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
-				throw new InvalidOperationException("Cannot modify indexes while indexing is in progress (already waited 10 seconds). Try again later");
+			if(currentlyIndexingLock.TryEnterWriteLock(TimeSpan.FromSeconds(60)) == false)
+				throw new InvalidOperationException("Cannot modify indexes while indexing is in progress (already waited full minute). Try again later");
 			return new DisposableAction(currentlyIndexingLock.ExitWriteLock);
 		}
 
