@@ -23,7 +23,7 @@ namespace Raven.Abstractions.Indexing
 		/// Gets or sets the map function, if there is only one
 		/// </summary>
 		/// <remarks>
-		/// This property only exists for backward compatability purposes
+		/// This property only exists for backward compatibility purposes
 		/// </remarks>
 		public string Map
 		{
