@@ -92,7 +92,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-			const int bufferSize = 1024;
+			const int bufferSize = 4096;
 			var tasks = new List<Task>();
 			var enumerator = source.GetEnumerator();
 			var hasMore = true;
@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
 				var task = Task.Factory.StartNew(() => action(items));
 				tasks.Add(task);
 
-				if(tasks.Count >= context.Configuration.MaxNumberOfParallelIndexTasks)
+				if (tasks.Count >= context.Configuration.MaxNumberOfParallelIndexTasks)
 				{
 					Task.WaitAll(tasks.ToArray());
 					tasks.Clear();
