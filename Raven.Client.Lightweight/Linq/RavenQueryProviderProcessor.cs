@@ -114,9 +114,10 @@ namespace Raven.Client.Linq
 								VisitMemberAccess((MemberExpression) unaryExpressionOp, false);
 								break;
 							case ExpressionType.Call:
-								// probably a call to !In()
+								// probably a call to !In() or !string.IsNullOrEmpty()
 								luceneQuery.OpenSubclause();
 								luceneQuery.Where("*:*");
+								luceneQuery.AndAlso();
 								luceneQuery.NegateNext();
 								VisitMethodCall((MethodCallExpression) unaryExpressionOp);
 								luceneQuery.CloseSubclause();
@@ -493,6 +494,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
+		private void VisitIsNullOrEmpty(MethodCallExpression expression)
+		{
+			var memberInfo = GetMember(expression.Arguments[0]);
+
+			luceneQuery.OpenSubclause();
+			luceneQuery.WhereEquals(memberInfo.Path, Constants.NullValue, false);
+			luceneQuery.OrElse();
+			luceneQuery.WhereEquals(memberInfo.Path, Constants.EmptyString, false);
+			luceneQuery.CloseSubclause();
+		}
+
 		private void VisitGreaterThan(BinaryExpression expression)
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
@@ -828,6 +840,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "EndsWith":
 				{
 					VisitEndsWith(expression);
+					break;
+				}
+				case "IsNullOrEmpty":
+				{
+					VisitIsNullOrEmpty(expression);
 					break;
 				}
 				default:
