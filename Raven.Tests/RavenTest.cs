@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
@@ -40,6 +41,7 @@ namespace Raven.Tests
 		protected const string DbDirectory = @".\TestDb\";
 		protected const string DbName = DbDirectory + @"DocDb.esb";
 		private string path;
+		private readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 
 		static RavenTest()
 		{
@@ -99,6 +101,10 @@ namespace Raven.Tests
 				// We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
 				documentStore.Dispose();
 				throw;
+			}
+			finally
+			{
+				stores.Add(documentStore);
 			}
 		}
 
@@ -370,6 +376,7 @@ namespace Raven.Tests
 
 		public virtual void Dispose()
 		{
+			stores.Where(store => store != null).ForEach(store => store.Dispose());
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
 			ClearDatabaseDirectory();
