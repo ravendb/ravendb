@@ -572,7 +572,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var memberInfo = GetMember(expression.Arguments[0]);
 			var oldPath = currentPath;
 			currentPath = memberInfo.Path + ",";
-			if (expression.Arguments.Count > 1)
+			if (expression.Arguments.Count >= 2)
 			{
 				VisitExpression(expression.Arguments[1]);
 			}
