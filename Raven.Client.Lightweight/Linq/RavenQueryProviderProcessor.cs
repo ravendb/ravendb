@@ -285,6 +285,7 @@ namespace Raven.Client.Linq
 			{
 				luceneQuery.OpenSubclause();
 				luceneQuery.Where("*:*");
+				luceneQuery.AndAlso();
 				luceneQuery.NegateNext();
 				VisitExpression(expression.Left);
 				luceneQuery.CloseSubclause();
