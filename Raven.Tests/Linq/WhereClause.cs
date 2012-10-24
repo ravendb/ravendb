@@ -84,7 +84,7 @@ namespace Raven.Tests.Linq
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers.Where(user => user.Name.StartsWith("foo") == false);
 
-			Assert.Equal("( *:* -Name:foo*)", q.ToString());
+			Assert.Equal("( *:* AND -Name:foo*)", q.ToString());
 		}
 
 		[Fact]
@@ -93,7 +93,7 @@ namespace Raven.Tests.Linq
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers.Where(user => !user.Name.StartsWith("foo"));
 
-			Assert.Equal("( *:* -Name:foo*)", q.ToString());
+			Assert.Equal("( *:* AND -Name:foo*)", q.ToString());
 		}
 
 
