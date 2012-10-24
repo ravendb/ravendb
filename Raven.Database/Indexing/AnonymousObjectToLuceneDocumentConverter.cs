@@ -37,22 +37,18 @@ namespace Raven.Database.Indexing
 
 		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
 		{
-			return (from property in properties.Cast<PropertyDescriptor>()
-					let name = property.Name
-					where name != Constants.DocumentIdFieldName
-					let value = property.GetValue(val)
-					from field in CreateFields(name, value, defaultStorage)
-					select field);
+			return from property in properties.Cast<PropertyDescriptor>()
+			       where property.Name != Constants.DocumentIdFieldName
+			       from field in CreateFields(property.Name, property.GetValue(val), defaultStorage)
+			       select field;
 		}
 
 		public IEnumerable<AbstractField> Index(RavenJObject document, Field.Store defaultStorage)
 		{
-			return (from property in document
-					let name = property.Key
-					where name != Constants.DocumentIdFieldName
-					let value = GetPropertyValue(property.Value)
-					from field in CreateFields(name, value, defaultStorage)
-					select field);
+			return from property in document
+				   where property.Key != Constants.DocumentIdFieldName
+				   from field in CreateFields(property.Key, GetPropertyValue(property.Value), defaultStorage)
+			       select field;
 		}
 
 		private static object GetPropertyValue(RavenJToken property)
