@@ -23,6 +23,7 @@ namespace Raven.Database.Indexing
 {
 	public class WorkContext : IDisposable
 	{
+		private readonly ConcurrentQueue<ActualIndexingBatchSize> lastActualIndexingBatchSize = new ConcurrentQueue<ActualIndexingBatchSize>();
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
@@ -328,6 +329,25 @@ namespace Raven.Database.Indexing
 					"Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
 				useCounters = false;
 			}
+		}
+
+		public void ReportIndexingActualBatchSize(int size)
+		{
+			lastActualIndexingBatchSize.Enqueue(new ActualIndexingBatchSize
+			{
+				Size = size,
+				Timestamp = SystemTime.UtcNow
+			});
+			if(lastActualIndexingBatchSize.Count > 25)
+			{
+				ActualIndexingBatchSize tuple;
+				lastActualIndexingBatchSize.TryDequeue(out tuple);
+			}
+		}
+
+		public ConcurrentQueue<ActualIndexingBatchSize> LastActualIndexingBatchSize
+		{
+			get { return lastActualIndexingBatchSize; }
 		}
 	}
 }

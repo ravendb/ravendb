@@ -37,6 +37,14 @@ namespace Raven.Abstractions.Data
 			public string Type { get; set; }
 			public string Name { get; set; }
 		}
+
+		public ActualIndexingBatchSize[] ActualIndexingBatchSize { get; set; }
+	}
+
+	public class ActualIndexingBatchSize
+	{
+		public int Size { get; set; }
+		public DateTime Timestamp { get; set; }
 	}
 
 	public class ExtensionsLog
