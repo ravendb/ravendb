@@ -50,6 +50,7 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Name.First")
+						.OrderBy("NameFirst")
 						.WaitForNonStaleResults()
 						.ToArray();
 
@@ -80,6 +81,7 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Tags,Id")
+						.OrderBy("Tags,Id")
 						.WaitForNonStaleResults()
 						.ToArray();
 
@@ -140,6 +142,7 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count, "Tags,Id")
+						.OrderBy("Tags,Id")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.ToArray();
 
@@ -169,8 +172,8 @@ namespace Raven.Tests.Bugs.Queries
 				using (var s = store.OpenSession())
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
-						.GroupBy(AggregationOperation.Count, "Name")
 						.WaitForNonStaleResults()
+						.GroupBy(AggregationOperation.Count, "Name")
 						.OrderBy("Name")
 						.ToArray();
 
@@ -202,6 +205,7 @@ namespace Raven.Tests.Bugs.Queries
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.WhereEquals("Active",true)
 						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Name")
+						.OrderBy("Name")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToArray();
 
