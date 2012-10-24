@@ -92,7 +92,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-			const int bufferSize = 8192;
+			const int bufferSize = 1024;
 			var tasks = new List<Task>();
 			var enumerator = source.GetEnumerator();
 			var hasMore = true;
