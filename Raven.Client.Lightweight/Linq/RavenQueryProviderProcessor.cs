@@ -754,11 +754,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					throw new InvalidOperationException("Could not extract value from " + expression);
 				}
 				var options = (SearchOptions) value;
-				if (chainedWhere && (options & SearchOptions.And) == SearchOptions.And)
+				if (chainedWhere && options.HasFlag(SearchOptions.And))
 				{
 					luceneQuery.AndAlso();
 				}
-				if ((options & SearchOptions.Not) == SearchOptions.Not)
+				if (options.HasFlag(SearchOptions.Not))
 				{
 					luceneQuery.NegateNext();
 				}
@@ -771,7 +771,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				luceneQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
 				luceneQuery.Boost(boost);
 
-				if ((options & SearchOptions.And) == SearchOptions.And)
+				if (options.HasFlag(SearchOptions.And))
 				{
 					chainedWhere = true;
 				}
