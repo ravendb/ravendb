@@ -192,7 +192,7 @@ namespace Raven.Client.Document
 		/// Whatever to allow queries on document id.
 		/// By default, queries on id are disabled, because it is far more efficent
 		/// to do a Load() than a Query() if you alred know the id.
-		/// This is NOT recommended and provided for backward compatability purposes only.
+		/// This is NOT recommended and provided for backward compatibility purposes only.
 		/// </summary>
 		public bool AllowQueriesOnId { get; set; }
 

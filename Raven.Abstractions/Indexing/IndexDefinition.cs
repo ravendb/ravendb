@@ -15,6 +15,19 @@ namespace Raven.Abstractions.Indexing
 	public class IndexDefinition
 	{
 		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.
+		/// </summary>
+		public IndexDefinition()
+		{
+			Maps = new HashSet<string>();
+			Indexes = new Dictionary<string, FieldIndexing>();
+			Stores = new Dictionary<string, FieldStorage>();
+			Analyzers = new Dictionary<string, string>();
+			SortOptions = new Dictionary<string, SortOptions>();
+			Fields = new List<string>();
+		}
+
+		/// <summary>
 		/// Get or set the name of the index
 		/// </summary>
 		public string Name { get; set; }
@@ -23,7 +36,7 @@ namespace Raven.Abstractions.Indexing
 		/// Gets or sets the map function, if there is only one
 		/// </summary>
 		/// <remarks>
-		/// This property only exists for backward compatability purposes
+		/// This property only exists for backward compatibility purposes
 		/// </remarks>
 		public string Map
 		{
@@ -70,7 +83,10 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Returns a boolean value indicating whether this IndexDefinition is of a temporary index
 		/// </summary>
-		public bool IsTemp { get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase); } }
+		public bool IsTemp
+		{
+			get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase); }
+		}
 
 		/// <summary>
 		/// Gets or sets the stores options
@@ -102,19 +118,6 @@ namespace Raven.Abstractions.Indexing
 		public IList<string> Fields { get; set; }
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.
-		/// </summary>
-		public IndexDefinition()
-		{
-			Maps = new HashSet<string>();
-			Indexes = new Dictionary<string, FieldIndexing>();
-			Stores = new Dictionary<string, FieldStorage>();
-			Analyzers = new Dictionary<string, string>();
-			SortOptions = new Dictionary<string, SortOptions>();
-			Fields = new List<string>();
-		}
-
-		/// <summary>
 		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
@@ -126,13 +129,13 @@ namespace Raven.Abstractions.Indexing
 			if (ReferenceEquals(this, other))
 				return true;
 			return Maps.SequenceEqual(other.Maps) &&
-				Equals(other.Name, Name) &&
-				Equals(other.Reduce, Reduce) &&
-				Equals(other.TransformResults, TransformResults) &&
-				DictionaryEquals(other.Stores, Stores) &&
-				DictionaryEquals(other.Indexes, Indexes) &&
-				DictionaryEquals(other.Analyzers, Analyzers) &&
-				DictionaryEquals(other.SortOptions, SortOptions);
+			       Equals(other.Name, Name) &&
+			       Equals(other.Reduce, Reduce) &&
+			       Equals(other.TransformResults, TransformResults) &&
+			       DictionaryEquals(other.Stores, Stores) &&
+			       DictionaryEquals(other.Indexes, Indexes) &&
+			       DictionaryEquals(other.Analyzers, Analyzers) &&
+			       DictionaryEquals(other.SortOptions, SortOptions);
 		}
 
 		private static bool DictionaryEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)

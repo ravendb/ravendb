@@ -86,7 +86,7 @@ namespace Raven.Client.Document.SessionOperations
 			var value = match.Groups[1].Value;
 			throw new InvalidOperationException(
 				"Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" +
-			Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatability reasons only.");
+			Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
 		}
 
 		private void StartTiming()

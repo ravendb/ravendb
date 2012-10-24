@@ -84,7 +84,7 @@ namespace Raven.Tests.Linq
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers.Where(user => user.Name.StartsWith("foo") == false);
 
-			Assert.Equal("( *:* -Name:foo*)", q.ToString());
+			Assert.Equal("(*:* AND -Name:foo*)", q.ToString());
 		}
 
 		[Fact]
@@ -93,9 +93,83 @@ namespace Raven.Tests.Linq
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers.Where(user => !user.Name.StartsWith("foo"));
 
-			Assert.Equal("( *:* -Name:foo*)", q.ToString());
+			Assert.Equal("(*:* AND -Name:foo*)", q.ToString());
 		}
 
+
+		[Fact]
+		public void IsNullOrEmpty()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name));
+
+			Assert.Equal("(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmptyEqTrue()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name) == true);
+
+			Assert.Equal("(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmptyEqFalse()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name) == false);
+
+			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmptyNegated()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => !string.IsNullOrEmpty(user.Name));
+
+			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
+		
+		[Fact]
+		public void IsNullOrEmpty_Any()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any());
+
+			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmpty_AnyEqTrue()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any() == true);
+
+			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmpty_AnyEqFalse()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any() == false);
+
+			Assert.Equal("(*:* AND -(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])))", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmpty_AnyNegated()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any() == false);
+
+			Assert.Equal("(*:* AND -(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])))", q.ToString());
+			// Note: this can be generated also a smaller query: 
+			// Assert.Equal("*:* AND (Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
+		}
 
 		[Fact]
 		public void BracesOverrideOperatorPrecedence_second_method()
@@ -104,6 +178,8 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers.Where(user => user.Name == "ayende" && (user.Name == "rob" || user.Name == "dave"));
 
 			Assert.Equal("Name:ayende AND (Name:rob OR Name:dave)", q.ToString());
+			// Note: this can be generated also a smaller query: 
+			// Assert.Equal("*:* AND (Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
 		}
 
 		[Fact]
@@ -501,8 +577,7 @@ namespace Raven.Tests.Linq
 		public void CanUnderstandSimpleAny_Dynamic()
 		{
 			var indexedUsers = GetRavenQueryInspector();
-			var q = indexedUsers
-				.Where(x => x.Properties.Any(y => y.Key == "first"));
+			var q = indexedUsers.Where(x => x.Properties.Any(y => y.Key == "first"));
 			Assert.Equal("Properties,Key:first", q.ToString());
 		}
 
@@ -510,9 +585,16 @@ namespace Raven.Tests.Linq
 		public void CanUnderstandSimpleAny_Static()
 		{
 			var indexedUsers = GetRavenQueryInspectorStatic();
-			var q = indexedUsers
-				.Where(x => x.Properties.Any(y => y.Key == "first"));
+			var q = indexedUsers.Where(x => x.Properties.Any(y => y.Key == "first"));
 			Assert.Equal("Properties_Key:first", q.ToString());
+		}
+
+		[Fact]
+		public void AnyOnCollection()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Properties.Any());
+			Assert.Equal("Properties:*", q.ToString());
 		}
 
 		public class IndexedUser

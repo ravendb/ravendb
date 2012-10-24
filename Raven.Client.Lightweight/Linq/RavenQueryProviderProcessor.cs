@@ -114,9 +114,10 @@ namespace Raven.Client.Linq
 								VisitMemberAccess((MemberExpression) unaryExpressionOp, false);
 								break;
 							case ExpressionType.Call:
-								// probably a call to !In()
+								// probably a call to !In() or !string.IsNullOrEmpty()
 								luceneQuery.OpenSubclause();
 								luceneQuery.Where("*:*");
+								luceneQuery.AndAlso();
 								luceneQuery.NegateNext();
 								VisitMethodCall((MethodCallExpression) unaryExpressionOp);
 								luceneQuery.CloseSubclause();
@@ -284,6 +285,7 @@ namespace Raven.Client.Linq
 			{
 				luceneQuery.OpenSubclause();
 				luceneQuery.Where("*:*");
+				luceneQuery.AndAlso();
 				luceneQuery.NegateNext();
 				VisitExpression(expression.Left);
 				luceneQuery.CloseSubclause();
@@ -493,6 +495,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
+		private void VisitIsNullOrEmpty(MethodCallExpression expression)
+		{
+			var memberInfo = GetMember(expression.Arguments[0]);
+
+			luceneQuery.OpenSubclause();
+			luceneQuery.WhereEquals(memberInfo.Path, Constants.NullValue, false);
+			luceneQuery.OrElse();
+			luceneQuery.WhereEquals(memberInfo.Path, Constants.EmptyString, false);
+			luceneQuery.CloseSubclause();
+		}
+
 		private void VisitGreaterThan(BinaryExpression expression)
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
@@ -557,13 +570,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		private void VisitAny(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Arguments[0]);
-			var oldPath = currentPath;
-			currentPath = memberInfo.Path + ",";
-			VisitExpression(expression.Arguments[1]);
-			currentPath = oldPath;
+			if (expression.Arguments.Count >= 2)
+			{
+				var oldPath = currentPath;
+				currentPath = memberInfo.Path + ",";
+				VisitExpression(expression.Arguments[1]);
+				currentPath = oldPath;
+			}
+			else
+			{
+				// Support for .Where(x => x.Properties.Any())
+				luceneQuery.WhereEquals(new WhereParams
+				{
+					FieldName = memberInfo.Path,
+					Value = "*",
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					IsNestedPath = memberInfo.IsNestedPath,
+				});
+			}
 		}
 
-		private void VisitNotStringContains(MethodCallExpression expression)
+		private void VisitContains(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Arguments[0]);
 			var oldPath = currentPath;
@@ -741,11 +769,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					throw new InvalidOperationException("Could not extract value from " + expression);
 				}
 				var options = (SearchOptions) value;
-				if (chainedWhere && (options & SearchOptions.And) == SearchOptions.And)
+				if (chainedWhere && options.HasFlag(SearchOptions.And))
 				{
 					luceneQuery.AndAlso();
 				}
-				if ((options & SearchOptions.Not) == SearchOptions.Not)
+				if (options.HasFlag(SearchOptions.Not))
 				{
 					luceneQuery.NegateNext();
 				}
@@ -758,7 +786,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				luceneQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
 				luceneQuery.Boost(boost);
 
-				if ((options & SearchOptions.And) == SearchOptions.And)
+				if (options.HasFlag(SearchOptions.And))
 				{
 					chainedWhere = true;
 				}
@@ -784,7 +812,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				case "Any":
 				{
-					VisitAny(expression);
+					if (expression.Arguments.First().Type == typeof(string))
+					{
+						luceneQuery.OpenSubclause();
+						luceneQuery.Where("*:*");
+						luceneQuery.AndAlso();
+						luceneQuery.NegateNext();
+						VisitIsNullOrEmpty(expression);
+						luceneQuery.CloseSubclause();
+					}
+					else
+					{
+						VisitAny(expression);
+					}
 					break;
 				}
 				case "Contains":
@@ -795,7 +835,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					}
 					else
 					{
-						VisitNotStringContains(expression);
+						VisitContains(expression);
 					}
 					break;
 				}
@@ -828,6 +868,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "EndsWith":
 				{
 					VisitEndsWith(expression);
+					break;
+				}
+				case "IsNullOrEmpty":
+				{
+					VisitIsNullOrEmpty(expression);
 					break;
 				}
 				default:

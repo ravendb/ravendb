@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class BackwardCompatability : RavenTest
+	public class BackwardCompatibility : RavenTest
 	{
 		
 		[Fact]
@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 				                           RavenJObject.FromObject(new {Name = "Ayende", Email = "ayende@ayende.com"}),
 				                           new RavenJObject());
 
-				store.RegisterListener(new BackwardCompatabilityListner());
+				store.RegisterListener(new BackwardCompatibilityListner());
 
 				using(var session = store.OpenSession())
 				{
@@ -37,7 +37,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public class BackwardCompatabilityListner : IDocumentConversionListener
+		public class BackwardCompatibilityListner : IDocumentConversionListener
 		{
 			readonly ConcurrentDictionary<Type, HashSet<string>> typePropertiesCache = new ConcurrentDictionary<Type, HashSet<string>>();
 			readonly ConditionalWeakTable<object, Dictionary<string, RavenJToken>> missingProps = new ConditionalWeakTable<object, Dictionary<string, RavenJToken>>();

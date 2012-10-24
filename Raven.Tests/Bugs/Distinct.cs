@@ -1,7 +1,7 @@
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Indexing;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -32,6 +32,7 @@ namespace Raven.Tests.Bugs
 					var objects = s.Advanced.LuceneQuery<dynamic>("test")
 						.WaitForNonStaleResults()
 						.SelectFields<dynamic>("Name")
+						.OrderBy("Name")
 						.GroupBy(AggregationOperation.Distinct)
 						.OrderBy("Name")
 						.ToList();
@@ -66,7 +67,7 @@ namespace Raven.Tests.Bugs
 				{
 					var objects = s.Query<User>("test")
 						.Customize(x => x.WaitForNonStaleResults())
-						.OrderBy(x => x.Name)
+						.Select(o => new {o.Name }).OrderBy(o => o.Name)
 						.Select(o => new { o.Name })
 						.Distinct()
 						.ToList();
@@ -103,6 +104,7 @@ namespace Raven.Tests.Bugs
 						.OrderBy(x => x.Name)
 						.Select(o => new { o.Name })
 						.Distinct()
+						.OrderBy(o => o.Name)
 						.Skip(1)
 						.ToList();
 
@@ -134,6 +136,7 @@ namespace Raven.Tests.Bugs
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>("test")
 						.WaitForNonStaleResults()
+						.OrderBy("Name")
 						.Skip(1)
 						.OrderBy("Name")
 						.SelectFields<dynamic>("Name")

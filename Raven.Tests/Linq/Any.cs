@@ -36,6 +36,25 @@ namespace Raven.Tests.Linq
 			}
 		}
 
+		[Fact]
+		public void CanCountWithAny()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new TestDoc {StringArray = new[] {"one", "two"}});
+					session.Store(new TestDoc {StringArray = new string[0]});
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal(1, session.Query<TestDoc>().Customize(customization => customization.WaitForNonStaleResults()).Count(p => p.StringArray.Any()));
+				}
+			}
+		}
+
 		private class OrderableEntity
 		{
 			public DateTime Order { get; set; }
