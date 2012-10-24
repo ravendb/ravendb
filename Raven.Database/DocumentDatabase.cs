@@ -307,6 +307,7 @@ namespace Raven.Database
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
+					Prefetches = workContext.FutureBatchStats.OrderBy(x=>x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })

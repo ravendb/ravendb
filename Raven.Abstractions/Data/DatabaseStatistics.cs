@@ -39,12 +39,21 @@ namespace Raven.Abstractions.Data
 		}
 
 		public ActualIndexingBatchSize[] ActualIndexingBatchSize { get; set; }
+		public FutureBatchStats[] Prefetches { get; set; }
 	}
 
 	public class ActualIndexingBatchSize
 	{
 		public int Size { get; set; }
 		public DateTime Timestamp { get; set; }
+	}
+
+	public class FutureBatchStats
+	{
+		public DateTime Timestamp { get; set; }
+		public TimeSpan? Duration { get; set; }
+		public int? Size { get; set; }
+		public int Retries { get; set; }
 	}
 
 	public class ExtensionsLog

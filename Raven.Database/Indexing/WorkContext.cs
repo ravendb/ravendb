@@ -18,11 +18,14 @@ using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using System.Linq;
+using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
 	public class WorkContext : IDisposable
 	{
+		private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
+		
 		private readonly ConcurrentQueue<ActualIndexingBatchSize> lastActualIndexingBatchSize = new ConcurrentQueue<ActualIndexingBatchSize>();
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
@@ -345,9 +348,26 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public ConcurrentSet<FutureBatchStats> FutureBatchStats
+		{
+			get { return futureBatchStats; }
+		}
+		
 		public ConcurrentQueue<ActualIndexingBatchSize> LastActualIndexingBatchSize
 		{
 			get { return lastActualIndexingBatchSize; }
+		}
+
+		public void AddFutureBatch(FutureBatchStats futureBatchStat)
+		{
+			futureBatchStats.Add(futureBatchStat);
+			if (futureBatchStats.Count <= 30) 
+				return;
+
+			foreach (var source in futureBatchStats.OrderBy(x => x.Timestamp).Take(5))
+			{
+				futureBatchStats.TryRemove(source);
+			}
 		}
 	}
 }
