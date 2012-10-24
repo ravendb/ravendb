@@ -132,7 +132,15 @@ namespace Raven.Tests.Linq
 
 			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
 		}
+		
+		[Fact]
+		public void IsNullOrEmpty_Any()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any());
 
+			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
 
 		[Fact]
 		public void BracesOverrideOperatorPrecedence_second_method()

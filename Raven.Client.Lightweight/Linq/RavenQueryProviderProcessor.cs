@@ -797,7 +797,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				case "Any":
 				{
-					VisitAny(expression);
+					if (expression.Arguments.First().Type == typeof(string))
+					{
+						luceneQuery.OpenSubclause();
+						luceneQuery.Where("*:*");
+						luceneQuery.AndAlso();
+						luceneQuery.NegateNext();
+						VisitIsNullOrEmpty(expression);
+						luceneQuery.CloseSubclause();
+					}
+					else
+					{
+						VisitAny(expression);
+					}
 					break;
 				}
 				case "Contains":

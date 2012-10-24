@@ -71,5 +71,25 @@ namespace Raven.Tests.Linq
 				}
 			}
 		}
+
+		[Fact]
+		public void WithAny()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new TestDoc { SomeProperty = "Has some content" });
+					session.Store(new TestDoc { SomeProperty = "" });
+					session.Store(new TestDoc { SomeProperty = null });
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal(1, session.Query<TestDoc>().Count(p => p.SomeProperty.Any()));
+				}
+			}
+		}
 	}
 }
