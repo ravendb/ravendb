@@ -193,7 +193,15 @@ namespace Raven.Abstractions.Connection
 						using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
 						{
 							var error = streamReader.ReadToEnd();
-							var ravenJObject = RavenJObject.Parse(error);
+							RavenJObject ravenJObject = null;
+							try
+							{
+								ravenJObject = RavenJObject.Parse(error);
+							}
+							catch { }
+
+							if (ravenJObject == null)
+								throw;
 							throw new WebException("Error: " + ravenJObject.Value<string>("Error"), e);
 						}
 					}
