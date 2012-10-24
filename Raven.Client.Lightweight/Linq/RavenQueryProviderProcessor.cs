@@ -579,6 +579,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 			else
 			{
+				// Support for .Where(x => x.Properties.Any())
 				luceneQuery.WhereEquals(new WhereParams
 				{
 					FieldName = memberInfo.Path,
