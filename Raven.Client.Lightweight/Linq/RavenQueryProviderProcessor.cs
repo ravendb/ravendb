@@ -572,7 +572,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var memberInfo = GetMember(expression.Arguments[0]);
 			var oldPath = currentPath;
 			currentPath = memberInfo.Path + ",";
-			VisitExpression(expression.Arguments[1]);
+			if (expression.Arguments.Count > 1)
+			{
+				VisitExpression(expression.Arguments[1]);
+			}
+			else
+			{
+				luceneQuery.WhereEquals(new WhereParams
+				{
+					FieldName = memberInfo.Path,
+					Value = "*",
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					IsNestedPath = memberInfo.IsNestedPath,
+				});
+			}
 			currentPath = oldPath;
 		}
 
