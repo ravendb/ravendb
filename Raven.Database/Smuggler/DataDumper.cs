@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
@@ -52,11 +53,11 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		protected override void FlushBatch(List<RavenJObject> batch)
+		protected override Guid FlushBatch(List<RavenJObject> batch)
 		{
 			var sw = Stopwatch.StartNew();
 
-			_database.Batch(batch.Select(x =>
+			var results = _database.Batch(batch.Select(x =>
 			{
 				var metadata = x.Value<RavenJObject>("@metadata");
 				var key = metadata.Value<string>("@id");
@@ -72,6 +73,12 @@ namespace Raven.Database.Smuggler
 
 			ShowProgress("Wrote {0:#,#} documents in {1:#,#;;0} ms", batch.Count, sw.ElapsedMilliseconds);
 			batch.Clear();
+
+
+			if(results.Length == 0)
+				return Guid.Empty;
+
+			return results.Last().Etag.Value;
 		}
 
 		protected override RavenJArray GetDocuments(Guid lastEtag)
@@ -98,6 +105,11 @@ namespace Raven.Database.Smuggler
 		protected override void PutIndex(string indexName, RavenJToken index)
 		{
 			_database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+		}
+
+		protected override DatabaseStatistics GetStats()
+		{
+			return _database.Statistics;
 		}
 
 		protected override void ShowProgress(string format, params object[] args)

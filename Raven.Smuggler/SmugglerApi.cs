@@ -51,14 +51,18 @@ namespace Raven.Smuggler
 
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
-			var builder = new StringBuilder(ConnectionStringOptions.Url, 2);
-			if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
+			var builder = new StringBuilder();
+			if (url.StartsWith("http", StringComparison.InvariantCultureIgnoreCase) == false)
 			{
-				if (ConnectionStringOptions.Url.EndsWith("/") == false)
-					builder.Append("/");
-				builder.Append("databases/");
-				builder.Append(ConnectionStringOptions.DefaultDatabase);
-				builder.Append('/');
+				builder.Append(ConnectionStringOptions.Url);
+				if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
+				{
+					if (ConnectionStringOptions.Url.EndsWith("/") == false)
+						builder.Append("/");
+					builder.Append("databases/");
+					builder.Append(ConnectionStringOptions.DefaultDatabase);
+					builder.Append('/');
+				}
 			}
 			builder.Append(url);
 			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
@@ -163,12 +167,18 @@ namespace Raven.Smuggler
 			request.ExecuteRequest();
 		}
 
+		protected override DatabaseStatistics GetStats()
+		{
+			var request = CreateRequest("/stats");
+			return request.ExecuteRequest<DatabaseStatistics>();
+		}
+
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			Console.WriteLine(format, args);
 		}
 
-		protected override void FlushBatch(List<RavenJObject> batch)
+		protected override Guid FlushBatch(List<RavenJObject> batch)
 		{
 			var sw = Stopwatch.StartNew();
 
@@ -188,13 +198,14 @@ namespace Raven.Smuggler
 
 			var retries = retriesCount;
 			HttpRavenRequest request = null;
+			BatchResult[] results;
 			while (true)
 			{
 				try
 				{
 					request = CreateRequest("/bulk_docs", "POST");
 					request.Write(commands);
-					request.ExecuteRequest();
+					results = request.ExecuteRequest<BatchResult[]>();
 					break;
 				}
 				catch (Exception e)
@@ -215,6 +226,10 @@ namespace Raven.Smuggler
 				(double)request.NumberOfBytesWrittenCompressed / 1024);
 
 			batch.Clear();
+
+			if (results.Length == 0)
+				return Guid.Empty;
+			return results.Last().Etag.Value;
 		}
 
 		public bool LastRequestErrored { get; set; }

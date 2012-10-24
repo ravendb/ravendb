@@ -18,7 +18,7 @@ namespace Raven.Smuggler
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 		private readonly SmugglerOptions options;
 		private readonly OptionSet optionSet;
-		bool incremental;
+		bool incremental, waitForIndexing;
 
 		private Program()
 		{
@@ -58,6 +58,7 @@ namespace Raven.Smuggler
 			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
 			            		{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
 								{"incremental", "States usage of incremental operations", _ => incremental = true },
+								{"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _=> waitForIndexing=true},
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}
@@ -121,6 +122,8 @@ namespace Raven.Smuggler
 				{
 					case SmugglerAction.Import:
 						smugglerApi.ImportData(options, incremental);
+						if(waitForIndexing)
+							smugglerApi.WaitForIndexing(options);
 						break;
 					case SmugglerAction.Export:
 						smugglerApi.ExportData(options, incremental);

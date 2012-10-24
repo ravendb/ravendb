@@ -5,7 +5,9 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
@@ -14,15 +16,19 @@ namespace Raven.Abstractions.Smuggler
 {
 	public abstract class SmugglerApiBase : ISmugglerApi
 	{
-		private const int MaxSizeOfUncomressedSizeToSendToDatabase = 16*1024*1024;
+		private const int MaxSizeOfUncomressedSizeToSendToDatabase = 16 * 1024 * 1024;
 		protected readonly SmugglerOptions smugglerOptions;
+		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
+		private readonly LinkedList<Tuple<Guid, DateTime>> batchRecording = new LinkedList<Tuple<Guid, DateTime>>();
+
 		protected abstract RavenJArray GetIndexes(int totalCount);
 		protected abstract RavenJArray GetDocuments(Guid lastEtag);
 		protected abstract Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag);
 
 		protected abstract void PutIndex(string indexName, RavenJToken index);
 		protected abstract void PutAttachment(AttachmentExportInfo attachmentExportInfo);
-		protected abstract void FlushBatch(List<RavenJObject> batch);
+		protected abstract Guid FlushBatch(List<RavenJObject> batch);
+		protected abstract DatabaseStatistics GetStats();
 
 		protected abstract void ShowProgress(string format, params object[] args);
 
@@ -143,6 +149,27 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
+		public void WaitForIndexing(SmugglerOptions options)
+		{
+			var justIndexingWait = Stopwatch.StartNew();
+			int tries = 0;
+			while (true)
+			{
+				var databaseStatistics = GetStats();
+				if (databaseStatistics.StaleIndexes.Length != 0)
+				{
+					if (tries++ % 10 == 0)
+					{
+						Console.Write("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+					}
+
+					Thread.Sleep(100);
+					continue;
+				}
+				Console.WriteLine("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+				break;
+			}
+		}
 
 		public void ImportData(SmugglerOptions options, bool incremental = false)
 		{
@@ -245,7 +272,7 @@ namespace Raven.Abstractions.Smuggler
 				if ((options.OperateOnTypes & ItemType.Indexes) != ItemType.Indexes)
 					continue;
 				var indexName = index.Value<string>("name");
-				if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
+				if (indexName.StartsWith("Temp/"))
 					continue;
 				if (index.Value<RavenJObject>("definition").Value<bool>("IsCompiled"))
 					continue; // can't import compiled indexes
@@ -266,15 +293,16 @@ namespace Raven.Abstractions.Smuggler
 			var batch = new List<RavenJObject>();
 			int totalCount = 0;
 			long lastFlushedAt = 0;
+			int batchCount = 0;
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var before = sizeStream.Position;
 				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
 				var size = sizeStream.Position - before;
-				if(size > 1024*1024)
+				if (size > 1024 * 1024)
 				{
 					Console.WriteLine("{0:#,#.##;;0} kb - {1}",
-						(double)size/1024, 
+						(double)size / 1024,
 						document["@metadata"].Value<string>("@id"));
 				}
 				if ((options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
@@ -289,10 +317,15 @@ namespace Raven.Abstractions.Smuggler
 					sizeOnDisk >= MaxSizeOfUncomressedSizeToSendToDatabase)
 				{
 					lastFlushedAt = sizeStream.Position;
-					FlushBatch(batch);
+					RegisterEtagPut(FlushBatch(batch));
+					if (batchCount++ % 10 == 0)
+					{
+						OutputIndexingDistance();
+					}
 				}
 			}
-			FlushBatch(batch);
+			RegisterEtagPut(FlushBatch(batch));
+			OutputIndexingDistance();
 
 			var attachmentCount = 0;
 			if (jsonReader.Read() == false || jsonReader.TokenType == JsonToken.EndObject)
@@ -321,6 +354,69 @@ namespace Raven.Abstractions.Smuggler
 				PutAttachment(attachmentExportInfo);
 			}
 			ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", totalCount, attachmentCount, sw.ElapsedMilliseconds);
+		}
+
+		private void RegisterEtagPut(Guid lastEtagInBatch)
+		{
+			batchRecording.AddLast(Tuple.Create(lastEtagInBatch, SystemTime.UtcNow));
+		}
+
+		private void OutputIndexingDistance()
+		{
+			var databaseStatistics = GetStats();
+			var earliestIndexedEtag = Guid.Empty;
+			foreach (var indexStat in databaseStatistics.Indexes)
+			{
+				if(earliestIndexedEtag.CompareTo(indexStat.LastIndexedEtag) < 0)
+				{
+					earliestIndexedEtag = indexStat.LastIndexedEtag;
+				}
+			}
+
+			var latest = DateTime.MinValue;
+			var node = batchRecording.Last;
+			while (node != null)
+			{
+				if (earliestIndexedEtag.CompareTo(node.Value.Item1) >= 0)
+				{
+					latest = node.Value.Item2;
+					break;
+				}
+
+				node = node.Previous;
+			}
+
+
+			var currentDoc = BitConverter.ToInt64(databaseStatistics.LastDocEtag.ToByteArray().Reverse().ToArray(), 0);
+			var lastIndexed = BitConverter.ToInt64(earliestIndexedEtag.ToByteArray().Reverse().ToArray(), 0);
+
+			var distance = Math.Max(0, currentDoc - lastIndexed);
+			TimeSpan latency = TimeSpan.Zero;
+			if(latest != DateTime.MinValue)
+			{
+				latency = SystemTime.UtcNow - latest;
+			}
+
+			Console.WriteLine("{0} indexes, distance: {1:#,#} - latency: {2} - batch: {3:#,#}", databaseStatistics.Indexes.Length, distance,
+				ToHumanTimeSpan(latency),
+				databaseStatistics.CurrentNumberOfItemsToIndexInSingleBatch);
+		}
+
+		private static string ToHumanTimeSpan(TimeSpan timeAgo)
+		{
+			if (timeAgo == TimeSpan.Zero)
+				return "zero";
+
+			if (timeAgo.TotalDays >= 1)
+				return string.Format("{0:#,#} days ago", timeAgo.TotalDays);
+			if (timeAgo.TotalHours >= 1)
+				return string.Format("{0:#,#} hours ago", timeAgo.TotalHours);
+			if (timeAgo.TotalMinutes >= 1)
+				return string.Format("{0:#,#} minutes ago", timeAgo.TotalMinutes);
+			if (timeAgo.TotalSeconds >= 1)
+				return string.Format("{0:#,#} seconds ago", timeAgo.TotalSeconds);
+
+			return string.Format("{0:#,#} milli-seconds ago", timeAgo.TotalMilliseconds);
 		}
 
 		protected void ExportIndexes(JsonTextWriter jsonWriter)
