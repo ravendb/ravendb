@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -84,43 +86,20 @@ namespace Raven.Database.Indexing
 		/// <summary>
 		/// Note that here we assume that  source may be very large (number of documents)
 		/// </summary>
-		public void ExecuteAllBuffered<T>(WorkContext context, IEnumerable<T> source, Action<IEnumerable<T>> action)
+		public void ExecuteAllBuffered<T>(WorkContext context, IEnumerable<T> source, Action<IEnumerator<T>> action)
 		{
 			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 			{
-				action(source);
+				using (var e = source.GetEnumerator())
+					action(e);
 				return;
 			}
-
-			const int bufferSize = 4096;
-			var tasks = new List<Task>();
-			var enumerator = source.GetEnumerator();
-			var hasMore = true;
-			while (hasMore)
+			var orderablePartitioner = Partitioner.Create(source);
+			var parts = orderablePartitioner.GetPartitions(context.Configuration.MaxNumberOfParallelIndexTasks);
+			Parallel.ForEach(parts, new ParallelOptions
 			{
-				var items = new List<T>(bufferSize);
-				while ((hasMore = enumerator.MoveNext()) && items.Count < bufferSize)
-				{
-					items.Add(enumerator.Current);
-				}
-				if(hasMore == false && tasks.Count == 0)
-				{
-					action(items);
-					return;
-				}
-				var task = Task.Factory.StartNew(() => action(items));
-				tasks.Add(task);
-
-				if (tasks.Count >= context.Configuration.MaxNumberOfParallelIndexTasks)
-				{
-					Task.WaitAll(tasks.ToArray());
-					tasks.Clear();
-				}
-			}
-			if (tasks.Count == 0)
-				return;
-
-			Task.WaitAll(tasks.ToArray());
+				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
+			},action);
 		}
 
 		/// <summary>

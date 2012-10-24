@@ -86,7 +86,7 @@ namespace Raven.Database.Indexing
 						var luceneDoc = new Document();
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 
-						foreach (var doc in RobustEnumerationIndex(partition.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats))
+						foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
 						{
 							float boost;
 							var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
