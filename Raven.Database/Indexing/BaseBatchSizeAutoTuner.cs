@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
@@ -11,7 +12,9 @@ namespace Raven.Database.Indexing
 
 		private int currentNumber;
 
-		public BaseBatchSizeAutoTuner(WorkContext context)
+		private DateTime lastIncrease;
+
+		protected BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
 			this.NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
@@ -34,7 +37,8 @@ namespace Raven.Database.Indexing
 					return;
 				if (ConsiderDecreasingBatchSize(amountOfItemsToIndex, indexingDuration))
 					return;
-				ConsiderIncreasingBatchSize(amountOfItemsToIndex, size, indexingDuration);
+				if (ConsiderIncreasingBatchSize(amountOfItemsToIndex, size, indexingDuration))
+					lastIncrease = SystemTime.UtcNow;
 			}
 			finally
 			{
@@ -42,18 +46,18 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void ConsiderIncreasingBatchSize(int amountOfItemsToIndex, int size, TimeSpan indexingDuration)
+		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, int size, TimeSpan indexingDuration)
 		{
 			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch)
 			{
-				return;
+				return false;
 			}
 
 			if (GetLastAmountOfItems().Any(x => x < NumberOfItemsToIndexInSingleBatch))
 			{
 				// this is the first time we hit the limit, we will give another go before we increase
 				// the batch size
-				return;
+				return false;
 			}
 
 			// in the previous run, we also hit the current limit, we need to check if we can increase the max batch size
@@ -75,16 +79,17 @@ namespace Raven.Database.Indexing
 			var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemory - sizedPlusIndexingCost;
 
 			if (remainingMemoryAfterBatchSizeIncrease < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
-				return;
+				return false;
 
 			// here we assume that the next batch would be 175% as long as the current one
 			// and there is no point in trying if we are just going to blow out past our max latency
 			var timeSpan = indexingDuration.Add(TimeSpan.FromMilliseconds(indexingDuration.TotalMilliseconds * 0.75));
 			if (timeSpan > context.Configuration.MaxIndexingRunLatency)
-				return;
+				return false;
 
-				NumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItems,
-															 NumberOfItemsToIndexInSingleBatch * 2);
+			NumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItems,
+			                                             NumberOfItemsToIndexInSingleBatch*2);
+			return true;
 		}
 
 		public long MaximumSizeAllowedToFetchFromStorage
@@ -147,14 +152,17 @@ namespace Raven.Database.Indexing
 				return false;
 			}
 
+			if ((SystemTime.UtcNow - lastIncrease).TotalMinutes < 3)
+				return true;
+
 			// we didn't have a lot of work to do, so let us see if we can reduce the batch size
 
 			// we are at the configured minimum, nothing to do
 			if (NumberOfItemsToIndexInSingleBatch == InitialNumberOfItems)
 				return true;
 
-			// we were above the max the last times, we can't reduce the work load now
-			if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToIndexInSingleBatch))
+			// we were above the max/2 the last few times, we can't reduce the work load now
+			if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToIndexInSingleBatch/2))
 				return true;
 
 			var old = NumberOfItemsToIndexInSingleBatch;
