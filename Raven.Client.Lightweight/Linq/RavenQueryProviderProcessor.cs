@@ -563,7 +563,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			currentPath = oldPath;
 		}
 
-		private void VisitNotStringContains(MethodCallExpression expression)
+		private void VisitContains(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Arguments[0]);
 			var oldPath = currentPath;
@@ -795,7 +795,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					}
 					else
 					{
-						VisitNotStringContains(expression);
+						VisitContains(expression);
 					}
 					break;
 				}
