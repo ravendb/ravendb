@@ -125,7 +125,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void IsNullOrEmptyEqNegated()
+		public void IsNullOrEmptyNegated()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers.Where(user => !string.IsNullOrEmpty(user.Name));
@@ -140,6 +140,33 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers.Where(user => user.Name.Any());
 
 			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmpty_AnyEqTrue()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any() == true);
+
+			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmpty_AnyEqFalse()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any() == false);
+
+			Assert.Equal("(*:* AND -(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])))", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmpty_AnyNegated()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any() == false);
+
+			Assert.Equal("(*:* AND -(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])))", q.ToString());
 		}
 
 		[Fact]
