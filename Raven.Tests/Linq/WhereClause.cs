@@ -167,6 +167,8 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers.Where(user => user.Name.Any() == false);
 
 			Assert.Equal("(*:* AND -(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])))", q.ToString());
+			// Note: this can be generated also a smaller query: 
+			// Assert.Equal("*:* AND (Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
 		}
 
 		[Fact]
@@ -176,6 +178,8 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers.Where(user => user.Name == "ayende" && (user.Name == "rob" || user.Name == "dave"));
 
 			Assert.Equal("Name:ayende AND (Name:rob OR Name:dave)", q.ToString());
+			// Note: this can be generated also a smaller query: 
+			// Assert.Equal("*:* AND (Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
 		}
 
 		[Fact]
