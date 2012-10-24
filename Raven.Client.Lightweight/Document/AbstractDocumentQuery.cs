@@ -798,12 +798,16 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name = "whereClause">The where clause.</param>
 		public void Where(string whereClause)
 		{
-			if (theQueryText.Length > 0)
+			AppendSpaceIfRequired();
+			theQueryText.Append(whereClause);
+		}
+
+		private void AppendSpaceIfRequired()
+		{
+			if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
 			{
 				theQueryText.Append(" ");
 			}
-
-			theQueryText.Append(whereClause);
 		}
 
 		/// <summary>
@@ -846,10 +850,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void OpenSubclause()
 		{
 			currentClauseDepth++;
-			if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
-			{
-				theQueryText.Append(" ");
-			}
+			AppendSpaceIfRequired();
 			NegateIfNeeded();
 			theQueryText.Append("(");
 		}
