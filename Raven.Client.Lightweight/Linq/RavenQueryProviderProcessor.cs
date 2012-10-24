@@ -570,11 +570,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		private void VisitAny(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Arguments[0]);
-			var oldPath = currentPath;
-			currentPath = memberInfo.Path + ",";
 			if (expression.Arguments.Count >= 2)
 			{
+				var oldPath = currentPath;
+				currentPath = memberInfo.Path + ",";
 				VisitExpression(expression.Arguments[1]);
+				currentPath = oldPath;
 			}
 			else
 			{
@@ -587,7 +588,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					IsNestedPath = memberInfo.IsNestedPath,
 				});
 			}
-			currentPath = oldPath;
 		}
 
 		private void VisitContains(MethodCallExpression expression)
