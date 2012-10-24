@@ -50,7 +50,7 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Name.First")
-						.OrderBy("NameFirst")
+						.OrderBy("Name.First")
 						.WaitForNonStaleResults()
 						.ToArray();
 
