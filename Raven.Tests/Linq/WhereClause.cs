@@ -98,6 +98,43 @@ namespace Raven.Tests.Linq
 
 
 		[Fact]
+		public void IsNullOrEmpty()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name));
+
+			Assert.Equal("(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmptyEqTrue()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name) == true);
+
+			Assert.Equal("(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmptyEqFalse()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => string.IsNullOrEmpty(user.Name) == false);
+
+			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
+
+		[Fact]
+		public void IsNullOrEmptyEqNegated()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => !string.IsNullOrEmpty(user.Name));
+
+			Assert.Equal("(*:* AND -(Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]]))", q.ToString());
+		}
+
+
+		[Fact]
 		public void BracesOverrideOperatorPrecedence_second_method()
 		{
 			var indexedUsers = GetRavenQueryInspector();
