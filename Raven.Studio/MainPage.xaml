@@ -146,7 +146,7 @@
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+                <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Logs"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/logs"

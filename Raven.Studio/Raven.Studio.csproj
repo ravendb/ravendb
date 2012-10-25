@@ -73,6 +73,12 @@
     <Reference Include="AsyncCtpLibrary_Silverlight5">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
     </Reference>
+    <Reference Include="Kent.Boogaart.HelperTrinity">
+      <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.4.0.0\lib\sl40\Kent.Boogaart.HelperTrinity.dll</HintPath>
+    </Reference>
+    <Reference Include="Kent.Boogaart.KBCsv">
+      <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\sl40\Kent.Boogaart.KBCsv.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\Microsoft.CSharp.dll</HintPath>
@@ -145,6 +151,7 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\CsvImportCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
@@ -153,6 +160,7 @@
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
+    <Compile Include="Features\Tasks\CsvImportTask.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
