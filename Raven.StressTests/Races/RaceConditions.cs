@@ -97,11 +97,5 @@ namespace Raven.StressTests.Races
 		{
 			Run<OverwriteDocuments>(x => x.WillThrowWhenOptimisticConcurrencyIsOn(), 10);
 		}
-		
-		[Fact]
-		public void CanGroupByNestedProperty_Dynamic()
-		{
-			Run<DynamicMapReduce>(x => x.CanGroupByNestedProperty_Dynamic(), 20);
-		}
 	}
 }
