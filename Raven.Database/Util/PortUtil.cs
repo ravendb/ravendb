@@ -36,28 +36,36 @@ namespace Raven.Database.Util
 				// nor do we actually care
 			}
 
-			if (portStr == "*" || string.IsNullOrWhiteSpace(portStr))
+			try
 			{
-				int autoPort;
-
-				if (TryReadPreviouslySelectAutoPort(out autoPort))
-					return autoPort;
-
-				autoPort = FindPort();
-				TrySaveAutoPortForNextTime(autoPort);
-
-				if (autoPort != DefaultPort)
+				if (portStr == "*" || string.IsNullOrWhiteSpace(portStr))
 				{
-					logger.Info("Default port {0} was not available, so using available port {1}", DefaultPort, autoPort);
+					int autoPort;
+
+					if (TryReadPreviouslySelectAutoPort(out autoPort))
+						return autoPort;
+
+					autoPort = FindPort();
+					TrySaveAutoPortForNextTime(autoPort);
+
+					if (autoPort != DefaultPort)
+					{
+						logger.Info("Default port {0} was not available, so using available port {1}", DefaultPort, autoPort);
+					}
+					return autoPort;
 				}
-				return autoPort;
+
+				int port;
+				if (int.TryParse(portStr, out port) == false)
+					return DefaultPort;
+
+				return port;
 			}
-
-			int port;
-			if (int.TryParse(portStr, out port) == false)
+			catch (Exception e)
+			{
+				logger.InfoException("Could not find port automatically, reverting to default port", e);
 				return DefaultPort;
-
-			return port;
+			}
 		}
 
 		private static void TrySaveAutoPortForNextTime(int autoPort)
