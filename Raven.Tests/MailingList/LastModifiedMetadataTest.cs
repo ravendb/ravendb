@@ -59,7 +59,6 @@ namespace Raven.Tests.MailingList
 			{
 				var user1 = new User { Name = "Joe Schmoe" };
 				var user2 = new User { Name = "Jack Spratt" };
-				var localTimeAtStartOfTest = DateTime.Now.ToLocalTime();
 				new AmazingIndex2().Execute(DocStore);
 				using (var session = DocStore.OpenSession())
 				{
@@ -76,7 +75,9 @@ namespace Raven.Tests.MailingList
 
 					var modifiedDocuments = (from u in session.Query<AmazingIndex2.ModifiedDocuments, AmazingIndex2>()
 												 .Customize(x=>x.WaitForNonStaleResults())
-											 select u).As<AmazingIndex2.ModifiedDocuments>().ToList();
+											 orderby u.InternalId
+											 select u)
+											 .As<AmazingIndex2.ModifiedDocuments>().ToList();
 
 					Assert.Equal(2, modifiedDocuments.Count);
 					Assert.Equal(user1.InternalId, modifiedDocuments[0].InternalId);

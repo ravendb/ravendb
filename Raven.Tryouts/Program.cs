@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Linq;
+using Raven.Tests.Faceted;
 
 namespace Raven.Tryouts
 {
@@ -8,13 +9,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var x = new DynamicViewCompiler("test", new IndexDefinition
+			for (int i = 0; i < 100; i++)
 			{
-				Map = "from doc in docs select  new { Age = Enumerable.Sum(doc.Children, x=> Enumerable.Sum(x, y=>y.Age))} ",
-			}, ".");
-			var abstractViewGenerator = x.GenerateInstance();
-			var viewText = abstractViewGenerator.SourceCode;
-			Console.WriteLine(viewText);
+				Console.Write("\r"+i);
+				using(var x = new FacetedIndexLimit())
+				{
+					x.CanPerformFacetedLimitSearch_HitsDesc();
+				}
+			}
 		}
 	}
 }

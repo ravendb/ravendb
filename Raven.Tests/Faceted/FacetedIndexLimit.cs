@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
@@ -12,9 +11,6 @@ using Raven.Client;
 using Raven.Client.Linq;
 using Xunit;
 using Raven.Abstractions.Indexing;
-using System.Threading;
-using System.Linq.Expressions;
-using Raven.Client.Document;
 
 namespace Raven.Tests.Faceted
 {
@@ -237,6 +233,8 @@ namespace Raven.Tests.Faceted
 					                  into result
 					                  select new {Manufacturer = result.Key, Count = result.Count()};
 					var camerasByHits = cameraCounts.OrderByDescending(x => x.Count).Select(x => x.Manufacturer.ToLower()).ToList();
+
+					WaitForUserToContinueTheTest(store);
 
 					Assert.Equal(5, facetResults.Results["Manufacturer"].Values.Count());
 					Assert.Equal(camerasByHits[0], facetResults.Results["Manufacturer"].Values[0].Range);
