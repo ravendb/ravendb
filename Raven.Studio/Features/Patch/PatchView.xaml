@@ -16,8 +16,15 @@
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
                          xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" Title="PatchView Page"
                          d:DataContext="{d:DesignInstance Models:PatchModel}">
-
-	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
+    <Infrastructure:PageView.Resources>
+        <Storyboard x:Key="ShowErrorPanel">
+            <DoubleAnimation Storyboard.TargetName="PatchScriptErrorPanel" Storyboard.TargetProperty="Height" To="60" Duration="0:0:0.1"/>
+        </Storyboard>
+        <Storyboard x:Key="HideErrorPanel">
+            <DoubleAnimation Storyboard.TargetName="PatchScriptErrorPanel" Storyboard.TargetProperty="Height" To="0" Duration="0:0:0.1"/>
+        </Storyboard>
+    </Infrastructure:PageView.Resources>
+    <Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
@@ -208,7 +215,25 @@
                 
                 <Editors:EditorBase Grid.Row="1" BoundDocument="{Binding Script}" IsSelectionMarginVisible="False" IsLineNumberMarginVisible="False" AreLineModificationMarksVisible="False"/>
 
-				<sdk:GridSplitter Grid.Column="1"
+                <Border Background="{StaticResource Brush_ErrorBackground}"
+						Grid.Row="1" Height="0"
+						VerticalAlignment="Bottom"
+						x:Name="PatchScriptErrorPanel">
+                    <i:Interaction.Triggers>
+                        <ei:DataTrigger Binding="{Binding IsErrorVisible.Value}" Value="True" Comparison="Equal">
+                            <ei:ControlStoryboardAction Storyboard="{StaticResource ShowErrorPanel}" ControlStoryboardOption="Play"/>
+                        </ei:DataTrigger>
+                        <ei:DataTrigger Binding="{Binding IsErrorVisible.Value}" Value="False" Comparison="Equal">
+                            <ei:ControlStoryboardAction Storyboard="{StaticResource HideErrorPanel}" ControlStoryboardOption="Play"/>
+                        </ei:DataTrigger>
+                    </i:Interaction.Triggers>
+                    <TextBlock Text="{Binding PatchScriptErrorMessage.Value}" Foreground="White" Margin="5" VerticalAlignment="Top" 
+							   TextWrapping="Wrap"
+							   Behaviors:FadeTrimming.IsEnabled="True"
+							   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"/>
+                </Border>
+                
+                <sdk:GridSplitter Grid.Column="1"
                                   Grid.Row="1" 
 								  VerticalAlignment="Stretch" 
 								  HorizontalAlignment="Center"/>
