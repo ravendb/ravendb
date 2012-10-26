@@ -1,7 +1,9 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Windows.Data;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Documents;
@@ -19,6 +21,10 @@ namespace Raven.Studio.Models
 
 	    private CollectionDocumentsCollectionSource collectionSource; 
 		private DocumentsModel documentsForSelectedCollection;
+
+        public CollectionViewSource SortedCollectionsList
+        {
+            get; private set; }
 
         public CollectionDocumentsCollectionSource CollectionSource
 		{
@@ -82,6 +88,15 @@ namespace Raven.Studio.Models
 
                 DocumentsForSelectedCollection.Context = "Collection/" + GetSelectedCollectionName();
             };
+
+		    SortedCollectionsList = new CollectionViewSource()
+		    {
+		        Source = Collections,
+		        SortDescriptions =
+		        {
+		            new SortDescription("Count", ListSortDirection.Descending)
+		        }
+		    };
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -96,7 +111,7 @@ namespace Raven.Studio.Models
 			DatabaseCommands.GetTermsCount(CollectionsIndex, "Tag", "", 100)
 				.ContinueOnSuccess(collections =>
 				                   	{
-										var collectionModels = collections.OrderByDescending(x => x.Count)
+										var collectionModels = collections
 											.Where(x=>x.Count > 0)
 											.Select(col => new CollectionModel { Name = col.Name, Count = col.Count })
 											.ToArray();
@@ -116,14 +131,8 @@ namespace Raven.Studio.Models
 		{
             // update documents count
 
-		    var nameToCount = collectionDocumentsCount.OrderByDescending(count => count.Count).ToDictionary(i => i.Name, i => i.Count);
+		    var nameToCount = collectionDocumentsCount.ToDictionary(i => i.Name, i => i.Count);
 		    var collections = Collections.OrderByDescending(model => model.Count).ToList();
-            Collections = new BindableCollection<CollectionModel>(model => model.Name);
-		    foreach (var collectionModel in collections)
-		    {
-		        Collections.Add(collectionModel);
-		    }
-		    
 		    foreach (var collectionModel in Collections)
 		    {
 		        collectionModel.Count = nameToCount[collectionModel.Name];
@@ -138,7 +147,7 @@ namespace Raven.Studio.Models
 			if (SelectedCollection.Value == null)
 				SelectedCollection.Value = Collections.FirstOrDefault();
 
-            OnPropertyChanged(() => Collections);
+            SortedCollectionsList.View.Refresh();
 		}
 
 		public string PageTitle
