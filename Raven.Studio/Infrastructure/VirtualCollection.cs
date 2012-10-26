@@ -68,6 +68,7 @@ namespace Raven.Studio.Infrastructure
 
             _source = source;
             _source.CollectionChanged += HandleSourceCollectionChanged;
+            _source.CountChanged += HandleCountChanged;
             _pageSize = pageSize;
             _equalityComparer = equalityComparer;
             _virtualItems = CreateItemsCache(pageSize);
@@ -78,6 +79,8 @@ namespace Raven.Studio.Infrastructure
 
             (_sortDescriptions as INotifyCollectionChanged).CollectionChanged += HandleSortDescriptionsChanged;
         }
+
+
 
         public IVirtualCollectionSource<T> Source
         {
@@ -229,6 +232,12 @@ namespace Raven.Studio.Infrastructure
         private void HandleSortDescriptionsChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             Refresh();
+        }
+
+        private void HandleCountChanged(object sender, EventArgs e)
+        {
+            Task.Factory.StartNew(UpdateCount, CancellationToken.None, TaskCreationOptions.None,
+                                  _synchronizationContextScheduler);
         }
 
         private void HandleSourceCollectionChanged(object sender, VirtualCollectionSourceChangedEventArgs e)
@@ -424,12 +433,26 @@ namespace Raven.Studio.Infrastructure
                         _virtualItems[i].ClearValue();
                 }
             }
+
+            _fetchedPages.Clear();
+            _requestedPages.Clear();
+
             UpdateCount(0);
+            UpdateCount();
         }
 
         private void UpdateCount()
         {
-            UpdateCount(_source.Count);
+            if (_source.Count.HasValue)
+            {            
+                UpdateCount(_source.Count.Value);
+            }
+            else
+            {
+                // if the Count is null, that indicates that
+                // the VirtualCollectionSource needs us to fetch a page before it will know how many elements there are
+                BeginGetPage(0);
+            }
         }
 
         private void UpdateCount(int count)

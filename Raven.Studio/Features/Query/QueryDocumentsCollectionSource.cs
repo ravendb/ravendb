@@ -44,13 +44,6 @@ namespace Raven.Studio.Features.Query
             Refresh(RefreshMode.ClearStaleData);
         }
 
-        protected override Task<int> GetCount()
-        {
-            return GetQueryResults(0, 0)
-                .ContinueWith(t => t.Result.TotalResults,
-                              TaskContinuationOptions.ExecuteSynchronously);
-        }
-
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
             return GetQueryResults(start, pageSize)

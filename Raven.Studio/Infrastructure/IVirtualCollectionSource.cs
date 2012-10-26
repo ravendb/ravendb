@@ -8,12 +8,11 @@ namespace Raven.Studio.Infrastructure
     public interface IVirtualCollectionSource<T>
     {
         event EventHandler<VirtualCollectionSourceChangedEventArgs> CollectionChanged;
+        event EventHandler<EventArgs> CountChanged;
 
-        int Count { get; }
-
-        Task<IList<T>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions);
-
+        int? Count { get; }
         void Refresh(RefreshMode mode);
+        Task<IList<T>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions);
     }
 
     public class VirtualCollectionSourceChangedEventArgs : EventArgs

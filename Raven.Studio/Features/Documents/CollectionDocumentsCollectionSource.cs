@@ -39,13 +39,6 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-        protected override Task<int> GetCount()
-        {
-            return GetQueryResults(0, 1)
-                .ContinueWith(t => t.Result.TotalResults,
-                              TaskContinuationOptions.ExecuteSynchronously);
-        }
-
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
             return GetQueryResults(start, pageSize)
