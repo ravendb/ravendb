@@ -1085,6 +1085,9 @@ namespace Raven.Database.Server
 			if (document.Settings["Raven/DataDir"] == null)
 				throw new InvalidOperationException("Could not find Raven/DataDir");
 
+			if(document.Disabled)
+				throw new InvalidOperationException("The database has been disabled.");
+
 			return document;
 		}
 

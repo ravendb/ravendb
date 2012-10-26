@@ -13,6 +13,7 @@ namespace Raven.Abstractions.Data
 		public string Id { get; set; }
 		public Dictionary<string, string> Settings { get; set; }
 		public Dictionary<string, string> SecuredSettings { get; set; }
+		public bool Disabled { get; set; }
 
 		public DatabaseDocument()
 		{
