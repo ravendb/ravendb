@@ -97,8 +97,15 @@ namespace Raven.Database.Json
 			catch (Exception errorEx)
 			{
 				OutputLog(ctx);
-				throw new InvalidOperationException("Unable to execute JavaScript: " + Environment.NewLine + patch.Script +
-					Environment.NewLine + "Debug information: " + Environment.NewLine + string.Join(Environment.NewLine, Debug), errorEx);
+				var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + patch.Script;
+				var error = errorEx as JsException;
+				if (error != null)
+					errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Value);
+				if (Debug.Count != 0)
+					errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
+					            string.Join(Environment.NewLine, Debug);
+				
+				throw new InvalidOperationException(errorMsg, errorEx);
 			}
 			finally
 			{
