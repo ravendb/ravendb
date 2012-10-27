@@ -44,6 +44,7 @@ namespace Raven.Studio.Models
 				new ImportTask(),
 				new ExportTask(),
 				new StartBackupTask(),
+                new CsvImportTask()
 				new IndexingTask(),
 				new SampleDataTask()
 			};
@@ -55,11 +56,11 @@ namespace Raven.Studio.Models
 				Value = "Offline"
 			};
 
-			
+
 
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
-											? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
-											: documentStore.AsyncDatabaseCommands.ForDatabase(name);
+			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 
 
 		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
@@ -166,7 +167,7 @@ namespace Raven.Studio.Models
                         : documentStore.Changes(name));
         }
 
-	    public IAsyncDatabaseCommands AsyncDatabaseCommands
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { return asyncDatabaseCommands; }
 		}
@@ -191,12 +192,12 @@ namespace Raven.Studio.Models
 		}
 
 	    public void Dispose()
-	    {
+		{
 	        disposable.Dispose();
 
             using ((IDisposable)databaseChanges)
-            {
-            }
-	    }
+		{
+		}
+		}
 	}
 }
