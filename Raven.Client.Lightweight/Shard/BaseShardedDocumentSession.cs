@@ -26,7 +26,6 @@ namespace Raven.Client.Shard
 		protected readonly ShardStrategy shardStrategy;
 		protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
 
-		protected readonly SessionMetadata sessionMetadata;
 
 		public BaseShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 			ShardStrategy shardStrategy, IDictionary<string, TDatabaseCommands> shardDbCommands)
@@ -34,7 +33,6 @@ namespace Raven.Client.Shard
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;
-			this.sessionMetadata = new SessionMetadata();
 		}
 
 		#region Sharding support methods
@@ -182,7 +180,7 @@ namespace Raven.Client.Shard
 
 		protected string ModifyObjectId(string id, object entity, RavenJObject metadata)
 		{
-			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity, sessionMetadata);
+			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity, this);
 			if (string.IsNullOrEmpty(shardId))
 				throw new InvalidOperationException("Could not find shard id for " + entity + " because " + shardStrategy.ShardAccessStrategy + " returned null or empty string for the document shard id.");
 			metadata[Constants.RavenShardId] = shardId;

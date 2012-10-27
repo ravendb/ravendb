@@ -85,7 +85,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		///  Generate a shard id for the specified entity
 		///  </summary>
-		public virtual string GenerateShardIdFor(object entity, SessionMetadata sessionMetadata)
+		public virtual string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata)
 		{
 			if (shardResultToStringByType.Count == 0)
 			{ 

@@ -1,8 +1,6 @@
 ﻿namespace Raven.Tests.Issues
 {
 	using System.Collections.Generic;
-
-	using Raven.Abstractions.Data;
 	using Raven.Client;
 	using Raven.Client.Document;
 	using Raven.Client.Shard;
@@ -162,14 +160,9 @@
 			base.Dispose();
 		}
 
-		private SessionMetadata ExtractSessionMetadataFromSession(object session)
+		private ITransactionalDocumentSession ExtractSessionMetadataFromSession(object session)
 		{
-			return
-				(SessionMetadata)
-				session
-				.GetType()
-				.GetField("sessionMetadata", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-				.GetValue(session);
+			return (ITransactionalDocumentSession) session;
 		}
 	}
 }

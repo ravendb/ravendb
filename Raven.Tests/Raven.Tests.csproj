@@ -460,7 +460,6 @@
     <Compile Include="Linq\Contains.cs" />
     <Compile Include="Linq\IsNullOrEmpty.cs" />
     <Compile Include="Issues\RavenDB_556.cs" />
-    <Compile Include="Issues\RavenDB_554.cs" />
     <Compile Include="Issues\RavenDB_579.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
