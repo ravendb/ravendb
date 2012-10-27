@@ -4,16 +4,8 @@ function output(msg) {
 	debug_outputs.push(msg);
 }
 
-function join(first, secound) {
-	return first + secound;
-}
-
-function trim(str, toTrim) {
-	return str.Replcae(toTrim, '');
-}
-
-function split(str, splitBy) {
-	return str.split(splitBy);
+if (!String.prototype.trim) {
+	String.prototype.trim = function () { return this.replace(/^\s\s*/, '').replace(/\s\s*$/, ''); };
 }
 
 Array.prototype.Remove = function (val /*, thisp*/) {

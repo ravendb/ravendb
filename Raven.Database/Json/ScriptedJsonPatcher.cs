@@ -208,27 +208,27 @@ namespace Raven.Database.Json
 					return JsNull.Instance;
 				case JTokenType.Boolean:
 					var boolVal = ((RavenJValue)value);
-					return new JsBoolean((bool)boolVal.Value, JsUndefined.Instance);
+					return global.BooleanClass.New((bool)boolVal.Value);
 				case JTokenType.Float:
 					var fltVal = ((RavenJValue)value);
 					if(fltVal.Value is float)
-						return new JsNumber((float)fltVal.Value, JsUndefined.Instance);
+						return new JsNumber((float)fltVal.Value, global.NumberClass);
 					if (fltVal.Value is decimal)
-						return new JsNumber((double)(decimal)fltVal.Value, JsUndefined.Instance);
-					return new JsNumber((double)fltVal.Value, JsUndefined.Instance);
+						return global.NumberClass.New((double)(decimal)fltVal.Value);
+					return global.NumberClass.New((double)fltVal.Value);
 				case JTokenType.Integer:
 					var intVal = ((RavenJValue)value);
 					if(intVal.Value is int)
 					{
-						return new JsNumber((int)intVal.Value, JsUndefined.Instance);
+						return global.NumberClass.New((int)intVal.Value);
 					}
-					return new JsNumber((long)intVal.Value, JsUndefined.Instance);
+					return global.NumberClass.New((long)intVal.Value);
 				case JTokenType.Date:
 					var dtVal = ((RavenJValue)value);
-					return new JsDate((DateTime)dtVal.Value, JsUndefined.Instance);
+					return global.DateClass.New((DateTime)dtVal.Value);
 				case JTokenType.String:
 					var strVal = ((RavenJValue)value);
-					return new JsString((string)strVal.Value, JsUndefined.Instance);
+					return global.StringClass.New((string)strVal.Value);
 				default:
 					throw new NotSupportedException(value.Type.ToString());
 			}

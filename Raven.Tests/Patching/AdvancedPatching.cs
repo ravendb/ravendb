@@ -64,6 +64,36 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
+		public void CanUseTrim()
+		{
+			var doc = RavenJObject.Parse("{\"Email\":' somebody@somewhere.com '}");
+			const string script = "this.Email = this.Email.trim();";
+			var patch = new ScriptedPatchRequest()
+			{
+				Script = script,
+			};
+			var result = new ScriptedJsonPatcher().Apply(doc, patch);
+			Assert.Equal(result["Email"].Value<string>(), "somebody@somewhere.com");
+		}
+
+
+		[Fact]
+		public void CanUseSplit()
+		{
+			var doc = RavenJObject.Parse("{\"Email\":'somebody@somewhere.com'}");
+			const string script = @"
+this.Parts = this.Email.split('@');";
+			var patch = new ScriptedPatchRequest()
+			{
+				Script = script,
+			};
+			var scriptedJsonPatcher = new ScriptedJsonPatcher();
+			var result = scriptedJsonPatcher.Apply(doc, patch);
+			Assert.Equal(result["Parts"].Value<RavenJArray>()[0], "somebody");
+			Assert.Equal(result["Parts"].Value<RavenJArray>()[1], "somewhere.com");
+		}
+
+		[Fact]
 		public void ComplexVariableTest2()
 		{
 			const string email = "somebody@somewhere.com";
