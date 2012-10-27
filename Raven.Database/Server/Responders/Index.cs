@@ -166,35 +166,15 @@ namespace Raven.Database.Server.Responders
 
 		private void GetIndexEntriesForDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, Reference<int> totalResults)
 		{
-			Guid indexEtag;
+			string entityName;
+			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
 
-			var queryResult = PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag);
-
-			if (queryResult == null) 
+			if(dynamicIndexName == null)
+			{
+				context.SetStatusToNotFound();
 				return;
-
-			var results = Database
-				.IndexStorage
-				.IndexEntires(queryResult.IndexName, indexQuery, Database.IndexQueryTriggers, totalResults)
-				.ToArray();
-
-			context.WriteETag(indexEtag);
-			context.WriteJson(
-				new
-				{
-					Count = results.Length,
-					Results = results,
-					Includes = new string[0],
-					IndexTimestamp = queryResult.IndexTimestamp,
-					IndexEtag = indexEtag,
-					TotalResults = totalResults.Value,
-					SkippedResults = 0,
-					NonAuthoritativeInformation = false,
-					ResultEtag = indexEtag,
-					IsStale = queryResult.IsStale,
-					IndexName = queryResult.IndexName,
-					LastQueryTime = Database.IndexStorage.GetLastQueryTime(queryResult.IndexName)
-				});
+			}
+			GetIndexEntriesForExistingIndex(context, dynamicIndexName, indexQuery, totalResults);
 		}
 
 		private void GetIndexEntriesForExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, Reference<int> totalResults)
@@ -472,11 +452,8 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
-			string entityName = null;
-			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
-				entityName = index.Substring("dynamic/".Length);
-
-			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
+			string entityName;
+			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
 
 			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
@@ -517,6 +494,14 @@ namespace Raven.Database.Server.Responders
 			return queryResult;
 		}
 
-		
+		private string GetDynamicIndexName(string index, IndexQuery indexQuery, out string entityName)
+		{
+			entityName = null;
+			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
+				entityName = index.Substring("dynamic/".Length);
+
+			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
+			return dynamicIndexName;
+		}
 	}
 }
