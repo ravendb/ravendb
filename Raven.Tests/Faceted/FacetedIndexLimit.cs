@@ -232,12 +232,12 @@ namespace Raven.Tests.Faceted
 					                  group d by d.Manufacturer
 					                  into result
 					                  select new {Manufacturer = result.Key, Count = result.Count()};
-					var camerasByHits = cameraCounts.OrderByDescending(x => x.Count).Select(x => x.Manufacturer.ToLower()).ToList();
-
-					WaitForUserToContinueTheTest(store);
+					var camerasByHits = cameraCounts.OrderByDescending(x => x.Count).ThenBy(x=>x.Manufacturer.ToLower()).Select(x => x.Manufacturer.ToLower()).ToList();
 
 					Assert.Equal(5, facetResults.Results["Manufacturer"].Values.Count());
 					Assert.Equal(camerasByHits[0], facetResults.Results["Manufacturer"].Values[0].Range);
+					if(camerasByHits[1] != facetResults.Results["Manufacturer"].Values[1].Range)
+						WaitForUserToContinueTheTest(store, debug: false);
 					Assert.Equal(camerasByHits[1], facetResults.Results["Manufacturer"].Values[1].Range);
 					Assert.Equal(camerasByHits[2], facetResults.Results["Manufacturer"].Values[2].Range);
 					Assert.Equal(camerasByHits[3], facetResults.Results["Manufacturer"].Values[3].Range);

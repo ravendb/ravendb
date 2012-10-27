@@ -206,14 +206,14 @@ namespace Raven.Database.Queries
 				//	once through the collector and pull out all of the terms in one shot
 				var allCollector = new GatherAllCollector();
 				var facetsByName = new Dictionary<string, Dictionary<string, int>>();
-			
+
 				IndexSearcher currentIndexSearcher;
 				using (Database.IndexStorage.GetCurrentIndexSearcher(Index, out currentIndexSearcher))
 				{
 					var baseQuery = Database.IndexStorage.GetLuceneQuery(Index, IndexQuery, Database.IndexQueryTriggers);
 					currentIndexSearcher.Search(baseQuery, allCollector);
 					var fields = Facets.Values.Select(x => x.Name)
-							.Concat(Ranges.Select(x=>x.Key));
+							.Concat(Ranges.Select(x => x.Key));
 					var fieldsToRead = new HashSet<string>(fields);
 					IndexedTerms.ReadEntriesForFields(currentIndexSearcher.IndexReader,
 						fieldsToRead,
@@ -223,7 +223,6 @@ namespace Raven.Database.Queries
 							List<ParsedRange> list;
 							if (Ranges.TryGetValue(term.Field, out list))
 							{
-								var num = NumericStringToNum(term.Text);
 								for (int i = 0; i < list.Count; i++)
 								{
 									var parsedRange = list[i];
@@ -262,16 +261,16 @@ namespace Raven.Database.Queries
 					switch (facet.TermSortMode)
 					{
 						case FacetTermSortMode.ValueAsc:
-							allTerms = new List<string>(groups.Keys.OrderBy(x => x));
+							allTerms = new List<string>(groups.OrderBy(x => x.Key).ThenBy(x => x.Value).Select(x => x.Key));
 							break;
 						case FacetTermSortMode.ValueDesc:
-							allTerms = new List<string>(groups.Keys.OrderByDescending(x => x));
+							allTerms = new List<string>(groups.OrderByDescending(x => x).ThenBy(x => x.Value).Select(x => x.Key));
 							break;
 						case FacetTermSortMode.HitsAsc:
-							allTerms = new List<string>(groups.OrderBy(x => x.Value).Select(x => x.Key));
+							allTerms = new List<string>(groups.OrderBy(x => x.Value).ThenBy(x => x.Key).Select(x => x.Key));
 							break;
 						case FacetTermSortMode.HitsDesc:
-							allTerms = new List<string>(groups.OrderByDescending(x => x.Value).Select(x => x.Key));
+							allTerms = new List<string>(groups.OrderByDescending(x => x.Value).ThenBy(x=>x.Key).Select(x => x.Key));
 							break;
 						default:
 							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
