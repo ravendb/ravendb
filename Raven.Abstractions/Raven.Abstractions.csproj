@@ -598,6 +598,7 @@
     <Compile Include="Data\PatchResult.cs" />
     <Compile Include="Data\PutResult.cs" />
     <Compile Include="Data\ServerError.cs" />
+    <Compile Include="Data\SessionMetadata.cs" />
     <Compile Include="Data\SetupDoc.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />

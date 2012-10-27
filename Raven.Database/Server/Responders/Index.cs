@@ -150,35 +150,86 @@ namespace Raven.Database.Server.Responders
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 			var totalResults = new Reference<int>();
-			var results = Database.IndexStorage
-								.IndexEntires(index, indexQuery,Database.IndexQueryTriggers, totalResults )
-								.ToArray();
 
+			var isDynamic = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase)
+			                || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase);
+
+			if (isDynamic)
+			{
+				GetIndexEntriesForDynamicIndex(context, index, indexQuery, totalResults);
+			} 
+			else
+			{
+				GetIndexEntriesForExistingIndex(context, index, indexQuery, totalResults);
+			}
+		}
+
+		private void GetIndexEntriesForDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, Reference<int> totalResults)
+		{
+			Guid indexEtag;
+
+			var queryResult = PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag);
+
+			if (queryResult == null) 
+				return;
+
+			var results = Database
+				.IndexStorage
+				.IndexEntires(queryResult.IndexName, indexQuery, Database.IndexQueryTriggers, totalResults)
+				.ToArray();
+
+			context.WriteETag(indexEtag);
+			context.WriteJson(
+				new
+				{
+					Count = results.Length,
+					Results = results,
+					Includes = new string[0],
+					IndexTimestamp = queryResult.IndexTimestamp,
+					IndexEtag = indexEtag,
+					TotalResults = totalResults.Value,
+					SkippedResults = 0,
+					NonAuthoritativeInformation = false,
+					ResultEtag = indexEtag,
+					IsStale = queryResult.IsStale,
+					IndexName = queryResult.IndexName,
+					LastQueryTime = Database.IndexStorage.GetLastQueryTime(queryResult.IndexName)
+				});
+		}
+
+		private void GetIndexEntriesForExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, Reference<int> totalResults)
+		{
+			var results = Database
+					.IndexStorage
+					.IndexEntires(index, indexQuery, Database.IndexQueryTriggers, totalResults)
+					.ToArray();
 
 			Tuple<DateTime, Guid> indexTimestamp = null;
 			bool isIndexStale = false;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				isIndexStale = accessor.Staleness.IsIndexStale(index, indexQuery.Cutoff, indexQuery.CutoffEtag);
-				indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);
-			});
+			Database.TransactionalStorage.Batch(
+				accessor =>
+				{
+					isIndexStale = accessor.Staleness.IsIndexStale(index, indexQuery.Cutoff, indexQuery.CutoffEtag);
+					indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);
+				});
 			var indexEtag = Database.GetIndexEtag(index, null);
 			context.WriteETag(indexEtag);
-			context.WriteJson(new
-			{
-				Count = results.Length,
-				Results = results,
-				Includes = new string[0],
-				IndexTimestamp = indexTimestamp.Item1,
-				IndexEtag = indexTimestamp.Item2,
-				TotalResults = totalResults.Value,
-				SkippedResults = 0,
-				NonAuthoritativeInformation = false,
-				ResultEtag = indexEtag,
-				IsStale = isIndexStale,
-				IndexName = index,
-				LastQueryTime = Database.IndexStorage.GetLastQueryTime(index)
-			});
+			context.WriteJson(
+				new
+				{
+					Count = results.Length,
+					Results = results,
+					Includes = new string[0],
+					IndexTimestamp = indexTimestamp.Item1,
+					IndexEtag = indexTimestamp.Item2,
+					TotalResults = totalResults.Value,
+					SkippedResults = 0,
+					NonAuthoritativeInformation = false,
+					ResultEtag = indexEtag,
+					IsStale = isIndexStale,
+					IndexName = index,
+					LastQueryTime = Database.IndexStorage.GetLastQueryTime(index)
+				});
 		}
 
 		private void GetExplanation(IHttpContext context, string index)
@@ -438,7 +489,7 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-			if(dynamicIndexName == null && // would have to create a dynamic index
+			if (dynamicIndexName == null && // would have to create a dynamic index
 				Database.Configuration.CreateTemporaryIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
 			{
 				indexEtag = Guid.NewGuid();

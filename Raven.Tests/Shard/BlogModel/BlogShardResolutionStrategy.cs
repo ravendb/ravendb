@@ -6,6 +6,8 @@ using Raven.Client.Shard;
 
 namespace Raven.Tests.Shard.BlogModel
 {
+	using Raven.Abstractions.Data;
+
 	public class BlogShardResolutionStrategy : IShardResolutionStrategy
 	{
 		private readonly int numberOfShardsForPosts;
@@ -16,7 +18,7 @@ namespace Raven.Tests.Shard.BlogModel
 			this.numberOfShardsForPosts = numberOfShardsForPosts;
 		}
 
-		public string GenerateShardIdFor(object entity)
+		public string GenerateShardIdFor(object entity, SessionMetadata sessionMetadata)
 		{
 			return GetShardIdFromObjectType(entity);
 		}
