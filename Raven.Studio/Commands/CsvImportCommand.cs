@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -14,104 +16,144 @@ using TaskStatus = Raven.Studio.Models.TaskStatus;
 
 namespace Raven.Studio.Commands
 {
-    public class CsvImportCommand : Command
-    {
-        const int BatchSize = 512;
-        private readonly Action<string> output;
-        private TaskModel taskModel;
-        private int totalCount;
+	public class CsvImportCommand : Command
+	{
+		const int BatchSize = 512;
+		private readonly Action<string> output;
+		private readonly TaskModel taskModel;
 
-        public CsvImportCommand(TaskModel taskModel, Action<string> output)
-        {
-            this.output = output;
-            this.taskModel = taskModel;
-        }
+		public CsvImportCommand(TaskModel taskModel, Action<string> output)
+		{
+			this.output = output;
+			this.taskModel = taskModel;
+		}
 
-        public override void Execute(object parameter)
-        {
-            var openFile = new OpenFileDialog
-                               {
-                                   Filter = "csv|*.csv"
-                               };
+		public override void Execute(object parameter)
+		{
+			var openFile = new OpenFileDialog
+							   {
+								   Filter = "csv|*.csv"
+							   };
 
-            if (openFile.ShowDialog() != true)
-                return;
+			if (openFile.ShowDialog() != true)
+				return;
 
-            totalCount = 0;
+			taskModel.TaskStatus = TaskStatus.Started;
+			output(string.Format("Importing from {0}", openFile.File.Name));
 
-            taskModel.TaskStatus = TaskStatus.Started;
-            output(string.Format("Importing from {0}", openFile.File.Name));
+			var streamReader = openFile.File.OpenText();
 
-            var sw = Stopwatch.StartNew();
+			var importImpl = new ImportImpl(streamReader, openFile.File.Name, taskModel, output,DatabaseCommands);
+			importImpl.ImportAsync()
+				.ContinueWith(task =>
+				{
+					importImpl.Dispose();
+					return task;
+				})
+				.Unwrap()
+				.Catch();
+		}
 
-            try
-            {
-                using (var csvReader = new CsvReader(openFile.File.OpenText()))
-                {
-                    var batch = new List<RavenJObject>();
-                    var header = csvReader.ReadHeaderRecord();
-                    var entity = Path.GetFileNameWithoutExtension(openFile.File.Name);
+		public class ImportImpl : IDisposable
+		{
+			private readonly TaskModel taskModel;
+			private readonly Action<string> output;
+			private readonly IAsyncDatabaseCommands databaseCommands;
+			private readonly CsvReader csvReader;
+			private readonly HeaderRecord header;
+			private readonly string entity;
+			private readonly Stopwatch sw;
+			private IEnumerator<DataRecord> enumerator;
+			private int totalCount;
 
-                    foreach (var record in csvReader.DataRecords)
-                    {
-                        var document = new RavenJObject();
-                        var id = Guid.NewGuid().ToString("N");
-                        foreach (var column in header.Values)
-                        {
-                            if (string.Compare("id", column, StringComparison.InvariantCultureIgnoreCase) == 0)
-                            {
-                                id = record[column];
-                            }
-                            else
-                            {
-                                document.Add(string.Format("\"{0}\"", column), new RavenJValue(record[column]));
-                            }
-                        }
+			public ImportImpl(StreamReader reader, string file, TaskModel taskModel, Action<string> output, IAsyncDatabaseCommands databaseCommands)
+			{
+				this.taskModel = taskModel;
+				this.output = output;
+				this.databaseCommands = databaseCommands;
+				csvReader = new CsvReader(reader);
+				header = csvReader.ReadHeaderRecord();
+				entity = Path.GetFileNameWithoutExtension(file);
+				sw = Stopwatch.StartNew();
 
-                        var metadata = new RavenJObject { { "Raven-Entity-Name", entity } };
-                        document.Add("@metadata", metadata);
-                        document.Add("@id", id);
+				enumerator = csvReader.DataRecords.GetEnumerator();
+			}
 
-                        batch.Add((RavenJObject)document);
+			public Task ImportAsync()
+			{
+				var batch = new List<RavenJObject>();
+				while (enumerator.MoveNext())
+				{
+					var record = enumerator.Current;
+					var document = new RavenJObject();
+					var id = Guid.NewGuid().ToString("N");
+					foreach (var column in header.Values)
+					{
+						if (string.Compare("id", column, StringComparison.InvariantCultureIgnoreCase) == 0)
+						{
+							id = record[column];
+						}
+						else
+						{
+							document[column] = record[column];
+						}
+					}
 
-                        if (batch.Count >= BatchSize)
-                        {
-                            FlushBatch(batch.ToList())
-                                .ContinueOnSuccess(() => {});
-                            batch.Clear();
-                        }
-                    }
-                }
+					var metadata = new RavenJObject { { "Raven-Entity-Name", entity } };
+					document.Add("@metadata", metadata);
+					metadata.Add("@id", id);
 
-                output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount, sw.ElapsedMilliseconds));
-                taskModel.TaskStatus = TaskStatus.Ended;
-            }
-            catch (Exception e)
-            {
-                taskModel.TaskStatus = TaskStatus.Ended;
-                throw e;
-            }
-        }
+					batch.Add(document);
 
-        Task FlushBatch(List<RavenJObject> batch)
-        {
-            totalCount += batch.Count;
-            var sw = Stopwatch.StartNew();
-            var commands = (from doc in batch
-                            let metadata = doc.Value<RavenJObject>("@metadata")
-                            let removal = doc.Remove("@metadata")
-                            select new PutCommandData
-                            {
-                                Metadata = metadata,
-                                Document = doc,
-                                Key = metadata.Value<string>("@id"),
-                            }).ToArray();
+					if (batch.Count >= BatchSize)
+					{
+						return FlushBatch(batch)
+							.ContinueWith(t => t.IsCompleted ? ImportAsync() : t)
+							.Unwrap();
+					}
+				}
 
-            output(String.Format("Wrote {0} documents  in {1:#,#;;0} ms",
-                                 batch.Count, sw.ElapsedMilliseconds));
+				if(batch.Count > 0)
+				{
+					return FlushBatch(batch)
+						.ContinueWith(t => t.IsCompleted ? ImportAsync() : t)
+						.Unwrap();
+				}
 
-            return DatabaseCommands
-                .BatchAsync(commands);
-        }
-    }
+				output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount, sw.ElapsedMilliseconds));
+				taskModel.TaskStatus = TaskStatus.Ended;
+
+				return new CompletedTask();
+			}
+
+			Task FlushBatch(List<RavenJObject> batch)
+			{
+				totalCount += batch.Count;
+				var sw = Stopwatch.StartNew();
+				var commands = (from doc in batch
+								let metadata = doc.Value<RavenJObject>("@metadata")
+								let removal = doc.Remove("@metadata")
+								select new PutCommandData
+								{
+									Metadata = metadata,
+									Document = doc,
+									Key = metadata.Value<string>("@id"),
+								}).ToArray();
+
+				output(String.Format("Wrote {0} documents  in {1:#,#;;0} ms",
+									 batch.Count, sw.ElapsedMilliseconds));
+
+				return databaseCommands
+					.BatchAsync(commands);
+			}
+
+			/// <summary>
+			/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+			/// </summary>
+			public void Dispose()
+			{
+				csvReader.Close();
+			}
+		}
+	}
 }
