@@ -66,18 +66,8 @@ namespace Raven.Tests.Indexes
 				using (var session = store.OpenSession())
 				{
 				
-					// now we wait for 
 					var usersCount = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count();
-
-					var databaseStatistics = store.DocumentDatabase.Statistics;
-
-					// IMPORTANT: this test relies on a race condition to pass.
-					// We nee to catch the state of the test after indexing was started, before it is completed
-					// this is why we are writing so many documents and limiting the number of documents we can
-					// index in one batch, to ensure that we _can_ capture it in the right time.
-
-					Assert.NotEmpty(databaseStatistics.StaleIndexes);
-
+					
 					Assert.Equal(1024 * 6 + 1, usersCount);
 				}
 			}
