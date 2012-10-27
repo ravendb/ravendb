@@ -209,14 +209,13 @@ namespace Raven.Database.Indexing
 						if (items.Count == 1)
 							return items[0];
 
-						var result = new JsonDocument[items.Sum(x => x.Length)];
-						int pos = 0;
-						foreach (var docs in items)
-						{
-							Array.Copy(docs, 0, result, pos, docs.Length);
-							pos += docs.Length;
-						}
-						return result;
+						// a single doc may appear multiple times, if it was updated
+						// while we were fetching things, so we have several versions
+						// of the same doc loaded, this will make sure that we will only 
+						// take one of them.
+						return items.SelectMany(x => x).GroupBy(x => x.Key)
+							.Select(g => g.OrderBy(x => x.Etag).First())
+							.ToArray();
 					}
 					else
 					{
@@ -285,7 +284,7 @@ namespace Raven.Database.Indexing
 					{
 						futureBatchStat.Retries++;
 
-						if(context.WaitForWork(TimeSpan.FromMinutes(1), ref localWork, "PreFetching") == false)
+						if(context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching") == false)
 							continue;
 
 						jsonDocuments = GetJsonDocs(lastEtag);
