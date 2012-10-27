@@ -45,6 +45,7 @@ namespace Raven.Tests.Linq
 				{
 					session.Store(new TestDoc {StringArray = new[] {"one", "two"}});
 					session.Store(new TestDoc {StringArray = new string[0]});
+					session.Store(new TestDoc {StringArray = new string[0]});
 					session.SaveChanges();
 				}
 
