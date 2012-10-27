@@ -172,6 +172,14 @@ namespace Raven.Json.Linq
 				dateTime = RavenJsonTextReader.ParseDateMicrosoft((string)value.Value);
 				return (U)(object)dateTime;
 			}
+			if (targetType == typeof(DateTimeOffset) && value.Value is string)
+			{
+				DateTimeOffset dateTimeOffset;
+				if (DateTimeOffset.TryParseExact((string)value.Value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
+					return (U)(object)dateTimeOffset;
+
+				return default(U);
+			}
 			return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
 		}
 	}
