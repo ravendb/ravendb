@@ -13,13 +13,18 @@ namespace Raven.Studio.Features.Documents
         {
         }
 
-        protected override Task<int> GetCount()
+        private void UpdateCount()
         {
-            return ApplicationModel.DatabaseCommands.GetStatisticsAsync().ContinueWith(t => (int)t.Result.CountOfDocuments);
+            ApplicationModel.DatabaseCommands.GetStatisticsAsync().ContinueWith(t => SetCount((int)t.Result.CountOfDocuments)).Catch();
         }
-
+        
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
+            if (!Count.HasValue)
+            {
+                UpdateCount();
+            }
+
             return ApplicationModel.DatabaseCommands.GetDocumentsAsync(start, pageSize, MetadataOnly)
                 .ContinueWith(t =>
                 {

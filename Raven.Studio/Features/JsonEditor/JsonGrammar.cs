@@ -38,7 +38,8 @@ namespace Raven.Studio.Features.JsonEditor
             var propertyValueList = new NonTerminal("PropertyValueList");
             var value = new NonTerminal("Value") { ErrorAlias = "Value"};
             var array = new NonTerminal("Array");
-            
+            var document = new NonTerminal("Document");
+
             var stringValue = new NonTerminal("String");
 
             jsonObject.Production = @openCurly +
@@ -71,7 +72,9 @@ namespace Raven.Studio.Features.JsonEditor
             stringValue.Production = @startString + (@stringCharacters["value"] > AstFrom("value") | @escapedCharacter["value"] > AstFrom("value") | @escapedUnicode["value"] > AstFrom("value")).ZeroOrMore().SetLabel("characters") + @endString.OnErrorContinue()
                 > Ast<JsonStringNode>().SetProperty(a => a.Text, AstChildrenFrom("characters"));
 
-            Root = jsonObject;
+            document.Production = jsonObject.Range(0, 1);
+
+            Root = document;
         }
 
         private IParserErrorResult DontReportBeforeClosingBrace(IParserState state)
