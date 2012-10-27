@@ -40,6 +40,8 @@ namespace Raven.Abstractions.Json
 			var enumType = Nullable.GetUnderlyingType(objectType) ?? objectType;
 			if (enumType != objectType && reader.TokenType == JsonToken.Null)//nullable
 				return null;
+			if(reader.Value == null)
+				return Activator.CreateInstance(enumType);
 			return Enum.Parse(enumType, reader.Value.ToString(), true);
 		}
 
