@@ -288,5 +288,20 @@ namespace Raven.Client
 			                                                          Expression.Constant(escapeQueryOptions)));
 			return (IRavenQueryable<T>)queryable;
 		}
+
+		/// <summary>
+		/// Perform an initial sort by lucene score.
+		/// </summary>
+		public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
+		{
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod ();
+			Expression expression = self.Expression;
+			if (expression.Type != typeof (IRavenQueryable<T>))
+			{
+				expression = Expression.Convert (expression, typeof (IRavenQueryable<T>));
+			}
+			var queryable = self.Provider.CreateQuery (Expression.Call (null, currentMethod.MakeGenericMethod (typeof (T)), expression));
+			return (IOrderedQueryable<T>)queryable;
+		}
 	}
 }

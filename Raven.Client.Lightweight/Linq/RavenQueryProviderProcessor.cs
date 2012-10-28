@@ -697,6 +697,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitSearch(expression);
 
 					break;
+				case "OrderByScore":
+					luceneQuery.AddOrder (Constants.TemporaryScoreValue, true);
+					VisitExpression (expression.Arguments[0]);
+					break;
 				case "Intersect":
 					VisitExpression(expression.Arguments[0]);
 					luceneQuery.Intersect();
