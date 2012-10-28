@@ -1093,8 +1093,9 @@ more responsive application.
 			{
 				jObject.EnsureSnapshot();
 				cachedJsonDocs[entity] = jObject;
+				return (RavenJObject)jObject.CreateSnapshot();
 			}
-			return (RavenJObject)jObject.CreateSnapshot();
+			return jObject;
 		}
 
 		private static void TrySimplfyingJson(RavenJObject jObject, JsonContract contract)
