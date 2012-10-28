@@ -43,9 +43,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
 			awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
 
-			logger.Info("Periodic backups started, will backup every" + interval + "minutes");
-
 			interval = backupConfigs.Interval;
+			logger.Info("Periodic backups started, will backup every" + interval + "minutes");
 			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(interval), TimeSpan.FromMinutes(interval));
 		}
 
