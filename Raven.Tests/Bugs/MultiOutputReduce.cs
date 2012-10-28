@@ -46,7 +46,6 @@ namespace Raven.Tests.Bugs
 							.Customize(x => x.WaitForNonStaleResults())
 							.Where(x => x.OrderId != null)
 							.ToList();
-
 						Assert.Equal(12*5, searchResults.Count);
 						foreach (var searchResult in searchResults)
 						{

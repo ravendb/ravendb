@@ -100,6 +100,10 @@ namespace Raven.Database
 
 		private readonly WorkContext workContext;
 		private readonly IndexingExecuter indexingExecuter;
+		public IndexingExecuter IndexingExecuter
+		{
+			get { return indexingExecuter; }
+		}
 
 		private readonly ConcurrentDictionary<Guid, CommittableTransaction> promotedTransactions = new ConcurrentDictionary<Guid, CommittableTransaction>();
 
@@ -1640,7 +1644,7 @@ namespace Raven.Database
 
 		static string productVersion;
 		private volatile bool disposed;
-		private ValidateLicense validateLicense;
+		private readonly ValidateLicense validateLicense;
 		public string ServerUrl
 		{
 			get
