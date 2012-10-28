@@ -26,9 +26,9 @@ namespace Raven.Studio.Models
 			if(databaseName == Constants.SystemDatabase)
 			{
 				var apiKeys = new ApiKeysSectionModel();
-
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
+				Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
 
 				return; 
@@ -51,6 +51,7 @@ namespace Raven.Studio.Models
                     var databaseSettingsSectionViewModel = new DatabaseSettingsSectionViewModel();
                     Settings.Sections.Add(databaseSettingsSectionViewModel);
                     Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
+					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
                     string activeBundles;
                     databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);

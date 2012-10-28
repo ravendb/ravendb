@@ -232,6 +232,10 @@
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
+    <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
+      <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BundlesSelect.xaml.cs">
       <DependentUpon>BundlesSelect.xaml</DependentUpon>
@@ -868,6 +872,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Settings\DatabaseSettingsSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

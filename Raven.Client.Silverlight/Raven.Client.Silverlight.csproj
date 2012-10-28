@@ -648,6 +648,9 @@
     <Compile Include="..\Raven.Abstractions\Data\LogItem.cs">
       <Link>Imports\Data\LogItem.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\PeriodicBackupSetup.cs">
+      <Link>Imports\Data\PeriodicBackupSetup.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ScriptedPatchRequest.cs">
       <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
     </Compile>

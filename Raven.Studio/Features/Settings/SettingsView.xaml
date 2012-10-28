@@ -31,6 +31,9 @@
 		<DataTemplate DataType="Models:WindowsAuthSettingsSectionModel">
 			<Settings:WindowsAuthSettingSectionView/>
 		</DataTemplate>
+		<DataTemplate DataType="Models:PeriodicBackupSettingsSectionModel">
+			<Settings:PeriodicBackupSettingsSectionView/>
+		</DataTemplate>
 	</UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot">
