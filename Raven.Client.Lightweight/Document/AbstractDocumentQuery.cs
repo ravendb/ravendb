@@ -1109,9 +1109,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void AndAlso()
 		{
 			if (theQueryText.Length < 1)
-			{
 				return;
-			}
 
 			theQueryText.Append(" AND");
 		}
@@ -1122,9 +1120,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void OrElse()
 		{
 			if (theQueryText.Length < 1)
-			{
 				return;
-			}
 
 			theQueryText.Append(" OR");
 		}
