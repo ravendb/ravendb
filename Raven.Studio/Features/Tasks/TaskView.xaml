@@ -24,14 +24,22 @@
 			<ItemsControl ItemsSource="{Binding TaskInputs}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<StackPanel Orientation="Horizontal">
-							<TextBlock Text="{Binding Name}"
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+
+							<TextBlock Grid.Column="0" Text="{Binding Name}"
+									   Width="{Binding DataContext.LongestInput, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"
 									   Padding="5"
 									   VerticalAlignment="Center" />
-							<TextBox Text="{Binding Value, Mode=TwoWay}"
+							<TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}"
 									 VerticalAlignment="Center"
+									 Margin="5"
 									 MinWidth="150" />
-						</StackPanel>
+						</Grid>
+						
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>

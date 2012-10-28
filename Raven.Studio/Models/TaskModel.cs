@@ -1,5 +1,6 @@
 ﻿using System.Windows.Input;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -10,14 +11,28 @@ namespace Raven.Studio.Models
 		Ended
 	}
 
+
 	public abstract class TaskModel : Model
 	{
+		private const int PixelsPerLetter = 7;
+
 		public TaskModel()
 		{
 			Output = new BindableCollection<string>(x => x);
 			TaskInputs = new BindableCollection<TaskInput>(x => x.Name);
 			TaskDatas = new BindableCollection<TaskData>(x => x.Name);
 			TaskStatus = TaskStatus.DidNotStart;
+		}
+
+		public int LongestInput
+		{
+			get
+			{
+				var taskInput = TaskInputs.OrderByDescending(input => input.Name.Length).FirstOrDefault();
+				if (taskInput != null)
+					return taskInput.Name.Length * PixelsPerLetter;
+				return 0;
+			}
 		}
 
 		private string name;
