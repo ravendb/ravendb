@@ -20,7 +20,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanImportFromDumpFile()
 		{
-			var options = new SmugglerOptions { File = Path.GetTempFileName() };
+			var options = new SmugglerOptions { BackupPath = Path.GetTempFileName() };
 			using (var store = NewDocumentStoreWithData())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase, options);
@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void ImportReplacesAnExistingDatabase()
 		{
-			var options = new SmugglerOptions { File = Path.GetTempFileName() };
+			var options = new SmugglerOptions { BackupPath = Path.GetTempFileName() };
 
 			using (var store = NewDocumentStoreWithData())
 			{

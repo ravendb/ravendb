@@ -33,54 +33,53 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract void ShowProgress(string format, params object[] args);
 
 		protected bool ensuredDatabaseExists;
+		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-		public SmugglerApiBase(SmugglerOptions smugglerOptions)
+		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
 			this.smugglerOptions = smugglerOptions;
 		}
 
-		public void ExportData(SmugglerOptions options, bool incremental = false)
+		public string ExportData(SmugglerOptions options, bool incremental = false)
 		{
-			var lastDocsEtag = Guid.Empty;
-			var lastAttachmentEtag = Guid.Empty;
-			var folder = options.File;
-			var etagFileLocation = Path.Combine(folder, "IncrementalExport.state.json");
+			return ExportData(options, incremental, true);
+		}
+
+		public string ExportData(SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		{
+			options = options ?? smugglerOptions;
+			if (options == null)
+				throw new ArgumentNullException("options");
+
+			var file = options.BackupPath;
 			if (incremental == true)
 			{
-				if (Directory.Exists(folder) == false)
+				if (Directory.Exists(options.BackupPath) == false)
 				{
-					Directory.CreateDirectory(folder);
+					if (File.Exists(options.BackupPath))
+						options.BackupPath = Path.GetDirectoryName(options.BackupPath) ?? options.BackupPath;
+					else
+						Directory.CreateDirectory(options.BackupPath);
 				}
 
-				options.File = Path.Combine(folder, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
-				if (File.Exists(options.File))
+				if (lastEtagsFromFile) ReadLastEtagsFromFile(options);
+
+				file = Path.Combine(options.BackupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
+				if (File.Exists(file))
 				{
 					var counter = 1;
-					var found = false;
-					while (found == false)
+					while (true)
 					{
-						options.File = Path.Combine(folder, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
+						file = Path.Combine(options.BackupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
 
-						if (File.Exists(options.File) == false)
-							found = true;
+						if (File.Exists(file) == false)
+							break;
 						counter++;
-					}
-				}
-
-				if (File.Exists(etagFileLocation))
-				{
-					using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
-					using (var jsonReader = new JsonTextReader(streamReader))
-					{
-						var ravenJObject = RavenJObject.Load(jsonReader);
-						lastDocsEtag = new Guid(ravenJObject.Value<string>("LastDocEtag"));
-						lastAttachmentEtag = new Guid(ravenJObject.Value<string>("LastAttachmentEtag"));
 					}
 				}
 			}
 
-
-			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(options.File), CompressionMode.Compress)))
+			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(options.BackupPath), CompressionMode.Compress)))
 			{
 				var jsonWriter = new JsonTextWriter(streamWriter)
 									 {
@@ -99,7 +98,7 @@ namespace Raven.Abstractions.Smuggler
 				jsonWriter.WriteStartArray();
 				if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
 				{
-					lastDocsEtag = ExportDocuments(options, jsonWriter, lastDocsEtag);
+					options.LastDocsEtag = ExportDocuments(options, jsonWriter, options.LastDocsEtag);
 				}
 				jsonWriter.WriteEndArray();
 
@@ -107,22 +106,44 @@ namespace Raven.Abstractions.Smuggler
 				jsonWriter.WriteStartArray();
 				if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
 				{
-					lastAttachmentEtag = ExportAttachments(jsonWriter, lastAttachmentEtag);
+					options.LastAttachmentEtag = ExportAttachments(jsonWriter, options.LastAttachmentEtag);
 				}
 				jsonWriter.WriteEndArray();
 
 				jsonWriter.WriteEndObject();
 				streamWriter.Flush();
 			}
-			if (incremental != true)
-				return;
 
+			if (incremental && lastEtagsFromFile)
+				WriteLastEtagsFromFile(options);
+
+			return file;
+		}
+
+		public static void ReadLastEtagsFromFile(SmugglerOptions options)
+		{
+			var etagFileLocation = Path.Combine(options.BackupPath, IncrementalExportStateFile);
+			if (File.Exists(etagFileLocation))
+			{
+				using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
+				using (var jsonReader = new JsonTextReader(streamReader))
+				{
+					var ravenJObject = RavenJObject.Load(jsonReader);
+					options.LastDocsEtag = new Guid(ravenJObject.Value<string>("LastDocEtag"));
+					options.LastAttachmentEtag = new Guid(ravenJObject.Value<string>("LastAttachmentEtag"));
+				}
+			}
+		}
+
+		public static void WriteLastEtagsFromFile(SmugglerOptions options)
+		{
+			var etagFileLocation = Path.Combine(options.BackupPath, IncrementalExportStateFile);
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
 			{
 				new RavenJObject
 					{
-						{"LastDocEtag", lastDocsEtag.ToString()},
-						{"LastAttachmentEtag", lastAttachmentEtag.ToString()}
+						{"LastDocEtag", options.LastDocsEtag.ToString()},
+						{"LastAttachmentEtag", options.LastAttachmentEtag.ToString()}
 					}.WriteTo(new JsonTextWriter(streamWriter));
 				streamWriter.Flush();
 			}
@@ -175,14 +196,14 @@ namespace Raven.Abstractions.Smuggler
 		{
 			if (incremental == false)
 			{
-				using (FileStream fileStream = File.OpenRead(options.File))
+				using (FileStream fileStream = File.OpenRead(options.BackupPath))
 				{
 					ImportData(fileStream, options);
 				}
 				return;
 			}
 
-			var files = Directory.GetFiles(Path.GetFullPath(options.File))
+			var files = Directory.GetFiles(Path.GetFullPath(options.BackupPath))
 				.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
 				.OrderBy(File.GetLastWriteTimeUtc)
 				.ToArray();
@@ -192,20 +213,20 @@ namespace Raven.Abstractions.Smuggler
 
 			var optionsWithoutIndexes = new SmugglerOptions
 											{
-												File = options.File,
+												BackupPath = options.BackupPath,
 												Filters = options.Filters,
 												OperateOnTypes = options.OperateOnTypes & ~ItemType.Indexes
 											};
 
 			for (var i = 0; i < files.Length - 1; i++)
 			{
-				using (var fileStream = File.OpenRead(Path.Combine(options.File, files[i])))
+				using (var fileStream = File.OpenRead(Path.Combine(options.BackupPath, files[i])))
 				{
 					ImportData(fileStream, optionsWithoutIndexes);
 				}
 			}
 
-			using (var fileStream = File.OpenRead(Path.Combine(options.File, files.Last())))
+			using (var fileStream = File.OpenRead(Path.Combine(options.BackupPath, files.Last())))
 			{
 				ImportData(fileStream, options);
 			}

@@ -69,6 +69,12 @@
     <Reference Include="Antlr3.Runtime, Version=3.3.1.7705, Culture=neutral, PublicKeyToken=eb42632606e9261f, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Antlr3.Runtime.dll</HintPath>
+    <Reference Include="AWS.Extensions">
+      <HintPath>..\SharedLibs\AWS.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="AWSSDK, Version=1.5.1.0, Culture=neutral, PublicKeyToken=cd2d24cd2bace800, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\AWSSDK.dll</HintPath>
     </Reference>
     <Reference Include="BouncyCastle.Crypto, Version=1.7.4137.9688, Culture=neutral, PublicKeyToken=a4292a325f69b123, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -134,6 +140,7 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
+    <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Bundles\Compression\Plugin\DocumentCompression.cs" />
     <Compile Include="Bundles\Compression\Streams\CompressStream.cs" />

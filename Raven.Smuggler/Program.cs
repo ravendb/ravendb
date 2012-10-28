@@ -96,8 +96,8 @@ namespace Raven.Smuggler
 			}
 			connectionStringOptions.Url = url;
 
-			options.File = args[2];
-			if (options.File == null)
+			options.BackupPath = args[2];
+			if (options.BackupPath == null)
 				PrintUsageAndExit(-1);
 
 			try
@@ -109,7 +109,7 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
-			if (options.File != null && Directory.Exists(options.File))
+			if (options.BackupPath != null && Directory.Exists(options.BackupPath))
 			{
 				incremental = true;
 			}
