@@ -1232,7 +1232,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if (proximity < 1)
 			{
-				throw new ArgumentOutOfRangeException("proximity", "Proximity distance must be positive number");
+				throw new ArgumentOutOfRangeException("proximity", "Proximity distance must be a positive number");
 			}
 
 			if (theQueryText[theQueryText.Length - 1] != '"')
