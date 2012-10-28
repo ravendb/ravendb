@@ -527,6 +527,11 @@ namespace Raven.Database.Indexing
 			if (docs.Length == 0)
 				return;
 
+			foreach (var doc in docs)
+			{
+				DocumentRetriever.EnsureIdInMetadata(doc);
+			}
+
 			futureIndexBatches.Add(new FutureIndexBatch
 			{
 				StartingEtag = GetLowestEtag(docs),

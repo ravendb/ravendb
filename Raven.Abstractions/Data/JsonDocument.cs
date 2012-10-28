@@ -98,8 +98,8 @@ namespace Raven.Abstractions.Data
 				metadata["@etag"] = Etag.Value.ToString();
 			if (NonAuthoritativeInformation != null)
 				metadata["Non-Authoritative-Information"] = NonAuthoritativeInformation.Value;
-			if (metadata.ContainsKey("@id") == false)
-				metadata["@id"] = Key;
+			//if (metadata.ContainsKey("@id") == false)
+			//	metadata["@id"] = Key;
 			doc["@metadata"] = metadata;
 
 			return doc;
