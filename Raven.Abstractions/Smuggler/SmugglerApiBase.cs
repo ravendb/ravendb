@@ -79,7 +79,7 @@ namespace Raven.Abstractions.Smuggler
 				}
 			}
 
-			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(options.BackupPath), CompressionMode.Compress)))
+			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(file), CompressionMode.Compress)))
 			{
 				var jsonWriter = new JsonTextWriter(streamWriter)
 									 {
