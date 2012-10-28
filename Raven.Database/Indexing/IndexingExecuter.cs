@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Json;
@@ -97,18 +98,18 @@ namespace Raven.Database.Indexing
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
 					var sw = Stopwatch.StartNew();
-					BackgroundTaskExecuter.Instance.ExecuteAll(context, result, (indexToWorkOn,_) =>
+					BackgroundTaskExecuter.Instance.ExecuteAll(context, result, (indexToWorkOn, _) =>
 					{
 						var index = indexToWorkOn.Item1;
 						var docs = indexToWorkOn.Item2;
 						transactionalStorage.Batch(
 							actions => IndexDocuments(actions, index.IndexName, docs));
-					
+
 					});
 					indexingDuration = sw.Elapsed;
 				}
 			}
-			catch(OperationCanceledException)
+			catch (OperationCanceledException)
 			{
 				operationCancelled = true;
 			}
@@ -120,11 +121,11 @@ namespace Raven.Database.Indexing
 					var lastModified = lastByEtag.LastModified.Value;
 					var lastEtag = lastByEtag.Etag.Value;
 
-					if(Log.IsDebugEnabled)
+					if (Log.IsDebugEnabled)
 					{
 						Log.Debug("Aftering indexing {0} documents, the new last etag for is: {1} for {2}",
-						          jsonDocs.Length,
-						          lastEtag,
+								  jsonDocs.Length,
+								  lastEtag,
 								  string.Join(", ", indexesToWorkOn.Select(x => x.IndexName))
 							);
 					}
@@ -157,90 +158,88 @@ namespace Raven.Database.Indexing
 			{
 				if (x.Task.IsCompleted)
 					return x.Task.Result.Length;
-				return autoTuner.NumberOfItemsToIndexInSingleBatch/15;
+				return autoTuner.NumberOfItemsToIndexInSingleBatch / 15;
 			});
 
 			var futureSize = futureIndexBatches.Sum(x =>
 			{
 				if (x.Task.IsCompleted)
-					return x.Task.Result.Sum(s=>s.SerializedSizeOnDisk);
+					return x.Task.Result.Sum(s => s.SerializedSizeOnDisk);
 				return autoTuner.NumberOfItemsToIndexInSingleBatch * 256;
-		
+
 			});
 			autoTuner.AutoThrottleBatchSize(jsonDocs.Length + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 		}
 
 		private JsonDocument[] GetJsonDocuments(Guid lastIndexedGuidForAllIndexes)
 		{
-			var futureResults = GetFutureJsonDocuments(lastIndexedGuidForAllIndexes, Timeout.Infinite);
+			var futureResults = GetFutureJsonDocuments(lastIndexedGuidForAllIndexes);
 			if (futureResults != null)
 				return futureResults;
 			return GetJsonDocs(lastIndexedGuidForAllIndexes);
 		}
 
-		private JsonDocument[] GetFutureJsonDocuments(Guid lastIndexedGuidForAllIndexes, int timeToWait)
+		private JsonDocument[] GetFutureJsonDocuments(Guid lastIndexedGuidForAllIndexes)
 		{
 			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == lastIndexedGuidForAllIndexes);
 			if (nextBatch == null)
 				return null;
-			
+
 			try
 			{
+				futureIndexBatches.TryRemove(nextBatch);
 				if (nextBatch.Task.IsCompleted == false)
 				{
-					if (nextBatch.Task.Wait(timeToWait) == false)
+					if (nextBatch.Task.Wait(Timeout.Infinite) == false)
 						return null;
 				}
-				if (timeToWait == Timeout.Infinite)
-					timeToWait = 500;
-
-				var documents = nextBatch.Task.Result;
+				var timeToWait = 500;
 
 				var items = new List<JsonDocument[]>
 				{
-					documents
+					nextBatch.Task.Result
 				};
 				while (true)
 				{
-					var highestEtag = GetHighestEtag(documents);
-					var current = GetFutureJsonDocuments(highestEtag.Etag.Value, timeToWait/2);
-					if(current == null)
+					var nextHighestEtag = GetNextHighestEtag(nextBatch.Task.Result);
+					nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextHighestEtag);
+					if (nextBatch == null)
 					{
-						if (items.Count == 1)
-							return items[0];
+						break;
+					}
+					futureIndexBatches.TryRemove(nextBatch);
+					timeToWait /= 2;
+					if (nextBatch.Task.Wait(timeToWait) == false)
+						break;
 
-						// a single doc may appear multiple times, if it was updated
-						// while we were fetching things, so we have several versions
-						// of the same doc loaded, this will make sure that we will only 
-						// take one of them.
-						return items.SelectMany(x => x).GroupBy(x => x.Key)
-							.Select(g => g.OrderBy(x => x.Etag).First())
-							.ToArray();
-					}
-					else
-					{
-						items.Add(current);
-					}
+					items.Add(nextBatch.Task.Result);
 				}
+
+				if (items.Count == 1)
+					return items[0];
+
+				// a single doc may appear multiple times, if it was updated
+				// while we were fetching things, so we have several versions
+				// of the same doc loaded, this will make sure that we will only 
+				// take one of them.
+				return items.SelectMany(x => x).GroupBy(x => x.Key)
+					.Select(g => g.OrderBy(x => x.Etag).First())
+					.ToArray();
 			}
 			catch (Exception e)
 			{
 				Log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
 				return null;
 			}
-			finally
-			{
-				futureIndexBatches.TryRemove(nextBatch);
-			}
 		}
 
 		private void MaybeAddFutureBatch(JsonDocument[] past)
 		{
-			if(context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 				return;
-			if(past.Length == 0)
+			if (past.Length == 0)
 				return;
-			if(futureIndexBatches.Count > 5) // we limit the number of future calls we do
+			if (futureIndexBatches.Count > 5) // we limit the number of future calls we do
 			{
 				var alreadyLoaded = futureIndexBatches.Sum(x =>
 				{
@@ -254,16 +253,15 @@ namespace Raven.Database.Indexing
 			}
 
 			// ensure we don't do TOO much future cachings
-			if( MemoryStatistics.AvailableMemory < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit )
+			if (MemoryStatistics.AvailableMemory < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				return;
 
 			// we loaded the maximum amount, there are probably more items to read now.
-			var lastByEtag = GetHighestEtag(past);
+			var nextEtag = GetNextHighestEtag(past);
 
-			var lastEtag = lastByEtag.Etag.Value;
-			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == lastEtag);
+			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextEtag);
 
-			if(nextBatch != null)
+			if (nextBatch != null)
 				return;
 
 			var futureBatchStat = new FutureBatchStats
@@ -274,20 +272,20 @@ namespace Raven.Database.Indexing
 			context.AddFutureBatch(futureBatchStat);
 			futureIndexBatches.Add(new FutureIndexBatch
 			{
-				StartingEtag = lastEtag,
+				StartingEtag = nextEtag,
 				Age = currentIndexingAge,
 				Task = System.Threading.Tasks.Task.Factory.StartNew(() =>
 				{
-					var jsonDocuments = GetJsonDocs(lastEtag);
+					var jsonDocuments = GetJsonDocs(nextEtag);
 					int localWork = workCounter;
-					while (jsonDocuments.Length == 0  && context.DoWork)
+					while (jsonDocuments.Length == 0 && context.DoWork)
 					{
 						futureBatchStat.Retries++;
 
-						if(context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching") == false)
+						if (context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching") == false)
 							continue;
 
-						jsonDocuments = GetJsonDocs(lastEtag);
+						jsonDocuments = GetJsonDocs(nextEtag);
 					}
 					futureBatchStat.Duration = sp.Elapsed;
 					futureBatchStat.Size = jsonDocuments.Length;
@@ -297,11 +295,19 @@ namespace Raven.Database.Indexing
 			});
 		}
 
+		private static Guid GetNextHighestEtag(JsonDocument[] past)
+		{
+			var jsonDocument = GetHighestEtag(past);
+			var byteArray = jsonDocument.Etag.Value.ToByteArray();
+			var next = BitConverter.ToInt64(byteArray.Skip(8).Reverse().ToArray(), 0) + 1;
+			return new Guid(byteArray.Take(8).Concat(BitConverter.GetBytes(next).Reverse()).ToArray());
+		}
+
 		private static JsonDocument GetHighestEtag(JsonDocument[] past)
 		{
 			var highest = new ComparableByteArray(Guid.Empty);
 			JsonDocument highestDoc = null;
-			for (int i = past.Length-1; i >= 0; i--)
+			for (int i = past.Length - 1; i >= 0; i--)
 			{
 				var etag = past[i].Etag.Value;
 				if (highest.CompareTo(etag) > 0)
@@ -380,7 +386,7 @@ namespace Raven.Database.Indexing
 						Json = (object)new FilteredDocument(doc)
 					} : new
 					{
-						Doc = filteredDoc, 
+						Doc = filteredDoc,
 						Json = JsonToExpando.Convert(doc.ToJson())
 					};
 				});
@@ -407,7 +413,7 @@ namespace Raven.Database.Indexing
 				{
 					// did we already indexed this document in this index?
 					var etag = item.Doc.Etag;
-					if(etag == null)
+					if (etag == null)
 						continue;
 
 					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
@@ -416,7 +422,7 @@ namespace Raven.Database.Indexing
 
 					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
-					    viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
+						viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
 					{
 						continue;
 					}
@@ -427,8 +433,8 @@ namespace Raven.Database.Indexing
 						batch.DateTime = item.Doc.LastModified;
 					else
 						batch.DateTime = batch.DateTime > item.Doc.LastModified
-						                 	? item.Doc.LastModified
-						                 	: batch.DateTime;
+											? item.Doc.LastModified
+											: batch.DateTime;
 				}
 
 				if (batch.Docs.Count == 0)
@@ -487,10 +493,10 @@ namespace Raven.Database.Indexing
 				return; // index was deleted, probably
 			try
 			{
-				if(Log.IsDebugEnabled)
+				if (Log.IsDebugEnabled)
 				{
 					string ids;
-					if (batch.Ids.Count < 256) 
+					if (batch.Ids.Count < 256)
 						ids = string.Join(",", batch.Ids);
 					else
 					{
@@ -502,7 +508,7 @@ namespace Raven.Database.Indexing
 
 				context.IndexStorage.Index(index, viewGenerator, batch.Docs, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
-			catch(OperationCanceledException)
+			catch (OperationCanceledException)
 			{
 				throw;
 			}
@@ -516,5 +522,33 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public void AfterCommit(JsonDocument[] docs)
+		{
+			if (docs.Length == 0)
+				return;
+
+			futureIndexBatches.Add(new FutureIndexBatch
+			{
+				StartingEtag = GetLowestEtag(docs),
+				Task = new CompletedTask<JsonDocument[]>(docs),
+				Age = currentIndexingAge
+			});
+		}
+
+
+		private static Guid GetLowestEtag(JsonDocument[] past)
+		{
+			var lowest = new ComparableByteArray(past[0].Etag.Value);
+			for (int i = 1; i < past.Length; i++)
+			{
+				var etag = past[i].Etag.Value;
+				if (lowest.CompareTo(etag) < 0)
+				{
+					continue;
+				}
+				lowest = new ComparableByteArray(etag);
+			}
+			return lowest.ToGuid();
+		}
 	}
 }

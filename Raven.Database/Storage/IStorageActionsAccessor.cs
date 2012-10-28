@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage
 {
@@ -22,5 +23,6 @@ namespace Raven.Database.Storage
 		event Action OnCommit;
 		bool IsWriteConflict(Exception exception);
 		T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.Task;
+		void AfterCommit(JsonDocument doc, Action<JsonDocument[]> afterCommit);
 	}
 }

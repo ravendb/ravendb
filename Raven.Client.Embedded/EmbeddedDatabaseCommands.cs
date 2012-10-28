@@ -490,12 +490,12 @@ namespace Raven.Client.Embedded
 		/// <param name="commandDatas">The command data.</param>
 		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
-			foreach (var commandData in commandDatas)
-			{
-				commandData.TransactionInformation = TransactionInformation;
-			}
 			CurrentOperationContext.Headers.Value = OperationsHeaders; 
-			return database.Batch(commandDatas);
+			return database.Batch(commandDatas.Select(cmd=>
+			{
+				cmd.TransactionInformation = TransactionInformation;
+				return cmd;
+			}));
 		}
 
 		/// <summary>
