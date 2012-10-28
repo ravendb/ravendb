@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -14,24 +13,18 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-#if !NET35
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Batches;
-#endif
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
-using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
-using Raven.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
 
 namespace Raven.Client.Document
 {
@@ -63,12 +56,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly IDatabaseCommands theDatabaseCommands;
 #endif
-#if !NET35
+		
 		/// <summary>
 		/// Async database commands to use
 		/// </summary>
 		protected readonly IAsyncDatabaseCommands theAsyncDatabaseCommands;
-#endif
+		
 		/// <summary>
 		/// The index to query
 		/// </summary>
@@ -179,7 +172,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET35
 		/// <summary>
 		///   Grant access to the async database commands
 		/// </summary>
@@ -187,7 +179,6 @@ namespace Raven.Client.Document
 		{
 			get { return theAsyncDatabaseCommands; }
 		}
-#endif
 
 		/// <summary>
 		/// Gets the document convention from the query session
@@ -233,7 +224,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT && !NET35
+#if !SILVERLIGHT
 		/// <summary>
 		///   Initializes a new instance of the <see cref = "DocumentQuery{T}" /> class.
 		/// </summary>
@@ -255,9 +246,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 									 IDatabaseCommands databaseCommands,
 #endif
-#if !NET35
 									 IAsyncDatabaseCommands asyncDatabaseCommands,
-#endif
 									 string indexName,
 									 string [] fieldsToFetch,
 									 string[] projectionFields,
@@ -271,9 +260,7 @@ namespace Raven.Client.Document
 			this.queryListeners = queryListeners;
 			this.indexName = indexName;
 			this.theSession = theSession;
-#if !NET35
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
-#endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
 
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
@@ -294,9 +281,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			theDatabaseCommands = other.theDatabaseCommands;
 #endif
-#if !NET35
 			theAsyncDatabaseCommands = other.theAsyncDatabaseCommands;
-#endif
 			indexName = other.indexName;
 			linqPathProvider = other.linqPathProvider;
 			projectionFields = other.projectionFields;
@@ -518,7 +503,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET35
 		protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
 		{
 			foreach (var key in dbCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
@@ -526,9 +510,8 @@ namespace Raven.Client.Document
 				dbCommands.OperationsHeaders.Remove(key);
 			}
 		}
-#endif
 
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -562,8 +545,6 @@ namespace Raven.Client.Document
 
 #endif
 
-#if !NET35
-
 		/// <summary>
 		///   Gets the query result
 		///   Execute the query the first time that this is called.
@@ -589,7 +570,6 @@ namespace Raven.Client.Document
 			theSession.IncrementRequestCount();
 			return ExecuteActualQueryAsync();
 		}
-#endif
 
 		protected void ExecuteBeforeQueryListeners()
 		{
@@ -681,8 +661,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET35
-	 
 		private Task<Tuple<QueryOperation,IList<T>>> ProcessEnumerator(Task<QueryOperation> task)
 		{
 			var currentQueryOperation = task.Result;
@@ -701,7 +679,6 @@ namespace Raven.Client.Document
 			}
 		}
 
-#endif
 		/// <summary>
 		///   Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
@@ -1450,7 +1427,6 @@ If you really want to do in memory filtering on the data returned from the query
 
 		#endregion
 
-#if !NET35
 		protected virtual Task<QueryOperation> ExecuteActualQueryAsync()
 		{
 			using(queryOperation.EnterQueryContext())
@@ -1485,8 +1461,6 @@ If you really want to do in memory filtering on the data returned from the query
 			return taskComplectionSource.Task;
 		}
 
-#endif
-	 
 		/// <summary>
 		///   Generates the index query.
 		/// </summary>
@@ -1771,7 +1745,6 @@ If you really want to do in memory filtering on the data returned from the query
 			return this;
 		}
 
-#if !NET35
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
@@ -1792,7 +1765,6 @@ If you really want to do in memory filtering on the data returned from the query
 			return QueryResultAsync
 				.ContinueWith(r => r.Result.TotalResults);
 		}
-#endif
 
 		public string GetMemberQueryPath(Expression expression)
 		{

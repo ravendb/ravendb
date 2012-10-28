@@ -9,11 +9,8 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
-using Raven.Client.Linq;
 using Raven.Client.Listeners;
-#if !NET35
 using Raven.Client.Connection.Async;
-#endif
 
 namespace Raven.Client.Document
 {
@@ -29,18 +26,12 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif 
-#if !NET35
-			, IAsyncDatabaseCommands asyncDatabaseCommands
-#endif
-, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+			, IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
 			: base(session
 #if !SILVERLIGHT
 			, databaseCommands
 #endif
-#if !NET35
-			, asyncDatabaseCommands
-#endif
-			, indexName, fieldsToFetch, projectionFields, queryListeners)
+			, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners)
 		{
 		}
 
@@ -82,9 +73,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			                                                   theDatabaseCommands,
 #endif
-#if !NET35
 			                                                   theAsyncDatabaseCommands,
-#endif
 			                                                   indexName, 
 															   fields,
 															   projections,
