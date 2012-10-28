@@ -5,9 +5,9 @@ using System.Threading;
 using Amazon;
 using Amazon.Glacier.Transfer;
 using Amazon.S3.Model;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Database.Plugins;
 using Raven.Database.Smuggler;
@@ -23,7 +23,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		private Timer timer;
 		private int interval;
 
-		private readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private volatile bool executing;
 		private string awsAccessKey, awsSecretKey;
 
@@ -77,7 +77,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			}
 			catch (Exception ex)
 			{
-				logger.Warn(ex);
+				logger.WarnException(ex.Message, ex);
 				executing = false;
 				return;
 			}
