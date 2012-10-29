@@ -13,7 +13,7 @@ using System.Linq;
 namespace Raven.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
+	[ExportMetadata("Order", 10001)]
 	[InheritedExport(typeof(AbstractDeleteTrigger))]
 	public class RemoveConflictOnDeleteTrigger : AbstractDeleteTrigger
 	{
