@@ -8,6 +8,7 @@ using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.MailingList
 {
@@ -37,10 +38,18 @@ namespace Raven.Tests.MailingList
 						.ToList();
 
 					Assert.Equal(3, students.Count);
-
-					Assert.Equal("students/1", students[0].Id);
-					Assert.Equal("students/3", students[1].Id);
 					Assert.Equal("students/2", students[2].Id);
+
+					try
+					{
+						Assert.Equal("students/1", students[0].Id);
+						Assert.Equal("students/3", students[1].Id);
+					}
+					catch (EqualException)
+					{
+						Assert.Equal("students/3", students[0].Id);
+						Assert.Equal("students/1", students[1].Id);
+					}
 				}
 			}
 		}
