@@ -12,12 +12,22 @@ namespace Raven.Studio.Models
 		}
 
 		public PeriodicBackupSetup PeriodicBackupSetup { get; set; }
+		public string AwsAccessKey { get; set; }
+		public string AwsSecretKey { get; set; }
+		public string OriginalAwsSecretKey { get; set; }
 		public bool HasDocument { get; set; }
 
 		public override void LoadFor(DatabaseDocument document)
 		{
-			  var session = ApplicationModel.Current.Server.Value.DocumentStore
-				  .OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
+			var session = ApplicationModel.Current.Server.Value.DocumentStore
+				.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
+
+			if (document.Settings.ContainsKey("Raven/AWSAccessKey") && document.SecuredSettings.ContainsKey("Raven/AWSSecretKey"))
+			{
+				AwsAccessKey = document.Settings["Raven/AWSAccessKey"];
+				AwsSecretKey = document.SecuredSettings["Raven/AWSSecretKey"];
+				OriginalAwsSecretKey = AwsSecretKey;
+			}
 
 			session.LoadAsync<PeriodicBackupSetup>(PeriodicBackupSetup.RavenDocumentKey).ContinueWith(task =>
 			{

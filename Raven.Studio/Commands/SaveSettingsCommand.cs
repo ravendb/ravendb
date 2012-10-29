@@ -133,8 +133,15 @@ namespace Raven.Studio.Commands
 			if(periodicBackup.PeriodicBackupSetup == null)
 				return;
 
+			if (periodicBackup.OriginalAwsSecretKey != periodicBackup.AwsSecretKey)
+				settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
+			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
+
+			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
+
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
 			session.Store(periodicBackup.PeriodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
+
 			session.SaveChangesAsync();
 		}
 
