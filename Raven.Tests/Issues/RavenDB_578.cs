@@ -19,7 +19,7 @@
 		}
 
 		[Fact]
-		public void DeletingConflictedDocumentOnOneServerShouldCauseConflictOnSecondOne()
+		public void DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -80,7 +80,14 @@
 
 				Assert.NotNull(c1);
 				Assert.Null(c2);
+
+				store1.DatabaseCommands.Put("people/1", null, c1.DataAsJson, c1.Metadata);
 			}
+
+			var p1 = this.WaitForDocument<Person>(store1, "people/1");
+			var p2 = this.WaitForDocument<Person>(store2, "people/1");
+
+			Assert.Equal(p1.FirstName, p2.FirstName);
 		}
 	}
 }
