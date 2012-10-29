@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Controls
 {
@@ -67,7 +68,7 @@ namespace Raven.Studio.Controls
 				return;
 
 			var checkbox = FindName(textblock.Text.Split(null)[0]) as CheckBox;
-			if (checkbox == null)
+			if (checkbox == null || checkbox.IsEnabled == false)
 				return;
 			checkbox.IsChecked = !checkbox.IsChecked;
 		}
