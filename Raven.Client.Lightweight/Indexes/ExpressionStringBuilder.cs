@@ -745,9 +745,7 @@ namespace Raven.Client.Indexes
 		{
 			if (node.Value == null)
 			{
-				Out("(");
 				ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
-				Out(")");
 				Out("null");
 				return node;
 			}
@@ -803,12 +801,20 @@ namespace Raven.Client.Indexes
 			type = nonNullableType ?? type;
 			var isNullableType = nonNullableType != null;
 
+			// we only cast enums and types is mscorlib. We don't support anything else
+			// because the VB compiler like to put converts all over the place, and include
+			// types that we can't really support (only exists on the client)
+			if (ShouldConvert(type) == false)
+				return;
+
+			Out("(");
 			Out(ConvertTypeToCSharpKeyword(type));
 
 			if (isNullableType)
 			{
 				Out("?");
 			}
+			Out(")");
 		}
 
 		private string ConvertTypeToCSharpKeyword(Type type)
@@ -1819,19 +1825,7 @@ namespace Raven.Client.Indexes
 					break;
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
-					// we only cast enums and types is mscorlib), we don't support anything else
-					// because the VB compiler like to put converts all over the place, and include
-					// types that we can't really support (only exists on the client)
-					var nonNullableType = Nullable.GetUnderlyingType(node.Type) ?? node.Type;
-					if (ShouldConvert(nonNullableType))
-					{
-						Out("(");
-						Out("(");
-						Out(nonNullableType.FullName);
-						if (Nullable.GetUnderlyingType(node.Type) != null)
-							Out("?");
-						Out(")");
-					}
+					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
 					Out("(");
 					break;
 				case ExpressionType.ArrayLength:
@@ -1865,14 +1859,6 @@ namespace Raven.Client.Indexes
 
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
-					// we only cast enums and types is mscorlib), we don't support anything else
-					// because the VB compiler like to put converts all over the place, and include
-					// types that we can't really support (only exists on the client)
-					var nonNullableType = Nullable.GetUnderlyingType(node.Type) ?? node.Type;
-					if (ShouldConvert(nonNullableType))
-					{
-						Out(")");
-					}
 					Out(")");
 					break;
 
