@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -1177,5 +1175,3 @@ namespace Raven.Client.Connection.Async
 		}
 	}
 }
-
-#endif

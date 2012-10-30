@@ -190,8 +190,6 @@ namespace Raven.Tests.Indexes
 			Assert.Equal(original.Reduce, generated.Reduce);
 		}
 
-
-#if !NET35        
 		public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
 		{
 			IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
@@ -263,9 +261,6 @@ users => from user in users
 })");
 		}
 
-
-
-#endif
 
 		public enum Gender
 		{

@@ -1,11 +1,8 @@
-#if !NET35
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
 {
@@ -54,4 +51,3 @@ namespace Raven.Client.Connection.Async
 		public int Count { get; set; }
 	}
 }
-#endif
