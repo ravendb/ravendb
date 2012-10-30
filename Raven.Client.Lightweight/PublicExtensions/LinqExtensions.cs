@@ -84,9 +84,9 @@ namespace Raven.Client
 		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.ToString();
+			var query = ravenQueryInspector.ToAsyncString();
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.AsyncIndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
 
 		/// <summary>

@@ -530,7 +530,7 @@ namespace Raven.Client.Connection.Async
 			var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
 			Uri.EscapeUriString(index),
 			Uri.EscapeDataString(facetSetupDoc),
-			Uri.EscapeDataString(query.Query));
+			Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
