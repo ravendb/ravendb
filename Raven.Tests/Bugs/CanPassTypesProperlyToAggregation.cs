@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs
 
 			Assert.Equal(@"docs.GroupBy(y => y.Denomination).Select(g => new {
     Denomination = g.Key,
-    Cost = Enumerable.Sum(g, z => ((System.Double)(((double) z.Cost))))
+    Cost = Enumerable.Sum(g, z => (double)(((double) z.Cost)))
 })", code);				   
 		}
 
