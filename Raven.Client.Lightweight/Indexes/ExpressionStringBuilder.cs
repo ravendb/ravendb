@@ -282,31 +282,31 @@ namespace Raven.Client.Indexes
 			{
 				Out("((decimal)");
 			}
-			if (memberType == typeof(double))
+			else if (memberType == typeof(double))
 			{
 				Out("((double)");
 			}
-			if (memberType == typeof(long))
+			else if (memberType == typeof(long))
 			{
 				Out("((long)");
 			}
-			if (memberType == typeof(float))
+			else if (memberType == typeof(float))
 			{
 				Out("((float)");
 			}
-			if (memberType == typeof(decimal?))
+			else if (memberType == typeof(decimal?))
 			{
 				Out("((decimal?)");
 			}
-			if (memberType == typeof(double?))
+			else if (memberType == typeof(double?))
 			{
 				Out("((double?)");
 			}
-			if (memberType == typeof(long?))
+			else if (memberType == typeof(long?))
 			{
 				Out("((long?)");
 			}
-			if (memberType == typeof(float?))
+			else if (memberType == typeof(float?))
 			{
 				Out("((float?)");
 			}
@@ -743,54 +743,143 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitConstant(ConstantExpression node)
 		{
-			if (node.Value != null)
+			if (node.Value == null)
 			{
-				var s = Convert.ToString(node.Value, CultureInfo.InvariantCulture);
-				if (node.Value is string)
-				{
-					Out("\"");
-					Out(s);
-					Out("\"");
-					return node;
-				}
-				if (node.Value is bool)
-				{
-					Out(node.Value.ToString().ToLower());
-					return node;
-				}
-				if (node.Value is char)
-				{
-					Out("'");
-					Out(s);
-					Out("'");
-					return node;
-				}
-				if (node.Value is Enum)
-				{
-					var enumType = node.Value.GetType();
-					if (TypeExistsOnServer(enumType))
-					{
-						Out(enumType.FullName.Replace("+", "."));
-						Out('.');
-						Out(s);
-						return node;
-					}
-					Out('"');
-					Out(node.Value.ToString());
-					Out('"');
-					return node;
-				}
-				if (node.Value is decimal)
-				{
-					Out(s);
-					Out('M');
-					return node;
-				}
-				Out(s);
+				Out("(");
+				Out(ConvertTypeToCSharpKeyword(node.Type));
+				Out(")");
+				Out("null");
 				return node;
 			}
-			Out("null");
+
+			var s = Convert.ToString(node.Value, CultureInfo.InvariantCulture);
+			if (node.Value is string)
+			{
+				Out("\"");
+				Out(s);
+				Out("\"");
+				return node;
+			}
+			if (node.Value is bool)
+			{
+				Out(node.Value.ToString().ToLower());
+				return node;
+			}
+			if (node.Value is char)
+			{
+				Out("'");
+				Out(s);
+				Out("'");
+				return node;
+			}
+			if (node.Value is Enum)
+			{
+				var enumType = node.Value.GetType();
+				if (TypeExistsOnServer(enumType))
+				{
+					Out(enumType.FullName.Replace("+", "."));
+					Out('.');
+					Out(s);
+					return node;
+				}
+				Out('"');
+				Out(node.Value.ToString());
+				Out('"');
+				return node;
+			}
+			if (node.Value is decimal)
+			{
+				Out(s);
+				Out('M');
+				return node;
+			}
+			Out(s);
 			return node;
+		}
+
+		private string ConvertTypeToCSharpKeyword(Type type)
+		{
+			if (type == typeof(string))
+			{
+				return "string";
+			}
+
+			if (type == typeof(bool))
+			{
+				return "bool";
+			}
+			if (type == typeof(bool?))
+			{
+				return "bool?";
+			}
+
+			if (type == typeof (decimal))
+			{
+				return "decimal";
+			}
+			if (type == typeof (decimal?))
+			{
+				return "decimal?";
+			}
+			if (type == typeof (double))
+			{
+				return "double";
+			}
+			if (type == typeof (double?))
+			{
+				return "double?";
+			}
+			if (type == typeof (float))
+			{
+				return "float";
+			}
+			if (type == typeof (float?))
+			{
+				return "float?";
+			}
+
+			if (type == typeof (long))
+			{
+				return "long";
+			}
+			if (type == typeof(long?))
+			{
+				return "long?";
+			}
+			if (type == typeof(int))
+			{
+				return "int";
+			}
+			if (type == typeof(int?))
+			{
+				return "int?";
+			}
+			if (type == typeof(short))
+			{
+				return "short";
+			}
+			if (type == typeof(short?))
+			{
+				return "short?";
+			}
+			if (type == typeof(byte))
+			{
+				return "byte";
+			}
+			if (type == typeof(byte?))
+			{
+				return "byte?";
+			}
+
+			if (type.FullName == "System.Object")
+			{
+				return "object";
+			}
+
+			const string knowNamespace = "System.";
+			if (knowNamespace + type.Name == type.FullName)
+				return type.Name;
+			return type.FullName;
 		}
 
 		private bool TypeExistsOnServer(Type type)
