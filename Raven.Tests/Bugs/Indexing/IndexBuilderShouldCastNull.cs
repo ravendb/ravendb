@@ -1,4 +1,5 @@
-﻿using Raven.Client.Indexes;
+﻿using System;
+using Raven.Client.Indexes;
 using Xunit;
 using System.Linq;
 
@@ -36,6 +37,8 @@ namespace Raven.Tests.Bugs.Indexing
 			public short? Short { get; set; }
 			public byte? Byte { get; set; }
 			public bool? Bool { get; set; }
+			public DateTime? DateTime { get; set; }
+			public DateTimeOffset? DateTimeOffset { get; set; }
 		}
 
 		public class NullableIndex : AbstractMultiMapIndexCreationTask<Result>
@@ -58,6 +61,8 @@ namespace Raven.Tests.Bugs.Indexing
 					Short = null,
 					Byte = null,
 					Bool = null,
+					DateTime = null,
+					DateTimeOffset = null,
 				}));
 			}
 		}
@@ -82,6 +87,8 @@ namespace Raven.Tests.Bugs.Indexing
 					Short = (short?)null,
 					Byte = (byte?)null,
 					Bool = (bool?)null,
+					DateTime = (DateTime?)null,
+					DateTimeOffset = (DateTimeOffset?)null,
 				}));
 			}
 		}

@@ -746,7 +746,7 @@ namespace Raven.Client.Indexes
 			if (node.Value == null)
 			{
 				Out("(");
-				Out(ConvertTypeToCSharpKeyword(node.Type));
+				ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
 				Out(")");
 				Out("null");
 				return node;
@@ -797,13 +797,30 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
+		private void ConvertTypeToCSharpKeywordIncludeNullable(Type type)
+		{
+			var nonNullableType = Nullable.GetUnderlyingType(type);
+			type = nonNullableType ?? type;
+			var isNullableType = nonNullableType != null;
+
+			Out(ConvertTypeToCSharpKeyword(type));
+
+			if (isNullableType)
+			{
+				Out("?");
+			}
+		}
+
 		private string ConvertTypeToCSharpKeyword(Type type)
 		{
 			if (type == typeof(string))
 			{
 				return "string";
 			}
-
+			if (type == typeof(char))
+			{
+				return "char";
+			}
 			if (type == typeof(bool))
 			{
 				return "bool";
@@ -876,8 +893,8 @@ namespace Raven.Client.Indexes
 				return "object";
 			}
 
-			const string knowNamespace = "System.";
-			if (knowNamespace + type.Name == type.FullName)
+			const string knownNamespace = "System";
+			if (knownNamespace == type.Namespace)
 				return type.Name;
 			return type.FullName;
 		}
