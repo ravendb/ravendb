@@ -65,7 +65,17 @@
 					Padding="8,4"
 					MinWidth="100"
 					Margin="0,10" />
-				<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" VerticalAlignment="Center" FontSize="21.333" Margin="100,0,0,0"/>
+				<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
+						   VerticalAlignment="Center" 
+						   FontSize="21.333" 
+						   Margin="100,0,0,0"/>
+				
+				<ProgressBar Margin="5" 
+							 Width="200" 
+							 Height="25"
+							 FlowDirection="LeftToRight" 
+							 IsIndeterminate="{Binding StatusBarActive}" 
+							 Visibility="{Binding TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
 			</StackPanel>
 		</StackPanel>
 

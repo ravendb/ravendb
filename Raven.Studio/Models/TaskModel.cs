@@ -16,7 +16,11 @@ namespace Raven.Studio.Models
 	{
 		private const int PixelsPerLetter = 7;
 
-		public Observable<bool> CanExecute { get; set; } 
+		public Observable<bool> CanExecute { get; set; }
+		public bool StatusBarActive
+		{
+			get { return TaskStatus == TaskStatus.Started; }
+		} 
 
 		public TaskModel()
 		{
@@ -25,6 +29,7 @@ namespace Raven.Studio.Models
 			{
 				Value = true
 			};
+
 			TaskInputs = new BindableCollection<TaskInput>(x => x.Name);
 			TaskDatas = new BindableCollection<TaskData>(x => x.Name);
 			TaskStatus = TaskStatus.DidNotStart;
@@ -65,6 +70,7 @@ namespace Raven.Studio.Models
 			{
 				taskStatus = value;
 				OnPropertyChanged(() => TaskStatus);
+				OnPropertyChanged(() => StatusBarActive);
 			}
 		}
 
