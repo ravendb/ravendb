@@ -8,21 +8,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Abstractions.Data;
-#if !NET35
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
-#endif
-using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection.Async;
 #endif
-using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -33,9 +31,7 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !NET35
 	[System.ComponentModel.Composition.InheritedExport]
-#endif
 	public abstract class AbstractIndexCreationTask
 	{
 		/// <summary>
@@ -160,7 +156,6 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
-#if !NET35
 		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
@@ -192,7 +187,6 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This is here as a marker only");
 		}
-#endif
 
 #if !SILVERLIGHT
 
@@ -247,7 +241,6 @@ namespace Raven.Client.Indexes
 		}
 #endif
 
-#if !NET35
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
@@ -295,7 +288,6 @@ namespace Raven.Client.Indexes
 				});
 			}).Unwrap();
 		}
-#endif
 	}
 
 	/// <summary>
