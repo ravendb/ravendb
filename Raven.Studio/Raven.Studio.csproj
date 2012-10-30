@@ -221,6 +221,7 @@
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
     <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
+    <Compile Include="Commands\RestoreCommand.cs" />
     <Compile Include="Commands\SaveSettingsCommand.cs" />
     <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
     <Compile Include="Commands\ItemSelectionCommand.cs" />
@@ -235,6 +236,7 @@
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
       <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Tasks\StartRestoreTask.cs" />
     <Compile Include="Infrastructure\ConfigurationManager.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
@@ -1220,6 +1222,7 @@
     <Resource Include="Assets\Images\patch_small.png" />
     <Resource Include="Assets\Images\execute_patch_tiny.png" />
     <Resource Include="Assets\Images\whatif_tiny.png" />
+    <Resource Include="Assets\Images\restore_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

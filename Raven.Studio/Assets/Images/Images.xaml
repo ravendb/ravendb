@@ -66,8 +66,9 @@
     <BitmapImage x:Key="Image_UnPin_Tiny" UriSource="un_pin_tiny.png"/>
     <BitmapImage x:Key="Image_Import_Tiny" UriSource="import_data_tiny.png"/>
     <BitmapImage x:Key="Image_Export_Tiny" UriSource="export_data_tiny.png"/>
-    <BitmapImage x:Key="Image_Backup_Tiny" UriSource="backup_tiny.png"/>
-    <BitmapImage x:Key="Image_QueryOptions_Tiny" UriSource="query_options_tiny.png"/>
+	<BitmapImage x:Key="Image_Backup_Tiny" UriSource="backup_tiny.png"/>
+	<BitmapImage x:Key="Image_Restore_Tiny" UriSource="restore_tiny.png"/>
+	<BitmapImage x:Key="Image_QueryOptions_Tiny" UriSource="query_options_tiny.png"/>
     <BitmapImage x:Key="Image_DeleteByQuery_Tiny" UriSource="delete_by_query.png"/>
     <BitmapImage x:Key="Image_Patch_Small" UriSource="patch_small.png"/>
     <BitmapImage x:Key="Image_ExecutePatch_Tiny" UriSource="execute_patch_tiny.png"/>
