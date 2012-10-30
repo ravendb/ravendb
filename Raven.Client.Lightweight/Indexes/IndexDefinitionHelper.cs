@@ -8,7 +8,7 @@ using Raven.Client.Util;
 namespace Raven.Client.Indexes
 {
 	/// <summary>
-	/// Generate index defintion from linq expressions
+	/// Generate index definition from linq expressions
 	/// </summary>
 	public class IndexDefinitionHelper
 	{

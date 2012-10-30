@@ -134,7 +134,7 @@ namespace Raven.Database.Linq
 
 			HandleTransformResults(ctor);
 
-			HandleReduceDefintion(ctor);
+			HandleReduceDefinition(ctor);
 
 		    AddAdditionalInformation(ctor);
 
@@ -264,7 +264,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			                   		})));
 		}
 
-		private void HandleReduceDefintion(ConstructorDeclaration ctor)
+		private void HandleReduceDefinition(ConstructorDeclaration ctor)
 		{
 			if (!indexDefinition.IsMapReduce) 
 				return;
