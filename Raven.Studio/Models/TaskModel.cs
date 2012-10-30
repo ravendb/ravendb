@@ -16,9 +16,15 @@ namespace Raven.Studio.Models
 	{
 		private const int PixelsPerLetter = 7;
 
+		public Observable<bool> CanExecute { get; set; } 
+
 		public TaskModel()
 		{
 			Output = new BindableCollection<string>(x => x);
+			CanExecute = new Observable<bool>
+			{
+				Value = true
+			};
 			TaskInputs = new BindableCollection<TaskInput>(x => x.Name);
 			TaskDatas = new BindableCollection<TaskData>(x => x.Name);
 			TaskStatus = TaskStatus.DidNotStart;
