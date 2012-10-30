@@ -3,49 +3,39 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
-using System.Reflection;
 using System;
-using System.Text;
 using System.Threading;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-#if !NET35
 using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
+using Raven.Abstractions.Data;
 using Raven.Client.Document.Batches;
-#endif
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Json.Linq;
 using Raven.Client.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-#if !SILVERLIGHT
 	/// <summary>
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
 		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
-#if !NET35
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-#endif
+
 		/// <summary>
 		/// Gets the database commands.
 		/// </summary>
 		/// <value>The database commands.</value>
 		public IDatabaseCommands DatabaseCommands { get; private set; }
 
-#if !NET35
 		/// <summary>
 		/// Access the lazy operations
 		/// </summary>
@@ -61,7 +51,6 @@ namespace Raven.Client.Document
 		{
 			get { return this; }
 		}
-#endif
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
@@ -86,8 +75,6 @@ namespace Raven.Client.Document
 		{
 			get { return this; }
 		}
-
-#if !NET35
 
 		/// <summary>
 		/// Begin a load while including the specified path 
@@ -179,7 +166,6 @@ namespace Raven.Client.Document
 		{
 			return Lazily.Load<T>(id, null);
 		}
-#endif
 
 		/// <summary>
 		/// Loads the specified entity with the specified id.
@@ -376,13 +362,10 @@ namespace Raven.Client.Document
 			return Conventions.GenerateDocumentKey(DatabaseCommands, entity);
 		}
 
-#if !NET35
 		protected override Task<string> GenerateKeyAsync(object entity)
 		{
 			throw new NotSupportedException("Cannot use async operation in sync session");
 		}
-#endif
-
 
 		/// <summary>
 		/// Begin a load while including the specified path
@@ -464,11 +447,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
-#if !NET35
 			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners);
-#else
-			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null, listeners.QueryListeners);
-#endif
 		}
 
 		/// <summary>
@@ -538,8 +517,6 @@ namespace Raven.Client.Document
 		{
 			return Advanced.LuceneQuery<T>(indexName);
 		}
-
-#if !NET35
 
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
@@ -650,11 +627,10 @@ namespace Raven.Client.Document
 			}
 		}
 
-#endif
 		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
 		{
 			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize).Select(TrackEntity<T>).ToList();
 		}
 	}
-#endif
 }
+#endif

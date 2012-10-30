@@ -8,8 +8,6 @@ using Raven.Client.Shard;
 using Raven.Json.Linq;
 using System.Linq;
 
-#if !NET35
-
 namespace Raven.Client.Document.Batches
 {
 	public class LazyQueryOperation<T> : ILazyOperation
@@ -104,5 +102,3 @@ namespace Raven.Client.Document.Batches
 		}
 	}
 }
-
-#endif

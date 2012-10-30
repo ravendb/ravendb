@@ -456,7 +456,7 @@ namespace Raven.Client.Document
 						new JsonNumericConverter<double>(double.TryParse),
 						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 						new JsonDynamicConverter()
 #endif
 					}
@@ -504,7 +504,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleForbiddenResponse { get; set; }
 
-#if !NET35
 		/// <summary>
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
@@ -516,7 +515,6 @@ namespace Raven.Client.Document
 		/// in async manner
 		/// </summary>
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
-#endif
 
 		/// <summary>
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls

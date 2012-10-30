@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-#if !NET35
 using Raven.Client.Connection.Async;
-#endif
 using Raven.Client.Document;
 
 namespace Raven.Client.Connection
