@@ -1,5 +1,4 @@
-﻿#if !NET35
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -8,11 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 
-#if SILVERLIGHT
-// comment
-#endif
 namespace Raven.Client.Extensions
 {
 	public static class Time
@@ -164,4 +159,3 @@ namespace Raven.Client.Extensions
 		}
 	}
 }
-#endif

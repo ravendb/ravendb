@@ -3,11 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35
-
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
 
 namespace Raven.Client
 {
@@ -33,4 +30,3 @@ namespace Raven.Client
 		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
 	}
 }
-#endif
