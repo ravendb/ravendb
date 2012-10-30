@@ -1,5 +1,4 @@
-﻿#if !NET35
-using System;
+﻿using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
@@ -83,4 +82,3 @@ namespace Raven.Client.Document
 		Task<TResult> Load<TResult>(ValueType id);
 	}
 }
-#endif

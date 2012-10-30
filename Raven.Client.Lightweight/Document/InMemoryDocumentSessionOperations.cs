@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 #if !SILVERLIGHT
@@ -12,6 +13,8 @@ using System.Text.RegularExpressions;
 using System.Transactions;
 #endif
 using System.Text;
+using System.Threading.Tasks;
+using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -26,14 +29,6 @@ using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
-
-#if !NET35
-using System.Dynamic;
-using Microsoft.CSharp.RuntimeBinder;
-using System.Threading.Tasks;
-using Raven.Abstractions.Json;
-
-#endif
 
 namespace Raven.Client.Document
 {

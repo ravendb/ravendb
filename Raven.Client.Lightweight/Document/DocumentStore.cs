@@ -102,7 +102,6 @@ namespace Raven.Client.Document
 
 #endif
 
-#if !NET35
 		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 		/// <summary>
 		/// Gets the async database commands.
@@ -117,7 +116,6 @@ namespace Raven.Client.Document
 				return asyncDatabaseCommandsGenerator();
 			}
 		}
-#endif
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentStore"/> class.
@@ -363,7 +361,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET35
 		private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
 		{
 			if (database != null)
@@ -374,7 +371,6 @@ namespace Raven.Client.Document
 				databaseCommands.ForceReadFromMaster();
 			return databaseCommands;
 		}
-#endif
 
 		/// <summary>
 		/// Initializes this instance.
@@ -408,7 +404,6 @@ namespace Raven.Client.Document
 				}
 #endif
 
-#if !NET35
 				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
 				{
 #if !SILVERLIGHT
@@ -424,7 +419,6 @@ namespace Raven.Client.Document
 					};
 #endif
 				}
-#endif
 
 				initialized = true;
 
@@ -605,7 +599,7 @@ namespace Raven.Client.Document
 				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
 			};
 #endif
-#if !NET35
+
 #if SILVERLIGHT
 			// required to ensure just a single auth dialog
 			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
@@ -623,7 +617,6 @@ namespace Raven.Client.Document
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);
 			};
-#endif
 		}
 
 
@@ -723,8 +716,6 @@ namespace Raven.Client.Document
 #endif
 		}
 
-#if !NET35
-
 		private IAsyncDocumentSession OpenAsyncSessionInternal(IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			AssertInitialized();
@@ -772,8 +763,6 @@ namespace Raven.Client.Document
 		{
 			return OpenAsyncSessionInternal(SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
-
-#endif
 
 		/// <summary>
 		/// Called after dispose is completed
