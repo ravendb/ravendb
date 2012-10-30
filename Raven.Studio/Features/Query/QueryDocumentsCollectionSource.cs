@@ -136,7 +136,16 @@ namespace Raven.Studio.Features.Query
         protected void OnQueryError(QueryErrorEventArgs e)
         {
             var handler = QueryError;
-            if (handler != null) handler(this, e);
+            if (handler != null)
+            {
+	            if(e.Exception.GetBaseException().Message.Contains("NotFound"))
+					handler(this, new QueryErrorEventArgs
+					{
+						Exception = new ArgumentException("Server Not Found", e.Exception)
+					});
+	            else
+					handler(this, e);
+            }
         }
     }
 
