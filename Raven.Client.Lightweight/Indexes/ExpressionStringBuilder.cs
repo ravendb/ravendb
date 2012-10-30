@@ -745,7 +745,9 @@ namespace Raven.Client.Indexes
 		{
 			if (node.Value == null)
 			{
-				ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
+				// Avoid converting/casting the type, if it already converted/casted.
+				if (IsLastOperatorIs('='))
+					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
 				Out("null");
 				return node;
 			}
@@ -793,6 +795,22 @@ namespace Raven.Client.Indexes
 			}
 			Out(s);
 			return node;
+		}
+
+		private bool IsLastOperatorIs(char s)
+		{
+			var i = _out.Length - 1;
+			while (i >= 0 && i < _out.Length)
+			{
+				var lastChar = _out[i];
+				if (lastChar != ' ')
+				{
+					return lastChar == s;
+				}
+				--i;
+			}
+
+			return false;
 		}
 
 		private void ConvertTypeToCSharpKeywordIncludeNullable(Type type)

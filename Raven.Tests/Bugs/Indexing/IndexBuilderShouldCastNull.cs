@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
 using System.Linq;
@@ -23,6 +24,26 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				new AnonymousNullableIndex().Execute(store);
 			}
+		}
+
+		[Fact]
+		public void NullableIndexDoesNotCastTwice()
+		{
+			var indexDefinition = new NullableIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+			Assert.DoesNotContain("(string)(string)", indexDefinition.Map, StringComparison.OrdinalIgnoreCase); // Include also (String)(string)|(string)(String) cases.
+			Assert.DoesNotContain("(System.String)(string)", indexDefinition.Map);
+			Assert.DoesNotContain("(string)(System.String)", indexDefinition.Map);
+			Assert.DoesNotContain("(System.String)(System.String)", indexDefinition.Map);
+		}
+
+		[Fact]
+		public void AnonymousNullableIndexDoesNotCastTwice()
+		{
+			var indexDefinition = new AnonymousNullableIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+			Assert.DoesNotContain("(string)(string)", indexDefinition.Map, StringComparison.OrdinalIgnoreCase); // Include also (String)(string)|(string)(String) cases.
+			Assert.DoesNotContain("(System.String)(string)", indexDefinition.Map);
+			Assert.DoesNotContain("(string)(System.String)", indexDefinition.Map);
+			Assert.DoesNotContain("(System.String)(System.String)", indexDefinition.Map);
 		}
 
 		private abstract class Nullable
