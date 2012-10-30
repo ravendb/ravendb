@@ -10,9 +10,8 @@ namespace Raven.Client.Indexes
 	/// <summary>
 	/// Generate index definition from linq expressions
 	/// </summary>
-	public class IndexDefinitionHelper
+	public static class IndexDefinitionHelper
 	{
-
 		/// <summary>
 		/// Perform the actual generation
 		/// </summary>
@@ -52,7 +51,7 @@ namespace Raven.Client.Indexes
 
 			var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.InvariantCulture);
 			if(indexOfQuerySource == -1)
-				throw new InvalidOperationException("Canot understand how to parse the query");
+				throw new InvalidOperationException("Cannot understand how to parse the query");
 
 			linqQuery = linqQuery.Substring(0, indexOfQuerySource) + querySource +
 						linqQuery.Substring(indexOfQuerySource + querySourceName.Length);
@@ -60,8 +59,8 @@ namespace Raven.Client.Indexes
 			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
 			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+(`\d+)?", "new ");// remove anonymous types
 			linqQuery = Regex.Replace(linqQuery, @"new " + typeof(TReduceResult).Name +"()", "new ");// remove reduce result type
-			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
-			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
+			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transparent identifiers
+			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transparent identifiers
 			linqQuery = Regex.Replace(linqQuery, @"__h__TransparentIdentifier(\d)+", "this$1");
 			linqQuery = JSBeautify.Apply(linqQuery);
 			return linqQuery;
