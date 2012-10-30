@@ -549,7 +549,8 @@ namespace Raven.Client.Document
 				{
 					// we are trying to do windows auth, but we didn't get the windows auth headers
 					throw new SecurityException(
-						"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
+						"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
+						+" but either worng credentials where entered or the specified server does not support Windows authentication." +
 						Environment.NewLine +
 						"If you are running inside IIS, make sure to enable Windows authentication.");
 				}
