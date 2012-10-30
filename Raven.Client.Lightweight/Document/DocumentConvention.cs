@@ -512,7 +512,7 @@ namespace Raven.Client.Document
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
 
 		/// <summary>
-		/// Begins handling of fobbiden responses
+		/// Begins handling of forbidden responses
 		/// in async manner
 		/// </summary>
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
