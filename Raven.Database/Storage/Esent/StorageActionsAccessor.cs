@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Storage.Esent.StorageActions;
@@ -108,6 +109,19 @@ namespace Raven.Storage.Esent
 				return newTask;
 			}
 			return task;
+		}
+
+		private Action<JsonDocument[]> afterCommitAction;
+		private List<JsonDocument> docsForCommit;
+		public void AfterCommit(JsonDocument doc, Action<JsonDocument[]> afterCommit)
+		{
+			afterCommitAction = afterCommit;
+			if(docsForCommit == null)
+			{
+				docsForCommit = new List<JsonDocument>();
+				inner.OnCommit += () => afterCommitAction(docsForCommit.ToArray());
+			}
+			docsForCommit.Add(doc);
 		}
 
 		public void SaveAllTasks()

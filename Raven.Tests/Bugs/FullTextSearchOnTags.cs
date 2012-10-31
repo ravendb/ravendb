@@ -431,6 +431,7 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
+		
 
 		[Fact]
 		public void Can_search_inner_words_with_extra_condition()
@@ -461,6 +462,7 @@ namespace Raven.Tests.Bugs
 						.Search(x => x.Name, "Photo", options: SearchOptions.And)
 						.Where(x => x.Id == "1")
 						.ToList();
+					WaitForUserToContinueTheTest(store);
 					Assert.NotEmpty(images);
 					Assert.True(images.Count == 1);
 				}

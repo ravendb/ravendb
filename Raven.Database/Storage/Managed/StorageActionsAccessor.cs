@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
@@ -75,6 +76,20 @@ namespace Raven.Storage.Managed
 				return newTask;
 			}
 			return task;
+		}
+
+
+		private Action<JsonDocument[]> afterCommitAction;
+		private List<JsonDocument> docsForCommit;
+		public void AfterCommit(JsonDocument doc, Action<JsonDocument[]> afterCommit)
+		{
+			afterCommitAction = afterCommit;
+			if (docsForCommit == null)
+			{
+				docsForCommit = new List<JsonDocument>();
+				OnCommit += () => afterCommitAction(docsForCommit.ToArray());
+			}
+			docsForCommit.Add(doc);
 		}
 
 		public void SaveAllTasks()

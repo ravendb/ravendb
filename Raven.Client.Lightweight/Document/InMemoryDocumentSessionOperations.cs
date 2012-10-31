@@ -819,7 +819,7 @@ more responsive application.
 				Document = json,
 				Etag = etag,
 				Key = documentMetadata.Key,
-				Metadata = documentMetadata.Metadata,
+				Metadata = (RavenJObject)documentMetadata.Metadata.CloneToken(),
 			};
 		}
 
@@ -1079,7 +1079,7 @@ more responsive application.
 				return jObject;
 
 			if (cachedJsonDocs != null && cachedJsonDocs.TryGetValue(entity, out jObject))
-				return jObject;
+				return (RavenJObject)jObject.CreateSnapshot();
 
 			var jsonSerializer = Conventions.CreateSerializer();
 			jObject = RavenJObject.FromObject(entity, jsonSerializer);
@@ -1090,7 +1090,11 @@ more responsive application.
 			}
 
 			if (cachedJsonDocs != null)
+			{
+				jObject.EnsureSnapshot();
 				cachedJsonDocs[entity] = jObject;
+				return (RavenJObject)jObject.CreateSnapshot();
+			}
 			return jObject;
 		}
 

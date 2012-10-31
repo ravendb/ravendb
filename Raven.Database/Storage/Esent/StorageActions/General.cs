@@ -143,6 +143,7 @@ namespace Raven.Storage.Esent.StorageActions
 		public Action Commit(CommitTransactionGrbit txMode)
 		{
 			transaction.Commit(txMode);
+			
 			return OnCommit;
 		}
 

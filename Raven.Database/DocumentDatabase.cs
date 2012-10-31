@@ -99,6 +99,11 @@ namespace Raven.Database
 		public string Name { get; private set; }
 
 		private readonly WorkContext workContext;
+		private readonly IndexingExecuter indexingExecuter;
+		public IndexingExecuter IndexingExecuter
+		{
+			get { return indexingExecuter; }
+		}
 
 		private readonly ConcurrentDictionary<Guid, CommittableTransaction> promotedTransactions = new ConcurrentDictionary<Guid, CommittableTransaction>();
 
@@ -203,6 +208,8 @@ namespace Raven.Database
 				IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
 
 				CompleteWorkContextSetup();
+
+				indexingExecuter = new IndexingExecuter(workContext);
 
 				InitializeTriggersExceptIndexCodecs();
 
@@ -482,7 +489,7 @@ namespace Raven.Database
 
 			workContext.StartWork();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new IndexingExecuter(workContext).Execute,
+				indexingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new ReducingExecuter(workContext).Execute,
@@ -588,6 +595,16 @@ namespace Raven.Database
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
+						metadata.EnsureSnapshot();
+						document.EnsureSnapshot();
+						actions.AfterCommit(new JsonDocument
+						{
+							Metadata = metadata,
+							Key = key,
+							DataAsJson = document,
+							Etag = newEtag,
+							LastModified = SystemTime.UtcNow,
+						}, indexingExecuter.AfterCommit);
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 							{
@@ -596,7 +613,7 @@ namespace Raven.Database
 								{
 									Name = key,
 									Type = DocumentChangeTypes.Put,
-									Etag = newEtag
+									Etag = newEtag,
 								});
 							});
 					}
@@ -1627,7 +1644,7 @@ namespace Raven.Database
 
 		static string productVersion;
 		private volatile bool disposed;
-		private ValidateLicense validateLicense;
+		private readonly ValidateLicense validateLicense;
 		public string ServerUrl
 		{
 			get

@@ -89,16 +89,17 @@ namespace Raven.Abstractions.Data
 			DataAsJson.EnsureSnapshot();
 			Metadata.EnsureSnapshot();
 
-			var doc = (RavenJObject) DataAsJson.CreateSnapshot();
+			var doc = (RavenJObject)DataAsJson.CreateSnapshot();
 			var metadata = (RavenJObject)Metadata.CreateSnapshot();
 
 			if (LastModified != null)
 				metadata[Constants.LastModified] = LastModified.Value;
-			if(Etag != null)
+			if (Etag != null)
 				metadata["@etag"] = Etag.Value.ToString();
 			if (NonAuthoritativeInformation != null)
 				metadata["Non-Authoritative-Information"] = NonAuthoritativeInformation.Value;
-
+			//if (metadata.ContainsKey("@id") == false)
+			//	metadata["@id"] = Key;
 			doc["@metadata"] = metadata;
 
 			return doc;
