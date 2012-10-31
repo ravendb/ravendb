@@ -230,7 +230,7 @@ namespace Raven.Storage.Managed
 			return true;
 		}
 
-		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
+		public Tuple<Guid,DateTime> AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			var existingEtag = AssertValidEtag(key, etag, "PUT", null);
 
@@ -246,18 +246,19 @@ namespace Raven.Storage.Managed
 			}
 
 			var newEtag = generator.CreateSequentialUuid();
+			var savedAt = SystemTime.UtcNow;
 			storage.Documents.Put(new RavenJObject
 			 {
 				 {"key", key},
 				 {"etag", newEtag.ToByteArray()},
-				 {"modified", SystemTime.UtcNow},
+				 {"modified", savedAt},
 				 {"id", GetNextDocumentId()},
 				 {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
 			 }, ms.ToArray());
 
 			documentCacher.RemoveCachedDocument(key, existingEtag);
 
-			return newEtag;
+			return Tuple.Create(newEtag, savedAt);
 		}
 
 		private int lastGeneratedId;

@@ -591,7 +591,8 @@ namespace Raven.Database
 					{
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
-						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
+						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
+						newEtag = addDocumentResult.Item1;
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
@@ -603,7 +604,7 @@ namespace Raven.Database
 							Key = key,
 							DataAsJson = document,
 							Etag = newEtag,
-							LastModified = SystemTime.UtcNow,
+							LastModified = addDocumentResult.Item2,
 						}, indexingExecuter.AfterCommit);
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
