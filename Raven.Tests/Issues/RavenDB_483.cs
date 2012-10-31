@@ -18,7 +18,7 @@ namespace Raven.Tests.Issues
 			}.ToIndexDefinition(new DocumentConvention());
 
 			const string expected = @"docs.People.Select(p => new {
-    DateTime = (DateTime ? )(null)
+    DateTime = ((DateTime ? ) null)
 })";
 			Assert.Equal(expected, indexDefinition.Map);
 		}
