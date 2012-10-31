@@ -1843,8 +1843,8 @@ namespace Raven.Client.Indexes
 					break;
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
-					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
 					Out("(");
+					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
 					break;
 				case ExpressionType.ArrayLength:
 					// we don't want to do nothing for those

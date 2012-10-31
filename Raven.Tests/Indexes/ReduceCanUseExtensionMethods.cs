@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -24,7 +25,6 @@ namespace Raven.Tests.Indexes
 		{
 			using (var store = NewDocumentStore())
 			{
-
 				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<PainfulInputData, IndexedFields>()
 				{
 					Map = documents => from doc in documents
@@ -65,6 +65,29 @@ namespace Raven.Tests.Indexes
 
 					Assert.Single(results);
 				}
+			}
+		}
+
+		[Fact]
+		public void CorrectlyUseExtensionMethodsOnConvertedType()
+		{
+			var indexDefinition = new PainfulIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+			Assert.Contains("((String[]) doc.Tags.Split(", indexDefinition.Map);
+		}
+
+		private class PainfulIndex : AbstractMultiMapIndexCreationTask<IndexedFields>
+		{
+			public PainfulIndex()
+			{
+				AddMap<PainfulInputData>(documents => from doc in documents
+										 // Do not remove the redundant (string[]). 
+										 // It's intentional here and intended to test the following parsing: ((string[])prop).Select(...)
+										 let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+										 select new IndexedFields()
+										 {
+											 Tags = tags.ToArray()
+										 });
+
 			}
 		}
 	}
