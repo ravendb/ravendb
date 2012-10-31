@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -12,16 +11,13 @@ using Raven.Client.Linq;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
-#if !NET35
 namespace Raven.Client.Shard
 {
 	public abstract class BaseShardedDocumentSession<TDatabaseCommands> : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession
 		where TDatabaseCommands : class
 	{
-#if !NET35
 		protected readonly List<Tuple<ILazyOperation, IList<TDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<TDatabaseCommands>>>();
 		protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-#endif
 		protected readonly IDictionary<string, List<ICommandData>> deferredCommandsByShard = new Dictionary<string, List<ICommandData>>();
 		protected readonly ShardStrategy shardStrategy;
 		protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
@@ -245,16 +241,8 @@ namespace Raven.Client.Shard
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, null
-#if !NET35
-, null
-#endif
-);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, this, null
-#if !NET35
-, null
-#endif
-);
+			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, null, null);
+			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, this, null, null);
 		}
 
 		/// <summary>
@@ -298,7 +286,6 @@ namespace Raven.Client.Shard
 			return IDocumentQueryGeneratorQuery<T>(indexName);
 		}
 
-#if !NET35
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.AsyncQuery
 		/// </summary>
@@ -308,7 +295,6 @@ namespace Raven.Client.Shard
 		{
 			return IDocumentQueryGeneratorAsyncQuery<T>(indexName);
 		}
-#endif
 
 		#endregion
 
@@ -341,4 +327,3 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-#endif

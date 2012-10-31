@@ -1245,7 +1245,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			return q;
 		}
 
-#if !NET35
 		/// <summary>
 		/// Gets the lucene query.
 		/// </summary>
@@ -1262,9 +1261,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			return asyncLuceneQuery.SelectFields<T>(FieldsToFetch.ToArray());
 		}
-
-
-#endif
 
 		/// <summary>
 		/// Executes the specified expression.

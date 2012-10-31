@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -16,10 +17,6 @@ using Raven.Client.Linq;
 
 namespace Raven.Client
 {
-#if !NET35
-	using System.Threading.Tasks;
-#endif
-
 	///<summary>
 	/// Extensions to the linq syntax
 	///</summary>

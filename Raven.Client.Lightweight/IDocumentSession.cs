@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -12,7 +13,6 @@ using Raven.Client.Linq;
 
 namespace Raven.Client
 {
-#if !SILVERLIGHT
 	/// <summary>
 	/// Interface for document session
 	/// </summary>
@@ -121,7 +121,6 @@ namespace Raven.Client
 		/// </summary>
 		void Store(object entity, Guid etag, string id);
 
-#if !NET35        
 		/// <summary>
 		/// Stores the specified dynamic entity.
 		/// </summary>
@@ -134,21 +133,6 @@ namespace Raven.Client
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
 		void Store(dynamic entity, string id);
-#else 
-		/// <summary>
-		/// Stores the specified dynamic entity.
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		void Store(object entity);
-
-		/// <summary>
-		/// Stores the specified dynamic entity, under the specified id
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		void Store(object entity, string id);
-#endif
 	}
-
-#endif
 }
+#endif

@@ -608,7 +608,6 @@ more responsive application.
 		protected string GenerateDocumentKeyForStorage(object entity)
 		{
 			string id;
-#if !NET35
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				if (TryGetIdFromDynamic(entity, out id) == false)
@@ -620,7 +619,6 @@ more responsive application.
 				}
 				return id;
 			}
-#endif
 
 			id = GetOrGenerateDocumentKey(entity);
 			TrySetIdentity(entity, id);

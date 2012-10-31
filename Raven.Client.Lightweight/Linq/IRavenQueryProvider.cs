@@ -49,7 +49,6 @@ namespace Raven.Client.Linq
 		/// </summary>
 		IRavenQueryProvider For<S>();
 
-#if !NET35
 		/// <summary>
 		/// Convert the Linq query to a Lucene query
 		/// </summary>
@@ -66,7 +65,6 @@ namespace Raven.Client.Linq
 		/// Move the registered after query actions
 		/// </summary>
 		void MoveAfterQueryExecuted<T>(IAsyncDocumentQuery<T> documentQuery);
-#endif
 
 		/// <summary>
 		/// Set the fields to fetch

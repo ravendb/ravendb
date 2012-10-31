@@ -14,11 +14,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
-#if !NET35
 	using Raven.Client.Connection.Async;
 	using System.Threading.Tasks;
-
-#endif
 
 	///<summary>
 	/// Extension methods to create mutli tenants databases
