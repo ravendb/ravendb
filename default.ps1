@@ -137,6 +137,7 @@ task Test -depends Compile {
 	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
+	Write-Host "xUnit location: $xUnit\tools\xunit.console.clr4.exe"
 	
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test ) {
