@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
 using Xunit;
@@ -34,6 +35,7 @@ namespace Raven.Tests.MailingList
 						.WaitForNonStaleResults()
 						.WhereStartsWith("FirstName", "David").Boost(3)
 						.WhereStartsWith("LastName", "David")
+						.OrderBy(Constants.TemporaryScoreValue, "LastName")
 						.ToList();
 
 					Assert.Equal(3, students.Count);
