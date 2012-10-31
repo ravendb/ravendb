@@ -239,7 +239,7 @@ namespace Raven.Database
 		private void InitializeTriggersExceptIndexCodecs()
 		{
 			DocumentCodecs
-				.Init(disableAllTriggers)
+				//.Init(disableAllTriggers) // Document codecs should always be activated (RavenDB-576)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
 			PutTriggers
