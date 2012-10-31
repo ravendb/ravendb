@@ -24,6 +24,8 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+			SavePeriodicBackup(databaseName);
+
 			if(databaseName == Constants.SystemDatabase)
 			{
 				SaveApiKeys();
@@ -123,6 +125,24 @@ namespace Raven.Studio.Commands
 
 			session.SaveChangesAsync()
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
+		}
+
+		private void SavePeriodicBackup(string databaseName)
+		{
+			var periodicBackup = settingsModel.GetSection<PeriodicBackupSettingsSectionModel>();
+			if(periodicBackup.PeriodicBackupSetup == null)
+				return;
+
+			if (periodicBackup.OriginalAwsSecretKey != periodicBackup.AwsSecretKey)
+				settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
+			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
+
+			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
+
+			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
+			session.Store(periodicBackup.PeriodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
+
+			session.SaveChangesAsync();
 		}
 
 		private void SaveWindowsAuth()

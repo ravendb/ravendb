@@ -30,6 +30,7 @@
                                              ValueWhenFalse="0"
                                              ValueWhenTrue="*"/>
 	<Converters:IdStringToIdWithoutHeader x:Key="IdStringToIdWithoutHeader"/>
+	<Converters:BundleNameToActiveConverter x:Key="BundleNameToActive"/>
     <Converters:StringListToStringConverter x:Key="StringListToString"/>
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:TrueWhenAnalyzedConverter x:Key="TrueWhenAnalyzed"/>

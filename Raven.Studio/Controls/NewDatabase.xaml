@@ -61,9 +61,9 @@
                 </Grid.ColumnDefinitions>
 
 
-                <TextBlock x:Name="DbPath" Text="Path: "
+                <TextBlock Text="Path: "
 					   Margin="5" VerticalAlignment="Center"/>
-                <TextBox Grid.Column="1"
+				<TextBox x:Name="DbPath" Grid.Column="1"
 					 Margin="5"/>
                 <TextBlock Text="Logs: "
 					   Grid.Row="1"
@@ -101,11 +101,12 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-
+	
 				<CheckBox x:Name="Compression"
                           Checked="Checked"
                           Unchecked="UnChecked"
-                          Margin="5"/>
+                          Margin="5" 
+						  IsEnabled="{Binding Name, ElementName=Compression, Converter={StaticResource BundleNameToActive}}"/>
 				<TextBlock Grid.Column="1"
                            Text="Compression Bundle"
                            Margin="5"
@@ -115,7 +116,8 @@
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="1"
-                          Margin="5"/>
+                          Margin="5"
+						  IsEnabled="{Binding Name, ElementName=Encryption, Converter={StaticResource BundleNameToActive}}"/>
                 <TextBlock Grid.Column="1"
                            Grid.Row="1"
                            Text="Encryption Bundle"
@@ -126,7 +128,8 @@
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="2"
-                          Margin="5"/>
+                          Margin="5"
+						  IsEnabled="{Binding Name, ElementName=Expiration, Converter={StaticResource BundleNameToActive}}"/>
 				<TextBlock Grid.Column="1"
                            Grid.Row="2"
                            Text="Expiration Bundle"
@@ -137,7 +140,8 @@
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="3"
-                          Margin="5"/>
+                          Margin="5"
+						  IsEnabled="{Binding Name, ElementName=Quotas, Converter={StaticResource BundleNameToActive}}"/>
 				<TextBlock Grid.Column="1"
                            Grid.Row="3"
                            Text="Quotas Bundle"
@@ -148,28 +152,33 @@
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="4"
-                          Margin="5"/>
+                          Margin="5"
+						  IsEnabled="{Binding Name, ElementName=Replication, Converter={StaticResource BundleNameToActive}}"/>
 				<TextBlock Grid.Column="1"
                            Grid.Row="4"
                            Text="Replication Bundle"
                            Margin="5"
                            MouseLeftButtonDown="ToggleBundles"/>
+				
 				<CheckBox x:Name="Versioning"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="5"
-                          Margin="5"/>
+                          Margin="5"
+						  IsEnabled="{Binding Name, ElementName=Versioning, Converter={StaticResource BundleNameToActive}}"/>
 				<TextBlock Grid.Column="1"
                            Grid.Row="5"
                            Text="Versioning Bundle"
                            Margin="5"
                            MouseLeftButtonDown="ToggleBundles"/>
+				
                 <CheckBox x:Name="Authorization"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="6"
-                          Margin="5"/>
-                <TextBlock Grid.Column="1"
+                          Margin="5"
+						  IsEnabled="{Binding Name, ElementName=Authorization, Converter={StaticResource BundleNameToActive}}"/>
+				<TextBlock Grid.Column="1"
                            Grid.Row="6"
                            Text="Authorization Bundle"
                            Margin="5"

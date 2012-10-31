@@ -576,6 +576,8 @@
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisTests.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis_should_support_MapReduce_indexes.cs" />
     <Compile Include="Bundles\MoreLikeThis\TestWithInMemoryDatabase.cs" />
+    <Compile Include="Bundles\PeriodicBackups\FactIfAwsIsAvailable.cs" />
+    <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Async\AttachmentReplication.cs" />
     <Compile Include="Bundles\Replication\Async\ConflictWhenReplicating.cs" />
     <Compile Include="Bundles\Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />

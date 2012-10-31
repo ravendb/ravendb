@@ -44,6 +44,7 @@ namespace Raven.Studio.Models
 				new ImportTask(),
 				new ExportTask(),
 				new StartBackupTask(),
+				new StartRestoreTask(),
 				new IndexingTask(),
 				new SampleDataTask(),
                 new CsvImportTask()

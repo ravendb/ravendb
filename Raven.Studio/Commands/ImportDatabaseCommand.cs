@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using Ionic.Zlib;
 using Raven.Imports.Newtonsoft.Json;
@@ -11,6 +12,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using TaskStatus = Raven.Studio.Models.TaskStatus;
@@ -34,6 +36,13 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
+			if (ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Statistics.Value.CountOfDocuments != 0)
+			{
+				if (AskUser.Confirmation("Override Docuements?", "There are documents in the database :" +
+							  ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name + "." + Environment.NewLine
+							  + "This operation can override those documents.") == false)
+					return;
+			}
 			var openFile = new OpenFileDialog
 			               {
 							   Filter = "Raven Dumps|*.ravendump;*.raven.dump",

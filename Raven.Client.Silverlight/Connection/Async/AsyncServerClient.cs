@@ -390,6 +390,24 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}).Unwrap();
 		}
 
+		public Task StartRestoreAsync(string restoreLocation, string databaseLocation)
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentials, convention));
+			request.AddOperationHeaders(OperationsHeaders);
+			return request.WriteAsync(new RavenJObject
+				{
+					{"RestoreLocation", restoreLocation},
+					{"DatabaseLocation", databaseLocation}
+				}.ToString(Formatting.None))
+				.ContinueWith(task =>
+				{
+					if (task.Exception != null)
+						return task;
+
+					return request.ExecuteRequestAsync();
+				}).Unwrap();
+		}
+
 		public Task StartIndexingAsync()
 		{
 			return ExecuteWithReplication("POST", operationUrl =>

@@ -51,6 +51,8 @@ namespace Raven.Studio.Commands
 			if (saveFile.ShowDialog() != true)
 				return;
 
+			taskModel.CanExecute.Value = false;
+
 			stream = saveFile.OpenFile();
 			gZipStream = new GZipStream(stream, CompressionMode.Compress);
 			streamWriter = new StreamWriter(gZipStream);
@@ -82,6 +84,7 @@ namespace Raven.Studio.Commands
 										if (array.Length == 0)
 										{
 											output(String.Format("Done with reading indexes, total: {0}", totalCount));
+											output(String.Format("Begin reading documents"));
 
 											jsonWriter.WriteEndArray();
 											jsonWriter.WritePropertyName("Docs");
@@ -143,6 +146,7 @@ namespace Raven.Studio.Commands
 			stream.Dispose();
 
 			output("Export complete");
+			taskModel.CanExecute.Value = true;
 			taskModel.TaskStatus = TaskStatus.Ended;
 			if (exception != null)
 				output(exception.ToString());

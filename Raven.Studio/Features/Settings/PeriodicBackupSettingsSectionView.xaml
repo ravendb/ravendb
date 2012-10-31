@@ -1,0 +1,75 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Settings.PeriodicBackupSettingsSectionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+    mc:Ignorable="d"
+    d:DesignHeight="300" d:DesignWidth="400">
+
+		<Border x:Name="LayoutRoot" Style="{StaticResource Style_Border_SettingsSection}">
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="50"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			<Grid>
+				<Grid Margin="5" Visibility="{Binding HasDocument, Converter={StaticResource BooleanToOppositeVisibility}}">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<TextBlock Text="There is no Periodic Backup set for this database."/>
+					<HyperlinkButton Content="Activate Periodic Backup"
+								 Command="{Binding EnablePeriodicBackup}"
+								 Grid.Row="1"/>
+				</Grid>
+				<Grid Margin="5" Visibility="{Binding HasDocument, Converter={StaticResource BooleanToVisibility}}">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+
+					<TextBlock Text="Glacier Vault Name: " VerticalAlignment="Center"/>
+					<TextBox Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.GlacierVaultName, Mode=TwoWay}" VerticalAlignment="Center"/>
+
+					<TextBlock Grid.Row="1" Text="S3 Bucket Name: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.S3BucketName, Mode=TwoWay}" VerticalAlignment="Center"/>
+
+					<TextBlock Grid.Row="2" Text="Aws Region Endpoint: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="2" Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.AwsRegionEndpoint, Mode=TwoWay}" VerticalAlignment="Center"/>
+
+					<TextBlock Grid.Row="3" Text="Interval: " VerticalAlignment="Center"/>
+					<StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+						<toolkit:NumericUpDown Margin="5" Value="{Binding PeriodicBackupSetup.Interval, Mode=TwoWay}" Maximum="214748364" VerticalAlignment="Center"/>
+						<TextBlock Text="in Minutes" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Grid>
+			</Grid>
+
+			<Grid Grid.Column="2" Visibility="{Binding HasDocument, Converter={StaticResource BooleanToVisibility}}">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="150"/>
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+
+				<TextBlock Text="AWS Access Key: " VerticalAlignment="Center"/>
+				<TextBox Grid.Column="1" Margin="5"  Text="{Binding AwsAccessKey, Mode=TwoWay}" VerticalAlignment="Center"/>
+
+				<TextBlock Grid.Row="1" Text="AWS Secret Key: " VerticalAlignment="Center"/>
+				<TextBox Grid.Row="1" Grid.Column="1" Margin="5"  Text="{Binding AwsSecretKey, Mode=TwoWay}" VerticalAlignment="Center"/>
+			</Grid>
+		</Grid>
+	</Border>
+</UserControl>
