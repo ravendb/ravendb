@@ -47,13 +47,30 @@ namespace Raven.Server
 
 		protected override void OnStop()
 		{
-			startTask.ContinueWith(task =>
+			var complete = false;
+			var shutdownStart = DateTime.Now;
+			var shutdownTask = startTask.ContinueWith(task =>
 			{
-				if (server != null)
+				if(server != null) 
 					server.Dispose();
+				complete = true;
 				return task;
-			}).Wait();
+			});
+			var keepAliveTask = Task.Factory.StartNew(() => 
+			{
+				System.Threading.Thread.Sleep(9000);
+				do 
+				{
+					EventLog.WriteEntry("Requesting additional time for service stop: " + (int)((DateTime.Now - shutdownStart).TotalSeconds) + "s", EventLogEntryType.Information);
+					base.RequestAdditionalTime(10000);
+					System.Threading.Thread.Sleep(9000);
+				} while(!complete);
+			});
 
+			Task.WaitAll(shutdownTask, keepAliveTask);
+
+			shutdownTask.Dispose();
+			keepAliveTask.Dispose();
 		}
 	}
 }
