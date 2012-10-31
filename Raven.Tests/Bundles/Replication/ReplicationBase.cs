@@ -32,18 +32,18 @@ namespace Raven.Bundles.Tests.Replication
 		private const int PortRangeStart = 8079;
 		protected const int RetriesCount = 500;
 
-		public IDocumentStore CreateStore(Action<DocumentStore> configureStore = null)
+		public IDocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null)
 		{
 			var port = PortRangeStart - servers.Count;
-			return CreateStoreAtPort(port, configureStore);
+			return CreateStoreAtPort(port, enableCompressionBundle, configureStore);
 		}
 
-		private IDocumentStore CreateStoreAtPort(int port, Action<DocumentStore> configureStore = null)
+		private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null)
 		{
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
 			                          {
-										Settings = {{"Raven/ActiveBundles", "replication"}},
+										Settings = {{"Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty)}},
 			                          	AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
 			                          	DataDirectory = "Data #" + servers.Count,
 			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,

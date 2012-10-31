@@ -457,6 +457,7 @@
     <Compile Include="Issues\RavenDB535.cs" />
     <Compile Include="Issues\RavenDB626.cs" />
     <Compile Include="Issues\RavenDB_554.cs" />
+    <Compile Include="Issues\RavenDB_576.cs" />
     <Compile Include="Linq\Contains.cs" />
     <Compile Include="Linq\IsNullOrEmpty.cs" />
     <Compile Include="Issues\RavenDB_556.cs" />
