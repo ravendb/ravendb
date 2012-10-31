@@ -49,9 +49,9 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 			{
 				// Insert valid documents.
-				session.Store(new Doc { DocId = "1", Map = new Dictionary<string, object> { { "X", 0 } } }, "1");
-				session.Store(new Doc { DocId = "2", Map = new Dictionary<string, object> { { "X", 1 } } }, "2");
-				session.Store(new Doc { DocId = "3", Map = new Dictionary<string, object> { { "X", 2 } } }, "3");
+				session.Store(new Doc { DocId = "1", Map = new Dictionary<string, object> { { "X", 1 } } }, "1");
+				session.Store(new Doc { DocId = "2", Map = new Dictionary<string, object> { { "X", 2 } } }, "2");
+				session.Store(new Doc { DocId = "3", Map = new Dictionary<string, object> { { "X", 3 } } }, "3");
 				// Doc 4 has no "X" in it's map.
 				session.Store(new Doc { DocId = "4", Map = new Dictionary<string, object>() }, "4");
 				session.SaveChanges();
