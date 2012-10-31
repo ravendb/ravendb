@@ -9,13 +9,12 @@ namespace Raven.Tests.Indexes
 {
 	public class ReduceCanUseExtensionMethods : RavenTest
 	{
-		private class PainfulInputData
+		private class InputData
 		{
-			public string Name;
 			public string Tags;
 		}
 
-		private class IndexedFields
+		private class Result
 		{
 			public string[] Tags;
 		}
@@ -25,11 +24,11 @@ namespace Raven.Tests.Indexes
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<PainfulInputData, IndexedFields>()
+				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<InputData, Result>()
 				{
 					Map = documents => from doc in documents
 					                   let tags = ((string[]) doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
-					                   select new IndexedFields()
+					                   select new Result()
 					                   {
 						                   Tags = tags.ToArray()
 					                   }
@@ -37,18 +36,8 @@ namespace Raven.Tests.Indexes
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new PainfulInputData()
-					{
-						Name = "Hello, universe",
-						Tags = "Little, orange, comment"
-					});
-
-					session.Store(new PainfulInputData()
-					{
-						Name = "Highlander",
-						Tags = "only-one"
-					});
-
+					session.Store(new InputData {Tags = "Little, orange, comment"});
+					session.Store(new InputData {Tags = "only-one"});
 					session.SaveChanges();
 				}
 
@@ -58,9 +47,9 @@ namespace Raven.Tests.Indexes
 
 				using (var session = store.OpenSession())
 				{
-					var results = session.Query<IndexedFields>("Hi")
+					var results = session.Query<Result>("Hi")
 						.Search(d => d.Tags, "only-one")
-						.As<PainfulInputData>()
+						.As<InputData>()
 						.ToList();
 
 					Assert.Single(results);
@@ -75,19 +64,18 @@ namespace Raven.Tests.Indexes
 			Assert.Contains("((String[]) doc.Tags.Split(", indexDefinition.Map);
 		}
 
-		private class PainfulIndex : AbstractMultiMapIndexCreationTask<IndexedFields>
+		private class PainfulIndex : AbstractMultiMapIndexCreationTask<Result>
 		{
 			public PainfulIndex()
 			{
-				AddMap<PainfulInputData>(documents => from doc in documents
+				AddMap<InputData>(documents => from doc in documents
 										 // Do not remove the redundant (string[]). 
 										 // It's intentional here and intended to test the following parsing: ((string[])prop).Select(...)
 										 let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
-										 select new IndexedFields()
+										 select new Result()
 										 {
 											 Tags = tags.ToArray()
 										 });
-
 			}
 		}
 	}
