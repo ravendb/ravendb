@@ -971,6 +971,8 @@ namespace Raven.Database.Indexing
 				foreach (SortedField field in indexQuery.SortedFields)
 				{
 					string f = field.Field;
+					if (f == Constants.TemporaryScoreValue)
+						continue;
 					if (f.EndsWith("_Range"))
 					{
 						f = f.Substring(0, f.Length - "_Range".Length);
@@ -1061,8 +1063,17 @@ namespace Raven.Database.Indexing
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
 				{
-					var ret = indexSearcher.Search(luceneQuery, null, minPageSize, sort);
-					return ret;
+					try
+					{
+						//indexSearcher.SetDefaultFieldSortScoring (sort.GetSort().Contains(SortField.FIELD_SCORE), false);
+						indexSearcher.SetDefaultFieldSortScoring (true, false);
+						var ret = indexSearcher.Search (luceneQuery, null, minPageSize, sort);
+						return ret;
+					}
+					finally
+					{
+						indexSearcher.SetDefaultFieldSortScoring (false, false);
+					}
 				}
 				return indexSearcher.Search(luceneQuery, null, minPageSize);
 			}
