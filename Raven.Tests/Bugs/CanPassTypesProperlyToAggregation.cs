@@ -4,25 +4,29 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
 	public class CanPassTypesProperlyToAggregation 
 	{
+		private class Coin
+		{
+			public int Denomination { get; set; }
+			public double Cost { get; set; }
+		}
+
 		[Fact]
 		public void WillGenerateDecimalCast()
 		{
 			Expression<Func<IEnumerable<Coin>, IEnumerable<object>>> query = x => from y in x
 			                                                                      group y by y.Denomination
 			                                                                      into g
-			                                                                      select
-			                                                                      	new
-			                                                                      	{
-			                                                                      		Denomination = g.Key,
-			                                                                      		Cost = g.Sum(z => z.Cost)
-			                                                                      	};
+			                                                                      select new
+			                                                                      {
+				                                                                      Denomination = g.Key,
+				                                                                      Cost = g.Sum(z => z.Cost)
+			                                                                      };
 
 
 			var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<Coin, Coin>(query, new DocumentConvention(), "docs", false);
