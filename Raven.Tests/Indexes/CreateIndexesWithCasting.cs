@@ -16,7 +16,8 @@ namespace Raven.Tests.Indexes
 				Conventions = new DocumentConvention()	
 			}.CreateIndexDefinition();
 
-			Assert.Contains("Id = ((System.Int64)(person.Name.Length))", indexDefinition.Map);
+			Assert.Contains("docs.People.Select(person => new {", indexDefinition.Map);
+			Assert.Contains("Id = ((long) person.Name.Length)", indexDefinition.Map);
 		}
 
 		public class WithCasting : AbstractIndexCreationTask<Person>
