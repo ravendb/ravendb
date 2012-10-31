@@ -4,11 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -140,12 +138,10 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 
-		public class User
+		private class User
 		{
 			public LiveProjection.Address[] Addresses { get; set; }
 		}
-
-
 
 		public class TheCompanyName
 		{
