@@ -61,9 +61,9 @@
                 </Grid.ColumnDefinitions>
 
 
-                <TextBlock x:Name="DbPath" Text="Path: "
+                <TextBlock Text="Path: "
 					   Margin="5" VerticalAlignment="Center"/>
-                <TextBox Grid.Column="1"
+				<TextBox x:Name="DbPath" Grid.Column="1"
 					 Margin="5"/>
                 <TextBlock Text="Logs: "
 					   Grid.Row="1"
