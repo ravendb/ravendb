@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
@@ -74,11 +75,14 @@ namespace Raven.Tests.Bugs.MapRedue
 		public void CanUseMaxOnNullableDateTimeOffset()
 		{
 			new Users_LastLoggedInAt().Execute(store);
+
 			using (var session = store.OpenSession())
 			{
 				var max = session.Query<Users_LastLoggedInAt.Result, Users_LastLoggedInAt>()
 					.Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
 					.ToList();
+
+				Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
 
 				Assert.NotEmpty(max);
 			}
@@ -89,6 +93,7 @@ namespace Raven.Tests.Bugs.MapRedue
 			public class Result
 			{
 				public string UserName { get; set; }
+				public DateTime? LoggedInAt { get; set; }
 				public DateTimeOffset? LoggedInAtWithOffset { get; set; }
 			}
 
@@ -97,19 +102,26 @@ namespace Raven.Tests.Bugs.MapRedue
 				AddMap<User>(users => users.Select(user => new Result
 				{
 					UserName = user.UserName,
+					LoggedInAt = (DateTime?) null,
 					LoggedInAtWithOffset = (DateTimeOffset?) null,
 				}));
 
 				AddMap<LogInAction>(actions => actions.Select(action => new Result
 				{
 					UserName = (string) null,
+					LoggedInAt = action.LoggedInAt,
 					LoggedInAtWithOffset = action.LoggedInAtWithOffset
 				}));
 
 				Reduce = results => from result in results
 				                    group result by result.UserName
 				                    into g
-				                    select new Result {UserName = g.Key, LoggedInAtWithOffset = g.Max(x => x.LoggedInAtWithOffset)};
+				                    select new Result
+				                    {
+					                    UserName = g.Key,
+					                    LoggedInAt = g.Max(x => x.LoggedInAt),
+					                    LoggedInAtWithOffset = g.Max(x => x.LoggedInAtWithOffset),
+				                    };
 			}
 		}
 	}
