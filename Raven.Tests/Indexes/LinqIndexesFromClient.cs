@@ -182,7 +182,7 @@ namespace Raven.Tests.Indexes
 })",
 				Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
-    Count = Enumerable.Sum(g, x => ((System.Int32)(x.Count)))
+    Count = Enumerable.Sum(g, x => ((int) x.Count))
 })"
 			};
 
@@ -205,7 +205,7 @@ namespace Raven.Tests.Indexes
 				Map = expectedIndexString,
 				Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
-    Count = Enumerable.Sum(g, x => ((System.Int32)(x.Count)))
+    Count = Enumerable.Sum(g, x => ((int) x.Count))
 })"
 			};
 
