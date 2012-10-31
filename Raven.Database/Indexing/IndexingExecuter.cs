@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -62,12 +63,26 @@ namespace Raven.Database.Indexing
 			public Guid StartingEtag;
 			public Task<JsonResults> Task;
 			public int Age;
+
+			public override string ToString()
+			{
+				if(Task.IsCompleted == false)
+					return "Pending...";
+				return Task.Result.ToString();
+			}
 		}
 
 		public class JsonResults
 		{
 			public JsonDocument[] Results;
 			public bool LoadedFromDisk;
+
+			public override string ToString()
+			{
+				if(Results == null)
+					return "0";
+				return Results.Length.ToString("#,#", CultureInfo.InvariantCulture);
+			}
 		}
 
 		private int currentIndexingAge;
@@ -186,7 +201,7 @@ namespace Raven.Database.Indexing
 			var futureResults = GetFutureJsonDocuments(lastIndexedGuidForAllIndexes);
 			if (futureResults != null)
 				return futureResults;
-			return GetJsonDocs(lastIndexedGuidForAllIndexes);
+			return GetJsonDocsFromDisk(lastIndexedGuidForAllIndexes);
 		}
 
 		private JsonResults GetFutureJsonDocuments(Guid lastIndexedGuidForAllIndexes)
@@ -292,7 +307,7 @@ namespace Raven.Database.Indexing
 				Age = currentIndexingAge,
 				Task = System.Threading.Tasks.Task.Factory.StartNew(() =>
 				{
-					var jsonDocuments = GetJsonDocs(nextEtag);
+					var jsonDocuments = GetJsonDocsFromDisk(nextEtag);
 					int localWork = workCounter;
 					while (jsonDocuments.Results.Length == 0 && context.DoWork)
 					{
@@ -301,7 +316,7 @@ namespace Raven.Database.Indexing
 						if (context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching") == false)
 							continue;
 
-						jsonDocuments = GetJsonDocs(nextEtag);
+						jsonDocuments = GetJsonDocsFromDisk(nextEtag);
 					}
 					futureBatchStat.Duration = sp.Elapsed;
 					futureBatchStat.Size = jsonDocuments.Results.Length;
@@ -355,7 +370,7 @@ namespace Raven.Database.Indexing
 			futureIndexBatches.Clear();
 		}
 
-		private JsonResults GetJsonDocs(Guid lastIndexed)
+		private JsonResults GetJsonDocsFromDisk(Guid lastIndexed)
 		{
 			JsonDocument[] jsonDocs = null;
 			transactionalStorage.Batch(actions =>

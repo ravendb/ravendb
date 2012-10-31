@@ -2,13 +2,33 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 
 namespace Raven.Database.Util
 {
+
+	[DebuggerTypeProxy(typeof(ConcurrentSet<>.DebugProxy))]
 	public class ConcurrentSet<T> : IEnumerable<T>
 	{
-		readonly ConcurrentDictionary<T, object> inner;
+		public class DebugProxy
+		{
+			private ConcurrentSet<T> parent;
+
+			public DebugProxy(ConcurrentSet<T> parent)
+			{
+				this.parent = parent;
+			}
+
+			[DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+			public string[] Items
+			{
+				get { return parent.Select(x => x.ToString()).ToArray(); }
+			}
+		}
+
+		private readonly ConcurrentDictionary<T, object> inner;
 
 		public ConcurrentSet()
 		{
@@ -68,6 +88,11 @@ namespace Raven.Database.Util
 		public void Clear()
 		{
 			inner.Clear();
+		}
+
+		public override string ToString()
+		{
+			return Count.ToString("#,#", CultureInfo.InvariantCulture);
 		}
 	}
 }
