@@ -1,7 +1,5 @@
 using System;
-#if !NET35
 using System.Collections.Concurrent;
-#endif
 using Raven.Client.Connection.Profiling;
 
 namespace Raven.Client.Util

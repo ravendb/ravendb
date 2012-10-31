@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 using System;
 using System.Dynamic;
 using System.Linq.Expressions;
