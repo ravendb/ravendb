@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Linq
 {
-	public class Not : RavenTest
+	public class CanQueryWithSavedKeywords : RavenTest
 	{
 		private class TestDoc
 		{
@@ -24,6 +24,44 @@ namespace Raven.Tests.Linq
 				using (var session = store.OpenSession())
 				{
 					Assert.NotNull(session.Query<TestDoc>().FirstOrDefault(doc => doc.SomeProperty == "NOT"));
+				}
+			}
+		}
+
+		[Fact]
+		public void CanQueryWithOr()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new TestDoc { SomeProperty = "OR" });
+					session.SaveChanges();
+				}
+
+				WaitForUserToContinueTheTest(store);
+
+				using (var session = store.OpenSession())
+				{
+					Assert.NotNull(session.Query<TestDoc>().FirstOrDefault(doc => doc.SomeProperty == "OR"));
+				}
+			}
+		}
+
+		[Fact]
+		public void CanQueryWithAnd()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new TestDoc { SomeProperty = "AND" });
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					Assert.NotNull(session.Query<TestDoc>().FirstOrDefault(doc => doc.SomeProperty == "AND"));
 				}
 			}
 		}

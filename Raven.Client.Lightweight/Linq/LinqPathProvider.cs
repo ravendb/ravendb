@@ -88,7 +88,7 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public object GetValueFromExpression(Expression expression, Type type)
 		{
-			if (expression == null)
+			 if (expression == null)
 				throw new ArgumentNullException("expression");
 
 			// Get object
