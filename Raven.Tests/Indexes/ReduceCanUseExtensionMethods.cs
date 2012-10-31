@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
@@ -7,13 +8,13 @@ namespace Raven.Tests.Indexes
 {
 	public class ReduceCanUseExtensionMethods : RavenTest
 	{
-		public class PainfulInputData
+		private class PainfulInputData
 		{
 			public string Name;
 			public string Tags;
 		}
 
-		public class IndexedFields
+		private class IndexedFields
 		{
 			public string[] Tags;
 		}
@@ -23,7 +24,6 @@ namespace Raven.Tests.Indexes
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Initialize();
 
 				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<PainfulInputData, IndexedFields>()
 				{
@@ -52,18 +52,16 @@ namespace Raven.Tests.Indexes
 					session.SaveChanges();
 				}
 
-				//  How to assert no indexing errors?  
-				//  When I create a similur index, the UI shows an indexing error related to using .Select().
+				while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
+					Thread.Sleep(100);
+				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 
 				using (var session = store.OpenSession())
 				{
 					var results = session.Query<IndexedFields>("Hi")
-						.Customize(a => a.WaitForNonStaleResults())
 						.Search(d => d.Tags, "only-one")
 						.As<PainfulInputData>()
 						.ToList();
-
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 
 					Assert.Single(results);
 				}
