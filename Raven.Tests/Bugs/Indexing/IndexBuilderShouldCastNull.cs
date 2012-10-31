@@ -62,9 +62,9 @@ namespace Raven.Tests.Bugs.Indexing
 			public DateTimeOffset? DateTimeOffset { get; set; }
 		}
 
-		public class NullableIndex : AbstractMultiMapIndexCreationTask<Result>
+		private class NullableIndex : AbstractMultiMapIndexCreationTask<NullableIndex.Result>
 		{
-			private class Result : Nullable
+			public class Result : Nullable
 			{
 			}
 
@@ -88,9 +88,9 @@ namespace Raven.Tests.Bugs.Indexing
 			}
 		}
 
-		public class AnonymousNullableIndex : AbstractMultiMapIndexCreationTask<Result>
+		private class AnonymousNullableIndex : AbstractMultiMapIndexCreationTask<AnonymousNullableIndex.Result>
 		{
-			private class Result : Nullable
+			public class Result : Nullable
 			{
 			}
 
