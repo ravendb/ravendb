@@ -6,7 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
+using System.Xml;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -79,6 +81,22 @@ namespace Raven.Database.Commercial
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not validate license at " + licensePath + ", " + licenseText, e);
+
+				try
+				{
+					var xmlDocument = new XmlDocument();
+					xmlDocument.LoadXml(licensePath);
+					var sig = xmlDocument.SelectSingleNode("/license/Signature");
+					if (sig != null && sig.ParentNode != null)
+						sig.ParentNode.RemoveChild(sig);
+					var stringBuilder = new StringBuilder();
+					xmlDocument.WriteTo(XmlWriter.Create(stringBuilder));
+					licenseText = stringBuilder.ToString();
+				}
+				catch (Exception)
+				{
+					// couldn't remove the signature, maybe not XML?
+				}
 
 				CurrentLicense = new LicensingStatus
 				{
