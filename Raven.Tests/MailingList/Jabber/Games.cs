@@ -38,7 +38,8 @@ namespace Raven.Tests.MailingList.Jabber
 									  {
 										  ServerName = s.Name,
 										  y.ConnectedOn,
-										  y.PlayerName
+										  y.PlayerName,
+										  s.Id
 									  };
 
 				Store(x => x.ServerName, FieldStorage.Yes);
@@ -50,6 +51,7 @@ namespace Raven.Tests.MailingList.Jabber
 
 			public class IndexQuery
 			{
+				public string Id { get; set; }
 				public string PlayerName { get; set; }
 				public string ConnectedOn { get; set; }
 				public string ServerName { get; set; }
@@ -72,6 +74,7 @@ namespace Raven.Tests.MailingList.Jabber
 						session.Query<GameServers_ConnectedPlayers.IndexQuery, GameServers_ConnectedPlayers>()
 							.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 							.Where(x => x.PlayerName.StartsWith("p"))
+							.OrderBy(x => x.Id).ThenBy(x=>x.PlayerName)
 							.AsProjection<GameServers_ConnectedPlayers.IndexQuery>()
 							.ToList();
 
