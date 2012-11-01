@@ -57,7 +57,9 @@
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <DocumentationFile>bin\Release\Raven.Database.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
+    <NoWarn>1607, 1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
