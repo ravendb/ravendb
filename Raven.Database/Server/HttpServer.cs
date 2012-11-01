@@ -19,6 +19,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
 using System.Threading.Tasks;
+using Jint;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
@@ -453,8 +454,7 @@ namespace Raven.Database.Server
 				try
 				{
 					HandleException(context, e);
-					if (ShouldLogException(e))
-						logger.WarnException("Error on request", e);
+					LogException(e);
 				}
 				finally
 				{
@@ -479,6 +479,25 @@ namespace Raven.Database.Server
 					logger.WarnException("Could not gather information to log request stats", e);
 				}
 				ResetThreadLocalState();
+			}
+		}
+
+		private void LogException(Exception e)
+		{
+			if (!ShouldLogException(e)) 
+				return;
+			var je = e as JintException;
+			if(je != null)
+			{
+				while (je.InnerException is JintException)
+				{
+					je = (JintException)je.InnerException;
+				}
+				logger.WarnException("Error on request", je);
+			}
+			else
+			{
+				logger.WarnException("Error on request", e);
 			}
 		}
 
@@ -607,6 +626,8 @@ namespace Raven.Database.Server
 					HandleBadRequest(ctx, (BadRequestException)e);
 				else if (e is ConcurrencyException)
 					HandleConcurrencyException(ctx, (ConcurrencyException)e);
+				else if (e is JintException)
+					HandleJintException(ctx, (JintException) e);
 				else if (TryHandleException(ctx, e) == false)
 					HandleGenericException(ctx, e);
 			}
@@ -614,6 +635,21 @@ namespace Raven.Database.Server
 			{
 				logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
 			}
+		}
+
+		private void HandleJintException(IHttpContext ctx, JintException e)
+		{
+			while (e.InnerException is JintException)
+			{
+				e = (JintException) e.InnerException;
+			}
+
+			ctx.SetStatusToBadRequest();
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = e.Message
+			});
 		}
 
 		protected bool TryHandleException(IHttpContext ctx, Exception exception)
