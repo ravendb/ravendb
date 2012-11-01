@@ -63,6 +63,10 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Antlr3.Runtime, Version=3.3.1.7705, Culture=neutral, PublicKeyToken=eb42632606e9261f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Raven.Database\bin\Debug\Antlr3.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
@@ -78,6 +82,10 @@
     </Reference>
     <Reference Include="ICSharpCode.NRefactory.Xml">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
+    </Reference>
+    <Reference Include="Jint, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
       <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>

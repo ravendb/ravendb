@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jint;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 using Raven.Client.Document;
@@ -186,7 +187,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		public void CanHandleNonsensePatching()
 		{
 			var doc = RavenJObject.FromObject(test);
-			Assert.Throws<InvalidOperationException>(
+			Assert.Throws<JintException>(
 				() =>
 				new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "this.Id = 'Somethi" }));
 		}
@@ -196,7 +197,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			var doc = RavenJObject.FromObject(test);
 			var invalidOperationException = Assert.Throws<InvalidOperationException>(
-				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "raise 'problem'" }));
+				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "throw 'problem'" }));
 
 			Assert.Contains("problem", invalidOperationException.Message);
 		}
