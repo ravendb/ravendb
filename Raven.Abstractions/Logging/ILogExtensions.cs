@@ -14,19 +14,29 @@ namespace Raven.Abstractions.Logging
 		public static void Debug(this ILog logger, string message, params object[] args)
 		{
 			GuardAgainstNullLogger(logger);
-			logger.Log(LogLevel.Debug, () => string.Format(CultureInfo.InvariantCulture, message, args));
+			logger.Log(LogLevel.Debug, () =>
+			{
+				if (args == null || args.Length == 0)
+					return message;
+				return string.Format(CultureInfo.InvariantCulture, message, args);
+			});
 		}
 
 		public static void DebugException(this ILog logger, string message, Exception ex)
 		{
 			GuardAgainstNullLogger(logger);
-			logger.Log(LogLevel.Debug, () => string.Format(CultureInfo.InvariantCulture, message), ex);
+			logger.Log(LogLevel.Debug, () => message, ex);
 		}
 
 		public static void Error(this ILog logger, string message, params object[] args)
 		{
 			GuardAgainstNullLogger(logger);
-			logger.Log(LogLevel.Error, () => string.Format(CultureInfo.InvariantCulture, message, args));
+			logger.Log(LogLevel.Error, () =>
+			{
+				if (args == null || args.Length == 0)
+					return message;
+				return string.Format(CultureInfo.InvariantCulture, message, args);
+			});
 		}
 
 		public static void ErrorException(this ILog logger, string message, Exception exception)
@@ -50,7 +60,12 @@ namespace Raven.Abstractions.Logging
 		public static void Info(this ILog logger, string message, params object[] args)
 		{
 			GuardAgainstNullLogger(logger);
-			logger.Log(LogLevel.Info, () => string.Format(CultureInfo.InvariantCulture, message, args));
+			logger.Log(LogLevel.Info, () =>
+			{
+				if (args == null || args.Length == 0)
+					return message;
+				return string.Format(CultureInfo.InvariantCulture, message, args);
+			});
 		}
 
 		public static void InfoException(this ILog logger, string message, Exception exception)
@@ -68,13 +83,18 @@ namespace Raven.Abstractions.Logging
 		public static void Warn(this ILog logger, string message, params object[] args)
 		{
 			GuardAgainstNullLogger(logger);
-			logger.Log(LogLevel.Warn, () => string.Format(CultureInfo.InvariantCulture, message, args));
+			logger.Log(LogLevel.Warn, () =>
+			{
+				if (args == null || args.Length == 0)
+					return message;
+				return string.Format(CultureInfo.InvariantCulture, message, args);
+			});
 		}
 
 		public static void WarnException(this ILog logger, string message, Exception ex)
 		{
 			GuardAgainstNullLogger(logger);
-			logger.Log(LogLevel.Warn, () => string.Format(CultureInfo.InvariantCulture, message), ex);
+			logger.Log(LogLevel.Warn, () => message, ex);
 		}
 
 		private static void GuardAgainstNullLogger(ILog logger)
