@@ -737,6 +737,7 @@ namespace Raven.Database
 
 		private static void RemoveReservedProperties(RavenJObject document)
 		{
+			document.Remove(string.Empty);
 			var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@")).ToList();
 			foreach (var propertyName in toRemove)
 			{
