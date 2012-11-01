@@ -104,7 +104,7 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				AddMap<Nullable>(nullables => nullables.Select(nullable => new
 				{
-					Char = (string)null,
+					Char = (char)null,
 					String = (string)null,
 					Object = (object)null,
 					Decimal = (decimal?)null,
