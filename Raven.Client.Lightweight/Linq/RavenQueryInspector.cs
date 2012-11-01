@@ -8,12 +8,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-#if !NET35
 using Raven.Client.Connection.Async;
-#endif
 
 namespace Raven.Client.Linq
 {
@@ -29,9 +26,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
-#if !NET35
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-#endif
 		private InMemoryDocumentSessionOperations session;
 
 		/// <summary>
@@ -60,9 +55,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
-#if !NET35
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
-#endif
 			this.provider.AfterQueryExecuted(queryStats.UpdateQueryStats);
 			this.expression = expression ?? Expression.Constant(this);
 		}
@@ -203,7 +196,6 @@ namespace Raven.Client.Linq
 		
 #endif
 
-#if !NET35
 		/// <summary>
 		/// Grant access to the async database commands
 		/// </summary>
@@ -216,7 +208,6 @@ namespace Raven.Client.Linq
 				return asyncDatabaseCommands;
 			}
 		}
-#endif
 
 		public InMemoryDocumentSessionOperations Session
 		{

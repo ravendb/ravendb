@@ -1,5 +1,4 @@
-﻿#if !NET35
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
@@ -83,4 +82,3 @@ namespace Raven.Client.Document.Batches
 		void ExecuteAllPendingLazyOperations();
 	}
 }
-#endif

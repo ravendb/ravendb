@@ -15,6 +15,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -22,15 +23,12 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Silverlight.Data;
 using Raven.Client.Document;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
-using Raven.Client.Extensions;
-using System.Threading;
-
-#if !NET35
 
 namespace Raven.Client.Silverlight.Connection.Async
 {
@@ -1227,5 +1225,3 @@ namespace Raven.Client.Silverlight.Connection.Async
 		}
 	}
 }
-
-#endif

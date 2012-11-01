@@ -6,10 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Lucene.Net.Documents;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -135,7 +133,7 @@ namespace Raven.Tests.Bugs
 			public string ProductName { get; set; }
 		}
 
-		public class Shipment
+		private class Shipment
 		{
 			public string Id { get; set; }
 			public string UserId { get; set; }
@@ -158,7 +156,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public class Product
+		private class Product
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
@@ -178,7 +176,7 @@ namespace Raven.Tests.Bugs
 			public string Country { get; set; }
 		}
 
-		public class ShipmentItem
+		private class ShipmentItem
 		{
 			public string Price { get; set; }
 			public string Name { get; set; }

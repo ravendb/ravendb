@@ -641,7 +641,6 @@
     <Compile Include="Json\Utilities\MathUtils.cs" />
     <Compile Include="Json\Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Json\Utilities\StringUtils.cs" />
-    <Compile Include="Json\Utilities\Tuple.cs" />
     <Compile Include="Linq\DynamicList.cs" />
     <Compile Include="Linq\DynamicNullObject.cs" />
     <Compile Include="Logging\ILog.cs" />

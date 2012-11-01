@@ -597,6 +597,38 @@ namespace Raven.Tests.Linq
 			Assert.Equal("Properties:*", q.ToString());
 		}
 
+		[Fact]
+		public void WillWrapLuceneSaveKeyword_NOT()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Name == "NOT");
+			Assert.Equal("Name:\"NOT\"", q.ToString());
+		}
+
+		[Fact]
+		public void WillWrapLuceneSaveKeyword_OR()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Name == "OR");
+			Assert.Equal("Name:\"OR\"", q.ToString());
+		}
+
+		[Fact]
+		public void WillWrapLuceneSaveKeyword_AND()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Name == "AND");
+			Assert.Equal("Name:\"AND\"", q.ToString());
+		}
+
+		[Fact]
+		public void WillNotWrapCaseNotMatchedLuceneSaveKeyword_And()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Name == "And");
+			Assert.Equal("Name:And", q.ToString());
+		}
+
 		public class IndexedUser
 		{
 			public int Age { get; set; }

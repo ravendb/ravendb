@@ -5,9 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using Raven.Client.Document;
-#if !NET35
 using Raven.Client.Connection.Async;
-#endif
 
 namespace Raven.Client.Connection
 {
@@ -28,12 +26,10 @@ namespace Raven.Client.Connection
 		IDatabaseCommands DatabaseCommands { get; }
 #endif
 
-#if !NET35
 		/// <summary>
 		/// Grant access to the async database commands
 		/// </summary>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
-#endif
 
 		/// <summary>
 		/// The query session

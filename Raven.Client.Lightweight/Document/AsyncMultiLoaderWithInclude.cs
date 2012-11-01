@@ -1,4 +1,3 @@
-#if !NET35
 //-----------------------------------------------------------------------
 // <copyright file="MultiLoaderWithInclude.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -10,7 +9,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Document.Async;
 
 namespace Raven.Client.Document
 {
@@ -127,4 +125,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

@@ -1,6 +1,5 @@
 using System;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
 
@@ -11,7 +10,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void WillNotProduceAnyErrors()
 		{
-			using(var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
@@ -25,7 +24,7 @@ namespace Raven.Tests.Indexes
 					{
 						for (int j = 0; j < 25; j++)
 						{
-							s.Store(new {Name = "User #" +j});
+							s.Store(new {Name = "User #" + j});
 						}
 						s.SaveChanges();
 					}
@@ -37,7 +36,7 @@ namespace Raven.Tests.Indexes
 						.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
 						.ToArray();
 					Assert.Equal(25, ret.Length);
-					foreach(var x in ret)
+					foreach (var x in ret)
 						Assert.Equal("200", x.Count);
 				}
 

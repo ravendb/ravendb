@@ -1,15 +1,12 @@
-﻿#if !NET35
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
-using Raven.Client.Linq;
 using Raven.Client.Listeners;
 
 namespace Raven.Client.Document
@@ -635,9 +632,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 																		 theDatabaseCommands,
 #endif
-#if !NET35
 																		 theAsyncDatabaseCommands,
-#endif
 																		 indexName, fields, projections, queryListeners)
 										{
 											pageSize = pageSize,
@@ -810,4 +805,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

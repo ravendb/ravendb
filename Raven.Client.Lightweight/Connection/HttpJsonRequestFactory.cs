@@ -124,7 +124,6 @@ namespace Raven.Client.Connection
 			ResetCache();
 		}
 
-#if !NET35
 		///<summary>
 		/// The aggressive cache duration
 		///</summary>
@@ -155,30 +154,7 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
-#else
-		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
-		[ThreadStatic] private static bool disableHttpCaching;
 
-
-		
-		/// <summary>
-		/// Disable the HTTP caching
-		/// </summary>
-		public bool DisableHttpCaching
-		{
-			get { return disableHttpCaching; }
-			set { disableHttpCaching = value; }
-		}
-
-		///<summary>
-		/// The aggressive cache duration
-		///</summary>
-		public TimeSpan? AggressiveCacheDuration
-		{
-			get { return aggressiveCacheDuration; }
-			set { aggressiveCacheDuration = value; }
-		}
-#endif
 		private volatile bool disposed;
 
 		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest)
@@ -221,10 +197,8 @@ namespace Raven.Client.Connection
 				return;
 		    disposed = true;
 			cache.Dispose();
-#if !NET35
 			aggressiveCacheDuration.Dispose();
 			disableHttpCaching.Dispose();
-#endif
 		}
 
 		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)

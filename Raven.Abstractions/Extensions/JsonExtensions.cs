@@ -22,14 +22,11 @@ namespace Raven.Abstractions.Extensions
 	{
 	    public static RavenJObject ToJObject(object result)
 		{
-#if !NET35
 			var dynamicJsonObject = result as Linq.IDynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner;
-#endif
 			if (result is string || result is ValueType)
 				return new RavenJObject { { "Value", new RavenJValue(result) } };
-
 			return RavenJObject.FromObject(result);
 		}
 

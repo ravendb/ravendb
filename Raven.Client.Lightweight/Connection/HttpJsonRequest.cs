@@ -12,9 +12,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Threading;
-#if !NET35
 using System.Threading.Tasks;
-#endif
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -81,8 +79,6 @@ namespace Raven.Client.Connection
 			WriteMetadata(requestParams.Metadata);
 			requestParams.UpdateHeaders(webRequest);
 		}
-
-#if !NET35
 
 		public Task ExecuteRequestAsync()
 		{
@@ -164,7 +160,7 @@ namespace Raven.Client.Connection
 					}
 				});
 		}
-#endif
+		
 		public void ExecuteRequest()
 		{
 			ReadResponseJson();
@@ -257,8 +253,6 @@ namespace Raven.Client.Connection
 			conventions.HandleForbiddenResponse(forbbidenResponse);
 		}
 
-
-#if !NET35
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
@@ -279,7 +273,6 @@ namespace Raven.Client.Connection
 
 			conventions.HandleForbiddenResponseAsync(forbbidenResponse);
 		}
-#endif
 
 		private void RecreateWebRequest(Action<HttpWebRequest> action)
 		{
@@ -331,7 +324,6 @@ namespace Raven.Client.Connection
 					throw;
 				return result;
 			}
-#if !NET35
 			catch (AggregateException e)
 			{
 				sp.Stop();
@@ -343,7 +335,6 @@ namespace Raven.Client.Connection
 					throw;
 				return result;
 			}
-#endif
 
 			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;

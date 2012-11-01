@@ -7,14 +7,8 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Transactions;
-#if !NET35
-using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
-#endif
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;

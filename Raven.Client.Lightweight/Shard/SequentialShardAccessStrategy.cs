@@ -5,15 +5,10 @@
 //-----------------------------------------------------------------------
 #if !SILVERLIGHT
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using Raven.Client.Connection;
-
-#if !NET35
 using System.Threading.Tasks;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
-#endif
 
 namespace Raven.Client.Shard
 {
@@ -56,19 +51,11 @@ namespace Raven.Client.Shard
 
 			// if ALL nodes failed, we still throw
 			if (errors.Count == commands.Count)
-#if !NET35
 				throw new AggregateException(errors);
-#else
-			throw new InvalidOperationException("Got an error from all servers", errors.First())
-				{
-					Data = {{"Errors", errors}}
-				};
-#endif
 
 			return list.ToArray();
 		}
 
-#if !NET35
 		public event ShardingErrorHandle<IAsyncDatabaseCommands> OnAsyncError;
 
 		public Task<T[]> ApplyAsync<T>(IList<IAsyncDatabaseCommands> commands, ShardRequestData request, Func<IAsyncDatabaseCommands, int, Task<T>> operation)
@@ -119,7 +106,6 @@ namespace Raven.Client.Shard
 			executer(0);
 			return resultsTask.Task.ContinueWith(task => task.Result.ToArray());
 		}
-#endif
 	}
 }
 #endif

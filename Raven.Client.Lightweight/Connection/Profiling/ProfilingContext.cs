@@ -1,11 +1,5 @@
-#if !NET35
-
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Linq;
-using Raven.Client.Document;
 
 namespace Raven.Client.Connection.Profiling
 {
@@ -46,5 +40,3 @@ namespace Raven.Client.Connection.Profiling
 		}
 	}
 }
-
-#endif

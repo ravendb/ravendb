@@ -31,10 +31,10 @@ namespace Raven.Tests.Bugs.Indexing
 				}
 			}
 		}
-	}
 
-	public class Result
-	{
-		public string SortVersion { get; set; }
+		private class Result
+		{
+			public string SortVersion { get; set; }
+		}
 	}
 }

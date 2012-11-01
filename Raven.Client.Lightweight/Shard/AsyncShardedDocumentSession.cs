@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -328,4 +327,3 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-#endif

@@ -18,7 +18,6 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public static class RavenTransactionAccessor
 	{
-#if !NET35
 		[ThreadStatic]
 		private static Stack<TransactionInformation> currentRavenTransactions;
 
@@ -55,17 +54,15 @@ namespace Raven.Client.Connection
 			});
 			return new DisposableAction(() => CurrentRavenTransactions.Pop());
 		}
-#endif
+		
 		/// <summary>
 		/// Gets the transaction information for the current transaction
 		/// </summary>
 		/// <returns></returns>
 		public static TransactionInformation GetTransactionInformation()
 		{
-			#if !NET35
 			if (CurrentRavenTransactions.Count >0)
 				return CurrentRavenTransactions.Peek();
-			#endif
 			if (Transaction.Current == null)
 				return null;
 			return new TransactionInformation

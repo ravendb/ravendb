@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+using Lucene.Net.Search;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -11,13 +12,13 @@ namespace Raven.Tests.MailingList
 {
 	public class Joel : RavenTest
 	{
-		public class Item
+		private class Item
 		{
 			public string Name { get; set; }
 			public int Age { get; set; }
 		}
 
-		public class Index : AbstractIndexCreationTask<Item, Index.Result>
+		private class Index : AbstractIndexCreationTask<Item, Index.Result>
 		{
 			public class Result
 			{
@@ -27,11 +28,11 @@ namespace Raven.Tests.MailingList
 			public Index()
 			{
 				Map = items =>
-					  from item in items
-					  select new Result
-					  {
-						  Query = new object[] { item.Age, item.Name }
-					  };
+				      from item in items
+				      select new Result
+				      {
+					      Query = new object[] {item.Age, item.Name}
+				      };
 			}
 		}
 
@@ -42,7 +43,12 @@ namespace Raven.Tests.MailingList
 			{
 				new Index().Execute(s);
 				var indexDefinition = s.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
-				Assert.Contains("new()", indexDefinition.Map);
+				Assert.Equal(@"docs.Items.Select(item => new {
+    Query = new object[] {
+        ((object) item.Age),
+        item.Name
+    }
+})", indexDefinition.Map);
 			}
 		}
 	}

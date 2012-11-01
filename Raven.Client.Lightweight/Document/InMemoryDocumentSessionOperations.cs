@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 #if !SILVERLIGHT
@@ -12,6 +13,8 @@ using System.Text.RegularExpressions;
 using System.Transactions;
 #endif
 using System.Text;
+using System.Threading.Tasks;
+using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -26,14 +29,6 @@ using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
-
-#if !NET35
-using System.Dynamic;
-using Microsoft.CSharp.RuntimeBinder;
-using System.Threading.Tasks;
-using Raven.Abstractions.Json;
-
-#endif
 
 namespace Raven.Client.Document
 {
@@ -211,10 +206,8 @@ namespace Raven.Client.Document
 			{
 				string id;
 				if (TryGetIdFromInstance(instance, out id)
-#if !NET35
 					|| (instance is IDynamicMetaObjectProvider &&
 					   TryGetIdFromDynamic(instance, out id))
-#endif
 )
 				{
 					AssertNoNonUniqueInstance(instance, id);
@@ -450,13 +443,11 @@ more responsive application.
 			if (Equals(entity, default(T)))
 			{
 				entity = documentFound.Deserialize<T>(Conventions);
-#if !NET35
 				var document = entity as RavenJObject;
 				if (document != null)
 				{
 					entity = (T)(object)(new DynamicJsonObject(document));
 				}
-#endif
 			}
 			TrySetIdentity(entity, id);
 
@@ -480,12 +471,10 @@ more responsive application.
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 			if (identityProperty == null)
 			{
-#if !NET35
 				if (entity is IDynamicMetaObjectProvider)
 				{
 					TrySetIdOnynamic(entity, id);
 				}
-#endif
 				return;
 			}
 
@@ -619,7 +608,6 @@ more responsive application.
 		protected string GenerateDocumentKeyForStorage(object entity)
 		{
 			string id;
-#if !NET35
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				if (TryGetIdFromDynamic(entity, out id) == false)
@@ -631,7 +619,6 @@ more responsive application.
 				}
 				return id;
 			}
-#endif
 
 			id = GetOrGenerateDocumentKey(entity);
 			TrySetIdentity(entity, id);
@@ -645,7 +632,6 @@ more responsive application.
 			throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
 		}
 
-#if !NET35
 		protected internal Task<string> GenerateDocumentKeyForStorageAsync(object entity)
 		{
 			if (entity is IDynamicMetaObjectProvider)
@@ -673,7 +659,6 @@ more responsive application.
 		}
 
 		protected abstract Task<string> GenerateKeyAsync(object entity);
-#endif
 
 		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
@@ -720,7 +705,6 @@ more responsive application.
 			return id;
 		}
 
-#if !NET35
 		protected Task<string> GetOrGenerateDocumentKeyAsync(object entity)
 		{
 			string id;
@@ -739,7 +723,6 @@ more responsive application.
 				return task.Result;
 			});
 		}
-#endif
 
 		/// <summary>
 		/// Attempts to get the document key from an instance 
@@ -762,7 +745,6 @@ more responsive application.
 			return false;
 		}
 
-#if !NET35
 		private static bool TryGetIdFromDynamic(dynamic entity, out string id)
 		{
 			try
@@ -787,7 +769,6 @@ more responsive application.
 			{
 			}
 		}
-#endif
 
 		/// <summary>
 		/// Creates the put entity command.
@@ -1060,9 +1041,7 @@ more responsive application.
 		private void SetClrType(Type entityType, RavenJObject metadata)
 		{
 			if (
-#if !NET35
 				entityType == typeof(DynamicJsonObject) ||
-#endif
 				entityType == typeof(RavenJObject)) // dynamic types
 			{
 				if (metadata.ContainsKey(Constants.RavenClrType))

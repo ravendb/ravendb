@@ -1,5 +1,4 @@
-﻿#if !NET35
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
@@ -121,4 +120,3 @@ namespace Raven.Client.Document.Batches
 #endif
 	}
 }
-#endif

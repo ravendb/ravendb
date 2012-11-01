@@ -1,6 +1,6 @@
 using System.ComponentModel.Composition.Hosting;
-using System.Linq;
 using Raven.Client.Indexes;
+using System.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs

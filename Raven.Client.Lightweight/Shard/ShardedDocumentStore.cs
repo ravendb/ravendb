@@ -3,27 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35
-
 using System;
 #if !SILVERLIGHT
 using System.Collections.Generic;
 using System.Collections.Specialized;
 #endif
 using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-#if !NET35
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
-#endif
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Client.Util;
 
 namespace Raven.Client.Shard
 {
@@ -106,8 +98,6 @@ namespace Raven.Client.Shard
 				afterDispose(this, EventArgs.Empty);
 		}
 
-#if !NET35
-
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
@@ -144,8 +134,6 @@ namespace Raven.Client.Shard
 			AfterSessionCreated(session);
 			return session;
 		}
-
-#endif
 
 		private readonly AtomicDictionary<IDatabaseChanges> changes =
 			new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
@@ -318,7 +306,6 @@ namespace Raven.Client.Shard
 			return store.DatabaseCommands;
 		}
 
-#if !NET35
 		public IAsyncDatabaseCommands AsyncDatabaseCommandsFor(string shardId)
 		{
 			IDocumentStore store;
@@ -327,7 +314,6 @@ namespace Raven.Client.Shard
 
 			return store.AsyncDatabaseCommands;
 		}
-#endif
 
 		/// <summary>
 		/// Executes the index creation against each of the shards.
@@ -345,5 +331,3 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-
-#endif

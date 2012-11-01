@@ -135,7 +135,6 @@ namespace Raven.Client.Indexes
 			return indexDefinition;
 		}
 
-#if !NET35
 		private static bool ContainsWhereEntityIs(Expression body)
 		{
 			var whereEntityIsVisitor = new WhereEntityIsVisitor();
@@ -154,12 +153,6 @@ namespace Raven.Client.Indexes
 				return base.VisitMethodCall(node);
 			}
 		}
-#else
-		 private static bool ContainsWhereEntityIs(Expression body)
-	    {
-	        return body.ToString().Contains("WhereEntityIs");
-	    }
-#endif
 
 		private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
 		{

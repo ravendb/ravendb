@@ -6,25 +6,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
-#if !NET35
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
-#endif
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
-using System.Linq;
 using Raven.Json.Linq;
-
 
 namespace Raven.Client.Document
 {
@@ -278,7 +274,7 @@ namespace Raven.Client.Document
 			return DocumentKeyGenerator(databaseCommands,entity);
 		}
 #endif
-#if !NET35
+	
 		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands,object entity)
 		{
 			var type = entity.GetType();
@@ -289,7 +285,6 @@ namespace Raven.Client.Document
 			}
 			return AsyncDocumentKeyGenerator(databaseCommands,entity);
 		}
-#endif
 
 		/// <summary>
 		/// Gets the identity property.
@@ -397,13 +392,12 @@ namespace Raven.Client.Document
 		/// <value>The document key generator.</value>
 		public Func<IDatabaseCommands,object, string> DocumentKeyGenerator { get; set; }
 #endif
-#if !NET35
+	
 		/// <summary>
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
 		public Func<IAsyncDatabaseCommands,object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
-#endif
 
 		/// <summary>
 		/// Instruct RavenDB to parallel Multi Get processing 
@@ -456,7 +450,7 @@ namespace Raven.Client.Document
 						new JsonNumericConverter<double>(double.TryParse),
 						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 						new JsonDynamicConverter()
 #endif
 					}
@@ -504,7 +498,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleForbiddenResponse { get; set; }
 
-#if !NET35
 		/// <summary>
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
@@ -512,11 +505,10 @@ namespace Raven.Client.Document
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
 
 		/// <summary>
-		/// Begins handling of fobbiden responses
+		/// Begins handling of forbidden responses
 		/// in async manner
 		/// </summary>
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
-#endif
 
 		/// <summary>
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls

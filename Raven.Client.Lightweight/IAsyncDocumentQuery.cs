@@ -1,8 +1,7 @@
-﻿#if !NET35
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using System;
 
 namespace Raven.Client
 {
@@ -39,4 +38,3 @@ namespace Raven.Client
 		Task<Tuple<QueryResult, IList<T>>> ToListAsync();
 	}
 }
-#endif

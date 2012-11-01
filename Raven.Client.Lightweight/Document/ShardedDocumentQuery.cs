@@ -8,13 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Raven.Abstractions.Data;
 using System.Threading;
-#if !NET35
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
-#endif
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 using Raven.Client.Connection;
@@ -61,9 +59,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			, null
 #endif
-#if !NET35
 			, null
-#endif
 			, indexName, 
 			fieldsToFetch,
 			projectionFields, 
@@ -204,7 +200,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET35
 		/// <summary>
 		///   Grant access to the async database commands
 		/// </summary>
@@ -212,9 +207,8 @@ namespace Raven.Client.Document
 		{
 			get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
 		}
-#endif
 
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -242,12 +236,10 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET35
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{
 			throw new NotSupportedException();
 		}
-#endif
 	}
 }
 #endif

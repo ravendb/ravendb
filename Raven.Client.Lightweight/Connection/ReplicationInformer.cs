@@ -13,9 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-#if !NET35
 using System.Threading.Tasks;
-#endif
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -87,57 +85,14 @@ namespace Raven.Client.Connection
 			this.conventions = conventions;
 		}
 
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
 #else
 		private readonly Dictionary<string, FailureCounter> failureCounts = new Dictionary<string, FailureCounter>();
 #endif
 
-#if !NET35
 		private Task refreshReplicationInformationTask;
-#endif
 
-#if NET35
-		/// <summary>
-		/// Updates the replication information if needed.
-		/// </summary>
-		/// <param name="serverClient">The server client.</param>
-		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
-		{
-			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-				return;
-
-			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-				return;
-			lock (replicationLock)
-			{
-				if (firstTime)
-				{
-					var serverHash = GetServerHash(serverClient);
-
-					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
-					if(document != null)
-					{
-						UpdateReplicationInformationFromDocument(document);
-					}
-				}
-
-				firstTime = false;
-
-				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-					return;
-
-				try 
-				{          
-					RefreshReplicationInformation(serverClient);
-				}
-				catch (System.Exception e)
-				{
-					log.ErrorException("Failed to refresh replication information", e);
-				}
-			}
-		}
-#else
 		/// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
@@ -187,7 +142,6 @@ namespace Raven.Client.Connection
 					});
 			}
 		}
-#endif
 
 		private class FailureCounter
 		{
@@ -278,7 +232,7 @@ namespace Raven.Client.Connection
 
 		private FailureCounter GetHolder(string operationUrl)
 		{
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
 #else
 			// need to compensate for 3.5 not having concnurrent dic.
@@ -597,7 +551,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 		}
 		#endregion
 
-#if !NET35
 		#region ExecuteWithReplicationAsync
 
 		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<string, Task<T>> operation)
@@ -771,23 +724,21 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		}
 
 		#endregion
-#endif
 
 		protected virtual bool IsServerDown(Exception e)
 		{
-#if !NET35
 			var aggregateException = e as AggregateException;
 			if (aggregateException != null)
 			{
 				e = aggregateException.ExtractSingleInnerException();
 			}
-#endif
+
 			var webException = (e as WebException) ?? (e.InnerException as WebException);
 			if (webException != null)
 			{
 				switch (webException.Status)
 				{
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 					case WebExceptionStatus.NameResolutionFailure:
 					case WebExceptionStatus.ReceiveFailure:
 					case WebExceptionStatus.PipelineFailure:
@@ -818,11 +769,9 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		public virtual void Dispose()
 		{
-#if !NET35
 			var replicationInformationTaskCopy = refreshReplicationInformationTask;
 			if (replicationInformationTaskCopy != null)
 				replicationInformationTaskCopy.Wait();
-#endif
 		}
 	}
 

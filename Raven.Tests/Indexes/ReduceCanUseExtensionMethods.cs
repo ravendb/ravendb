@@ -1,27 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Abstractions.Indexing;
+﻿using System.Linq;
+using System.Threading;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Database;
-using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Indexes
 {
 	public class ReduceCanUseExtensionMethods : RavenTest
 	{
-		public class PainfulInputData
+		private class InputData
 		{
-			public string Name;
 			public string Tags;
 		}
 
-		public class IndexedFields
+		private class Result
 		{
 			public string[] Tags;
 		}
@@ -31,52 +24,59 @@ namespace Raven.Tests.Indexes
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Initialize();
-
-				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<PainfulInputData, IndexedFields>()
-					{
-						Map = documents => from doc in documents
-										   let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
-										   select new IndexedFields()
-											   {
-												   Tags = tags.ToArray()
-											   }
-					});
-
-				using(var session = store.OpenSession())
+				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<InputData, Result>()
 				{
-					session.Store(new PainfulInputData()
-						{
-							Name = "Hello, universe",
-							Tags = "Little, orange, comment"
-						});
+					Map = documents => from doc in documents
+					                   let tags = ((string[]) doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+					                   select new Result()
+					                   {
+						                   Tags = tags.ToArray()
+					                   }
+				});
 
-					session.Store(new PainfulInputData()
-						{
-							Name = "Highlander",
-							Tags = "only-one"
-						});
-					
+				using (var session = store.OpenSession())
+				{
+					session.Store(new InputData {Tags = "Little, orange, comment"});
+					session.Store(new InputData {Tags = "only-one"});
 					session.SaveChanges();
 				}
 
-				//  How to assert no indexing errors?  
-				//  When I create a similur index, the UI shows an indexing error related to using .Select().
+				while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
+					Thread.Sleep(100);
+				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 
-				using(var session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					var results = session.Query<IndexedFields>("Hi")
-						.Customize(a => a.WaitForNonStaleResults())
+					var results = session.Query<Result>("Hi")
 						.Search(d => d.Tags, "only-one")
-						.As<PainfulInputData>()
+						.As<InputData>()
 						.ToList();
-
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 
 					Assert.Single(results);
 				}
 			}
 		}
-	
+
+		[Fact]
+		public void CorrectlyUseExtensionMethodsOnConvertedType()
+		{
+			var indexDefinition = new PainfulIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+			Assert.Contains("((String[]) doc.Tags.Split(", indexDefinition.Map);
+		}
+
+		private class PainfulIndex : AbstractMultiMapIndexCreationTask<Result>
+		{
+			public PainfulIndex()
+			{
+				AddMap<InputData>(documents => from doc in documents
+										 // Do not remove the redundant (string[]). 
+										 // It's intentional here and intended to test the following parsing: ((string[])prop).Select(...)
+										 let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+										 select new Result()
+										 {
+											 Tags = tags.ToArray()
+										 });
+			}
+		}
 	}
 }

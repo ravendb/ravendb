@@ -2,12 +2,9 @@
 using System.IO;
 using System.Linq;
 using System.Net;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
-#if !NET35
 namespace Raven.Abstractions.Extensions
 {
 	///<summary>
@@ -101,4 +98,3 @@ namespace Raven.Abstractions.Extensions
         }
 	}
 }
-#endif

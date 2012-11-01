@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-#if !NET35
 using Raven.Client.Connection.Async;
-#endif
 using Raven.Client.Document;
 
 namespace Raven.Client.Connection
@@ -83,7 +81,6 @@ namespace Raven.Client.Connection
 			return new Uri(url);
 		}
 
-#if !NET35
 		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, Document.DocumentConvention convention)
 		{
 			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
@@ -97,6 +94,5 @@ namespace Raven.Client.Connection
 			
 			return httpJsonRequest;
 		}
-#endif
 	}
 }

@@ -7,7 +7,6 @@ namespace Raven.Tests.Bugs
 {
 	public class CanUseReduceResultInOutput : RavenTest
 	{
-
 		public class CalendarWeek
 		{
 			public Owner Owner { get; set; }
