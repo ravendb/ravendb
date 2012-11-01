@@ -5,53 +5,36 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
-using Raven.Client;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Raven.Tests.MailingList
 {
 	public class Bhiku : RavenTest
 	{
-		private readonly IDocumentStore store;
-
-		public Bhiku()
-		{
-			store = NewDocumentStore();
-			using (var session = store.OpenSession())
-			{
-				session.Store(new Student { FirstName = "David", LastName = "Globe" });
-				session.Store(new Student { FirstName = "Tyson", LastName = "David" });
-				session.Store(new Student { FirstName = "David", LastName = "Jason" });
-				session.SaveChanges();
-			}
-
-			new Student_ByName().Execute(store);
-		}
-
 		[Fact]
 		public void CanUseBoost_StartsWith()
 		{
-			using (var session = store.OpenSession())
+			using (var store = NewDocumentStore())
 			{
-				var students = session.Advanced.LuceneQuery<Student>()
-					.WaitForNonStaleResults()
-					.WhereStartsWith("FirstName", "David").Boost(3)
-					.WhereStartsWith("LastName", "David")
-					.ToList();
-
-				Assert.Equal(3, students.Count);
-				Assert.Equal("students/2", students[2].Id);
-
-				try
+				using (var session = store.OpenSession())
 				{
-						.ToList();
+					session.Store(new Student { FirstName = "David", LastName = "Globe" });
+					session.Store(new Student { FirstName = "Tyson", LastName = "David" });
+					session.Store(new Student { FirstName = "David", LastName = "Jason" });
+					session.SaveChanges();
+				}
 
-					Assert.Equal(3, students.Count);
+				new Student_ByName().Execute(store);
 
+				using (var session = store.OpenSession())
+				{
+					var students = session.Advanced.LuceneQuery<Student>()
+						.WaitForNonStaleResults()
+						.WhereStartsWith("FirstName", "David").Boost(3)
+						.WhereStartsWith("LastName", "David")
 						.OrderBy(Constants.TemporaryScoreValue, "LastName")
 						.ToList();
 
@@ -59,11 +42,7 @@ namespace Raven.Tests.MailingList
 
 					Assert.Equal("students/1", students[0].Id);
 					Assert.Equal("students/3", students[1].Id);
-				}
-				catch (EqualException)
-				{
-					Assert.Equal("students/3", students[0].Id);
-					Assert.Equal("students/1", students[1].Id);
+					Assert.Equal("students/2", students[2].Id);
 				}
 			}
 		}
@@ -71,32 +50,36 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanUseBoost_Equal()
 		{
-			using (var session = store.OpenSession())
+			using (var store = NewDocumentStore())
 			{
-				var queryable = session.Query<Student, Student_ByName>()
-					.Customize(x => x.WaitForNonStaleResults())
-					.Where(x => x.FirstName == ("David") || x.LastName == ("David"));
-				var students = queryable
-					.ToList();
-
-				Assert.Equal(3, students.Count);
-				Assert.Equal("students/2", students[2].Id);
-
-				try
+				using (var session = store.OpenSession())
 				{
+					session.Store(new Student { FirstName = "David", LastName = "Globe" });
+					session.Store(new Student { FirstName = "Tyson", LastName = "David" });
+					session.Store(new Student { FirstName = "David", LastName = "Jason" });
+					session.SaveChanges();
+				}
+
+				new Student_ByName().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					var queryable = session.Query<Student, Student_ByName>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.FirstName == ("David") || x.LastName == ("David"));
+					var students = queryable
+						.ToList();
+
+					Assert.Equal(3, students.Count);
+
 					Assert.Equal("students/1", students[0].Id);
 					Assert.Equal("students/3", students[1].Id);
-				}
-				catch (EqualException)
-				{
-					Assert.Equal("students/3", students[0].Id);
-					Assert.Equal("students/1", students[1].Id);
+					Assert.Equal("students/2", students[2].Id);
 				}
 			}
-
 		}
 
-		private class Student
+		public class Student
 		{
 			public string Id { get; set; }
 			public string FirstName { get; set; }
@@ -104,7 +87,7 @@ namespace Raven.Tests.MailingList
 			public DateTime DateOfBirth { get; set; }
 		}
 
-		private class Student_ByName : AbstractIndexCreationTask<Student>
+		public class Student_ByName : AbstractIndexCreationTask<Student>
 		{
 			public Student_ByName()
 			{
