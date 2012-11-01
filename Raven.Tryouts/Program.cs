@@ -16,32 +16,8 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "Test",
-			})
-			{
-				store.Initialize();
-				store.Conventions.ShouldCacheRequest = url => false;
-				store.MaxNumberOfCachedRequests = 0;
-				store.EnlistInDistributedTransactions = false;
-
-				using (store.DisableAggressiveCaching())
-				{
-					int c = 0;
-					while (true)
-					{
-						Console.WriteLine(++c);
-						using (var session = store.OpenSession())
-						{
-							for (var i = 0; i < 1000; i++)
-								session.Store(new Article { Text = "foobar" });
-							session.SaveChanges();
-						}
-					}
-				}
-			}
+			var dateTime = DateTime.Parse("11/01/2012 23:30:00Z");
+			Console.WriteLine(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(dateTime, "Pacific Standard Time"));
 		}
 
 
