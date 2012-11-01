@@ -1251,7 +1251,7 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("POST", url =>
 			{
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, url + "/identity/next?" + Uri.EscapeDataString(name), "POST", credentials, convention)
+					new CreateHttpJsonRequestParams(this, url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 				var readResponseJson = request.ReadResponseJson();
