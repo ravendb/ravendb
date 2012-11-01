@@ -222,9 +222,9 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-		protected void WaitForUserToContinueTheTest(bool debug = true)
+		protected void WaitForUserToContinueTheTest()
 		{
-			if (debug && Debugger.IsAttached == false)
+			if (Debugger.IsAttached == false)
 				return;
 
 			using (var documentStore = new DocumentStore
@@ -241,7 +241,7 @@ namespace Raven.Tests
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
 			}
 
 		}

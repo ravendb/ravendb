@@ -15,6 +15,14 @@ namespace Raven.Abstractions.Linq
 
 		public bool IsExplicitNull { get; set; }
 
+		public override bool TryConvert(ConvertBinder binder, out object result)
+		{
+			result = binder.ReturnType.IsValueType
+				         ? Activator.CreateInstance(binder.ReturnType)
+				         : null;
+			return true;
+		}
+
 		public override bool TryBinaryOperation(BinaryOperationBinder binder, object arg, out object result)
 		{
 			switch (binder.Operation)
@@ -26,7 +34,7 @@ namespace Raven.Abstractions.Linq
 					result = arg != null && arg is DynamicNullObject == false;
 					break;
 				default:
-					result = this;
+					result = new DynamicNullObject();
 					break;
 			}
 			return true;
@@ -89,35 +97,6 @@ namespace Raven.Abstractions.Linq
 		{
 			return GetEnumerator();
 		}
-
-		// null is false or 0 by default
-		public static implicit operator bool(DynamicNullObject o) { return false; }
-		public static implicit operator bool?(DynamicNullObject o) { return null; }
-		public static implicit operator decimal(DynamicNullObject o) { return 0; }
-		public static implicit operator decimal?(DynamicNullObject o) { return null; }
-		public static implicit operator double(DynamicNullObject o) { return 0; }
-		public static implicit operator double?(DynamicNullObject o) { return null; }
-		public static implicit operator float(DynamicNullObject o) { return 0; }
-		public static implicit operator float?(DynamicNullObject o) { return null; }
-		public static implicit operator long(DynamicNullObject o) { return 0; }
-		public static implicit operator long?(DynamicNullObject o) { return null; }
-		public static implicit operator int(DynamicNullObject o) { return 0; }
-		public static implicit operator int?(DynamicNullObject o) { return null; }
-		public static implicit operator short(DynamicNullObject o) { return 0; }
-		public static implicit operator short?(DynamicNullObject o) { return null; }
-		public static implicit operator byte(DynamicNullObject o) { return 0; }
-		public static implicit operator byte?(DynamicNullObject o) { return null; }
-		public static implicit operator string(DynamicNullObject o) { return null; }
-		public static implicit operator char(DynamicNullObject o) { return Char.MinValue; }
-		public static implicit operator char?(DynamicNullObject o) { return null; }
-		public static implicit operator DateTime(DynamicNullObject o) { return DateTime.MinValue; }
-		public static implicit operator DateTime?(DynamicNullObject o) { return null; }
-		public static implicit operator DateTimeOffset(DynamicNullObject o) { return DateTimeOffset.MinValue; }
-		public static implicit operator DateTimeOffset?(DynamicNullObject o) { return null; }
-		public static implicit operator TimeSpan(DynamicNullObject o) { return TimeSpan.Zero; }
-		public static implicit operator TimeSpan?(DynamicNullObject o) { return null; }
-		public static implicit operator Guid(DynamicNullObject o) { return Guid.Empty; }
-		public static implicit operator Guid?(DynamicNullObject o) { return null; }
 
 		public static bool operator ==(DynamicNullObject left, object right)
 		{

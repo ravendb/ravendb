@@ -82,7 +82,10 @@ namespace Raven.Tests.Bugs.MapRedue
 					.Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
 					.ToList();
 
-				Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+				WaitForUserToContinueTheTest(store);
+
+				var databaseStatistics = store.DatabaseCommands.GetStatistics();
+				Assert.Empty(databaseStatistics.Errors);
 
 				Assert.NotEmpty(max);
 			}
