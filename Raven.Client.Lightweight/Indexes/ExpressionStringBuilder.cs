@@ -1495,23 +1495,6 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-		private static readonly Dictionary<Type, string> wellKnownTypes = new Dictionary<Type, string>
-		{
-			{typeof (object), "object"},
-			{typeof (string), "string"},
-			{typeof (int), "int"},
-			{typeof (long), "long"},
-			{typeof (float), "float"},
-			{typeof (double), "double"},
-			{typeof (decimal), "decimal"},
-			{typeof (bool), "bool"},
-			{typeof (char), "char"},
-			{typeof (byte), "byte"},
-			{typeof (Guid), "Guid"},
-			{typeof (DateTime), "DateTime"},
-			{typeof (DateTimeOffset), "DateTimeOffset"},
-			{typeof (TimeSpan), "TimeSpan"},
-		};
 		private void VisitType(Type type)
 		{
 			if (type.IsGenericType == false || CheckIfAnonymousType(type))
@@ -1534,13 +1517,7 @@ namespace Raven.Client.Indexes
 					Out("?");
 					return;
 				}
-				string value;
-				if(wellKnownTypes.TryGetValue(type, out value))
-				{
-					Out(value);
-					return;
-				}
-				Out(type.Name);
+				Out(ConvertTypeToCSharpKeyword(type));
 				return;
 			}
 			var genericArguments = type.GetGenericArguments();
