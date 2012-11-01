@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
+using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Json.Linq;
@@ -14,48 +16,38 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
+			using (var store = new DocumentStore
 			{
-				Console.Write("\r" + i);
-				Environment.SetEnvironmentVariable("Run", i.ToString());
-				using (var x = new MultiOutputReduce())
+				Url = "http://localhost:8080",
+				DefaultDatabase = "Test",
+			})
+			{
+				store.Initialize();
+				store.Conventions.ShouldCacheRequest = url => false;
+				store.MaxNumberOfCachedRequests = 0;
+				store.EnlistInDistributedTransactions = false;
+
+				using (store.DisableAggressiveCaching())
 				{
-					x.CanGetCorrectResultsFromAllItems();
+					int c = 0;
+					while (true)
+					{
+						Console.WriteLine(++c);
+						using (var session = store.OpenSession())
+						{
+							for (var i = 0; i < 1000; i++)
+								session.Store(new Article { Text = "foobar" });
+							session.SaveChanges();
+						}
+					}
 				}
 			}
-
-			//using(var docDb = new DocumentDatabase(new RavenConfiguration
-			//{
-			//	RunInMemory = true
-			//}))
-			//{
-			//	docDb.PutIndex("My", new IndexDefinition
-			//	{
-			//		Map = "from doc in docs.Docs select new { doc.Name }"
-			//	});
-
-			//	docDb.Put("Raven/Hilo/docs", null, new RavenJObject{{"Max", 32}}, new RavenJObject(), null);
+		}
 
 
-			//	docDb.Batch(new ICommandData[]
-			//	{
-			//		new PutCommandData
-			//		{
-			//			Key = "docs/1",
-			//			Metadata = new RavenJObject{{Constants.RavenEntityName, "Docs"}},
-			//			Document = new RavenJObject{{"Name", "oren"}}
-			//		},
-			//		new PutCommandData
-			//		{
-			//			Key = "docs/2",
-			//			Metadata = new RavenJObject{{Constants.RavenEntityName, "Docs"}},
-			//			Document = new RavenJObject{{"Name", "ayende"}}
-			//		},  
-			//	});
-
-			//	var jsonDocuments = docDb.IndexingExecuter.GetJsonDocuments(Guid.Empty);
-			//	jsonDocuments = docDb.IndexingExecuter.GetJsonDocuments(Guid.Parse("00000000-0000-0100-0000-000000000002"));
-			//}
+		public class Article
+		{
+			public string Text { get; set; }
 		}
 	}
 }

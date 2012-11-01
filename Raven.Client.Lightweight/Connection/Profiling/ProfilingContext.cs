@@ -23,6 +23,7 @@ namespace Raven.Client.Connection.Profiling
 		/// </summary>
 		public void RecordAction(object sender, RequestResultArgs requestResultArgs)
 		{
+
 			var profilingInformationHolder = sender as IHoldProfilingInformation;
 			if (profilingInformationHolder == null)
 				return;

@@ -449,7 +449,12 @@ namespace Raven.Client.Document
 
 		public void InitializeProfiling()
 		{
-			jsonRequestFactory.LogRequest += profilingContext.RecordAction;
+			jsonRequestFactory.LogRequest += (sender, args) =>
+			{
+				if (Conventions.DisableProfiling)
+					return;
+				profilingContext.RecordAction(sender, args);
+			};
 		}
 
 #if !SILVERLIGHT
