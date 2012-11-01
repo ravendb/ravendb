@@ -826,7 +826,7 @@ namespace Raven.Client.Indexes
 			Out("(");
 			Out(ConvertTypeToCSharpKeyword(type));
 
-			if (isNullableType)
+			if (isNullableType && nonNullableType != typeof(Guid))
 			{
 				Out("?");
 			}
@@ -838,6 +838,10 @@ namespace Raven.Client.Indexes
 			if (type == typeof(string))
 			{
 				return "string";
+			}
+			if (type == typeof(Guid) || type == typeof(Guid?))
+			{
+				return "string"; // on the server, Guids are represented as strings
 			}
 			if (type == typeof(char))
 			{
@@ -851,7 +855,6 @@ namespace Raven.Client.Indexes
 			{
 				return "bool?";
 			}
-
 			if (type == typeof (decimal))
 			{
 				return "decimal";
@@ -1905,9 +1908,6 @@ namespace Raven.Client.Indexes
 		{
 			if(nonNullableType.IsEnum)
 				return true;
-
-			if (nonNullableType == typeof(Guid))
-				return false;// in the server, represented as string only
 
 			return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
 		}
