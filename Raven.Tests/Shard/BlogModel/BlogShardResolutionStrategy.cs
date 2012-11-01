@@ -7,8 +7,6 @@ using Raven.Client.Shard;
 
 namespace Raven.Tests.Shard.BlogModel
 {
-	using Raven.Abstractions.Data;
-
 	public class BlogShardResolutionStrategy : IShardResolutionStrategy
 	{
 		private readonly int numberOfShardsForPosts;
