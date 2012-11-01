@@ -1244,6 +1244,11 @@ namespace Raven.Client.Indexes
 			else
 			{
 				Visit(node.NewExpression);
+				if (TypeExistsOnServer(node.Type) == false)
+				{
+					const int removeLength = 2;
+					_out.Remove(_out.Length - removeLength, removeLength);
+				}
 			}
 			Out(" {");
 			var num = 0;
@@ -1448,8 +1453,15 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitNew(NewExpression node)
 		{
 			Out("new ");
-			VisitType(node.Type);
-			Out("(");
+			if (TypeExistsOnServer(node.Type))
+			{
+				VisitType(node.Type);
+				Out("(");
+			}
+			else
+			{
+				Out("{");
+			}
 			for (var i = 0; i < node.Arguments.Count; i++)
 			{
 				if (i > 0)
@@ -1472,7 +1484,14 @@ namespace Raven.Client.Indexes
 
 				Visit(node.Arguments[i]);
 			}
-			Out(")");
+			if (TypeExistsOnServer(node.Type))
+			{
+				Out(")");
+			}
+			else
+			{
+				Out("}");
+			}
 			return node;
 		}
 
