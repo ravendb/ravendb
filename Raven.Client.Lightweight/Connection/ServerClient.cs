@@ -1226,7 +1226,7 @@ namespace Raven.Client.Connection
 						.AddOperationHeaders(OperationsHeaders));
 				
 
-				RavenJObject json = (RavenJObject)request.ReadResponseJson();
+				var json = (RavenJObject)request.ReadResponseJson();
 
 				return new SuggestionQueryResult
 				{
@@ -1244,6 +1244,20 @@ namespace Raven.Client.Connection
 
 			var jo = (RavenJObject)httpJsonRequest.ReadResponseJson();
 			return jo.Deserialize<DatabaseStatistics>(convention);
+		}
+
+		public long NextIdentityFor(string name)
+		{
+			return ExecuteWithReplication("POST", url =>
+			{
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, url + "/identity/next?" + Uri.EscapeDataString(name), "POST", credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
+
+				var readResponseJson = request.ReadResponseJson();
+
+				return readResponseJson.Value<long>("Value");
+			});
 		}
 
 		/// <summary>

@@ -364,6 +364,11 @@ namespace Raven.Client.Connection
 		JsonDocumentMetadata Head(string key);
 
 		/// <summary>
+		/// Generate the next identity value from the server
+		/// </summary>
+		long NextIdentityFor(string name);
+
+		/// <summary>
 		/// Get the full URL for the given document key
 		/// </summary>
 		string UrlFor(string documentKey);
