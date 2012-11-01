@@ -1,8 +1,8 @@
 ﻿using System;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Xunit;
 using System.Linq;
+using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
@@ -48,6 +48,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 		private abstract class Nullable
 		{
+			public char? Char { get; set; }
 			public string String { get; set; }
 			public object Object { get; set; }
 			public decimal? Decimal { get; set; }
@@ -60,6 +61,8 @@ namespace Raven.Tests.Bugs.Indexing
 			public bool? Bool { get; set; }
 			public DateTime? DateTime { get; set; }
 			public DateTimeOffset? DateTimeOffset { get; set; }
+			public TimeSpan? TimeSpan { get; set; }
+			public Guid? Guid { get; set; }
 		}
 
 		private class NullableIndex : AbstractMultiMapIndexCreationTask<NullableIndex.Result>
@@ -72,6 +75,7 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				AddMap<Nullable>(nullables => nullables.Select(nullable => new Result
 				{
+					Char = null,
 					String = null,
 					Object = null,
 					Decimal = null,
@@ -84,6 +88,8 @@ namespace Raven.Tests.Bugs.Indexing
 					Bool = null,
 					DateTime = null,
 					DateTimeOffset = null,
+					TimeSpan = null,
+					Guid = null,
 				}));
 			}
 		}
@@ -98,6 +104,7 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				AddMap<Nullable>(nullables => nullables.Select(nullable => new
 				{
+					Char = (string)null,
 					String = (string)null,
 					Object = (object)null,
 					Decimal = (decimal?)null,
@@ -110,6 +117,8 @@ namespace Raven.Tests.Bugs.Indexing
 					Bool = (bool?)null,
 					DateTime = (DateTime?)null,
 					DateTimeOffset = (DateTimeOffset?)null,
+					TimeSpan = (TimeSpan?)null,
+					Guid = (Guid?)null,
 				}));
 			}
 		}

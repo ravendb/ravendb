@@ -90,10 +90,16 @@ namespace Raven.Abstractions.Linq
 		public static implicit operator byte(DynamicNullObject o) { return 0; }
 		public static implicit operator byte?(DynamicNullObject o) { return null; }
 		public static implicit operator string(DynamicNullObject o) { return null; }
+		public static implicit operator char(DynamicNullObject o) { return Char.MinValue; }
+		public static implicit operator char?(DynamicNullObject o) { return null; }
 		public static implicit operator DateTime(DynamicNullObject o) { return DateTime.MinValue; }
 		public static implicit operator DateTime?(DynamicNullObject o) { return null; }
 		public static implicit operator DateTimeOffset(DynamicNullObject o) { return DateTimeOffset.MinValue; }
 		public static implicit operator DateTimeOffset?(DynamicNullObject o) { return null; }
+		public static implicit operator TimeSpan(DynamicNullObject o) { return TimeSpan.Zero; }
+		public static implicit operator TimeSpan?(DynamicNullObject o) { return null; }
+		public static implicit operator Guid(DynamicNullObject o) { return Guid.Empty; }
+		public static implicit operator Guid?(DynamicNullObject o) { return null; }
 
 		public override bool Equals(object obj)
 		{
