@@ -571,6 +571,15 @@ namespace Raven.Database
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
 		}
 
+
+		public void PutDocumentMetadata(string key, RavenJObject metadata)
+		{
+			if (key == null)
+				throw new ArgumentNullException("key");
+			key = key.Trim();
+			TransactionalStorage.Batch(actions => actions.Documents.PutDocumentMetadata(key, metadata));
+		}
+
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			workContext.DocsPerSecIncreaseBy(1);

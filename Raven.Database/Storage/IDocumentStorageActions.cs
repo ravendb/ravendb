@@ -23,5 +23,6 @@ namespace Raven.Database.Storage
 
 		bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata);
 		Tuple<Guid, DateTime> AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata);
+		Tuple<Guid, DateTime> PutDocumentMetadata(string key, RavenJObject metadata);
 	}
 }

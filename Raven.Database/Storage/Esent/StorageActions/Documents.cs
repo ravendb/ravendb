@@ -299,6 +299,33 @@ namespace Raven.Storage.Esent.StorageActions
 			return optimizer.Select(ReadCurrentDocument);
 		}
 
+		public Tuple<Guid, DateTime> PutDocumentMetadata(string key, RavenJObject metadata)
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_key");
+			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+			if (isUpdate == false)
+				throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
+				                                    " does not exists");
+
+			Guid newEtag = uuidGenerator.CreateSequentialUuid();
+			DateTime savedAt = SystemTime.UtcNow;
+			using (var update = new Update(session, Documents, JET_prep.Replace))
+			{
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt);
+
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
+				{
+					metadata.WriteTo(stream);
+					stream.Flush();
+				}
+
+				update.Save();
+			}
+			return Tuple.Create(newEtag, savedAt);
+		}
+
 		public Tuple<Guid, DateTime> AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 2048)

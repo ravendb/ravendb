@@ -230,6 +230,12 @@ namespace Raven.Storage.Managed
 			return true;
 		}
 
+		public Tuple<Guid, DateTime> PutDocumentMetadata(string key, RavenJObject metadata)
+		{
+			var documentByKey = DocumentByKey(key, null);
+			return AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, metadata);
+		}
+
 		public Tuple<Guid,DateTime> AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			var existingEtag = AssertValidEtag(key, etag, "PUT", null);
