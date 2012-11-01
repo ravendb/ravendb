@@ -169,6 +169,10 @@ namespace Raven.Abstractions.Linq
 						if (l > int.MinValue && int.MaxValue > l)
 							return (int)l;
 					}
+					if(value is Guid)
+					{
+						return value.ToString();
+					}
 					var s = value as string;
 					if (s != null)
 					{
