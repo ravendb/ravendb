@@ -182,14 +182,20 @@ namespace Raven.Database.Indexing
 			var futureLen = futureIndexBatches.Sum(x =>
 			{
 				if (x.Task.IsCompleted)
-					return x.Task.Result.Results.Length;
+				{
+					var jsonResults = x.Task.Result;
+					return jsonResults.LoadedFromDisk ? jsonResults.Results.Length : 0;
+				}
 				return autoTuner.NumberOfItemsToIndexInSingleBatch / 15;
 			});
 
 			var futureSize = futureIndexBatches.Sum(x =>
 			{
 				if (x.Task.IsCompleted)
-					return x.Task.Result.Results.Sum(s => s.SerializedSizeOnDisk);
+				{
+					var jsonResults = x.Task.Result;
+					return jsonResults.LoadedFromDisk ? jsonResults.Results.Sum(s => s.SerializedSizeOnDisk) : 0;
+				}
 				return autoTuner.NumberOfItemsToIndexInSingleBatch * 256;
 
 			});
