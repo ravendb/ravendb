@@ -58,17 +58,22 @@ namespace Raven.Database.Indexing
 			};
 		}
 
+		[DebuggerDisplay("{DebugDisplay}")]
 		private class FutureIndexBatch
 		{
 			public Guid StartingEtag;
 			public Task<JsonResults> Task;
 			public int Age;
 
-			public override string ToString()
+			public string DebugDisplay
 			{
-				if(Task.IsCompleted == false)
-					return "Pending...";
-				return Task.Result.ToString();
+				get
+				{
+					if (Task.IsCompleted == false)
+						return "Etag: " + StartingEtag + ", Age: " + Age + " Results: Pending";
+
+					return "Etag: " + StartingEtag + ", Age: " + Age + " Results: " + Task.Result.Results.Length.ToString("#,#");
+				}
 			}
 		}
 
@@ -79,7 +84,7 @@ namespace Raven.Database.Indexing
 
 			public override string ToString()
 			{
-				if(Results == null)
+				if (Results == null)
 					return "0";
 				return Results.Length.ToString("#,#", CultureInfo.InvariantCulture);
 			}
@@ -106,10 +111,10 @@ namespace Raven.Database.Indexing
 			{
 				jsonDocs = GetJsonDocuments(lastIndexedGuidForAllIndexes);
 
-				if(Log.IsDebugEnabled)
+				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-					          jsonDocs.Results.Length, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Results.Select(x=>x.Key)));
+							  jsonDocs.Results.Length, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Results.Select(x => x.Key)));
 				}
 
 				context.ReportIndexingActualBatchSize(jsonDocs.Results.Length);
@@ -169,7 +174,7 @@ namespace Raven.Database.Indexing
 				}
 
 				// make sure that we don't have too much "future cache" items
-				foreach (var source in futureIndexBatches.Where(x => x.Age + 16 < currentIndexingAge).ToList())
+				foreach (var source in futureIndexBatches.Where(x => (currentIndexingAge - x.Age) > 25).ToList())
 				{
 					ObserveDiscardedTask(source);
 					futureIndexBatches.TryRemove(source);
@@ -268,7 +273,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		
+
 
 		private void MaybeAddFutureBatch(JsonResults past)
 		{
@@ -484,7 +489,7 @@ namespace Raven.Database.Indexing
 					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
 					return;
 				}
-				if(Log.IsDebugEnabled)
+				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Going to index {0} documents in {1}: ({2})", batch.Ids.Count, indexToWorkOn, string.Join(", ", batch.Ids));
 				}
@@ -589,9 +594,11 @@ namespace Raven.Database.Indexing
 		private Guid DecrementEtag(Guid etag)
 		{
 			var bytes = etag.ToByteArray();
-			var part = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0) - 1;
-
-			return new Guid(bytes.Take(8).Concat(BitConverter.GetBytes(part).Reverse()).ToArray());
+			var changes = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0) - 1;
+			var restarts = BitConverter.ToInt64(bytes.Take(8).Reverse().ToArray(), 0);
+			if (restarts == 1 && changes == 0)// very first item, we start from 0-0
+				restarts = 0;
+			return new Guid(BitConverter.GetBytes(restarts).Reverse().Concat(BitConverter.GetBytes(changes).Reverse()).ToArray());
 		}
 
 

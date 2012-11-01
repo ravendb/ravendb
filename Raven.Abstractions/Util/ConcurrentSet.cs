@@ -22,9 +22,9 @@ namespace Raven.Database.Util
 			}
 
 			[DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-			public string[] Items
+			public object[] Items
 			{
-				get { return parent.Select(x => x.ToString()).ToArray(); }
+				get { return parent.Cast<object>().ToArray(); }
 			}
 		}
 
