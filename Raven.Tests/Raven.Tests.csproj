@@ -478,7 +478,9 @@
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
     <Compile Include="Issues\RavenDB349.cs" />
+    <Compile Include="Issues\RavenDB422.cs" />
     <Compile Include="Issues\RavenDB478.cs" />
+    <Compile Include="Issues\RavenDb505.cs" />
     <Compile Include="Issues\RavenDB514.cs" />
     <Compile Include="Issues\RavenDB535.cs" />
     <Compile Include="Issues\RavenDB626.cs" />
