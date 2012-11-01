@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -10,6 +12,9 @@ namespace Raven.Database.Server.Responders.Admin
 	{
 		public override void RespondToAdmin(IHttpContext context)
 		{
+            if(EnsureSystemDatabase(context) == false)
+                return;
+
 			var restoreRequest = context.ReadJsonObject<RestoreRequest>();
 
 			var ravenConfiguration = new RavenConfiguration();
@@ -21,8 +26,14 @@ namespace Raven.Database.Server.Responders.Admin
 			{
 				ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 			}
+		    var restoreDoc = new List<string>();
 
-			DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation);
+		    DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation,
+		                             msg =>
+		                             {
+
+		                             });
+            SystemDatabase.
 		}
 	}
 }

@@ -25,5 +25,6 @@ namespace Raven.Database.Server.Abstractions
 
 		public IIdentity Identity { get; private set; }
 		public List<string> AdminDatabases { get; set; }
+        //TODO: to dictionaty of Admin, ReadOnly and Read/Write
 	}
 }
