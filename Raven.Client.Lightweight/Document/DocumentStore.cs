@@ -405,6 +405,9 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 		private void RecoverPendingTransactions()
 		{
+			if (EnlistInDistributedTransactions == false)
+				return;
+
 			var pendingTransactionRecovery = new PendingTransactionRecovery();
 			pendingTransactionRecovery.Execute(DatabaseCommands);
 		}
