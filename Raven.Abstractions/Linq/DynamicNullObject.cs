@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq.Expressions;
 
 namespace Raven.Abstractions.Linq
 {
@@ -13,6 +14,23 @@ namespace Raven.Abstractions.Linq
 		}
 
 		public bool IsExplicitNull { get; set; }
+
+		public override bool TryBinaryOperation(BinaryOperationBinder binder, object arg, out object result)
+		{
+			switch (binder.Operation)
+			{
+				case ExpressionType.Equal:
+					result = arg == null || arg is DynamicNullObject;
+					break;
+				case ExpressionType.NotEqual:
+					result = arg != null && arg is DynamicNullObject == false;
+					break;
+				default:
+					result = this;
+					break;
+			}
+			return true;
+		}
 
 		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
 		{
@@ -101,16 +119,6 @@ namespace Raven.Abstractions.Linq
 		public static implicit operator Guid(DynamicNullObject o) { return Guid.Empty; }
 		public static implicit operator Guid?(DynamicNullObject o) { return null; }
 
-		public override bool Equals(object obj)
-		{
-			return obj is DynamicNullObject;
-		}
-
-		public override int GetHashCode()
-		{
-			return 0;
-		}
-
 		public static bool operator ==(DynamicNullObject left, object right)
 		{
 			return right == null || right is DynamicNullObject;
@@ -121,24 +129,14 @@ namespace Raven.Abstractions.Linq
 			return right != null && (right is DynamicNullObject) == false;
 		}
 
-		public static bool operator >(DynamicNullObject left, object right)
+		public override bool Equals(object obj)
 		{
-			return false;
+			return obj is DynamicNullObject;
 		}
 
-		public static bool operator <(DynamicNullObject left, object right)
+		public override int GetHashCode()
 		{
-			return false;
-		}
-
-		public static bool operator >=(DynamicNullObject left, object right)
-		{
-			return false;
-		}
-
-		public static bool operator <=(DynamicNullObject left, object right)
-		{
-			return false;
+			return 0;
 		}
 	}
 }
