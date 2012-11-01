@@ -41,7 +41,7 @@ namespace Raven.Studio.Commands
 
 			var name = ApplicationModel.Database.Value.Name;
 			var normalizedName = new string(name.Select(ch => Path.GetInvalidPathChars().Contains(ch) ? '_' : ch).ToArray());
-			var defaultFileName = string.Format("Dump of {0}, {1}", normalizedName, DateTimeOffset.Now.ToString("MMM dd yyyy HH-mm", CultureInfo.InvariantCulture));
+			var defaultFileName = string.Format("Dump of {0}, {1}", normalizedName, DateTimeOffset.Now.ToString("dd MMM yyyy HH-mm", CultureInfo.InvariantCulture));
 			try
 			{
 				saveFile.DefaultFileName = defaultFileName;
