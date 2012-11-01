@@ -1575,7 +1575,7 @@ namespace Raven.Client.Indexes
 					Out("new ");
 					if (!CheckIfAnonymousType(node.Type.GetElementType()))
 					{
-						Out(node.Type.GetElementType().FullName + " ");
+						Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
 					}
 					Out("[]");
 					VisitExpressions('{', node.Expressions, '}');
