@@ -109,6 +109,7 @@ namespace Raven.Abstractions.Linq
 		}
 
 		public static implicit operator double(DynamicNullObject o) { return double.NaN; }
+		public static implicit operator double?(DynamicNullObject o) { return null; }
 	
 		public override bool Equals(object obj)
 		{
