@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using Raven.Abstractions.Extensions;
@@ -65,6 +66,23 @@ namespace Raven.Storage.Managed
 				};
 			})
 			.Take(take);
+		}
+
+		public void RemoveAllBefore(string name, Guid etag)
+		{
+			var comparable = new ComparableByteArray(etag);
+			var results = storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
+			{
+				{"name", name},
+				{"etag", Guid.Empty.ToByteArray()}
+			})
+				.TakeWhile(x => String.Equals(x.Value<string>("name"), name, StringComparison.InvariantCultureIgnoreCase) &&
+				                comparable.CompareTo(x.Value<byte[]>("etag")) >= 0);
+
+			foreach (var result in results)
+			{
+				storage.Lists.Remove(result);
+			}
 		}
 
 		public ListItem Read(string name, string key)

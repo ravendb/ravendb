@@ -50,6 +50,25 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetDelete(session, Lists);
 		}
 
+		public void RemoveAllBefore(string name, Guid etag)
+		{
+			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
+			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Lists, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.None);
+			if (Api.TrySeek(session, Lists, SeekGrbit.SeekLE) == false)
+				return;
+			do
+			{
+				var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
+				if (string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+					break;
+
+				Api.JetDelete(session, Lists);
+
+			} while (Api.TryMovePrevious(session, Lists));
+
+		}
+
 		public IEnumerable<ListItem> Read(string name, Guid start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
