@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
 using Xunit;
+using Raven.Client;
 
 namespace Raven.Tests.MailingList
 {
@@ -66,7 +67,9 @@ namespace Raven.Tests.MailingList
 				{
 					var queryable = session.Query<Student, Student_ByName>()
 						.Customize(x => x.WaitForNonStaleResults())
-						.Where(x => x.FirstName == ("David") || x.LastName == ("David"));
+						.Where(x => x.FirstName == ("David") || x.LastName == ("David"))
+						.OrderByScore().ThenBy(x=>x.LastName)
+						;
 					var students = queryable
 						.ToList();
 
