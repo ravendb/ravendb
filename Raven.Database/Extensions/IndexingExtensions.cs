@@ -114,6 +114,10 @@ namespace Raven.Database.Extensions
 			return new Sort(self.SortedFields
 							.Select(sortedField =>
 							{
+								if (sortedField.Field == Constants.TemporaryScoreValue)
+								{
+									return SortField.FIELD_SCORE;
+								}
 								if(sortedField.Field.StartsWith(Constants.RandomFieldName))
 								{
 									var parts = sortedField.Field.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);

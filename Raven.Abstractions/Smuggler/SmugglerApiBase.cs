@@ -35,6 +35,10 @@ namespace Raven.Abstractions.Smuggler
 		protected bool ensuredDatabaseExists;
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
+		protected double maximumBatchChangePercentage = 0.3;
+
+		protected int minimumBatchSize = 10;
+
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
 			this.smugglerOptions = smugglerOptions;
@@ -77,7 +81,7 @@ namespace Raven.Abstractions.Smuggler
 						counter++;
 					}
 				}
-			}
+					}
 
 			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(file), CompressionMode.Compress)))
 			{
@@ -152,14 +156,29 @@ namespace Raven.Abstractions.Smuggler
 		private Guid ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Guid lastEtag)
 		{
 			int totalCount = 0;
+
+			long previousProcessingTime = 0;
+
 			while (true)
 			{
+				var watch = Stopwatch.StartNew();
 				var documents = GetDocuments(lastEtag);
+				watch.Stop();
+
 				if (documents.Length == 0)
 				{
 					ShowProgress("Done with reading documents, total: {0}", totalCount);
 					return lastEtag;
 				}
+
+				var currentProcessingTime = watch.ElapsedTicks;
+
+				if (previousProcessingTime == 0)
+					previousProcessingTime = watch.ElapsedTicks;
+
+				options.BatchSize = CalculateBatchSize(options.BatchSize, previousProcessingTime, currentProcessingTime);
+
+				previousProcessingTime = currentProcessingTime;
 
 				var final = documents.Where(options.MatchFilters).ToList();
 				final.ForEach(item => item.WriteTo(jsonWriter));
@@ -388,7 +407,7 @@ namespace Raven.Abstractions.Smuggler
 			var earliestIndexedEtag = Guid.Empty;
 			foreach (var indexStat in databaseStatistics.Indexes)
 			{
-				if(earliestIndexedEtag.CompareTo(indexStat.LastIndexedEtag) < 0)
+				if (earliestIndexedEtag.CompareTo(indexStat.LastIndexedEtag) < 0)
 				{
 					earliestIndexedEtag = indexStat.LastIndexedEtag;
 				}
@@ -413,7 +432,7 @@ namespace Raven.Abstractions.Smuggler
 
 			var distance = Math.Max(0, currentDoc - lastIndexed);
 			TimeSpan latency = TimeSpan.Zero;
-			if(latest != DateTime.MinValue)
+			if (latest != DateTime.MinValue)
 			{
 				latency = SystemTime.UtcNow - latest;
 			}
@@ -459,6 +478,16 @@ namespace Raven.Abstractions.Smuggler
 					item.WriteTo(jsonWriter);
 				}
 			}
+		}
+
+		private int CalculateBatchSize(int currentBatchSize, long previousProcessingTime, long currentProcessingTime)
+		{
+			var processingTimeDifference = (previousProcessingTime - currentProcessingTime) / (double)Math.Max(previousProcessingTime, currentProcessingTime);
+
+			processingTimeDifference = Math.Min(maximumBatchChangePercentage, Math.Abs(processingTimeDifference))
+			                           * Math.Sign(processingTimeDifference);
+
+			return Math.Max(minimumBatchSize, currentBatchSize + (int)(processingTimeDifference * currentBatchSize));
 		}
 
 	}

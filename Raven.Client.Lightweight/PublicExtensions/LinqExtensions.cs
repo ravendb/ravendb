@@ -84,9 +84,9 @@ namespace Raven.Client
 		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.ToString();
+			var query = ravenQueryInspector.ToAsyncString();
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.AsyncIndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
 
 		/// <summary>
@@ -287,6 +287,21 @@ namespace Raven.Client
 			                                                          Expression.Constant(options),
 			                                                          Expression.Constant(escapeQueryOptions)));
 			return (IRavenQueryable<T>)queryable;
+		}
+
+		/// <summary>
+		/// Perform an initial sort by lucene score.
+		/// </summary>
+		public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
+		{
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod ();
+			Expression expression = self.Expression;
+			if (expression.Type != typeof (IRavenQueryable<T>))
+			{
+				expression = Expression.Convert (expression, typeof (IRavenQueryable<T>));
+			}
+			var queryable = self.Provider.CreateQuery (Expression.Call (null, currentMethod.MakeGenericMethod (typeof (T)), expression));
+			return (IOrderedQueryable<T>)queryable;
 		}
 	}
 }

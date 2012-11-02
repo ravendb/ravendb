@@ -103,6 +103,19 @@ namespace Raven.Tests.Faceted
 		}
 
 		[Fact]
+		public void CanPerformFacetedSearch_Remotely_Asynchronously()
+		{
+			using(GetNewServer())
+			using(var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				ExecuteTestAsynchronously(store, _originalFacets);
+			}
+		}
+
+		[Fact]
 		public void CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI()
 		{
 			using (GetNewServer())
@@ -234,6 +247,35 @@ namespace Raven.Tests.Faceted
 						.ToFacets("facets/CameraFacets");
 					facetQueryTimer.Stop();
 
+					var filteredData = _data.Where(exp.Compile()).ToList();
+					CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
+				}
+			}
+		}
+
+		private void ExecuteTestAsynchronously(IDocumentStore store, List<Facet> facetsToUse)
+		{
+			Setup(store, facetsToUse);
+
+			using(var s = store.OpenAsyncSession())
+			{
+				var expressions = new Expression<Func<Camera, bool>>[]
+				{
+					x => x.Cost >= 100 && x.Cost <= 300,
+					x => x.DateOfListing > new DateTime(2000, 1, 1),
+					x => x.Megapixels > 5.0m && x.Cost < 500,
+					x => x.Manufacturer == "abc&edf"
+				};
+
+				foreach(var exp in expressions)
+				{
+					var facetQueryTimer = Stopwatch.StartNew();
+					var task = s.Query<Camera>("CameraCost")
+						.Where(exp)
+						.ToFacetsAsync("facets/CameraFacets");
+					task.Wait();
+					facetQueryTimer.Stop();
+					var facetResults = task.Result;
 					var filteredData = _data.Where(exp.Compile()).ToList();
 					CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
 				}

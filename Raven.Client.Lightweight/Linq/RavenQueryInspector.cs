@@ -139,6 +139,22 @@ namespace Raven.Client.Linq
 			return fields + luceneQuery;
 		}
 
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents this instance.
+		/// </summary>
+		/// <returns>
+		/// A <see cref="System.String"/> that represents this instance.
+		/// </returns>
+		public string ToAsyncString()
+		{
+			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
+			var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
+			string fields = "";
+			if(ravenQueryProvider.FieldsToFetch.Count > 0)
+				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
+			return fields + luceneQuery;
+		}
+
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
 			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
@@ -153,6 +169,19 @@ namespace Raven.Client.Linq
 			{
 				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
+			}
+		}
+
+		/// <summary>
+		/// Get the name of the index being queried asynchronously
+		/// </summary>
+		public string AsyncIndexQueried
+		{
+			get
+			{
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+				var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
 		}

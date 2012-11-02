@@ -13,6 +13,8 @@ using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
 {
+	using System.Net.Sockets;
+
 	public class Program
 	{
 		private readonly RavenConnectionStringOptions connectionStringOptions;
@@ -132,6 +134,19 @@ namespace Raven.Smuggler
 			}
 			catch (WebException e)
 			{
+				if (e.Status == WebExceptionStatus.ConnectFailure)
+				{
+					Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
+					var socketException = e.InnerException as SocketException;
+					if (socketException != null)
+					{
+						Console.WriteLine("Details: {0}", socketException.Message);
+						Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
+					}
+
+					Environment.Exit((int)e.Status);
+				}
+
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null)
 					throw;
