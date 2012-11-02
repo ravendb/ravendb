@@ -108,6 +108,8 @@ namespace Raven.Abstractions.Linq
 			return right != null && (right is DynamicNullObject) == false;
 		}
 
+		public static implicit operator long(DynamicNullObject o) { return 0; }
+	
 		public override bool Equals(object obj)
 		{
 			return obj is DynamicNullObject;
