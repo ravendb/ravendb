@@ -1362,7 +1362,7 @@ namespace Raven.Client.Indexes
 				{
 					Visit(expression);
 				}
-				if (node.Method.Name != "get_Item") // VB indexer
+				if (IsIndexerCall(node) == false)
 				{
 					Out(".");
 				}
@@ -1372,14 +1372,14 @@ namespace Raven.Client.Indexes
 				Out(node.Method.DeclaringType.Name);
 				Out(".");
 			}
-			if (node.Method.Name != "get_Item") // VB indexer
+			if (IsIndexerCall(node))
 			{
-				Out(node.Method.Name);
-				Out("(");
+				Out("[");
 			}
 			else
 			{
-				Out("[");
+				Out(node.Method.Name);
+				Out("(");
 			}
 			var num2 = num;
 			var count = node.Arguments.Count;
@@ -1412,8 +1412,13 @@ namespace Raven.Client.Indexes
 				}
 				num2++;
 			}
-			Out(node.Method.Name != "get_Item" ? ")" : "]");
+			Out(IsIndexerCall(node) ? "]" : ")");
 			return node;
+		}
+
+		private static bool IsIndexerCall(MethodCallExpression node)
+		{
+			return node.Method.IsSpecialName && (node.Method.Name.StartsWith("get_") || node.Method.Name.StartsWith("set_"));
 		}
 
 		private static bool IsExtensionMethod(MethodCallExpression node)
