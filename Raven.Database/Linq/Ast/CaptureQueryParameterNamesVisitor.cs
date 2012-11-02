@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -5,6 +6,7 @@ using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
+	[CLSCompliant(false)]
 	public class CaptureQueryParameterNamesVisitor : DepthFirstAstVisitor<object, object>
 	{
 		private readonly HashSet<string> queryParameters = new HashSet<string>();

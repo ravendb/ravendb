@@ -47,16 +47,16 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 			requiredGroups = required.RequiredGroups != null
-				                 ? required.RequiredGroups.Where(data => data.Enabled).ToList()
-				                 : new List<WindowsAuthData>();
+								 ? required.RequiredGroups.Where(data => data.Enabled).ToList()
+								 : new List<WindowsAuthData>();
 			requiredUsers = required.RequiredUsers != null
-				                ? required.RequiredUsers.Where(data => data.Enabled).ToList()
-				                : new List<WindowsAuthData>();
+								? required.RequiredUsers.Where(data => data.Enabled).ToList()
+								: new List<WindowsAuthData>();
 		}
 
 		public override bool Authorize(IHttpContext ctx)
 		{
-            //TODO: Check that the User is valid with the PrincapalWithDatabaseAccress and check if administrator
+			//TODO: Check that the User is valid with the PrincapalWithDatabaseAccress and check if administrator
 			Action onRejectingRequest;
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx, out onRejectingRequest))
 			{
@@ -84,7 +84,7 @@ namespace Raven.Database.Server.Security.Windows
 
 		private bool IsInvalidUser(IHttpContext ctx, out Action onRejectingRequest)
 		{
-            //TODO: kiil this method and change it to TryCreateUser
+			//TODO: kiil this method and change it to TryCreateUser
 			var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
 			{
@@ -110,13 +110,13 @@ namespace Raven.Database.Server.Security.Windows
 
 			if ((requiredGroups.Count > 0 || requiredUsers.Count > 0))
 			{
-			    var databaseName = database().Name;
+				var databaseName = database().Name;
 
-                if (readOnlyList.Any(selectedDatabaseName => string.Equals(selectedDatabaseName, databaseName)))
+				if (readOnlyList.Any(selectedDatabaseName => string.Equals(selectedDatabaseName, databaseName)))
 					return true;
 				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup.Name)
 					&& requiredGroup.Databases.Any(access => access.TenantId == databaseName))
-					|| requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser.Name, StringComparison.InvariantCultureIgnoreCase) 
+					|| requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser.Name, StringComparison.InvariantCultureIgnoreCase)
 						&& requiredUser.Databases.Any(access => access.TenantId == databaseName)))
 					return false;
 
@@ -138,8 +138,8 @@ namespace Raven.Database.Server.Security.Windows
 			if (databasesForGroups != null)
 				readOnlyList
 					.AddRange(databasesForGroups.Where(access => access.ReadOnly)
-						          .Select(access => access.TenantId)
-						          .ToList());
+								  .Select(access => access.TenantId)
+								  .ToList());
 			return readOnlyList;
 		}
 
@@ -156,8 +156,8 @@ namespace Raven.Database.Server.Security.Windows
 			if (databasesForGroups != null)
 				adminList
 					.AddRange(databasesForGroups.Where(access => access.Admin)
-						          .Select(access => access.TenantId)
-						          .ToList());
+								  .Select(access => access.TenantId)
+								  .ToList());
 			return adminList;
 		}
 

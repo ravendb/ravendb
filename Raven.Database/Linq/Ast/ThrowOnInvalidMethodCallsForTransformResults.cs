@@ -8,6 +8,7 @@ using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
+	[CLSCompliant(false)]
 	public class ThrowOnInvalidMethodCallsForTransformResults : DepthFirstAstVisitor<object,object>
 	{
 		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)

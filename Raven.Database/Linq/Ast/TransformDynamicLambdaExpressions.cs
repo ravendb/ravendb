@@ -6,6 +6,7 @@ using ICSharpCode.NRefactory.PatternMatching;
 
 namespace Raven.Database.Linq.Ast
 {
+	[CLSCompliant(false)]
 	public class TransformDynamicLambdaExpressions : DepthFirstAstVisitor<object,object>
 	{
 		public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)

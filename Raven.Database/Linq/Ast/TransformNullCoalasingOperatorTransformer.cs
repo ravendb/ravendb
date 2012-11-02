@@ -1,8 +1,10 @@
 
+using System;
 using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
+	[CLSCompliant(false)]
 	public class TransformNullCoalasingOperatorTransformer : DepthFirstAstVisitor<object,object>
 	{
 		/// <summary>

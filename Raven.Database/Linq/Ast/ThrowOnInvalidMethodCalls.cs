@@ -6,6 +6,7 @@ using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
+	[CLSCompliant(false)]
 	public class ThrowOnInvalidMethodCalls : DepthFirstAstVisitor<object,object>
 	{
 		public class ForbiddenMethod

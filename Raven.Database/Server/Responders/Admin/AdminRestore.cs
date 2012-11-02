@@ -12,8 +12,8 @@ namespace Raven.Database.Server.Responders.Admin
 	{
 		public override void RespondToAdmin(IHttpContext context)
 		{
-            if(EnsureSystemDatabase(context) == false)
-                return;
+			if (EnsureSystemDatabase(context) == false)
+				return;
 
 			var restoreRequest = context.ReadJsonObject<RestoreRequest>();
 
@@ -26,15 +26,15 @@ namespace Raven.Database.Server.Responders.Admin
 			{
 				ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 			}
-		    var restoreDoc = new List<string>();
+			var restoreDoc = new List<string>();
 
-            // Commented out unfinished code to get it to compile
-//		    DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation,
-//		                             msg =>
-//		                             {
-//
-//		                             });
-//            SystemDatabase.
+			// Commented out unfinished code to get it to compile
+			//		    DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation,
+			//		                             msg =>
+			//		                             {
+			//
+			//		                             });
+			//            SystemDatabase.
 		}
 	}
 }

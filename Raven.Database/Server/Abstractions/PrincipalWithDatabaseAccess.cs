@@ -13,7 +13,8 @@ namespace Raven.Database.Server.Abstractions
 			Identity = principal.Identity;
 		}
 
-		public PrincipalWithDatabaseAccess(WindowsPrincipal principal, List<string> adminDatabases) : this(principal)
+		public PrincipalWithDatabaseAccess(WindowsPrincipal principal, List<string> adminDatabases)
+			: this(principal)
 		{
 			AdminDatabases = adminDatabases;
 		}
@@ -25,6 +26,6 @@ namespace Raven.Database.Server.Abstractions
 
 		public IIdentity Identity { get; private set; }
 		public List<string> AdminDatabases { get; set; }
-        //TODO: to dictionaty of Admin, ReadOnly and Read/Write
+		//TODO: to dictionaty of Admin, ReadOnly and Read/Write
 	}
 }
