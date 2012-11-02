@@ -28,12 +28,13 @@ namespace Raven.Database.Server.Responders.Admin
 			}
 		    var restoreDoc = new List<string>();
 
-		    DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation,
-		                             msg =>
-		                             {
-
-		                             });
-            SystemDatabase.
+            // Commented out unfinished code to get it to compile
+//		    DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation,
+//		                             msg =>
+//		                             {
+//
+//		                             });
+//            SystemDatabase.
 		}
 	}
 }
