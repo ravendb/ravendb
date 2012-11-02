@@ -209,6 +209,7 @@
     <Compile Include="Behaviors\HighlightSyntaxErrorAction.cs" />
     <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
+    <Compile Include="Behaviors\RowDefinitionVisibility.cs" />
     <Compile Include="Behaviors\SelectAllAction.cs" />
     <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
     <Compile Include="Behaviors\ShowAutoCompleteDropDown.cs" />
