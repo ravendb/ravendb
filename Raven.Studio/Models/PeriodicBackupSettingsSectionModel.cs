@@ -14,6 +14,8 @@ namespace Raven.Studio.Models
 		public PeriodicBackupSetup PeriodicBackupSetup { get; set; }
 		public string AwsAccessKey { get; set; }
 		public string AwsSecretKey { get; set; }
+        //TODO: remove original
+        //TODO: add selection betweeb S3 and Glecuir
 		public string OriginalAwsSecretKey { get; set; }
 		public bool HasDocument { get; set; }
 

@@ -308,8 +308,8 @@
 
 			<Grid Grid.Row="5">
 				<Grid.RowDefinitions>
-					<RowDefinition Height="{Binding IsComboBoxVisible, Converter={StaticResource HiddenWhenFalseStarSizedWhenTrue}}"/>
-					<RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" Behaviors:RowDefinitionVisibility.IsVisible="{Binding IsComboBoxVisible}" />
+				    <RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 

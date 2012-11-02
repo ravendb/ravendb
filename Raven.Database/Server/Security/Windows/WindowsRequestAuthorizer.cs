@@ -56,6 +56,7 @@ namespace Raven.Database.Server.Security.Windows
 
 		public override bool Authorize(IHttpContext ctx)
 		{
+            //TODO: Check that the User is valid with the PrincapalWithDatabaseAccress and check if administrator
 			Action onRejectingRequest;
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx, out onRejectingRequest))
 			{
@@ -83,6 +84,7 @@ namespace Raven.Database.Server.Security.Windows
 
 		private bool IsInvalidUser(IHttpContext ctx, out Action onRejectingRequest)
 		{
+            //TODO: kiil this method and change it to TryCreateUser
 			var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
 			{
@@ -102,18 +104,20 @@ namespace Raven.Database.Server.Security.Windows
 			var adminList = GenerateAdminList(databasesForUsers, databasesForGroups);
 
 			if (ctx.User is PrincipalWithDatabaseAccess == false)
-				ctx.User = new PrincipalWithDatabaseAccess(ctx.User as WindowsPrincipal, adminList);
+				ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User, adminList);
 
 			var readOnlyList = GenerateReadOnlyList(databasesForUsers, databasesForGroups);
 
 			if ((requiredGroups.Count > 0 || requiredUsers.Count > 0))
 			{
-				if (readOnlyList.Any(databaseName => string.Equals(databaseName, database().Name)))
+			    var databaseName = database().Name;
+
+                if (readOnlyList.Any(selectedDatabaseName => string.Equals(selectedDatabaseName, databaseName)))
 					return true;
 				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup.Name)
-					&& requiredGroup.Databases.Any(access => access.TenantId == database().Name))
+					&& requiredGroup.Databases.Any(access => access.TenantId == databaseName))
 					|| requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser.Name, StringComparison.InvariantCultureIgnoreCase) 
-						&& requiredUser.Databases.Any(access => access.TenantId == database().Name)))
+						&& requiredUser.Databases.Any(access => access.TenantId == databaseName)))
 					return false;
 
 				return true;

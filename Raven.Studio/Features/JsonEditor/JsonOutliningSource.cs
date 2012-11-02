@@ -78,8 +78,14 @@ namespace Raven.Studio.Features.JsonEditor
             if (parseData == null)
                 return null;
 
-            var node = parseData.Ast as JsonObjectNode;
-            return node;
+            var node = parseData.Ast;
+
+            if (node.HasChildren)
+            {
+                return node.Children[0] as JsonObjectNode;
+            }
+            
+            return null;
         }
 
         static JsonOutliningSource()
