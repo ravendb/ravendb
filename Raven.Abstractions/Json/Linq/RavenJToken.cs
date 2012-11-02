@@ -423,6 +423,37 @@ namespace Raven.Json.Linq
 			return p.Evaluate(this, errorWhenNoMatch);
 		}
 
+        /// <summary>
+        /// Selects the token that matches the object path.
+        /// </summary>
+        /// <param name="path">
+        /// The object path from the current <see cref="RavenJToken"/> to the <see cref="RavenJToken"/>
+        /// to be returned. This must be a string of property names or array indexes separated
+        /// by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
+        /// <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
+        /// </param>
+        /// <returns>The <see cref="RavenJToken"/> that matches the object path or a null reference if no matching token is found.</returns>
+        public RavenJToken SelectToken(RavenJPath path)
+        {
+            return SelectToken(path, false);
+        }
+
+        /// <summary>
+        /// Selects the token that matches the object path.
+        /// </summary>
+        /// <param name="path">
+        /// The object path from the current <see cref="RavenJToken"/> to the <see cref="RavenJToken"/>
+        /// to be returned. This must be a string of property names or array indexes separated
+        /// by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
+        /// <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
+        /// </param>
+        /// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
+        /// <returns>The <see cref="RavenJToken"/> that matches the object path.</returns>
+        public RavenJToken SelectToken(RavenJPath path, bool errorWhenNoMatch)
+        {
+            return path.Evaluate(this, errorWhenNoMatch);
+        }
+
 		/// <summary>
 		/// Returns a collection of the child values of this token, in document order.
 		/// </summary>

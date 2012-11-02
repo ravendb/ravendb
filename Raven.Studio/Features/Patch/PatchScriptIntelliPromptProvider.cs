@@ -18,6 +18,7 @@ using ActiproSoftware.Windows.Controls.SyntaxEditor;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Models;
 using Raven.Abstractions.Extensions;
@@ -106,32 +107,26 @@ namespace Raven.Studio.Features.Patch
 
         private IEnumerable<string> GetProperties(string completedPropertyPath)
         {
-            if (!documentPropertyCacheUpToDate)
-            {
-                documentProperties.Clear();
-                documentProperties.AddRange(DocumentHelpers.GetPropertiesFromDocuments(recentDocuments, includeNestedProperties: true).Distinct());
+            var parsedPath = new RavenJPath(completedPropertyPath);
 
-                documentPropertyCacheUpToDate = true;
-            }
-
-            if (completedPropertyPath.Length > 0 && !completedPropertyPath.EndsWith("."))
-            {
-                completedPropertyPath += ".";
-            }
-
-            var prefixLength = completedPropertyPath.Length;
             var matchingProperties =
-                documentProperties.Where(p => p.StartsWith(completedPropertyPath, StringComparison.InvariantCulture))
-                    .Select(p =>
-                    {
-                        var trimmedString = p.Substring(prefixLength);
-                        var indexOfDot = trimmedString.IndexOf('.');
-                        trimmedString = indexOfDot >= 0 ? trimmedString.Substring(0, indexOfDot) : trimmedString;
-                        return trimmedString;
-                    })
-                    .Distinct();
+                recentDocuments.SelectMany(doc => GetPropertiesAtEndOfPath(doc, parsedPath)).Distinct();
 
             return matchingProperties;
+        }
+
+        private IEnumerable<string> GetPropertiesAtEndOfPath(JsonDocument document, RavenJPath path)
+        {
+            var currentObject = document.DataAsJson.SelectToken(path);
+
+            if (currentObject is RavenJObject)
+            {
+                return (currentObject as RavenJObject).Keys;
+            }
+            else
+            {
+                return new string[0];
+            }
         }
 
         private CompletionContext GetCompletionContext(IEditorView view)
@@ -172,7 +167,6 @@ namespace Raven.Studio.Features.Patch
         private string DetermineFullMemberExpression(string tokenText, ITextSnapshotReader reader)
         {
             var sb = new StringBuilder(tokenText);
-
             var token = reader.ReadTokenReverse();
             while (token != null)
             {
@@ -181,6 +175,22 @@ namespace Raven.Studio.Features.Patch
                 if (token.Key == "Identifier" || (token.Key == "Punctuation" && text == ".") || (token.Key == "Keyword" && text == "this"))
                 {
                     sb.Insert(0, text);
+                }
+                else if (token.Key == "CloseSquareBrace")
+                {
+                    var indexExpression = ReadArrayIndexExpression(reader);
+                    if (indexExpression == null)
+                    {
+                        // we're not going to be able to make sense
+                        // of the rest of the expression, so bail out.
+                        break;
+                    }
+
+                    sb.Insert(0, indexExpression);
+                }
+                else if (token.Key == "Whitespace")
+                {
+                    // skip it
                 }
                 else
                 {
@@ -191,6 +201,56 @@ namespace Raven.Studio.Features.Patch
             }
 
             return sb.ToString();
+        }
+
+        private string ReadArrayIndexExpression(ITextSnapshotReader reader)
+        {
+            // we're looking for an expression of the form [123] or [myVariable]
+            // if we don't find one, return false.
+            string indexValue = null;
+
+            var token = reader.ReadTokenReverse();
+            while (token != null)
+            {
+                var text = reader.PeekText(token.Length);
+
+                if (token.Key == "Identifier" && indexValue == null)
+                {
+                    // substitue 0 for the name of the variable to give us 
+                    // the best chance of matching something when we look up the path in a document
+                    indexValue = "0";
+                }
+                else if ((token.Key == "IntegerNumber") && indexValue == null)
+                {
+                    indexValue = text;
+                }
+                else if (token.Key == "Whitespace")
+                {
+                    // skip it
+                }
+                else if (token.Key == "OpenSquareBrace")
+                {
+                    if (indexValue == null)
+                    {
+                        // we didn't find a properly formed (and simple) index expression
+                        // before hitting the square brace
+                        return null;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                token = reader.ReadTokenReverse();
+            }
+
+            if (indexValue == null)
+            {
+                return null;
+            }
+
+            return "[" + indexValue + "]";
         }
 
         private class CompletionContext

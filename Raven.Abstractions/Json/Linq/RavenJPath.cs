@@ -5,7 +5,7 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
-	internal class RavenJPath
+	public class RavenJPath
 	{
 		private readonly string _expression;
 		public List<object> Parts { get; private set; }
