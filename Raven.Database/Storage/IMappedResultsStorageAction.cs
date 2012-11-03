@@ -46,6 +46,11 @@ namespace Raven.Database.Storage
 			return Bucket == other.Bucket && string.Equals(ReduceKey, other.ReduceKey);
 		}
 
+		public override string ToString()
+		{
+			return Bucket + " - " + ReduceKey;
+		}
+
 		public override bool Equals(object obj)
 		{
 			if (ReferenceEquals(null, obj)) return false;

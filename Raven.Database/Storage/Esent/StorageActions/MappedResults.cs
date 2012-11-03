@@ -171,7 +171,7 @@ namespace Raven.Storage.Esent.StorageActions
 						yield return mappedResultInfo;
 					}
 				}
-
+				
 				reader.Add();
 			} while (Api.TryMoveNext(session, ScheduledReductions) && take > 0);
 
@@ -214,7 +214,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, MappedResults, bucket, MakeKeyGrbit.None);
 
 			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-
+			bool returnedResults = false;
 			do
 			{
 				var indexFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
@@ -224,7 +224,9 @@ namespace Raven.Storage.Esent.StorageActions
 					string.Equals(keyFromDb, reduceKey, StringComparison.InvariantCultureIgnoreCase) == false ||
 					bucketFromDb != bucket)
 				{
-					continue;
+					// this is a continue instead of a break because with lond reduce keys, we might have multiple items that have
+					// the same index key, so we go through them one at a time and compare the full key
+					continue; 
 				}
 				yield return new MappedResultInfo
 				{
@@ -238,8 +240,19 @@ namespace Raven.Storage.Esent.StorageActions
 					Data = LoadMappedResults(keyFromDb),
 					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
 				};
+				returnedResults = true;
 			} while (Api.TryMoveNext(session, MappedResults));
 
+			if(returnedResults == false)
+			{
+				{
+					yield return new MappedResultInfo
+					{
+						ReduceKey = reduceKey,
+						Bucket = bucket
+					};
+				}
+			}
 		}
 
 
@@ -300,7 +313,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, ReducedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, ReducedResults, bucket, MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, ReducedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
-
+			bool returnedResults = false;
 			do
 			{
 				var key = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["reduce_key"]);
@@ -308,6 +321,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (string.Equals(key, reduceKey, StringComparison.InvariantCultureIgnoreCase) == false ||
 					bucketFromDb != bucket)
 					continue;
+				returnedResults = true;
 				yield return new MappedResultInfo
 				{
 					Bucket = bucket,
@@ -321,6 +335,15 @@ namespace Raven.Storage.Esent.StorageActions
 					Size = Api.RetrieveColumnSize(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["data"]) ?? 0
 				};
 			} while (Api.TryMoveNext(session, ReducedResults));
+
+			if (returnedResults == false)
+			{
+				yield return new MappedResultInfo
+				{
+					Bucket = bucket,
+					ReduceKey = reduceKey,
+				};
+			}
 
 		}
 		public void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed)

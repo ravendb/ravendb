@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -16,14 +17,22 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var dateTime = DateTime.Parse("11/01/2012 23:30:00Z");
-			Console.WriteLine(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(dateTime, "Pacific Standard Time"));
+			var date = new DateTime(2012, 11, 1, 0, 0, 0, DateTimeKind.Unspecified);
+			var x= new DocumentStore
+			{
+				Url = "http://localhost:8080"
+			}.Initialize();
+			var documentSession = x.OpenSession();
+			var documentQuery = documentSession.Advanced.LuceneQuery<Article>();
+			documentQuery.WhereBetweenOrEqual(xa=> xa.Date, date, date.AddDays(1));
+			Console.WriteLine(documentQuery.ToString());
 		}
 
 
 		public class Article
 		{
 			public string Text { get; set; }
+			public DateTime Date { get; set; }
 		}
 	}
 }
