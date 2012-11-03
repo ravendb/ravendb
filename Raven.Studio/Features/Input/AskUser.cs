@@ -135,6 +135,29 @@ namespace Raven.Studio.Features.Input
 			return tcs.Task;
 		}
 
+		public static void ConfirmationWithEvent(string title, string question, Action onOkay)
+		{
+			var dataContext = new ConfirmModel
+			{
+				Title = title,
+				Question = question
+			};
+			var inputWindow = new ConfirmWindow
+			{
+				DataContext = dataContext
+			};
+
+
+			inputWindow.Closed += (sender, args) =>
+			{
+				if (inputWindow.DialogResult != null)
+					onOkay();
+			};
+
+			inputWindow.Show();
+
+		}
+
         public static bool Confirmation(string title, string question)
         {
             return MessageBox.Show(question, title, MessageBoxButton.OKCancel) == MessageBoxResult.OK;

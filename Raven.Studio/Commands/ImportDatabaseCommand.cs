@@ -38,15 +38,24 @@ namespace Raven.Studio.Commands
 		{
 			if (ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Statistics.Value.CountOfDocuments != 0)
 			{
-				if (AskUser.Confirmation("Override Docuements?", "There are documents in the database :" +
-							  ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name + "." + Environment.NewLine
-							  + "This operation can override those documents.") == false)
-					return;
+				AskUser.ConfirmationWithEvent("Override Docuements?", "There are documents in the database :" +
+				                                                  ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+				                                                  "." + Environment.NewLine
+				                                                  + "This operation can override those documents.",
+																  ExecuteInternal);
 			}
+			else
+			{
+				ExecuteInternal();
+			}
+		}
+
+		private void ExecuteInternal()
+		{
 			var openFile = new OpenFileDialog
-			               {
-							   Filter = "Raven Dumps|*.ravendump;*.raven.dump",
-			               };
+			{
+				Filter = "Raven Dumps|*.ravendump;*.raven.dump",
+			};
 
 			if (openFile.ShowDialog() != true)
 				return;
