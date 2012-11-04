@@ -75,7 +75,8 @@ namespace Raven.Database.Commercial
 				{
 					Status = "Commercial - " + licenseValidator.LicenseType,
 					Error = false,
-					Message = "Valid license at " + licensePath
+					Message = "Valid license at " + licensePath,
+					Attributes = licenseValidator.LicenseAttributes
 				};
 			}
 			catch (Exception e)
