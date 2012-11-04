@@ -77,14 +77,16 @@ namespace Raven.Database.Indexing
 						indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
 						return doc;
 					})
-						.Where(x => x is FilteredDocument == false);
+						.Where(x => x is FilteredDocument == false)
+						.ToList();
 
 
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
 						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 						var luceneDoc = new Document();
-						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
+						                                Field.Index.NOT_ANALYZED_NO_NORMS);
 
 						foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
 						{
@@ -107,11 +109,11 @@ namespace Raven.Database.Indexing
 									{
 										logIndexing.WarnException(
 											string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-															   name, indexingResult.NewDocId),
+											              name, indexingResult.NewDocId),
 											exception);
 										context.AddError(name,
-														 indexingResult.NewDocId,
-														 exception.Message
+										                 indexingResult.NewDocId,
+										                 exception.Message
 											);
 									},
 									trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
