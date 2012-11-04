@@ -10,7 +10,7 @@
 		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
 		<projectUrl>http://www.ravendb.net/</projectUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
-		<tags>nosql ravendb raven document database bundles</tags>
+		<tags>nosql ravendb raven document database bundles authorization</tags>
 		<dependencies>
 			<dependency id="RavenDB.Database" version=""/>
 		</dependencies>
