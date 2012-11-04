@@ -65,14 +65,15 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 		    var user = (PrincipalWithDatabaseAccess) ctx.User;
-            var databaseName = database().Name;
+            var databaseName = database().Name ?? string.Empty;
 
-            if (user.Principal.IsInRole(WindowsBuiltInRole.Administrator) || user.AdminDatabases.Contains(databaseName))
+		    if (userCreated && (user.Principal.IsInRole(WindowsBuiltInRole.Administrator) || user.AdminDatabases.Contains(databaseName)))
                 return true;
 
 			var httpRequest = ctx.Request;
 
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
+                userCreated &&
                 user.ReadWriteDatabases.Contains(databaseName) == false &&
 				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
 			{
@@ -81,12 +82,16 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
             if (IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) &&
+                userCreated &&
                 (user.ReadOnlyDatabases.Contains(databaseName) || user.ReadWriteDatabases.Contains(databaseName)))
                 return true;
-            
-            CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
-            CurrentOperationContext.User.Value = ctx.User;
-			return true;
+            if (userCreated)
+            {
+                CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
+                CurrentOperationContext.User.Value = ctx.User;
+            }
+
+		    return true;
 		}
 
         private bool TryCreateUser(IHttpContext ctx, out Action onRejectingRequest)
@@ -117,6 +122,12 @@ namespace Raven.Database.Server.Security.Windows
 	        var adminList = new List<string>();
 	        var readOnlyList = new List<string>();
 	        var readWriteList = new List<string>();
+
+            if(databaseAccessLists.ContainsKey(ctx.User.Identity.Name) == false)
+            {
+                ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User);
+                return;
+            }
 
 	        foreach (var databaseAccess in databaseAccessLists[ctx.User.Identity.Name])
 	        {
