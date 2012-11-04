@@ -57,115 +57,115 @@ namespace Raven.Database.Server.Security.Windows
 		public override bool Authorize(IHttpContext ctx)
 		{
 			Action onRejectingRequest;
-		    var userCreated = TryCreateUser(ctx, out onRejectingRequest);
+			var userCreated = TryCreateUser(ctx, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
 				onRejectingRequest();
 				return false;
 			}
 
-		    var user = (PrincipalWithDatabaseAccess) ctx.User;
-            var databaseName = database().Name ?? string.Empty;
+			var user = (PrincipalWithDatabaseAccess)ctx.User;
+			var databaseName = database().Name ?? string.Empty;
 
-		    if (userCreated && (user.Principal.IsInRole(WindowsBuiltInRole.Administrator) || user.AdminDatabases.Contains(databaseName)))
-                return true;
+			if (userCreated && (user.Principal.IsInRole(WindowsBuiltInRole.Administrator) || user.AdminDatabases.Contains(databaseName)))
+				return true;
 
 			var httpRequest = ctx.Request;
 
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
-                userCreated &&
-                user.ReadWriteDatabases.Contains(databaseName) == false &&
+				userCreated &&
+				user.ReadWriteDatabases.Contains(databaseName) == false &&
 				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
 			{
 				onRejectingRequest();
 				return false;
 			}
 
-            if (IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) &&
-                userCreated &&
-                (user.ReadOnlyDatabases.Contains(databaseName) || user.ReadWriteDatabases.Contains(databaseName)))
-                return true;
-            if (userCreated)
-            {
-                CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
-                CurrentOperationContext.User.Value = ctx.User;
-            }
+			if (IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) &&
+				userCreated &&
+				(user.ReadOnlyDatabases.Contains(databaseName) || user.ReadWriteDatabases.Contains(databaseName)))
+				return true;
+			if (userCreated)
+			{
+				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
+				CurrentOperationContext.User.Value = ctx.User;
+			}
 
-		    return true;
+			return true;
 		}
 
-        private bool TryCreateUser(IHttpContext ctx, out Action onRejectingRequest)
-        {
-            var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
-            if (invalidUser)
-            {
-                onRejectingRequest = () =>
-                {
-                    ctx.Response.AddHeader("Raven-Required-Auth", "Windows");
-                    ctx.SetStatusToForbidden();
-                };
-                return false;
-            }
-
-            var databaseAccessLists = GenerateDatabaseAccessLists(ctx);
-            UpdateUserPrincipal(ctx, databaseAccessLists);
-
-            onRejectingRequest = ctx.SetStatusToUnauthorized;
-            return true;
-        }
-
-	    private void UpdateUserPrincipal(IHttpContext ctx, Dictionary<string, List<DatabaseAccess>> databaseAccessLists)
-	    {
-            if (ctx.User is PrincipalWithDatabaseAccess)
-                return;
-
-	        var adminList = new List<string>();
-	        var readOnlyList = new List<string>();
-	        var readWriteList = new List<string>();
-
-            if(databaseAccessLists.ContainsKey(ctx.User.Identity.Name) == false)
-            {
-                ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User);
-                return;
-            }
-
-	        foreach (var databaseAccess in databaseAccessLists[ctx.User.Identity.Name])
-	        {
-	            if(databaseAccess.Admin)
-                    adminList.Add(databaseAccess.TenantId);
-                else if(databaseAccess.ReadOnly)
-                    readOnlyList.Add(databaseAccess.TenantId);
-                else
-                    readWriteList.Add(databaseAccess.TenantId);         
-	        }
-
-            ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User)
-            {
-                AdminDatabases = adminList,
-                ReadOnlyDatabases = readOnlyList,
-                ReadWriteDatabases = readWriteList
-            };
-	    }
-
-		private Dictionary<string,List<DatabaseAccess>> GenerateDatabaseAccessLists(IHttpContext ctx)
+		private bool TryCreateUser(IHttpContext ctx, out Action onRejectingRequest)
 		{
-            var databaseAccessLists = requiredUsers
-                .Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
-                .ToDictionary(source => source.Name, source => source.Databases);
+			var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
+			if (invalidUser)
+			{
+				onRejectingRequest = () =>
+				{
+					ctx.Response.AddHeader("Raven-Required-Auth", "Windows");
+					ctx.SetStatusToForbidden();
+				};
+				return false;
+			}
 
-		    foreach (var windowsAuthData in requiredGroups.Where(data => ctx.User.IsInRole(data.Name)))
-		    {
-                if(databaseAccessLists.ContainsKey(windowsAuthData.Name))
-                {
-                    databaseAccessLists[windowsAuthData.Name].AddRange(windowsAuthData.Databases);
-                }
-                else
-                {
-                    databaseAccessLists.Add(windowsAuthData.Name, windowsAuthData.Databases);
-                }
-		    }
+			var databaseAccessLists = GenerateDatabaseAccessLists(ctx);
+			UpdateUserPrincipal(ctx, databaseAccessLists);
 
-            return databaseAccessLists;
+			onRejectingRequest = ctx.SetStatusToUnauthorized;
+			return true;
+		}
+
+		private void UpdateUserPrincipal(IHttpContext ctx, Dictionary<string, List<DatabaseAccess>> databaseAccessLists)
+		{
+			if (ctx.User is PrincipalWithDatabaseAccess)
+				return;
+
+			var adminList = new List<string>();
+			var readOnlyList = new List<string>();
+			var readWriteList = new List<string>();
+
+			if (databaseAccessLists.ContainsKey(ctx.User.Identity.Name) == false)
+			{
+				ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User);
+				return;
+			}
+
+			foreach (var databaseAccess in databaseAccessLists[ctx.User.Identity.Name])
+			{
+				if (databaseAccess.Admin)
+					adminList.Add(databaseAccess.TenantId);
+				else if (databaseAccess.ReadOnly)
+					readOnlyList.Add(databaseAccess.TenantId);
+				else
+					readWriteList.Add(databaseAccess.TenantId);
+			}
+
+			ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User)
+			{
+				AdminDatabases = adminList,
+				ReadOnlyDatabases = readOnlyList,
+				ReadWriteDatabases = readWriteList
+			};
+		}
+
+		private Dictionary<string, List<DatabaseAccess>> GenerateDatabaseAccessLists(IHttpContext ctx)
+		{
+			var databaseAccessLists = requiredUsers
+				.Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
+				.ToDictionary(source => source.Name, source => source.Databases);
+
+			foreach (var windowsAuthData in requiredGroups.Where(data => ctx.User.IsInRole(data.Name)))
+			{
+				if (databaseAccessLists.ContainsKey(windowsAuthData.Name))
+				{
+					databaseAccessLists[windowsAuthData.Name].AddRange(windowsAuthData.Databases);
+				}
+				else
+				{
+					databaseAccessLists.Add(windowsAuthData.Name, windowsAuthData.Databases);
+				}
+			}
+
+			return databaseAccessLists;
 		}
 
 		public override void Dispose()
