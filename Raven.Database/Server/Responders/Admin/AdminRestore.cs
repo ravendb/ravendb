@@ -5,6 +5,7 @@ using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders.Admin
 {
@@ -26,15 +27,18 @@ namespace Raven.Database.Server.Responders.Admin
 			{
 				ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 			}
-			var restoreDoc = new List<string>();
 
-			// Commented out unfinished code to get it to compile
-			//		    DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation,
-			//		                             msg =>
-			//		                             {
-			//
-			//		                             });
-			//            SystemDatabase.
+			var restoreStatus = new List<string>();
+
+			DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation,
+			                         msg =>
+			                         {
+				                         restoreStatus.Add(msg);
+				                         SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+											 RavenJObject.FromObject(new {restoreStatus}), new RavenJObject(), null);
+			                         });
+			//TODO: put database document in system database
+			// SystemDatabase.Put("Raven/Databases/" + restoreRequest.DatabaseName, null, )
 		}
 	}
 }

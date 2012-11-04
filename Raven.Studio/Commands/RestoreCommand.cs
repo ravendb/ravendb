@@ -1,6 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using Raven.Client.Extensions;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
@@ -21,8 +24,28 @@ namespace Raven.Studio.Commands
 			if (location == null || name == null)
 				return;
 
-			DatabaseCommands.StartRestoreAsync(location.Value, name.Value)
-				.ContinueWith(task => task.Wait()).Catch();
+			startRestoreTask.TaskStatus = TaskStatus.Started;
+			startRestoreTask.CanExecute.Value = false;
+			DatabaseCommands.StartRestoreAsync(location.Value, name.Value).Catch();
+
+			UpdateStatus();
+		}
+
+		private void UpdateStatus()
+		{
+			DatabaseCommands.ForDefaultDatabase().GetAsync("Raven/Restore/Status").ContinueOnSuccessInTheUIThread(doc =>
+			{
+				var status = doc.DataAsJson["restoreStatus"].Values().Select(token => token.ToString()).ToList();
+				startRestoreTask.Output.Clear();
+				startRestoreTask.Output.AddRange(status);
+				if (status.Last().Contains("Complete") == false)
+					Time.Delay(TimeSpan.FromMilliseconds(250)).ContinueOnSuccessInTheUIThread(UpdateStatus);
+				else
+				{
+					startRestoreTask.CanExecute.Value = true;
+					startRestoreTask.TaskStatus = TaskStatus.Ended;
+				}
+			});
 		}
 	}
 }

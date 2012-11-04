@@ -140,9 +140,9 @@ namespace Raven.Storage.Esent
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
 
-		public void Restore(string backupLocation, string databaseLocation)
+		public void Restore(string backupLocation, string databaseLocation, Action<string> output)
 		{
-			new RestoreOperation(backupLocation, databaseLocation).Execute();
+			new RestoreOperation(backupLocation, databaseLocation, output).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()
