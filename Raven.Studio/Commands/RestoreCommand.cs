@@ -18,15 +18,16 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			var location = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Location");
+			var backupLocation = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Backup Location");
+			var databaseLocation = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Database Location");
 			var name = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Database Name");
 
-			if (location == null || name == null)
+			if (backupLocation == null || name == null || databaseLocation == null)
 				return;
 
 			startRestoreTask.TaskStatus = TaskStatus.Started;
 			startRestoreTask.CanExecute.Value = false;
-			DatabaseCommands.StartRestoreAsync(location.Value, name.Value).Catch();
+			DatabaseCommands.StartRestoreAsync(backupLocation.Value, databaseLocation.Value, name.Value).Catch();
 
 			UpdateStatus();
 		}

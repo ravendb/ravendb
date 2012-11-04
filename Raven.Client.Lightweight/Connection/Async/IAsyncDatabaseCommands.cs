@@ -245,7 +245,7 @@ namespace Raven.Client.Connection.Async
 
 		Task StartBackupAsync(string backupLocation);
 
-		Task StartRestoreAsync(string restoreLocation, string databaseLocation);
+		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null);
 
 		Task StartIndexingAsync();
 
