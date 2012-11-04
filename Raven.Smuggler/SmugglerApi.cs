@@ -220,10 +220,11 @@ namespace Raven.Smuggler
 				}
 			}
 			total += batch.Count;
-			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,#.##;;0} kb] in {1:#,#;;0} ms", 
+			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,#.##;;0} kb] in {1:#,#;;0} ms ({6:#,#;;0} ms per doc)", 
 				batch.Count, sw.ElapsedMilliseconds, ++count, total,
 				(double)request.NumberOfBytesWrittenUncompressed / 1024,
-				(double)request.NumberOfBytesWrittenCompressed / 1024);
+				(double)request.NumberOfBytesWrittenCompressed / 1024,
+				batch.Count / Math.Max(1, sw.ElapsedMilliseconds));
 
 			batch.Clear();
 
