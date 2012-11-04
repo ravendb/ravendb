@@ -13,6 +13,7 @@ namespace Raven.Studio.Infrastructure.Converters
 			if (value == null)
 				return false;
 
+			return true;//temp until another way of doing it is found
 			if (ConfigurationManager.AppSettings.ContainsKey("Raven/ActiveBundles") == false)
 				return false;
 			var bundles = ConfigurationManager.AppSettings["Raven/ActiveBundles"];
