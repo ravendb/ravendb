@@ -395,6 +395,7 @@ namespace Raven.Abstractions.Smuggler
 		private void HandleBatch(SmugglerOptions options, List<RavenJObject> batch, long sizeOfDisk)
 		{
 			var sw = Stopwatch.StartNew();
+			var actualBatchSize = batch.Count;
 			Guid lastEtagInBatch = FlushBatch(batch);
 			sw.Stop();
 
@@ -402,7 +403,7 @@ namespace Raven.Abstractions.Smuggler
 
 			batchRecording.AddLast(Tuple.Create(lastEtagInBatch, SystemTime.UtcNow));
 			if(sizeOfDisk >=MaxSizeOfUncomressedSizeToSendToDatabase)
-				options.BatchSize = batch.Count;
+				options.BatchSize = actualBatchSize - actualBatchSize/10;
 			else
 				ModifyBatchSize(options, currentProcessingTime);
 		}
@@ -488,11 +489,11 @@ namespace Raven.Abstractions.Smuggler
 
 		private void ModifyBatchSize(SmugglerOptions options, TimeSpan currentProcessingTime)
 		{
-			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.8))
+			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.5))
 				return;
 
-			var change = Math.Max(1, options.BatchSize/2);
-			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.9))
+			var change = Math.Max(1, options.BatchSize / 3);
+			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.7))
 				options.BatchSize -= change;
 			else
 				options.BatchSize += change;
