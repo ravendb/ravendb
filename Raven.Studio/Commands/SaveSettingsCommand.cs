@@ -133,8 +133,12 @@ namespace Raven.Studio.Commands
 			if(periodicBackup.PeriodicBackupSetup == null)
 				return;
 
-			if (periodicBackup.OriginalAwsSecretKey != periodicBackup.AwsSecretKey)
-				settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
+            if (periodicBackup.IsS3Selected.Value)
+                periodicBackup.PeriodicBackupSetup.GlacierVaultName = string.Empty;
+            else
+                periodicBackup.PeriodicBackupSetup.S3BucketName = string.Empty;
+
+            settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
 			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
 
 			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);

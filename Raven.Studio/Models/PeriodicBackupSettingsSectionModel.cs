@@ -1,6 +1,7 @@
 ﻿using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
@@ -9,14 +10,14 @@ namespace Raven.Studio.Models
 		public PeriodicBackupSettingsSectionModel()
 		{
 			SectionName = "Periodic Backup";
+            IsS3Selected = new Observable<bool>();
 		}
 
 		public PeriodicBackupSetup PeriodicBackupSetup { get; set; }
 		public string AwsAccessKey { get; set; }
 		public string AwsSecretKey { get; set; }
-        //TODO: remove original
+        public Observable<bool> IsS3Selected { get; set; }
         //TODO: add selection betweeb S3 and Glecuir
-		public string OriginalAwsSecretKey { get; set; }
 		public bool HasDocument { get; set; }
 
 		public override void LoadFor(DatabaseDocument document)
@@ -28,7 +29,6 @@ namespace Raven.Studio.Models
 			{
 				AwsAccessKey = document.Settings["Raven/AWSAccessKey"];
 				AwsSecretKey = document.SecuredSettings["Raven/AWSSecretKey"];
-				OriginalAwsSecretKey = AwsSecretKey;
 			}
 
 			session.LoadAsync<PeriodicBackupSetup>(PeriodicBackupSetup.RavenDocumentKey).ContinueWith(task =>
