@@ -318,7 +318,7 @@ namespace Raven.Database.Indexing
 				Age = currentIndexingAge,
 				Task = System.Threading.Tasks.Task.Factory.StartNew(() =>
 				{
-					var jsonDocuments = GetJsonDocsFromDisk(nextEtag);
+					var jsonDocuments = GetJsonDocuments(nextEtag);
 					int localWork = workCounter;
 					while (jsonDocuments.Results.Length == 0 && context.DoWork)
 					{
@@ -327,7 +327,7 @@ namespace Raven.Database.Indexing
 						if (context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching") == false)
 							continue;
 
-						jsonDocuments = GetJsonDocsFromDisk(nextEtag);
+						jsonDocuments = GetJsonDocuments(nextEtag);
 					}
 					futureBatchStat.Duration = sp.Elapsed;
 					futureBatchStat.Size = jsonDocuments.Results.Length;
