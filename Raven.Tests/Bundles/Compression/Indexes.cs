@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Abstractions.Data;
+﻿using System.Linq;
 using Raven.Abstractions.Indexing;
-using Raven.Bundles.Tests.Versioning;
+using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
-
-namespace Raven.Bundles.Tests.Compression
+namespace Raven.Tests.Bundles.Compression
 {
 	public class Indexes : Compression
 	{

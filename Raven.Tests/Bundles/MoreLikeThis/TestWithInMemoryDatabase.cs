@@ -4,7 +4,7 @@ using System.Reflection;
 using Raven.Client.Document;
 using Raven.Server;
 
-namespace Raven.Bundles.Tests.MoreLikeThis
+namespace Raven.Tests.Bundles.MoreLikeThis
 {
 	public class TestWithInMemoryDatabase : IDisposable
 	{

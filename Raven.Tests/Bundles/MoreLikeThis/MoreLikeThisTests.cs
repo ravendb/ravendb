@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -11,9 +10,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
 using Xunit;
-using MoreLikeThisQueryParameters = Raven.Abstractions.Data.MoreLikeThisQueryParameters;
 
-namespace Raven.Bundles.Tests.MoreLikeThis
+namespace Raven.Tests.Bundles.MoreLikeThis
 {
 	public class MoreLikeThisTests : TestWithInMemoryDatabase, IDisposable
 	{

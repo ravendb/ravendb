@@ -4,13 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
 using Raven.Server;
 
-namespace Raven.Bundles.Tests.Compression
+namespace Raven.Tests.Bundles.Compression
 {
 	public abstract class Compression : IDisposable
 	{

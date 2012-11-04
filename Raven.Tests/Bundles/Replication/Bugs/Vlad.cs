@@ -1,9 +1,7 @@
 ﻿using System.Linq;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication.Bugs
+namespace Raven.Tests.Bundles.Replication.Bugs
 {
 	public class Vlad : ReplicationBase
 	{

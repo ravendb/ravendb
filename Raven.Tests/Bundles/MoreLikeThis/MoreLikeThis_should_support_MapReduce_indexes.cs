@@ -1,14 +1,12 @@
 ﻿using System.Collections.Specialized;
-using System.ComponentModel.Composition.Hosting;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
 using Xunit;
-using MoreLikeThisQueryParameters = Raven.Abstractions.Data.MoreLikeThisQueryParameters;
 
-
-namespace Raven.Bundles.Tests.MoreLikeThis
+namespace Raven.Tests.Bundles.MoreLikeThis
 {
 	public class MoreLikeThis_should_support_MapReduce_indexes : TestWithInMemoryDatabase
 	{

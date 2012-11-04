@@ -3,7 +3,7 @@ using Raven.Client.Bundles.Versioning;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Versioning.Bugs
+namespace Raven.Tests.Bundles.Versioning.Bugs
 {
 	public class VersioningWithGuidIds : VersioningTest
 	{

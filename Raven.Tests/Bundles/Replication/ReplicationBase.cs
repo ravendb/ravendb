@@ -6,23 +6,19 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
-using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Tests;
 using Xunit;
-using IOExtensions = Raven.Database.Extensions.IOExtensions;
 using System.Linq;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class ReplicationBase : IDisposable
 	{

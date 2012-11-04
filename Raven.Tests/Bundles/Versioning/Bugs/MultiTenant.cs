@@ -3,11 +3,10 @@ using Raven.Client;
 using Raven.Client.Bundles.Versioning;
 using Raven.Client.Document;
 using Raven.Server;
-using Raven.Tests;
 using Xunit;
 using Raven.Client.Extensions;
 
-namespace Raven.Bundles.Tests.Versioning.Bugs
+namespace Raven.Tests.Bundles.Versioning.Bugs
 {
 	public class MultiTenant : RavenTest
 	{

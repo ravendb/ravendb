@@ -3,7 +3,7 @@ using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
-namespace Raven.Bundles.Tests.MoreLikeThis
+namespace Raven.Tests.Bundles.MoreLikeThis
 {
 	public class MoreLikeThisQueryParametersTests
 	{

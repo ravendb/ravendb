@@ -4,19 +4,18 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Bundles.Versioning;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Bundles.Tests.Expiration
+namespace Raven.Tests.Bundles.Expiration
 {
 	public class Expiration : IDisposable
 	{

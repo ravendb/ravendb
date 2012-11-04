@@ -1,13 +1,10 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using Raven.Client;
+﻿using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class FailoverBetweenTwoMultiTenantDatabases : ReplicationBase
 	{

@@ -1,12 +1,10 @@
-﻿
-using System.IO;
+﻿using System.IO;
 using System.Threading;
-using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class AttachmentReplicationBugs : ReplicationBase
 	{

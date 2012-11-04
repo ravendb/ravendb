@@ -4,11 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-using Raven.Bundles.Tests.Versioning;
-using Raven.Client;
+using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication.Async
+namespace Raven.Tests.Bundles.Replication.Async
 {
 	public class SimpleReplication : ReplicationBase
 	{

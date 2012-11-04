@@ -1,10 +1,10 @@
 using System.Net;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class WritesDuringFailover2 : ReplicationBase
 	{
