@@ -514,25 +514,6 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		private class IndexingBatch
-		{
-			public IndexingBatch()
-			{
-				Ids = new List<string>();
-				Docs = new List<dynamic>();
-			}
-
-			public readonly List<string> Ids;
-			public readonly List<dynamic> Docs;
-			public DateTime? DateTime;
-
-			public void Add(JsonDocument doc, object asJson)
-			{
-				Ids.Add(doc.Key);
-				Docs.Add(asJson);
-			}
-		}
-
 		private void IndexDocuments(IStorageActionsAccessor actions, string index, IndexingBatch batch)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
@@ -552,8 +533,8 @@ namespace Raven.Database.Indexing
 					Log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
 				}
 				context.CancellationToken.ThrowIfCancellationRequested();
-
-				context.IndexStorage.Index(index, viewGenerator, batch.Docs, context, actions, batch.DateTime ?? DateTime.MinValue);
+				
+				context.IndexStorage.Index(index, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
 			catch (OperationCanceledException)
 			{

@@ -198,6 +198,7 @@
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
+    <Compile Include="Indexing\IndexingBatch.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
     <Compile Include="Json\ScriptsCache.cs" />

@@ -36,7 +36,7 @@ namespace Raven.Database.Indexing
 			get { return false; }
 		}
 
-		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
+		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
 			var sourceCount = 0;
@@ -51,7 +51,7 @@ namespace Raven.Database.Indexing
 				try
 				{
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
-					var documentsWrapped = documents.Select((dynamic doc) =>
+					var documentsWrapped = batch.Docs.Select((doc,i) =>
 					{
 						Interlocked.Increment(ref sourceCount);
 						if (doc.__document_id == null)
@@ -74,7 +74,8 @@ namespace Raven.Database.Indexing
 									);
 							},
 							trigger => trigger.OnIndexEntryDeleted(documentId));
-						indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
+						if(batch.SkipDeleteFromIndex[i] == false)
+							indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
 						return doc;
 					})
 						.Where(x => x is FilteredDocument == false)

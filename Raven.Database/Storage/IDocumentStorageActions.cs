@@ -22,7 +22,14 @@ namespace Raven.Database.Storage
 		JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation);
 
 		bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata);
-		Tuple<Guid, DateTime> AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata);
-		Tuple<Guid, DateTime> PutDocumentMetadata(string key, RavenJObject metadata);
+		AddDocumentResult AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata);
+		AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata);
+	}
+
+	public class AddDocumentResult
+	{
+		public Guid Etag;
+		public DateTime SavedAt;
+		public bool Updated;
 	}
 }

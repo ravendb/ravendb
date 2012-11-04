@@ -299,7 +299,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return optimizer.Select(ReadCurrentDocument);
 		}
 
-		public Tuple<Guid, DateTime> PutDocumentMetadata(string key, RavenJObject metadata)
+		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -323,10 +323,15 @@ namespace Raven.Storage.Esent.StorageActions
 
 				update.Save();
 			}
-			return Tuple.Create(newEtag, savedAt);
+			return new AddDocumentResult
+			{
+				Etag = newEtag,
+				SavedAt = savedAt,
+				Updated = true
+			};
 		}
 
-		public Tuple<Guid, DateTime> AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
+		public AddDocumentResult AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 2048)
 				throw new ArgumentException(string.Format("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters, key is: '{0}'", key), "key");
@@ -383,7 +388,12 @@ namespace Raven.Storage.Esent.StorageActions
 							   key, isUpdate);
 
 			cacher.RemoveCachedDocument(key, newEtag);
-			return Tuple.Create(newEtag, savedAt);
+			return new AddDocumentResult
+			{
+				Etag = newEtag,
+				SavedAt = savedAt,
+				Updated = isUpdate
+			};
 		}
 
 
