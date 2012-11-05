@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Windows.Data;
+using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Infrastructure.Converters
 {
@@ -8,17 +9,13 @@ namespace Raven.Studio.Infrastructure.Converters
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			var name = value as string;
+			var name = parameter as string;
+			var license = value as LicensingStatus;
 
-			if (value == null)
+			if (value == null || license == null || license.Attributes == null || license.Attributes.ContainsKey("Raven/ActiveBundles") == false)
 				return false;
 
-			return true;//temp until another way of doing it is found
-			if (ConfigurationManager.AppSettings.ContainsKey("Raven/ActiveBundles") == false)
-				return false;
-			var bundles = ConfigurationManager.AppSettings["Raven/ActiveBundles"];
-
-			return bundles.Contains(name);
+			return license.Attributes["Raven/ActiveBundles"].Contains(name);
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

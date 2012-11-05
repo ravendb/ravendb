@@ -2,18 +2,31 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Raven.Abstractions.Data;
+using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
+using Raven.Client.Connection;
 
 namespace Raven.Studio.Controls
 {
 	public partial class NewDatabase : ChildWindow
 	{
 		public List<string> Bundles { get; private set; }
+		public LicensingStatus LicensingStatus { get; set; }
 
 		public NewDatabase()
 		{
 			InitializeComponent();
-			DataContext = this;
+			var req = ApplicationModel.DatabaseCommands.ForDefaultDatabase().CreateRequest("/license/status", "GET");
+
+			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
+			{
+				LicensingStatus = ((RavenJObject)doc).Deserialize<LicensingStatus>(new DocumentConvention());
+			});
+
+			
 			Bundles = new List<string>();
 			KeyDown += (sender, args) =>
 			{

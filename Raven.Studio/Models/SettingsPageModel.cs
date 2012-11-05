@@ -1,5 +1,7 @@
 ﻿using System.Windows.Input;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -8,10 +10,23 @@ namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
-
+	    private bool showPeriodicBackup;
         public SettingsPageModel()
         {
             Settings = new SettingsModel();
+			var req = ApplicationModel.DatabaseCommands.ForDefaultDatabase().CreateRequest("/license/status", "GET");
+
+			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
+			{
+				var licensingStatus = ((RavenJObject)doc).Deserialize<LicensingStatus>(new DocumentConvention());
+				if(licensingStatus != null && 
+					licensingStatus.Attributes != null && 
+					licensingStatus.Attributes.ContainsKey("Raven/ActiveBundles") &&
+					licensingStatus.Attributes["Raven/ActiveBundles"].Contains("PeriodicBackups"))
+				{
+					showPeriodicBackup = true;
+				}
+			});
         }
 
         public string CurrentDatabase
@@ -28,8 +43,8 @@ namespace Raven.Studio.Models
 				var apiKeys = new ApiKeysSectionModel();
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
-                Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
-
+				if(showPeriodicBackup)
+					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
 
@@ -54,8 +69,8 @@ namespace Raven.Studio.Models
 			        Settings.Sections.Add(databaseSettingsSectionViewModel);
 			        Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
                     
-                    Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
-			        
+					if(showPeriodicBackup)
+						Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 			        string activeBundles;
 			        databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
