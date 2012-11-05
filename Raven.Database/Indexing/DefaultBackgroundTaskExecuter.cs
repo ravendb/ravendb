@@ -102,7 +102,7 @@ namespace Raven.Database.Indexing
 
 		private IEnumerator<T> Yield<T>(IList<T> source, int start, int end)
 		{
-			while (start < source.Count && end >= 0)
+			while (start < source.Count && end > 0)
 			{
 				end--;
 				yield return source[start];
