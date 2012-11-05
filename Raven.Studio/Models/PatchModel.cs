@@ -186,7 +186,8 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => IsQueryVisible);
 				OnPropertyChanged(() => IsComboBoxVisible);
 				OnPropertyChanged(() => BeforeAndAfterPromptText);
-			    SelectedItem = "";
+				if(KeepSelectedItem == false)
+					SelectedItem = "";
 			    UpdateAvailableObjects();
 			    ClearBeforeAndAfter();
 			}
@@ -277,6 +278,8 @@ namespace Raven.Studio.Models
 		    get { return selectedItem; }
             set
             {
+				if (value == null && KeepSelectedItem)
+					return;
                 selectedItem = value;
                 OnPropertyChanged(() => SelectedItem);
                 recentDocuments.Clear();
@@ -342,6 +345,7 @@ namespace Raven.Studio.Models
 	    public IEditorDocument Script { get; private set; }
 		public ObservableCollection<PatchValue> Values { get; set; }
 		public PatchValue SelectedValue { get; set; }
+		public bool KeepSelectedItem { get; set; }
 
 		public const string CollectionsIndex = "Raven/DocumentsByEntityName";
 		public ICommand Patch { get { return new ExecutePatchCommand(this); } }
@@ -405,7 +409,12 @@ namespace Raven.Studio.Models
                             AvailableObjects.AddRange(collections.OrderByDescending(x => x.Count)
                                                           .Where(x => x.Count > 0)
                                                           .Select(col => col.Name).ToList());
-	                        SelectedItem = AvailableObjects.FirstOrDefault();
+							if(KeepSelectedItem == false)
+								SelectedItem = AvailableObjects.FirstOrDefault();
+							else
+								KeepSelectedItem = false;								
+
+							OnPropertyChanged(() => SelectedItem);
                         });
                     break;
                 case PatchOnOptions.Index:
@@ -414,7 +423,12 @@ namespace Raven.Studio.Models
                         {
                             AvailableObjects.Clear();
                             AvailableObjects.AddRange(indexes.OrderBy(x => x));
-							SelectedItem = AvailableObjects.FirstOrDefault();
+							if (KeepSelectedItem == false)
+								SelectedItem = AvailableObjects.FirstOrDefault();
+							else
+								KeepSelectedItem = false;
+
+							OnPropertyChanged(() => SelectedItem);
                         });
                     break;
             }
@@ -516,14 +530,14 @@ namespace Raven.Studio.Models
 		public override void Execute(object parameter)
 		{
 			AskUser.SelectItem("Load", "Choose saved patching to load",
-			                                    () => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
+												() => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Database.Value.Name).Advanced.
 				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
 					                                             task =>
 					                                             {
 						                                             IList<string> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).ToList();
 						                                             return objects;
 					                                             }))
-				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().
+				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Database.Value.Name).
 					                                          LoadAsync<PatchDocument>("Studio/Patch/" + result)
 					                                          .ContinueOnSuccessInTheUIThread(patch =>
 					                                          {
@@ -531,10 +545,11 @@ namespace Raven.Studio.Models
 																	  ApplicationModel.Current.Notifications.Add(new Notification("Could not find Patch document named " + result, NotificationLevel.Error));
 																  else
 																  {
+																	  patchModel.KeepSelectedItem = true;
+																	  patchModel.SelectedItem = patch.SelectedItem;
 																	  patchModel.PatchOn = patch.PatchOnOption;
 																	  patchModel.QueryDoc.SetText(patch.Query);
 																	  patchModel.Script.SetText(patch.Script);
-																	  patchModel.SelectedItem = patch.SelectedItem;
 																	  patchModel.Values = new ObservableCollection<PatchValue>(patch.Values);
 																	  patchModel.UpdateDoc(result);
 
@@ -567,7 +582,7 @@ namespace Raven.Studio.Models
 					Values = patchModel.Values.ToList()
 				};
 
-				var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
+				var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Database.Value.Name);
 				session.Store(doc);
 				session.SaveChangesAsync().ContinueOnSuccessInTheUIThread(() => patchModel.UpdateDoc(name));
 			});
