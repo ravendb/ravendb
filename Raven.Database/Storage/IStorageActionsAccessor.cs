@@ -25,4 +25,5 @@ namespace Raven.Database.Storage
 		T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.Task;
 		void AfterCommit(JsonDocument doc, Action<JsonDocument[]> afterCommit);
 	}
+
 }

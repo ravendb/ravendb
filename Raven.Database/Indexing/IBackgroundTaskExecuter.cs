@@ -14,7 +14,7 @@ namespace Raven.Database.Indexing
 
 		void ExecuteAll<T>(WorkContext context, IList<T> source, Action<T, long> action);
 
-		void ExecuteAllBuffered<T>(WorkContext context, IEnumerable<T> source, Action<IEnumerator<T>> action);
+		void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action);
 	}
 
 	public interface IRepeatedAction
