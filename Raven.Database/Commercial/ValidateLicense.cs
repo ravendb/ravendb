@@ -23,14 +23,12 @@ namespace Raven.Database.Commercial
 	internal class ValidateLicense : IDisposable
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
-		public static IDictionary<string, string> LicenseAttributes { get; set; }
 		private AbstractLicenseValidator licenseValidator;
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 
 		static ValidateLicense()
 		{
-			LicenseAttributes = new Dictionary<string, string>();
 			CurrentLicense = new LicensingStatus
 			{
 				Status = "AGPL - Open Source",
@@ -60,8 +58,6 @@ namespace Raven.Database.Commercial
 				licenseValidator.AssertValidLicense(() =>
 				{
 					string value;
-
-					LicenseAttributes = licenseValidator.LicenseAttributes;
 
 					AssertForV2(licenseValidator.LicenseAttributes);
 					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&

@@ -1029,7 +1029,7 @@ namespace Raven.Database.Server
 		private void AssertLicenseParameters(InMemoryRavenConfiguration config)
 		{
 			string maxDatabases;
-			if (ValidateLicense.LicenseAttributes.TryGetValue("numberOfDatabases", out maxDatabases))
+			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfDatabases", out maxDatabases))
 			{
 				if (string.Equals(maxDatabases, "unlimited", StringComparison.InvariantCultureIgnoreCase) == false)
 				{
@@ -1051,7 +1051,7 @@ namespace Raven.Database.Server
 				foreach (var bundle in bundlesList)
 				{
 					string value;
-					if (ValidateLicense.LicenseAttributes.TryGetValue(bundle, out value))
+					if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
 					{
 						bool active;
 						if (bool.TryParse(value, out active) && active == false)

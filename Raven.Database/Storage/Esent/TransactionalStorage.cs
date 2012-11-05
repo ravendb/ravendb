@@ -356,7 +356,7 @@ namespace Raven.Storage.Esent
 				try
 				{
 					string value;
-					if (ValidateLicense.LicenseAttributes.TryGetValue("maxSizeInMb", out value))
+					if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("maxSizeInMb", out value))
 					{
 						if (value != "unlimited")
 						{

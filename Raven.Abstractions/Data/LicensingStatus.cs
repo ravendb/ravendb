@@ -14,5 +14,10 @@ namespace Raven.Abstractions.Data
 		public string Status { get; set; }
 		public bool Error { get; set; }
 		public IDictionary<string, string> Attributes { get; set; }
+
+		public LicensingStatus()
+		{
+			Attributes = new Dictionary<string, string>();
+		}
 	}
 }
