@@ -1,4 +1,6 @@
-﻿using System.Windows.Input;
+﻿using System;
+using System.Collections.Generic;
+using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -10,7 +12,7 @@ namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
-	    private bool showPeriodicBackup;
+	    private bool ShowPeriodicBackup { get; set; }
         public SettingsPageModel()
         {
             Settings = new SettingsModel();
@@ -19,12 +21,20 @@ namespace Raven.Studio.Models
 			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{
 				var licensingStatus = ((RavenJObject)doc).Deserialize<LicensingStatus>(new DocumentConvention());
-				if(licensingStatus != null && 
-					licensingStatus.Attributes != null && 
-					licensingStatus.Attributes.ContainsKey("Raven/ActiveBundles") &&
-					licensingStatus.Attributes["Raven/ActiveBundles"].Contains("PeriodicBackups"))
+				if(licensingStatus != null && licensingStatus.Attributes != null)
 				{
-					showPeriodicBackup = true;
+					//TODO: remove local attributes
+					var localAttributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+					foreach (var attribute in licensingStatus.Attributes)
+					{
+						localAttributes.Add(attribute.Key, attribute.Value);
+					}
+
+					if (localAttributes.ContainsKey("PeriodicBackups") && localAttributes["PeriodicBackups"].Equals("true", StringComparison.InvariantCultureIgnoreCase))
+					{
+						ShowPeriodicBackup = true;
+						OnPropertyChanged(() => ShowPeriodicBackup);
+					}
 				}
 			});
         }
@@ -43,7 +53,7 @@ namespace Raven.Studio.Models
 				var apiKeys = new ApiKeysSectionModel();
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
-				if(showPeriodicBackup)
+				if(ShowPeriodicBackup)
 					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
@@ -69,7 +79,7 @@ namespace Raven.Studio.Models
 			        Settings.Sections.Add(databaseSettingsSectionViewModel);
 			        Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
                     
-					if(showPeriodicBackup)
+					if(ShowPeriodicBackup)
 						Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 			        string activeBundles;

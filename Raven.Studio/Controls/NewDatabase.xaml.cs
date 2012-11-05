@@ -14,16 +14,17 @@ namespace Raven.Studio.Controls
 	public partial class NewDatabase : ChildWindow
 	{
 		public List<string> Bundles { get; private set; }
-		public LicensingStatus LicensingStatus { get; set; }
+		public Observable<LicensingStatus> LicensingStatus { get; set; }
 
 		public NewDatabase()
 		{
+			LicensingStatus = new Observable<LicensingStatus>();
 			InitializeComponent();
 			var req = ApplicationModel.DatabaseCommands.ForDefaultDatabase().CreateRequest("/license/status", "GET");
 
 			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{
-				LicensingStatus = ((RavenJObject)doc).Deserialize<LicensingStatus>(new DocumentConvention());
+				LicensingStatus.Value = ((RavenJObject)doc).Deserialize<LicensingStatus>(new DocumentConvention());
 			});
 
 			

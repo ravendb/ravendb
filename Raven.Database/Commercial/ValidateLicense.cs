@@ -23,14 +23,14 @@ namespace Raven.Database.Commercial
 	internal class ValidateLicense : IDisposable
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
-		public static IDictionary<string, string> LicenseAttributes { get; set; }
+		public static Dictionary<string, string> LicenseAttributes { get; set; }
 		private AbstractLicenseValidator licenseValidator;
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 
 		static ValidateLicense()
 		{
-			LicenseAttributes = new Dictionary<string, string>();
+			LicenseAttributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 			CurrentLicense = new LicensingStatus
 			{
 				Status = "AGPL - Open Source",

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
@@ -13,6 +14,11 @@ namespace Raven.Abstractions.Data
 		public string Message { get; set; }
 		public string Status { get; set; }
 		public bool Error { get; set; }
-		public IDictionary<string, string> Attributes { get; set; }
+		public Dictionary<string, string> Attributes { get; set; }
+
+		public LicensingStatus()
+		{
+			Attributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+		}
 	}
 }
