@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
+using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Implementation;
@@ -584,6 +585,7 @@ namespace Raven.Studio.Models
         } }
 
 	    public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
+		public ICommand CopyErrorTextToClipboard{get{return new ActionCommand(() => Clipboard.SetText(QueryErrorMessage.Value));}}
 
         public Observable<string> QueryErrorMessage { get; private set; }
         public Observable<bool> IsErrorVisible { get; private set; } 

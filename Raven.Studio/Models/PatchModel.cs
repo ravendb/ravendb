@@ -348,6 +348,7 @@ namespace Raven.Studio.Models
 		public bool KeepSelectedItem { get; set; }
 
 		public const string CollectionsIndex = "Raven/DocumentsByEntityName";
+		public ICommand CopyErrorTextToClipboard { get { return new ActionCommand(() => Clipboard.SetText(PatchScriptErrorMessage.Value)); } }
 		public ICommand Patch { get { return new ExecutePatchCommand(this); } }
 		public ICommand PatchSelected { get { return new PatchSelectedCommand(this); } }
 		public ICommand Test { get { return new TestPatchCommand(this); } }
