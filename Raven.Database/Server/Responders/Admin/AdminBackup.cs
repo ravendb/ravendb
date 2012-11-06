@@ -20,7 +20,7 @@ namespace Raven.Database.Server.Responders.Admin
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
-			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup);
+			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 			context.SetStatusToCreated(BackupStatus.RavenBackupStatusDocumentKey);
 		}
 	}

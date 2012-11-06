@@ -24,16 +24,18 @@ namespace Raven.Storage.Managed.Backup
 		private readonly DocumentDatabase database;
 		private readonly IPersistentSource persistentSource;
 		private string to;
+		private readonly DatabaseDocument databaseDocument;
 		private string src;
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		public BackupOperation(DocumentDatabase database, IPersistentSource persistentSource, string src, string to)
+		public BackupOperation(DocumentDatabase database, IPersistentSource persistentSource, string src, string to, DatabaseDocument databaseDocument)
 		{
 			this.database = database;
 			this.persistentSource = persistentSource;
 			this.src = src;
 			this.to = to;
+			this.databaseDocument = databaseDocument;
 		}
 
 		public void Execute(object ignored)
@@ -89,6 +91,9 @@ namespace Raven.Storage.Managed.Backup
 		{
 			try
 			{
+				if (databaseDocument != null)
+					File.WriteAllText(Path.Combine(to, "Database.Document"), RavenJObject.FromObject(databaseDocument).ToString());
+
 				logger.Info("Backup completed");
 				var jsonDocument = database.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 				if (jsonDocument == null)

@@ -371,13 +371,14 @@ namespace Raven.Client.Silverlight.Connection.Async
 				.ContinueWith(task => convention.CreateSerializer().Deserialize<LicensingStatus>(new RavenJTokenReader(task.Result)));
 		}
 
-		public Task StartBackupAsync(string backupLocation)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 			return request.WriteAsync(new RavenJObject
 				{
-					{"BackupLocation", backupLocation}
+					{"BackupLocation", backupLocation},
+					{"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
 				}.ToString(Formatting.None))
 				.ContinueWith(task =>
 				{
