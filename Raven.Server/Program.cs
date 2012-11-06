@@ -255,7 +255,7 @@ Configuration options:
 					ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 
 				}
-				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation);
+				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, s => {});
 			}
 			catch (Exception e)
 			{

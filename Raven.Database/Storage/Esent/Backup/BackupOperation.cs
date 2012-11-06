@@ -27,13 +27,15 @@ namespace Raven.Storage.Esent.Backup
 		private bool incrementalBackup;
 		private string src;
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+		private DatabaseDocument databaseDocument;
 
-		public BackupOperation(DocumentDatabase database, string src, string to, bool incrementalBackup)
+		public BackupOperation(DocumentDatabase database, string src, string to, bool incrementalBackup, DatabaseDocument databaseDocument)
 		{
 			instance = ((TransactionalStorage)database.TransactionalStorage).Instance;
 			this.src = src;
 			this.to = to;
 			this.incrementalBackup = incrementalBackup;
+			this.databaseDocument = databaseDocument;
 			this.database = database;
 		}
 
@@ -87,6 +89,8 @@ namespace Raven.Storage.Esent.Backup
 				var esentBackup = new EsentBackup(instance, to, incrementalBackup ? BackupGrbit.Incremental : BackupGrbit.Atomic);
 				esentBackup.Notify += UpdateBackupStatus;
 				esentBackup.Execute();
+				if(databaseDocument != null)
+					File.WriteAllText(Path.Combine(to, "Database.Document"), RavenJObject.FromObject(databaseDocument).ToString());
 
 				File.WriteAllText(backupConfigPath, "Backup completed " + SystemTime.UtcNow);
 			}

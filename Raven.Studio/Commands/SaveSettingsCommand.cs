@@ -24,7 +24,11 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
-			SavePeriodicBackup(databaseName);
+
+			var periodicBackup = settingsModel.GetSection<PeriodicBackupSettingsSectionModel>();
+			if (periodicBackup != null)
+				SavePeriodicBackup(databaseName, periodicBackup);
+
 
 			if(databaseName == Constants.SystemDatabase)
 			{
@@ -127,14 +131,17 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-		private void SavePeriodicBackup(string databaseName)
+		private void SavePeriodicBackup(string databaseName, PeriodicBackupSettingsSectionModel periodicBackup)
 		{
-			var periodicBackup = settingsModel.GetSection<PeriodicBackupSettingsSectionModel>();
 			if(periodicBackup.PeriodicBackupSetup == null)
 				return;
 
-			if (periodicBackup.OriginalAwsSecretKey != periodicBackup.AwsSecretKey)
-				settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
+            if (periodicBackup.IsS3Selected.Value)
+                periodicBackup.PeriodicBackupSetup.GlacierVaultName = string.Empty;
+            else
+                periodicBackup.PeriodicBackupSetup.S3BucketName = string.Empty;
+
+            settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
 			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
 
 			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);

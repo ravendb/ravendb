@@ -9,5 +9,6 @@ namespace Raven.Database.Data
 	{
 		public string RestoreLocation { get; set; }
 		public string DatabaseLocation { get; set; }
+		public string DatabaseName { get; set; }
 	}
 }

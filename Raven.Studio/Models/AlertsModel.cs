@@ -1,9 +1,16 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
+using Raven.Client.Connection.Async;
+using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Studio.Features.Alerts;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Data;
 using System.Linq;
+using Raven.Client.Connection;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
@@ -43,25 +50,26 @@ namespace Raven.Studio.Models
 
 			Alerts.CollectionChanged += (sender, args) => UpdateUnobserved();
 
-			//TODO: Query for data and delete sample data
-
-			ServerAlerts.Add(new Alert()
-			{
-				AlertLevel = AlertLevel.Warning,
-				Title = "Title",
-				Database = "NO Database",
-				Message = "This warning has not been seen",
-				Observed = false
-			});
-
-			ServerAlerts.Add(new Alert()
-			{
-				AlertLevel = AlertLevel.Error,
-				Message = "This error was seen",
-				Observed = true
-			});
+			GetAlertsFromServer();
 
 			OnPropertyChanged(() => Alerts);
+		}
+
+		private void GetAlertsFromServer()
+		{
+			ApplicationModel
+				.DatabaseCommands
+				.GetAsync(Constants.RavenAlerts)
+				.ContinueOnSuccessInTheUIThread(doc =>
+				{
+					if(doc == null)
+					{
+						ServerAlerts = new ObservableCollection<Alert>();
+						return;
+					}
+					var alerts = doc.DataAsJson.Deserialize<AlertsDocument>(new DocumentConvention());
+					ServerAlerts = new ObservableCollection<Alert>(alerts.Alerts);
+				});
 		}
 
 		public void UpdateUnobserved()
@@ -78,6 +86,30 @@ namespace Raven.Studio.Models
 		public ICommand UncheckAll { get { return new MarkAllCommand(this, false); } }
 		public ICommand DeleteSelectedAlert { get { return new DeleteAlertCommand(this); } }
 		public ICommand DeleteAllObserved { get { return new DeleteAllObservedCommand(this); } }
+		public ICommand SaveChanges { get { return new SaveAlertsCommand(this); } }
+		public ICommand Refresh{get{return new ActionCommand(GetAlertsFromServer);}}
+	}
+
+	public class SaveAlertsCommand : Command
+	{
+		private readonly AlertsModel alertsModel;
+
+		public SaveAlertsCommand(AlertsModel alertsModel)
+		{
+			this.alertsModel = alertsModel;
+		}
+
+		public override void Execute(object parameter)
+		{
+			var alertsDocument = new AlertsDocument
+			{
+				Alerts = new List<Alert>(alertsModel.ServerAlerts)
+			};
+
+			ApplicationModel.DatabaseCommands
+				.PutAsync(Constants.RavenAlerts, null,RavenJObject.FromObject(alertsDocument),new RavenJObject())
+				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.Notifications.Add(new Notification("Alerts Saved")));
+		}
 	}
 
 	public class DeleteAllObservedCommand : Command

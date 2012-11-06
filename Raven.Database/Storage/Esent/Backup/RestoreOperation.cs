@@ -15,11 +15,13 @@ namespace Raven.Storage.Esent.Backup
 {
 	public class RestoreOperation
 	{
+		private readonly Action<string> output;
 		private readonly string backupLocation;
 		private readonly string databaseLocation;
 
-		public RestoreOperation(string backupLocation, string databaseLocation)
+		public RestoreOperation(string backupLocation, string databaseLocation, Action<string> output)
 		{
+			this.output = output;
 			this.backupLocation = backupLocation.ToFullPath();
 			this.databaseLocation = databaseLocation.ToFullPath();
 		}
@@ -28,11 +30,15 @@ namespace Raven.Storage.Esent.Backup
 		{
 			if (File.Exists(Path.Combine(backupLocation, "RavenDB.Backup")) == false)
 			{
+				output(backupLocation + " doesn't look like a valid backup");
 				throw new InvalidOperationException(backupLocation + " doesn't look like a valid backup");
 			}
 
-			if(Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
+			if (Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
+			{
+				output("Database already exists, cannot restore to an existing database.");
 				throw new IOException("Database already exists, cannot restore to an existing database.");
+			}
 
 			if (Directory.Exists(databaseLocation) == false)
 				Directory.CreateDirectory(databaseLocation);
@@ -55,7 +61,7 @@ namespace Raven.Storage.Esent.Backup
 			{
 				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
-				
+
 				var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
 				if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
 				{
@@ -76,7 +82,7 @@ namespace Raven.Storage.Esent.Backup
 
 			foreach (var directory in directories)
 			{
-				foreach (var file in Directory.GetFiles(directory,"RVN*.log"))
+				foreach (var file in Directory.GetFiles(directory, "RVN*.log"))
 				{
 					var justFile = Path.GetFileName(file);
 					File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
@@ -84,16 +90,16 @@ namespace Raven.Storage.Esent.Backup
 			}
 
 			return directories.LastOrDefault() ?? backupLocation;
-
 		}
 
 		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
 		{
+			output(string.Format("Esent Restore: {0} {1} {2}", snp, snt, data));
 			Console.WriteLine("Esent Restore: {0} {1} {2}", snp, snt, data);
 			return JET_err.Success;
 		}
 
-		private static void CopyAll(DirectoryInfo source, DirectoryInfo target)
+		private void CopyAll(DirectoryInfo source, DirectoryInfo target)
 		{
 			// Check if the target directory exists, if not, create it.
 			if (Directory.Exists(target.FullName) == false)
@@ -104,6 +110,7 @@ namespace Raven.Storage.Esent.Backup
 			// Copy each file into it's new directory.
 			foreach (FileInfo fi in source.GetFiles())
 			{
+				output(string.Format(@"Copying {0}\{1}", target.FullName, fi.Name));
 				Console.WriteLine(@"Copying {0}\{1}", target.FullName, fi.Name);
 				fi.CopyTo(Path.Combine(target.ToString(), fi.Name), true);
 			}
@@ -116,6 +123,5 @@ namespace Raven.Storage.Esent.Backup
 				CopyAll(diSourceSubDir, nextTargetSubDir);
 			}
 		}
-
 	}
 }

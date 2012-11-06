@@ -11,7 +11,8 @@ namespace Raven.Studio.Features.Tasks
 			Name = "Restore Database";
 			Description = "Restore a database.";
 			IconResource = "Image_Restore_Tiny";
-			TaskInputs.Add(new TaskInput("Location", @"C:\path-to-your-backup-folder"));
+			TaskInputs.Add(new TaskInput("Backup Location", @"C:\path-to-your-backup-folder"));
+			TaskInputs.Add(new TaskInput("Database Location", ""));
 			TaskInputs.Add(new TaskInput("Database Name", ""));
 		}
 

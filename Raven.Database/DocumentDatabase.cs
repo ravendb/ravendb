@@ -1587,7 +1587,7 @@ namespace Raven.Database
 			}
 		}
 
-		public void StartBackup(string backupDestinationDirectory, bool incrementalBackup)
+		public void StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
 		{
 			var document = Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 			if (document != null)
@@ -1605,14 +1605,14 @@ namespace Raven.Database
 			}), new RavenJObject(), null);
 			IndexStorage.FlushMapIndexes();
 			IndexStorage.FlushReduceIndexes();
-			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup);
+			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup, databaseDocument);
 		}
 
-		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output )
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
-				transactionalStorage.Restore(backupLocation, databaseLocation);
+				transactionalStorage.Restore(backupLocation, databaseLocation, output);
 			}
 		}
 
@@ -1785,6 +1785,18 @@ namespace Raven.Database
 
 				return indexEtag;
 			}
+		}
+
+		public void AddAlert(Alert alert)
+		{
+			AlertsDocument alertsDocument;
+			var alertsDoc = Get(Constants.RavenAlerts, null);
+			if (alertsDoc == null) 
+				alertsDocument = new AlertsDocument();
+			else
+				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
+
+			alertsDocument.Alerts.Add(alert);
 		}
 	}
 }

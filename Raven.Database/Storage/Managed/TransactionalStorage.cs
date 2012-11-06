@@ -175,16 +175,16 @@ namespace Raven.Storage.Managed
 			return persistenceSource.CreatedNew;
 		}
 
-		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup)
+		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
 		{
-			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory);
+			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory, databaseDocument);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		
 		}
 
-		public void Restore(string backupLocation, string databaseLocation)
+		public void Restore(string backupLocation, string databaseLocation, Action<string> output)
 		{
-			new RestoreOperation(backupLocation, databaseLocation).Execute();
+			new RestoreOperation(backupLocation, databaseLocation, output).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()

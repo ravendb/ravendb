@@ -37,17 +37,28 @@
 						<ColumnDefinition Width="Auto"/>
 					</Grid.ColumnDefinitions>
 
-					<TextBlock Text="Glacier Vault Name: " VerticalAlignment="Center"/>
-					<TextBox Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.GlacierVaultName, Mode=TwoWay}" VerticalAlignment="Center"/>
+                    <ComboBox SelectedIndex="{Binding IsS3Selected.Value, Converter={StaticResource BooleanToInt}, Mode=TwoWay}" VerticalAlignment="Center">
+                        <ComboBoxItem Content="Glacier Vault Name: "/>
+                        <ComboBoxItem Content="S3 Bucket Name: "/>
+                    </ComboBox>
 
-					<TextBlock Grid.Row="1" Text="S3 Bucket Name: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.S3BucketName, Mode=TwoWay}" VerticalAlignment="Center"/>
+					<TextBox Grid.Column="1" 
+                             Margin="5"  
+                             Text="{Binding PeriodicBackupSetup.GlacierVaultName, Mode=TwoWay}" 
+                             VerticalAlignment="Center"
+                             Visibility="{Binding IsS3Selected.Value, Converter={StaticResource BooleanToOppositeVisibility} }"/>
 
-					<TextBlock Grid.Row="2" Text="Aws Region Endpoint: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="2" Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.AwsRegionEndpoint, Mode=TwoWay}" VerticalAlignment="Center"/>
+					<TextBox Grid.Column="1" 
+                             Margin="5"  
+                             Text="{Binding PeriodicBackupSetup.S3BucketName, Mode=TwoWay}" 
+                             VerticalAlignment="Center"
+                             Visibility="{Binding IsS3Selected.Value, Converter={StaticResource BooleanToVisibility} }"/>
 
-					<TextBlock Grid.Row="3" Text="Interval: " VerticalAlignment="Center"/>
-					<StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+					<TextBlock Grid.Row="1" Text="Aws Region Endpoint: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.AwsRegionEndpoint, Mode=TwoWay}" VerticalAlignment="Center"/>
+
+					<TextBlock Grid.Row="2" Text="Interval: " VerticalAlignment="Center"/>
+					<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 						<toolkit:NumericUpDown Margin="5" Value="{Binding PeriodicBackupSetup.Interval, Mode=TwoWay}" Maximum="214748364" VerticalAlignment="Center"/>
 						<TextBlock Text="in Minutes" VerticalAlignment="Center"/>
 					</StackPanel>
