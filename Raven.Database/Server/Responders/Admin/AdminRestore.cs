@@ -6,6 +6,7 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Responders.Admin
 {
@@ -37,8 +38,24 @@ namespace Raven.Database.Server.Responders.Admin
 				                         SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 											 RavenJObject.FromObject(new {restoreStatus}), new RavenJObject(), null);
 			                         });
-			//TODO: put database document in system database
-			// SystemDatabase.Put("Raven/Databases/" + restoreRequest.DatabaseName, null, )
+
+			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Database.Document")))
+			{
+				var databaseDocumentText = File.ReadAllText(Path.Combine(restoreRequest.RestoreLocation, "Database.Document"));
+				var databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
+				if (databaseDocument == null)
+					return;
+
+				if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
+					databaseDocument.Settings[Constants.RavenDataDir] = restoreRequest.DatabaseLocation;
+				if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseName))
+					databaseDocument.Id = "Raven/Databases/" + restoreRequest.DatabaseName;
+				SystemDatabase.Put(databaseDocument.Id, null, RavenJObject.FromObject(databaseDocument), new RavenJObject(), null);
+
+				restoreStatus.Add("The new database was created");
+				SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+					RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+			}
 		}
 	}
 }
