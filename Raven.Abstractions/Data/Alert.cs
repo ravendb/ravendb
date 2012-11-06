@@ -6,10 +6,10 @@ namespace Raven.Abstractions.Data
 	{
 		public string Title { get; set; }
 		public DateTime CreatedAt { get; set; }
-		public string Database { get; set; }
 		public bool Observed { get; set; }
 		public string Message { get; set; }
 		public AlertLevel AlertLevel { get; set; }
+		public Exception Exception { get; set; }
 	}
 
 	public enum AlertLevel

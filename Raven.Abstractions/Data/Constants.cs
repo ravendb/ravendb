@@ -42,6 +42,7 @@ namespace Raven.Abstractions.Data
 		public const string NotForReplication = "Raven-Not-For-Replication";
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 		public const string ActiveBundles = "Raven/ActiveBundles";
+		public const string RavenAlerts = "Raven/Alerts";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";

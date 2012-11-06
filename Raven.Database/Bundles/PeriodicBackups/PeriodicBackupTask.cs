@@ -5,6 +5,7 @@ using System.Threading;
 using Amazon;
 using Amazon.Glacier.Transfer;
 using Amazon.S3.Model;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -77,6 +78,14 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			catch (Exception ex)
 			{
 				logger.WarnException(ex.Message, ex);
+				Database.AddAlert(new Alert
+				{
+					AlertLevel = AlertLevel.Error,
+					CreatedAt = SystemTime.UtcNow,
+					Message = ex.Message,
+					Title = "Error in Periodic Backup",
+					Exception = ex
+				});
 				executing = false;
 				return;
 			}
@@ -135,6 +144,14 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			}
 			catch (Exception e)
 			{
+				Database.AddAlert(new Alert
+				{
+					AlertLevel = AlertLevel.Error,
+					CreatedAt = SystemTime.UtcNow,
+					Message = e.Message,
+					Title = "Error in Periodic Backup",
+					Exception = e
+				});
 				logger.ErrorException("Error when performing periodic backup", e);
 			}
 			finally

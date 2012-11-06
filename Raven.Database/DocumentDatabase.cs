@@ -1786,5 +1786,17 @@ namespace Raven.Database
 				return indexEtag;
 			}
 		}
+
+		public void AddAlert(Alert alert)
+		{
+			AlertsDocument alertsDocument;
+			var alertsDoc = Get(Constants.RavenAlerts, null);
+			if (alertsDoc == null) 
+				alertsDocument = new AlertsDocument();
+			else
+				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
+
+			alertsDocument.Alerts.Add(alert);
+		}
 	}
 }
