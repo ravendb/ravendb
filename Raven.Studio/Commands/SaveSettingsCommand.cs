@@ -24,7 +24,11 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
-			SavePeriodicBackup(databaseName);
+
+			var periodicBackup = settingsModel.GetSection<PeriodicBackupSettingsSectionModel>();
+			if (periodicBackup != null)
+				SavePeriodicBackup(databaseName, periodicBackup);
+
 
 			if(databaseName == Constants.SystemDatabase)
 			{
@@ -127,9 +131,8 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-		private void SavePeriodicBackup(string databaseName)
+		private void SavePeriodicBackup(string databaseName, PeriodicBackupSettingsSectionModel periodicBackup)
 		{
-			var periodicBackup = settingsModel.GetSection<PeriodicBackupSettingsSectionModel>();
 			if(periodicBackup.PeriodicBackupSetup == null)
 				return;
 
