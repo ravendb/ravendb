@@ -57,12 +57,8 @@ namespace Raven.Studio.Models
 
 		private void GetAlertsFromServer()
 		{
-			var dbName = ApplicationModel.Database.Value.Name;
-			if (dbName == Constants.SystemDatabase)
-				dbName = null;
 			ApplicationModel
 				.DatabaseCommands
-				.ForDatabase(dbName)
 				.GetAsync(Constants.RavenAlerts)
 				.ContinueOnSuccessInTheUIThread(doc =>
 				{

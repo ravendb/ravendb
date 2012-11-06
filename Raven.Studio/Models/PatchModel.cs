@@ -530,15 +530,18 @@ namespace Raven.Studio.Models
 
 		public override void Execute(object parameter)
 		{
+			var dbName = ApplicationModel.Database.Value.Name;
+			if (dbName == Constants.SystemDatabase)
+				dbName = null;
 			AskUser.SelectItem("Load", "Choose saved patching to load",
-												() => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Database.Value.Name).Advanced.
+												() => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(dbName).Advanced.
 				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
 					                                             task =>
 					                                             {
 						                                             IList<string> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).ToList();
 						                                             return objects;
 					                                             }))
-				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Database.Value.Name).
+				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(dbName).
 					                                          LoadAsync<PatchDocument>("Studio/Patch/" + result)
 					                                          .ContinueOnSuccessInTheUIThread(patch =>
 					                                          {
@@ -582,8 +585,11 @@ namespace Raven.Studio.Models
 					Id = "Studio/Patch/" + name,
 					Values = patchModel.Values.ToList()
 				};
+				var dbName = ApplicationModel.Database.Value.Name;
+				if (dbName == Constants.SystemDatabase)
+					dbName = null;
 
-				var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Database.Value.Name);
+				var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(dbName);
 				session.Store(doc);
 				session.SaveChangesAsync().ContinueOnSuccessInTheUIThread(() => patchModel.UpdateDoc(name));
 			});
