@@ -51,7 +51,6 @@ namespace Raven.Bundles.IndexReplication
 		{
 			private readonly DbProviderFactory _providerFactory;
 			private readonly string _connectionString;
-			private readonly IndexReplicationDestination _destination;
 			private readonly IndexReplicationDestination destination;
 			private static readonly Regex datePattern = new Regex(@"\d{17}", RegexOptions.Compiled);
 
@@ -65,7 +64,7 @@ namespace Raven.Bundles.IndexReplication
 			{
 				_providerFactory = providerFactory;
 				_connectionString = connectionString;
-				_destination = destination;
+				this.destination = destination;
 			}
 
 
