@@ -104,6 +104,16 @@ namespace Raven.Bundles.IndexReplication
 
 					if (field == null || field.StringValue == Constants.NullValue)
 						parameter.Value = DBNull.Value;
+					else if (field.StringValue == Constants.EmptyString)
+						parameter.Value = "";
+					else if (field.StringValue.Equals("False", StringComparison.InvariantCultureIgnoreCase))
+					{
+						parameter.Value = false;
+					}
+					else if (field.StringValue.Equals("True", StringComparison.InvariantCultureIgnoreCase))
+					{
+						parameter.Value = true;
+					}
 					else if (field is NumericField)
 					{
 						var numField = (NumericField) field;
