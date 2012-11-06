@@ -28,6 +28,7 @@
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
@@ -155,7 +156,15 @@
 			</Grid>
 		</Border>
 
-		<Grid Grid.Row="2">
+
+		<ProgressBar Visibility="{Binding InProccess.Value, Converter={StaticResource BooleanToVisibility}}"
+					 Height="25"
+					 Width="200"
+					 Margin="5"
+					 IsIndeterminate="{Binding InProccess.Value}"
+					 HorizontalAlignment="Left"
+					 Grid.Row="2"/>
+		<Grid Grid.Row="3">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="Auto"/>

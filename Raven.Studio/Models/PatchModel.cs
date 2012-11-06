@@ -56,20 +56,21 @@ namespace Raven.Studio.Models
         public PatchModel()
         {
             Values = new ObservableCollection<PatchValue>();
+			InProccess = new Observable<bool>();
 
-            OriginalDoc = new EditorDocument()
+            OriginalDoc = new EditorDocument
             {
                 Language = JsonLanguage,
                 IsReadOnly = true,
             };
 
-            NewDoc = new EditorDocument()
+            NewDoc = new EditorDocument
             {
                 Language = JsonLanguage,
                 IsReadOnly = true,
             };
 
-            Script = new EditorDocument()
+            Script = new EditorDocument
             {
                 Language = JScriptLanguage
             };
@@ -77,7 +78,7 @@ namespace Raven.Studio.Models
             Script.Language.RegisterService(new PatchScriptIntelliPromptProvider(Values, recentDocuments));
             Script.Language.RegisterService<IEditorDocumentTextChangeEventSink>(new AutoCompletionTrigger());
 
-            QueryDoc = new EditorDocument()
+            QueryDoc = new EditorDocument
             {
                 Language = QueryLanguage
             };
@@ -170,7 +171,7 @@ namespace Raven.Studio.Models
             {
                 queryIndexAutoComplete = value;
                 QueryDoc.Language.UnregisterService<ICompletionProvider>();
-                QueryDoc.Language.RegisterService<ICompletionProvider>(value.CompletionProvider);
+                QueryDoc.Language.RegisterService(value.CompletionProvider);
             }
         }
 
@@ -298,11 +299,11 @@ namespace Raven.Studio.Models
 	        if (PatchOn == PatchOnOptions.Collection)
 	        {
                 QueryResults.SetChangesObservable(d => d.IndexChanges
-					.Where(n => n.Name.Equals(PatchModel.CollectionsIndex, StringComparison.InvariantCulture))
+					.Where(n => n.Name.Equals(CollectionsIndex, StringComparison.InvariantCulture))
 					.Select(m => Unit.Default));
 
 				if (string.IsNullOrWhiteSpace(SelectedItem) == false)
-					queryCollectionSource.UpdateQuery(PatchModel.CollectionsIndex, new IndexQuery {Query = "Tag:" + SelectedItem});
+					queryCollectionSource.UpdateQuery(CollectionsIndex, new IndexQuery {Query = "Tag:" + SelectedItem});
 	        }
             else if (PatchOn == PatchOnOptions.Index)
             {
@@ -345,7 +346,7 @@ namespace Raven.Studio.Models
 	    public IEditorDocument Script { get; private set; }
 		public ObservableCollection<PatchValue> Values { get; set; }
 		public PatchValue SelectedValue { get; set; }
-		public bool KeepSelectedItem { get; set; }
+		public bool KeepSelectedItem { private get; set; }
 
 		public const string CollectionsIndex = "Raven/DocumentsByEntityName";
 		public ICommand CopyErrorTextToClipboard { get { return new ActionCommand(() => Clipboard.SetText(PatchScriptErrorMessage.Value)); } }
@@ -372,6 +373,8 @@ namespace Raven.Studio.Models
 				});
 			}
 		}
+
+		public Observable<bool> InProccess { get; private set; }
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
@@ -444,10 +447,7 @@ namespace Raven.Studio.Models
                 .Throttle(TimeSpan.FromSeconds(0.5))
                 .TakeUntil(Unloaded)
                 .ObserveOnDispatcher()
-                .Subscribe(e =>
-                {
-                    UpdateCollectionSource();
-                });
+                .Subscribe(e => UpdateCollectionSource());
         }
 
 
@@ -706,9 +706,12 @@ namespace Raven.Studio.Models
 					break;
 			}
 
-		    ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
-		        .ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()))
-                .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); });
+			patchModel.InProccess.Value = true;
+
+			ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
+				.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()))
+				.ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+				.Finally(() => patchModel.InProccess.Value = false);
 
 		    patchModel.ShowBeforeAndAfterPrompt = false;
 			patchModel.ShowAfterPrompt = false;
@@ -735,6 +738,7 @@ namespace Raven.Studio.Models
 					if (values == null)
 						return;
                     var request = new ScriptedPatchRequest { Script = patchModel.Script.CurrentSnapshot.Text, Values = values};
+					patchModel.InProccess.Value = true;
 
                     switch (patchModel.PatchOn)
                     {
@@ -747,30 +751,32 @@ namespace Raven.Studio.Models
                             };
 
 		                    ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
-                                .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); }).
-			                    ContinueOnSuccessInTheUIThread(
+			                    .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+			                    .ContinueOnSuccessInTheUIThread(
 				                    () => ApplicationModel.Database.Value.AsyncDatabaseCommands.GetAsync(patchModel.SelectedItem).
-					                          ContinueOnSuccessInTheUIThread(
-						                          doc =>
-						                          {
-							                          patchModel.OriginalDoc.SetText(doc.ToJson().ToString());
-							                          patchModel.NewDoc.SetText("");
-							                          patchModel.ShowAfterPrompt = true;
-						                          }));
+					                          ContinueOnSuccessInTheUIThread(doc =>
+					                          {
+						                          patchModel.OriginalDoc.SetText(doc.ToJson().ToString());
+						                          patchModel.NewDoc.SetText("");
+						                          patchModel.ShowAfterPrompt = true;
+					                          }))
+			                    .Finally(() => patchModel.InProccess.Value = false);
                             break;
 
                         case PatchOnOptions.Collection:
                             ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(PatchModel.CollectionsIndex,
                                                                                                 new IndexQuery { Query = "Tag:" + patchModel.SelectedItem }, request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
-                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); });
+                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+																								 .Finally(() => patchModel.InProccess.Value = false);
                             break;
 
                         case PatchOnOptions.Index:
-                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery() { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
+                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
                                                                                                 request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
-                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); });
+                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+																								 .Finally(() => patchModel.InProccess.Value = false);
                             break;
                     }
 
