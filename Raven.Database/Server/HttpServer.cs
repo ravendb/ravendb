@@ -23,6 +23,7 @@ using Jint;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
+using Raven.Database.Plugins;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
 using Raven.Database.Util;
@@ -40,7 +41,6 @@ using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins.Tenants;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
-using Rhino.Licensing;
 
 namespace Raven.Database.Server
 {
@@ -53,7 +53,7 @@ namespace Raven.Database.Server
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
-		private IBufferPool bufferPool = new BufferPool(BufferPoolStream.MaxBufferSize * 512, BufferPoolStream.MaxBufferSize);
+		private readonly IBufferPool bufferPool = new BufferPool(BufferPoolStream.MaxBufferSize * 512, BufferPoolStream.MaxBufferSize);
 
 		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { };
 
@@ -139,6 +139,11 @@ namespace Raven.Database.Server
 			requestAuthorizer = new MixedModeRequestAuthorizer();
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+
+			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
+			{
+				task.Execute(this);
+			}
 		}
 
 		private bool TryCreateDirectory(string path)
@@ -202,6 +207,8 @@ namespace Raven.Database.Server
 							Size = totalSizeOnDisk,
 							HumaneSize = DatabaseSize.Humane(totalSizeOnDisk),
 							documentDatabase.Database.Statistics.CountOfDocuments,
+							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
+							documentDatabase.Database.WorkContext.ConcurrentRequests
 						}
 				};
 			}
@@ -385,6 +392,10 @@ namespace Raven.Database.Server
 				}
 				databaseLastRecentlyUsed.TryRemove(db, out time);
 				ResourcesStoresCache.TryRemove(db, out databaseTask);
+
+				var onDatabaseCleanupOccured = DatabaseCleanupOccured;
+				if (onDatabaseCleanupOccured != null)
+					onDatabaseCleanupOccured(db);
 			}
 		}
 
@@ -484,10 +495,10 @@ namespace Raven.Database.Server
 
 		private void LogException(Exception e)
 		{
-			if (!ShouldLogException(e)) 
+			if (!ShouldLogException(e))
 				return;
 			var je = e as JintException;
-			if(je != null)
+			if (je != null)
 			{
 				while (je.InnerException is JintException)
 				{
@@ -512,6 +523,9 @@ namespace Raven.Database.Server
 				logger.ErrorException("Could not finalize request properly", e2);
 			}
 		}
+
+		public event EventHandler<BeforeRequestEventArgs> BeforeRequest;
+		public event Action<string> DatabaseCleanupOccured;
 
 		public void HandleActualRequest(IHttpContext ctx)
 		{
@@ -627,7 +641,7 @@ namespace Raven.Database.Server
 				else if (e is ConcurrencyException)
 					HandleConcurrencyException(ctx, (ConcurrencyException)e);
 				else if (e is JintException)
-					HandleJintException(ctx, (JintException) e);
+					HandleJintException(ctx, (JintException)e);
 				else if (TryHandleException(ctx, e) == false)
 					HandleGenericException(ctx, e);
 			}
@@ -641,7 +655,7 @@ namespace Raven.Database.Server
 		{
 			while (e.InnerException is JintException)
 			{
-				e = (JintException) e.InnerException;
+				e = (JintException)e.InnerException;
 			}
 
 			ctx.SetStatusToBadRequest();
@@ -759,7 +773,6 @@ namespace Raven.Database.Server
 			}
 			try
 			{
-
 				if (!SetThreadLocalState(ctx))
 					return false;
 
@@ -807,6 +820,7 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
+				CurrentDatabase.WorkContext.DecrementConcurrentRequestsCounter();
 				ResetThreadLocalState();
 				if (onResponseEnd != null)
 					onResponseEnd();
@@ -863,6 +877,8 @@ namespace Raven.Database.Server
 		protected void OnDispatchingRequest(IHttpContext ctx)
 		{
 			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
+			CurrentDatabase.WorkContext.IncrementRequestsPerSecCounter();
+			CurrentDatabase.WorkContext.IncrementConcurrentRequestsCounter();
 		}
 
 		public DocumentDatabase CurrentDatabase
@@ -874,13 +890,27 @@ namespace Raven.Database.Server
 		{
 			var requestUrl = ctx.GetRequestUrlForTenantSelection();
 			var match = databaseQuery.Match(requestUrl);
-
+			var onBeforeRequest = BeforeRequest;
 			if (match.Success == false)
 			{
 				currentTenantId.Value = Constants.SystemDatabase;
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
 				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+				if (onBeforeRequest != null)
+				{
+					var args = new BeforeRequestEventArgs
+					{
+						Context = ctx,
+						IgnoreRequest = false,
+						TenantId = "System",
+						Database = SystemDatabase
+					};
+					onBeforeRequest(this, args);
+					if (args.IgnoreRequest)
+						return false;
+				}
+
 				return true;
 			}
 			var tenantId = match.Groups[1].Value;
@@ -907,6 +937,19 @@ namespace Raven.Database.Server
 							Error = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.",
 						});
 						return false;
+					}
+					if (onBeforeRequest != null)
+					{
+						var args = new BeforeRequestEventArgs
+						{
+							Context = ctx,
+							IgnoreRequest = false,
+							TenantId = tenantId,
+							Database = resourceStoreTask.Result
+						};
+						onBeforeRequest(this, args);
+						if (args.IgnoreRequest)
+							return false;
 					}
 				}
 				catch (Exception e)
@@ -1121,7 +1164,7 @@ namespace Raven.Database.Server
 			if (document.Settings["Raven/DataDir"] == null)
 				throw new InvalidOperationException("Could not find Raven/DataDir");
 
-			if(document.Disabled)
+			if (document.Disabled)
 				throw new InvalidOperationException("The database has been disabled.");
 
 			return document;

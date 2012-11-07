@@ -215,6 +215,7 @@
     <Compile Include="Linq\StringLiteralExpression.cs" />
     <Compile Include="Queries\MatchNoDocsQuery.cs" />
     <Compile Include="Server\Abstractions\PrincipalWithDatabaseAccess.cs" />
+    <Compile Include="Server\BeforeRequestEventArgs.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\LogContext.cs" />
