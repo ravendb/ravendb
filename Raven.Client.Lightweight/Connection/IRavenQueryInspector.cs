@@ -39,6 +39,6 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// The last term that we asked the query to use equals on
 		/// </summary>
-		KeyValuePair<string, string> GetLastEqualityTerm();
+		KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
 	}
 }
