@@ -12,31 +12,9 @@ namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
-	    private bool ShowPeriodicBackup { get; set; }
         public SettingsPageModel()
         {
             Settings = new SettingsModel();
-			var req = ApplicationModel.DatabaseCommands.ForDefaultDatabase().CreateRequest("/license/status", "GET");
-
-			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
-			{
-				var licensingStatus = ((RavenJObject)doc).Deserialize<LicensingStatus>(new DocumentConvention());
-				if(licensingStatus != null && licensingStatus.Attributes != null)
-				{
-					//TODO: remove local attributes
-					var localAttributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-					foreach (var attribute in licensingStatus.Attributes)
-					{
-						localAttributes.Add(attribute.Key, attribute.Value);
-					}
-
-					if (localAttributes.ContainsKey("PeriodicBackups") && localAttributes["PeriodicBackups"].Equals("true", StringComparison.InvariantCultureIgnoreCase))
-					{
-						ShowPeriodicBackup = true;
-						OnPropertyChanged(() => ShowPeriodicBackup);
-					}
-				}
-			});
         }
 
         public string CurrentDatabase
@@ -53,9 +31,7 @@ namespace Raven.Studio.Models
 				var apiKeys = new ApiKeysSectionModel();
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
-				if(ShowPeriodicBackup)
-					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
-
+				Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
 
 				return; 
@@ -78,9 +54,8 @@ namespace Raven.Studio.Models
 			        var databaseSettingsSectionViewModel = new DatabaseSettingsSectionViewModel();
 			        Settings.Sections.Add(databaseSettingsSectionViewModel);
 			        Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
-                    
-					if(ShowPeriodicBackup)
-						Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
+
+					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 			        string activeBundles;
 			        databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);

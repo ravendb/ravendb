@@ -31,6 +31,7 @@
                                              ValueWhenTrue="*"/>
 	<Converters:IdStringToIdWithoutHeader x:Key="IdStringToIdWithoutHeader"/>
 	<Converters:BundleNameToActiveConverter x:Key="BundleNameToActive"/>
+	<Converters:BundleNameToToolTipCoverter x:Key="BundleNameToToolTip"/>
     <Converters:StringListToStringConverter x:Key="StringListToString"/>
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:TrueWhenAnalyzedConverter x:Key="TrueWhenAnalyzed"/>

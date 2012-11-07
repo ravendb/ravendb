@@ -34,6 +34,7 @@ namespace Raven.Studio.Commands
 			{
 				SaveApiKeys();
 				SaveWindowsAuth();
+				ApplicationModel.Current.Notifications.Add(new Notification("Api keys and Windows Authentication saved"));
 				return;
 			}
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
@@ -169,8 +170,7 @@ namespace Raven.Studio.Commands
 
 			session.Store(RavenJObject.FromObject(windowsAuthModel.Document.Value), "Raven/Authorization/WindowsSettings");
 
-			session.SaveChangesAsync()
-				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.Notifications.Add(new Notification("Windows Authentication Settings Saved")));
+			session.SaveChangesAsync();
 		}
 
 		private void SaveApiKeys()
@@ -202,7 +202,6 @@ namespace Raven.Studio.Commands
 
 			session.SaveChangesAsync();
 			apiKeysModel.ApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeysModel.ApiKeys);
-			ApplicationModel.Current.AddInfoNotification("Api Keys Saved");
 		}
 	}
 }

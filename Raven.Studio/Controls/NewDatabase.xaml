@@ -115,7 +115,8 @@
 				<TextBlock Grid.Column="1"
                            Text="Compression Bundle"
                            Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"/>
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Compression}"/>
 
 				<CheckBox x:Name="Encryption"
                           Checked="Checked"
@@ -123,14 +124,14 @@
                           Grid.Row="1"
                           Margin="5"
 						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Encryption}"/>
-
 				<TextBlock Grid.Column="1"
                            Grid.Row="1"
                            Text="Encryption Bundle"
                            Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"/>
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Encryption}"/>
 
-                <CheckBox x:Name="Expiration"
+				<CheckBox x:Name="Expiration"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="2"
@@ -140,7 +141,8 @@
                            Grid.Row="2"
                            Text="Expiration Bundle"
                            Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"/>
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Expiration}"/>
 
 				<CheckBox x:Name="Quotas"
                           Checked="Checked"
@@ -152,7 +154,8 @@
                            Grid.Row="3"
                            Text="Quotas Bundle"
                            Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"/>
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Quotas}"/>
 
 				<CheckBox x:Name="Replication"
                           Checked="Checked"
@@ -164,8 +167,9 @@
                            Grid.Row="4"
                            Text="Replication Bundle"
                            Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"/>
-				
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Replication}"/>
+
 				<CheckBox x:Name="Versioning"
                           Checked="Checked"
                           Unchecked="UnChecked"
@@ -176,9 +180,10 @@
                            Grid.Row="5"
                            Text="Versioning Bundle"
                            Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"/>
-				
-                <CheckBox x:Name="Authorization"
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Versioning}"/>
+
+				<CheckBox x:Name="Authorization"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="6"
@@ -188,8 +193,9 @@
                            Grid.Row="6"
                            Text="Authorization Bundle"
                            Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"/>
-            </Grid>
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Authorization}"/>
+			</Grid>
 		</Grid>
 		
 		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="2" Grid.ColumnSpan="3"/>
