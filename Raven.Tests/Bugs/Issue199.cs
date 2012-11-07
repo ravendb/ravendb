@@ -62,7 +62,7 @@ namespace Raven.Tests.Bugs
 					Assert.NotEmpty(
 						session.Advanced.LuceneQuery<dynamic>("test").
 						WaitForNonStaleResults().
-						Where("f_platform:1 AND (f_name:*H* OR f_alias:*H*)")
+						Where("f_platform:1 AND (f_name:*h* OR f_alias:*h*)")
 						.OrderBy(new[] { "-f_License", "f_totaldownload" })
 						.ToList()
 						);

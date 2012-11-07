@@ -517,6 +517,7 @@
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
     <Compile Include="MailingList\ChrisMarisic.cs" />
+    <Compile Include="MailingList\CustomAnalyzerStartsWithFailure.cs" />
     <Compile Include="MailingList\DeanWard.cs" />
     <Compile Include="MailingList\Edin.cs" />
     <Compile Include="MailingList\Failing_lucene_query_where_in_tests.cs" />
