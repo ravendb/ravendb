@@ -30,7 +30,7 @@ namespace Raven.Database.Indexing
 
 		static SpatialIndex()
 		{
-			Context = NtsSpatialContext.GEO_KM;
+			Context = NtsSpatialContext.GEO;
 			GeometryServiceProvider.Instance = new NtsGeometryServices();
 
 			ShapeReadWriter = new NtsShapeReadWriter(Context);
@@ -69,15 +69,12 @@ namespace Raven.Database.Indexing
 					spatialOperation = SpatialOperation.Intersects;
 					break;
 				case SpatialRelation.Nearby:
-					var nearbyArgs = new SpatialArgs(SpatialOperation.IsWithin, shape);
-					nearbyArgs.SetDistPrecision(distanceErrorPct);
 					// only sort by this, do not filter
-					return new FunctionQuery(spatialStrategy.MakeValueSource(nearbyArgs));
+					return new FunctionQuery(spatialStrategy.MakeDistanceValueSource(shape.GetCenter()));
 				default:
 					throw new ArgumentOutOfRangeException("relation");
 			}
-			var args = new SpatialArgs(spatialOperation, shape);
-			args.SetDistPrecision(distanceErrorPct);
+			var args = new SpatialArgs(spatialOperation, shape) {DistErrPct = distanceErrorPct};
 
 			return spatialStrategy.MakeQuery(args);
 		}

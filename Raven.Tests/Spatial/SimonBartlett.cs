@@ -27,7 +27,7 @@ namespace Raven.Tests.Spatial
 				{
 					var doc = new Lucene.Net.Documents.Document();
 
-					var writeShape = NtsSpatialContext.GEO_KM.ReadShape("LINESTRING (0 0, 1 1, 2 1)");
+					var writeShape = NtsSpatialContext.GEO.ReadShape("LINESTRING (0 0, 1 1, 2 1)");
 					var writeStrategy = SpatialIndex.CreateStrategy("WKT", SpatialSearchStrategy.GeohashPrefixTree, GeohashPrefixTree.GetMaxLevelsPossible());
 					foreach (var f in writeStrategy.CreateIndexableFields(writeShape))
 					{
@@ -38,8 +38,8 @@ namespace Raven.Tests.Spatial
 				}
 
 
-				var shape = NtsSpatialContext.GEO_KM.ReadShape("LINESTRING (1 0, 1 1, 1 2)");
-				SpatialArgs args = new SpatialArgs(SpatialOperation.BBoxIntersects, shape);
+				var shape = NtsSpatialContext.GEO.ReadShape("LINESTRING (1 0, 1 1, 1 2)");
+				SpatialArgs args = new SpatialArgs(SpatialOperation.Intersects, shape);
 				var strategy = SpatialIndex.CreateStrategy("WKT", SpatialSearchStrategy.GeohashPrefixTree, GeohashPrefixTree.GetMaxLevelsPossible());
 				var makeQuery = strategy.MakeQuery(args);
 				using(var search = new IndexSearcher(dir))
