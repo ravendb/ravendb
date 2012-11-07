@@ -128,7 +128,8 @@ namespace Raven.Database.Indexing
 		{
 			Point ptFrom = Context.MakePoint(fromLng, fromLat);
 			Point ptTo = Context.MakePoint(toLng, toLat);
-			return Context.GetDistCalc().Distance(ptFrom, ptTo);
+			var distance = Context.GetDistCalc().Distance(ptFrom, ptTo);
+			return (distance / RadiansToDegrees) * EarthMeanRadiusKm;
 		}
 	}
 }
