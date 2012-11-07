@@ -165,10 +165,10 @@ namespace Raven.Database.Commercial
 		{
 			string version;
 			if (licenseAttributes.TryGetValue("version", out version) == false)
-				throw new LicenseExpiredException("This is not a licence for RavenDB 1.2");
+				throw new LicenseExpiredException("This is not a licence for RavenDB 2.0");
 
-			if(version != "1.2")
-				throw new LicenseExpiredException("This is not a licence for RavenDB 1.2");
+			if(version != "1.2" && version != "2.0")
+				throw new LicenseExpiredException("This is not a licence for RavenDB 2.0");
 
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))
