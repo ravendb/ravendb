@@ -9,12 +9,10 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Xml;
-using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Impl.Clustering;
-using Raven.Database.Plugins;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
 using Raven.Database.Extensions;
@@ -31,10 +29,10 @@ namespace Raven.Database.Commercial
 
 		private static readonly Dictionary<string,string> alwaysOnAttributes = new Dictionary<string, string>
 		{
-			{"periodingBackups", "false"},
+			{"periodicBackups", "false"},
 			{"encryption", "false"},
 			{"compression", "false"},
-			{"qoutas","false"},
+			{"quotas","false"},
 
 			{"authorization","true"},
 			{"expiration","true"},
