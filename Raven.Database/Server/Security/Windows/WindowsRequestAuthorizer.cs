@@ -64,7 +64,11 @@ namespace Raven.Database.Server.Security.Windows
 				return false;
 			}
 
-			var user = (PrincipalWithDatabaseAccess)ctx.User;
+			PrincipalWithDatabaseAccess user = null;
+			if(userCreated)
+			{
+				user = (PrincipalWithDatabaseAccess)ctx.User;
+			}
 			var databaseName = database().Name ?? string.Empty;
 
 			if (userCreated && (user.Principal.IsInRole(WindowsBuiltInRole.Administrator) || user.AdminDatabases.Contains(databaseName)))
@@ -85,6 +89,7 @@ namespace Raven.Database.Server.Security.Windows
 				userCreated &&
 				(user.ReadOnlyDatabases.Contains(databaseName) || user.ReadWriteDatabases.Contains(databaseName)))
 				return true;
+
 			if (userCreated)
 			{
 				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
