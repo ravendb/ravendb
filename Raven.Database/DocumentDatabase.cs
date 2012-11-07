@@ -605,8 +605,8 @@ namespace Raven.Database
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
-						metadata.EnsureSnapshot();
-						document.EnsureSnapshot();
+						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						actions.AfterCommit(new JsonDocument
 						{
 							Metadata = metadata,

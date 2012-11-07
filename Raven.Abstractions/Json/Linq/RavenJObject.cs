@@ -324,6 +324,11 @@ namespace Raven.Json.Linq
 			Properties.EnsureSnapshot();
 		}
 
+		public void EnsureSnapshot(string msg)
+		{
+			Properties.EnsureSnapshot(msg);
+		}
+
 		public override IEnumerable<RavenJToken> Values()
 		{
 			return Properties.Values;

@@ -56,7 +56,7 @@ namespace Raven.Bundles.Versioning.Triggers
 					metadata[VersioningUtil.RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
 				}
 
-				PutResult newDoc = Database.Put(key + "/revisions/", null, document, copyMetadata,
+				PutResult newDoc = Database.Put(key + "/revisions/", null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
 				                                transactionInformation);
 				int revision = int.Parse(newDoc.Key.Split('/').Last());
 
