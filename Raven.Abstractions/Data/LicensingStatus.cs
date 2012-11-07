@@ -11,14 +11,15 @@ namespace Raven.Abstractions.Data
 {
 	public class LicensingStatus
 	{
+		private Dictionary<string, string> attributes;
 		public string Message { get; set; }
 		public string Status { get; set; }
 		public bool Error { get; set; }
-		public Dictionary<string, string> Attributes { get; set; }
 
-		public LicensingStatus()
+		public Dictionary<string, string> Attributes
 		{
-			Attributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+			get { return attributes ?? (attributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)); }
+			set { attributes = new Dictionary<string, string>(value, StringComparer.InvariantCultureIgnoreCase); }
 		}
 	}
 }

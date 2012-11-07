@@ -9,6 +9,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Xml;
+using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -28,15 +29,28 @@ namespace Raven.Database.Commercial
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 
+		private static readonly Dictionary<string,string> alwaysOnAttributes = new Dictionary<string, string>
+		{
+			{"periodingBackups", "false"},
+			{"encryption", "false"},
+			{"compression", "false"},
+			{"qoutas","false"},
+
+			{"authorization","true"},
+			{"expiration","true"},
+			{"replication","true"},
+			{"versioning","true"},
+		};
+
 		static ValidateLicense()
 		{
-			LicenseAttributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 			CurrentLicense = new LicensingStatus
 			{
 				Status = "AGPL - Open Source",
 				Error = false,
 				Message = "No license file was found.\r\n" +
-				          "The AGPL license restrictions apply, only Open Source / Development work is permitted."
+				          "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
+				Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase)
 			};
 		}
 
@@ -69,12 +83,18 @@ namespace Raven.Database.Commercial
 					}
 				});
 
+				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase);
+				foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
+				{
+					attributes[licenseAttribute.Key] = licenseAttribute.Value;
+				}
+		
 				CurrentLicense = new LicensingStatus
 				{
 					Status = "Commercial - " + licenseValidator.LicenseType,
 					Error = false,
 					Message = "Valid license at " + licensePath,
-					Attributes = licenseValidator.LicenseAttributes
+					Attributes = attributes;
 				};
 			}
 			catch (Exception e)
@@ -101,7 +121,8 @@ namespace Raven.Database.Commercial
 				{
 					Status = "AGPL - Open Source",
 					Error = true,
-					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e
+					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e,
+					Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase)
 				};
 			}
 		}
