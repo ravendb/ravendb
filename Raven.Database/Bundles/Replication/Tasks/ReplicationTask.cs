@@ -152,8 +152,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void NotifySiblings()
 		{
-			var notifications = new ConcurrentQueue<RavenConnectionStringOptions>();
+			var notifications = new BlockingCollection<RavenConnectionStringOptions>();
+
 			Task.Factory.StartNew(() => NotifySibling(notifications));
+
 			int skip = 0;
 			var replicationDestinations = GetReplicationDestinations();
 			while (true)
@@ -161,7 +163,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, skip, 128);
 				if (docs.Length == 0)
 				{
-					notifications.Enqueue(null); // marker to stop notify this
+					notifications.TryAdd(null, 15 * 1000); // marker to stop notify this
 					return;
 				}
 
@@ -180,22 +182,21 @@ namespace Raven.Bundles.Replication.Tasks
 
 					if (match != null)
 					{
-						notifications.Enqueue(match.ConnectionStringOptions);
+						notifications.TryAdd(match.ConnectionStringOptions, 15 * 1000);
 					}
 					else
 					{
-						notifications.Enqueue(new RavenConnectionStringOptions
+						notifications.TryAdd(new RavenConnectionStringOptions
 						{
 							Url = sourceReplicationInformation.Source
-						});
+						}, 15 * 1000);
 					}
 				}
 			}
 		}
 
-		private void NotifySibling(ConcurrentQueue<RavenConnectionStringOptions> queue)
+		private void NotifySibling(BlockingCollection<RavenConnectionStringOptions> collection)
 		{
-			var collection = new BlockingCollection<RavenConnectionStringOptions>(queue);
 			while (true)
 			{
 				RavenConnectionStringOptions connectionStringOptions;
@@ -214,6 +215,7 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl();
 					var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+					request.WebRequest.ContentLength = 0;
 					request.ExecuteRequest();
 				}
 				catch (Exception e)
