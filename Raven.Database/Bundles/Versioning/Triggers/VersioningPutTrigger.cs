@@ -31,7 +31,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			return VetoResult.Allowed;
 		}
 
-		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Guid etag, TransactionInformation transactionInformation)
 		{
 			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				return;
