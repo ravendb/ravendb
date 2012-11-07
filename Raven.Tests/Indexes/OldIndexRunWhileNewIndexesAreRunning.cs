@@ -70,6 +70,7 @@ namespace Raven.Tests.Indexes
 
 				using (var session = store.OpenSession())
 				{
+					session.Advanced.MaxNumberOfRequestsPerSession = 1000;
 					while (true) // we have to wait until we _start_ indexing
 					{
 						var objects = session.Advanced.LuceneQuery<object>("test").Take(1).ToList();
