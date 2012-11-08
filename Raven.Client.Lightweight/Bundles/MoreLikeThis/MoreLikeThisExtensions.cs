@@ -1,10 +1,8 @@
 ﻿using System;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Bundles.MoreLikeThis
 {
@@ -13,13 +11,13 @@ namespace Raven.Client.Bundles.MoreLikeThis
 		public static T[] MoreLikeThis<T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var indexCreator = new TIndexCreator();
-			return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, new MoreLikeThisQueryParameters
+			return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, new MoreLikeThisQuery
 			{
 				DocumentId = documentId
 			});
 		}
 
-		public static T[] MoreLikeThis<T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, MoreLikeThisQueryParameters parameters) where TIndexCreator : AbstractIndexCreationTask, new()
+		public static T[] MoreLikeThis<T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, MoreLikeThisQuery parameters) where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var indexCreator = new TIndexCreator();
 			return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, parameters);
@@ -28,45 +26,37 @@ namespace Raven.Client.Bundles.MoreLikeThis
 
 		public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, string documentId)
 		{
-			return MoreLikeThis<T>(advancedSession, index, new MoreLikeThisQueryParameters
+			return MoreLikeThis<T>(advancedSession, index, new MoreLikeThisQuery
 			{
 				DocumentId = documentId
 			});
 		}
 
-		public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, MoreLikeThisQueryParameters parameters)
+		public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, MoreLikeThisQuery parameters)
 		{
-			var cmd = advancedSession.DocumentStore.DatabaseCommands as ServerClient;
-			if (cmd == null)
-				throw new NotImplementedException("Embedded client isn't supported by the MoreLikeThis bundle");
+			if (string.IsNullOrEmpty(index))
+				throw new ArgumentException("Index name cannot be null or empty", "index");
 
-
-			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
+			parameters.IndexName = index;
 
 			// /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
-			EnsureIsNotNullOrEmpty(index, "index");
+			var cmd = advancedSession.DocumentStore.DatabaseCommands;
 
+			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
 			inMemoryDocumentSessionOperations.IncrementRequestCount();
-			var multiLoadOperation = new MultiLoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null ,null);
+
+			var multiLoadOperation = new MultiLoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null, null);
 			MultiLoadResult multiLoadResult;
 			do
 			{
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-					var result = cmd.ExecuteGetRequest(parameters.GetRequestUri(index));
-
-					multiLoadResult = ((RavenJObject)result).Deserialize<MultiLoadResult>(inMemoryDocumentSessionOperations.Conventions);
+					multiLoadResult = cmd.MoreLikeThis(parameters);
 				}
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 
 			return multiLoadOperation.Complete<T>();
-		}
-
-		private static void EnsureIsNotNullOrEmpty(string key, string argName)
-		{
-			if (string.IsNullOrEmpty(key))
-				throw new ArgumentException("Key cannot be null or empty", argName);
 		}
 	}
 }

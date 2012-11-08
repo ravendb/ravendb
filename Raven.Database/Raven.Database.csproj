@@ -212,6 +212,8 @@
     <Compile Include="Linq\Mono.Reflection\Instruction.cs" />
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Linq\StringLiteralExpression.cs" />
+    <Compile Include="Queries\MoreLikeThisQueryRunner.cs" />
+    <Compile Include="Queries\MoreLikeThisQueryExtensions.cs" />
     <Compile Include="Queries\MatchNoDocsQuery.cs" />
     <Compile Include="Server\Abstractions\PrincipalWithDatabaseAccess.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />

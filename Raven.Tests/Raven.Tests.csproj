@@ -615,8 +615,7 @@
     <Compile Include="Bundles\Expiration\Expiration.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisQueryParametersTests.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisTests.cs" />
-    <Compile Include="Bundles\MoreLikeThis\MoreLikeThis_should_support_MapReduce_indexes.cs" />
-    <Compile Include="Bundles\MoreLikeThis\TestWithInMemoryDatabase.cs" />
+    <Compile Include="Bundles\MoreLikeThis\MoreLikeThisShouldSupportMapReduceIndexes.cs" />
     <Compile Include="Bundles\PeriodicBackups\FactIfAwsIsAvailable.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Async\AttachmentReplication.cs" />

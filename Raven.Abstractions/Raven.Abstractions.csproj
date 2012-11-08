@@ -561,6 +561,7 @@
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
+    <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
@@ -593,7 +594,7 @@
     <Compile Include="Data\JsonDocumentMetadata.cs" />
     <Compile Include="Data\LicensingStatus.cs" />
     <Compile Include="Data\LogItem.cs" />
-    <Compile Include="Data\MoreLikeThisQueryParameters.cs" />
+    <Compile Include="Data\MoreLikeThisQuery.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />
     <Compile Include="Data\PatchRequest.cs" />
