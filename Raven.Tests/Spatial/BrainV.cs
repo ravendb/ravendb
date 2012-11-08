@@ -29,7 +29,6 @@ namespace Raven.Tests.Spatial
 				using(var session = store.OpenSession())
 				{
 					var objects = session.Query<object>("eventsByLatLng")
-						.Customize(x => x.WithinRadiusOf(6, 0, 0))
 						.Customize(x => x.WaitForNonStaleResults())
 						.ToArray();
 
