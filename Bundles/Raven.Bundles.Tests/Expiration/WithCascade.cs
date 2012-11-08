@@ -10,7 +10,6 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Bundles.Tests.Expiration
 {
@@ -22,7 +21,7 @@ namespace Raven.Bundles.Tests.Expiration
 
 		public WithCascade()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(WithCascade)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
 			var ravenConfiguration = new database::Raven.Database.Config.RavenConfiguration
