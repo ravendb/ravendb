@@ -60,7 +60,7 @@ namespace Raven.Server
 				do 
 				{
 					RequestAdditionalTime(10000);
-				} while(shutdownTask.Wait(9000));
+				} while(!shutdownTask.Wait(9000));
 			});
 
 			Task.WaitAll(shutdownTask, keepAliveTask);
