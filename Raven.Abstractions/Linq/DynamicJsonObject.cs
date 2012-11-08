@@ -158,7 +158,8 @@ namespace Raven.Abstractions.Linq
 					var ar = (RavenJArray)jToken;
 					return new DynamicList(this, ar.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
-					return jToken.Value<DateTime>();
+					var ravenJValue = ((RavenJValue) jToken);
+					return ravenJValue.Value;
 				case JTokenType.Null:
 					return new DynamicNullObject { IsExplicitNull = true };
 				default:
