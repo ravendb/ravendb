@@ -1653,7 +1653,6 @@ namespace Raven.Database
 			}
 		}
 
-		static string productVersion;
 		private volatile bool disposed;
 		private readonly ValidateLicense validateLicense;
 		public string ServerUrl
@@ -1669,6 +1668,7 @@ namespace Raven.Database
 			}
 		}
 
+		static string productVersion;
 		public static string ProductVersion
 		{
 			get

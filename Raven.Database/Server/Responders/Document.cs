@@ -108,7 +108,7 @@ namespace Raven.Database.Server.Responders
 					{
 						context.SetStatusToNonAuthoritativeInformation();
 					}
-					
+
 					GetDocumentDirectly(context, docId);
 				});
 		}
