@@ -42,21 +42,21 @@ namespace Raven.Bundles.Tests.Replication
 		{
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
-			                          {
-										Settings = {{"Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty)}},
-			                          	AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
-			                          	DataDirectory = "Data #" + servers.Count,
-			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-			                          	RunInMemory = true,
-			                          	Port = port,
-										DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
-			                          };
+			{
+				Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
+				AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
+				DataDirectory = "Data #" + servers.Count,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				RunInMemory = true,
+				Port = port,
+				DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
+			};
 			ConfigureServer(serverConfiguration);
 			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
 			serverConfiguration.PostInit();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			servers.Add(ravenDbServer);
-			
+
 			var documentStore = new DocumentStore {Url = ravenDbServer.Database.Configuration.ServerUrl};
 			ConfigureStore(documentStore);
 			if (configureStore != null)
@@ -86,7 +86,7 @@ namespace Raven.Bundles.Tests.Replication
 				}
 				catch (Exception e)
 				{
-					err.Add(e);	
+					err.Add(e);
 				}
 			}
 
@@ -133,7 +133,10 @@ namespace Raven.Bundles.Tests.Replication
 			RunReplication(stores[src], stores[dest]);
 		}
 
-		protected void RunReplication(IDocumentStore source, IDocumentStore destination, TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None)
+		protected void RunReplication(IDocumentStore source, IDocumentStore destination,
+			TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None,
+			bool disabled = false,
+			bool ignoredClient = false)
 		{
 			Console.WriteLine("Replicating from {0} to {1}.", source.Url, destination.Url);
 			using (var session = source.OpenSession())
@@ -142,6 +145,8 @@ namespace Raven.Bundles.Tests.Replication
 				{
 					Url = destination.Url.Replace("localhost", "ipv4.fiddler"),
 					TransitiveReplicationBehavior = transitiveReplicationBehavior,
+					Disabled = disabled,
+					IgnoredClient = ignoredClient
 				};
 				SetupDestination(replicationDestination);
 				session.Store(new ReplicationDocument
@@ -154,22 +159,22 @@ namespace Raven.Bundles.Tests.Replication
 
 		protected virtual void SetupDestination(ReplicationDestination replicationDestination)
 		{
-			
+
 		}
 
 		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
 			Assert.NotEmpty(urls);
 			source.Put(Constants.RavenReplicationDestinations,
-			           null, new RavenJObject
-			           {
-			           	{
-			           		"Destinations", new RavenJArray(urls.Select(url => new RavenJObject
-			           		{
-			           			{"Url", url}
-			           		}))
-			           		}
-			           }, new RavenJObject());
+						null, new RavenJObject
+						{
+							{
+								"Destinations", new RavenJArray(urls.Select(url => new RavenJObject
+								{
+									{"Url", url}
+								}))
+							}
+						}, new RavenJObject());
 		}
 
 		protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
@@ -216,7 +221,7 @@ namespace Raven.Bundles.Tests.Replication
 			}
 
 			var jsonDocumentMetadata = commands.Head(expectedId);
-			
+
 			Assert.NotNull(jsonDocumentMetadata);
 		}
 

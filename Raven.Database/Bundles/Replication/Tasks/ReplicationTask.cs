@@ -780,7 +780,9 @@ namespace Raven.Bundles.Replication.Tasks
 				return new ReplicationStrategy[0];
 			}
 			return jsonDeserialization
-				.Destinations.Select(GetConnectionOptionsSafe)
+				.Destinations
+				.Where(x => !x.Disabled)
+				.Select(GetConnectionOptionsSafe)
 				.Where(x => x != null)
 				.ToArray();
 		}
