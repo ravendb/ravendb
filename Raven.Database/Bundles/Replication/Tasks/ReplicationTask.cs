@@ -398,6 +398,7 @@ namespace Raven.Bundles.Replication.Tasks
 					url += "&attachmentEtag=" + lastAttachmentEtag.Value;
 
 				var request = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
+				request.Write(new byte[0]);
 				request.ExecuteRequest();
 			}
 			catch (WebException e)
