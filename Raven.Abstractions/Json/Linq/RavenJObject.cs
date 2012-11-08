@@ -16,7 +16,17 @@ namespace Raven.Json.Linq
 	/// </summary>
 	public class RavenJObject : RavenJToken, IEnumerable<KeyValuePair<string, RavenJToken>>
 	{
+		/// <summary>
+		/// This can be used to attach additional state for external clients
+		/// Not used by anything related to JSON
+		/// </summary>
+		public Dictionary<string, object> __ExteranlState
+		{
+			get { return externalState ?? (externalState = new Dictionary<string, object>()); }
+		}
+
 		private readonly IEqualityComparer<string> comparer;
+		private Dictionary<string, object> externalState;
 
 		/// <summary>
 		/// Gets the node type for this <see cref="RavenJToken"/>.
@@ -322,6 +332,11 @@ namespace Raven.Json.Linq
 		public override void EnsureSnapshot()
 		{
 			Properties.EnsureSnapshot();
+		}
+
+		public void EnsureSnapshot(string msg)
+		{
+			Properties.EnsureSnapshot(msg);
 		}
 
 		public override IEnumerable<RavenJToken> Values()

@@ -4,15 +4,22 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
 	public class LicensingStatus
 	{
+		private Dictionary<string, string> attributes;
 		public string Message { get; set; }
 		public string Status { get; set; }
 		public bool Error { get; set; }
-		public IDictionary<string, string> Attributes { get; set; }
+
+		public Dictionary<string, string> Attributes
+		{
+			get { return attributes ?? (attributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)); }
+			set { attributes = new Dictionary<string, string>(value, StringComparer.InvariantCultureIgnoreCase); }
+		}
 	}
 }

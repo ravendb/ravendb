@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Impl;
@@ -20,8 +21,8 @@ namespace Raven.Database.Storage
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
 		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
-		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup);
-		void Restore(string backupLocation, string databaseLocation);
+		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
+		void Restore(string backupLocation, string databaseLocation, Action<string> output);
 		long GetDatabaseSizeInBytes();
 
 		string FriendlyName { get; }

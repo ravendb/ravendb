@@ -24,12 +24,17 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
-			SavePeriodicBackup(databaseName);
+
+			var periodicBackup = settingsModel.GetSection<PeriodicBackupSettingsSectionModel>();
+			if (periodicBackup != null)
+				SavePeriodicBackup(databaseName, periodicBackup);
+
 
 			if(databaseName == Constants.SystemDatabase)
 			{
 				SaveApiKeys();
 				SaveWindowsAuth();
+				ApplicationModel.Current.Notifications.Add(new Notification("Api keys and Windows Authentication saved"));
 				return;
 			}
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
@@ -127,14 +132,17 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-		private void SavePeriodicBackup(string databaseName)
+		private void SavePeriodicBackup(string databaseName, PeriodicBackupSettingsSectionModel periodicBackup)
 		{
-			var periodicBackup = settingsModel.GetSection<PeriodicBackupSettingsSectionModel>();
 			if(periodicBackup.PeriodicBackupSetup == null)
 				return;
 
-			if (periodicBackup.OriginalAwsSecretKey != periodicBackup.AwsSecretKey)
-				settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
+            if (periodicBackup.IsS3Selected.Value)
+                periodicBackup.PeriodicBackupSetup.GlacierVaultName = string.Empty;
+            else
+                periodicBackup.PeriodicBackupSetup.S3BucketName = string.Empty;
+
+            settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
 			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
 
 			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
@@ -162,8 +170,7 @@ namespace Raven.Studio.Commands
 
 			session.Store(RavenJObject.FromObject(windowsAuthModel.Document.Value), "Raven/Authorization/WindowsSettings");
 
-			session.SaveChangesAsync()
-				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.Notifications.Add(new Notification("Windows Authentication Settings Saved")));
+			session.SaveChangesAsync();
 		}
 
 		private void SaveApiKeys()
@@ -195,7 +202,6 @@ namespace Raven.Studio.Commands
 
 			session.SaveChangesAsync();
 			apiKeysModel.ApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeysModel.ApiKeys);
-			ApplicationModel.Current.AddInfoNotification("Api Keys Saved");
 		}
 	}
 }

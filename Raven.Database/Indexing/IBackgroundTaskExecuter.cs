@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Raven.Database.Config;
 
 namespace Raven.Database.Indexing
 {

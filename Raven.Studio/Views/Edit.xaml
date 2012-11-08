@@ -426,6 +426,7 @@
                 <Controls1:WatermarkedTextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                               Watermark="Document Id?"
                                               Grid.Row="0"
+											  IsEnabled="{Binding EditingDatabase, Converter={StaticResource NegatingBool}}"
                                               Margin="5,10,10,0" />
 
                 <ListBox Grid.Row="1" ItemsSource="{Binding DocumentSections}" SelectedItem="{Binding CurrentSection, Mode=TwoWay}"

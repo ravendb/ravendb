@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Linq;
+using Lucene.Net.Util;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
 using Raven.Database.Util;
 using Xunit;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Tests
 {
@@ -64,11 +66,11 @@ namespace Raven.Tests
 		}
 
 		[Fact]
-		public void When_context_database_name_is_null_The_should_not_record_log()
+		public void When_context_database_name_is_null_The_should_be_recorded_for_sys_log()
 		{
 			LogContext.DatabaseName.Value = null;
 			sut.Write(new LogEventInfo { LoggerName = "Raven.x", Level = LogLevel.Info });
-			Assert.Equal(0, sut.DatabaseTargetCount);
+			Assert.Equal(1, sut[Constants.SystemDatabase].GeneralLog.Count());
 		}
 
 		[Fact]

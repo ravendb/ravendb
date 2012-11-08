@@ -1,5 +1,9 @@
-﻿using System.Windows.Input;
+﻿using System;
+using System.Collections.Generic;
+using System.Windows.Input;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -8,7 +12,6 @@ namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
-
         public SettingsPageModel()
         {
             Settings = new SettingsModel();
@@ -28,12 +31,7 @@ namespace Raven.Studio.Models
 				var apiKeys = new ApiKeysSectionModel();
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
-				if (ConfigurationManager.AppSettings.ContainsKey("Raven/ActiveBundles")
-					&& ConfigurationManager.AppSettings["Raven/ActiveBundles"].Contains("PeriodicBackups"))
-				{
-					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
-				}
-
+				Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
 
 				return; 
@@ -57,11 +55,7 @@ namespace Raven.Studio.Models
 			        Settings.Sections.Add(databaseSettingsSectionViewModel);
 			        Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
 
-			        if (ConfigurationManager.AppSettings.ContainsKey("Raven/ActiveBundles")
-			            && ConfigurationManager.AppSettings["Raven/ActiveBundles"].Contains("PeriodicBackups"))
-			        {
-				        Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
-			        }
+					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 			        string activeBundles;
 			        databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);

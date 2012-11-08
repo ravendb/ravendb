@@ -44,11 +44,13 @@ namespace Raven.Studio.Models
 				new ImportTask(),
 				new ExportTask(),
 				new StartBackupTask(),
-				new StartRestoreTask(),
 				new IndexingTask(),
 				new SampleDataTask(),
                 new CsvImportTask()
 			};
+
+			if (name == null || name == Constants.SystemDatabase)
+				Tasks.Insert(3, new StartRestoreTask());
 
 			SelectedTask = new Observable<TaskModel> { Value = Tasks.FirstOrDefault() };
 			Statistics = new Observable<DatabaseStatistics>();
@@ -57,12 +59,9 @@ namespace Raven.Studio.Models
 				Value = "Offline"
 			};
 
-
-
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
 			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
 			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
-
 
 		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
 		        .SampleResponsive(TimeSpan.FromSeconds(2))
