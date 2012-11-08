@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -16,6 +17,7 @@ using Raven.Database.Impl.Clustering;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
 using Raven.Database.Extensions;
+using System.Linq;
 
 namespace Raven.Database.Commercial
 {
@@ -78,6 +80,16 @@ namespace Raven.Database.Commercial
 					    "true".Equals(value, StringComparison.InvariantCultureIgnoreCase))
 					{
 						licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
+					}
+					string allowExternalBundles;
+					if(licenseValidator.LicenseAttributes.TryGetValue("allowExternalBundles", out allowExternalBundles) && 
+						bool.Parse(allowExternalBundles) == false)
+					{
+						var directoryCatalogs = config.Catalog.Catalogs.OfType<DirectoryCatalog>().ToArray();
+						foreach (var catalog in directoryCatalogs)
+						{
+							config.Catalog.Catalogs.Remove(catalog);
+						}
 					}
 				});
 
