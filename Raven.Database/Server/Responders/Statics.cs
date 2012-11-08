@@ -23,8 +23,8 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var array = Database.GetAttachments(context.GetStart(), 
-			                                   context.GetPageSize(Database.Configuration.MaxPageSize),
+			var array = Database.GetAttachments(context.GetStart(),
+											   context.GetPageSize(Database.Configuration.MaxPageSize),
 			                                   context.GetEtagFromQueryString(),
 											   context.Request.QueryString["startsWith"],
 											   long.MaxValue);
