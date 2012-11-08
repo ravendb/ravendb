@@ -66,5 +66,16 @@ namespace Raven.Server
 			Task.WaitAll(shutdownTask, keepAliveTask);
 
 		}
+
+		protected override void OnShutdown()
+		{
+			var shutdownTask = startTask.ContinueWith(task =>
+			{
+				if (server != null)
+					server.Dispose();
+				return task;
+			});
+			Task.WaitAll(shutdownTask);
+		}
 	}
 }
