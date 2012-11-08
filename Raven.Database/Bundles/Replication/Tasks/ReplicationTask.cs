@@ -398,6 +398,7 @@ namespace Raven.Bundles.Replication.Tasks
 					url += "&attachmentEtag=" + lastAttachmentEtag.Value;
 
 				var request = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
+				request.Write(new byte[0]);
 				request.ExecuteRequest();
 			}
 			catch (WebException e)
@@ -780,7 +781,9 @@ namespace Raven.Bundles.Replication.Tasks
 				return new ReplicationStrategy[0];
 			}
 			return jsonDeserialization
-				.Destinations.Select(GetConnectionOptionsSafe)
+				.Destinations
+				.Where(x => !x.Disabled)
+				.Select(GetConnectionOptionsSafe)
 				.Where(x => x != null)
 				.ToArray();
 		}

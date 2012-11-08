@@ -173,9 +173,6 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
-      <Link>Infrastructure\Alert.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\ConflictsResolver.cs">
       <Link>Infrastructure\ConflictsResolver.cs</Link>
     </Compile>
@@ -238,8 +235,8 @@
       <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
-    <Compile Include="Infrastructure\ConfigurationManager.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
+    <Compile Include="Infrastructure\Converters\BundleNameToToolTipCoverter.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BundlesSelect.xaml.cs">

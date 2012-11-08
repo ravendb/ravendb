@@ -32,7 +32,7 @@ namespace Raven.Server
 		private static void Main(string[] args)
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
-			if (RunningInInteractiveMode())
+			if (RunningInInteractiveMode(args))
 			{
 				try
 				{
@@ -67,11 +67,11 @@ namespace Raven.Server
 			}
 		}
 
-		private static bool RunningInInteractiveMode()
+		private static bool RunningInInteractiveMode(string[] args)
 		{
 			if (Type.GetType("Mono.Runtime") != null) // running on mono, which doesn't support detecting this
 				return true;
-			return Environment.UserInteractive;
+			return Environment.UserInteractive || (args != null && args.Length > 0);
 		}
 
 		private static void WaitForUserInputAndExitWithError()
@@ -255,7 +255,7 @@ Configuration options:
 					ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 
 				}
-				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation);
+				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, s => {});
 			}
 			catch (Exception e)
 			{

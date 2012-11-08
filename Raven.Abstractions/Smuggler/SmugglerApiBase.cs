@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Smuggler
 {
 	public abstract class SmugglerApiBase : ISmugglerApi
 	{
-		private const int MaxSizeOfUncomressedSizeToSendToDatabase = 16 * 1024 * 1024;
+		private const int MaxSizeOfUncomressedSizeToSendToDatabase = 32 * 1024 * 1024;
 		protected readonly SmugglerOptions smugglerOptions;
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
 		private readonly LinkedList<Tuple<Guid, DateTime>> batchRecording = new LinkedList<Tuple<Guid, DateTime>>();
@@ -38,6 +38,7 @@ namespace Raven.Abstractions.Smuggler
 		protected double maximumBatchChangePercentage = 0.3;
 
 		protected int minimumBatchSize = 10;
+		protected int maximumBatchSize = 512 * 1000;
 
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
@@ -56,7 +57,7 @@ namespace Raven.Abstractions.Smuggler
 				throw new ArgumentNullException("options");
 
 			var file = options.BackupPath;
-			if (incremental == true)
+			if (incremental)
 			{
 				if (Directory.Exists(options.BackupPath) == false)
 				{
@@ -157,8 +158,6 @@ namespace Raven.Abstractions.Smuggler
 		{
 			int totalCount = 0;
 
-			long previousProcessingTime = 0;
-
 			while (true)
 			{
 				var watch = Stopwatch.StartNew();
@@ -171,14 +170,9 @@ namespace Raven.Abstractions.Smuggler
 					return lastEtag;
 				}
 
-				var currentProcessingTime = watch.ElapsedTicks;
+				var currentProcessingTime = watch.Elapsed;
 
-				if (previousProcessingTime == 0)
-					previousProcessingTime = watch.ElapsedTicks;
-
-				options.BatchSize = CalculateBatchSize(options.BatchSize, previousProcessingTime, currentProcessingTime);
-
-				previousProcessingTime = currentProcessingTime;
+				ModifyBatchSize(options, currentProcessingTime);
 
 				var final = documents.Where(options.MatchFilters).ToList();
 				final.ForEach(item => item.WriteTo(jsonWriter));
@@ -334,6 +328,7 @@ namespace Raven.Abstractions.Smuggler
 			int totalCount = 0;
 			long lastFlushedAt = 0;
 			int batchCount = 0;
+			long sizeOnDisk = 0;
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var before = sizeStream.Position;
@@ -352,19 +347,20 @@ namespace Raven.Abstractions.Smuggler
 
 				totalCount += 1;
 				batch.Add(document);
-				var sizeOnDisk = (sizeStream.Position - lastFlushedAt);
+				sizeOnDisk = (sizeStream.Position - lastFlushedAt);
 				if (batch.Count >= smugglerOptions.BatchSize ||
 					sizeOnDisk >= MaxSizeOfUncomressedSizeToSendToDatabase)
 				{
 					lastFlushedAt = sizeStream.Position;
-					RegisterEtagPut(FlushBatch(batch));
-					if (batchCount++ % 10 == 0)
+					HandleBatch(options,batch, sizeOnDisk);
+					sizeOnDisk = 0;
+					if (++batchCount % 10 == 0)
 					{
 						OutputIndexingDistance();
 					}
 				}
 			}
-			RegisterEtagPut(FlushBatch(batch));
+			HandleBatch(options, batch, sizeOnDisk);
 			OutputIndexingDistance();
 
 			var attachmentCount = 0;
@@ -396,9 +392,20 @@ namespace Raven.Abstractions.Smuggler
 			ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", totalCount, attachmentCount, sw.ElapsedMilliseconds);
 		}
 
-		private void RegisterEtagPut(Guid lastEtagInBatch)
+		private void HandleBatch(SmugglerOptions options, List<RavenJObject> batch, long sizeOfDisk)
 		{
+			var sw = Stopwatch.StartNew();
+			var actualBatchSize = batch.Count;
+			Guid lastEtagInBatch = FlushBatch(batch);
+			sw.Stop();
+
+			var currentProcessingTime = sw.Elapsed;
+
 			batchRecording.AddLast(Tuple.Create(lastEtagInBatch, SystemTime.UtcNow));
+			if(sizeOfDisk >=MaxSizeOfUncomressedSizeToSendToDatabase)
+				options.BatchSize = actualBatchSize - actualBatchSize/10;
+			else
+				ModifyBatchSize(options, currentProcessingTime);
 		}
 
 		private void OutputIndexingDistance()
@@ -480,14 +487,16 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private int CalculateBatchSize(int currentBatchSize, long previousProcessingTime, long currentProcessingTime)
+		private void ModifyBatchSize(SmugglerOptions options, TimeSpan currentProcessingTime)
 		{
-			var processingTimeDifference = (previousProcessingTime - currentProcessingTime) / (double)Math.Max(previousProcessingTime, currentProcessingTime);
+			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.5))
+				return;
 
-			processingTimeDifference = Math.Min(maximumBatchChangePercentage, Math.Abs(processingTimeDifference))
-			                           * Math.Sign(processingTimeDifference);
-
-			return Math.Max(minimumBatchSize, currentBatchSize + (int)(processingTimeDifference * currentBatchSize));
+			var change = Math.Max(1, options.BatchSize / 3);
+			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.7))
+				options.BatchSize -= change;
+			else
+				options.BatchSize += change;
 		}
 
 	}

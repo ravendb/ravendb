@@ -10,9 +10,9 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using Raven.Abstractions.Json;
+using Raven.Client.Listeners;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions;
@@ -47,8 +47,12 @@ namespace Raven.Client.Connection
 		private readonly ReplicationInformer replicationInformer;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? currentSessionId;
+		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly ProfilingInformation profilingInformation;
 		private int readStripingBase;
+
+		private bool resolvingConflict;
+		private bool resolvingConflictRetries;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -62,7 +66,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
-		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, Func<string, ReplicationInformer> replicationInformerGetter, string databaseName, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId)
+		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, Func<string, ReplicationInformer> replicationInformerGetter, string databaseName, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId, IDocumentConflictListener[] conflictListeners)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(currentSessionId);
 			this.credentials = credentials;
@@ -71,6 +75,7 @@ namespace Raven.Client.Connection
 			this.replicationInformer = replicationInformerGetter(databaseName);
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.currentSessionId = currentSessionId;
+			this.conflictListeners = conflictListeners;
 			this.url = url;
 
 			if (url.EndsWith("/"))
@@ -215,18 +220,66 @@ namespace Raven.Client.Connection
 					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 					var etag = httpWebResponse.GetEtagHeader();
 
-					throw CreateConcurrencyException(key, conflictsDoc, etag);
+					var concurrencyException = TryResolveConflictOrCreateConcurrencyException(key, conflictsDoc, etag);
+					if(concurrencyException == null)
+					{
+						if(resolvingConflictRetries)
+							throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+		
+						resolvingConflictRetries = true;
+						try
+						{
+							return DirectGet(serverUrl, key);
+						}
+						finally
+						{
+							resolvingConflictRetries = false;
+						}
+					}
+					throw concurrencyException;
 				}
 				throw;
 			}
 		}
 
-		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, Guid etag)
+		private ConflictException TryResolveConflictOrCreateConcurrencyException(string key, RavenJObject conflictsDoc, Guid etag)
 		{
-			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+			var ravenJArray = conflictsDoc.Value<RavenJArray>("Conflicts");
+			if(ravenJArray == null)
+				throw new InvalidOperationException("Could not get conflict ids from conflicted document, are you trying to resolve a conflict when using metadata-only?");
+
+			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
+
+
+
+			if (conflictListeners.Length > 0 && resolvingConflict == false)
+			{
+				resolvingConflict = true;
+				try
+				{
+					var multiLoadResult = Get(conflictIds, null);
+
+					var results = multiLoadResult.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
+
+					foreach (var conflictListener in conflictListeners)
+					{
+						JsonDocument resolvedDocument;
+						if(conflictListener.TryResolveConflict(key, results, out resolvedDocument))
+						{
+							Put(key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
+
+							return null;
+						}
+					}
+				}
+				finally
+				{
+					resolvingConflict = false;
+				}
+			}
 
 			return new ConflictException("Conflict detected on " + key +
-			                            ", conflict must be resolved before the document will be accessible")
+			                            ", conflict must be resolved before the document will be accessible", true)
 			{
 				ConflictedVersionIds = conflictIds,
 				Etag = etag
@@ -504,7 +557,7 @@ namespace Raven.Client.Connection
 					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
-												", conflict must be resolved before the attachment will be accessible")
+												", conflict must be resolved before the attachment will be accessible", true)
 					{
 						ConflictedVersionIds = conflictIds,
 						Etag = httpWebResponse.GetEtagHeader()
@@ -814,11 +867,9 @@ namespace Raven.Client.Connection
 				throw;
 			}
 			var directQuery = SerializationHelper.ToQueryResult(json, request.GetEtagHeader());
-			foreach (var docResult in directQuery.Results.Concat(directQuery.Includes))
-			{
-				AssertNonConflictedDocument(docResult);
-			}
-			return directQuery;
+			var docResults = directQuery.Results.Concat(directQuery.Includes);
+			return RetryOperationBecauseOfConflict(docResults, directQuery, 
+				() => DirectQuery(index, query, operationUrl, includes, metadataOnly, includeEntries));
 		}
 
 		/// <summary>
@@ -896,24 +947,48 @@ namespace Raven.Client.Connection
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
 				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase))).ToList()
 			};
-			foreach (var docResult in multiLoadResult.Results.Concat(multiLoadResult.Includes))
-			{
-				
-				AssertNonConflictedDocument(docResult);
-			}
-			return multiLoadResult;
+
+			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
+			
+			return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationUrl, includes, metadataOnly));
 		}
 
-		private static void AssertNonConflictedDocument(RavenJObject docResult)
+		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
+		{
+			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
+			if (!requiresRetry) 
+				return currentResult;
+
+			if (resolvingConflictRetries)
+				throw new InvalidOperationException(
+					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+			resolvingConflictRetries = true;
+			try
+			{
+				return nextTry();
+			}
+			finally
+			{
+				resolvingConflictRetries = false;
+			}
+		}
+
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
 		{
 			if (docResult == null)
-				return;
+				return false;
 			var metadata = docResult[Constants.Metadata];
 			if (metadata == null)
-				return;
+				return false;
 
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
-				throw CreateConcurrencyException(metadata.Value<string>("@id"), docResult, HttpExtensions.EtagHeaderToGuid(metadata.Value<string>("@etag")));
+			{
+				var concurrencyException = TryResolveConflictOrCreateConcurrencyException(metadata.Value<string>("@id"), docResult, HttpExtensions.EtagHeaderToGuid(metadata.Value<string>("@etag")));
+				if(concurrencyException == null)
+					return true;
+				throw concurrencyException;
+			}
+			return false;
 		}
 
 		/// <summary>
@@ -1023,7 +1098,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new ServerClient(url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId);
+			return new ServerClient(url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId, conflictListeners);
 		}
 
 		/// <summary>
@@ -1044,7 +1119,7 @@ namespace Raven.Client.Connection
 			databaseUrl = databaseUrl + "/databases/" + database;
 			if (databaseUrl == Url)
 				return this;
-			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId)
+			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners)
 				   {
 					   OperationsHeaders = OperationsHeaders
 				   };
@@ -1055,7 +1130,7 @@ namespace Raven.Client.Connection
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
 				return this;
-			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId)
+			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId, conflictListeners)
 			{
 				OperationsHeaders = OperationsHeaders
 			};
@@ -1315,14 +1390,9 @@ namespace Raven.Client.Connection
 					return null;
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
-					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
-					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
-
 					throw new ConflictException("Conflict detected on " + key +
-												", conflict must be resolved before the document will be accessible")
+												", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
 					{
-						ConflictedVersionIds = conflictIds,
 						Etag = httpWebResponse.GetEtagHeader()
 					};
 				}

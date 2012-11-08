@@ -25,7 +25,7 @@ namespace Raven.Database.Indexing
 	public class WorkContext : IDisposable
 	{
 		private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
-		
+
 		private readonly ConcurrentQueue<ActualIndexingBatchSize> lastActualIndexingBatchSize = new ConcurrentQueue<ActualIndexingBatchSize>();
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
@@ -184,6 +184,10 @@ namespace Raven.Database.Indexing
 				DocsPerSecCounter.Dispose();
 			if (ReducedPerSecCounter != null)
 				ReducedPerSecCounter.Dispose();
+			if (RequestsPerSecCounter != null)
+				RequestsPerSecCounter.Dispose();
+			if (ConcurrentRequestsCounter != null)
+				ConcurrentRequestsCounter.Dispose();
 			if (IndexedPerSecCounter != null)
 				IndexedPerSecCounter.Dispose();
 			cancellationTokenSource.Dispose();
@@ -211,7 +215,29 @@ namespace Raven.Database.Indexing
 		private PerformanceCounter DocsPerSecCounter { get; set; }
 		private PerformanceCounter IndexedPerSecCounter { get; set; }
 		private PerformanceCounter ReducedPerSecCounter { get; set; }
+		private PerformanceCounter RequestsPerSecCounter { get; set; }
+		private PerformanceCounter ConcurrentRequestsCounter { get; set; }
 		private bool useCounters = true;
+
+		public float RequestsPerSecond
+		{
+			get
+			{
+				if (useCounters == false)
+					return -1;
+				return RequestsPerSecCounter.NextValue();
+			}
+		}
+
+		public float ConcurrentRequests
+		{
+			get
+			{
+				if(useCounters == false)
+					return -1;
+				return ConcurrentRequestsCounter.NextValue();
+			}
+		}
 
 		public void DocsPerSecIncreaseBy(int numOfDocs)
 		{
@@ -235,11 +261,36 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public void IncrementRequestsPerSecCounter()
+		{
+			if (useCounters)
+			{
+				RequestsPerSecCounter.Increment();
+			}
+		}
+
+
+		public void IncrementConcurrentRequestsCounter()
+		{
+			if (useCounters)
+			{
+				ConcurrentRequestsCounter.Increment();
+			}
+		}
+
+		public void DecrementConcurrentRequestsCounter()
+		{
+			if (useCounters)
+			{
+				ConcurrentRequestsCounter.Decrement();
+			}
+		}
 		private void CreatePreformanceCounters(string name)
 		{
+			var categoryName = "RavenDB 2.0: " + name;
 			DocsPerSecCounter = new PerformanceCounter
 			{
-				CategoryName = "RavenDB-" + name,
+				CategoryName = categoryName,
 				CounterName = "# docs / sec",
 				MachineName = ".",
 				ReadOnly = false
@@ -247,7 +298,7 @@ namespace Raven.Database.Indexing
 
 			IndexedPerSecCounter = new PerformanceCounter
 			{
-				CategoryName = "RavenDB-" + name,
+				CategoryName = categoryName,
 				CounterName = "# docs indexed / sec",
 				MachineName = ".",
 				ReadOnly = false
@@ -255,22 +306,37 @@ namespace Raven.Database.Indexing
 
 			ReducedPerSecCounter = new PerformanceCounter
 			{
-				CategoryName = "RavenDB-" + name,
+				CategoryName = categoryName,
 				CounterName = "# docs reduced / sec",
 				MachineName = ".",
 				ReadOnly = false
 			};
+
+			RequestsPerSecCounter = new PerformanceCounter
+			{
+				CategoryName = categoryName,
+				CounterName = "# req / sec",
+				MachineName = ".",
+				ReadOnly = false
+			};
+
+			ConcurrentRequestsCounter = new PerformanceCounter
+			{
+				CategoryName = categoryName,
+				CounterName = "# of concurrent requests",
+				MachineName = ".",
+				ReadOnly = false
+			};
+
 		}
 
 		private void SetupPreformanceCounter(string name)
 		{
-			if (PerformanceCounterCategory.Exists("RavenDB-" + name))
+			if (PerformanceCounterCategory.Exists("RavenDB 2.0: " + name))
 				return;
 
 			var counters = new CounterCreationDataCollection();
 
-			// 1. counter for counting operations per second:
-			//        PerformanceCounterType.RateOfCountsPerSecond32
 			var docsPerSecond = new CounterCreationData
 			{
 				CounterName = "# docs / sec",
@@ -279,8 +345,6 @@ namespace Raven.Database.Indexing
 			};
 			counters.Add(docsPerSecond);
 
-			// 2. counter for counting operations per second:
-			//        PerformanceCounterType.RateOfCountsPerSecond32
 			var indexedPerSecond = new CounterCreationData
 			{
 				CounterName = "# docs indexed / sec",
@@ -289,8 +353,6 @@ namespace Raven.Database.Indexing
 			};
 			counters.Add(indexedPerSecond);
 
-			// 3. counter for counting operations per second:
-			//        PerformanceCounterType.RateOfCountsPerSecond32
 			var reducesPerSecond = new CounterCreationData
 			{
 				CounterName = "# docs reduced / sec",
@@ -299,9 +361,25 @@ namespace Raven.Database.Indexing
 			};
 			counters.Add(reducesPerSecond);
 
+			var requestsPerSecond = new CounterCreationData
+			{
+				CounterName = "# req / sec",
+				CounterHelp = "Number of http requests per second",
+				CounterType = PerformanceCounterType.RateOfCountsPerSecond32
+			};
+			counters.Add(requestsPerSecond);
+
+			var concurrentRequests = new CounterCreationData
+			{
+				CounterName = "# of concurrent requests",
+				CounterHelp = "Number of http requests per second",
+				CounterType = PerformanceCounterType.NumberOfItems32
+			};
+			counters.Add(concurrentRequests);
+
 			// create new category with the counters above
 
-			PerformanceCounterCategory.Create("RavenDB-" + name,
+			PerformanceCounterCategory.Create("RavenDB 2.0: " + name,
 											  "RevenDB category", PerformanceCounterCategoryType.Unknown, counters);
 		}
 
@@ -320,7 +398,7 @@ namespace Raven.Database.Indexing
 				SetupPreformanceCounter(name);
 				CreatePreformanceCounters(name);
 			}
-			catch(UnauthorizedAccessException e)
+			catch (UnauthorizedAccessException e)
 			{
 				log.WarnException(
 					"Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
@@ -341,7 +419,7 @@ namespace Raven.Database.Indexing
 				Size = size,
 				Timestamp = SystemTime.UtcNow
 			});
-			if(lastActualIndexingBatchSize.Count > 25)
+			if (lastActualIndexingBatchSize.Count > 25)
 			{
 				ActualIndexingBatchSize tuple;
 				lastActualIndexingBatchSize.TryDequeue(out tuple);
@@ -352,7 +430,7 @@ namespace Raven.Database.Indexing
 		{
 			get { return futureBatchStats; }
 		}
-		
+
 		public ConcurrentQueue<ActualIndexingBatchSize> LastActualIndexingBatchSize
 		{
 			get { return lastActualIndexingBatchSize; }
@@ -361,7 +439,7 @@ namespace Raven.Database.Indexing
 		public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{
 			futureBatchStats.Add(futureBatchStat);
-			if (futureBatchStats.Count <= 30) 
+			if (futureBatchStats.Count <= 30)
 				return;
 
 			foreach (var source in futureBatchStats.OrderBy(x => x.Timestamp).Take(5))

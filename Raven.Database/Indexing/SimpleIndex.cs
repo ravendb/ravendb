@@ -36,7 +36,7 @@ namespace Raven.Database.Indexing
 			get { return false; }
 		}
 
-		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
+		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
 			var sourceCount = 0;
@@ -51,7 +51,7 @@ namespace Raven.Database.Indexing
 				try
 				{
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
-					var documentsWrapped = documents.Select((dynamic doc) =>
+					var documentsWrapped = batch.Docs.Select((doc,i) =>
 					{
 						Interlocked.Increment(ref sourceCount);
 						if (doc.__document_id == null)
@@ -74,17 +74,20 @@ namespace Raven.Database.Indexing
 									);
 							},
 							trigger => trigger.OnIndexEntryDeleted(documentId));
-						indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
+						if(batch.SkipDeleteFromIndex[i] == false)
+							indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
 						return doc;
 					})
-						.Where(x => x is FilteredDocument == false);
+						.Where(x => x is FilteredDocument == false)
+						.ToList();
 
 
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
 						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 						var luceneDoc = new Document();
-						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
+						                                Field.Index.NOT_ANALYZED_NO_NORMS);
 
 						foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
 						{
@@ -107,11 +110,11 @@ namespace Raven.Database.Indexing
 									{
 										logIndexing.WarnException(
 											string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-															   name, indexingResult.NewDocId),
+											              name, indexingResult.NewDocId),
 											exception);
 										context.AddError(name,
-														 indexingResult.NewDocId,
-														 exception.Message
+										                 indexingResult.NewDocId,
+										                 exception.Message
 											);
 									},
 									trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));

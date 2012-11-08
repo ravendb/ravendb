@@ -60,7 +60,7 @@ namespace Raven.Abstractions.Extensions
 			self.WriteTo(new BsonWriter(stream)
 			{
 				DateTimeKindHandling = DateTimeKind.Unspecified
-			});
+			}, Default.Converters);
 		}
 
 

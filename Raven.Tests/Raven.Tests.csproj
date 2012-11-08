@@ -94,6 +94,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.Spatial.NTS, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Raven.Web\Bin\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualStudio.DebuggerVisualizers, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -116,6 +120,10 @@
     </Reference>
     <Reference Include="Rhino.Mocks">
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
+    </Reference>
+    <Reference Include="Spatial4n.Core.NTS, Version=1.0.0.0, Culture=neutral, PublicKeyToken=9f9456e1ca16d45e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Raven.Web\Bin\Spatial4n.Core.NTS.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -482,10 +490,13 @@
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
+    <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
+    <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
+    <Compile Include="Issues\RaqvenDB651.cs" />
     <Compile Include="Issues\RavenDB349.cs" />
     <Compile Include="Issues\RavenDB422.cs" />
     <Compile Include="Issues\RavenDB478.cs" />
@@ -494,6 +505,7 @@
     <Compile Include="Issues\RavenDB535.cs" />
     <Compile Include="Issues\RavenDB542 .cs" />
     <Compile Include="Issues\RavenDB626.cs" />
+    <Compile Include="Issues\RavenDB651.cs" />
     <Compile Include="Issues\RavenDB653.cs" />
     <Compile Include="Issues\RavenDB_554.cs" />
     <Compile Include="Issues\RavenDB_578.cs" />
@@ -508,6 +520,7 @@
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
     <Compile Include="MailingList\ChrisMarisic.cs" />
+    <Compile Include="MailingList\CustomAnalyzerStartsWithFailure.cs" />
     <Compile Include="MailingList\DeanWard.cs" />
     <Compile Include="MailingList\Edin.cs" />
     <Compile Include="MailingList\Failing_lucene_query_where_in_tests.cs" />
@@ -537,6 +550,7 @@
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
+    <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />
     <Compile Include="Spatial\SpatialTest2.cs" />
     <Compile Include="Bugs\spokeypokey.cs" />

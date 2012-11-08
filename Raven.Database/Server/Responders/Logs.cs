@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
@@ -41,22 +42,15 @@ namespace Raven.Database.Server.Responders
 				});
 				return;
 			}
-			if(database.Name == null)
-			{
-				context.SetStatusToBadRequest();
-				context.WriteJson(new
-				{
-					Error = "Database name is null."
-				});
-				return;
-			}
-			IEnumerable<LogEventInfo> log = target[Database.Name].GeneralLog;
+			var dbName = database.Name ?? Constants.SystemDatabase;
+			var boundedMemoryTarget = target[dbName];
+			IEnumerable<LogEventInfo> log = boundedMemoryTarget.GeneralLog;
 
 			switch (context.Request.QueryString["type"])
 			{
 				case "error":
 				case "warn":
-					log = target[Database.Name].WarnLog;
+					log = boundedMemoryTarget.WarnLog;
 					break;
 			}
 

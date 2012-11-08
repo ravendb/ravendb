@@ -61,7 +61,6 @@ namespace Raven.Tests.MailingList
 					{Constants.RavenEntityName, "users"}
 				});
 
-				store.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
 
 				store.DatabaseCommands.PutIndex("UsersByName", new IndexDefinition
 				{
@@ -70,7 +69,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					Assert.NotEmpty(session.Query<User>("UsersByName").Where(x => x.FirstName == "Oren"));
+					Assert.NotEmpty(session.Query<User>("UsersByName").Customize(x=>x.WaitForNonStaleResults()).Where(x => x.FirstName == "Oren"));
 
 					Assert.NotEmpty(session.Query<User>("UsersByName").Where(x => x.FirstName == "Ayende"));
 				}

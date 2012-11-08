@@ -27,17 +27,17 @@ namespace Raven.Tests.Indexes
 				store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<InputData, Result>()
 				{
 					Map = documents => from doc in documents
-					                   let tags = ((string[]) doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
-					                   select new Result()
-					                   {
-						                   Tags = tags.ToArray()
-					                   }
+									   let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+									   select new Result()
+									   {
+										   Tags = tags.ToArray()
+									   }
 				});
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new InputData {Tags = "Little, orange, comment"});
-					session.Store(new InputData {Tags = "only-one"});
+					session.Store(new InputData { Tags = "Little, orange, comment" });
+					session.Store(new InputData { Tags = "only-one" });
 					session.SaveChanges();
 				}
 
@@ -69,13 +69,13 @@ namespace Raven.Tests.Indexes
 			public PainfulIndex()
 			{
 				AddMap<InputData>(documents => from doc in documents
-										 // Do not remove the redundant (string[]). 
-										 // It's intentional here and intended to test the following parsing: ((string[])prop).Select(...)
-										 let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
-										 select new Result()
-										 {
-											 Tags = tags.ToArray()
-										 });
+											   // Do not remove the redundant (string[]). 
+											   // It's intentional here and intended to test the following parsing: ((string[])prop).Select(...)
+											   let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+											   select new Result()
+											   {
+												   Tags = tags.ToArray()
+											   });
 			}
 		}
 	}

@@ -591,6 +591,12 @@
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
+      <Link>Imports\Data\Alert.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\AlertsDocument.cs">
+      <Link>Imports\Data\AlertsDocument.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ApiKeyDefinition.cs">
       <Link>Imports\Data\ApiKeyDefinition.cs</Link>
     </Compile>
@@ -959,6 +965,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryableExtensions.cs">
       <Link>Imports\Linq\RavenQueryableExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConflictListener.cs">
+      <Link>Imports\Listeners\IDocumentConflictListener.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConversionListener.cs">
       <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>

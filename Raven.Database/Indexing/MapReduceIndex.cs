@@ -50,7 +50,7 @@ namespace Raven.Database.Indexing
 
 		public override void IndexDocuments(
 			AbstractViewGenerator viewGenerator,
-			IEnumerable<dynamic> documents,
+			IndexingBatch batch,
 			WorkContext context,
 			IStorageActionsAccessor actions,
 			DateTime minimumTimestamp)
@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
 			var sw = Stopwatch.StartNew();
 			var start = SystemTime.UtcNow;
 			var changed = new HashSet<ReduceKeyAndBucket>();
-			var documentsWrapped = documents.Select(doc =>
+			var documentsWrapped = batch.Docs.Select(doc =>
 			{
 				sourceCount++;
 				var documentId = doc.__document_id;

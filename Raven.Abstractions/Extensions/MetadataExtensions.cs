@@ -228,9 +228,19 @@ namespace Raven.Abstractions.Extensions
 					return RavenJObject.Parse(val);
 				if (val.StartsWith("["))
 					return RavenJArray.Parse(val);
-				DateTime result;
-				if (DateTime.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
-					return new RavenJValue(result);
+
+				DateTime dateTime;
+				if (DateTime.TryParseExact(val, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+				{
+					if (val.EndsWith("Z"))
+						return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+					return new RavenJValue(dateTime);
+				} 
+					
+				DateTimeOffset dateTimeOffset;
+				if (DateTimeOffset.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
+					return new RavenJValue(dateTimeOffset);
+				
 				return new RavenJValue(val);
 
 			}

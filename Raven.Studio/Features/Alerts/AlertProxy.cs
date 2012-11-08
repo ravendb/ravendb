@@ -19,7 +19,6 @@ namespace Raven.Studio.Features.Alerts
 			Alert = alert;
 			Title = alert.Title;
 			CreatedAt = alert.CreatedAt;
-			Database = alert.Database;
 			Observed = new Observable<bool> {Value = alert.Observed};
 			Message = alert.Message;
 			AlertLevel = alert.AlertLevel;

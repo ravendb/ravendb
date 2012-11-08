@@ -13,7 +13,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Impl.Clustering;
-using Raven.Database.Plugins;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
 using Raven.Database.Extensions;
@@ -23,20 +22,33 @@ namespace Raven.Database.Commercial
 	internal class ValidateLicense : IDisposable
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
-		public static IDictionary<string, string> LicenseAttributes { get; set; }
+		public static Dictionary<string, string> LicenseAttributes { get; set; }
 		private AbstractLicenseValidator licenseValidator;
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 
+		private static readonly Dictionary<string,string> alwaysOnAttributes = new Dictionary<string, string>
+		{
+			{"periodicBackups", "false"},
+			{"encryption", "false"},
+			{"compression", "false"},
+			{"quotas","false"},
+
+			{"authorization","true"},
+			{"expiration","true"},
+			{"replication","true"},
+			{"versioning","true"},
+		};
+
 		static ValidateLicense()
 		{
-			LicenseAttributes = new Dictionary<string, string>();
 			CurrentLicense = new LicensingStatus
 			{
 				Status = "AGPL - Open Source",
 				Error = false,
 				Message = "No license file was found.\r\n" +
-				          "The AGPL license restrictions apply, only Open Source / Development work is permitted."
+				          "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
+				Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase)
 			};
 		}
 
@@ -61,8 +73,6 @@ namespace Raven.Database.Commercial
 				{
 					string value;
 
-					LicenseAttributes = licenseValidator.LicenseAttributes;
-
 					AssertForV2(licenseValidator.LicenseAttributes);
 					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
 					    "true".Equals(value, StringComparison.InvariantCultureIgnoreCase))
@@ -71,11 +81,18 @@ namespace Raven.Database.Commercial
 					}
 				});
 
+				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase);
+				foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
+				{
+					attributes[licenseAttribute.Key] = licenseAttribute.Value;
+				}
+		
 				CurrentLicense = new LicensingStatus
 				{
 					Status = "Commercial - " + licenseValidator.LicenseType,
 					Error = false,
-					Message = "Valid license at " + licensePath
+					Message = "Valid license at " + licensePath,
+					Attributes = attributes
 				};
 			}
 			catch (Exception e)
@@ -102,7 +119,8 @@ namespace Raven.Database.Commercial
 				{
 					Status = "AGPL - Open Source",
 					Error = true,
-					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e
+					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e,
+					Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase)
 				};
 			}
 		}
@@ -145,10 +163,10 @@ namespace Raven.Database.Commercial
 		{
 			string version;
 			if (licenseAttributes.TryGetValue("version", out version) == false)
-				throw new LicenseExpiredException("This is not a licence for RavenDB 1.2");
+				throw new LicenseExpiredException("This is not a licence for RavenDB 2.0");
 
-			if(version != "1.2")
-				throw new LicenseExpiredException("This is not a licence for RavenDB 1.2");
+			if(version != "1.2" && version != "2.0")
+				throw new LicenseExpiredException("This is not a licence for RavenDB 2.0");
 
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))

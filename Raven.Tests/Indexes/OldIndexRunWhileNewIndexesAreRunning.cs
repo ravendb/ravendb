@@ -20,24 +20,47 @@ namespace Raven.Tests.Indexes
 		}
 
 		[Fact]
-		public void ShouldWork()
+		public void OneBigSave()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
-				using(var session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					for (int i = 0; i < 1024*6; i++)
+					for (int i = 0; i < 1024 * 6; i++)
 					{
-						session.Store(new User{});
+						session.Store(new User { });
 					}
 					session.SaveChanges();
 				}
 
-				using(var session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					var usersCount = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count();
 
-					Assert.Equal(1024*6, usersCount);
+					Assert.Equal(1024 * 6, usersCount);
+				}
+			}
+		}
+
+		[Fact]
+		public void ShouldWork()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					for (int i = 0; i < 1024 * 6; i++)
+					{
+						session.Store(new User { });
+					}
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var usersCount = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count();
+
+					Assert.Equal(1024 * 6, usersCount);
 				}
 
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
@@ -47,6 +70,7 @@ namespace Raven.Tests.Indexes
 
 				using (var session = store.OpenSession())
 				{
+					session.Advanced.MaxNumberOfRequestsPerSession = 1000;
 					while (true) // we have to wait until we _start_ indexing
 					{
 						var objects = session.Advanced.LuceneQuery<object>("test").Take(1).ToList();
@@ -65,9 +89,9 @@ namespace Raven.Tests.Indexes
 
 				using (var session = store.OpenSession())
 				{
-				
+
 					var usersCount = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count();
-					
+
 					Assert.Equal(1024 * 6 + 1, usersCount);
 				}
 			}

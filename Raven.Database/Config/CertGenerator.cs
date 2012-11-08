@@ -76,6 +76,11 @@ namespace Raven.Database.Config
 
 				try
 				{
+					if(Environment.OSVersion.Version.Major <= 5)
+					{
+						return new X509Certificate2(memoryStream.ToArray());
+					}
+
 					return new X509Certificate2(memoryStream.ToArray(), string.Empty, X509KeyStorageFlags.MachineKeySet);
 				}
 				catch (Exception)

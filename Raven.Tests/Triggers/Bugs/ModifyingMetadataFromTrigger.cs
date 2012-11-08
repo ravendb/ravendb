@@ -120,7 +120,6 @@ namespace Raven.Tests.Triggers.Bugs
 		private void TestCreatedDate(RavenJObject metadata)
 		{
 			var createdDate = metadata.Value<DateTime>("CreatedDate");
-			Assert.Equal(DateTimeKind.Unspecified, createdDate.Kind);
 			Assert.Equal(AuditTrigger.CreatedAtDateTime, createdDate);
 		}
 	}

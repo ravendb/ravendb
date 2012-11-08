@@ -54,7 +54,7 @@
       <HintPath>..\..\packages\xunit.1.9.1\lib\net20\xunit.dll</HintPath>
     </Reference>
     <Reference Include="xunit.extensions">
-      <HintPath>..\..\packages\xunit.extensions.1.9.0.1566\lib\xunit.extensions.dll</HintPath>
+      <HintPath>..\..\packages\xunit.extensions.1.9.1\lib\net20\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -82,6 +82,7 @@
     <Compile Include="IndexedProperties\IndexedProperties.cs" />
     <Compile Include="IndexReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
+    <Compile Include="Replication\ReplicationDestinationDisabled.cs" />
     <Compile Include="Replication\ReplicationWithOAuth.cs" />
     <Compile Include="TestUtil.cs" />
     <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />

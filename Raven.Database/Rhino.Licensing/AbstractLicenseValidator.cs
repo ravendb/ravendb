@@ -117,7 +117,7 @@ namespace Rhino.Licensing
 		/// <summary>
 		/// Gets extra license information
 		/// </summary>
-		public IDictionary<string, string> LicenseAttributes { get; private set; }
+		public Dictionary<string, string> LicenseAttributes { get; private set; }
 
 		/// <summary>
 		/// Gets or Sets the license content
@@ -172,7 +172,7 @@ namespace Rhino.Licensing
 		{
 			LeaseTimeout = TimeSpan.FromMinutes(5);
 			discoveryHost = new DiscoveryHost();
-			LicenseAttributes = new Dictionary<string, string>();
+			LicenseAttributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 			this.publicKey = publicKey;
 			discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
 		}

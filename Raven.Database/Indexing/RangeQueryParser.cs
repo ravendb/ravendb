@@ -42,7 +42,48 @@ namespace Raven.Database.Indexing
 
 			return tokenReplacement;
 		}
-		
+
+		protected override Query GetPrefixQuery(string field, string termStr)
+		{
+			var fieldQuery = GetFieldQuery(field, termStr);
+
+			var tq = fieldQuery as TermQuery;
+			if(tq != null) 
+				return NewPrefixQuery(tq.Term);
+
+			throw new InvalidOperationException("When trying to parse prefix clause for field '" + field + "' with value '" +
+			                                    termStr + "', we got a non term query, can't proceed: " + fieldQuery.GetType().Name + " " + fieldQuery);
+		}
+
+		protected override Query GetWildcardQuery(string field, string termStr)
+		{
+			if (field == "*" && termStr == "*")
+			{
+				return NewMatchAllDocsQuery();
+			}
+			var fieldQuery = GetFieldQuery(field, termStr);
+
+			var tq = fieldQuery as TermQuery;
+			if (tq != null)
+				return NewWildcardQuery(tq.Term);
+			
+			throw new InvalidOperationException("When trying to parse wildcard clause for field '" + field + "' with value '" +
+														termStr + "', we got a non term query, can't proceed: " + fieldQuery.GetType().Name + " " + fieldQuery);
+		}
+
+		protected override Query GetFuzzyQuery(string field, string termStr, float minSimilarity)
+		{
+			var fieldQuery = GetFieldQuery(field, termStr);
+
+			var tq = fieldQuery as TermQuery;
+			if (tq != null)
+				return NewFuzzyQuery(tq.Term, minSimilarity, FuzzyPrefixLength);
+
+			throw new InvalidOperationException("When trying to parse fuzzy clause for field '" + field + "' with value '" +
+												termStr + "', we got a non term query, can't proceed: " + fieldQuery.GetType().Name + " " + fieldQuery);
+	
+		}
+
 		protected override Query GetFieldQuery(string field, string queryText)
 		{
 			string value;

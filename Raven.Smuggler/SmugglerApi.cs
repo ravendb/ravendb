@@ -28,7 +28,7 @@ namespace Raven.Smuggler
 		protected override RavenJArray GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
-			var request = CreateRequest("/indexes?pageSize="+ smugglerOptions.BatchSize + "&start=" + totalCount);
+			var request = CreateRequest("/indexes?pageSize=" + smugglerOptions.BatchSize + "&start=" + totalCount);
 			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
 			return indexes;
 		}
@@ -44,7 +44,7 @@ namespace Raven.Smuggler
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
 
 		public SmugglerApi(SmugglerOptions smugglerOptions, RavenConnectionStringOptions connectionStringOptions)
-			:base(smugglerOptions)
+			: base(smugglerOptions)
 		{
 			ConnectionStringOptions = connectionStringOptions;
 		}
@@ -67,7 +67,7 @@ namespace Raven.Smuggler
 			builder.Append(url);
 			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
 			httpRavenRequest.WebRequest.Timeout = smugglerOptions.Timeout;
-			if(LastRequestErrored)
+			if (LastRequestErrored)
 			{
 				httpRavenRequest.WebRequest.KeepAlive = false;
 				httpRavenRequest.WebRequest.Timeout *= 2;
@@ -206,24 +206,27 @@ namespace Raven.Smuggler
 					request = CreateRequest("/bulk_docs", "POST");
 					request.Write(commands);
 					results = request.ExecuteRequest<BatchResult[]>();
+					sw.Stop();
 					break;
 				}
 				catch (Exception e)
 				{
 					if (--retries == 0 || request == null)
 						throw;
+					sw.Stop();
 					LastRequestErrored = true;
 					ShowProgress("Error flushing to database, remaining attempts {0} - time {2:#,#} ms, will retry [{3:#,#.##;;0} kb compressed to {4:#,#.##;;0} kb]. Error: {1}",
-					             retriesCount - retries, e, sw.ElapsedMilliseconds,
-					             (double) request.NumberOfBytesWrittenUncompressed/1024,
-					             (double) request.NumberOfBytesWrittenCompressed/1024);
+								 retriesCount - retries, e, sw.ElapsedMilliseconds,
+								 (double)request.NumberOfBytesWrittenUncompressed / 1024,
+								 (double)request.NumberOfBytesWrittenCompressed / 1024);
 				}
 			}
 			total += batch.Count;
-			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,#.##;;0} kb] in {1:#,#;;0} ms", 
+			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} in {1,6:#,#;;0} ms ({6:0.00} ms per doc) (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,#.##;;0} kb]",
 				batch.Count, sw.ElapsedMilliseconds, ++count, total,
 				(double)request.NumberOfBytesWrittenUncompressed / 1024,
-				(double)request.NumberOfBytesWrittenCompressed / 1024);
+				(double)request.NumberOfBytesWrittenCompressed / 1024,
+				Math.Round((double)sw.ElapsedMilliseconds / Math.Max(1, batch.Count), 2));
 
 			batch.Clear();
 

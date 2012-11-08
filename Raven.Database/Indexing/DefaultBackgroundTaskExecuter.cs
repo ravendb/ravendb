@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Util;
 
@@ -21,7 +19,7 @@ namespace Raven.Database.Indexing
 		public IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class
 		{
-			if(context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 			{
 				return source.Select(func).ToList();
 			}
@@ -38,17 +36,17 @@ namespace Raven.Database.Indexing
 		public void Repeat(IRepeatedAction action)
 		{
 			var tuple = timers.GetOrAdd(action.RepeatDuration.ToString(),
-			                                      span =>
-			                                      {
-			                                      	var repeatedActions = new ConcurrentSet<IRepeatedAction>
+												  span =>
+												  {
+													  var repeatedActions = new ConcurrentSet<IRepeatedAction>
 			                                      	{
 			                                      		action
 			                                      	};
-			                                      	var timer = new Timer(ExecuteTimer, action.RepeatDuration,
-			                                      	                      action.RepeatDuration,
-			                                      	                      action.RepeatDuration);
-			                                      	return Tuple.Create(timer, repeatedActions);
-			                                      });
+													  var timer = new Timer(ExecuteTimer, action.RepeatDuration,
+																			action.RepeatDuration,
+																			action.RepeatDuration);
+													  return Tuple.Create(timer, repeatedActions);
+												  });
 			tuple.Item2.TryAdd(action);
 		}
 
@@ -74,7 +72,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			if (tuple.Item2.Count != 0) 
+			if (tuple.Item2.Count != 0)
 				return;
 
 			if (timers.TryRemove(span, out tuple) == false)
@@ -86,20 +84,30 @@ namespace Raven.Database.Indexing
 		/// <summary>
 		/// Note that here we assume that  source may be very large (number of documents)
 		/// </summary>
-		public void ExecuteAllBuffered<T>(WorkContext context, IEnumerable<T> source, Action<IEnumerator<T>> action)
+		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
 		{
-			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			const int bufferSize = 256;
+			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
+			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= bufferSize)
 			{
 				using (var e = source.GetEnumerator())
 					action(e);
 				return;
 			}
-			var orderablePartitioner = Partitioner.Create(source);
-			var parts = orderablePartitioner.GetPartitions(context.Configuration.MaxNumberOfParallelIndexTasks);
-			Parallel.ForEach(parts, new ParallelOptions
+			var steps = source.Count/maxNumberOfParallelIndexTasks;
+			Parallel.For(0, steps,
+			             new ParallelOptions {MaxDegreeOfParallelism = maxNumberOfParallelIndexTasks},
+			             i => action(Yield(source, i*bufferSize, bufferSize)));
+		}
+
+		private IEnumerator<T> Yield<T>(IList<T> source, int start, int end)
+		{
+			while (start < source.Count && end > 0)
 			{
-				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
-			},action);
+				end--;
+				yield return source[start];
+				start++;
+			}
 		}
 
 		/// <summary>
@@ -110,7 +118,7 @@ namespace Raven.Database.Indexing
 			WorkContext context,
 			IList<T> source, Action<T, long> action)
 		{
-			if(context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 			{
 				long i = 0;
 				foreach (var item in source)
@@ -119,20 +127,20 @@ namespace Raven.Database.Indexing
 				}
 				return;
 			}
-			context.CancellationToken.ThrowIfCancellationRequested();;
+			context.CancellationToken.ThrowIfCancellationRequested();
 			var partitioneds = Partition(source, context.Configuration.MaxNumberOfParallelIndexTasks).ToList();
 			int start = 0;
 			foreach (var partitioned in partitioneds)
 			{
-				context.CancellationToken.ThrowIfCancellationRequested(); ;
+				context.CancellationToken.ThrowIfCancellationRequested();
 				var currentStart = start;
 				Parallel.ForEach(partitioned, new ParallelOptions
 				{
 					TaskScheduler = context.TaskScheduler,
 					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
-				},(item,_,index)=>
+				}, (item, _, index) =>
 				{
-					using(new DisposableAction(() => LogContext.DatabaseName.Value = null))
+					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 					{
 						LogContext.DatabaseName.Value = context.DatabaseName;
 						action(item, currentStart + index);
@@ -144,7 +152,7 @@ namespace Raven.Database.Indexing
 
 		static IEnumerable<IList<T>> Partition<T>(IList<T> source, int size)
 		{
-			for (int i = 0; i < source.Count; i+=size)
+			for (int i = 0; i < source.Count; i += size)
 			{
 				yield return source.Skip(i).Take(size).ToList();
 			}

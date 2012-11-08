@@ -10,7 +10,8 @@
                          Title="AlertsView Page"
 						 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models">
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="DataTemplate_List_DetailsView">
@@ -267,6 +268,46 @@
                                                Stretch="None"
                                                VerticalAlignment="Center" />
 										<TextBlock Text="Delete All Observed"
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,0,0" />
+									</StackPanel>
+								</Button.Content>
+							</Button>
+							<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+
+							<Button Style="{StaticResource Style_Button_MouseOverChrome}"
+									ToolTipService.ToolTip="Refresh"
+									VerticalAlignment="Center"
+									HorizontalAlignment="Left"
+									Command="{Binding Refresh}"
+									VerticalContentAlignment="Center">
+								<Button.Content>
+									<StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center">
+										<Image Source="{StaticResource Image_Refresh_Small}"
+                                               Stretch="None"
+                                               VerticalAlignment="Center" />
+										<TextBlock Text="Refresh from server"
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,0,0" />
+									</StackPanel>
+								</Button.Content>
+							</Button>
+
+
+							<Button Style="{StaticResource Style_Button_MouseOverChrome}"
+									ToolTipService.ToolTip="Save Changes"
+									VerticalAlignment="Center"
+									HorizontalAlignment="Left"
+									Command="{Binding SaveChanges}"
+									VerticalContentAlignment="Center">
+								<Button.Content>
+									<StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center">
+										<Image Source="{StaticResource Image_Save_Small}"
+                                               Stretch="None"
+                                               VerticalAlignment="Center" />
+										<TextBlock Text="Save Changes"
                                                    VerticalAlignment="Center"
                                                    Margin="2,0,0,0" />
 									</StackPanel>
