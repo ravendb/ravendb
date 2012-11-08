@@ -4,13 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 extern alias client;
-using Raven.Client.Connection;
+using System;
 using Raven.Client.Document;
 using client::Raven.Client.Authorization;
 using client::Raven.Bundles.Authorization.Model;
-
-using System;
-using Raven.Bundles.Tests.Versioning;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Authorization

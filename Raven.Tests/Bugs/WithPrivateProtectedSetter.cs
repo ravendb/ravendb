@@ -12,7 +12,6 @@ namespace Raven.Tests.Bugs
 {
 	public class WithPrivateProtectedSetter
 	{
-
 		[Fact]
 		public void CanSerializeToJsonCorrectly()
 		{
@@ -34,13 +33,8 @@ namespace Raven.Tests.Bugs
 			Assert.DoesNotContain("k__BackingField", s);
 		}
 
-		public class Company
+		private class Company
 		{
-			public Company()
-			{
-				
-			}
-
 			public Company(string name, string region)
 			{
 				Name = name;

@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -15,7 +14,6 @@ namespace Raven.Tests.Bundles.Versioning
 {
 	public class Versioning : VersioningTest
 	{
-
 		[Fact]
 		public void Will_automatically_set_metadata()
 		{

@@ -846,7 +846,7 @@ namespace Raven.Studio.Models
 			{
 				Database.Value.DocumentChanges.TakeUntil(Unloaded)
 					.ObserveOnDispatcher()
-					.Subscribe(n => HandleChangeNotification(n));
+					.Subscribe(HandleChangeNotification);
 			}
 		}
 

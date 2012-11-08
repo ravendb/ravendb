@@ -1,14 +1,12 @@
 ﻿extern alias database;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
 using System.Collections.Generic;
-using System.Net;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+using Raven.Tests.Bundles.Replication;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication.Async
+namespace Raven.Bundles.Tests.Replication
 {
 	public class ReplicationWithOAuth : ReplicationBase
 	{

@@ -6,7 +6,6 @@
 extern alias client;
 using client::Raven.Client.Authorization;
 using client::Raven.Bundles.Authorization.Model;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Extensions;
 using Xunit;
 
