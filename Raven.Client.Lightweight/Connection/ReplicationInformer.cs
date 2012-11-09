@@ -191,8 +191,9 @@ namespace Raven.Client.Connection
 
 		private class FailureCounter
 		{
-			public int Value;
+			public long Value;
 			public DateTime LastCheck;
+			public bool ForceCheck;
 
 			public FailureCounter()
 			{
@@ -204,9 +205,17 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Get the current failure count for the url
 		/// </summary>
-		public int GetFailureCount(string operationUrl)
+		public long GetFailureCount(string operationUrl)
 		{
 			return GetHolder(operationUrl).Value;
+		}
+
+		/// <summary>
+		/// Get failure last check time for the url
+		/// </summary>
+		public DateTime GetFailureLastCheck(string operationUrl)
+		{
+			return GetHolder(operationUrl).LastCheck;
 		}
 
 		/// <summary>
@@ -218,8 +227,11 @@ namespace Raven.Client.Connection
 				AssertValidOperation(method);
 
 			var failureCounter = GetHolder(operationUrl);
-			if (failureCounter.Value == 0)
+			if (failureCounter.Value == 0 || failureCounter.ForceCheck)
+			{
+				failureCounter.LastCheck = SystemTime.UtcNow;
 				return true;
+			}
 
 
 			if (currentRequest % GetCheckReptitionRate(failureCounter.Value) == 0)
@@ -237,10 +249,10 @@ namespace Raven.Client.Connection
 			return false;
 		}
 
-		private int GetCheckReptitionRate(int value)
+		private int GetCheckReptitionRate(long value)
 		{
 			if (value < 2)
-				return value;
+				return (int)value;
 			if (value < 10)
 				return 2;
 			if (value < 100)
@@ -316,6 +328,7 @@ namespace Raven.Client.Connection
 		public void IncrementFailureCount(string operationUrl)
 		{
 			FailureCounter value = GetHolder(operationUrl);
+			value.ForceCheck = false;
 			var current = Interlocked.Increment(ref value.Value);
 			if (current == 1)// first failure
 			{
@@ -511,6 +524,7 @@ namespace Raven.Client.Connection
 			var value = GetHolder(operationUrl);
 			var oldVal = Interlocked.Exchange(ref value.Value, 0);
 			value.LastCheck = SystemTime.UtcNow;
+			value.ForceCheck = false;
 			if (oldVal != 0)
 			{
 				FailoverStatusChanged(this,
@@ -823,6 +837,12 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			if (replicationInformationTaskCopy != null)
 				replicationInformationTaskCopy.Wait();
 #endif
+		}
+
+		public void ForceCheck(string primaryUrl, bool shouldForceCheck)
+		{
+			var failureCounter = this.GetHolder(primaryUrl);
+			failureCounter.ForceCheck = shouldForceCheck;
 		}
 	}
 

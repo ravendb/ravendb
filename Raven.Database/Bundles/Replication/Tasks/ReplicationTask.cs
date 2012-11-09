@@ -158,6 +158,11 @@ namespace Raven.Bundles.Replication.Tasks
 
 			int skip = 0;
 			var replicationDestinations = GetReplicationDestinations();
+			foreach (var replicationDestination in replicationDestinations)
+			{
+				notifications.TryAdd(replicationDestination.ConnectionStringOptions, 15 * 1000);
+			}
+
 			while (true)
 			{
 				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, skip, 128);
@@ -440,7 +445,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var failureCount = replicationFailureStats.GetOrAdd(url);
 			Interlocked.Exchange(ref failureCount.Count, 0);
 			failureCount.Timestamp = SystemTime.UtcNow;
-			if(string.IsNullOrWhiteSpace(lastError) == false)
+			if (string.IsNullOrWhiteSpace(lastError) == false)
 				failureCount.LastError = lastError;
 			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
 						 null);
@@ -586,7 +591,7 @@ namespace Raven.Bundles.Replication.Tasks
 										}))
 							.OrderBy(x => x.Etag)
 							.ToList();
-						
+
 						filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(destinationId, document.Key, document.Metadata)).ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
@@ -670,7 +675,7 @@ namespace Raven.Bundles.Replication.Tasks
 							.OrderBy(x => x.Etag)
 
 							.ToList();
-						
+
 						filteredAttachmentsToReplicate = attachmentsToReplicate.Where(attachment => destination.FilterAttachments(attachment, destinationId)).ToList();
 
 						attachmentSinceLastEtag += attachmentsToReplicate.Count;
@@ -835,11 +840,34 @@ namespace Raven.Bundles.Replication.Tasks
 			return replicationStrategy;
 		}
 
-		public void ResetFailureForHeartbeat(string src)
+		public void HandleHeartbeat(string src)
+		{
+			ResetFailureForHeartbeat(src);
+
+			heartbeatDictionary.AddOrUpdate(src, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
+		}
+
+		public bool IsHeartbeatAvailable(string src, DateTime lastCheck)
+		{
+			if (heartbeatDictionary.ContainsKey(src))
+			{
+				DateTime lastHeartbeat;
+				if (heartbeatDictionary.TryGetValue(src, out lastHeartbeat))
+				{
+					return lastHeartbeat >= lastCheck;
+				}
+			}
+
+			return false;
+		}
+
+		private void ResetFailureForHeartbeat(string src)
 		{
 			ResetFailureCount(src, string.Empty);
 			docDb.WorkContext.ShouldNotifyAboutWork(() => "Replication Heartbeat from " + src);
 			docDb.WorkContext.NotifyAboutWork();
 		}
+
+		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>();
 	}
 }

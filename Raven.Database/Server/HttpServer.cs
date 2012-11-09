@@ -750,7 +750,7 @@ namespace Raven.Database.Server
 					if (requestResponder.WillRespond(ctx))
 					{
 						var sp = Stopwatch.StartNew();
-						requestResponder.Respond(ctx);
+						requestResponder.ReplicationAwareRespond(ctx);
 						sp.Stop();
 						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,# ms", CultureInfo.InvariantCulture));
 						return requestResponder.IsUserInterfaceRequest;

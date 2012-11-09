@@ -26,6 +26,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+	using Raven.Abstractions.Data;
+
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
 	/// </summary>
@@ -402,7 +404,7 @@ namespace Raven.Client.Connection
 				&& CachedRequestDetails != null)
 			{
 				factory.UpdateCacheTime(this);
-				var result = factory.GetCachedResponse(this);
+				var result = factory.GetCachedResponse(this, httpWebResponse.Headers);
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
@@ -476,6 +478,27 @@ namespace Raven.Client.Connection
 			{
 				webRequest.Headers[header.Key] = header.Value;
 			}
+			return this;
+		}
+
+		public HttpJsonRequest AddReplicationStatusHeaders(string primaryUrl, string currentUrl, DateTime lastPrimaryCheck, FailoverBehavior failoverBehavior)
+		{
+			var method = this.Method;
+
+			var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
+			if (shouldReadFromAllServers && method != "GET")
+				return this;
+
+			var shouldReadFromSecondaries = ((conventions.FailoverBehavior & FailoverBehavior.AllowReadsFromSecondaries) == FailoverBehavior.AllowReadsFromSecondaries);
+			if (shouldReadFromSecondaries && method != "GET")
+				return this;
+
+			if (!primaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+			{
+				webRequest.Headers.Add(Constants.RavenClientPrimaryServerUrl, primaryUrl);
+				webRequest.Headers.Add(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
+			}
+
 			return this;
 		}
 
