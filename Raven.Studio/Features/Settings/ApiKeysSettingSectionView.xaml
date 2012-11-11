@@ -79,7 +79,20 @@
                          Grid.ColumnSpan="2"
 						 IsReadOnly="True"
 						 Text="{Binding Converter={StaticResource GetFullApiKeyConverter}}" 
-                         Margin="5"/>
+                         Margin="5"
+						 x:Name="FullApiKey">
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu>
+							<ContextMenu:MenuItem Header="Copy Api Key to Clipboard"
+                                                  Command="{StaticResource CopyToClipboardCommand}"
+												  CommandParameter="{Binding Text, ElementName=FullApiKey}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
+				</TextBox>
 
 				<TextBlock Grid.Row="3" 
 						   Text="Connection String:"
@@ -89,7 +102,20 @@
                          Grid.ColumnSpan="2"
 						 IsReadOnly="True"
 						 Text="{Binding Converter={StaticResource GetFullConnectionStringConverter}}" 
-                         Margin="5"/>
+                         Margin="5"
+						 x:Name="ConnectionString">
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu>
+							<ContextMenu:MenuItem Header="Copy Connection String to Clipboard"
+                                                  Command="{StaticResource CopyToClipboardCommand}"
+												  CommandParameter="{Binding Text, ElementName=ConnectionString}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
+				</TextBox>
 
 				<TextBlock Grid.Row="4" 
 						   Text="Enabled:" 
