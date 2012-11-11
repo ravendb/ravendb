@@ -475,7 +475,6 @@ namespace Raven.Client.Document
 			Conventions.HandleUnauthorizedResponse = response =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
-				response.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
 				{
@@ -508,7 +507,6 @@ namespace Raven.Client.Document
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
-				unauthorizedResponse.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
 				{
