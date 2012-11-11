@@ -15,6 +15,7 @@ namespace Raven.Json.Linq
 		private bool isSnapshot;
 		private int count = -1;
 		private IDictionary<string, RavenJToken> localChanges;
+		private string snapshotMsg;
 
 		protected IDictionary<string, RavenJToken> LocalChanges
 		{
@@ -42,7 +43,7 @@ namespace Raven.Json.Linq
 		public void Add(string key, RavenJToken value)
 		{
 			if (isSnapshot)
-				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+				throw new InvalidOperationException(snapshotMsg ?? "Cannot modify a snapshot, this is probably a bug");
 
 			if (ContainsKey(key))
 				throw new ArgumentException(string.Format("An item with the same key has already been added: '{0}'", key));
@@ -257,8 +258,9 @@ namespace Raven.Json.Linq
 			return new DictionaryWithParentSnapshot(this);
 		}
 
-		public void EnsureSnapshot()
+		public void EnsureSnapshot(string msg = null)
 		{
+			snapshotMsg = msg;
 			isSnapshot = true;
 		}
 	}

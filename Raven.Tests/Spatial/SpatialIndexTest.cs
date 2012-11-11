@@ -116,12 +116,9 @@ namespace Raven.Tests.Spatial
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				queryResult = db.Query("eventsByLatLng", new IndexQuery()
 				{
 					Query = "Tag:[[Event]]",
-					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(0, 0, radius),
-					SpatialRelation =  SpatialRelation.Within,
-					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[] { new SortedField("__distance"), }
 				});
 				if (queryResult.IsStale)

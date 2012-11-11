@@ -16,6 +16,7 @@ namespace Raven.Client.Document
 			QueryListeners = new IDocumentQueryListener[0];
 			StoreListeners = new IDocumentStoreListener[0];
 			DeleteListeners = new IDocumentDeleteListener[0];
+			ConflictListeners = new IDocumentConflictListener[0];
 		}
 
 		/// <summary>
@@ -34,6 +35,11 @@ namespace Raven.Client.Document
 		/// The delete listeners
 		/// </summary>
 		public IDocumentDeleteListener[] DeleteListeners { get; set; }
+
+		/// <summary>
+		/// The conflict listeners
+		/// </summary>
+		public IDocumentConflictListener[] ConflictListeners { get; set; }
 
 	}
 }

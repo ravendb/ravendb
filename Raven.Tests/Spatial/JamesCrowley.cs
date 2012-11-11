@@ -6,14 +6,13 @@ using Xunit;
 
 namespace Raven.Tests.Spatial
 {
-	public class JamesCrowley
+	public class JamesCrowley : RavenTest
 	{
 		[Fact]
 		public void GeoSpatialTest()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var store = NewDocumentStore())
 			{
-				store.Initialize();
 				new EventsBySimpleLocation().Execute(store);
 				using (var session = store.OpenSession())
 				{

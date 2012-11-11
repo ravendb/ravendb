@@ -165,11 +165,14 @@ namespace Raven.Database.Linq
 		{
 			var strategy = GetStrategyForField(fieldName);
 
-			// ReSharper disable CSharpWarnings::CS0612
-			Shape shape = SpatialIndex.Context.MakePoint(lng ?? 0, lat ?? 0);
+			if (lng == null || double.IsNaN(lng.Value))
+				return Enumerable.Empty<IFieldable>();
+			if(lat == null || double.IsNaN(lat.Value))
+				return Enumerable.Empty<IFieldable>();
+
+			Shape shape = SpatialIndex.Context.MakePoint(lng.Value, lat.Value);
 			return strategy.CreateIndexableFields(shape)
 				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.ShapeReadWriter.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
-			// ReSharper restore CSharpWarnings::CS0612
 		}
 
 		[CLSCompliant(false)]

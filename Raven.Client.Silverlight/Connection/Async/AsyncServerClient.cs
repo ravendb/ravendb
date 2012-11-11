@@ -238,7 +238,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 				throw new ConflictException("Conflict detected on " + key +
-											", conflict must be resolved before the document will be accessible")
+											", conflict must be resolved before the document will be accessible", false)
 				{
 					ConflictedVersionIds = conflictIds,
 					Etag = httpWebResponse.GetEtagHeader()

@@ -151,6 +151,17 @@ namespace Raven.Client
 		protected readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
+		/// Registers the conflict listener.
+		/// </summary>
+		/// <param name="conflictListener">The delete listener.</param>
+		/// <returns></returns>
+		public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
+		{
+			listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
+			return this;
+		}
+
+		/// <summary>
 		/// Registers the delete listener.
 		/// </summary>
 		/// <param name="deleteListener">The delete listener.</param>

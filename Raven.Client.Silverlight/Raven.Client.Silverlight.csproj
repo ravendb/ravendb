@@ -966,6 +966,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryableExtensions.cs">
       <Link>Imports\Linq\RavenQueryableExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConflictListener.cs">
+      <Link>Imports\Listeners\IDocumentConflictListener.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConversionListener.cs">
       <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>
     </Compile>

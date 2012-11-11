@@ -364,7 +364,7 @@ namespace Raven.Client.Connection
 			replicationDestinations = replicationDocument.Destinations.Select(x =>
 			{
 				var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url : x.ClientVisibleUrl;
-				if (string.IsNullOrEmpty(url) || x.IgnoredClient)
+				if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
 					return null;
 				if (string.IsNullOrEmpty(x.Database))
 					return new ReplicationDestinationData

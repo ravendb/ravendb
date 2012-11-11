@@ -602,7 +602,7 @@ namespace Raven.Client.Document
 					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
-				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
+				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId, listeners.ConflictListeners);
 			};
 #endif
 
@@ -617,7 +617,7 @@ namespace Raven.Client.Document
 #if SILVERLIGHT
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, task, GetReplicationInformerForDatabase, null);
 #else
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
 #endif
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;

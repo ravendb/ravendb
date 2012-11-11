@@ -425,6 +425,7 @@ namespace Raven.Client.Linq
 
 			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 			result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+			result.Path = result.Path.Replace("(", "").Replace(")", ""); // removing cast remains
 
 			if (expression.NodeType == ExpressionType.ArrayLength)
 				result.Path += ".Length";

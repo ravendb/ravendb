@@ -61,6 +61,14 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void CanHandkeCasts()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => ((Dog)x.Animal).Color == "black");
+			Assert.Equal("Animal.Color:black", q.ToString());
+		}
+
+		[Fact]
 		public void StartsWith()
 		{
 			var indexedUsers = GetRavenQueryInspector();
@@ -637,6 +645,17 @@ namespace Raven.Tests.Linq
 			public string Email { get; set; }
 			public UserProperty[] Properties { get; set; }
 			public bool IsActive { get; set; }
+			public IAnimal Animal { get; set; }
+		}
+
+		public interface IAnimal
+		{
+			
+		}
+
+		public class Dog : IAnimal
+		{
+			public string Color { get; set; }
 		}
 
 		public class UserProperty

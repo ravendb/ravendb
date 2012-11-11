@@ -162,6 +162,7 @@
     <Compile Include="Linq\LinqPathProvider.cs" />
     <Compile Include="Linq\RavenQueryableExtensions.cs" />
     <Compile Include="Linq\ReflectionExtensions.cs" />
+    <Compile Include="Listeners\IDocumentConflictListener.cs" />
     <Compile Include="PublicExtensions\SearchOptions.cs" />
     <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
