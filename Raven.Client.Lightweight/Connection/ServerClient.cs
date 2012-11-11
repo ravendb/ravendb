@@ -1311,7 +1311,7 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Return a list of documents that based on the <typeparam name="MoreLikeThisQuery"/>.
+		/// Return a list of documents that based on the MoreLikeThisQuery.
 		/// </summary>
 		/// <param name="query">The more like this query parameters</param>
 		/// <returns></returns>
