@@ -80,6 +80,38 @@ namespace Raven.Tests.Spatial
 			}
 		}
 
+		[Fact]
+		public void CirclesShouldNotIntersect()
+		{
+			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			{
+				store.Initialize();
+				store.ExecuteIndex(new GeoIndex());
+
+				using (var session = store.OpenSession())
+				{
+					// 110km is approximately 1 degree
+					session.Store(new GeoDocument { WKT = "CIRCLE(0.000000 0.000000 d=110)" });
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+
+				using (var session = store.OpenSession())
+				{
+					var matches = session.Query<RavenJObject, GeoIndex>()
+						.Customize(x =>
+						{
+							// Should not intersect, as there is 1 Degree between the two shapes
+							x.RelatesToShape("WKT", "CIRCLE(0.000000 3.000000 d=110)", SpatialRelation.Intersects);
+							x.WaitForNonStaleResults();
+						}).Any();
+
+					Assert.False(matches);
+				}
+			}
+		}
+
 		public class GeoDocument
 		{
 			public string WKT { get; set; }
