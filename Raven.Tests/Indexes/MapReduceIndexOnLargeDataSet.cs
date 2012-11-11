@@ -1,7 +1,7 @@
 using System;
+using System.Linq;
 using Raven.Abstractions.Indexing;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Indexes
 {
