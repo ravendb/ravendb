@@ -1,8 +1,4 @@
-using System;
-using System.Globalization;
 using System.Linq;
-using System.Threading;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -14,6 +10,7 @@ namespace Raven.Tests.Indexes
 		{
 			public decimal Value { get; set; }
 		}
+
 		public class Dec : AbstractIndexCreationTask<Item>
 		{
 			public Dec()

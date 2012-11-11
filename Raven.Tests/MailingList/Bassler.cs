@@ -5,12 +5,10 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
-using System.Reflection;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
-using Raven.Client.Linq;
 
 namespace Raven.Tests.MailingList
 {
@@ -24,50 +22,32 @@ namespace Raven.Tests.MailingList
 				new App_WaiverWaitlistItemSearch().Execute(store);
 				using (var session = store.OpenSession())
 				{
-
-					var wwle1 = new WaiverWaitlistItem("clients/1", DateTime.Today, "5") { Id = "waiverwaitlistitems/1" };
-					var wwle2 = new WaiverWaitlistItem("clients/1", DateTime.Today.AddDays(7), "1") { Id = "waiverwaitlistitems/2" };
-					session.Store(wwle1);
-					session.Store(wwle2);
-
-					var c1 = new TestClient { ClientProfile = { PersonName = new TestPersonName("John", "Able") }, Id = "clients/1" };
-					var c2 = new TestClient { ClientProfile = { PersonName = new TestPersonName("Joe", "Cain") }, Id = "clients/2" };
-
-					session.Store(c1);
-					session.Store(c2);
-
-
+					session.Store(new WaiverWaitlistItem {Id = "waiverwaitlistitems/1", ClientId = "clients/1", ScreeningDate = DateTime.Today, GroupNumber = "5"});
+					session.Store(new WaiverWaitlistItem { Id = "waiverwaitlistitems/2", ClientId = "clients/1", ScreeningDate = DateTime.Today.AddDays(7), GroupNumber = "1" });
+					session.Store(new TestClient { ClientProfile = { PersonName = new TestPersonName("John", "Able") }, Id = "clients/1" });
+					session.Store(new TestClient { ClientProfile = { PersonName = new TestPersonName("Joe", "Cain") }, Id = "clients/2" });
 					session.SaveChanges();
 
 					var list = session.Query<App_WaiverWaitlistItemSearch.IndexResult, App_WaiverWaitlistItemSearch>()
 						.AsProjection<App_WaiverWaitlistItemSearch.IndexResult>()
 						.ToList();
+
 					Assert.False(list.Any(result => result.GroupNumber == null));
 					Assert.False(list.Any(result => result.ScreeningDate == DateTime.MinValue));
 					Assert.False(list.Any(result => result.LastName == null));
 				}
 			}
 		}
-		public class WaiverWaitlistItem
+
+		private class WaiverWaitlistItem
 		{
-			public WaiverWaitlistItem()
-			{
-			}
-
-			public WaiverWaitlistItem(string clientId, DateTime? screeningDate, string groupNumber)
-			{
-				ClientId = clientId;
-				ScreeningDate = screeningDate;
-				GroupNumber = groupNumber;
-			}
-
 			public string Id { get; set; }
 			public DateTime? ScreeningDate { get; set; }
 			public string ClientId { get; set; }
 			public string GroupNumber { get; set; }
 		}
 
-		public class TestClient
+		private class TestClient
 		{
 			public TestClient()
 			{
@@ -78,17 +58,13 @@ namespace Raven.Tests.MailingList
 			public ClientProfile ClientProfile { get; set; }
 		}
 
-		public class ClientProfile
+		private class ClientProfile
 		{
 			public TestPersonName PersonName { get; set; }
 		}
 
-		public class TestPersonName
+		private class TestPersonName
 		{
-			public TestPersonName()
-			{
-			}
-
 			public TestPersonName(string firstName, string lastName)
 				: this(firstName, null, lastName, null)
 			{
@@ -177,7 +153,5 @@ namespace Raven.Tests.MailingList
 				Indexes.Add(ir => ir.GroupNumber, FieldIndexing.Analyzed);
 			}
 		}
-
-
 	}
 }
