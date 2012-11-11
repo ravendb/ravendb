@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs
 
 			Assert.Equal(@"docs.GroupBy(y => y.Denomination).Select(g => new {
     Denomination = g.Key,
-    Cost = ((double) g.First().Cost).ToString()
+    Cost = ((double) g.FirstOrDefault().Cost).ToString()
 })", code);
 		} 
 	}
