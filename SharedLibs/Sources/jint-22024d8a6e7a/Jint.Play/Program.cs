@@ -1,12 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using System.Reflection;
 using System.Diagnostics;
-using Jint.Native;
-using Jint.Debugger;
 
 namespace Jint.Play
 {
@@ -15,7 +8,6 @@ namespace Jint.Play
         static void Main(string[] args)
         {
 
-            var assembly = Assembly.Load("Jint.Tests");
             Stopwatch sw = new Stopwatch();
 
             // string script = new StreamReader(assembly.GetManifestResourceStream("Jint.Tests.Parse.coffeescript-debug.js")).ReadToEnd();
@@ -28,20 +20,8 @@ namespace Jint.Play
             sw.Reset();
             sw.Start();
 
-            try
-            {
-                Console.WriteLine(jint.Run("2+3"));
-                Console.WriteLine("after0");
-                Console.WriteLine(jint.Run(")(---"));
-                Console.WriteLine("after1");
-                Console.WriteLine(jint.Run("FOOBAR"));
-                Console.WriteLine("after2");
-
-            }
-            catch (JintException e)
-            {
-                Console.WriteLine(e.Message);
-            }
+            Console.WriteLine(jint.Run("Math.floor(1.5)"));
+           
 
             Console.WriteLine("{0}ms", sw.ElapsedMilliseconds);
         }

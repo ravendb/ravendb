@@ -79,6 +79,7 @@
     <Compile Include="Native\ClrFunction.cs" />
     <Compile Include="Native\INativeIndexer.cs" />
     <Compile Include="Native\JsLiteral.cs" />
+    <Compile Include="Native\MathFunction.cs" />
     <Compile Include="Native\NativeArrayIndexer.cs" />
     <Compile Include="Native\NativeIndexer.cs" />
     <Compile Include="Native\NativeOverloadImpl.cs" />
