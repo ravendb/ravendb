@@ -1378,7 +1378,24 @@ namespace Raven.Client.Indexes
 			}
 			else
 			{
-				Out(node.Method.Name);
+				switch (node.Method.Name)
+				{
+					case "First":
+						Out("FirstOrDefault");
+						break;
+					case "Last":
+						Out("LastOrDefault");
+						break;
+					case "Single":
+						Out("SingleOrDefault");
+						break;
+					case "ElementAt":
+						Out("ElementAtOrDefault");
+						break;
+					default:
+						Out(node.Method.Name);
+						break;
+				}
 				Out("(");
 			}
 			var num2 = num;
