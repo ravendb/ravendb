@@ -56,7 +56,7 @@ namespace Raven.Database.Extensions
 				public Lazy<bool> Value;
 			}
 
-			private const int CacheMaxSize = 25;
+			private const int CacheMaxSize = 1024;
 			private static readonly TimeSpan maxDuration = TimeSpan.FromMinutes(15);
 
 			private readonly ConcurrentDictionary<SecurityIdentifier, CachedResult> cache =
