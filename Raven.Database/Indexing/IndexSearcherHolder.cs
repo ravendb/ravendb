@@ -1,15 +1,16 @@
 using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Search;
-using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
 	public class IndexSearcherHolder
 	{
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 		private volatile IndexSearcherHoldingState current;
 
 		public ManualResetEvent SetIndexSearcher(IndexSearcher searcher)
@@ -35,8 +36,9 @@ namespace Raven.Database.Indexing
 				searcher = indexSearcherHoldingState.IndexSearcher;
 				return indexSearcherHoldingState;
 			}
-			catch (Exception)
+			catch (Exception e)
 			{
+				Log.ErrorException("Failed to get the index searcher.", e);
 				indexSearcherHoldingState.Dispose();
 				throw;
 			}
