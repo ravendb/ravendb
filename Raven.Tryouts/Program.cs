@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -17,15 +18,10 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var date = new DateTime(2012, 11, 1, 0, 0, 0, DateTimeKind.Unspecified);
-			var x= new DocumentStore
-			{
-				Url = "http://localhost:8080"
-			}.Initialize();
-			var documentSession = x.OpenSession();
-			var documentQuery = documentSession.Advanced.LuceneQuery<Article>();
-			documentQuery.WhereBetweenOrEqual(xa=> xa.Date, date, date.AddDays(1));
-			Console.WriteLine(documentQuery.ToString());
+			int x = int.MaxValue - 1;
+			Interlocked.Increment(ref x);
+			Interlocked.Increment(ref x);
+			Console.WriteLine(x);
 		}
 
 
