@@ -5,6 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Globalization;
+using System.Linq;
+using System.Text;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Changes
 {
@@ -52,7 +55,17 @@ namespace Raven.Client.Changes
 				return (char)ascii;
 			}
 			else
-				return value.ToString()[0];
-		} 
+				return value.ToString(CultureInfo.InvariantCulture)[0];
+		}
+
+		public static string ToBase62(Guid guid)
+		{
+			byte[] bytes = guid.ToByteArray();
+
+			long a = BitConverter.ToInt64(bytes, 0);
+			long b = BitConverter.ToInt64(bytes, 8);
+
+			return Base62ToString(a) + Base62ToString(b);
+		}
 	}
 }
