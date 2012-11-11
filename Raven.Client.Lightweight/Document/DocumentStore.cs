@@ -541,7 +541,7 @@ namespace Raven.Client.Document
 		{
 			if (credentials != null)
 			{
-				var authHeaders = response.Headers["WWW-Authentication"];
+				var authHeaders = response.Headers["WWW-Authenticate"];
 				if (authHeaders == null ||
 					(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
 					)
