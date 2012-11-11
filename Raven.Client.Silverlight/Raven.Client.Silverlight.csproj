@@ -822,11 +822,23 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncServerClient.cs">
+      <Link>Connection\Async\AsyncServerClient.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\CachedRequest.cs">
+      <Link>Connection\CachedRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\CreateHttpJsonRequestParams.cs">
+      <Link>Connection\CreateHttpJsonRequestParams.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
       <Link>Imports\Connection\DocumentConventionJsonExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\HttpExtensions.cs">
       <Link>Connection\HttpExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\MultiGetOperation.cs">
+      <Link>Connection\MultiGetOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\ObservableLineStream.cs">
       <Link>Imports\Connection\ObservableLineStream.cs</Link>
@@ -848,6 +860,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\RequestStatus.cs">
       <Link>Imports\Connection\Profiling\RequestStatus.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenUrlExtensions.cs">
+      <Link>Connection\RavenUrlExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
       <Link>Imports\DocumentStoreBase.cs</Link>
@@ -930,6 +945,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\ParallelExtensions.cs">
       <Link>Imports\Extensions\ParallelExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\StringExtensions.cs">
+      <Link>Extensions\StringExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\TaskExtensions.cs</Link>
     </Compile>
@@ -1005,17 +1023,18 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\LastEtagHolder.cs">
       <Link>Imports\Util\LastEtagHolder.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\SimpleCache.cs">
+      <Link>Connection\SimpleCache.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
-    <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
-    <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
@@ -1048,6 +1067,7 @@
     <Compile Include="DotNetZip\ZlibException.cs" />
     <Compile Include="DotNetZip\ZlibStream.cs" />
     <Compile Include="DotNetZip\ZlibStreamFlavor.cs" />
+    <Compile Include="MissingFromSilverlight\NameValueCollection.cs" />
     <Compile Include="MissingFromSilverlight\SpinWait.cs" />
     <Compile Include="MissingFromSilverlight\SplitOrderedList.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />

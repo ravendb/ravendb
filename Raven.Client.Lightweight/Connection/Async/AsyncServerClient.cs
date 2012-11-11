@@ -11,10 +11,15 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+#if !SILVERLIGHT
 using System.Transactions;
+#endif
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Client.Listeners;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#endif
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -50,6 +55,11 @@ namespace Raven.Client.Connection.Async
 		private readonly ReplicationInformer replicationInformer;
 		private int requestCount;
 		private int readStripingBase;
+
+		public string Url
+		{
+			get { return url; }
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
@@ -218,7 +228,7 @@ namespace Raven.Client.Connection.Async
 							.AddOperationHeaders(OperationsHeaders));
 
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
-					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, serializeObject, null)
+					return request.WriteAsync(serializeObject)
 						.ContinueWith(writeTask => request.ReadResponseJsonAsync()
 													.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("index"); })).
 						Unwrap();
@@ -308,7 +318,7 @@ namespace Raven.Client.Connection.Async
 					new CreateHttpJsonRequestParams(this, opUrl + "/docs/" + key, method, metadata, credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
-			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, document.ToString(), null)
+			return request.WriteAsync(document.ToString())
 			.ContinueWith(task =>
 			{
 				if (task.Exception != null)
@@ -392,7 +402,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("GET", url => DirectGetAsync(url, key));
 		}
 
-		private Task<JsonDocument> DirectGetAsync(string opUrl, string key)
+		public Task<JsonDocument> DirectGetAsync(string opUrl, string key)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
@@ -476,8 +486,7 @@ namespace Raven.Client.Connection.Async
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", credentials,
 				                                                                         convention)
 					                                         .AddOperationHeaders(OperationsHeaders));
-			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, new RavenJArray(keys).ToString(Formatting.None),
-			                              null)
+			return request.WriteAsync(new RavenJArray(keys).ToString(Formatting.None))
 				.ContinueWith(writeTask => request.ReadResponseJsonAsync())
 				.Unwrap()
 				.ContinueWith(task => CompleteMultiGetAsync(opUrl, keys, includes, task))
@@ -752,7 +761,7 @@ namespace Raven.Client.Connection.Async
 				}
 
 
-				return Task.Factory.FromAsync(httpJsonRequest.BeginWrite, httpJsonRequest.EndWrite, postedData, null)
+				return httpJsonRequest.WriteAsync(postedData)
 					.ContinueWith(
 						task =>
 						{
@@ -895,7 +904,7 @@ namespace Raven.Client.Connection.Async
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 				var data = jArray.ToString(Formatting.None);
 
-				return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
+				return req.WriteAsync(data)
 							.ContinueWith(writeTask =>
 							{
 								writeTask.Wait(); // throw
@@ -947,11 +956,13 @@ namespace Raven.Client.Connection.Async
 
 		private static void AddTransactionInformation(RavenJObject metadata)
 		{
+#if !SILVERLIGHT
 			if (Transaction.Current == null)
 				return;
 
 			string txInfo = string.Format("{0}, {1}", Transaction.Current.TransactionInformation.DistributedIdentifier, TransactionManager.DefaultTimeout);
 			metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
+#endif
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -1016,7 +1027,7 @@ namespace Raven.Client.Connection.Async
 				request.AddOperationHeaders(OperationsHeaders);
 
 				return request
-					.ExecuteWriteAsync(Encoding.UTF8.GetString(data))
+					.ExecuteWriteAsync(Encoding.UTF8.GetString(data, 0, data.Length))
 					.ContinueWith(write =>
 					{
 						if (write.Exception != null)

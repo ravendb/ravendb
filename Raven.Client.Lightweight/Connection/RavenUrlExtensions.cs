@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#endif
 
 namespace Raven.Client.Connection
 {

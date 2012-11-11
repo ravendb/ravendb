@@ -33,11 +33,7 @@ namespace Raven.Client.Connection
 
 		public static Guid GetEtagHeader(this HttpJsonRequest request)
 		{
-#if SILVERLIGHT
-			return EtagHeaderToGuid(request.ResponseHeaders["ETag"].FirstOrDefault());
-#else
 			return EtagHeaderToGuid(request.ResponseHeaders["ETag"]);
-#endif
 		}
 
 		internal static Guid EtagHeaderToGuid(string responseHeader)

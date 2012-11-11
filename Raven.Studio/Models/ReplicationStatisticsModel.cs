@@ -4,7 +4,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection.Async;
-using Raven.Client.Silverlight.Connection.Async;
 using Raven.Database.Bundles.Replication;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;

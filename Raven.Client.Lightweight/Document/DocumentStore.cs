@@ -23,7 +23,6 @@ using Raven.Client.Document.Async;
 #if SILVERLIGHT
 using System.Net.Browser;
 using Raven.Client.Silverlight.Connection;
-using Raven.Client.Silverlight.Connection.Async;
 #else
 using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
@@ -606,19 +605,10 @@ namespace Raven.Client.Document
 			};
 #endif
 
-#if SILVERLIGHT
-			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
-				.ExecuteRequestAsync();
-#endif
 			asyncDatabaseCommandsGenerator = () =>
 			{
-
-#if SILVERLIGHT
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, task, GetReplicationInformerForDatabase, null);
-#else
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
-#endif
+
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);

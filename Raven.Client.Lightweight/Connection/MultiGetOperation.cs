@@ -1,5 +1,10 @@
 using System;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.Connection;
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Linq;
 using System.Net;
 using Raven.Imports.Newtonsoft.Json;
@@ -74,7 +79,8 @@ namespace Raven.Client.Connection
 					HttpResult = 0,
 					Status = RequestStatus.AggresivelyCached,
 					Result = "",
-					Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
+					Url = httpJsonRequest.webRequest.RequestUri.AbsolutePath + "?" + httpJsonRequest.webRequest.RequestUri.Query,
+					//TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
 				return true;
