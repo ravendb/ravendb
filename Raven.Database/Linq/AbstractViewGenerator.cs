@@ -172,7 +172,7 @@ namespace Raven.Database.Linq
 
 			Shape shape = SpatialIndex.Context.MakePoint(lng.Value, lat.Value);
 			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.ShapeReadWriter.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
 		[CLSCompliant(false)]
@@ -195,9 +195,9 @@ namespace Raven.Database.Linq
 			if (maxTreeLevel == 0) maxTreeLevel = GeohashPrefixTree.GetMaxLevelsPossible();
 			var strategy = SpatialStrategies.GetOrAdd(fieldName, s => SpatialIndex.CreateStrategy(fieldName, spatialSearchStrategy, maxTreeLevel));
 
-			var shape = SpatialIndex.ShapeReadWriter.ReadShape(shapeWKT);
+			var shape = SpatialIndex.ReadShape(shapeWKT);
 			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.ShapeReadWriter.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
 		#endregion
