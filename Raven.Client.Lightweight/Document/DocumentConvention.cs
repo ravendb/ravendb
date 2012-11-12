@@ -169,7 +169,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Enable multipule async operations
 		/// </summary>
-		public bool AllowMultipuleOperations { get; set; }
+		public bool AllowMultipuleAsyncOperations { get; set; }
 
 		///<summary>
 		/// A list of type converters that can be used to translate the document key (string)

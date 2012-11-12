@@ -252,13 +252,10 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">The name.</param>
 		public Task DeleteIndexAsync(string name)
 		{
-			return ExecuteWithReplication("DELETE", operationUrl =>
-			{
-				return operationUrl.Indexes(name)
-					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
-					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-					.ExecuteRequestAsync();
-			});
+			return ExecuteWithReplication("DELETE", operationUrl => operationUrl.Indexes(name)
+				                                                        .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+				                                                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				                                                        .ExecuteRequestAsync());
 		}
 
 		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
@@ -1374,7 +1371,11 @@ namespace Raven.Client.Connection.Async
 		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
 		{
 			// Convert the Func<string, Task> to a Func<string, Task<object>>
-			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t => null));
+			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>
+			{
+				t.AssertNotFailed();
+				return null;
+			}));
 		}
 
 		private volatile bool currentlyExecuting;
@@ -1384,7 +1385,7 @@ namespace Raven.Client.Connection.Async
 		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
-			if (currentlyExecuting && convention.AllowMultipuleOperations == false)
+			if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
 
 			currentlyExecuting = true;

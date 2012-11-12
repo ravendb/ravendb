@@ -134,18 +134,21 @@ namespace Raven.Client.Silverlight.Connection
 
 			var webResponse = exception.Response as HttpWebResponse;
 			if (webResponse == null || (webResponse.StatusCode != HttpStatusCode.Unauthorized && webResponse.StatusCode != HttpStatusCode.Forbidden))
-				return task;
+				task.AssertNotFailed();
 
 			if(webResponse.StatusCode == HttpStatusCode.Forbidden)
 			{
 				HandleForbbidenResponseAsync(webResponse);
-				return task;
+				task.AssertNotFailed();
 			}
 
 			var authorizeResponse = HandleUnauthorizedResponseAsync(webResponse);
 
 			if (authorizeResponse == null)
-				return task; // effectively throw
+			{
+				task.AssertNotFailed();
+				return task;// never get called
+			}
 
 
 			return authorizeResponse
