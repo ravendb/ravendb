@@ -305,7 +305,10 @@ namespace Raven.Storage.Esent
 			catch (Exception e)
 			{
 				Dispose();
-				throw new InvalidOperationException("Could not open transactional storage: " + database, e);
+				var fileAccessExeption = e as EsentFileAccessDeniedException;
+				if(fileAccessExeption == null)
+					throw new InvalidOperationException("Could not open transactional storage: " + database, e);
+				throw new InvalidOperationException("Could not write to location: " + path + ". Make sure you have for this location.", e);
 			}
 		}
 
