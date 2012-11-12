@@ -328,5 +328,6 @@ namespace Raven.Abstractions.Linq
 		{
 			get { return inner; }
 		}
+
 	}
 }
