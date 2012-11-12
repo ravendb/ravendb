@@ -103,7 +103,7 @@ namespace Raven.Bundles.Tests.Replication.Bugs
 			}
 		}
 
-		private static void WaitForReplication(IDocumentStore store2, bool documentMissing)
+		private void WaitForReplication(IDocumentStore store2, bool documentMissing)
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{
