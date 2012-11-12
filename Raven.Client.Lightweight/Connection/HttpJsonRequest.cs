@@ -51,6 +51,12 @@ namespace Raven.Client.Connection
 		private bool writeCalled;
 		public static readonly string ClientVersion = typeof (HttpJsonRequest).Assembly.GetName().Version.ToString();
 
+		private string primaryUrl;
+
+		private string operationUrl;
+
+		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
+
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -349,6 +355,9 @@ namespace Raven.Client.Connection
 
 			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
+
+			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
+
 			using (response)
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
@@ -405,6 +414,8 @@ namespace Raven.Client.Connection
 			{
 				factory.UpdateCacheTime(this);
 				var result = factory.GetCachedResponse(this, httpWebResponse.Headers);
+
+				HandleReplicationStatusChanges(httpWebResponse.Headers, primaryUrl, operationUrl);
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
@@ -481,7 +492,7 @@ namespace Raven.Client.Connection
 			return this;
 		}
 
-		public HttpJsonRequest AddReplicationStatusHeaders(string primaryUrl, string currentUrl, DateTime lastPrimaryCheck, FailoverBehavior failoverBehavior)
+		public HttpJsonRequest AddReplicationStatusHeaders(string primaryUrl, string currentUrl, DateTime lastPrimaryCheck, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
 			var method = this.Method;
 
@@ -497,6 +508,11 @@ namespace Raven.Client.Connection
 			{
 				webRequest.Headers.Add(Constants.RavenClientPrimaryServerUrl, primaryUrl);
 				webRequest.Headers.Add(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
+
+				this.primaryUrl = primaryUrl;
+				this.operationUrl = currentUrl;
+
+				HandleReplicationStatusChanges = handleReplicationStatusChanges;
 			}
 
 			return this;
