@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
 
@@ -55,6 +56,12 @@ namespace Raven.Database.Server
 			return match.Success && supportedVerbsCached.Contains(context.Request.HttpMethod);
 		}
 
+		public void ReplicationAwareRespond(IHttpContext context)
+		{
+			Respond(context);
+			HandleReplication(context);
+		}
+
 		public abstract void Respond(IHttpContext context);
 
 		protected TransactionInformation GetRequestTransaction(IHttpContext context)
@@ -62,14 +69,41 @@ namespace Raven.Database.Server
 			var txInfo = context.Request.Headers["Raven-Transaction-Information"];
 			if (string.IsNullOrEmpty(txInfo))
 				return null;
-			var parts = txInfo.Split(new[]{", "}, StringSplitOptions.RemoveEmptyEntries);
-			if(parts.Length != 2)
+			var parts = txInfo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length != 2)
 				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
 			return new TransactionInformation
 			{
 				Id = new Guid(parts[0]),
 				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
 			};
+		}
+
+		private void HandleReplication(IHttpContext context)
+		{
+			var clientPrimaryServerUrl = context.Request.Headers[Constants.RavenClientPrimaryServerUrl];
+			var clientPrimaryServerLastCheck = context.Request.Headers[Constants.RavenClientPrimaryServerLastCheck];
+			if (string.IsNullOrEmpty(clientPrimaryServerUrl) || string.IsNullOrEmpty(clientPrimaryServerLastCheck))
+			{
+				return;
+			}
+
+			DateTime primaryServerLastCheck;
+			if(DateTime.TryParse(clientPrimaryServerLastCheck, out primaryServerLastCheck) == false)
+			{
+				return;
+			}
+
+			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+			if (replicationTask == null)
+			{
+				return;
+			}
+
+			if (replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
+			{
+				context.Response.AddHeader(Constants.RavenForcePrimaryServerCheck, "True");
+			}
 		}
 	}
 }

@@ -42,21 +42,25 @@ namespace Raven.Bundles.Tests.Replication
 		{
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
-			{
+			                          {
 				Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
-				AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
-				DataDirectory = "Data #" + servers.Count,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				RunInMemory = true,
-				Port = port,
-				DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
-			};
+			                          	AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
+			                          	DataDirectory = "Data #" + servers.Count,
+			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+			                          	RunInMemory = true,
+			                          	Port = port,
+										DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
+			                          };
 			ConfigureServer(serverConfiguration);
+			if(removeDataDirectory)
+			{
 			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
+			}
+
 			serverConfiguration.PostInit();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			servers.Add(ravenDbServer);
-
+			
 			var documentStore = new DocumentStore {Url = ravenDbServer.Database.Configuration.ServerUrl};
 			ConfigureStore(documentStore);
 			if (configureStore != null)
@@ -75,7 +79,7 @@ namespace Raven.Bundles.Tests.Replication
 		{
 		}
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			var err = new List<Exception>();
 			foreach (var documentStore in stores)
@@ -86,7 +90,7 @@ namespace Raven.Bundles.Tests.Replication
 				}
 				catch (Exception e)
 				{
-					err.Add(e);
+					err.Add(e);	
 				}
 			}
 
@@ -105,6 +109,35 @@ namespace Raven.Bundles.Tests.Replication
 
 			if (err.Count > 0)
 				throw new AggregateException(err);
+		}
+
+		public void StopDatabase(int index)
+		{
+			var previousServer = servers[index];
+			previousServer.Dispose();
+		}
+
+		public void StartDatabase(int index)
+		{
+			var previousServer = servers[index];
+
+			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.Database.Configuration.Port);
+			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
+			{
+				Settings = { { "Raven/ActiveBundles", "replication" } },
+				AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
+				DataDirectory = previousServer.Database.Configuration.DataDirectory,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				RunInMemory = previousServer.Database.Configuration.RunInMemory,
+				Port = previousServer.Database.Configuration.Port,
+				DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
+			};
+			ConfigureServer(serverConfiguration);
+
+			serverConfiguration.PostInit();
+			var ravenDbServer = new RavenDbServer(serverConfiguration);
+
+			servers[index] = ravenDbServer;
 		}
 
 		public IDocumentStore ResetDatabase(int index)
@@ -159,22 +192,22 @@ namespace Raven.Bundles.Tests.Replication
 
 		protected virtual void SetupDestination(ReplicationDestination replicationDestination)
 		{
-
+			
 		}
 
 		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
 			Assert.NotEmpty(urls);
 			source.Put(Constants.RavenReplicationDestinations,
-						null, new RavenJObject
-						{
-							{
-								"Destinations", new RavenJArray(urls.Select(url => new RavenJObject
-								{
-									{"Url", url}
-								}))
-							}
-						}, new RavenJObject());
+			           null, new RavenJObject
+			           {
+			           	{
+			           		"Destinations", new RavenJArray(urls.Select(url => new RavenJObject
+			           		{
+			           			{"Url", url}
+			           		}))
+			           		}
+			           }, new RavenJObject());
 		}
 
 		protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
@@ -221,7 +254,7 @@ namespace Raven.Bundles.Tests.Replication
 			}
 
 			var jsonDocumentMetadata = commands.Head(expectedId);
-
+			
 			Assert.NotNull(jsonDocumentMetadata);
 		}
 
