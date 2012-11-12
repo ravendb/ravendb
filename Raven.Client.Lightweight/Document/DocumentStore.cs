@@ -475,7 +475,6 @@ namespace Raven.Client.Document
 			Conventions.HandleUnauthorizedResponse = response =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
-				response.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
 				{
@@ -508,7 +507,6 @@ namespace Raven.Client.Document
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
-				unauthorizedResponse.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
 				{
@@ -541,7 +539,7 @@ namespace Raven.Client.Document
 		{
 			if (credentials != null)
 			{
-				var authHeaders = response.Headers["WWW-Authentication"];
+				var authHeaders = response.Headers["WWW-Authenticate"];
 				if (authHeaders == null ||
 					(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
 					)

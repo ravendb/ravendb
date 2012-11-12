@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -16,6 +17,7 @@ using Raven.Database.Impl.Clustering;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
 using Raven.Database.Extensions;
+using System.Linq;
 
 namespace Raven.Database.Commercial
 {
@@ -78,6 +80,16 @@ namespace Raven.Database.Commercial
 					    "true".Equals(value, StringComparison.InvariantCultureIgnoreCase))
 					{
 						licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
+					}
+					string allowExternalBundles;
+					if(licenseValidator.LicenseAttributes.TryGetValue("allowExternalBundles", out allowExternalBundles) && 
+						bool.Parse(allowExternalBundles) == false)
+					{
+						var directoryCatalogs = config.Catalog.Catalogs.OfType<DirectoryCatalog>().ToArray();
+						foreach (var catalog in directoryCatalogs)
+						{
+							config.Catalog.Catalogs.Remove(catalog);
+						}
 					}
 				});
 
@@ -163,10 +175,10 @@ namespace Raven.Database.Commercial
 		{
 			string version;
 			if (licenseAttributes.TryGetValue("version", out version) == false)
-				throw new LicenseExpiredException("This is not a licence for RavenDB 2.0");
+				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
 
 			if(version != "1.2" && version != "2.0")
-				throw new LicenseExpiredException("This is not a licence for RavenDB 2.0");
+				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
 
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))

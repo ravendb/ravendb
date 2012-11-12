@@ -83,9 +83,9 @@
     <Reference Include="ICSharpCode.NRefactory.Xml">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
-    <Reference Include="Jint, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
+    <Reference Include="Jint.Raven, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Jint.dll</HintPath>
+      <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
       <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
@@ -529,6 +529,7 @@
     <Compile Include="MailingList\Georgiosd.cs" />
     <Compile Include="MailingList\Holt.cs" />
     <Compile Include="MailingList\InIssues.cs" />
+    <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
     <Compile Include="MailingList\linmouhong2.cs" />
     <Compile Include="MailingList\LinqInExtensionTests.cs" />
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />

@@ -31,7 +31,7 @@ namespace Raven.Database.Indexing
 	public static class SpatialIndex
 	{
 		internal static readonly NtsSpatialContext Context;
-		internal static NtsShapeReadWriter ShapeReadWriter;
+		private static readonly NtsShapeReadWriter shapeReadWriter;
 		/// <summary>
 		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
 		///
@@ -46,7 +46,7 @@ namespace Raven.Database.Indexing
 			Context = new NtsSpatialContext(true);
 			GeometryServiceProvider.Instance = new NtsGeometryServices();
 
-			ShapeReadWriter = new NtsShapeReadWriter(Context);
+			shapeReadWriter = new NtsShapeReadWriter(Context);
 		}
 
 		public static SpatialStrategy CreateStrategy(string fieldName, SpatialSearchStrategy spatialSearchStrategy,
@@ -66,8 +66,7 @@ namespace Raven.Database.Indexing
 									  double distanceErrorPct = 0.025)
 		{
 			SpatialOperation spatialOperation;
-			shapeWKT = TranslateCircleFromKmToRadians(shapeWKT);
-			Shape shape = ShapeReadWriter.ReadShape(shapeWKT);
+			var shape = ReadShape(shapeWKT);
 
 			switch (relation)
 			{
@@ -92,6 +91,13 @@ namespace Raven.Database.Indexing
 			var args = new SpatialArgs(spatialOperation, shape) { DistErrPct = distanceErrorPct };
 
 			return spatialStrategy.MakeQuery(args);
+		}
+
+		public static Shape ReadShape(string shapeWKT)
+		{
+			shapeWKT = TranslateCircleFromKmToRadians(shapeWKT);
+			Shape shape = shapeReadWriter.ReadShape(shapeWKT);
+			return shape;
 		}
 
 		private static readonly Regex CirlceShape =
@@ -120,7 +126,7 @@ namespace Raven.Database.Indexing
 			var spatialQry = indexQuery as SpatialIndexQuery;
 			if (spatialQry == null) return null;
 
-			var args = new SpatialArgs(SpatialOperation.IsWithin, ShapeReadWriter.ReadShape(spatialQry.QueryShape));
+			var args = new SpatialArgs(SpatialOperation.IsWithin, shapeReadWriter.ReadShape(spatialQry.QueryShape));
 			return spatialStrategy.MakeFilter(args);
 		}
 
@@ -130,6 +136,12 @@ namespace Raven.Database.Indexing
 			Point ptTo = Context.MakePoint(toLng, toLat);
 			var distance = Context.GetDistCalc().Distance(ptFrom, ptTo);
 			return (distance / RadiansToDegrees) * EarthMeanRadiusKm;
+		}
+
+		public static string WriteShape(Shape shape)
+		{
+			var writeShape = shapeReadWriter.WriteShape(shape);
+			return writeShape;
 		}
 	}
 }

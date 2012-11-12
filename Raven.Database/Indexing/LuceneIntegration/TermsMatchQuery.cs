@@ -97,14 +97,20 @@ namespace Raven.Database.Indexing.LuceneIntegration
 					return false;
 				}
 				int last;
-				while ((last = string.CompareOrdinal(termsMatchQuery.matches[pos], term.Text)) < 0)
+				while (true)
 				{
-					if (++pos >= termsMatchQuery.matches.Count)
+					if (pos >= termsMatchQuery.matches.Count)
 					{
 						endEnum = true;
 						return false;
 					}
-				}
+					last = string.CompareOrdinal(termsMatchQuery.matches[pos], term.Text);
+					if (last >= 0)
+					{
+						break;
+					}
+					pos++;
+				}	
 				if (last > 0)
 				{
 					MoveToCurrentTerm();

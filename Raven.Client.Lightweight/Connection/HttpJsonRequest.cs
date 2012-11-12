@@ -219,19 +219,18 @@ namespace Raven.Client.Connection
 						throw;
 
 					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+					if (httpWebResponse == null ||
+					    (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+					     httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
 						throw;
 
-					using (httpWebResponse)
+					if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
 					{
-						if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
-						{
-							HandleForbbidenResponse(httpWebResponse);
-							throw;
-						}
-						if (HandleUnauthorizedResponse(httpWebResponse) == false)
-							throw;
+						HandleForbbidenResponse(httpWebResponse);
+						throw;
 					}
+					if (HandleUnauthorizedResponse(httpWebResponse) == false)
+						throw;
 				}
 			}
 		}

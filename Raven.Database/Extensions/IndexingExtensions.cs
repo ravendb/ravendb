@@ -127,7 +127,7 @@ namespace Raven.Database.Extensions
 								}
 								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
 								{
-									var shape = SpatialIndex.ShapeReadWriter.ReadShape(spatialQuery.QueryShape);
+									var shape = SpatialIndex.ReadShape(spatialQuery.QueryShape);
 									var dsort = new SpatialDistanceFieldComparatorSource(shape.GetCenter());
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}

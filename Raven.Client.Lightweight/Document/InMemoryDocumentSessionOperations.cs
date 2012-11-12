@@ -9,10 +9,10 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 #if !SILVERLIGHT
-using System.Text.RegularExpressions;
 using System.Transactions;
 #endif
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Util;
@@ -38,6 +38,10 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class InMemoryDocumentSessionOperations : IDisposable
 	{
+		private static int counter;
+
+		private readonly int hash = Interlocked.Increment(ref counter);
+
 		protected bool GenerateDocumentKeysOnStore = true;
 
 		/// <summary>
@@ -1340,6 +1344,16 @@ more responsive application.
 					});
 				}
 			}
+		}
+
+		public override int GetHashCode()
+		{
+			return hash;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return ReferenceEquals(obj, this);
 		}
 	}
 }
