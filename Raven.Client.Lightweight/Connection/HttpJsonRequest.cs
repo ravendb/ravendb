@@ -482,28 +482,21 @@ namespace Raven.Client.Connection
 			return this;
 		}
 
-		public HttpJsonRequest AddReplicationStatusHeaders(string primaryUrl, string currentUrl, DateTime lastPrimaryCheck, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
-			var method = this.Method;
-
-			var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
-			if (shouldReadFromAllServers && method != "GET")
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
 				return this;
+			if(replicationInformer.GetFailureCount(thePrimaryUrl) <=0)
+				return this; // not because of failover, no need to do this.
 
-			var shouldReadFromSecondaries = ((conventions.FailoverBehavior & FailoverBehavior.AllowReadsFromSecondaries) == FailoverBehavior.AllowReadsFromSecondaries);
-			if (shouldReadFromSecondaries && method != "GET")
-				return this;
+			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
+			webRequest.Headers.Add(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(thePrimaryUrl));
+			webRequest.Headers.Add(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
 
-			if (!primaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
-			{
-				webRequest.Headers.Add(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(primaryUrl));
-				webRequest.Headers.Add(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
+			primaryUrl = thePrimaryUrl;
+			operationUrl = currentUrl;
 
-				this.primaryUrl = primaryUrl;
-				this.operationUrl = currentUrl;
-
-				HandleReplicationStatusChanges = handleReplicationStatusChanges;
-			}
+			HandleReplicationStatusChanges = handleReplicationStatusChanges;
 
 			return this;
 		}

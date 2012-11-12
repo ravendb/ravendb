@@ -104,7 +104,7 @@ namespace Raven.Client.Connection.Async
 				return operationUrl.IndexNames(start, pageSize)
 					.NoCache()
 					.ToJsonRequest(this, credentials, convention)
-					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges)
+					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
 					.ReadResponseJsonAsync()
 					.ContinueWith(task =>
 					{
@@ -125,7 +125,7 @@ namespace Raven.Client.Connection.Async
 			{
 				var url2 = (operationUrl + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task =>
@@ -149,7 +149,7 @@ namespace Raven.Client.Connection.Async
 			{
 				var httpJsonRequestAsync = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention));
 				httpJsonRequestAsync.AddOperationHeaders(OperationsHeaders);
-				httpJsonRequestAsync.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				httpJsonRequestAsync.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return httpJsonRequestAsync.ReadResponseJsonAsync();
 			});
@@ -166,7 +166,7 @@ namespace Raven.Client.Connection.Async
 				return operationUrl.IndexDefinition(name)
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
-				.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges)
+				.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
 				.ReadResponseJsonAsync()
 					.ContinueWith(task =>
 					{
@@ -202,7 +202,7 @@ namespace Raven.Client.Connection.Async
 				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-			webRequest.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+			webRequest.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return webRequest.ExecuteRequestAsync()
 				.ContinueWith(task =>
@@ -245,7 +245,7 @@ namespace Raven.Client.Connection.Async
 			{
 				return operationUrl.Indexes(name)
 					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
-					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges)
+					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
 					.ExecuteRequestAsync();
 			});
 		}
@@ -259,7 +259,7 @@ namespace Raven.Client.Connection.Async
 					new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync()
 					.ContinueWith(task =>
@@ -321,7 +321,7 @@ namespace Raven.Client.Connection.Async
 					new CreateHttpJsonRequestParams(this, opUrl + "/docs/" + key, method, metadata, credentials, convention)
 							.AddOperationHeaders(OperationsHeaders));
 
-				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, document.ToString(), null)
 				.ContinueWith(task =>
@@ -414,7 +414,7 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, opUrl + "/docs/" + key, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task =>
@@ -486,7 +486,7 @@ namespace Raven.Client.Connection.Async
 					                                                                         convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => CompleteMultiGetAsync(opUrl, keys, includes, task))
@@ -579,7 +579,7 @@ namespace Raven.Client.Connection.Async
 				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-			request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+			request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
@@ -602,7 +602,7 @@ namespace Raven.Client.Connection.Async
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
 																							 credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(task.Result)));
@@ -697,7 +697,7 @@ namespace Raven.Client.Connection.Async
 																							 "POST", credentials, convention));
 																							 
 				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync();
 			});
@@ -712,7 +712,7 @@ namespace Raven.Client.Connection.Async
 																							 (operationUrl + "/admin/StopIndexing").NoCache(),
 																							 "POST", credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync();
 			});
@@ -727,7 +727,7 @@ namespace Raven.Client.Connection.Async
 																							 (operationUrl + "/admin/IndexingStatus").
 																								NoCache(), "GET", credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
@@ -748,7 +748,7 @@ namespace Raven.Client.Connection.Async
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-			request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+			request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync()
 					.ContinueWith(
@@ -770,7 +770,7 @@ namespace Raven.Client.Connection.Async
 				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-				httpJsonRequest.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				httpJsonRequest.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				var requestsForServer = multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
 
@@ -831,7 +831,7 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
 				.AddOperationHeaders(OperationsHeaders));
 
-			request.AddReplicationStatusHeaders(url, opUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+			request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
@@ -900,7 +900,7 @@ namespace Raven.Client.Connection.Async
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task =>
@@ -928,7 +928,7 @@ namespace Raven.Client.Connection.Async
 				var req = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-				req.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				req.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 				var data = jArray.ToString(Formatting.None);
@@ -1052,7 +1052,7 @@ namespace Raven.Client.Connection.Async
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationUrl, key), "PUT", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request
 					.ExecuteWriteAsync(Encoding.UTF8.GetString(data))
@@ -1082,7 +1082,7 @@ namespace Raven.Client.Connection.Async
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request
 					.ReadResponseBytesAsync()
@@ -1155,7 +1155,7 @@ namespace Raven.Client.Connection.Async
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationUrl, key), "DELETE", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync();
 			});
@@ -1194,7 +1194,7 @@ namespace Raven.Client.Connection.Async
 				return operationUrl.Terms(index, field, fromValue, pageSize)
 					.NoCache()
 					.ToJsonRequest(this, credentials, convention)
-					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer.GetFailureLastCheck(url), convention.FailoverBehavior, HandleReplicationStatusChanges)
+					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
 					.ReadResponseJsonAsync()
 					.ContinueWith(task =>
 					{
