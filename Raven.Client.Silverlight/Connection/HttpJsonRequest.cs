@@ -21,6 +21,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
+using Raven.Abstractions.Connection;
 
 namespace Raven.Client.Silverlight.Connection
 {
@@ -244,7 +245,7 @@ namespace Raven.Client.Silverlight.Connection
 			
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
-			using (var responseStream = response.GetResponseStream())
+			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
 				return handleResponse(responseStream);
 			}
@@ -430,6 +431,18 @@ namespace Raven.Client.Silverlight.Connection
 										return task;
 									return ExecuteRequestAsync();
 								})
+				.Unwrap();
+		}
+
+		public Task ExecuteWriteAsync(byte[] data)
+		{
+			return WriteAsync(data)
+				.ContinueWith(task =>
+				{
+					if (task.IsFaulted)
+						return task;
+					return ExecuteRequestAsync();
+				})
 				.Unwrap();
 		}
 

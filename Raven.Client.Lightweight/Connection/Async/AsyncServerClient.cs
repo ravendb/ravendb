@@ -1165,7 +1165,7 @@ namespace Raven.Client.Connection.Async
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request
-					.ExecuteWriteAsync(Encoding.UTF8.GetString(data, 0, data.Length))
+					.ExecuteWriteAsync(data)
 					.ContinueWith(write =>
 					{
 						if (write.Exception != null)
