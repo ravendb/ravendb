@@ -773,6 +773,19 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		public Task ExecuteWriteAsync(byte[] data)
+		{
+			try
+			{
+				Write(new MemoryStream(data));
+				return ExecuteRequestAsync();
+			}
+			catch (Exception e)
+			{
+				return new CompletedTask(e);
+			}
+		}
+
 		public Task WriteAsync(string serializeObject)
 		{
 			return Task.Factory.FromAsync(BeginWrite, EndWrite, serializeObject, null);
