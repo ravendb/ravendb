@@ -1,6 +1,5 @@
 ﻿namespace Raven.Tests.Issues
 {
-	using System;
 	using System.Threading;
 
 	using Raven.Abstractions.Data;
@@ -108,6 +107,8 @@
 
 			Assert.NotNull(store1.DatabaseCommands.Get("items/1"));
 
+			Thread.Sleep(2000);
+
 			Assert.NotNull(store.DatabaseCommands.Get("items/1"));
 
 			Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
@@ -126,7 +127,7 @@
 			store1 = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
-				Url = "http://win2008-ppekrol:8113"
+				Url = "http://localhost:8113"
 			};
 
 			store1.Initialize();
@@ -134,7 +135,7 @@
 			store2 = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
-				Url = "http://win2008-ppekrol:8114"
+				Url = "http://localhost:8114"
 			};
 
 			store2.Initialize();
@@ -197,6 +198,8 @@
 			server1 = this.StartServer(server1);
 
 			Assert.NotNull(store1.AsyncDatabaseCommands.GetAsync("items/1").Result);
+
+			Thread.Sleep(2000);
 
 			Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
 

@@ -9,16 +9,12 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server
 {
-	using System.Threading;
-
-	using Raven.Bundles.Replication.Tasks;
-	using Raven.Database.Extensions;
-
 	[InheritedExport]
 	public abstract class AbstractRequestResponder
 	{

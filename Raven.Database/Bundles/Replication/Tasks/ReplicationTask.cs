@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -844,21 +845,48 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			ResetFailureForHeartbeat(src);
 
-			heartbeatDictionary.AddOrUpdate(src, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
+			string entry;
+			if (!TryConvertUrlToIp(src, out entry))
+				entry = src;
+
+			heartbeatDictionary.AddOrUpdate(entry, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
 		}
 
 		public bool IsHeartbeatAvailable(string src, DateTime lastCheck)
 		{
-			if (heartbeatDictionary.ContainsKey(src))
+			string entry;
+			if(!TryConvertUrlToIp(src, out entry))
+				entry = src;
+
+			if (heartbeatDictionary.ContainsKey(entry))
 			{
 				DateTime lastHeartbeat;
-				if (heartbeatDictionary.TryGetValue(src, out lastHeartbeat))
+				if (heartbeatDictionary.TryGetValue(entry, out lastHeartbeat))
 				{
 					return lastHeartbeat >= lastCheck;
 				}
 			}
 
 			return false;
+		}
+
+		private bool TryConvertUrlToIp(string url, out string ipv4Address)
+		{
+			try
+			{
+				var uri = new Uri(url);
+				var addresses = Dns.GetHostAddresses(uri.IsLoopback ? Dns.GetHostEntry(uri.DnsSafeHost).HostName : uri.DnsSafeHost);
+
+				var ipv4 = addresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+
+				ipv4Address = ipv4 != null ? ipv4.ToString() : null;
+			}
+			catch (Exception)
+			{
+				ipv4Address = null;
+			}
+
+			return ipv4Address != null;
 		}
 
 		private void ResetFailureForHeartbeat(string src)
