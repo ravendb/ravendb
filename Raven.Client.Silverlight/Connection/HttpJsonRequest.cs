@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
-using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -23,7 +21,6 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
-using Raven.Abstractions.Connection;
 
 namespace Raven.Client.Silverlight.Connection
 {
@@ -42,6 +39,13 @@ namespace Raven.Client.Silverlight.Connection
 		private byte[] postedData;
 		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
+
+		private string primaryUrl;
+
+		private string operationUrl;
+
+		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
+
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
@@ -432,6 +436,31 @@ namespace Raven.Client.Silverlight.Connection
 		public double CalculateDuration()
 		{
 			return 0;
+		}
+
+		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+		{
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+				return this;
+			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
+				return this; // not because of failover, no need to do this.
+
+			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
+			webRequest.Headers[Constants.RavenClientPrimaryServerUrl] = ToRemoteUrl(thePrimaryUrl);
+			webRequest.Headers[Constants.RavenClientPrimaryServerLastCheck] = lastPrimaryCheck.ToString("s");
+
+			primaryUrl = thePrimaryUrl;
+			operationUrl = currentUrl;
+
+			HandleReplicationStatusChanges = handleReplicationStatusChanges;
+
+			return this;
+		}
+
+		private static string ToRemoteUrl(string primaryUrl)
+		{
+			var uriBuilder = new UriBuilder(primaryUrl);
+			return uriBuilder.Uri.ToString();
 		}
 	}
 }

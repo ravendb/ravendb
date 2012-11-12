@@ -19,6 +19,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Listeners;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+using Raven.Client.Silverlight.MissingFromSilverlight;
 #endif
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
@@ -861,9 +862,11 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention));
+			var request =
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
+				                                                                         convention));
 
-			request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync()
 						.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject)task.Result, request.GetEtagHeader())));
