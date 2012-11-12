@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Ionic.Zlib;
+using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -68,7 +69,7 @@ namespace Raven.Client.Silverlight.Connection
 		/// Gets or sets the response headers.
 		/// </summary>
 		/// <value>The response headers.</value>
-		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
+		public NameValueCollection ResponseHeaders { get; set; }
 
 		internal HttpJsonRequest(string url, string method, RavenJObject metadata, DocumentConvention conventions, HttpJsonRequestFactory factory)
 		{
@@ -231,14 +232,12 @@ namespace Raven.Client.Silverlight.Connection
 				}
 			}
 
-			ResponseHeaders = new Dictionary<string, IList<string>>(StringComparer.InvariantCultureIgnoreCase);
+			ResponseHeaders = new NameValueCollection();
 			foreach (var key in response.Headers.AllKeys)
 			{
-				ResponseHeaders[key] = new List<string>
-				{
-					response.Headers[key]
-				};
+				ResponseHeaders[key] = response.Headers[key];
 			}
+			
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
 			using (var responseStream = response.GetResponseStream())
@@ -428,6 +427,11 @@ namespace Raven.Client.Silverlight.Connection
 									return ExecuteRequestAsync();
 								})
 				.Unwrap();
+		}
+
+		public double CalculateDuration()
+		{
+			return 0;
 		}
 	}
 }

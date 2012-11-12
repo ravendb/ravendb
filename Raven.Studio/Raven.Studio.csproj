@@ -237,6 +237,8 @@
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToToolTipCoverter.cs" />
+    <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
+    <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BundlesSelect.xaml.cs">

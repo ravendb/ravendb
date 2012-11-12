@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection.Async;
-#endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;

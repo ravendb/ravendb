@@ -8,7 +8,11 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+#if !SILVERLIGHT
 using System.IO.Compression;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -767,6 +771,11 @@ namespace Raven.Client.Connection
 			{
 				return new CompletedTask(e);
 			}
+		}
+
+		public Task WriteAsync(string serializeObject)
+		{
+			return Task.Factory.FromAsync(BeginWrite, EndWrite, serializeObject, null);
 		}
 	}
 }

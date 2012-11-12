@@ -20,6 +20,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using System.Net;
 using System.Net.Sockets;
@@ -27,7 +28,6 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
 
 #if SILVERLIGHT
-using Raven.Client.Silverlight.Connection.Async;
 using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Json.Linq;
 #endif

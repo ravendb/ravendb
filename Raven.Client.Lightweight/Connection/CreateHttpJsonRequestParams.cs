@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Linq;
 using System.Net;
 using Raven.Client.Connection.Profiling;

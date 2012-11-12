@@ -1,8 +1,7 @@
 using System;
-using System.Net;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Document;
+using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Silverlight.Connection
@@ -35,62 +34,50 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Invoke the LogRequest event
 		/// </summary>
-		internal void InvokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs e)
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequentResult)
 		{
 			var handler = LogRequest;
 			if (handler != null)
-				handler(sender, e);
-		}
-
-
-		/// <summary>
-		/// Creates the HTTP json request.
-		/// </summary>
-		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
-		{
-			var request = new HttpJsonRequest(createHttpJsonRequestParams.Url, createHttpJsonRequestParams.Method, createHttpJsonRequestParams.Metadata, createHttpJsonRequestParams.Convention, this);
-			ConfigureRequest(createHttpJsonRequestParams.Self, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
-			return request;
+				handler(sender, generateRequentResult.Invoke());
 		}
 
 		/// <summary>
 		/// Determine whether to use compression or not 
 		/// </summary>
 		public bool DisableRequestCompression { get; set; }
+		public bool DisableHttpCaching
+		{
+			get { return false; }
+		}
 
 		public void Dispose()
 		{
 		}
-	}
 
-	public class CreateHttpJsonRequestParams
-	{
-		public CreateHttpJsonRequestParams(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
+		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
 		{
-			Self = self;
-			Url = url;
-			Method = method;
-			Credentials = credentials;
-			Convention = convention;
+			var request = new HttpJsonRequest(createHttpJsonRequestParams.Url, createHttpJsonRequestParams.Method, createHttpJsonRequestParams.Metadata, createHttpJsonRequestParams.Convention, this);
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
+			return request;
 		}
 
-		public CreateHttpJsonRequestParams(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
+		public IDisposable DisableAllCaching()
 		{
-			Self = self;
-			Url = url;
-			Method = method;
-			Metadata = metadata;
-			Credentials = credentials;
-			Convention = convention;
+			return null;
 		}
 
-		public object Self { get; private set; }
-		public string Url { get; private set; }
-		public string Method { get; private set; }
-		public RavenJObject Metadata { get; private set; }
-		public ICredentials Credentials { get; private set; }
-		public DocumentConvention Convention { get; private set; }
-		public bool AvoidCachingRequest { get; set; }
-	}
+		internal CachedRequestOp ConfigureCaching(string url, Action<string, string> setHeader)
+		{
+			return new CachedRequestOp();
+		}
 
+		public void IncrementCachedRequests()
+		{
+		}
+
+		public void CacheResponse(string s, RavenJToken result, NameValueCollection nameValueCollection)
+		{
+			
+		}
+	}
 }

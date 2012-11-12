@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+#if SILVERLIGHT
+using System.Windows.Browser;
+using Raven.Client.Silverlight.Connection;
+#endif
 
 namespace Raven.Client.Connection
 {
@@ -48,11 +52,12 @@ namespace Raven.Client.Connection
 		{
 			return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
 		}
-
-		//public static string Docs(this string url, string key)
-		//{
-		//    return url + "/docs/" + HttpUtility.UrlEncode(key);
-		//}
+#if SILVERLIGHT
+		public static string Docs(this string url, string key)
+		{
+			return url + "/docs/" + HttpUtility.UrlEncode(key);
+		}
+#endif
 
 		public static string Docs(this string url, int start, int pageSize)
 		{

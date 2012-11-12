@@ -1,5 +1,9 @@
 ﻿using System;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection

@@ -23,6 +23,8 @@
 	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
 	<Converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
 	<Converters:FirstLineOnlyConverter x:Key="FirstLineOnly" />
+	<Converters:GetFullApiKeyConverter x:Key="GetFullApiKeyConverter"/>
+	<Converters:GetFullConnectionStringConverter x:Key="GetFullConnectionStringConverter"/>
 	<Converters:StringEmptyToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedForValue"
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />

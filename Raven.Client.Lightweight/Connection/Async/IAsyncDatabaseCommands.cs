@@ -11,6 +11,9 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -137,7 +140,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Create a http request to the specified relative url on the current database
 		/// </summary>
-		Silverlight.Connection.HttpJsonRequest CreateRequest(string relativeUrl, string method);
+		HttpJsonRequest CreateRequest(string relativeUrl, string method);
 #endif
 
 		/// <summary>

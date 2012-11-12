@@ -175,12 +175,12 @@ namespace Raven.Client
 
 #endif
 
-		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query)
+		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query, bool isAsync = false)
 		{
 			if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
 				return;
 
-			var lastEqualityTerm = queryInspector.GetLastEqualityTerm();
+			var lastEqualityTerm = queryInspector.GetLastEqualityTerm(isAsync);
 			if (lastEqualityTerm.Key == null)
 				throw new InvalidOperationException("Could not suggest on a query that doesn't have a single equality check");
 
@@ -194,7 +194,7 @@ namespace Raven.Client
 		public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, SuggestionQuery query)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
+			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query, true);
 
 			return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.IndexQueried, query);
 		}

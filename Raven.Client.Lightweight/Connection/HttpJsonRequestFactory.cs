@@ -1,5 +1,9 @@
 ﻿using System;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Net;
 using System.Threading;
 using Raven.Abstractions.Extensions;

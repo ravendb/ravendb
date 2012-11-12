@@ -37,6 +37,7 @@ namespace Raven.Database.Indexing
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 		public string DatabaseName { get; set; }
+		public Dictionary<string,string> CountersNames = new Dictionary<string, string>();
 
 		public DateTime LastWorkTime { get; private set; }
 
@@ -395,8 +396,9 @@ namespace Raven.Database.Indexing
 			name = name ?? Constants.SystemDatabase;
 			try
 			{
-				SetupPreformanceCounter(name);
-				CreatePreformanceCounters(name);
+				SetupPreformanceCounterName(name);
+				SetupPreformanceCounter(CountersNames[name]);
+				CreatePreformanceCounters(CountersNames[name]);
 			}
 			catch (UnauthorizedAccessException e)
 			{
@@ -410,6 +412,28 @@ namespace Raven.Database.Indexing
 					"Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
 				useCounters = false;
 			}
+		}
+
+		private void SetupPreformanceCounterName(string name)
+		{
+			//For databases that has a long name
+			if (CountersNames.ContainsKey(name))
+				return;
+
+			string result = name;
+			//dealing with names who are very long (there is a limit of 80 chars for counter name)
+			if (result.Length > 60)
+			{
+				result = name.Remove(59);
+				int counter = 1;
+				while (PerformanceCounterCategory.Exists("RavenDB 2.0: " + result + counter))
+				{
+					counter++;
+				}
+				result = result + counter;
+			}
+
+			CountersNames.Add(name,result);
 		}
 
 		public void ReportIndexingActualBatchSize(int size)
