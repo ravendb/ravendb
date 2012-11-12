@@ -496,7 +496,7 @@ namespace Raven.Client.Connection
 
 			if (!primaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
 			{
-				webRequest.Headers.Add(Constants.RavenClientPrimaryServerUrl, primaryUrl);
+				webRequest.Headers.Add(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(primaryUrl));
 				webRequest.Headers.Add(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
 
 				this.primaryUrl = primaryUrl;
@@ -506,6 +506,14 @@ namespace Raven.Client.Connection
 			}
 
 			return this;
+		}
+
+		private static string ToRemoteUrl(string primaryUrl)
+		{
+			var uriBuilder = new UriBuilder(primaryUrl);
+			if(uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
+				uriBuilder.Host = Environment.MachineName;
+			return uriBuilder.Uri.ToString();
 		}
 
 		/// <summary>

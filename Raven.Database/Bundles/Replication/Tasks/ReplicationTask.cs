@@ -58,6 +58,11 @@ namespace Raven.Bundles.Replication.Tasks
 			get { return replicationFailureStats; }
 		}
 
+		public ConcurrentDictionary<string, DateTime> Heartbeats
+		{
+			get { return heartbeatDictionary; }
+		}
+
 		private int replicationAttempts;
 		private int workCounter;
 		private HttpRavenRequestFactory httpRavenRequestFactory;
@@ -226,7 +231,7 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 				catch (Exception e)
 				{
-					log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server restart", e);
+					log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
 				}
 			}
 		}
@@ -848,23 +853,15 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			ResetFailureForHeartbeat(src);
 
-			string entry;
-			if (!TryConvertUrlToIp(src, out entry))
-				entry = src;
-
-			heartbeatDictionary.AddOrUpdate(entry, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
+			heartbeatDictionary.AddOrUpdate(src, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
 		}
 
 		public bool IsHeartbeatAvailable(string src, DateTime lastCheck)
 		{
-			string entry;
-			if(!TryConvertUrlToIp(src, out entry))
-				entry = src;
-
-			if (heartbeatDictionary.ContainsKey(entry))
+			if (heartbeatDictionary.ContainsKey(src))
 			{
 				DateTime lastHeartbeat;
-				if (heartbeatDictionary.TryGetValue(entry, out lastHeartbeat))
+				if (heartbeatDictionary.TryGetValue(src, out lastHeartbeat))
 				{
 					return lastHeartbeat >= lastCheck;
 				}
@@ -873,24 +870,6 @@ namespace Raven.Bundles.Replication.Tasks
 			return false;
 		}
 
-		private bool TryConvertUrlToIp(string url, out string ipv4Address)
-		{
-			try
-			{
-				var uri = new Uri(url);
-				var addresses = Dns.GetHostAddresses(uri.IsLoopback ? Dns.GetHostEntry(uri.DnsSafeHost).HostName : uri.DnsSafeHost);
-
-				var ipv4 = addresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-
-				ipv4Address = ipv4 != null ? ipv4.ToString() : null;
-			}
-			catch (Exception)
-			{
-				ipv4Address = null;
-			}
-
-			return ipv4Address != null;
-		}
 
 		private void ResetFailureForHeartbeat(string src)
 		{
@@ -899,6 +878,6 @@ namespace Raven.Bundles.Replication.Tasks
 			docDb.WorkContext.NotifyAboutWork();
 		}
 
-		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>();
+		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 	}
 }

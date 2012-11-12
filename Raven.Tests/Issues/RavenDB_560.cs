@@ -1,17 +1,19 @@
-﻿namespace Raven.Tests.Issues
+﻿using System;
+using Raven.Bundles.Replication.Tasks;
+using System.Linq;
+using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Bundles.Tests.Replication;
+using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Database.Extensions;
+using Raven.Server;
+using Xunit;
+
+namespace Raven.Tests.Issues
 {
-	using System.Threading;
-
-	using Raven.Abstractions.Data;
-	using Raven.Bundles.Tests.Replication;
-	using Raven.Client.Connection;
-	using Raven.Client.Document;
-	using Raven.Client.Extensions;
-	using Raven.Database.Extensions;
-	using Raven.Server;
-
-	using Xunit;
-
+	
 	public class RavenDB_560 : ReplicationBase
 	{
 		public class Item
@@ -52,22 +54,22 @@
 				new DatabaseDocument
 				{
 					Id = "Northwind",
-					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D1\N" } }
+					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D1\N"}}
 				});
 
 			store2.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
-					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D2\N" } }
+					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D2\N"}}
 				});
 
 			var db1Url = store1.Url + "/databases/Northwind";
 			var db2Url = store2.Url + "/databases/Northwind";
 
-			this.SetupReplication(store1.DatabaseCommands, db2Url);
+			SetupReplication(store1.DatabaseCommands, db2Url);
 
-			var store = new DocumentStore
+			using (var store = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
 				Url = store1.Url,
@@ -75,47 +77,64 @@
 				{
 					FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
 				}
-			};
-
-			store.Initialize();
-			var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
-			replicationInformerForDatabase
-				.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands)
-				.Wait();
-
-			Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
-
-			using (var session = store.OpenSession())
+			})
 			{
-				session.Store(new Item());
-				session.SaveChanges();
+
+				store.Initialize();
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
+				replicationInformerForDatabase
+					.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
+					.Wait();
+
+				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item());
+					session.SaveChanges();
+				}
+
+				WaitForDocument(store2.DatabaseCommands, "items/1");
+
+				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
+
+				StopServer(server1);
+
+				// Fail few times so we will be sure that client does not try its primary url
+				for (int i = 0; i < 15; i++)
+				{
+					Assert.NotNull(store.DatabaseCommands.Get("items/1"));
+				}
+
+				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+
+				var replicationTask =
+					server2.Server.GetDatabaseInternal("Northwind").Result.StartupTasks.OfType<ReplicationTask>().First();
+				replicationTask.Heartbeats.Clear();
+
+				server1 = StartServer(server1);
+
+				Assert.NotNull(store1.DatabaseCommands.Get("items/1"));
+
+
+				while (true)
+				{
+					DateTime time;
+					if (replicationTask.Heartbeats.TryGetValue(db1Url.Replace("localhost", Environment.MachineName.ToLowerInvariant()), out time))
+					{
+						break;
+					}
+					Thread.Sleep(100);
+				}
+
+				Assert.NotNull(store.DatabaseCommands.Get("items/1"));
+
+				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+
+				Assert.NotNull(store.DatabaseCommands.Get("items/1"));
+
+				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
 			}
-
-			this.WaitForDocument(store2.DatabaseCommands, "items/1");
-
-			Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
-
-			this.StopServer(server1);
-
-			// Fail few times so we will be sure that client does not try its primary url
-			Assert.NotNull(store.DatabaseCommands.Get("items/1"));
-			Assert.NotNull(store.DatabaseCommands.Get("items/1"));
-
-			Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
-
-			server1 = this.StartServer(server1);
-
-			Assert.NotNull(store1.DatabaseCommands.Get("items/1"));
-
-			Thread.Sleep(2000);
-
-			Assert.NotNull(store.DatabaseCommands.Get("items/1"));
-
-			Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
-
-			Assert.NotNull(store.DatabaseCommands.Get("items/1"));
-
-			Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
 		}
 
 		[Fact]
@@ -144,14 +163,14 @@
 				new DatabaseDocument
 				{
 					Id = "Northwind",
-					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D1\N" } }
+					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D1\N"}}
 				});
 
 			store2.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
-					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D2\N" } }
+					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D2\N"}}
 				});
 
 			var db1Url = store1.Url + "/databases/Northwind";
@@ -159,7 +178,7 @@
 
 			this.SetupReplication(store1.DatabaseCommands, db2Url);
 
-			var store = new DocumentStore
+			using (var store = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
 				Url = store1.Url,
@@ -167,47 +186,62 @@
 				{
 					FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
 				}
-			};
-
-			store.Initialize();
-			var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
-			replicationInformerForDatabase
-				.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands)
-				.Wait();
-
-			Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
-
-			using (var session = store.OpenAsyncSession())
+			})
 			{
-				session.Store(new Item());
-				session.SaveChangesAsync().Wait();
+
+				store.Initialize();
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
+				replicationInformerForDatabase
+					.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
+					.Wait();
+
+				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
+
+				using (var session = store.OpenAsyncSession())
+				{
+					session.Store(new Item());
+					session.SaveChangesAsync().Wait();
+				}
+
+				this.WaitForDocument(store2.DatabaseCommands, "items/1");
+
+				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
+
+				this.StopServer(server1);
+
+				// Fail few times so we will be sure that client does not try its primary url
+				for (int i = 0; i < 15; i++)
+				{
+					Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
+				}
+				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+
+				var replicationTask =
+					server2.Server.GetDatabaseInternal("Northwind").Result.StartupTasks.OfType<ReplicationTask>().First();
+				replicationTask.Heartbeats.Clear();
+
+				server1 = this.StartServer(server1);
+
+				Assert.NotNull(store1.AsyncDatabaseCommands.GetAsync("items/1").Result);
+
+				while (true)
+				{
+					DateTime time;
+					if (replicationTask.Heartbeats.TryGetValue(db1Url.Replace("localhost", Environment.MachineName.ToLowerInvariant()), out time))
+					{
+						break;
+					}
+					Thread.Sleep(100);
+				}
+
+				Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
+
+				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+
+				Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
+
+				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
 			}
-
-			this.WaitForDocument(store2.DatabaseCommands, "items/1");
-
-			Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
-
-			this.StopServer(server1);
-
-			// Fail few times so we will be sure that client does not try its primary url
-			Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
-			Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
-
-			Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
-
-			server1 = this.StartServer(server1);
-
-			Assert.NotNull(store1.AsyncDatabaseCommands.GetAsync("items/1").Result);
-
-			Thread.Sleep(2000);
-
-			Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
-
-			Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
-
-			Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
-
-			Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
 		}
 
 		private RavenDbServer CreateServer(int port, string dataDirectory, bool removeDataDirectory = true)
