@@ -126,10 +126,11 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			MaxNumberOfCachedRequests = 2048;
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
+			Conventions = new DocumentConvention();
 #else
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string,string>();
+			Conventions = new DocumentConvention{AllowMultipuleOperations = true};
 #endif
-			Conventions = new DocumentConvention();
 		}
 
 		private string identifier;

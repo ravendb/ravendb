@@ -201,7 +201,7 @@ namespace Raven.Client.Connection.Async
 		{
 			var requestUri = url + "/indexes/" + name;
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
+				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
 			return webRequest.ExecuteRequestAsync()
@@ -281,14 +281,16 @@ namespace Raven.Client.Connection.Async
 		/// <param name="id">The id.</param>
 		public Task DeleteDocumentAsync(string id)
 		{
+#if !SILVERLIGHT
 			throw new NotImplementedException();
-
-			//return ExecuteWithReplication("DELETE", url =>
-			//{
-			//    return url.Docs(id)
-			//        .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
-			//        .ExecuteRequestAsync();
-			//});
+#else
+			return ExecuteWithReplication("DELETE", url =>
+			{
+			    return url.Docs(id)
+			        .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+			        .ExecuteRequestAsync();
+			});
+#endif
 		}
 
 		/// <summary>
@@ -549,7 +551,22 @@ namespace Raven.Client.Connection.Async
 
 		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
-			throw new NotImplementedException();
+			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
+			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
+		}
+
+		private Task UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+		{
+
+			return ExecuteWithReplication(method, operationUrl =>
+			{
+				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, path, method, credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
+				return request.ExecuteWriteAsync(requestData);
+			});
 		}
 
 		/// <summary>
@@ -597,12 +614,20 @@ namespace Raven.Client.Connection.Async
 
 		public Task<LicensingStatus> GetLicenseStatusAsync()
 		{
-			throw new NotImplementedException();
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/license/status").NoCache(), "GET", credentials, convention));
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => convention.CreateSerializer().Deserialize<LicensingStatus>(new RavenJTokenReader(task.Result)));
 		}
 
 		public Task<BuildNumber> GetBuildNumberAsync()
 		{
-			throw new NotImplementedException();
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/build/version").NoCache(), "GET", credentials, convention));
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(task.Result)));
 		}
 
 		public Task<LicensingStatus> GetLicenseStatus()
@@ -791,66 +816,136 @@ namespace Raven.Client.Connection.Async
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The include paths</param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", url => DirectQueryAsync(url, index, query, includes, metadataOnly));
-		}
-
-		private Task<QueryResult> DirectQueryAsync(string opUrl, string index, IndexQuery query, string[] includes, bool metadataOnly)
-		{
-			EnsureIsNotNullOrEmpty(index, "index");
-			var path = query.GetIndexQueryUrl(opUrl, index, "indexes");
-			if (metadataOnly)
-				path += "&metadata-only=true";
-			if (includes != null && includes.Length > 0)
+			return ExecuteWithReplication("GET", url =>
 			{
-				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
-			}
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
-				.AddOperationHeaders(OperationsHeaders));
-
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task =>
+				EnsureIsNotNullOrEmpty(index, "index");
+				var path = query.GetIndexQueryUrl(url, index, "indexes");
+				if (metadataOnly)
+					path += "&metadata-only=true";
+				if (includes != null && includes.Length > 0)
 				{
-					RavenJObject json;
-					try
-					{
-						json = (RavenJObject)task.Result;
-					}
-					catch (AggregateException e)
-					{
-						var we = e.ExtractSingleInnerException() as WebException;
-						if (we != null)
-						{
-							var httpWebResponse = we.Response as HttpWebResponse;
-							if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-							{
-								var text = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()).ReadToEnd();
-								if (text.Contains("maxQueryString"))
-									throw new InvalidOperationException(text, e);
-								throw new InvalidOperationException("There is no index named: " + index);
-							}
-						}
-						throw;
-					}
+					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+				}
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention));
 
-					var qr = new QueryResult
-					{
-						IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-						IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-						IndexEtag = request.GetEtagHeader(),
-						Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
-						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-						IndexName = json.Value<string>("IndexName"),
-						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
-					};
-					var docResults = qr.Results.Concat(qr.Includes);
-					return RetryOperationBecauseOfConflict(opUrl, docResults, qr,
-					                                       () => DirectQueryAsync(opUrl, index, query, includes, metadataOnly));
-
-				})
-				.Unwrap();
+				return request.ReadResponseJsonAsync()
+						.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject)task.Result, request.GetEtagHeader())));
+			});
 		}
+
+		private T AttemptToProcessResponse<T>(Func<T> process) where T : class
+		{
+			try
+			{
+				return process();
+			}
+			catch (AggregateException e)
+			{
+				var webException = e.ExtractSingleInnerException() as WebException;
+				if (webException == null)
+					throw;
+
+				if (HandleException(webException))
+					return null;
+
+				throw;
+			}
+		}
+
+		/// <summary>
+		/// Attempts to handle an exception raised when receiving a response from the server
+		/// </summary>
+		/// <param name="e">The exception to handle</param>
+		/// <returns>returns true if the exception is handled, false if it should be thrown</returns>
+		private bool HandleException(WebException e)
+		{
+			var httpWebResponse = e.Response as HttpWebResponse;
+			if (httpWebResponse == null)
+			{
+				return false;
+			}
+			if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+			{
+				var content = new StreamReader(httpWebResponse.GetResponseStream());
+				var jo = RavenJObject.Load(new JsonTextReader(content));
+				var error = jo.Deserialize<ServerRequestError>(convention);
+
+				throw new WebException(error.Error);
+			}
+			return false;
+		}
+
+		///// <summary>
+		///// Begins the async query.
+		///// </summary>
+		///// <param name="index">The index.</param>
+		///// <param name="query">The query.</param>
+		///// <param name="includes">The include paths</param>
+		///// <param name="metadataOnly">Load just the document metadata</param>
+		//public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
+		//{
+		//	return ExecuteWithReplication("GET", url => DirectQueryAsync(url, index, query, includes, metadataOnly));
+		//}
+
+		//private Task<QueryResult> DirectQueryAsync(string opUrl, string index, IndexQuery query, string[] includes, bool metadataOnly)
+		//{
+		//	EnsureIsNotNullOrEmpty(index, "index");
+		//	var path = query.GetIndexQueryUrl(opUrl, index, "indexes");
+		//	if (metadataOnly)
+		//		path += "&metadata-only=true";
+		//	if (includes != null && includes.Length > 0)
+		//	{
+		//		path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+		//	}
+
+		//	var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention)
+		//		.AddOperationHeaders(OperationsHeaders));
+
+		//	return request.ReadResponseJsonAsync()
+		//		.ContinueWith(task =>
+		//		{
+		//			RavenJObject json;
+		//			try
+		//			{
+		//				json = (RavenJObject)task.Result;
+		//			}
+		//			catch (AggregateException e)
+		//			{
+		//				var we = e.ExtractSingleInnerException() as WebException;
+		//				if (we != null)
+		//				{
+		//					var httpWebResponse = we.Response as HttpWebResponse;
+		//					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+		//					{
+		//						var text = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()).ReadToEnd();
+		//						if (text.Contains("maxQueryString"))
+		//							throw new InvalidOperationException(text, e);
+		//						throw new InvalidOperationException("There is no index named: " + index);
+		//					}
+		//				}
+		//				throw;
+		//			}
+
+		//			var qr = new QueryResult
+		//			{
+		//				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+		//				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+		//				IndexEtag = request.GetEtagHeader(),
+		//				Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
+		//				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+		//				IndexName = json.Value<string>("IndexName"),
+		//				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
+		//			};
+		//			var docResults = qr.Results.Concat(qr.Includes);
+		//			return RetryOperationBecauseOfConflict(opUrl, docResults, qr,
+		//												   () => DirectQueryAsync(opUrl, index, query, includes, metadataOnly));
+
+		//		})
+		//		.Unwrap();
+		//}
 
 		/// <summary>
 		/// Returns a list of suggestions based on the specified suggestion query.
@@ -1147,7 +1242,18 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public Task EnsureSilverlightStartUpAsync()
 		{
+#if !SILVERLIGHT
 			throw new NotImplementedException();
+#else
+			return ExecuteWithReplication("GET", url =>
+			{
+				return url
+					.SilverlightEnsuresStartup()
+					.NoCache()
+					.ToJsonRequest(this, credentials, convention)
+					.ReadResponseBytesAsync();
+			});
+#endif
 		}
 
 		///<summary>
@@ -1218,7 +1324,7 @@ namespace Raven.Client.Connection.Async
 		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
-			if (currentlyExecuting)
+			if (currentlyExecuting && convention.AllowMultipuleOperations == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
 
 			currentlyExecuting = true;

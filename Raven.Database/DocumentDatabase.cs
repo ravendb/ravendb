@@ -989,7 +989,7 @@ namespace Raven.Database
 				{
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator == null)
-						throw new InvalidOperationException("Could not find index named: " + index);
+						throw new IndexDoesNotExistsException("Could not find index named: " + index);
 
 					resultEtag = GetIndexEtag(index, null);
 

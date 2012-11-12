@@ -936,6 +936,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\QueryOperation.cs">
       <Link>Imports\Document\SessionOperations\QueryOperation.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Exceptions\ServerRequestError.cs">
+      <Link>Data\ServerRequestError.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>
@@ -1035,7 +1038,6 @@
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
-    <Compile Include="Data\ServerRequestError.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
