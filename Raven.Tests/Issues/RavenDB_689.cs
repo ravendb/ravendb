@@ -1,11 +1,9 @@
 ﻿namespace Raven.Tests.Issues
 {
-	using System;
 	using System.Threading;
 
 	using Raven.Bundles.Tests.Replication;
 	using Raven.Client;
-	using Raven.Client.Document;
 	using Raven.Client.Exceptions;
 
 	using Xunit;
@@ -20,18 +18,35 @@
 
 		public RavenDB_689()
 		{
-			this.RetriesCount = 100;
+			RetriesCount = 100;
 		}
 
+		/// <summary>
+		/// 3 machines
+		///   1 -> 3
+		///   1 -> 2
+		///   2 -> 1
+		///- Create users/1 on 1, let it replicate to 2, 3
+		///- Disconnect 1 from the network
+		///- Update users/1 on 2, let ir replicate 3
+		///- Update user/1 on 1 (still disconnected)
+		///- Disconnect 2, reconnect 1
+		///- Let the conflict happen on 3
+		///- Reconnect 2, let the conflict flow to 2 or 1
+		///- Resolve the conflict on the conflicted machine
+		///- Reconnect 3, should replicate the conflict resolution
+		///	**** Right now, it conflict on the conflict, which shouldn't be happening.
+		///	**** Show detect that this is successful resolution
+		/// </summary>
 		[Fact]
-		public void Test1()
+		public void TwoMastersOneSlaveReplicationIssue()
 		{
-			var store1 = this.CreateStore();
-			var store2 = this.CreateStore();
-			var store3 = this.CreateStore();
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+			var store3 = CreateStore();
 
-			this.SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			this.SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
 
 			using (var session = store1.OpenSession())
 			{
@@ -39,13 +54,13 @@
 				session.SaveChanges();
 			}
 
-			this.WaitForDocument(store2.DatabaseCommands, "users/1");
-			this.WaitForDocument(store3.DatabaseCommands, "users/1");
+			WaitForDocument(store2.DatabaseCommands, "users/1");
+			WaitForDocument(store3.DatabaseCommands, "users/1");
 
-			this.RemoveReplication(store1.DatabaseCommands);
-			this.RemoveReplication(store2.DatabaseCommands);
+			RemoveReplication(store1.DatabaseCommands);
+			RemoveReplication(store2.DatabaseCommands);
 
-			this.SetupReplication(store2.DatabaseCommands, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store3.Url);
 
 			using (var session = store2.OpenSession())
 			{
@@ -57,8 +72,8 @@
 
 			Thread.Sleep(3000);
 
-			Assert.Equal(1, this.WaitForDocument<User>(store1, "users/1").Tick);
-			Assert.Equal(2, this.WaitForDocument<User>(store3, "users/1").Tick);
+			Assert.Equal(1, WaitForDocument<User>(store1, "users/1").Tick);
+			Assert.Equal(2, WaitForDocument<User>(store3, "users/1").Tick);
 
 			using (var session = store1.OpenSession())
 			{
@@ -68,8 +83,8 @@
 				session.SaveChanges();
 			}
 
-			this.RemoveReplication(store2.DatabaseCommands);
-			this.SetupReplication(store1.DatabaseCommands, store3.Url);
+			RemoveReplication(store2.DatabaseCommands);
+			SetupReplication(store1.DatabaseCommands, store3.Url);
 
 			var conflictException = Assert.Throws<ConflictException>(() =>
 			{
@@ -85,10 +100,10 @@
 
 			Assert.Equal("Conflict detected on users/1, conflict must be resolved before the document will be accessible", conflictException.Message);
 
-			this.RemoveReplication(store1.DatabaseCommands);
-			this.RemoveReplication(store2.DatabaseCommands);
-			this.SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			this.SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			RemoveReplication(store1.DatabaseCommands);
+			RemoveReplication(store2.DatabaseCommands);
+			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
 
 			IDocumentStore store;
 
@@ -147,9 +162,9 @@
 
 			Thread.Sleep(3000);
 
-			Assert.Equal(expectedTick, this.WaitForDocument<User>(store1, "users/1").Tick);
-			Assert.Equal(expectedTick, this.WaitForDocument<User>(store2, "users/1").Tick);
-			Assert.Equal(expectedTick, this.WaitForDocument<User>(store3, "users/1").Tick);
+			Assert.Equal(expectedTick, WaitForDocument<User>(store1, "users/1").Tick);
+			Assert.Equal(expectedTick, WaitForDocument<User>(store2, "users/1").Tick);
+			Assert.Equal(expectedTick, WaitForDocument<User>(store3, "users/1").Tick);
 		}
 	}
 }
