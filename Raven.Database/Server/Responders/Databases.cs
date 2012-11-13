@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Responders
 {
@@ -46,7 +50,13 @@ namespace Raven.Database.Server.Responders
 			else
 			{
 				context.WriteHeaders(new RavenJObject(), lastDocEtag);
-				context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
+				var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, context.GetStart(),
+				                                                        context.GetPageSize(Database.Configuration.MaxPageSize));
+				var data = databases
+					.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+					.ToArray();
+
+				context.WriteJson(data);
 			}
 		}
 	}
