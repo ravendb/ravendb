@@ -1134,9 +1134,8 @@ namespace Raven.Client.Connection.Async
 				.ContinueWith(task =>
 				{
 					var json = (RavenJArray)task.Result;
-					var test= json.Select(x => x.ToString())
+					return json.Select(x => x.ToString())
 						.ToArray();
-					return test;
 				});
 		}
 
