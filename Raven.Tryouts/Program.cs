@@ -11,6 +11,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -18,17 +19,15 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			int x = int.MaxValue - 1;
-			Interlocked.Increment(ref x);
-			Interlocked.Increment(ref x);
-			Console.WriteLine(x);
-		}
-
-
-		public class Article
-		{
-			public string Text { get; set; }
-			public DateTime Date { get; set; }
+			for (int i = 0; i < 100; i++)
+			{
+				Console.Clear();
+				Console.WriteLine(i);
+				using(var x= new RavenDB_560())
+				{
+					x.ClientShouldGetInformationFromSecondaryServerThatItsPrimaryServerMightBeUp();
+				}
+			}
 		}
 	}
 }
