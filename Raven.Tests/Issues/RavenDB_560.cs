@@ -27,8 +27,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ClientShouldGetInformationFromSecondaryServerThatItsPrimaryServerMightBeUp()
 		{
-			server1 = this.CreateServer(8111, "D1");
-			server2 = this.CreateServer(8112, "D2");
+			server1 = CreateServer(8111, "D1");
+			server2 = CreateServer(8112, "D2");
 
 			store1 = new DocumentStore
 			{
