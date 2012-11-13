@@ -1,10 +1,15 @@
 ﻿namespace Raven.Tests.Issues
 {
+	using System;
+	using System.IO;
 	using System.Threading;
 
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Extensions;
 	using Raven.Bundles.Tests.Replication;
 	using Raven.Client;
 	using Raven.Client.Exceptions;
+	using Raven.Json.Linq;
 
 	using Xunit;
 	using Xunit.Sdk;
@@ -14,11 +19,6 @@
 		public class User
 		{
 			public long Tick { get; set; }
-		}
-
-		public RavenDB_689()
-		{
-			RetriesCount = 100;
 		}
 
 		/// <summary>
@@ -39,7 +39,111 @@
 		///	**** Show detect that this is successful resolution
 		/// </summary>
 		[Fact]
-		public void TwoMastersOneSlaveReplicationIssue()
+		public void TwoMastersOneSlaveAttachmentReplicationIssue()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+			var store3 = CreateStore();
+
+			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+
+			store1.DatabaseCommands.PutAttachment("users/1", null, new MemoryStream(new byte[] { 1 }), new RavenJObject());
+
+			WaitForAttachement(store2, "users/1");
+			WaitForAttachement(store3, "users/1");
+
+			RemoveReplication(store1.DatabaseCommands);
+			RemoveReplication(store2.DatabaseCommands);
+
+			SetupReplication(store2.DatabaseCommands, store3.Url);
+
+			var attachment = store2.DatabaseCommands.GetAttachment("users/1");
+			store2.DatabaseCommands.PutAttachment("users/1", attachment.Etag, new MemoryStream(new byte[] { 2 }), attachment.Metadata);
+
+			Thread.Sleep(TimeSpan.FromSeconds(5));
+
+			WaitForAttachment(store1, "users/1", a => Assert.Equal(new byte[] { 1 }, a.Data().ReadData()));
+			WaitForAttachment(store3, "users/1", a => Assert.Equal(new byte[] { 2 }, a.Data().ReadData()));
+
+			attachment = store1.DatabaseCommands.GetAttachment("users/1");
+			store1.DatabaseCommands.PutAttachment("users/1", attachment.Etag, new MemoryStream(new byte[] { 3 }), attachment.Metadata);
+
+			RemoveReplication(store2.DatabaseCommands);
+			SetupReplication(store1.DatabaseCommands, store3.Url);
+
+			var conflictException = Assert.Throws<ConflictException>(() =>
+			{
+				for (int i = 0; i < RetriesCount; i++)
+				{
+					store3.DatabaseCommands.GetAttachment("users/1");
+					Thread.Sleep(100);
+				}
+			});
+
+			Assert.Equal("Conflict detected on users/1, conflict must be resolved before the attachment will be accessible", conflictException.Message);
+
+			RemoveReplication(store1.DatabaseCommands);
+			RemoveReplication(store2.DatabaseCommands);
+			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+
+			IDocumentStore store;
+
+			try
+			{
+				conflictException = Assert.Throws<ConflictException>(() =>
+				{
+					for (int i = 0; i < RetriesCount; i++)
+					{
+						store1.DatabaseCommands.GetAttachment("users/1");
+						Thread.Sleep(100);
+					}
+				});
+
+				store = store1;
+			}
+			catch (ThrowsException)
+			{
+				conflictException = Assert.Throws<ConflictException>(() =>
+				{
+					for (int i = 0; i < RetriesCount; i++)
+					{
+						store2.DatabaseCommands.GetAttachment("users/1");
+						Thread.Sleep(100);
+					}
+				});
+
+				store = store2;
+			}
+
+			Assert.Equal("Conflict detected on users/1, conflict must be resolved before the attachment will be accessible", conflictException.Message);
+
+			byte[] expectedData = null;
+
+			try
+			{
+				store.DatabaseCommands.GetAttachment("users/1");
+			}
+			catch (ConflictException e)
+			{
+				var c1 = store.DatabaseCommands.GetAttachment(e.ConflictedVersionIds[0]);
+				var c2 = store.DatabaseCommands.GetAttachment(e.ConflictedVersionIds[1]);
+
+				expectedData = c1.Data().ReadData();
+
+				store.DatabaseCommands.PutAttachment("users/1", null, new MemoryStream(expectedData), c1.Metadata);
+			}
+
+			Thread.Sleep(TimeSpan.FromSeconds(10));
+
+			WaitForAttachment(store1, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
+			WaitForAttachment(store2, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
+			WaitForAttachment(store3, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
+		}
+
+		[Fact]
+		public void TwoMastersOneSlaveDocumentReplicationIssue()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -70,7 +174,7 @@
 				session.SaveChanges();
 			}
 
-			Thread.Sleep(3000);
+			Thread.Sleep(TimeSpan.FromSeconds(5));
 
 			Assert.Equal(1, WaitForDocument<User>(store1, "users/1").Tick);
 			Assert.Equal(2, WaitForDocument<User>(store3, "users/1").Tick);
@@ -160,11 +264,41 @@
 				expectedTick = long.Parse(c1.DataAsJson["Tick"].ToString());
 			}
 
-			Thread.Sleep(3000);
+			Thread.Sleep(TimeSpan.FromSeconds(5));
 
 			Assert.Equal(expectedTick, WaitForDocument<User>(store1, "users/1").Tick);
 			Assert.Equal(expectedTick, WaitForDocument<User>(store2, "users/1").Tick);
 			Assert.Equal(expectedTick, WaitForDocument<User>(store3, "users/1").Tick);
+		}
+
+		private void WaitForAttachment(IDocumentStore store, string attachmentId, Action<Attachment> assert)
+		{
+			Attachment attachment = null;
+			Exception lastException = null;
+
+			for (var i = 0; i < RetriesCount; i++)
+			{
+				try
+				{
+					attachment = WaitForAttachement(store, attachmentId);
+					assert(attachment);
+
+					return;
+				}
+				catch (Exception e)
+				{
+					lastException = e;
+				}
+
+				Thread.Sleep(100);
+			}
+
+			if (lastException != null)
+			{
+				throw lastException;
+			}
+
+			throw new Exception("Assert failed from unknown reason.");
 		}
 	}
 }

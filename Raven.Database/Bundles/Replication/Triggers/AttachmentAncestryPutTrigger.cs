@@ -37,22 +37,25 @@ namespace Raven.Bundles.Replication.Triggers
 				var attachmentMetadata = GetAttachmentMetadata(key);
 				if (attachmentMetadata != null)
 				{
-					var history = attachmentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
-					              new RavenJArray();
+					var history = attachmentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
 					metadata[Constants.RavenReplicationHistory] = history;
 
-					history.Add(new RavenJObject
+					if (attachmentMetadata.ContainsKey(Constants.RavenReplicationVersion) &&
+						attachmentMetadata.ContainsKey(Constants.RavenReplicationSource))
 					{
-						{Constants.RavenReplicationVersion, attachmentMetadata[Constants.RavenReplicationVersion]},
-						{Constants.RavenReplicationSource, attachmentMetadata[Constants.RavenReplicationSource]}
-
-					});
+						history.Add(new RavenJObject
+						{
+							{Constants.RavenReplicationVersion, attachmentMetadata[Constants.RavenReplicationVersion]},
+							{Constants.RavenReplicationSource, attachmentMetadata[Constants.RavenReplicationSource]}
+						});
+					}
 
 					if (history.Length > Constants.ChangeHistoryLength)
 					{
 						history.RemoveAt(0);
 					}
 				}
+
 				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
 				metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
 			}
