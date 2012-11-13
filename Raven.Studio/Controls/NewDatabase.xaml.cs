@@ -2,17 +2,32 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Raven.Abstractions.Data;
+using Raven.Client.Document;
+using Raven.Json.Linq;
+using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
+using Raven.Client.Connection;
 
 namespace Raven.Studio.Controls
 {
 	public partial class NewDatabase : ChildWindow
 	{
 		public List<string> Bundles { get; private set; }
+		public Observable<LicensingStatus> LicensingStatus { get; set; }
 
 		public NewDatabase()
 		{
+			LicensingStatus = new Observable<LicensingStatus>();
 			InitializeComponent();
-			DataContext = this;
+			var req = ApplicationModel.DatabaseCommands.ForDefaultDatabase().CreateRequest("/license/status", "GET");
+
+			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
+			{
+				LicensingStatus.Value = ((RavenJObject)doc).Deserialize<LicensingStatus>(new DocumentConvention());
+			});
+
+			
 			Bundles = new List<string>();
 			KeyDown += (sender, args) =>
 			{
@@ -67,7 +82,7 @@ namespace Raven.Studio.Controls
 				return;
 
 			var checkbox = FindName(textblock.Text.Split(null)[0]) as CheckBox;
-			if (checkbox == null)
+			if (checkbox == null || checkbox.IsEnabled == false)
 				return;
 			checkbox.IsChecked = !checkbox.IsChecked;
 		}

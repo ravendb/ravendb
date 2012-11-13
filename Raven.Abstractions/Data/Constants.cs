@@ -6,6 +6,18 @@ namespace Raven.Abstractions.Data
 {
 	public static class Constants
 	{
+		static Constants()
+		{
+			InDatabaseKeyVerificationDocumentContents = new RavenJObject
+			{
+				{"Text", "The encryption is correct."}
+			};
+			InDatabaseKeyVerificationDocumentContents.EnsureSnapshot();
+		}
+		
+		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
+		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
+		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 		
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
@@ -34,6 +46,7 @@ namespace Raven.Abstractions.Data
 		public const string NotForReplication = "Raven-Not-For-Replication";
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 		public const string ActiveBundles = "Raven/ActiveBundles";
+		public const string RavenAlerts = "Raven/Alerts";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
@@ -47,9 +60,7 @@ namespace Raven.Abstractions.Data
 		public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
 
 		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
-		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents = new RavenJObject {
-			{ "Text", "The encryption is correct." }
-		};
+		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents;
 
 		public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
 		public const int MinimumAcceptableEncryptionKeyLength = 64 / 8;

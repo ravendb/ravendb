@@ -114,6 +114,10 @@ namespace Raven.Database.Extensions
 			return new Sort(self.SortedFields
 							.Select(sortedField =>
 							{
+								if (sortedField.Field == Constants.TemporaryScoreValue)
+								{
+									return SortField.FIELD_SCORE;
+								}
 								if(sortedField.Field.StartsWith(Constants.RandomFieldName))
 								{
 									var parts = sortedField.Field.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
@@ -123,7 +127,7 @@ namespace Raven.Database.Extensions
 								}
 								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
 								{
-									var shape = SpatialIndex.ShapeReadWriter.ReadShape(spatialQuery.QueryShape);
+									var shape = SpatialIndex.ReadShape(spatialQuery.QueryShape);
 									var dsort = new SpatialDistanceFieldComparatorSource(shape.GetCenter());
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}

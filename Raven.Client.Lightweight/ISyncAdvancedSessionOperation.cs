@@ -1,15 +1,10 @@
-#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ISyncAdvancedSessionOperation.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35
-using Raven.Abstractions.Data;
+#if !SILVERLIGHT
 using Raven.Client.Document.Batches;
-using Raven.Client.Connection.Async;
-#endif
-using Raven.Client.Connection;
 using System.Collections.Generic;
 using Raven.Client.Indexes;
 
@@ -31,7 +26,6 @@ namespace Raven.Client
 		/// </summary>
 		IEnumerable<T> LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25);
 
-#if !NET35
 		/// <summary>
 		/// Access the lazy operations
 		/// </summary>
@@ -41,7 +35,6 @@ namespace Raven.Client
 		/// Access the eager operations
 		/// </summary>
 		IEagerSessionOperations Eagerly { get; }
-#endif
 
 		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.

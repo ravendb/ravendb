@@ -6,12 +6,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
-using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -32,18 +29,18 @@ namespace Raven.Bundles.Tests.Replication
 		private const int PortRangeStart = 8079;
 		protected int RetriesCount = 500;
 
-		public IDocumentStore CreateStore(Action<DocumentStore> configureStore = null)
+		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null)
 		{
 			var port = PortRangeStart - servers.Count;
-			return CreateStoreAtPort(port, configureStore);
+			return CreateStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore);
 		}
 
-		private IDocumentStore CreateStoreAtPort(int port, Action<DocumentStore> configureStore = null)
+		private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null)
 		{
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
 									  {
-										  Settings = { { "Raven/ActiveBundles", "replication" } },
+										  Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
 										  AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
 										  DataDirectory = "Data #" + servers.Count,
 										  RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
@@ -52,7 +49,11 @@ namespace Raven.Bundles.Tests.Replication
 										  DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
 									  };
 			ConfigureServer(serverConfiguration);
-			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
+			if (removeDataDirectory)
+			{
+				IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
+			}
+
 			serverConfiguration.PostInit();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			servers.Add(ravenDbServer);
@@ -75,7 +76,7 @@ namespace Raven.Bundles.Tests.Replication
 		{
 		}
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			var err = new List<Exception>();
 			foreach (var documentStore in stores)
@@ -107,6 +108,35 @@ namespace Raven.Bundles.Tests.Replication
 				throw new AggregateException(err);
 		}
 
+		public void StopDatabase(int index)
+		{
+			var previousServer = servers[index];
+			previousServer.Dispose();
+		}
+
+		public void StartDatabase(int index)
+		{
+			var previousServer = servers[index];
+
+			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.Database.Configuration.Port);
+			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
+			{
+				Settings = { { "Raven/ActiveBundles", "replication" } },
+				AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
+				DataDirectory = previousServer.Database.Configuration.DataDirectory,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				RunInMemory = previousServer.Database.Configuration.RunInMemory,
+				Port = previousServer.Database.Configuration.Port,
+				DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
+			};
+			ConfigureServer(serverConfiguration);
+
+			serverConfiguration.PostInit();
+			var ravenDbServer = new RavenDbServer(serverConfiguration);
+
+			servers[index] = ravenDbServer;
+		}
+
 		public IDocumentStore ResetDatabase(int index)
 		{
 			stores[index].Dispose();
@@ -133,7 +163,10 @@ namespace Raven.Bundles.Tests.Replication
 			RunReplication(stores[src], stores[dest]);
 		}
 
-		protected void RunReplication(IDocumentStore source, IDocumentStore destination, TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None)
+		protected void RunReplication(IDocumentStore source, IDocumentStore destination,
+			TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None,
+			bool disabled = false,
+			bool ignoredClient = false)
 		{
 			Console.WriteLine("Replicating from {0} to {1}.", source.Url, destination.Url);
 			using (var session = source.OpenSession())
@@ -142,6 +175,8 @@ namespace Raven.Bundles.Tests.Replication
 				{
 					Url = destination.Url.Replace("localhost", "ipv4.fiddler"),
 					TransitiveReplicationBehavior = transitiveReplicationBehavior,
+					Disabled = disabled,
+					IgnoredClient = ignoredClient
 				};
 				SetupDestination(replicationDestination);
 				session.Store(new ReplicationDocument

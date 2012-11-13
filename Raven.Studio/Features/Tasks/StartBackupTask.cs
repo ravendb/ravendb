@@ -40,8 +40,10 @@ namespace Raven.Studio.Features.Tasks
 					{
 						Output.Add("[" + backupMessage.Timestamp + "]   	" + backupMessage.Severity + " :    	"+ backupMessage.Message);	
 					}
-				})
-				.Finally(() => TaskStatus = TaskStatus.Ended);
+
+					if(Status.Completed != null)
+						TaskStatus = TaskStatus.Ended;
+				});
 		}
 	}
 }

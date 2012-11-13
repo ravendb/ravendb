@@ -19,11 +19,8 @@ using Raven.Client.Silverlight.Connection;
 #else
 using Raven.Client.Indexes;
 #endif
-#if !NET35
 using Raven.Client.Connection.Async;
-using Raven.Client.Util;
 
-#endif
 
 namespace Raven.Client
 {
@@ -85,8 +82,6 @@ namespace Raven.Client
 		/// <returns></returns>
 		IDocumentStore Initialize();
 
-
-#if !NET35
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
@@ -104,7 +99,6 @@ namespace Raven.Client
 		/// </summary>
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
-#endif
 
 #if !SILVERLIGHT
 		/// <summary>

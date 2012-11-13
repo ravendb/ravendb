@@ -1,11 +1,5 @@
-#if !NET35
-
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Linq;
-using Raven.Client.Document;
 
 namespace Raven.Client.Connection.Profiling
 {
@@ -23,6 +17,7 @@ namespace Raven.Client.Connection.Profiling
 		/// </summary>
 		public void RecordAction(object sender, RequestResultArgs requestResultArgs)
 		{
+
 			var profilingInformationHolder = sender as IHoldProfilingInformation;
 			if (profilingInformationHolder == null)
 				return;
@@ -45,5 +40,3 @@ namespace Raven.Client.Connection.Profiling
 		}
 	}
 }
-
-#endif

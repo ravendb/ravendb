@@ -762,6 +762,19 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Generate the next identity value from the server
+		/// </summary>
+		public long NextIdentityFor(string name)
+		{
+			long nextIdentityValue = -1;
+			database.TransactionalStorage.Batch(accessor =>
+			{
+				nextIdentityValue = accessor.General.GetNextIdentityValue(name);
+			});
+			return nextIdentityValue;
+		}
+
+		/// <summary>
 		/// Get the full URL for the given document key. This is not supported for embedded database.
 		/// </summary>
 		public string UrlFor(string documentKey)

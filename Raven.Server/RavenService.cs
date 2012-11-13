@@ -47,12 +47,23 @@ namespace Raven.Server
 
 		protected override void OnStop()
 		{
-			startTask.ContinueWith(task =>
+			var shutdownTask = startTask.ContinueWith(task =>
 			{
-				if (server != null)
+				if(server != null) 
 					server.Dispose();
 				return task;
-			}).Wait();
+			});
+			var keepAliveTask = Task.Factory.StartNew(() => 
+			{
+				if(shutdownTask.Wait(9000))
+					return;
+				do 
+				{
+					RequestAdditionalTime(10000);
+				} while(shutdownTask.Wait(9000));
+			});
+
+			Task.WaitAll(shutdownTask, keepAliveTask);
 
 		}
 	}

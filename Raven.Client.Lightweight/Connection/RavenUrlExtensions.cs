@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-#if !NET35
 using Raven.Client.Connection.Async;
-#endif
 using Raven.Client.Document;
+#if SILVERLIGHT
+using System.Windows.Browser;
+using Raven.Client.Silverlight.Connection;
+#endif
 
 namespace Raven.Client.Connection
 {
@@ -50,11 +52,12 @@ namespace Raven.Client.Connection
 		{
 			return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
 		}
-
-		//public static string Docs(this string url, string key)
-		//{
-		//    return url + "/docs/" + HttpUtility.UrlEncode(key);
-		//}
+#if SILVERLIGHT
+		public static string Docs(this string url, string key)
+		{
+			return url + "/docs/" + HttpUtility.UrlEncode(key);
+		}
+#endif
 
 		public static string Docs(this string url, int start, int pageSize)
 		{
@@ -83,7 +86,6 @@ namespace Raven.Client.Connection
 			return new Uri(url);
 		}
 
-#if !NET35
 		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, Document.DocumentConvention convention)
 		{
 			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
@@ -97,6 +99,5 @@ namespace Raven.Client.Connection
 			
 			return httpJsonRequest;
 		}
-#endif
 	}
 }

@@ -117,7 +117,7 @@ namespace Raven.Database.Data
 				TransformResults = DynamicAggregation ? AggregationReducePart() : null,
 			};
 
-			if(DynamicAggregation)
+			if (DynamicAggregation)
 			{
 				foreach (var item in GroupByItems)
 				{
@@ -162,7 +162,7 @@ namespace Raven.Database.Data
 						AppendSelectClauseForReduce(sb);
 
 
-						if(DynamicAggregation == false)
+						if (DynamicAggregation == false)
 							sb.AppendLine("\tCount = g.Sum(x=>x.Count)");
 						else
 							sb.AppendLine("\tCount = g.Count()");
@@ -234,11 +234,13 @@ namespace Raven.Database.Data
 		{
 			var fields = SimpleQueryParser.GetFieldsForDynamicQuery(query);
 
-			if(query.SortedFields != null)
+			if (query.SortedFields != null)
 			{
 				foreach (var sortedField in query.SortedFields)
 				{
-					if(sortedField.Field.StartsWith(Constants.RandomFieldName))
+					if (sortedField.Field.StartsWith(Constants.RandomFieldName))
+						continue;
+					if (sortedField.Field == Constants.TemporaryScoreValue)
 						continue;
 					fields.Add(Tuple.Create(sortedField.Field, sortedField.Field));
 				}
@@ -270,7 +272,7 @@ namespace Raven.Database.Data
 		}
 
 		static readonly Regex replaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
-		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<Tuple<string,string>> fields)
+		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<Tuple<string, string>> fields)
 		{
 			if (query.GroupBy != null && query.GroupBy.Length > 0)
 			{
@@ -281,8 +283,8 @@ namespace Raven.Database.Data
 					QueryFrom = x
 				}).ToArray();
 			}
-			if (DynamicAggregation == false && 
-				AggregationOperation != AggregationOperation.None && 
+			if (DynamicAggregation == false &&
+				AggregationOperation != AggregationOperation.None &&
 				query.GroupBy != null && query.GroupBy.Length > 0)
 			{
 				Items = GroupByItems;
@@ -294,11 +296,11 @@ namespace Raven.Database.Data
 					From = x.Item1,
 					To = ReplaceIndavlidCharactersForFields(x.Item2),
 					QueryFrom = x.Item2
-				}).OrderByDescending(x=>x.QueryFrom.Length).ToArray();
+				}).OrderByDescending(x => x.QueryFrom.Length).ToArray();
 				if (GroupByItems != null && DynamicAggregation)
 				{
 					Items = Items.Concat(GroupByItems).OrderByDescending(x => x.QueryFrom.Length).ToArray();
-					var groupBys = GroupByItems.Select(x=>x.To).ToArray();
+					var groupBys = GroupByItems.Select(x => x.To).ToArray();
 					query.FieldsToFetch = query.FieldsToFetch == null ?
 						groupBys :
 						query.FieldsToFetch.Concat(groupBys).ToArray();
@@ -321,6 +323,9 @@ namespace Raven.Database.Data
 			{
 				String[] split = sortHintHeader.Split(sortHintHeader.Contains("-") ? '-' : '_'); // we only use _ for backward compatibility
 				String fieldName = Uri.UnescapeDataString(split[1]);
+				if (fieldName == Constants.TemporaryScoreValue)
+					continue;
+
 				if (fieldName.EndsWith("_Range"))
 					fieldName = fieldName.Substring(0, fieldName.Length - "_Range".Length);
 				string fieldType = headers[sortHintHeader];

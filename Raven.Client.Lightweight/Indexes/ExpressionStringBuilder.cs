@@ -3,12 +3,10 @@
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
 // //-----------------------------------------------------------------------
-#if !NET35
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -282,31 +280,31 @@ namespace Raven.Client.Indexes
 			{
 				Out("((decimal)");
 			}
-			if (memberType == typeof(double))
+			else if (memberType == typeof(double))
 			{
 				Out("((double)");
 			}
-			if (memberType == typeof(long))
+			else if (memberType == typeof(long))
 			{
 				Out("((long)");
 			}
-			if (memberType == typeof(float))
+			else if (memberType == typeof(float))
 			{
 				Out("((float)");
 			}
-			if (memberType == typeof(decimal?))
+			else if (memberType == typeof(decimal?))
 			{
 				Out("((decimal?)");
 			}
-			if (memberType == typeof(double?))
+			else if (memberType == typeof(double?))
 			{
 				Out("((double?)");
 			}
-			if (memberType == typeof(long?))
+			else if (memberType == typeof(long?))
 			{
 				Out("((long?)");
 			}
-			if (memberType == typeof(float?))
+			else if (memberType == typeof(float?))
 			{
 				Out("((float?)");
 			}
@@ -743,54 +741,187 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitConstant(ConstantExpression node)
 		{
-			if (node.Value != null)
+			if (node.Value == null)
 			{
-				var s = Convert.ToString(node.Value, CultureInfo.InvariantCulture);
-				if (node.Value is string)
-				{
-					Out("\"");
-					Out(s);
-					Out("\"");
-					return node;
-				}
-				if (node.Value is bool)
-				{
-					Out(node.Value.ToString().ToLower());
-					return node;
-				}
-				if (node.Value is char)
-				{
-					Out("'");
-					Out(s);
-					Out("'");
-					return node;
-				}
-				if (node.Value is Enum)
-				{
-					var enumType = node.Value.GetType();
-					if (TypeExistsOnServer(enumType))
-					{
-						Out(enumType.FullName.Replace("+", "."));
-						Out('.');
-						Out(s);
-						return node;
-					}
-					Out('"');
-					Out(node.Value.ToString());
-					Out('"');
-					return node;
-				}
-				if (node.Value is decimal)
-				{
-					Out(s);
-					Out('M');
-					return node;
-				}
-				Out(s);
+				// Avoid converting/casting the type, if it already converted/casted.
+				if (IsLastOperatorIs('='))
+					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
+				Out("null");
 				return node;
 			}
-			Out("null");
+
+			var s = Convert.ToString(node.Value, CultureInfo.InvariantCulture);
+			if (node.Value is string)
+			{
+				Out("\"");
+				Out(s);
+				Out("\"");
+				return node;
+			}
+			if (node.Value is bool)
+			{
+				Out(node.Value.ToString().ToLower());
+				return node;
+			}
+			if (node.Value is char)
+			{
+				Out("'");
+				Out(s);
+				Out("'");
+				return node;
+			}
+			if (node.Value is Enum)
+			{
+				var enumType = node.Value.GetType();
+				if (TypeExistsOnServer(enumType))
+				{
+					Out(enumType.FullName.Replace("+", "."));
+					Out('.');
+					Out(s);
+					return node;
+				}
+				Out('"');
+				Out(node.Value.ToString());
+				Out('"');
+				return node;
+			}
+			if (node.Value is decimal)
+			{
+				Out(s);
+				Out('M');
+				return node;
+			}
+			Out(s);
 			return node;
+		}
+
+		private bool IsLastOperatorIs(char s)
+		{
+			var i = _out.Length - 1;
+			while (i >= 0 && i < _out.Length)
+			{
+				var lastChar = _out[i];
+				if (lastChar != ' ')
+				{
+					return lastChar == s;
+				}
+				--i;
+			}
+
+			return false;
+		}
+
+		private void ConvertTypeToCSharpKeywordIncludeNullable(Type type)
+		{
+			var nonNullableType = Nullable.GetUnderlyingType(type);
+			type = nonNullableType ?? type;
+			var isNullableType = nonNullableType != null;
+
+			// we only cast enums and types is mscorlib. We don't support anything else
+			// because the VB compiler like to put converts all over the place, and include
+			// types that we can't really support (only exists on the client)
+			if (ShouldConvert(type) == false)
+				return;
+
+			Out("(");
+			Out(ConvertTypeToCSharpKeyword(type));
+
+			if (isNullableType && nonNullableType != typeof(Guid))
+			{
+				Out("?");
+			}
+			Out(")");
+		}
+
+		private string ConvertTypeToCSharpKeyword(Type type)
+		{
+			if (type == typeof(string))
+			{
+				return "string";
+			}
+			if (type == typeof(Guid) || type == typeof(Guid?))
+			{
+				return "string"; // on the server, Guids are represented as strings
+			}
+			if (type == typeof(char))
+			{
+				return "char";
+			}
+			if (type == typeof(bool))
+			{
+				return "bool";
+			}
+			if (type == typeof(bool?))
+			{
+				return "bool?";
+			}
+			if (type == typeof (decimal))
+			{
+				return "decimal";
+			}
+			if (type == typeof (decimal?))
+			{
+				return "decimal?";
+			}
+			if (type == typeof (double))
+			{
+				return "double";
+			}
+			if (type == typeof (double?))
+			{
+				return "double?";
+			}
+			if (type == typeof (float))
+			{
+				return "float";
+			}
+			if (type == typeof (float?))
+			{
+				return "float?";
+			}
+
+			if (type == typeof (long))
+			{
+				return "long";
+			}
+			if (type == typeof(long?))
+			{
+				return "long?";
+			}
+			if (type == typeof(int))
+			{
+				return "int";
+			}
+			if (type == typeof(int?))
+			{
+				return "int?";
+			}
+			if (type == typeof(short))
+			{
+				return "short";
+			}
+			if (type == typeof(short?))
+			{
+				return "short?";
+			}
+			if (type == typeof(byte))
+			{
+				return "byte";
+			}
+			if (type == typeof(byte?))
+			{
+				return "byte?";
+			}
+
+			if (type.FullName == "System.Object")
+			{
+				return "object";
+			}
+
+			const string knownNamespace = "System";
+			if (knownNamespace == type.Namespace)
+				return type.Name;
+			return type.FullName;
 		}
 
 		private bool TypeExistsOnServer(Type type)
@@ -1116,6 +1247,11 @@ namespace Raven.Client.Indexes
 			else
 			{
 				Visit(node.NewExpression);
+				if (TypeExistsOnServer(node.Type) == false)
+				{
+					const int removeLength = 2;
+					_out.Remove(_out.Length - removeLength, removeLength);
+				}
 			}
 			Out(" {");
 			var num = 0;
@@ -1226,7 +1362,7 @@ namespace Raven.Client.Indexes
 				{
 					Visit(expression);
 				}
-				if (node.Method.Name != "get_Item") // VB indexer
+				if (IsIndexerCall(node) == false)
 				{
 					Out(".");
 				}
@@ -1236,14 +1372,14 @@ namespace Raven.Client.Indexes
 				Out(node.Method.DeclaringType.Name);
 				Out(".");
 			}
-			if (node.Method.Name != "get_Item") // VB indexer
+			if (IsIndexerCall(node))
 			{
-				Out(node.Method.Name);
-				Out("(");
+				Out("[");
 			}
 			else
 			{
-				Out("[");
+				Out(node.Method.Name);
+				Out("(");
 			}
 			var num2 = num;
 			var count = node.Arguments.Count;
@@ -1276,8 +1412,13 @@ namespace Raven.Client.Indexes
 				}
 				num2++;
 			}
-			Out(node.Method.Name != "get_Item" ? ")" : "]");
+			Out(IsIndexerCall(node) ? "]" : ")");
 			return node;
+		}
+
+		private static bool IsIndexerCall(MethodCallExpression node)
+		{
+			return node.Method.IsSpecialName && (node.Method.Name.StartsWith("get_") || node.Method.Name.StartsWith("set_"));
 		}
 
 		private static bool IsExtensionMethod(MethodCallExpression node)
@@ -1320,8 +1461,15 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitNew(NewExpression node)
 		{
 			Out("new ");
-			VisitType(node.Type);
-			Out("(");
+			if (TypeExistsOnServer(node.Type))
+			{
+				VisitType(node.Type);
+				Out("(");
+			}
+			else
+			{
+				Out("{");
+			}
 			for (var i = 0; i < node.Arguments.Count; i++)
 			{
 				if (i > 0)
@@ -1344,27 +1492,17 @@ namespace Raven.Client.Indexes
 
 				Visit(node.Arguments[i]);
 			}
-			Out(")");
+			if (TypeExistsOnServer(node.Type))
+			{
+				Out(")");
+			}
+			else
+			{
+				Out("}");
+			}
 			return node;
 		}
 
-		private static readonly Dictionary<Type, string> wellKnownTypes = new Dictionary<Type, string>
-		{
-			{typeof (object), "object"},
-			{typeof (string), "string"},
-			{typeof (int), "int"},
-			{typeof (long), "long"},
-			{typeof (float), "float"},
-			{typeof (double), "double"},
-			{typeof (decimal), "decimal"},
-			{typeof (bool), "bool"},
-			{typeof (char), "char"},
-			{typeof (byte), "byte"},
-			{typeof (Guid), "Guid"},
-			{typeof (DateTime), "DateTime"},
-			{typeof (DateTimeOffset), "DateTimeOffset"},
-			{typeof (TimeSpan), "TimeSpan"},
-		};
 		private void VisitType(Type type)
 		{
 			if (type.IsGenericType == false || CheckIfAnonymousType(type))
@@ -1387,13 +1525,7 @@ namespace Raven.Client.Indexes
 					Out("?");
 					return;
 				}
-				string value;
-				if(wellKnownTypes.TryGetValue(type, out value))
-				{
-					Out(value);
-					return;
-				}
-				Out(type.Name);
+				Out(ConvertTypeToCSharpKeyword(type));
 				return;
 			}
 			var genericArguments = type.GetGenericArguments();
@@ -1428,7 +1560,7 @@ namespace Raven.Client.Indexes
 					Out("new ");
 					if (!CheckIfAnonymousType(node.Type.GetElementType()))
 					{
-						Out(node.Type.GetElementType().FullName + " ");
+						Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
 					}
 					Out("[]");
 					VisitExpressions('{', node.Expressions, '}');
@@ -1713,20 +1845,8 @@ namespace Raven.Client.Indexes
 					break;
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
-					// we only cast enums and types is mscorlib), we don't support anything else
-					// because the VB compiler like to put converts all over the place, and include
-					// types that we can't really support (only exists on the client)
-					var nonNullableType = Nullable.GetUnderlyingType(node.Type) ?? node.Type;
-					if (ShouldConvert(nonNullableType))
-					{
-						Out("(");
-						Out("(");
-						Out(nonNullableType.FullName);
-						if (Nullable.GetUnderlyingType(node.Type) != null)
-							Out("?");
-						Out(")");
-					}
 					Out("(");
+					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
 					break;
 				case ExpressionType.ArrayLength:
 					// we don't want to do nothing for those
@@ -1759,14 +1879,6 @@ namespace Raven.Client.Indexes
 
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
-					// we only cast enums and types is mscorlib), we don't support anything else
-					// because the VB compiler like to put converts all over the place, and include
-					// types that we can't really support (only exists on the client)
-					var nonNullableType = Nullable.GetUnderlyingType(node.Type) ?? node.Type;
-					if (ShouldConvert(nonNullableType))
-					{
-						Out(")");
-					}
 					Out(")");
 					break;
 
@@ -1802,12 +1914,7 @@ namespace Raven.Client.Indexes
 			if(nonNullableType.IsEnum)
 				return true;
 
-			if (nonNullableType == typeof(Guid))
-				return false;// in the server, represented as string only
-
 			return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
 		}
 	}
 }
-
-#endif

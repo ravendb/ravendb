@@ -27,7 +27,7 @@ namespace Raven.Database.Linq
 
 			var current = NullIfEmptyEnumerable(func(item));
 			if (current == null)
-				return new DynamicList(Enumerable.Empty<object>());
+				return new DynamicList(new[] { item });
 
 			queue.Enqueue(item);
 			while (queue.Count > 0)

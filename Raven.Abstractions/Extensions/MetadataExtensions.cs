@@ -13,6 +13,8 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 #if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
 #endif
 
 namespace Raven.Abstractions.Extensions
@@ -131,6 +133,37 @@ namespace Raven.Abstractions.Extensions
 		}
 
 #if SILVERLIGHT
+		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
+		{
+			var filterHeaders = self.FilterHeaders();
+			if (self.ContainsKey("Content-Type"))
+				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
+			return filterHeaders;
+		}
+
+		/// <summary>
+		/// Filters the headers from unwanted headers
+		/// </summary>
+		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this NameValueCollection self)
+		{
+			var metadata = new RavenJObject();
+			foreach (var header in self.Headers)
+			{
+				if (header.Key.StartsWith("Temp"))
+					continue;
+				if (headersToIgnoreClient.Contains(header.Key))
+					continue;
+				var values = header.Value;
+				var headerName = CaptureHeaderName(header.Key);
+				if (values.Count == 1)
+					metadata.Add(headerName, GetValue(values[0]));
+				else
+					metadata.Add(headerName, new RavenJArray(values.Select(GetValue)));
+			}
+			return metadata;
+		}
+
 		public static RavenJObject FilterHeadersAttachment(this IDictionary<string, IList<string>> self)
 		{
 			var filterHeaders = self.FilterHeaders();
@@ -228,9 +261,19 @@ namespace Raven.Abstractions.Extensions
 					return RavenJObject.Parse(val);
 				if (val.StartsWith("["))
 					return RavenJArray.Parse(val);
-				DateTime result;
-				if (DateTime.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
-					return new RavenJValue(result);
+
+				DateTime dateTime;
+				if (DateTime.TryParseExact(val, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+				{
+					if (val.EndsWith("Z"))
+						return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+					return new RavenJValue(dateTime);
+				} 
+					
+				DateTimeOffset dateTimeOffset;
+				if (DateTimeOffset.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
+					return new RavenJValue(dateTimeOffset);
+				
 				return new RavenJValue(val);
 
 			}

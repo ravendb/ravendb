@@ -13,7 +13,7 @@ namespace Raven.Database.Indexing.Sorting
 		public SpatialDistanceSortField(string field, bool reverse, SpatialIndexQuery qry)
 			: base(field, CUSTOM, reverse)
 		{
-			var shape = SpatialIndex.ShapeReadWriter.ReadShape(qry.QueryShape);
+			var shape = SpatialIndex.ReadShape(qry.QueryShape);
 			center = shape.GetCenter();
 		}
 
@@ -109,7 +109,7 @@ namespace Raven.Database.Indexing.Sorting
 				Shape shape;
 				try
 				{
-					shape = SpatialIndex.ShapeReadWriter.ReadShape(shapeAsText);
+					shape = SpatialIndex.ReadShape(shapeAsText);
 				}
 				catch (InvalidOperationException)
 				{

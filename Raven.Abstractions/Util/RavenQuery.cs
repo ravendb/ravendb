@@ -120,6 +120,8 @@ namespace Raven.Abstractions.Util
 						return "\"OR\"";
 					case "AND":
 						return "\"AND\"";
+					case "NOT":
+						return "\"NOT\"";
 					default:
 						return term;
 				}

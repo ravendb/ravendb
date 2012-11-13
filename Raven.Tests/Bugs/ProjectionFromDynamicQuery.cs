@@ -151,7 +151,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public class Person
+		private class Person
 		{
 			public string Name { get; set; }
 			public Address BillingAddress { get; set; }

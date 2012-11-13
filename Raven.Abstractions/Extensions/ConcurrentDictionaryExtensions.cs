@@ -1,7 +1,4 @@
-#if !NET35
-using System;
 using System.Collections.Concurrent;
-using System.Threading;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -38,4 +35,3 @@ namespace Raven.Abstractions.Extensions
 		//}
 	}
 }
-#endif

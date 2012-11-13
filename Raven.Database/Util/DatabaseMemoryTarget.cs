@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
 
@@ -31,7 +32,7 @@ namespace Raven.Database.Util
 				return;
 			string databaseName = LogContext.DatabaseName.Value;
 			if (string.IsNullOrWhiteSpace(databaseName))
-				return;
+				databaseName = Constants.SystemDatabase;
 			BoundedMemoryTarget boundedMemoryTarget = databaseTargets.GetOrAdd(databaseName, _ => new BoundedMemoryTarget());
 			boundedMemoryTarget.Write(logEvent);
 		}

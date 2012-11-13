@@ -10,7 +10,8 @@ using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
 {
-	public class CaptureSelectNewFieldNamesVisitor : DepthFirstAstVisitor<object,object>
+	[CLSCompliant(false)]
+	public class CaptureSelectNewFieldNamesVisitor : DepthFirstAstVisitor<object, object>
 	{
 		public HashSet<string> FieldNames = new HashSet<string>();
 		private bool queryProcessed;

@@ -135,11 +135,10 @@ namespace Raven.Tests.MailingList.spokeypokey
 					try
 					{
 						Assert.Empty(serverErrors);
-						serverErrors.ForEach(error => Console.WriteLine(error.Error));
 					}
 					catch (Exception)
 					{
-						Console.WriteLine(serverErrors);
+						serverErrors.ForEach(Console.WriteLine);
 						throw;
 					}
 

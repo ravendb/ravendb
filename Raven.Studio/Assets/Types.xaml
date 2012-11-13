@@ -23,6 +23,8 @@
 	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
 	<Converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
 	<Converters:FirstLineOnlyConverter x:Key="FirstLineOnly" />
+	<Converters:GetFullApiKeyConverter x:Key="GetFullApiKeyConverter"/>
+	<Converters:GetFullConnectionStringConverter x:Key="GetFullConnectionStringConverter"/>
 	<Converters:StringEmptyToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedForValue"
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />
@@ -30,6 +32,8 @@
                                              ValueWhenFalse="0"
                                              ValueWhenTrue="*"/>
 	<Converters:IdStringToIdWithoutHeader x:Key="IdStringToIdWithoutHeader"/>
+	<Converters:BundleNameToActiveConverter x:Key="BundleNameToActive"/>
+	<Converters:BundleNameToToolTipCoverter x:Key="BundleNameToToolTip"/>
     <Converters:StringListToStringConverter x:Key="StringListToString"/>
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:TrueWhenAnalyzedConverter x:Key="TrueWhenAnalyzed"/>

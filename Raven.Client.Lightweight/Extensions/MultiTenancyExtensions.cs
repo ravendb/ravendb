@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection.Async;
-#endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
@@ -14,11 +11,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
-#if !NET35
 	using Raven.Client.Connection.Async;
 	using System.Threading.Tasks;
-
-#endif
 
 	///<summary>
 	/// Extension methods to create mutli tenants databases

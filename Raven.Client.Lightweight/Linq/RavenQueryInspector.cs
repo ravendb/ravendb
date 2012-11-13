@@ -8,12 +8,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-#if !NET35
 using Raven.Client.Connection.Async;
-#endif
 
 namespace Raven.Client.Linq
 {
@@ -29,9 +26,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
-#if !NET35
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-#endif
 		private InMemoryDocumentSessionOperations session;
 
 		/// <summary>
@@ -60,9 +55,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
-#if !NET35
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
-#endif
 			this.provider.AfterQueryExecuted(queryStats.UpdateQueryStats);
 			this.expression = expression ?? Expression.Constant(this);
 		}
@@ -139,6 +132,22 @@ namespace Raven.Client.Linq
 			return fields + luceneQuery;
 		}
 
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents this instance.
+		/// </summary>
+		/// <returns>
+		/// A <see cref="System.String"/> that represents this instance.
+		/// </returns>
+		public string ToAsyncString()
+		{
+			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
+			var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
+			string fields = "";
+			if(ravenQueryProvider.FieldsToFetch.Count > 0)
+				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
+			return fields + luceneQuery;
+		}
+
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
 			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
@@ -153,6 +162,19 @@ namespace Raven.Client.Linq
 			{
 				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
+			}
+		}
+
+		/// <summary>
+		/// Get the name of the index being queried asynchronously
+		/// </summary>
+		public string AsyncIndexQueried
+		{
+			get
+			{
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+				var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
 		}
@@ -174,7 +196,6 @@ namespace Raven.Client.Linq
 		
 #endif
 
-#if !NET35
 		/// <summary>
 		/// Grant access to the async database commands
 		/// </summary>
@@ -187,7 +208,6 @@ namespace Raven.Client.Linq
 				return asyncDatabaseCommands;
 			}
 		}
-#endif
 
 		public InMemoryDocumentSessionOperations Session
 		{
@@ -200,11 +220,17 @@ namespace Raven.Client.Linq
 		///<summary>
 		/// Get the last equality term for the query
 		///</summary>
-		public KeyValuePair<string, string> GetLastEqualityTerm()
+		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
 			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+			if (isAsync)
+			{
+				var luceneQueryasync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
+				return ((IRavenQueryInspector)luceneQueryasync).GetLastEqualityTerm(true);
+			}
+
 			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-			return ((IRavenQueryInspector)luceneQuery).GetLastEqualityTerm();
+			return ((IRavenQueryInspector) luceneQuery).GetLastEqualityTerm();
 		}
 
 #if SILVERLIGHT

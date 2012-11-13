@@ -13,6 +13,8 @@ namespace Raven.Database.Storage
 		IEnumerable<ListItem> Read(string name, Guid start, int take);
 
 		ListItem Read(string name, string key);
+
+		void RemoveAllBefore(string name, Guid etag);
 	}
 
 	public class ListItem

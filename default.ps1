@@ -1,7 +1,10 @@
+Include ".\build_utils.ps1"
+
 properties {
 	$base_dir  = resolve-path .
 	$lib_dir = "$base_dir\SharedLibs"
 	$build_dir = "$base_dir\build"
+	$packages_dir = "$base_dir\packages"
 	$buildartifacts_dir = "$build_dir\"
 	$sln_file = "$base_dir\zzz_RavenDB_Release.sln"
 	$version = "1.2"
@@ -10,7 +13,7 @@ properties {
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Release"
 	
-	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), "Jint.???","Antlr3.Runtime.???",
+	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), "Jint.Raven.???",
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", "BouncyCastle.Crypto.???", 
 				"ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???" ) |
 		ForEach-Object { 
@@ -22,7 +25,7 @@ properties {
 	
 	$server_files = @( "Raven.Server.???", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
 					 "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",  "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", 
-					"Esent.Interop.???", "Jint.???","Antlr3.Runtime.???","Raven.Abstractions.???", "Raven.Database.???" ) |
+					"Esent.Interop.???", "Jint.Raven.???","Raven.Abstractions.???", "Raven.Database.???" ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -48,7 +51,7 @@ properties {
 		}
  
 	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
-						  "Esent.Interop.???", "Jint.???","Antlr3.Runtime.???","ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
+						  "Esent.Interop.???", "Jint.Raven.???","ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 						"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",(Get-DependencyPackageFiles 'NLog.2'),
 						   "AsyncCtpLibrary.???") |
 		ForEach-Object { 
@@ -58,7 +61,6 @@ properties {
 	  
 		$test_prjs = @("Raven.Tests.dll","Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll" )
 }
-include .\psake_ext.ps1
 
 task default -depends Stable,Release
 
@@ -93,25 +95,6 @@ task Init -depends Verify40, Clean {
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
-	
-	copy $tools_dir\xUnit\*.* $build_dir
-}
-
-task BeforeCompile {
-	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
-	$datDest = "$base_dir\Raven.Studio\Settings.dat"
-	echo $dat
-	if (Test-Path $dat) {
-		Copy-Item $dat $datDest -force
-	}
-	ElseIf ((Test-Path $datDest) -eq $false) {
-		New-Item $datDest -type file -force
-	}
-}
-
-task AfterCompile {
-	#new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
-	remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
 }
 
 task Compile -depends Init {
@@ -122,13 +105,23 @@ task Compile -depends Init {
 	exec { &"$build_dir\Raven.ProjectRewriter.exe" }
 	
 	try { 
-		ExecuteTask("BeforeCompile")
+		$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
+		$datDest = "$base_dir\Raven.Studio\Settings.dat"
+		echo $dat
+		if (Test-Path $dat) {
+			Copy-Item $dat $datDest -force
+		}
+		ElseIf ((Test-Path $datDest) -eq $false) {
+			New-Item $datDest -type file -force
+		}
+		
 		Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
 	} catch {
 		Throw
 	} finally { 
-		ExecuteTask("AfterCompile")
+		#new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
+		remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
 	}
 }
 
@@ -143,21 +136,23 @@ task Test -depends Compile {
 	Write-Host $test_prjs
 	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	
+	$xUnit = Get-PackagePath xunit.runners
+	Write-Host "xUnit location: $xUnit\tools\xunit.console.clr4.exe"
 	
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test ) {
 			$env:raventest_storage_engine = 'munin';
 			Write-Host "Testing $build_dir\$_ (munin)"
-			exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
-
+			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
+			
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
 		}
 	}
 }
@@ -165,9 +160,11 @@ task Test -depends Compile {
 task StressTest -depends Compile {
 	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
 	
+	$xUnit = Get-PackagePath xunit.runners
+	
 	@("Raven.StressTests.dll") | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
-		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+		exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
 	}
 }
 
@@ -431,14 +428,14 @@ task CreateNugetPackages -depends Compile {
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
 	@("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 		 "Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
-		 "Jint.???","Antlr3.Runtime.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll") `
+		 "Jint.Raven.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll") `
 		 |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40 }
 	
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
 	New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
 	@("BouncyCastle.Crypto.???", "Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
-		"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",	"NewtonSoft.Json.???", "NLog.???", "Jint.???","Antlr3.Runtime.???",
+		"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",	"NewtonSoft.Json.???", "NLog.???", "Jint.Raven.???",
 		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server\tools }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
 

@@ -111,7 +111,8 @@ namespace Raven.Bundles.Encryption.Settings
 				if (EncryptedDocumentsExist(database))
 					throw new InvalidOperationException("The database already has existing documents, you cannot start using encryption now.");
 
-				database.Put(Constants.InDatabaseKeyVerificationDocumentName, null, Constants.InDatabaseKeyVerificationDocumentContents, new RavenJObject(), null);
+				var clonedDoc = (RavenJObject)Constants.InDatabaseKeyVerificationDocumentContents.CreateSnapshot();
+				database.Put(Constants.InDatabaseKeyVerificationDocumentName, null, clonedDoc, new RavenJObject(), null);
 			}
 		}
 

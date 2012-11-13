@@ -16,7 +16,6 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Lucene.Net.Spatial;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -25,15 +24,12 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
-using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -221,7 +217,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
+		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch,
 											WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 
@@ -971,6 +967,8 @@ namespace Raven.Database.Indexing
 				foreach (SortedField field in indexQuery.SortedFields)
 				{
 					string f = field.Field;
+					if (f == Constants.TemporaryScoreValue)
+						continue;
 					if (f.EndsWith("_Range"))
 					{
 						f = f.Substring(0, f.Length - "_Range".Length);
@@ -1061,8 +1059,17 @@ namespace Raven.Database.Indexing
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
 				{
-					var ret = indexSearcher.Search(luceneQuery, null, minPageSize, sort);
-					return ret;
+					try
+					{
+						//indexSearcher.SetDefaultFieldSortScoring (sort.GetSort().Contains(SortField.FIELD_SCORE), false);
+						indexSearcher.SetDefaultFieldSortScoring (true, false);
+						var ret = indexSearcher.Search (luceneQuery, null, minPageSize, sort);
+						return ret;
+					}
+					finally
+					{
+						indexSearcher.SetDefaultFieldSortScoring (false, false);
+					}
 				}
 				return indexSearcher.Search(luceneQuery, null, minPageSize);
 			}

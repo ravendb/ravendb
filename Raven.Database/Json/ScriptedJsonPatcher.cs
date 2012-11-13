@@ -61,6 +61,10 @@ namespace Raven.Database.Json
 			{
 				throw;
 			}
+			catch (JintException)
+			{
+				throw;
+			}
 			catch (Exception e)
 			{
 				throw new InvalidOperationException("Could not parse: " + Environment.NewLine + patch.Script, e);
@@ -71,7 +75,7 @@ namespace Raven.Database.Json
 			{
 				foreach (var kvp in patch.Values)
 				{
-					if(kvp.Value is RavenJToken)
+					if (kvp.Value is RavenJToken)
 					{
 						ctx.SetParameter(kvp.Key, ToJsInstance(ctx.Global, (RavenJToken)kvp.Value));
 					}
@@ -103,8 +107,8 @@ namespace Raven.Database.Json
 					errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Value);
 				if (Debug.Count != 0)
 					errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
-					            string.Join(Environment.NewLine, Debug);
-				
+								string.Join(Environment.NewLine, Debug);
+
 				throw new InvalidOperationException(errorMsg, errorEx);
 			}
 			finally
@@ -141,7 +145,7 @@ namespace Raven.Database.Json
 				case JsInstance.CLASS_OBJECT:
 					return ToRavenJObject((JsObject)v);
 				case JsInstance.CLASS_DATE:
-					var dt = (DateTime) v.Value;
+					var dt = (DateTime)v.Value;
 					return new RavenJValue(dt);
 				case JsInstance.TYPE_NUMBER:
 				case JsInstance.CLASS_NUMBER:
@@ -211,14 +215,14 @@ namespace Raven.Database.Json
 					return global.BooleanClass.New((bool)boolVal.Value);
 				case JTokenType.Float:
 					var fltVal = ((RavenJValue)value);
-					if(fltVal.Value is float)
+					if (fltVal.Value is float)
 						return new JsNumber((float)fltVal.Value, global.NumberClass);
 					if (fltVal.Value is decimal)
 						return global.NumberClass.New((double)(decimal)fltVal.Value);
 					return global.NumberClass.New((double)fltVal.Value);
 				case JTokenType.Integer:
 					var intVal = ((RavenJValue)value);
-					if(intVal.Value is int)
+					if (intVal.Value is int)
 					{
 						return global.NumberClass.New((int)intVal.Value);
 					}

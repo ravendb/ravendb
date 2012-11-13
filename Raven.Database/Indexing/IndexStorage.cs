@@ -470,7 +470,7 @@ namespace Raven.Database.Indexing
 
 		public void Index(string index,
 			AbstractViewGenerator viewGenerator,
-			IEnumerable<dynamic> docs,
+			IndexingBatch batch,
 			WorkContext context,
 			IStorageActionsAccessor actions,
 			DateTime minimumTimestamp)
@@ -484,7 +484,7 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
-				value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
+				value.IndexDocuments(viewGenerator, batch, context, actions, minimumTimestamp);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,

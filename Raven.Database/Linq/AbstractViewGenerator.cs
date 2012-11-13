@@ -165,11 +165,14 @@ namespace Raven.Database.Linq
 		{
 			var strategy = GetStrategyForField(fieldName);
 
-			// ReSharper disable CSharpWarnings::CS0612
-			Shape shape = SpatialIndex.Context.MakePoint(lng ?? 0, lat ?? 0);
+			if (lng == null || double.IsNaN(lng.Value))
+				return Enumerable.Empty<IFieldable>();
+			if(lat == null || double.IsNaN(lat.Value))
+				return Enumerable.Empty<IFieldable>();
+
+			Shape shape = SpatialIndex.Context.MakePoint(lng.Value, lat.Value);
 			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.ShapeReadWriter.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
-			// ReSharper restore CSharpWarnings::CS0612
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
 		[CLSCompliant(false)]
@@ -192,9 +195,9 @@ namespace Raven.Database.Linq
 			if (maxTreeLevel == 0) maxTreeLevel = GeohashPrefixTree.GetMaxLevelsPossible();
 			var strategy = SpatialStrategies.GetOrAdd(fieldName, s => SpatialIndex.CreateStrategy(fieldName, spatialSearchStrategy, maxTreeLevel));
 
-			var shape = SpatialIndex.ShapeReadWriter.ReadShape(shapeWKT);
+			var shape = SpatialIndex.ReadShape(shapeWKT);
 			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.ShapeReadWriter.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
 		#endregion

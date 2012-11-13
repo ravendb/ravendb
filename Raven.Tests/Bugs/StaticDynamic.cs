@@ -57,21 +57,21 @@ namespace Raven.Tests.Bugs
 				session.SaveChanges();
 			}
 		}
-	}
 
-	public class Docs_Flagged : AbstractIndexCreationTask<TestDoc>
-	{
-		public Docs_Flagged()
+		public class Docs_Flagged : AbstractIndexCreationTask<TestDoc>
 		{
-			Map = testDocs => from doc in testDocs
-							  where doc.Flag
-							  select new { doc.Id };
+			public Docs_Flagged()
+			{
+				Map = testDocs => from doc in testDocs
+								  where doc.Flag
+								  select new { doc.Id };
+			}
 		}
-	}
 
-	public class TestDoc
-	{
-		public string Id { get; set; }
-		public bool Flag { get; set; }
+		public class TestDoc
+		{
+			public string Id { get; set; }
+			public bool Flag { get; set; }
+		}
 	}
 }

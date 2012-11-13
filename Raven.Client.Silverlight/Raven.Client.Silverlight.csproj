@@ -591,6 +591,12 @@
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
+      <Link>Imports\Data\Alert.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\AlertsDocument.cs">
+      <Link>Imports\Data\AlertsDocument.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ApiKeyDefinition.cs">
       <Link>Imports\Data\ApiKeyDefinition.cs</Link>
     </Compile>
@@ -647,6 +653,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\LogItem.cs">
       <Link>Imports\Data\LogItem.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\PeriodicBackupSetup.cs">
+      <Link>Imports\Data\PeriodicBackupSetup.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ScriptedPatchRequest.cs">
       <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
@@ -738,9 +747,6 @@
     <Compile Include="..\Raven.Abstractions\Json\Utilities\StringUtils.cs">
       <Link>Imports\Json\Utilities\StringUtils.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Utilities\Tuple.cs">
-      <Link>Imports\Json\Utilities\Tuple.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\Linq\DynamicList.cs">
       <Link>Imports\Linq\DynamicList.cs</Link>
     </Compile>
@@ -816,11 +822,23 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncServerClient.cs">
+      <Link>Connection\Async\AsyncServerClient.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\CachedRequest.cs">
+      <Link>Connection\CachedRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\CreateHttpJsonRequestParams.cs">
+      <Link>Connection\CreateHttpJsonRequestParams.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
       <Link>Imports\Connection\DocumentConventionJsonExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\HttpExtensions.cs">
       <Link>Connection\HttpExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\MultiGetOperation.cs">
+      <Link>Connection\MultiGetOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\ObservableLineStream.cs">
       <Link>Imports\Connection\ObservableLineStream.cs</Link>
@@ -842,6 +860,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\RequestStatus.cs">
       <Link>Imports\Connection\Profiling\RequestStatus.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenUrlExtensions.cs">
+      <Link>Connection\RavenUrlExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
       <Link>Imports\DocumentStoreBase.cs</Link>
@@ -915,6 +936,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\QueryOperation.cs">
       <Link>Imports\Document\SessionOperations\QueryOperation.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Exceptions\ServerRequestError.cs">
+      <Link>Data\ServerRequestError.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>
@@ -923,6 +947,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\ParallelExtensions.cs">
       <Link>Imports\Extensions\ParallelExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\StringExtensions.cs">
+      <Link>Extensions\StringExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\TaskExtensions.cs</Link>
@@ -960,6 +987,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryableExtensions.cs">
       <Link>Imports\Linq\RavenQueryableExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConflictListener.cs">
+      <Link>Imports\Listeners\IDocumentConflictListener.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConversionListener.cs">
       <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>
     </Compile>
@@ -996,18 +1026,18 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\LastEtagHolder.cs">
       <Link>Imports\Util\LastEtagHolder.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\SimpleCache.cs">
+      <Link>Connection\SimpleCache.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
-    <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
-    <Compile Include="Connection\RavenUrlExtensions.cs" />
-    <Compile Include="Data\ServerRequestError.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
@@ -1039,6 +1069,7 @@
     <Compile Include="DotNetZip\ZlibException.cs" />
     <Compile Include="DotNetZip\ZlibStream.cs" />
     <Compile Include="DotNetZip\ZlibStreamFlavor.cs" />
+    <Compile Include="MissingFromSilverlight\NameValueCollection.cs" />
     <Compile Include="MissingFromSilverlight\SpinWait.cs" />
     <Compile Include="MissingFromSilverlight\SplitOrderedList.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />

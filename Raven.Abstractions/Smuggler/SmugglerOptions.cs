@@ -20,14 +20,18 @@ namespace Raven.Abstractions.Smuggler
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
 			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
+			LastAttachmentEtag = LastDocsEtag = Guid.Empty;
 		}
 
 		/// <summary>
-		/// A file to write to when doing an export or read from when doing an import.
+		/// The path to write to when doing an export, or where to read from when doing an import.
 		/// </summary>
-		public string File { get; set; }
+		public string BackupPath { get; set; }
 
 		public Dictionary<string, string> Filters { get; set; }
+
+		public Guid LastDocsEtag { get; set; }
+		public Guid LastAttachmentEtag { get; set; }
 
 		/// <summary>
 		/// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
@@ -44,6 +48,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 			return (ItemType)Enum.Parse(typeof(ItemType), items);
 		}
+
 		/// <summary>
 		/// The timeout for requests
 		/// </summary>

@@ -425,6 +425,7 @@ namespace Raven.Client.Linq
 
 			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 			result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+			result.Path = result.Path.Replace("(", "").Replace(")", ""); // removing cast remains
 
 			if (expression.NodeType == ExpressionType.ArrayLength)
 				result.Path += ".Length";
@@ -696,6 +697,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "Search":
 					VisitSearch(expression);
 
+					break;
+				case "OrderByScore":
+					luceneQuery.AddOrder (Constants.TemporaryScoreValue, true);
+					VisitExpression (expression.Arguments[0]);
 					break;
 				case "Intersect":
 					VisitExpression(expression.Arguments[0]);
@@ -1245,7 +1250,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			return q;
 		}
 
-#if !NET35
 		/// <summary>
 		/// Gets the lucene query.
 		/// </summary>
@@ -1262,9 +1266,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			return asyncLuceneQuery.SelectFields<T>(FieldsToFetch.ToArray());
 		}
-
-
-#endif
 
 		/// <summary>
 		/// Executes the specified expression.

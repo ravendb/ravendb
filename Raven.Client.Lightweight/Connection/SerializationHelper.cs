@@ -5,7 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -122,23 +126,16 @@ namespace Raven.Client.Connection
 		/// Deserialize a request to a JsonDocument
 		/// </summary>
 		public static JsonDocument DeserializeJsonDocument(string key, RavenJToken requestJson,
-#if !SILVERLIGHT
 			NameValueCollection headers, 
-#else 
-			IDictionary<string, IList<string>> headers,
-#endif
+
 			HttpStatusCode statusCode)
 		{
 			var jsonData = (RavenJObject)requestJson;
 			var meta = headers.FilterHeaders();
-			
-#if !SILVERLIGHT
+
 			var etag = headers["ETag"];
 			var lastModified = headers[Constants.LastModified];
-#else
-			var etag = headers["ETag"].First();
-			var lastModified = headers[Constants.LastModified].First();
-#endif
+
 			return new JsonDocument
 			{
 				DataAsJson = jsonData,

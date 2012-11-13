@@ -57,11 +57,9 @@ namespace Raven.Abstractions.Connection
 						case "Expect":
 							// explicitly ignoring this
 							break;
-#if !NET35
 						case "Host":
 							dest.Host = src.Host;
 							break;
-#endif
 						case "If-Modified-Since":
 							dest.IfModifiedSince = src.IfModifiedSince;
 							break;

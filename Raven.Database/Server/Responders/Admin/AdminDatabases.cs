@@ -61,6 +61,8 @@ namespace Raven.Database.Server.Responders.Admin
 					break;
 				case "DELETE":
 					var configuration = server.CreateTenantConfiguration(db);
+					var databasedocument = Database.Get(docKey, null);
+
 					if (configuration == null)
 						return;
 					Database.Delete(docKey, null, null);
@@ -68,6 +70,14 @@ namespace Raven.Database.Server.Responders.Admin
 					if(bool.TryParse(context.Request.QueryString["hard-delete"], out result) && result)
 					{
 						IOExtensions.DeleteDirectory(configuration.DataDirectory);	
+						IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
+
+						if (databasedocument != null)
+						{
+							dbDoc = databasedocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+							if(dbDoc != null && dbDoc.Settings.ContainsKey(Constants.RavenLogsPath))
+								IOExtensions.DeleteDirectory(dbDoc.Settings[Constants.RavenLogsPath]);
+						}	
 					}
 					break;
 			}

@@ -5,8 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Ionic.Zlib;
+using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Client.Silverlight.Connection;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -41,7 +41,7 @@ namespace Raven.Studio.Commands
 
 			var name = ApplicationModel.Database.Value.Name;
 			var normalizedName = new string(name.Select(ch => Path.GetInvalidPathChars().Contains(ch) ? '_' : ch).ToArray());
-			var defaultFileName = string.Format("Dump of {0}, {1}", normalizedName, DateTimeOffset.Now.ToString("MMM dd yyyy HH-mm", CultureInfo.InvariantCulture));
+			var defaultFileName = string.Format("Dump of {0}, {1}", normalizedName, DateTimeOffset.Now.ToString("dd MMM yyyy HH-mm", CultureInfo.InvariantCulture));
 			try
 			{
 				saveFile.DefaultFileName = defaultFileName;
@@ -50,6 +50,8 @@ namespace Raven.Studio.Commands
 
 			if (saveFile.ShowDialog() != true)
 				return;
+
+			taskModel.CanExecute.Value = false;
 
 			stream = saveFile.OpenFile();
 			gZipStream = new GZipStream(stream, CompressionMode.Compress);
@@ -82,6 +84,7 @@ namespace Raven.Studio.Commands
 										if (array.Length == 0)
 										{
 											output(String.Format("Done with reading indexes, total: {0}", totalCount));
+											output(String.Format("Begin reading documents"));
 
 											jsonWriter.WriteEndArray();
 											jsonWriter.WritePropertyName("Docs");
@@ -143,6 +146,7 @@ namespace Raven.Studio.Commands
 			stream.Dispose();
 
 			output("Export complete");
+			taskModel.CanExecute.Value = true;
 			taskModel.TaskStatus = TaskStatus.Ended;
 			if (exception != null)
 				output(exception.ToString());

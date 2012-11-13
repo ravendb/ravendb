@@ -22,6 +22,7 @@ namespace Raven.Studio.Models
 			Document = new Observable<WindowsAuthDocument>();
 			RequiredUsers = new ObservableCollection<WindowsAuthData>();
 			RequiredGroups = new ObservableCollection<WindowsAuthData>();
+			SelectedList = new ObservableCollection<WindowsAuthData>();
 
 			ApplicationModel.DatabaseCommands.ForDefaultDatabase()
 				.GetAsync("Raven/Authorization/WindowsSettings")

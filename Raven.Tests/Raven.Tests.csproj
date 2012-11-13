@@ -63,6 +63,10 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Antlr3.Runtime, Version=3.3.1.7705, Culture=neutral, PublicKeyToken=eb42632606e9261f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Raven.Database\bin\Debug\Antlr3.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
@@ -70,13 +74,18 @@
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
-    <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
+    <Reference Include="ICSharpCode.NRefactory">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
-    <Reference Include="ICSharpCode.NRefactory.CSharp, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
+    <Reference Include="ICSharpCode.NRefactory.CSharp">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory.Xml">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
+    </Reference>
+    <Reference Include="Jint.Raven, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+      <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
       <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
@@ -85,16 +94,36 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.Spatial.NTS, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Raven.Web\Bin\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualStudio.DebuggerVisualizers, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Mdb">
+      <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Pdb">
+      <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks">
+      <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
     <Reference Include="Rhino.Mocks">
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
+    </Reference>
+    <Reference Include="Spatial4n.Core.NTS, Version=1.0.0.0, Culture=neutral, PublicKeyToken=9f9456e1ca16d45e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Raven.Web\Bin\Spatial4n.Core.NTS.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -118,11 +147,22 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.9.0.1566, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\packages\xunit.1.9.0.1566\lib\xunit.dll</HintPath>
+    <Reference Include="xunit, Version=1.9.1.1600, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.dll</HintPath>
     </Reference>
-    <Reference Include="xunit.extensions, Version=1.9.0.1566, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\packages\xunit.extensions.1.9.0.1566\lib\xunit.extensions.dll</HintPath>
+    <Reference Include="xunit.extensions, Version=1.9.1.1600, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\xunit.extensions.1.9.1\lib\net20\xunit.extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.runner.msbuild">
+      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.msbuild.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.runner.tdnet">
+      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.tdnet.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.runner.utility">
+      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.utility.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -174,6 +214,8 @@
     <Compile Include="Bugs\IndexesWithDateTimeMin.cs" />
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
     <Compile Include="Bugs\Indexing\CannotCreateIndexWithoutReduce.cs" />
+    <Compile Include="Bugs\Indexing\WillRemoveTypesThatNotExistsOnTheServer.cs" />
+    <Compile Include="Bugs\Indexing\IndexBuilderShouldCastNull.cs" />
     <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
     <Compile Include="Bugs\InitializeConfiguration.cs" />
@@ -195,6 +237,7 @@
     <Compile Include="Bugs\MapRedue\Document.cs" />
     <Compile Include="Bugs\MapRedue\DocumentView.cs" />
     <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />
+    <Compile Include="Bugs\MapRedue\MinMax.cs" />
     <Compile Include="Bugs\MapRedue\TreeWithChildrenCount.cs" />
     <Compile Include="Bugs\Marcus.cs" />
     <Compile Include="Bugs\Matthew.cs" />
@@ -285,7 +328,6 @@
     <Compile Include="Bugs\CanProjectIdFromDocumentInQueries.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
-    <Compile Include="Bugs\Coin.cs" />
     <Compile Include="Bugs\CompiledIndexes\NetworkEventsToNetworkTemp.cs" />
     <Compile Include="Bugs\CompiledIndexes\NetworkList.cs" />
     <Compile Include="Bugs\CompiledIndexes\Network.cs" />
@@ -448,18 +490,30 @@
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
+    <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
+    <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
+    <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
+    <Compile Include="Issues\RaqvenDB651.cs" />
     <Compile Include="Issues\RavenDB349.cs" />
+    <Compile Include="Issues\RavenDB422.cs" />
     <Compile Include="Issues\RavenDB478.cs" />
+    <Compile Include="Issues\RavenDb505.cs" />
     <Compile Include="Issues\RavenDB514.cs" />
     <Compile Include="Issues\RavenDB535.cs" />
+    <Compile Include="Issues\RavenDB542 .cs" />
     <Compile Include="Issues\RavenDB626.cs" />
+    <Compile Include="Issues\RavenDB651.cs" />
+    <Compile Include="Issues\RavenDB653.cs" />
     <Compile Include="Issues\RavenDB_554.cs" />
     <Compile Include="Issues\RavenDB_578.cs" />
     <Compile Include="Issues\RavenDB_689.cs" />
+    <Compile Include="Issues\RavenDB_576.cs" />
+    <Compile Include="Issues\RavenDB_560.cs" />
     <Compile Include="Linq\Contains.cs" />
+    <Compile Include="Linq\Not.cs" />
     <Compile Include="Linq\IsNullOrEmpty.cs" />
     <Compile Include="Issues\RavenDB_556.cs" />
     <Compile Include="Issues\RavenDB_579.cs" />
@@ -468,6 +522,7 @@
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
     <Compile Include="MailingList\ChrisMarisic.cs" />
+    <Compile Include="MailingList\CustomAnalyzerStartsWithFailure.cs" />
     <Compile Include="MailingList\DeanWard.cs" />
     <Compile Include="MailingList\Edin.cs" />
     <Compile Include="MailingList\Failing_lucene_query_where_in_tests.cs" />
@@ -476,6 +531,7 @@
     <Compile Include="MailingList\Georgiosd.cs" />
     <Compile Include="MailingList\Holt.cs" />
     <Compile Include="MailingList\InIssues.cs" />
+    <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
     <Compile Include="MailingList\linmouhong2.cs" />
     <Compile Include="MailingList\LinqInExtensionTests.cs" />
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />
@@ -485,10 +541,12 @@
     <Compile Include="MailingList\Nullables.cs" />
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
+    <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\Stif.cs" />
+    <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
@@ -496,6 +554,7 @@
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
+    <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />
     <Compile Include="Spatial\SpatialTest2.cs" />
     <Compile Include="Bugs\spokeypokey.cs" />
@@ -576,6 +635,8 @@
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisTests.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis_should_support_MapReduce_indexes.cs" />
     <Compile Include="Bundles\MoreLikeThis\TestWithInMemoryDatabase.cs" />
+    <Compile Include="Bundles\PeriodicBackups\FactIfAwsIsAvailable.cs" />
+    <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Async\AttachmentReplication.cs" />
     <Compile Include="Bundles\Replication\Async\ConflictWhenReplicating.cs" />
     <Compile Include="Bundles\Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />

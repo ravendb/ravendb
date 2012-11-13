@@ -3,11 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
 using ICSharpCode.NRefactory.CSharp;
 using System.Linq;
 
 namespace Raven.Database.Linq.Ast
 {
+	[CLSCompliant(false)]
 	public class TransformObsoleteMethods : DepthFirstAstVisitor<object,object>
 	{
 		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)

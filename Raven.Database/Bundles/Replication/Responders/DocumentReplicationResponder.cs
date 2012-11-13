@@ -10,6 +10,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Raven.Abstractions.Logging;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Server;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -28,9 +29,15 @@ namespace Raven.Bundles.Replication.Responders
 	public class DocumentReplicationResponder : AbstractRequestResponder
 	{
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
+		private ReplicationTask replicationTask;
+		public ReplicationTask ReplicationTask
+		{
+			get { return replicationTask ?? (replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault()); }
+		}
 
 		[ImportMany]
 		public IEnumerable<AbstractDocumentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
+
 
 		public override void Respond(IHttpContext context)
 		{
@@ -48,7 +55,9 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 			var array = context.ReadJsonArray();
-			using(Database.DisableAllTriggersForCurrentThread())
+			if (ReplicationTask != null) 
+				ReplicationTask.HandleHeartbeat(src);
+			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				Database.TransactionalStorage.Batch(actions =>
 				{
@@ -56,7 +65,7 @@ namespace Raven.Bundles.Replication.Responders
 					foreach (RavenJObject document in array)
 					{
 						var metadata = document.Value<RavenJObject>("@metadata");
-						if(metadata[Constants.RavenReplicationSource] == null)
+						if (metadata[Constants.RavenReplicationSource] == null)
 						{
 							// not sure why, old document from when the user didn't have replciation
 							// that we suddenly decided to replicate, choose the source for that
@@ -103,14 +112,14 @@ namespace Raven.Bundles.Replication.Responders
 
 		private static string HashReplicationIdentifier(RavenJObject metadata)
 		{
-			using(var md5 = MD5.Create())
+			using (var md5 = MD5.Create())
 			{
 				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + metadata.Value<string>("@etag"));
 				return new Guid(md5.ComputeHash(bytes)).ToString();
 			}
 		}
 
-		private  string HashReplicationIdentifier(Guid existingEtag)
+		private string HashReplicationIdentifier(Guid existingEtag)
 		{
 			using (var md5 = MD5.Create())
 			{

@@ -88,7 +88,7 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public object GetValueFromExpression(Expression expression, Type type)
 		{
-			if (expression == null)
+			 if (expression == null)
 				throw new ArgumentNullException("expression");
 
 			// Get object
@@ -238,7 +238,6 @@ namespace Raven.Client.Linq
 					case ExpressionType.Add:
 					case ExpressionType.And:
 					case ExpressionType.AndAlso:
-#if !NET35
 					case ExpressionType.AndAssign:
 					case ExpressionType.Decrement:
 					case ExpressionType.Increment:
@@ -252,7 +251,6 @@ namespace Raven.Client.Linq
 					case ExpressionType.Index:
 					case ExpressionType.Assign:
 					case ExpressionType.Block:
-#endif
 					case ExpressionType.Conditional:
 					case ExpressionType.ArrayIndex:
 

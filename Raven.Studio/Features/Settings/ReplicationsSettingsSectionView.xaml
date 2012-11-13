@@ -24,6 +24,11 @@
 					<ColumnDefinition Width="*"/>
 					<ColumnDefinition Width="20" />
 				</Grid.ColumnDefinitions>
+				<StackPanel Orientation="Horizontal">
+					<TextBlock Text="Disable: "/>
+					<CheckBox x:Name="Disabled" IsChecked="{Binding Disabled, Mode=TwoWay}"/>
+				</StackPanel>
+				
 				<Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" 
                         Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteReplication}" 
                         CommandParameter="{Binding}" VerticalAlignment="Center"
@@ -49,34 +54,86 @@
 						<ColumnDefinition Width="*" />
 					</Grid.ColumnDefinitions>
 
-					<TextBlock Grid.Row="0" Text="Url: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="0" 
+							   Text="Url: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="0" 
+							 Grid.Column="1" 
+							 Text="{Binding Url, Mode=TwoWay}" 
+							 Margin="5" 
+							 IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 					
-					<TextBlock Grid.Row="1" Text="Client Visible Url: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ClientVisibleUrl, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="1" 
+							   Text="Client Visible Url: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" 
+							 Grid.Column="1" 
+							 Text="{Binding ClientVisibleUrl, Mode=TwoWay}" 
+							 Margin="5"
+							 IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 
-					<TextBlock Grid.Row="2" Text="Database: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="2" 
+							   Text="Database: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="2" 
+							 Grid.Column="1" 
+							 Text="{Binding Database, Mode=TwoWay}" 
+							 Margin="5"
+							 IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 
-					<TextBlock Grid.Row="3" Text="User Name: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Username, Mode=TwoWay}" Margin="5" />
+					<TextBlock Grid.Row="3" 
+							   Text="User Name: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="3" 
+							 Grid.Column="1" 
+							 Text="{Binding Username, Mode=TwoWay}" 
+							 Margin="5"
+							 IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 					
-					<TextBlock Grid.Row="4" Text="Password: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" />
+					<TextBlock Grid.Row="4" 
+							   Text="Password: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="4" 
+							 Grid.Column="1" 
+							 Text="{Binding Password, Mode=TwoWay}" 
+							 Margin="5"
+							 IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 
-					<TextBlock Grid.Row="5" Text="Domain: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="5" 
+							   Text="Domain: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="5" 
+							 Grid.Column="1" 
+							 Text="{Binding Domain, Mode=TwoWay}" 
+							 Margin="5"
+							 IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 
-					<TextBlock Grid.Row="6" Text="ApiKey: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="6" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="6" 
+							   Text="ApiKey: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="6" 
+							 Grid.Column="1" 
+							 Text="{Binding ApiKey, Mode=TwoWay}" 
+							 Margin="5"
+							 IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 
-					<TextBlock Grid.Row="7" Text="Skip Failover: " VerticalAlignment="Center"/>
-					<CheckBox Grid.Row="7" Grid.Column="1" IsChecked="{Binding SkipFailover, Mode=TwoWay}" Margin="5"/>
+					<TextBlock Grid.Row="7" 
+							   Text="Skip Failover: " 
+							   VerticalAlignment="Center"/>
+					<CheckBox Grid.Row="7" 
+							  Grid.Column="1" 
+							  IsChecked="{Binding IgnoredClient, Mode=TwoWay}" 
+							  Margin="5"
+							  IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 
 					<TextBlock Grid.Row="8" Text="Transitive Replication:  " VerticalAlignment="Center"/>
 
-					<ComboBox Grid.Row="8" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}"
-                          ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"/>
+					<ComboBox Grid.Row="8" 
+							  Grid.Column="1" 
+							  Margin="5" 
+							  SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}"
+							  ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"
+							  IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 				</Grid>	
 			</Grid>
 		</DataTemplate>

@@ -1,4 +1,3 @@
-#if !NET35
 using System;
 using Raven.Abstractions.Data;
 #if !SILVERLIGHT
@@ -25,4 +24,3 @@ namespace Raven.Client.Document.Batches
 #endif
 	}
 }
-#endif

@@ -71,6 +71,11 @@ namespace Raven.Abstractions.Replication
 		public bool IgnoredClient { get; set; }
 
 		/// <summary>
+		/// Gets or sets if replication to this destination is disabled in both client and server.
+		/// </summary>
+		public bool Disabled { get; set; }
+
+		/// <summary>
 		/// Gets or sets the Client URL of the replication destination
 		/// </summary>
 		public string ClientVisibleUrl { get; set; }

@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -55,6 +56,11 @@ namespace Raven.Bundles.Replication.Tasks
 		public ConcurrentDictionary<string, FailureCount> ReplicationFailureStats
 		{
 			get { return replicationFailureStats; }
+		}
+
+		public ConcurrentDictionary<string, DateTime> Heartbeats
+		{
+			get { return heartbeatDictionary; }
 		}
 
 		private int replicationAttempts;
@@ -152,16 +158,23 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void NotifySiblings()
 		{
-			var notifications = new ConcurrentQueue<RavenConnectionStringOptions>();
+			var notifications = new BlockingCollection<RavenConnectionStringOptions>();
+
 			Task.Factory.StartNew(() => NotifySibling(notifications));
+
 			int skip = 0;
 			var replicationDestinations = GetReplicationDestinations();
+			foreach (var replicationDestination in replicationDestinations)
+			{
+				notifications.TryAdd(replicationDestination.ConnectionStringOptions, 15 * 1000);
+			}
+
 			while (true)
 			{
 				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, skip, 128);
 				if (docs.Length == 0)
 				{
-					notifications.Enqueue(null); // marker to stop notify this
+					notifications.TryAdd(null, 15 * 1000); // marker to stop notify this
 					return;
 				}
 
@@ -180,22 +193,21 @@ namespace Raven.Bundles.Replication.Tasks
 
 					if (match != null)
 					{
-						notifications.Enqueue(match.ConnectionStringOptions);
+						notifications.TryAdd(match.ConnectionStringOptions, 15 * 1000);
 					}
 					else
 					{
-						notifications.Enqueue(new RavenConnectionStringOptions
+						notifications.TryAdd(new RavenConnectionStringOptions
 						{
 							Url = sourceReplicationInformation.Source
-						});
+						}, 15 * 1000);
 					}
 				}
 			}
 		}
 
-		private void NotifySibling(ConcurrentQueue<RavenConnectionStringOptions> queue)
+		private void NotifySibling(BlockingCollection<RavenConnectionStringOptions> collection)
 		{
-			var collection = new BlockingCollection<RavenConnectionStringOptions>(queue);
 			while (true)
 			{
 				RavenConnectionStringOptions connectionStringOptions;
@@ -214,11 +226,12 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl();
 					var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+					request.WebRequest.ContentLength = 0;
 					request.ExecuteRequest();
 				}
 				catch (Exception e)
 				{
-					log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server restart", e);
+					log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
 				}
 			}
 		}
@@ -398,6 +411,7 @@ namespace Raven.Bundles.Replication.Tasks
 					url += "&attachmentEtag=" + lastAttachmentEtag.Value;
 
 				var request = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
+				request.Write(new byte[0]);
 				request.ExecuteRequest();
 			}
 			catch (WebException e)
@@ -438,7 +452,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var failureCount = replicationFailureStats.GetOrAdd(url);
 			Interlocked.Exchange(ref failureCount.Count, 0);
 			failureCount.Timestamp = SystemTime.UtcNow;
-			if(string.IsNullOrWhiteSpace(lastError) == false)
+			if (string.IsNullOrWhiteSpace(lastError) == false)
 				failureCount.LastError = lastError;
 			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
 						 null);
@@ -584,7 +598,7 @@ namespace Raven.Bundles.Replication.Tasks
 										}))
 							.OrderBy(x => x.Etag)
 							.ToList();
-						
+
 						filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(destinationId, document.Key, document.Metadata)).ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
@@ -668,7 +682,7 @@ namespace Raven.Bundles.Replication.Tasks
 							.OrderBy(x => x.Etag)
 
 							.ToList();
-						
+
 						filteredAttachmentsToReplicate = attachmentsToReplicate.Where(attachment => destination.FilterAttachments(attachment, destinationId)).ToList();
 
 						attachmentSinceLastEtag += attachmentsToReplicate.Count;
@@ -780,7 +794,9 @@ namespace Raven.Bundles.Replication.Tasks
 				return new ReplicationStrategy[0];
 			}
 			return jsonDeserialization
-				.Destinations.Select(GetConnectionOptionsSafe)
+				.Destinations
+				.Where(x => !x.Disabled)
+				.Select(GetConnectionOptionsSafe)
 				.Where(x => x != null)
 				.ToArray();
 		}
@@ -833,11 +849,35 @@ namespace Raven.Bundles.Replication.Tasks
 			return replicationStrategy;
 		}
 
-		public void ResetFailureForHeartbeat(string src)
+		public void HandleHeartbeat(string src)
+		{
+			ResetFailureForHeartbeat(src);
+
+			heartbeatDictionary.AddOrUpdate(src, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
+		}
+
+		public bool IsHeartbeatAvailable(string src, DateTime lastCheck)
+		{
+			if (heartbeatDictionary.ContainsKey(src))
+			{
+				DateTime lastHeartbeat;
+				if (heartbeatDictionary.TryGetValue(src, out lastHeartbeat))
+				{
+					return lastHeartbeat >= lastCheck;
+				}
+			}
+
+			return false;
+		}
+
+
+		private void ResetFailureForHeartbeat(string src)
 		{
 			ResetFailureCount(src, string.Empty);
 			docDb.WorkContext.ShouldNotifyAboutWork(() => "Replication Heartbeat from " + src);
 			docDb.WorkContext.NotifyAboutWork();
 		}
+
+		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 	}
 }

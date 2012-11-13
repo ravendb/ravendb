@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -16,10 +17,6 @@ using Raven.Client.Linq;
 
 namespace Raven.Client
 {
-#if !NET35
-	using System.Threading.Tasks;
-#endif
-
 	///<summary>
 	/// Extensions to the linq syntax
 	///</summary>
@@ -84,9 +81,9 @@ namespace Raven.Client
 		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.ToString();
+			var query = ravenQueryInspector.ToAsyncString();
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.AsyncIndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
 
 		/// <summary>
@@ -178,12 +175,12 @@ namespace Raven.Client
 
 #endif
 
-		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query)
+		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query, bool isAsync = false)
 		{
 			if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
 				return;
 
-			var lastEqualityTerm = queryInspector.GetLastEqualityTerm();
+			var lastEqualityTerm = queryInspector.GetLastEqualityTerm(isAsync);
 			if (lastEqualityTerm.Key == null)
 				throw new InvalidOperationException("Could not suggest on a query that doesn't have a single equality check");
 
@@ -197,7 +194,7 @@ namespace Raven.Client
 		public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, SuggestionQuery query)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
+			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query, true);
 
 			return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.IndexQueried, query);
 		}
@@ -287,6 +284,21 @@ namespace Raven.Client
 			                                                          Expression.Constant(options),
 			                                                          Expression.Constant(escapeQueryOptions)));
 			return (IRavenQueryable<T>)queryable;
+		}
+
+		/// <summary>
+		/// Perform an initial sort by lucene score.
+		/// </summary>
+		public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
+		{
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod ();
+			Expression expression = self.Expression;
+			if (expression.Type != typeof (IRavenQueryable<T>))
+			{
+				expression = Expression.Convert (expression, typeof (IRavenQueryable<T>));
+			}
+			var queryable = self.Provider.CreateQuery (Expression.Call (null, currentMethod.MakeGenericMethod (typeof (T)), expression));
+			return (IOrderedQueryable<T>)queryable;
 		}
 	}
 }

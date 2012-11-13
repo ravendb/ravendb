@@ -61,6 +61,14 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void CanHandkeCasts()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => ((Dog)x.Animal).Color == "black");
+			Assert.Equal("Animal.Color:black", q.ToString());
+		}
+
+		[Fact]
 		public void StartsWith()
 		{
 			var indexedUsers = GetRavenQueryInspector();
@@ -597,6 +605,38 @@ namespace Raven.Tests.Linq
 			Assert.Equal("Properties:*", q.ToString());
 		}
 
+		[Fact]
+		public void WillWrapLuceneSaveKeyword_NOT()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Name == "NOT");
+			Assert.Equal("Name:\"NOT\"", q.ToString());
+		}
+
+		[Fact]
+		public void WillWrapLuceneSaveKeyword_OR()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Name == "OR");
+			Assert.Equal("Name:\"OR\"", q.ToString());
+		}
+
+		[Fact]
+		public void WillWrapLuceneSaveKeyword_AND()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Name == "AND");
+			Assert.Equal("Name:\"AND\"", q.ToString());
+		}
+
+		[Fact]
+		public void WillNotWrapCaseNotMatchedLuceneSaveKeyword_And()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Name == "And");
+			Assert.Equal("Name:And", q.ToString());
+		}
+
 		public class IndexedUser
 		{
 			public int Age { get; set; }
@@ -605,6 +645,17 @@ namespace Raven.Tests.Linq
 			public string Email { get; set; }
 			public UserProperty[] Properties { get; set; }
 			public bool IsActive { get; set; }
+			public IAnimal Animal { get; set; }
+		}
+
+		public interface IAnimal
+		{
+			
+		}
+
+		public class Dog : IAnimal
+		{
+			public string Color { get; set; }
 		}
 
 		public class UserProperty

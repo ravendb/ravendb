@@ -217,7 +217,18 @@
 					<TextBlock Text="{Binding QueryErrorMessage.Value}" Foreground="White" Margin="5" VerticalAlignment="Top" 
 							   TextWrapping="Wrap"
 							   Behaviors:FadeTrimming.IsEnabled="True"
-							   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"/>
+							   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True">
+						 <ContextMenu:ContextMenuService.ContextMenu>
+                        <ContextMenu:ContextMenu x:Name="DocumentsContextMenu">
+                            <ContextMenu:MenuItem Header="Copy Error to Clipboard"
+                                                  Command="{Binding CopyErrorTextToClipboard}">
+                                <ContextMenu:MenuItem.Icon>
+                                    <Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+                                </ContextMenu:MenuItem.Icon>
+                            </ContextMenu:MenuItem>
+                        </ContextMenu:ContextMenu>
+                    </ContextMenu:ContextMenuService.ContextMenu>
+					</TextBlock>
 				</Border>
 
 				<Grid Grid.Row="2">

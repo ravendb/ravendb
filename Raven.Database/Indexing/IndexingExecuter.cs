@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -57,17 +58,36 @@ namespace Raven.Database.Indexing
 			};
 		}
 
+		[DebuggerDisplay("{DebugDisplay}")]
 		private class FutureIndexBatch
 		{
 			public Guid StartingEtag;
 			public Task<JsonResults> Task;
 			public int Age;
+
+			public string DebugDisplay
+			{
+				get
+				{
+					if (Task.IsCompleted == false)
+						return "Etag: " + StartingEtag + ", Age: " + Age + " Results: Pending";
+
+					return "Etag: " + StartingEtag + ", Age: " + Age + " Results: " + Task.Result.Results.Length.ToString("#,#");
+				}
+			}
 		}
 
 		public class JsonResults
 		{
 			public JsonDocument[] Results;
 			public bool LoadedFromDisk;
+
+			public override string ToString()
+			{
+				if (Results == null)
+					return "0";
+				return Results.Length.ToString("#,#", CultureInfo.InvariantCulture);
+			}
 		}
 
 		private int currentIndexingAge;
@@ -91,10 +111,10 @@ namespace Raven.Database.Indexing
 			{
 				jsonDocs = GetJsonDocuments(lastIndexedGuidForAllIndexes);
 
-				if(Log.IsDebugEnabled)
+				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-					          jsonDocs.Results.Length, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Results.Select(x=>x.Key)));
+							  jsonDocs.Results.Length, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Results.Select(x => x.Key)));
 				}
 
 				context.ReportIndexingActualBatchSize(jsonDocs.Results.Length);
@@ -154,7 +174,7 @@ namespace Raven.Database.Indexing
 				}
 
 				// make sure that we don't have too much "future cache" items
-				foreach (var source in futureIndexBatches.Where(x => x.Age + 16 < currentIndexingAge).ToList())
+				foreach (var source in futureIndexBatches.Where(x => (currentIndexingAge - x.Age) > 25).ToList())
 				{
 					ObserveDiscardedTask(source);
 					futureIndexBatches.TryRemove(source);
@@ -167,14 +187,20 @@ namespace Raven.Database.Indexing
 			var futureLen = futureIndexBatches.Sum(x =>
 			{
 				if (x.Task.IsCompleted)
-					return x.Task.Result.Results.Length;
+				{
+					var jsonResults = x.Task.Result;
+					return jsonResults.LoadedFromDisk ? jsonResults.Results.Length : 0;
+				}
 				return autoTuner.NumberOfItemsToIndexInSingleBatch / 15;
 			});
 
 			var futureSize = futureIndexBatches.Sum(x =>
 			{
 				if (x.Task.IsCompleted)
-					return x.Task.Result.Results.Sum(s => s.SerializedSizeOnDisk);
+				{
+					var jsonResults = x.Task.Result;
+					return jsonResults.LoadedFromDisk ? jsonResults.Results.Sum(s => s.SerializedSizeOnDisk) : 0;
+				}
 				return autoTuner.NumberOfItemsToIndexInSingleBatch * 256;
 
 			});
@@ -186,7 +212,7 @@ namespace Raven.Database.Indexing
 			var futureResults = GetFutureJsonDocuments(lastIndexedGuidForAllIndexes);
 			if (futureResults != null)
 				return futureResults;
-			return GetJsonDocs(lastIndexedGuidForAllIndexes);
+			return GetJsonDocsFromDisk(lastIndexedGuidForAllIndexes);
 		}
 
 		private JsonResults GetFutureJsonDocuments(Guid lastIndexedGuidForAllIndexes)
@@ -247,7 +273,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		
+
 
 		private void MaybeAddFutureBatch(JsonResults past)
 		{
@@ -292,7 +318,7 @@ namespace Raven.Database.Indexing
 				Age = currentIndexingAge,
 				Task = System.Threading.Tasks.Task.Factory.StartNew(() =>
 				{
-					var jsonDocuments = GetJsonDocs(nextEtag);
+					var jsonDocuments = GetJsonDocuments(nextEtag);
 					int localWork = workCounter;
 					while (jsonDocuments.Results.Length == 0 && context.DoWork)
 					{
@@ -301,7 +327,7 @@ namespace Raven.Database.Indexing
 						if (context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching") == false)
 							continue;
 
-						jsonDocuments = GetJsonDocs(nextEtag);
+						jsonDocuments = GetJsonDocuments(nextEtag);
 					}
 					futureBatchStat.Duration = sp.Elapsed;
 					futureBatchStat.Size = jsonDocuments.Results.Length;
@@ -355,7 +381,7 @@ namespace Raven.Database.Indexing
 			futureIndexBatches.Clear();
 		}
 
-		private JsonResults GetJsonDocs(Guid lastIndexed)
+		private JsonResults GetJsonDocsFromDisk(Guid lastIndexed)
 		{
 			JsonDocument[] jsonDocs = null;
 			transactionalStorage.Batch(actions =>
@@ -463,7 +489,7 @@ namespace Raven.Database.Indexing
 					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
 					return;
 				}
-				if(Log.IsDebugEnabled)
+				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Going to index {0} documents in {1}: ({2})", batch.Ids.Count, indexToWorkOn, string.Join(", ", batch.Ids));
 				}
@@ -488,25 +514,6 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		private class IndexingBatch
-		{
-			public IndexingBatch()
-			{
-				Ids = new List<string>();
-				Docs = new List<dynamic>();
-			}
-
-			public readonly List<string> Ids;
-			public readonly List<dynamic> Docs;
-			public DateTime? DateTime;
-
-			public void Add(JsonDocument doc, object asJson)
-			{
-				Ids.Add(doc.Key);
-				Docs.Add(asJson);
-			}
-		}
-
 		private void IndexDocuments(IStorageActionsAccessor actions, string index, IndexingBatch batch)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
@@ -526,8 +533,8 @@ namespace Raven.Database.Indexing
 					Log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
 				}
 				context.CancellationToken.ThrowIfCancellationRequested();
-
-				context.IndexStorage.Index(index, viewGenerator, batch.Docs, context, actions, batch.DateTime ?? DateTime.MinValue);
+				
+				context.IndexStorage.Index(index, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
 			catch (OperationCanceledException)
 			{
@@ -568,9 +575,11 @@ namespace Raven.Database.Indexing
 		private Guid DecrementEtag(Guid etag)
 		{
 			var bytes = etag.ToByteArray();
-			var part = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0) - 1;
-
-			return new Guid(bytes.Take(8).Concat(BitConverter.GetBytes(part).Reverse()).ToArray());
+			var changes = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0) - 1;
+			var restarts = BitConverter.ToInt64(bytes.Take(8).Reverse().ToArray(), 0);
+			if (restarts == 1 && changes == 0)// very first item, we start from 0-0
+				restarts = 0;
+			return new Guid(BitConverter.GetBytes(restarts).Reverse().Concat(BitConverter.GetBytes(changes).Reverse()).ToArray());
 		}
 
 

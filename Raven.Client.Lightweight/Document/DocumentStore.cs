@@ -23,7 +23,6 @@ using Raven.Client.Document.Async;
 #if SILVERLIGHT
 using System.Net.Browser;
 using Raven.Client.Silverlight.Connection;
-using Raven.Client.Silverlight.Connection.Async;
 #else
 using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
@@ -102,7 +101,6 @@ namespace Raven.Client.Document
 
 #endif
 
-#if !NET35
 		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 		/// <summary>
 		/// Gets the async database commands.
@@ -117,7 +115,6 @@ namespace Raven.Client.Document
 				return asyncDatabaseCommandsGenerator();
 			}
 		}
-#endif
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentStore"/> class.
@@ -129,10 +126,11 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			MaxNumberOfCachedRequests = 2048;
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
+			Conventions = new DocumentConvention();
 #else
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string,string>();
+			Conventions = new DocumentConvention{AllowMultipuleAsyncOperations = true};
 #endif
-			Conventions = new DocumentConvention();
 		}
 
 		private string identifier;
@@ -363,7 +361,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET35
 		private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
 		{
 			if (database != null)
@@ -374,7 +371,6 @@ namespace Raven.Client.Document
 				databaseCommands.ForceReadFromMaster();
 			return databaseCommands;
 		}
-#endif
 
 		/// <summary>
 		/// Initializes this instance.
@@ -408,7 +404,6 @@ namespace Raven.Client.Document
 				}
 #endif
 
-#if !NET35
 				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
 				{
 #if !SILVERLIGHT
@@ -424,7 +419,6 @@ namespace Raven.Client.Document
 					};
 #endif
 				}
-#endif
 
 				initialized = true;
 
@@ -449,7 +443,12 @@ namespace Raven.Client.Document
 
 		public void InitializeProfiling()
 		{
-			jsonRequestFactory.LogRequest += profilingContext.RecordAction;
+			jsonRequestFactory.LogRequest += (sender, args) =>
+			{
+				if (Conventions.DisableProfiling)
+					return;
+				profilingContext.RecordAction(sender, args);
+			};
 		}
 
 #if !SILVERLIGHT
@@ -476,7 +475,6 @@ namespace Raven.Client.Document
 			Conventions.HandleUnauthorizedResponse = response =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
-				response.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
 				{
@@ -509,7 +507,6 @@ namespace Raven.Client.Document
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
-				unauthorizedResponse.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
 				{
@@ -542,14 +539,15 @@ namespace Raven.Client.Document
 		{
 			if (credentials != null)
 			{
-				var authHeaders = response.Headers["WWW-Authentication"];
+				var authHeaders = response.Headers["WWW-Authenticate"];
 				if (authHeaders == null ||
 					(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
 					)
 				{
 					// we are trying to do windows auth, but we didn't get the windows auth headers
 					throw new SecurityException(
-						"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
+						"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
+						+" but either worng credentials where entered or the specified server does not support Windows authentication." +
 						Environment.NewLine +
 						"If you are running inside IIS, make sure to enable Windows authentication.");
 				}
@@ -602,28 +600,18 @@ namespace Raven.Client.Document
 					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
-				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
+				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId, listeners.ConflictListeners);
 			};
 #endif
-#if !NET35
-#if SILVERLIGHT
-			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
-				.ExecuteRequestAsync();
-#endif
+
 			asyncDatabaseCommandsGenerator = () =>
 			{
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
 
-#if SILVERLIGHT
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, task, GetReplicationInformerForDatabase, null);
-#else
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null);
-#endif
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);
 			};
-#endif
 		}
 
 
@@ -723,8 +711,6 @@ namespace Raven.Client.Document
 #endif
 		}
 
-#if !NET35
-
 		private IAsyncDocumentSession OpenAsyncSessionInternal(IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			AssertInitialized();
@@ -772,8 +758,6 @@ namespace Raven.Client.Document
 		{
 			return OpenAsyncSessionInternal(SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
-
-#endif
 
 		/// <summary>
 		/// Called after dispose is completed

@@ -134,15 +134,15 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup)
+		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase)
 		{
-			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup);
+			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
 
-		public void Restore(string backupLocation, string databaseLocation)
+		public void Restore(string backupLocation, string databaseLocation, Action<string> output)
 		{
-			new RestoreOperation(backupLocation, databaseLocation).Execute();
+			new RestoreOperation(backupLocation, databaseLocation, output).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()
@@ -305,7 +305,10 @@ namespace Raven.Storage.Esent
 			catch (Exception e)
 			{
 				Dispose();
-				throw new InvalidOperationException("Could not open transactional storage: " + database, e);
+				var fileAccessExeption = e as EsentFileAccessDeniedException;
+				if(fileAccessExeption == null)
+					throw new InvalidOperationException("Could not open transactional storage: " + database, e);
+				throw new InvalidOperationException("Could not write to location: " + path + ". Make sure you have read/write permissions for this path.", e);
 			}
 		}
 
@@ -356,7 +359,7 @@ namespace Raven.Storage.Esent
 				try
 				{
 					string value;
-					if (ValidateLicense.LicenseAttributes.TryGetValue("maxSizeInMb", out value))
+					if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("maxSizeInMb", out value))
 					{
 						if (value != "unlimited")
 						{

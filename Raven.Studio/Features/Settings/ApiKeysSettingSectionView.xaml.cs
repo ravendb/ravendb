@@ -1,4 +1,5 @@
-﻿using System.Windows.Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -24,6 +25,15 @@ namespace Raven.Studio.Features.Settings
 				model.Value.SearchApiKeys = SearchBox.Text;
 				Command.ExecuteCommand(model.Value.Search);
 			}
+		}
+
+		//a walkaround the view update issue 
+		private void NameChanged(object sender, RoutedEventArgs routedEventArgs)
+		{
+			var apiModel = DataContext as ApiKeysSectionModel;
+			if (apiModel == null)
+				return;
+			apiModel.Update();
 		}
 	}
 }

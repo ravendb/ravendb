@@ -3,12 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-#if !NET35
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -58,4 +55,3 @@ namespace Raven.Client.Document.Async
 		}
 	}
 }
-#endif

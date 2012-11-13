@@ -24,14 +24,20 @@
 			<ItemsControl ItemsSource="{Binding TaskInputs}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<StackPanel Orientation="Horizontal">
-							<TextBlock Text="{Binding Name}"
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+							<TextBlock Grid.Column="0" Text="{Binding Name}"
+									   Width="{Binding DataContext.LongestInput, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"
 									   Padding="5"
 									   VerticalAlignment="Center" />
-							<TextBox Text="{Binding Value, Mode=TwoWay}"
+							<TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}"
 									 VerticalAlignment="Center"
+									 Margin="5"
 									 MinWidth="150" />
-						</StackPanel>
+						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
@@ -55,10 +61,21 @@
 					Width="Auto"
 					HorizontalAlignment="Left"
 					Command="{Binding Action}"
+					IsEnabled="{Binding CanExecute.Value,Mode=TwoWay}"
 					Padding="8,4"
 					MinWidth="100"
 					Margin="0,10" />
-				<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" VerticalAlignment="Center" FontSize="21.333" Margin="100,0,0,0"/>
+				<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
+						   VerticalAlignment="Center" 
+						   FontSize="21.333" 
+						   Margin="100,0,0,0"/>
+				
+				<ProgressBar Margin="5" 
+							 Width="200" 
+							 Height="25"
+							 FlowDirection="LeftToRight" 
+							 IsIndeterminate="{Binding StatusBarActive}" 
+							 Visibility="{Binding TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
 			</StackPanel>
 		</StackPanel>
 

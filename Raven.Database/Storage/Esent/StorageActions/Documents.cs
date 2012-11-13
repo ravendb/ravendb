@@ -299,7 +299,39 @@ namespace Raven.Storage.Esent.StorageActions
 			return optimizer.Select(ReadCurrentDocument);
 		}
 
-		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
+		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_key");
+			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+			if (isUpdate == false)
+				throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
+				                                    " does not exists");
+
+			Guid newEtag = uuidGenerator.CreateSequentialUuid();
+			DateTime savedAt = SystemTime.UtcNow;
+			using (var update = new Update(session, Documents, JET_prep.Replace))
+			{
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt);
+
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
+				{
+					metadata.WriteTo(stream);
+					stream.Flush();
+				}
+
+				update.Save();
+			}
+			return new AddDocumentResult
+			{
+				Etag = newEtag,
+				SavedAt = savedAt,
+				Updated = true
+			};
+		}
+
+		public AddDocumentResult AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 2048)
 				throw new ArgumentException(string.Format("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters, key is: '{0}'", key), "key");
@@ -328,6 +360,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Guid newEtag = uuidGenerator.CreateSequentialUuid();
 
 
+			DateTime savedAt;
 			using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
@@ -339,7 +372,8 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], SystemTime.UtcNow);
+				savedAt = SystemTime.UtcNow;
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt);
 
 				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
 				{
@@ -354,7 +388,12 @@ namespace Raven.Storage.Esent.StorageActions
 							   key, isUpdate);
 
 			cacher.RemoveCachedDocument(key, newEtag);
-			return newEtag;
+			return new AddDocumentResult
+			{
+				Etag = newEtag,
+				SavedAt = savedAt,
+				Updated = isUpdate
+			};
 		}
 
 

@@ -57,7 +57,9 @@
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <DocumentationFile>bin\Release\Raven.Database.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
+    <NoWarn>1607, 1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -66,9 +68,12 @@
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Antlr3.Runtime, Version=3.3.1.7705, Culture=neutral, PublicKeyToken=eb42632606e9261f, processorArchitecture=MSIL">
+    <Reference Include="AWS.Extensions">
+      <HintPath>..\SharedLibs\AWS.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="AWSSDK, Version=1.5.1.0, Culture=neutral, PublicKeyToken=cd2d24cd2bace800, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Antlr3.Runtime.dll</HintPath>
+      <HintPath>..\SharedLibs\AWSSDK.dll</HintPath>
     </Reference>
     <Reference Include="BouncyCastle.Crypto, Version=1.7.4137.9688, Culture=neutral, PublicKeyToken=a4292a325f69b123, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -83,15 +88,18 @@
     </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory.CSharp, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Jint, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
+    <Reference Include="ICSharpCode.NRefactory.Xml, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Jint.dll</HintPath>
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
+    </Reference>
+    <Reference Include="Jint.Raven">
+      <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -102,9 +110,8 @@
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="Mono.Cecil, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Mono.Cecil.dll</HintPath>
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.dll</HintPath>
     </Reference>
     <Reference Include="NetTopologySuite">
       <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
@@ -134,6 +141,7 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
+    <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Bundles\Compression\Plugin\DocumentCompression.cs" />
     <Compile Include="Bundles\Compression\Streams\CompressStream.cs" />
@@ -155,10 +163,12 @@
     <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
     <Compile Include="Bundles\Replication\ReplicationStatistic.cs" />
+    <Compile Include="Bundles\Replication\Responders\AdminPurgeTombstones.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\AttachmentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\DocumentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\ReplicationHeartbeat.cs" />
+    <Compile Include="Bundles\Replication\Responders\ReplicationTopology.cs" />
     <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
@@ -179,12 +189,15 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Extensions\AdminFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
+    <Compile Include="Indexing\IndexingBatch.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
+    <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
@@ -199,6 +212,7 @@
     <Compile Include="Linq\StringLiteralExpression.cs" />
     <Compile Include="Queries\MatchNoDocsQuery.cs" />
     <Compile Include="Server\Abstractions\PrincipalWithDatabaseAccess.cs" />
+    <Compile Include="Server\BeforeRequestEventArgs.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\LogContext.cs" />
@@ -207,7 +221,9 @@
     <Compile Include="Server\Responders\Admin\AdminGc.cs" />
     <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
+    <Compile Include="Server\Responders\Admin\AdminRestore.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
+    <Compile Include="Server\Responders\Identity.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />

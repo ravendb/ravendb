@@ -1,10 +1,9 @@
-﻿namespace Raven.Client.Extensions
-{
-#if !NET35
-	using Raven.Client.Connection.Async;
-	using System.Threading.Tasks;
-	using Indexes;
+﻿using System.Threading.Tasks;
+using Raven.Client.Connection.Async;
+using Raven.Client.Indexes;
 
+namespace Raven.Client.Extensions
+{
 	///<summary>
 	/// Extension methods that make certain database command operations more convenient to use
 	///</summary>
@@ -27,5 +26,4 @@
 				indexCreationTask.CreateIndexDefinition(), overwrite);
 		}
 	}
-#endif
 }

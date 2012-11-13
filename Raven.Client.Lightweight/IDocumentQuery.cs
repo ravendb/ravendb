@@ -5,11 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if !NET35
-using System.Threading.Tasks;
-#endif
 using Raven.Abstractions.Data;
-using Raven.Client.Linq;
 
 namespace Raven.Client
 {
@@ -48,7 +44,6 @@ namespace Raven.Client
 		QueryResult QueryResult { get; }
 #endif
 
-#if !NET35
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
@@ -61,6 +56,5 @@ namespace Raven.Client
 		/// Also provide a function to execute when the value is evaluated
 		/// </summary>
 		Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
-#endif
 	}
 }

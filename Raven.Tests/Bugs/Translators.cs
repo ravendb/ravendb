@@ -5,15 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition.Hosting;
-using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing;
-using Raven.Database.Linq;
 using Xunit;
 using System.Linq;
 using Raven.Client.Linq;
@@ -33,10 +30,26 @@ namespace Raven.Tests.Bugs
 				TransformResults =
 					(database, users) => from user in users
 										 let partner = database.Load<User>(user.PartnerId)
-										 let x = 2 / partner.Age  // force an error
 										 select new {User = user.Name, Partner = partner.Name};
 			}
 		}
+
+		public class Users_CausingErrors : AbstractIndexCreationTask<User>
+		{
+			public Users_CausingErrors()
+			{
+				Map =
+					users => from user in users
+							 select new { user.Name };
+
+				TransformResults =
+					(database, users) => from user in users
+										 let partner = database.Load<User>(user.PartnerId)
+										 let x = string.Empty[1] // cause errors
+										 select new { User = user.Name, Partner = partner.Name };
+			}
+		}
+
 
 		[Fact]
 		public void CanUseTranslatorToModifyQueryResults_UsingClientGeneratedIndex()
@@ -83,19 +96,18 @@ namespace Raven.Tests.Bugs
 				}
 
 				IndexCreation.CreateIndexes(
-					new CompositionContainer(new TypeCatalog(typeof(Users))),
+					new CompositionContainer(new TypeCatalog(typeof(Users_CausingErrors))),
 					ds);
 
 				using (var s = ds.OpenSession())
 				{
-					var exception = Assert.Throws<InvalidOperationException>(() => s.Query<User, Users>()
+					var exception = Assert.Throws<InvalidOperationException>(() => s.Query<User, Users_CausingErrors>()
 																								 .Customize(x => x.WaitForNonStaleResults())
 																								 .Where(x => x.Name == "Ayende")
 																								 .As<UserWithPartner>()
 																								 .First());
 
-					dynamic dynamicNullObject = new DynamicNullObject();
-					var expectedError = Assert.Throws<DivideByZeroException>(() => 1 / dynamicNullObject);
+					var expectedError = Assert.Throws<IndexOutOfRangeException>(() => string.Empty[1]);
 
 					Assert.Equal("The transform results function failed.\r\nDoc 'users/1', Error: " + expectedError.Message, exception.Message);
 				}

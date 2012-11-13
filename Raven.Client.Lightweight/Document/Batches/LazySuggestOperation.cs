@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Security.Policy;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
-#if !NET35
-
 	public class LazySuggestOperation : ILazyOperation
 	{
 		private readonly string index;
@@ -85,5 +80,4 @@ namespace Raven.Client.Document.Batches
 			Result = result;
 		}
 	}
-#endif
 }

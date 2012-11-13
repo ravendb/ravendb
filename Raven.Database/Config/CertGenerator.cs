@@ -76,11 +76,16 @@ namespace Raven.Database.Config
 
 				try
 				{
-					return new X509Certificate2(memoryStream.ToArray());
+					if(Environment.OSVersion.Version.Major <= 5)
+					{
+						return new X509Certificate2(memoryStream.ToArray());
+					}
+
+					return new X509Certificate2(memoryStream.ToArray(), string.Empty, X509KeyStorageFlags.MachineKeySet);
 				}
 				catch (Exception)
 				{
-					return new X509Certificate2(memoryStream.ToArray(), string.Empty, X509KeyStorageFlags.MachineKeySet);
+					return new X509Certificate2(memoryStream.ToArray(), string.Empty, X509KeyStorageFlags.DefaultKeySet);
 				}
 			}));
 			return lazy.Value;

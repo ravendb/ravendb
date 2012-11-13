@@ -182,7 +182,7 @@ namespace Raven.Tests.Indexes
 })",
 				Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
-    Count = Enumerable.Sum(g, x => ((System.Int32)(x.Count)))
+    Count = Enumerable.Sum(g, x => ((int) x.Count))
 })"
 			};
 
@@ -190,8 +190,6 @@ namespace Raven.Tests.Indexes
 			Assert.Equal(original.Reduce, generated.Reduce);
 		}
 
-
-#if !NET35        
 		public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
 		{
 			IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
@@ -207,7 +205,7 @@ namespace Raven.Tests.Indexes
 				Map = expectedIndexString,
 				Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
-    Count = Enumerable.Sum(g, x => ((System.Int32)(x.Count)))
+    Count = Enumerable.Sum(g, x => ((int) x.Count))
 })"
 			};
 
@@ -263,9 +261,6 @@ users => from user in users
 })");
 		}
 
-
-
-#endif
 
 		public enum Gender
 		{

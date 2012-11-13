@@ -9,9 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
-#if !NET35
 using Raven.Client.Connection.Async;
-#endif
 #if !Silverlight
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -33,9 +31,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
-#if !NET35
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-#endif
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -47,9 +43,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 , IDatabaseCommands databaseCommands
 #endif
-#if !NET35
 , IAsyncDatabaseCommands asyncDatabaseCommands
-#endif
 )
 		{
 			FieldsToFetch = new HashSet<string>();
@@ -61,9 +55,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
-#if !NET35
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
-#endif
 		}
 
 		/// <summary>
@@ -118,9 +110,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 				, databaseCommands
 #endif
-#if !NET35
 				, asyncDatabaseCommands
-#endif
 			);
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
@@ -140,14 +130,11 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression, (InMemoryDocumentSessionOperations)queryGenerator
+			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
 #if !SILVERLIGHT
-				, databaseCommands
+			                                  , databaseCommands
 #endif
-#if !NET35
-				, asyncDatabaseCommands
-#endif
-			);
+			                                  , asyncDatabaseCommands);
 		}
 
 		IQueryable IQueryProvider.CreateQuery(Expression expression)
@@ -156,14 +143,14 @@ namespace Raven.Client.Linq
 			try
 			{
 				var makeGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
-				var args = new object[] { this, ravenQueryStatistics, indexName, expression, queryGenerator
+				var args = new object[]
+				{
+					this, ravenQueryStatistics, indexName, expression, queryGenerator
 #if !SILVERLIGHT
-				                                      ,databaseCommands
+					, databaseCommands
 #endif
-#if !NET35
-				                                      ,asyncDatabaseCommands
-#endif
-				                                    };
+					, asyncDatabaseCommands
+				};
 				return (IQueryable) Activator.CreateInstance(makeGenericType, args);
 			}
 			catch (TargetInvocationException tie)
@@ -214,8 +201,6 @@ namespace Raven.Client.Linq
 			customizeQuery += action;
 		}
 
-#if !NET35
-
 		/// <summary>
 		/// Move the registered after query actions
 		/// </summary>
@@ -249,7 +234,6 @@ namespace Raven.Client.Linq
 				query = query.SelectFields<S>(FieldsToFetch.ToArray());
 			return query.Lazily(onEval);
 		}
-#endif
 
 		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{

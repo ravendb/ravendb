@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35
-
 using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
@@ -129,4 +127,3 @@ namespace Raven.Client
 		IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 	}
 }
-#endif

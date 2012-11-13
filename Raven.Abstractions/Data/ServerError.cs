@@ -12,9 +12,7 @@ namespace Raven.Abstractions.Data
 		public string Index { get; set; }
 		public string Error { get; set; }
 		public DateTime Timestamp { get; set; }
-
 		public string Document { get; set; }
-
 
 		public override string ToString()
 		{

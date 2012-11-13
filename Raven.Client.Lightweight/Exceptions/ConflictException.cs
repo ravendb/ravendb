@@ -32,7 +32,7 @@ namespace Raven.Client.Exceptions
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
-		public ConflictException()
+		public ConflictException(bool properlyHandlesClientSideResolution)
 		{
 		}
 
@@ -40,7 +40,7 @@ namespace Raven.Client.Exceptions
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
 		/// <param name="message">The message.</param>
-		public ConflictException(string message)
+		public ConflictException(string message, bool properlyHandlesClientSideResolution)
 			: base(message)
 		{
 		}
@@ -50,7 +50,7 @@ namespace Raven.Client.Exceptions
 		/// </summary>
 		/// <param name="message">The message.</param>
 		/// <param name="inner">The inner.</param>
-		public ConflictException(string message, Exception inner)
+		public ConflictException(string message, Exception inner, bool properlyHandlesClientSideResolution)
 			: base(message, inner)
 		{
 		}

@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35
-
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -13,6 +11,9 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -139,7 +140,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Create a http request to the specified relative url on the current database
 		/// </summary>
-		Silverlight.Connection.HttpJsonRequest CreateRequest(string relativeUrl, string method);
+		HttpJsonRequest CreateRequest(string relativeUrl, string method);
 #endif
 
 		/// <summary>
@@ -245,7 +246,9 @@ namespace Raven.Client.Connection.Async
 
 		Task<BuildNumber> GetBuildNumberAsync();
 
-		Task StartBackupAsync(string backupLocation);
+		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
+
+		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null);
 
 		Task StartIndexingAsync();
 
@@ -261,4 +264,3 @@ namespace Raven.Client.Connection.Async
 		void ForceReadFromMaster();
 	}
 }
-#endif

@@ -239,7 +239,7 @@ namespace Raven.Database
 		private void InitializeTriggersExceptIndexCodecs()
 		{
 			DocumentCodecs
-				.Init(disableAllTriggers)
+				//.Init(disableAllTriggers) // Document codecs should always be activated (RavenDB-576)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
 			PutTriggers
@@ -571,6 +571,15 @@ namespace Raven.Database
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
 		}
 
+
+		public void PutDocumentMetadata(string key, RavenJObject metadata)
+		{
+			if (key == null)
+				throw new ArgumentNullException("key");
+			key = key.Trim();
+			TransactionalStorage.Batch(actions => actions.Documents.PutDocumentMetadata(key, metadata));
+		}
+
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			workContext.DocsPerSecIncreaseBy(1);
@@ -591,19 +600,22 @@ namespace Raven.Database
 					{
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
-						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
+						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
+						newEtag = addDocumentResult.Etag;
 
+						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+						
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
-						metadata.EnsureSnapshot();
-						document.EnsureSnapshot();
 						actions.AfterCommit(new JsonDocument
 						{
 							Metadata = metadata,
 							Key = key,
 							DataAsJson = document,
 							Etag = newEtag,
-							LastModified = SystemTime.UtcNow,
+							LastModified = addDocumentResult.SavedAt,
+							SkipDeleteFromIndex = addDocumentResult.Updated == false
 						}, indexingExecuter.AfterCommit);
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
@@ -727,6 +739,7 @@ namespace Raven.Database
 
 		private static void RemoveReservedProperties(RavenJObject document)
 		{
+			document.Remove(string.Empty);
 			var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@")).ToList();
 			foreach (var propertyName in toRemove)
 			{
@@ -976,7 +989,7 @@ namespace Raven.Database
 				{
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator == null)
-						throw new InvalidOperationException("Could not find index named: " + index);
+						throw new IndexDoesNotExistsException("Could not find index named: " + index);
 
 					resultEtag = GetIndexEtag(index, null);
 
@@ -1575,7 +1588,7 @@ namespace Raven.Database
 			}
 		}
 
-		public void StartBackup(string backupDestinationDirectory, bool incrementalBackup)
+		public void StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
 		{
 			var document = Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 			if (document != null)
@@ -1593,14 +1606,14 @@ namespace Raven.Database
 			}), new RavenJObject(), null);
 			IndexStorage.FlushMapIndexes();
 			IndexStorage.FlushReduceIndexes();
-			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup);
+			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup, databaseDocument);
 		}
 
-		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output )
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
-				transactionalStorage.Restore(backupLocation, databaseLocation);
+				transactionalStorage.Restore(backupLocation, databaseLocation, output);
 			}
 		}
 
@@ -1773,6 +1786,18 @@ namespace Raven.Database
 
 				return indexEtag;
 			}
+		}
+
+		public void AddAlert(Alert alert)
+		{
+			AlertsDocument alertsDocument;
+			var alertsDoc = Get(Constants.RavenAlerts, null);
+			if (alertsDoc == null) 
+				alertsDocument = new AlertsDocument();
+			else
+				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
+
+			alertsDocument.Alerts.Add(alert);
 		}
 	}
 }

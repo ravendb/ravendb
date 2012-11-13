@@ -30,6 +30,7 @@ namespace Raven.Database.Linq
 {
 	public static class QueryParsingUtils
 	{
+		[CLSCompliant(false)]
 		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
 			var unit = new SyntaxTree();
@@ -72,6 +73,7 @@ namespace Raven.Database.Linq
 			return stringWriter.GetStringBuilder().ToString();
 		}
 
+		[CLSCompliant(false)]
 		public static string ToText(AstNode node)
 		{
 			var stringWriter = new StringWriter();
@@ -131,6 +133,7 @@ namespace Raven.Database.Linq
 			}
 		}
 
+		[CLSCompliant(false)]
 		public static VariableInitializer GetVariableDeclarationForLinqMethods(string query, bool requiresSelectNewAnonymousType)
 		{
 			try
@@ -233,6 +236,7 @@ namespace Raven.Database.Linq
 			return expression;
 		}
 
+		[CLSCompliant(false)]
 		public static LambdaExpression AsLambdaExpression(this Expression expression)
 		{
 			var lambdaExpression = expression as LambdaExpression;

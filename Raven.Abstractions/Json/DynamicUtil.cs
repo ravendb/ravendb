@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT  && !NET35
+#if !SILVERLIGHT
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;

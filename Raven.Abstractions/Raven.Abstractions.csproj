@@ -560,7 +560,10 @@
     <Compile Include="Connection\OAuthHelper.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Data\Alert.cs" />
+    <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
+    <Compile Include="Data\PeriodicBackupSetup.cs" />
+    <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
     <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\AggregationOperationExtensions.cs" />
@@ -640,7 +643,6 @@
     <Compile Include="Json\Utilities\MathUtils.cs" />
     <Compile Include="Json\Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Json\Utilities\StringUtils.cs" />
-    <Compile Include="Json\Utilities\Tuple.cs" />
     <Compile Include="Linq\DynamicList.cs" />
     <Compile Include="Linq\DynamicNullObject.cs" />
     <Compile Include="Logging\ILog.cs" />

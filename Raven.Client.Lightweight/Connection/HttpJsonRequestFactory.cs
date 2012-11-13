@@ -1,5 +1,9 @@
 ﻿using System;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Net;
 using System.Threading;
 using Raven.Abstractions.Extensions;
@@ -9,6 +13,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+	using Raven.Abstractions.Data;
+
 	///<summary>
 	/// Create the HTTP Json Requests to the RavenDB Server
 	/// and manages the http cache
@@ -124,7 +130,6 @@ namespace Raven.Client.Connection
 			ResetCache();
 		}
 
-#if !NET35
 		///<summary>
 		/// The aggressive cache duration
 		///</summary>
@@ -155,38 +160,21 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
-#else
-		[ThreadStatic] private static TimeSpan? aggressiveCacheDuration;
-		[ThreadStatic] private static bool disableHttpCaching;
 
-
-		
-		/// <summary>
-		/// Disable the HTTP caching
-		/// </summary>
-		public bool DisableHttpCaching
-		{
-			get { return disableHttpCaching; }
-			set { disableHttpCaching = value; }
-		}
-
-		///<summary>
-		/// The aggressive cache duration
-		///</summary>
-		public TimeSpan? AggressiveCacheDuration
-		{
-			get { return aggressiveCacheDuration; }
-			set { aggressiveCacheDuration = value; }
-		}
-#endif
 		private volatile bool disposed;
 
-		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest)
+		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, NameValueCollection additionalHeaders = null)
 		{
 			if (httpJsonRequest.CachedRequestDetails == null)
 				throw new InvalidOperationException("Cannot get cached response from a request that has no cached information");
 			httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
 			httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
+
+			if (additionalHeaders != null && additionalHeaders[Constants.RavenForcePrimaryServerCheck] != null)
+			{
+				httpJsonRequest.ResponseHeaders.Add(Constants.RavenForcePrimaryServerCheck, additionalHeaders[Constants.RavenForcePrimaryServerCheck]);
+			}
+
 			IncrementCachedRequests();
 			return httpJsonRequest.CachedRequestDetails.Data.CloneToken();
 		}
@@ -221,10 +209,8 @@ namespace Raven.Client.Connection
 				return;
 		    disposed = true;
 			cache.Dispose();
-#if !NET35
 			aggressiveCacheDuration.Dispose();
 			disableHttpCaching.Dispose();
-#endif
 		}
 
 		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)

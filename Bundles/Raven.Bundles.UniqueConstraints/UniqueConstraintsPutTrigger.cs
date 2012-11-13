@@ -27,6 +27,7 @@ namespace Raven.Bundles.UniqueConstraints
 				return;
 
 			var constraintMetaObject = new RavenJObject { { Constants.IsConstraintDocument, true } };
+			constraintMetaObject.EnsureSnapshot();
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
@@ -38,7 +39,7 @@ namespace Raven.Bundles.UniqueConstraints
 					documentName,
 					null,
 					RavenJObject.FromObject(new { RelatedId = key }),
-					constraintMetaObject,
+					(RavenJObject)constraintMetaObject.CreateSnapshot(),
 					transactionInformation);
 			}
 		}

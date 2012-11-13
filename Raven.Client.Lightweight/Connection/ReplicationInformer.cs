@@ -13,15 +13,14 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-#if !NET35
 using System.Threading.Tasks;
-#endif
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using System.Net;
 using System.Net.Sockets;
@@ -29,7 +28,6 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
 
 #if SILVERLIGHT
-using Raven.Client.Silverlight.Connection.Async;
 using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Json.Linq;
 #endif
@@ -87,57 +85,14 @@ namespace Raven.Client.Connection
 			this.conventions = conventions;
 		}
 
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
 #else
 		private readonly Dictionary<string, FailureCounter> failureCounts = new Dictionary<string, FailureCounter>();
 #endif
 
-#if !NET35
 		private Task refreshReplicationInformationTask;
-#endif
 
-#if NET35
-		/// <summary>
-		/// Updates the replication information if needed.
-		/// </summary>
-		/// <param name="serverClient">The server client.</param>
-		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
-		{
-			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-				return;
-
-			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-				return;
-			lock (replicationLock)
-			{
-				if (firstTime)
-				{
-					var serverHash = GetServerHash(serverClient);
-
-					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
-					if(document != null)
-					{
-						UpdateReplicationInformationFromDocument(document);
-					}
-				}
-
-				firstTime = false;
-
-				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-					return;
-
-				try 
-				{          
-					RefreshReplicationInformation(serverClient);
-				}
-				catch (System.Exception e)
-				{
-					log.ErrorException("Failed to refresh replication information", e);
-				}
-			}
-		}
-#else
 		/// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
@@ -187,12 +142,12 @@ namespace Raven.Client.Connection
 					});
 			}
 		}
-#endif
 
 		private class FailureCounter
 		{
-			public int Value;
+			public long Value;
 			public DateTime LastCheck;
+			public bool ForceCheck;
 
 			public FailureCounter()
 			{
@@ -204,9 +159,17 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Get the current failure count for the url
 		/// </summary>
-		public int GetFailureCount(string operationUrl)
+		public long GetFailureCount(string operationUrl)
 		{
 			return GetHolder(operationUrl).Value;
+		}
+
+		/// <summary>
+		/// Get failure last check time for the url
+		/// </summary>
+		public DateTime GetFailureLastCheck(string operationUrl)
+		{
+			return GetHolder(operationUrl).LastCheck;
 		}
 
 		/// <summary>
@@ -218,8 +181,11 @@ namespace Raven.Client.Connection
 				AssertValidOperation(method);
 
 			var failureCounter = GetHolder(operationUrl);
-			if (failureCounter.Value == 0)
+			if (failureCounter.Value == 0 || failureCounter.ForceCheck)
+			{
+				failureCounter.LastCheck = SystemTime.UtcNow;
 				return true;
+			}
 
 
 			if (currentRequest % GetCheckReptitionRate(failureCounter.Value) == 0)
@@ -237,10 +203,10 @@ namespace Raven.Client.Connection
 			return false;
 		}
 
-		private int GetCheckReptitionRate(int value)
+		private int GetCheckReptitionRate(long value)
 		{
 			if (value < 2)
-				return value;
+				return (int)value;
 			if (value < 10)
 				return 2;
 			if (value < 100)
@@ -278,7 +244,7 @@ namespace Raven.Client.Connection
 
 		private FailureCounter GetHolder(string operationUrl)
 		{
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
 #else
 			// need to compensate for 3.5 not having concnurrent dic.
@@ -316,6 +282,7 @@ namespace Raven.Client.Connection
 		public void IncrementFailureCount(string operationUrl)
 		{
 			FailureCounter value = GetHolder(operationUrl);
+			value.ForceCheck = false;
 			var current = Interlocked.Increment(ref value.Value);
 			if (current == 1)// first failure
 			{
@@ -410,7 +377,7 @@ namespace Raven.Client.Connection
 			replicationDestinations = replicationDocument.Destinations.Select(x =>
 			{
 				var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url : x.ClientVisibleUrl;
-				if (string.IsNullOrEmpty(url) || x.IgnoredClient)
+				if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
 					return null;
 				if (string.IsNullOrEmpty(x.Database))
 					return new ReplicationDestinationData
@@ -511,6 +478,7 @@ namespace Raven.Client.Connection
 			var value = GetHolder(operationUrl);
 			var oldVal = Interlocked.Exchange(ref value.Value, 0);
 			value.LastCheck = SystemTime.UtcNow;
+			value.ForceCheck = false;
 			if (oldVal != 0)
 			{
 				FailoverStatusChanged(this,
@@ -597,7 +565,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 		}
 		#endregion
 
-#if !NET35
 		#region ExecuteWithReplicationAsync
 
 		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<string, Task<T>> operation)
@@ -771,23 +738,21 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		}
 
 		#endregion
-#endif
 
 		protected virtual bool IsServerDown(Exception e)
 		{
-#if !NET35
 			var aggregateException = e as AggregateException;
 			if (aggregateException != null)
 			{
 				e = aggregateException.ExtractSingleInnerException();
 			}
-#endif
+
 			var webException = (e as WebException) ?? (e.InnerException as WebException);
 			if (webException != null)
 			{
 				switch (webException.Status)
 				{
-#if !NET35 && !SILVERLIGHT
+#if !SILVERLIGHT
 					case WebExceptionStatus.NameResolutionFailure:
 					case WebExceptionStatus.ReceiveFailure:
 					case WebExceptionStatus.PipelineFailure:
@@ -818,11 +783,15 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		public virtual void Dispose()
 		{
-#if !NET35
 			var replicationInformationTaskCopy = refreshReplicationInformationTask;
 			if (replicationInformationTaskCopy != null)
 				replicationInformationTaskCopy.Wait();
-#endif
+		}
+
+		public void ForceCheck(string primaryUrl, bool shouldForceCheck)
+		{
+			var failureCounter = this.GetHolder(primaryUrl);
+			failureCounter.ForceCheck = shouldForceCheck;
 		}
 	}
 

@@ -56,20 +56,21 @@ namespace Raven.Studio.Models
         public PatchModel()
         {
             Values = new ObservableCollection<PatchValue>();
+			InProccess = new Observable<bool>();
 
-            OriginalDoc = new EditorDocument()
+            OriginalDoc = new EditorDocument
             {
                 Language = JsonLanguage,
                 IsReadOnly = true,
             };
 
-            NewDoc = new EditorDocument()
+            NewDoc = new EditorDocument
             {
                 Language = JsonLanguage,
                 IsReadOnly = true,
             };
 
-            Script = new EditorDocument()
+            Script = new EditorDocument
             {
                 Language = JScriptLanguage
             };
@@ -77,7 +78,7 @@ namespace Raven.Studio.Models
             Script.Language.RegisterService(new PatchScriptIntelliPromptProvider(Values, recentDocuments));
             Script.Language.RegisterService<IEditorDocumentTextChangeEventSink>(new AutoCompletionTrigger());
 
-            QueryDoc = new EditorDocument()
+            QueryDoc = new EditorDocument
             {
                 Language = QueryLanguage
             };
@@ -170,7 +171,7 @@ namespace Raven.Studio.Models
             {
                 queryIndexAutoComplete = value;
                 QueryDoc.Language.UnregisterService<ICompletionProvider>();
-                QueryDoc.Language.RegisterService<ICompletionProvider>(value.CompletionProvider);
+                QueryDoc.Language.RegisterService(value.CompletionProvider);
             }
         }
 
@@ -186,7 +187,8 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => IsQueryVisible);
 				OnPropertyChanged(() => IsComboBoxVisible);
 				OnPropertyChanged(() => BeforeAndAfterPromptText);
-			    SelectedItem = "";
+				if(KeepSelectedItem == false)
+					SelectedItem = "";
 			    UpdateAvailableObjects();
 			    ClearBeforeAndAfter();
 			}
@@ -277,6 +279,8 @@ namespace Raven.Studio.Models
 		    get { return selectedItem; }
             set
             {
+				if (value == null && KeepSelectedItem)
+					return;
                 selectedItem = value;
                 OnPropertyChanged(() => SelectedItem);
                 recentDocuments.Clear();
@@ -295,11 +299,11 @@ namespace Raven.Studio.Models
 	        if (PatchOn == PatchOnOptions.Collection)
 	        {
                 QueryResults.SetChangesObservable(d => d.IndexChanges
-					.Where(n => n.Name.Equals(PatchModel.CollectionsIndex, StringComparison.InvariantCulture))
+					.Where(n => n.Name.Equals(CollectionsIndex, StringComparison.InvariantCulture))
 					.Select(m => Unit.Default));
 
 				if (string.IsNullOrWhiteSpace(SelectedItem) == false)
-					queryCollectionSource.UpdateQuery(PatchModel.CollectionsIndex, new IndexQuery {Query = "Tag:" + SelectedItem});
+					queryCollectionSource.UpdateQuery(CollectionsIndex, new IndexQuery {Query = "Tag:" + SelectedItem});
 	        }
             else if (PatchOn == PatchOnOptions.Index)
             {
@@ -342,8 +346,10 @@ namespace Raven.Studio.Models
 	    public IEditorDocument Script { get; private set; }
 		public ObservableCollection<PatchValue> Values { get; set; }
 		public PatchValue SelectedValue { get; set; }
+		public bool KeepSelectedItem { private get; set; }
 
 		public const string CollectionsIndex = "Raven/DocumentsByEntityName";
+		public ICommand CopyErrorTextToClipboard { get { return new ActionCommand(() => Clipboard.SetText(PatchScriptErrorMessage.Value)); } }
 		public ICommand Patch { get { return new ExecutePatchCommand(this); } }
 		public ICommand PatchSelected { get { return new PatchSelectedCommand(this); } }
 		public ICommand Test { get { return new TestPatchCommand(this); } }
@@ -367,6 +373,8 @@ namespace Raven.Studio.Models
 				});
 			}
 		}
+
+		public Observable<bool> InProccess { get; private set; }
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
@@ -405,7 +413,12 @@ namespace Raven.Studio.Models
                             AvailableObjects.AddRange(collections.OrderByDescending(x => x.Count)
                                                           .Where(x => x.Count > 0)
                                                           .Select(col => col.Name).ToList());
-	                        SelectedItem = AvailableObjects.FirstOrDefault();
+							if(KeepSelectedItem == false)
+								SelectedItem = AvailableObjects.FirstOrDefault();
+							else
+								KeepSelectedItem = false;								
+
+							OnPropertyChanged(() => SelectedItem);
                         });
                     break;
                 case PatchOnOptions.Index:
@@ -414,7 +427,12 @@ namespace Raven.Studio.Models
                         {
                             AvailableObjects.Clear();
                             AvailableObjects.AddRange(indexes.OrderBy(x => x));
-							SelectedItem = AvailableObjects.FirstOrDefault();
+							if (KeepSelectedItem == false)
+								SelectedItem = AvailableObjects.FirstOrDefault();
+							else
+								KeepSelectedItem = false;
+
+							OnPropertyChanged(() => SelectedItem);
                         });
                     break;
             }
@@ -429,10 +447,7 @@ namespace Raven.Studio.Models
                 .Throttle(TimeSpan.FromSeconds(0.5))
                 .TakeUntil(Unloaded)
                 .ObserveOnDispatcher()
-                .Subscribe(e =>
-                {
-                    UpdateCollectionSource();
-                });
+                .Subscribe(e => UpdateCollectionSource());
         }
 
 
@@ -515,15 +530,18 @@ namespace Raven.Studio.Models
 
 		public override void Execute(object parameter)
 		{
+			var dbName = ApplicationModel.Database.Value.Name;
+			if (dbName == Constants.SystemDatabase)
+				dbName = null;
 			AskUser.SelectItem("Load", "Choose saved patching to load",
-			                                    () => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced.
+												() => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(dbName).Advanced.
 				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
 					                                             task =>
 					                                             {
 						                                             IList<string> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).ToList();
 						                                             return objects;
 					                                             }))
-				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().
+				.ContinueOnSuccessInTheUIThread(result => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(dbName).
 					                                          LoadAsync<PatchDocument>("Studio/Patch/" + result)
 					                                          .ContinueOnSuccessInTheUIThread(patch =>
 					                                          {
@@ -531,10 +549,11 @@ namespace Raven.Studio.Models
 																	  ApplicationModel.Current.Notifications.Add(new Notification("Could not find Patch document named " + result, NotificationLevel.Error));
 																  else
 																  {
+																	  patchModel.KeepSelectedItem = true;
+																	  patchModel.SelectedItem = patch.SelectedItem;
 																	  patchModel.PatchOn = patch.PatchOnOption;
 																	  patchModel.QueryDoc.SetText(patch.Query);
 																	  patchModel.Script.SetText(patch.Script);
-																	  patchModel.SelectedItem = patch.SelectedItem;
 																	  patchModel.Values = new ObservableCollection<PatchValue>(patch.Values);
 																	  patchModel.UpdateDoc(result);
 
@@ -566,8 +585,11 @@ namespace Raven.Studio.Models
 					Id = "Studio/Patch/" + name,
 					Values = patchModel.Values.ToList()
 				};
+				var dbName = ApplicationModel.Database.Value.Name;
+				if (dbName == Constants.SystemDatabase)
+					dbName = null;
 
-				var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
+				var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(dbName);
 				session.Store(doc);
 				session.SaveChangesAsync().ContinueOnSuccessInTheUIThread(() => patchModel.UpdateDoc(name));
 			});
@@ -690,9 +712,12 @@ namespace Raven.Studio.Models
 					break;
 			}
 
-		    ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
-		        .ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()))
-                .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); });
+			patchModel.InProccess.Value = true;
+
+			ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
+				.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()))
+				.ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+				.Finally(() => patchModel.InProccess.Value = false);
 
 		    patchModel.ShowBeforeAndAfterPrompt = false;
 			patchModel.ShowAfterPrompt = false;
@@ -719,6 +744,7 @@ namespace Raven.Studio.Models
 					if (values == null)
 						return;
                     var request = new ScriptedPatchRequest { Script = patchModel.Script.CurrentSnapshot.Text, Values = values};
+					patchModel.InProccess.Value = true;
 
                     switch (patchModel.PatchOn)
                     {
@@ -731,30 +757,32 @@ namespace Raven.Studio.Models
                             };
 
 		                    ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
-                                .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); }).
-			                    ContinueOnSuccessInTheUIThread(
+			                    .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+			                    .ContinueOnSuccessInTheUIThread(
 				                    () => ApplicationModel.Database.Value.AsyncDatabaseCommands.GetAsync(patchModel.SelectedItem).
-					                          ContinueOnSuccessInTheUIThread(
-						                          doc =>
-						                          {
-							                          patchModel.OriginalDoc.SetText(doc.ToJson().ToString());
-							                          patchModel.NewDoc.SetText("");
-							                          patchModel.ShowAfterPrompt = true;
-						                          }));
+					                          ContinueOnSuccessInTheUIThread(doc =>
+					                          {
+						                          patchModel.OriginalDoc.SetText(doc.ToJson().ToString());
+						                          patchModel.NewDoc.SetText("");
+						                          patchModel.ShowAfterPrompt = true;
+					                          }))
+			                    .Finally(() => patchModel.InProccess.Value = false);
                             break;
 
                         case PatchOnOptions.Collection:
                             ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(PatchModel.CollectionsIndex,
                                                                                                 new IndexQuery { Query = "Tag:" + patchModel.SelectedItem }, request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
-                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); });
+                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+																								 .Finally(() => patchModel.InProccess.Value = false);
                             break;
 
                         case PatchOnOptions.Index:
-                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery() { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
+                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
                                                                                                 request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
-                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); });
+                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+																								 .Finally(() => patchModel.InProccess.Value = false);
                             break;
                     }
 

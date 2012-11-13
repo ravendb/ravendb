@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET35
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -159,7 +158,8 @@ namespace Raven.Abstractions.Linq
 					var ar = (RavenJArray)jToken;
 					return new DynamicList(this, ar.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
-					return jToken.Value<DateTime>();
+					var ravenJValue = ((RavenJValue) jToken);
+					return ravenJValue.Value;
 				case JTokenType.Null:
 					return new DynamicNullObject { IsExplicitNull = true };
 				default:
@@ -169,6 +169,10 @@ namespace Raven.Abstractions.Linq
 						var l = (long)value;
 						if (l > int.MinValue && int.MaxValue > l)
 							return (int)l;
+					}
+					if(value is Guid)
+					{
+						return value.ToString();
 					}
 					var s = value as string;
 					if (s != null)
@@ -324,6 +328,6 @@ namespace Raven.Abstractions.Linq
 		{
 			get { return inner; }
 		}
+
 	}
 }
-#endif

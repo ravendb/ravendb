@@ -9,7 +9,6 @@ using Raven.Bundles.Replication.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-using Raven.Client.Silverlight.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
@@ -49,6 +48,9 @@ namespace Raven.Studio.Models
                 new CsvImportTask()
 			};
 
+			if (name == null || name == Constants.SystemDatabase)
+				Tasks.Insert(3, new StartRestoreTask());
+
 			SelectedTask = new Observable<TaskModel> { Value = Tasks.FirstOrDefault() };
 			Statistics = new Observable<DatabaseStatistics>();
 			Status = new Observable<string>
@@ -56,12 +58,9 @@ namespace Raven.Studio.Models
 				Value = "Offline"
 			};
 
-
-
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
 			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
 			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
-
 
 		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
 		        .SampleResponsive(TimeSpan.FromSeconds(2))

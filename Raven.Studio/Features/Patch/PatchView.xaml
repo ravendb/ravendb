@@ -28,6 +28,7 @@
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
@@ -155,7 +156,15 @@
 			</Grid>
 		</Border>
 
-		<Grid Grid.Row="2">
+
+		<ProgressBar Visibility="{Binding InProccess.Value, Converter={StaticResource BooleanToVisibility}}"
+					 Height="25"
+					 Width="200"
+					 Margin="5"
+					 IsIndeterminate="{Binding InProccess.Value}"
+					 HorizontalAlignment="Left"
+					 Grid.Row="2"/>
+		<Grid Grid.Row="3">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="Auto"/>
@@ -227,10 +236,21 @@
                             <ei:ControlStoryboardAction Storyboard="{StaticResource HideErrorPanel}" ControlStoryboardOption="Play"/>
                         </ei:DataTrigger>
                     </i:Interaction.Triggers>
-                    <TextBlock Text="{Binding PatchScriptErrorMessage.Value}" Foreground="White" Margin="5" VerticalAlignment="Top" 
+					<TextBlock Text="{Binding PatchScriptErrorMessage.Value}" Foreground="White" Margin="5" VerticalAlignment="Top" 
 							   TextWrapping="Wrap"
 							   Behaviors:FadeTrimming.IsEnabled="True"
-							   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"/>
+							   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True">
+						 <ContextMenu:ContextMenuService.ContextMenu>
+                        <ContextMenu:ContextMenu x:Name="DocumentsContextMenu">
+                            <ContextMenu:MenuItem Header="Copy Error to Clipboard"
+                                                  Command="{Binding CopyErrorTextToClipboard}">
+                                <ContextMenu:MenuItem.Icon>
+                                    <Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+                                </ContextMenu:MenuItem.Icon>
+                            </ContextMenu:MenuItem>
+                        </ContextMenu:ContextMenu>
+                    </ContextMenu:ContextMenuService.ContextMenu>
+					</TextBlock>
                 </Border>
                 
                 <sdk:GridSplitter Grid.Column="1"
@@ -308,8 +328,8 @@
 
 			<Grid Grid.Row="5">
 				<Grid.RowDefinitions>
-					<RowDefinition Height="{Binding IsComboBoxVisible, Converter={StaticResource HiddenWhenFalseStarSizedWhenTrue}}"/>
-					<RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" Behaviors:RowDefinitionVisibility.IsVisible="{Binding IsComboBoxVisible}" />
+				    <RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 

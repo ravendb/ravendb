@@ -1,5 +1,9 @@
-﻿using System.Windows.Input;
+﻿using System;
+using System.Collections.Generic;
+using System.Windows.Input;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -8,7 +12,6 @@ namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
-
         public SettingsPageModel()
         {
             Settings = new SettingsModel();
@@ -26,55 +29,57 @@ namespace Raven.Studio.Models
 			if(databaseName == Constants.SystemDatabase)
 			{
 				var apiKeys = new ApiKeysSectionModel();
-
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
+				Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
 
 				return; 
 			}
 
-            ApplicationModel.Current.Server.Value.DocumentStore
-                .AsyncDatabaseCommands
-                .ForDefaultDatabase()
-                .CreateRequest("/admin/databases/" + databaseName, "GET")
-                .ReadResponseJsonAsync()
-                .ContinueOnSuccessInTheUIThread(doc =>
-                {
-                    if (doc == null)
-                        return;
+	        ApplicationModel.Current.Server.Value.DocumentStore
+		        .AsyncDatabaseCommands
+		        .ForDefaultDatabase()
+		        .CreateRequest("/admin/databases/" + databaseName, "GET")
+		        .ReadResponseJsonAsync()
+		        .ContinueOnSuccessInTheUIThread(doc =>
+		        {
+			        if (doc == null)
+				        return;
 
-                    var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer().Deserialize
-                        <DatabaseDocument>(new RavenJTokenReader(doc));
-                    Settings.DatabaseDocument = databaseDocument;
+			        var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
+						.Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
+			        Settings.DatabaseDocument = databaseDocument;
 
-                    var databaseSettingsSectionViewModel = new DatabaseSettingsSectionViewModel();
-                    Settings.Sections.Add(databaseSettingsSectionViewModel);
-                    Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
+			        var databaseSettingsSectionViewModel = new DatabaseSettingsSectionViewModel();
+			        Settings.Sections.Add(databaseSettingsSectionViewModel);
+			        Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
 
-                    string activeBundles;
-                    databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
+					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
-					if (activeBundles != null)
-					{
-						if (activeBundles.Contains("Quotas"))
-							Settings.Sections.Add(new QuotaSettingsSectionModel());
+			        string activeBundles;
+			        databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
 
-						if (activeBundles.Contains("Replication"))
-							Settings.Sections.Add(new ReplicationSettingsSectionModel());
+			        if (activeBundles != null)
+			        {
+				        if (activeBundles.Contains("Quotas"))
+					        Settings.Sections.Add(new QuotaSettingsSectionModel());
 
-						if (activeBundles.Contains("Versioning"))
-							Settings.Sections.Add(new VersioningSettingsSectionModel());
+				        if (activeBundles.Contains("Replication"))
+					        Settings.Sections.Add(new ReplicationSettingsSectionModel());
 
-                        if (activeBundles.Contains("Authorization"))
-                            Settings.Sections.Add(new AuthorizationSettingsSectionModel());
-					}
+				        if (activeBundles.Contains("Versioning"))
+					        Settings.Sections.Add(new VersioningSettingsSectionModel());
 
-	                foreach (var settingsSectionModel in Settings.Sections)
-                    {
-                        settingsSectionModel.LoadFor(databaseDocument);
-                    }
-                });
+				        if (activeBundles.Contains("Authorization"))
+					        Settings.Sections.Add(new AuthorizationSettingsSectionModel());
+			        }
+
+			        foreach (var settingsSectionModel in Settings.Sections)
+			        {
+				        settingsSectionModel.LoadFor(databaseDocument);
+			        }
+		        });
         }
 
         public SettingsModel Settings { get; private set; }
