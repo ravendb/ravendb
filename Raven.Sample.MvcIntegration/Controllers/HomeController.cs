@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Web.Mvc;
+using Raven.Sample.MvcIntegration.Models;
 using System.Linq;
-using System.Web;
-using System.Web.Mvc;
 
 namespace Raven.Sample.MvcIntegration.Controllers
 {
@@ -10,6 +8,16 @@ namespace Raven.Sample.MvcIntegration.Controllers
 	{
 		public ActionResult Index()
 		{
+			using (var session = WebApiApplication.Store.OpenSession())
+			{
+				session.Store(new TodoItem {Text = "Getting Started!"});
+				session.SaveChanges();
+			}
+
+			using (var session = WebApiApplication.Store.OpenSession())
+			{
+				var todoItems = session.Query<TodoItem>().ToList();
+			}
 			return View();
 		}
 	}
