@@ -19,6 +19,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Listeners;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+using Raven.Client.Silverlight.MissingFromSilverlight;
 #endif
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
@@ -37,6 +38,8 @@ using Raven.Imports.Newtonsoft.Json.Bson;
 
 namespace Raven.Client.Connection.Async
 {
+	using System.Collections.Specialized;
+
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
@@ -107,11 +110,12 @@ namespace Raven.Client.Connection.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<string[]> GetIndexNamesAsync(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", url =>
+			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				return url.IndexNames(start, pageSize)
+				return operationUrl.IndexNames(start, pageSize)
 					.NoCache()
 					.ToJsonRequest(this, credentials, convention)
+					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
 					.ReadResponseJsonAsync()
 					.ContinueWith(task =>
 					{
@@ -128,10 +132,11 @@ namespace Raven.Client.Connection.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", url =>
+			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var url2 = (url + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
+				var url2 = (operationUrl + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task =>
@@ -151,10 +156,12 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">The name.</param>
 		public Task ResetIndexAsync(string name)
 		{
-			return ExecuteWithReplication("RESET", url =>
+			return ExecuteWithReplication("RESET", operationUrl =>
 			{
-				var httpJsonRequestAsync = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/indexes/" + name, "RESET", credentials, convention));
+				var httpJsonRequestAsync = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention));
 				httpJsonRequestAsync.AddOperationHeaders(OperationsHeaders);
+				httpJsonRequestAsync.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
 				return httpJsonRequestAsync.ReadResponseJsonAsync();
 			});
 		}
@@ -165,11 +172,13 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">The name.</param>
 		public Task<IndexDefinition> GetIndexAsync(string name)
 		{
-			return ExecuteWithReplication("GET", url =>
+			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				return url.IndexDefinition(name)
+				return operationUrl.IndexDefinition(name)
 				.NoCache()
-				.ToJsonRequest(this, credentials, convention).ReadResponseJsonAsync()
+				.ToJsonRequest(this, credentials, convention)
+				.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				.ReadResponseJsonAsync()
 					.ContinueWith(task =>
 					{
 						var json = (RavenJObject)task.Result;
@@ -196,13 +205,15 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">Should overwrite index</param>
-		/// <param name="url">The server's url</param>
-		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string url)
+		/// <param name="operationUrl">The server's url</param>
+		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string operationUrl)
 		{
-			var requestUri = url + "/indexes/" + name;
+			var requestUri = operationUrl + "/indexes/" + name;
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
+
+			webRequest.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return webRequest.ExecuteRequestAsync()
 				.ContinueWith(task =>
@@ -241,22 +252,22 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">The name.</param>
 		public Task DeleteIndexAsync(string name)
 		{
-			return ExecuteWithReplication("DELETE", url =>
-			{
-				return url.Indexes(name)
-					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
-					.ExecuteRequestAsync();
-			});
+			return ExecuteWithReplication("DELETE", operationUrl => operationUrl.Indexes(name)
+				                                                        .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+				                                                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				                                                        .ExecuteRequestAsync());
 		}
 
 		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			return ExecuteWithReplication("DELETE", url =>
+			return ExecuteWithReplication("DELETE", operationUrl =>
 			{
-				string path = queryToDelete.GetIndexQueryUrl(url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
+
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync()
 					.ContinueWith(task =>
@@ -320,8 +331,11 @@ namespace Raven.Client.Connection.Async
 					new CreateHttpJsonRequestParams(this, opUrl + "/docs/" + key, method, metadata, credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
+		
+			request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
 			return request.WriteAsync(document.ToString())
-			.ContinueWith(task =>
+				.ContinueWith(task =>
 			{
 				if (task.Exception != null)
 					throw new InvalidOperationException("Unable to write to server");
@@ -411,6 +425,8 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, opUrl + "/docs/" + key, "GET", metadata, credentials, convention)
 				.AddOperationHeaders(OperationsHeaders));
 
+				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
@@ -480,6 +496,9 @@ namespace Raven.Client.Connection.Async
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "GET", credentials,
 					                                                                         convention)
 						                                         .AddOperationHeaders(OperationsHeaders));
+
+				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => CompleteMultiGetAsync(opUrl, keys, includes, task))
 					.Unwrap();
@@ -574,9 +593,9 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
 		{
-			return ExecuteWithReplication("GET", url =>
+			return ExecuteWithReplication("GET", operationUrl =>
 		{
-			var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+			var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
 			Uri.EscapeUriString(index),
 			Uri.EscapeDataString(facetSetupDoc),
 			Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
@@ -584,6 +603,8 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
+
+			request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
@@ -606,6 +627,7 @@ namespace Raven.Client.Connection.Async
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
 																							 credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(task.Result)));
@@ -706,7 +728,9 @@ namespace Raven.Client.Connection.Async
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
 																							 (operationUrl + "/admin/StartIndexing").NoCache(),
 																							 "POST", credentials, convention));
+																							 
 				request.AddOperationHeaders(OperationsHeaders);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync();
 			});
@@ -721,6 +745,7 @@ namespace Raven.Client.Connection.Async
 																							 (operationUrl + "/admin/StopIndexing").NoCache(),
 																							 "POST", credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync();
 			});
@@ -735,6 +760,7 @@ namespace Raven.Client.Connection.Async
 																							 (operationUrl + "/admin/IndexingStatus").
 																								NoCache(), "GET", credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
@@ -755,6 +781,8 @@ namespace Raven.Client.Connection.Async
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
+			request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
 			return request.ReadResponseJsonAsync()
 					.ContinueWith(
 						task =>
@@ -768,12 +796,14 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
 		{
-			return ExecuteWithReplication("GET", url => // logical GET even though the actual request is a POST
+			return ExecuteWithReplication("GET", operationUrl => // logical GET even though the actual request is a POST
 			{
-				var multiGetOperation = new MultiGetOperation(this, convention, url, requests);
+				var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
 
 				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
+
+				httpJsonRequest.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				var requestsForServer = multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
 
@@ -820,30 +850,34 @@ namespace Raven.Client.Connection.Async
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", url =>
-			{
-				EnsureIsNotNullOrEmpty(index, "index");
+		{
+			EnsureIsNotNullOrEmpty(index, "index");
 				var path = query.GetIndexQueryUrl(url, index, "indexes");
-				if (metadataOnly)
-					path += "&metadata-only=true";
-				if (includes != null && includes.Length > 0)
-				{
-					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
-				}
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention));
+			if (metadataOnly)
+				path += "&metadata-only=true";
+			if (includes != null && includes.Length > 0)
+			{
+				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+			}
+			var request =
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
+				                                                                         convention));
 
-				return request.ReadResponseJsonAsync()
+			request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			return request.ReadResponseJsonAsync()
 						.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject)task.Result, request.GetEtagHeader())));
 			});
 		}
 
 		private T AttemptToProcessResponse<T>(Func<T> process) where T : class
-		{
-			try
-			{
+				{
+					try
+					{
 				return process();
-			}
-			catch (AggregateException e)
-			{
+					}
+					catch (AggregateException e)
+					{
 				var webException = e.ExtractSingleInnerException() as WebException;
 				if (webException == null)
 					throw;
@@ -861,12 +895,12 @@ namespace Raven.Client.Connection.Async
 		/// <param name="e">The exception to handle</param>
 		/// <returns>returns true if the exception is handled, false if it should be thrown</returns>
 		private bool HandleException(WebException e)
-		{
+						{
 			var httpWebResponse = e.Response as HttpWebResponse;
 			if (httpWebResponse == null)
-			{
+							{
 				return false;
-			}
+							}
 			if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
 			{
 				var content = new StreamReader(httpWebResponse.GetResponseStream());
@@ -874,9 +908,9 @@ namespace Raven.Client.Connection.Async
 				var error = jo.Deserialize<ServerRequestError>(convention);
 
 				throw new WebException(error.Error);
-			}
+						}
 			return false;
-		}
+					}
 
 		///// <summary>
 		///// Begins the async query.
@@ -957,9 +991,9 @@ namespace Raven.Client.Connection.Async
 			if (suggestionQuery == null)
 				throw new ArgumentNullException("suggestionQuery");
 
-			return ExecuteWithReplication("GET", url =>
+			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var requestUri = url + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
+				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
 					Uri.EscapeUriString(index),
 					Uri.EscapeDataString(suggestionQuery.Term),
 					Uri.EscapeDataString(suggestionQuery.Field),
@@ -970,6 +1004,8 @@ namespace Raven.Client.Connection.Async
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
+
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task =>
@@ -990,12 +1026,15 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
 		{
-			return ExecuteWithReplication("POST", url =>
+			return ExecuteWithReplication("POST", operationUrl =>
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
-				var req = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/bulk_docs", "POST", metadata, credentials, convention)
+				var req = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
+
+				req.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 				var data = jArray.ToString(Formatting.None);
 
@@ -1110,7 +1149,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="metadata">The metadata.</param>
 		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata)
 		{
-			return ExecuteWithReplication("PUT", url =>
+			return ExecuteWithReplication("PUT", operationUrl =>
 			{
 				if (metadata == null)
 					metadata = new RavenJObject();
@@ -1118,11 +1157,12 @@ namespace Raven.Client.Connection.Async
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(url, key), "PUT", metadata, credentials, convention));
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationUrl, key), "PUT", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request
-					.ExecuteWriteAsync(Encoding.UTF8.GetString(data, 0, data.Length))
+					.ExecuteWriteAsync(data)
 					.ContinueWith(write =>
 					{
 						if (write.Exception != null)
@@ -1148,6 +1188,8 @@ namespace Raven.Client.Connection.Async
 				AddTransactionInformation(metadata);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
+
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request
 					.ReadResponseBytesAsync()
@@ -1211,15 +1253,16 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		public Task DeleteAttachmentAsync(string key, Guid? etag)
 		{
-			return ExecuteWithReplication("DELETE", url =>
+			return ExecuteWithReplication("DELETE", operationUrl =>
 			{
 				var metadata = new RavenJObject();
 
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(url, key), "DELETE", metadata, credentials, convention));
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationUrl, key), "DELETE", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync();
 			});
@@ -1264,11 +1307,12 @@ namespace Raven.Client.Connection.Async
 		///<returns></returns>
 		public Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize)
 		{
-			return ExecuteWithReplication("GET", url =>
+			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				return url.Terms(index, field, fromValue, pageSize)
+				return operationUrl.Terms(index, field, fromValue, pageSize)
 					.NoCache()
 					.ToJsonRequest(this, credentials, convention)
+					.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
 					.ReadResponseJsonAsync()
 					.ContinueWith(task =>
 					{
@@ -1311,10 +1355,27 @@ namespace Raven.Client.Connection.Async
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
+		private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
+		{
+			if (!primaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+			{
+				var forceCheck = headers[Constants.RavenForcePrimaryServerCheck];
+				bool shouldForceCheck;
+				if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
+				{
+					this.replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
+				}
+			}
+		}
+
 		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
 		{
 			// Convert the Func<string, Task> to a Func<string, Task<object>>
-			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t => null));
+			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>
+			{
+				t.AssertNotFailed();
+				return null;
+			}));
 		}
 
 		private volatile bool currentlyExecuting;
@@ -1324,7 +1385,7 @@ namespace Raven.Client.Connection.Async
 		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
-			if (currentlyExecuting && convention.AllowMultipuleOperations == false)
+			if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
 
 			currentlyExecuting = true;

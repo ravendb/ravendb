@@ -129,7 +129,7 @@ namespace Raven.Client.Document
 			Conventions = new DocumentConvention();
 #else
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string,string>();
-			Conventions = new DocumentConvention{AllowMultipuleOperations = true};
+			Conventions = new DocumentConvention{AllowMultipuleAsyncOperations = true};
 #endif
 		}
 

@@ -36,7 +36,7 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
-			replicationTask.ResetFailureForHeartbeat(src);
+			replicationTask.HandleHeartbeat(src);
 		}
 	}
 }
