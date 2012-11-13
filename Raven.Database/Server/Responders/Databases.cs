@@ -37,6 +37,22 @@ namespace Raven.Database.Server.Responders
 
 			// If admin, show all dbs
 
+			List<string> approvedDatabases = null;
+
+			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+			{
+				if(server.RequestAuthorizer.Authorize(context) == false)
+				{
+					return;
+				}
+
+
+				if (context.User.IsAdministrator() == false)
+				{
+					approvedDatabases = server.RequestAuthorizer.GetApprovedDatabases(context);
+				}
+			}
+
 			Guid lastDocEtag = Guid.Empty;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
@@ -55,6 +71,11 @@ namespace Raven.Database.Server.Responders
 				var data = databases
 					.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 					.ToArray();
+
+				if(approvedDatabases != null)
+				{
+					data = data.Where(s => approvedDatabases.Contains(s)).ToArray();
+				}
 
 				context.WriteJson(data);
 			}

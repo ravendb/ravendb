@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
@@ -9,6 +10,7 @@ namespace Raven.Database.Server.Security
 	{
 		private readonly WindowsRequestAuthorizer windowsRequestAuthorizer = new WindowsRequestAuthorizer();
 		private readonly OAuthRequestAuthorizer oAuthRequestAuthorizer = new OAuthRequestAuthorizer();
+		private string authHeader;
 
 		protected override void Initialize()
 		{
@@ -23,13 +25,23 @@ namespace Raven.Database.Server.Security
 			if (NeverSecret.Urls.Contains(requestUrl))
 				return true;
 
-			var authHeader = context.Request.Headers["Authorization"];
+			authHeader = context.Request.Headers["Authorization"];
 			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
 				return oAuthRequestAuthorizer.Authorize(context);
 			}
 
 			return windowsRequestAuthorizer.Authorize(context);
+		}
+
+		public override List<string> GetApprovedDatabases(IHttpContext context)
+		{
+			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+			{
+				return oAuthRequestAuthorizer.GetApprovedDatabases(context);
+			}
+
+			return windowsRequestAuthorizer.GetApprovedDatabases(context);
 		}
 
 		public override void Dispose()

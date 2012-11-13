@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Principal;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.Security.OAuth
 {
@@ -17,7 +19,6 @@ namespace Raven.Database.Server.Security.OAuth
 				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All || 
 			        Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
 			        isGetRequest;
-			
 
 			var token = GetToken(ctx);
 			
@@ -69,6 +70,14 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
+		public override List<string> GetApprovedDatabases(IHttpContext context)
+		{
+			var user = context.User as OAuthPrincipal;
+			if(user == null)
+				return new List<string>();
+			return user.GetApprovedDatabases();
+		}
+
 		public override void Dispose()
 		{
 			
@@ -78,8 +87,8 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			const string bearerPrefix = "Bearer ";
 
-			var auth = ctx.Request.Headers["Authorization"];
 
+			var auth = ctx.Request.Headers["Authorization"];
 			if (auth == null || auth.Length <= bearerPrefix.Length || !auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
 				return null;
 
@@ -141,6 +150,11 @@ namespace Raven.Database.Server.Security.OAuth
 		public bool IsAuthenticated
 		{
 			get { return true; }
+		}
+
+		public List<string> GetApprovedDatabases()
+		{
+			return tokenBody.AuthorizedDatabases.Select(access => access.TenantId).ToList();
 		}
 	}
 }
