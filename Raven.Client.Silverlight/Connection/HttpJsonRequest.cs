@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
-using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -14,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Ionic.Zlib;
+using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -42,6 +41,13 @@ namespace Raven.Client.Silverlight.Connection
 		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
 
+		private string primaryUrl;
+
+		private string operationUrl;
+
+		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
+
+
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
 			retries++;
@@ -68,7 +74,7 @@ namespace Raven.Client.Silverlight.Connection
 		/// Gets or sets the response headers.
 		/// </summary>
 		/// <value>The response headers.</value>
-		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
+		public NameValueCollection ResponseHeaders { get; set; }
 
 		internal HttpJsonRequest(string url, string method, RavenJObject metadata, DocumentConvention conventions, HttpJsonRequestFactory factory)
 		{
@@ -128,18 +134,21 @@ namespace Raven.Client.Silverlight.Connection
 
 			var webResponse = exception.Response as HttpWebResponse;
 			if (webResponse == null || (webResponse.StatusCode != HttpStatusCode.Unauthorized && webResponse.StatusCode != HttpStatusCode.Forbidden))
-				return task;
+				task.AssertNotFailed();
 
 			if(webResponse.StatusCode == HttpStatusCode.Forbidden)
 			{
 				HandleForbbidenResponseAsync(webResponse);
-				return task;
+				task.AssertNotFailed();
 			}
 
 			var authorizeResponse = HandleUnauthorizedResponseAsync(webResponse);
 
 			if (authorizeResponse == null)
-				return task; // effectively throw
+			{
+				task.AssertNotFailed();
+				return task;// never get called
+			}
 
 
 			return authorizeResponse
@@ -231,17 +240,15 @@ namespace Raven.Client.Silverlight.Connection
 				}
 			}
 
-			ResponseHeaders = new Dictionary<string, IList<string>>(StringComparer.InvariantCultureIgnoreCase);
+			ResponseHeaders = new NameValueCollection();
 			foreach (var key in response.Headers.AllKeys)
 			{
-				ResponseHeaders[key] = new List<string>
-				{
-					response.Headers[key]
-				};
+				ResponseHeaders[key] = response.Headers[key];
 			}
+			
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
-			using (var responseStream = response.GetResponseStream())
+			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
 				return handleResponse(responseStream);
 			}
@@ -428,6 +435,48 @@ namespace Raven.Client.Silverlight.Connection
 									return ExecuteRequestAsync();
 								})
 				.Unwrap();
+		}
+
+		public Task ExecuteWriteAsync(byte[] data)
+		{
+			return WriteAsync(data)
+				.ContinueWith(task =>
+				{
+					if (task.IsFaulted)
+						return task;
+					return ExecuteRequestAsync();
+				})
+				.Unwrap();
+		}
+
+		public double CalculateDuration()
+		{
+			return 0;
+		}
+
+		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+		{
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+				return this;
+			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
+				return this; // not because of failover, no need to do this.
+
+			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
+			webRequest.Headers[Constants.RavenClientPrimaryServerUrl] = ToRemoteUrl(thePrimaryUrl);
+			webRequest.Headers[Constants.RavenClientPrimaryServerLastCheck] = lastPrimaryCheck.ToString("s");
+
+			primaryUrl = thePrimaryUrl;
+			operationUrl = currentUrl;
+
+			HandleReplicationStatusChanges = handleReplicationStatusChanges;
+
+			return this;
+		}
+
+		private static string ToRemoteUrl(string primaryUrl)
+		{
+			var uriBuilder = new UriBuilder(primaryUrl);
+			return uriBuilder.Uri.ToString();
 		}
 	}
 }

@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
 
@@ -45,6 +47,8 @@ namespace Raven.Studio.Models
 			get { return new ActionCommand(DeleteApi); }
 		}
 
+		public ICommand GenerateSecretCommand {get{return new ActionCommand(GenerateSecret);}}
+
 		public ICommand AddDatabaseAccess
 		{
 			get
@@ -52,8 +56,7 @@ namespace Raven.Studio.Models
 				return new ActionCommand(() =>
 				{
 					SelectedApiKey.Databases.Add(new DatabaseAccess());
-					ApiKeys = new ObservableCollection<ApiKeyDefinition>(ApiKeys);
-					OnPropertyChanged(() => ApiKeys);
+					Update();
 				});
 			}
 		}
@@ -82,8 +85,7 @@ namespace Raven.Studio.Models
 
 			SelectedApiKey.Databases.Remove(access);
 
-			ApiKeys = new ObservableCollection<ApiKeyDefinition>(ApiKeys);
-			OnPropertyChanged(() => ApiKeys);
+			Update();
 		}
 
 		private void DeleteApi(object parameter)
@@ -91,13 +93,27 @@ namespace Raven.Studio.Models
 			var key = parameter as ApiKeyDefinition;
 			ApiKeys.Remove(key ?? SelectedApiKey);
 
-			ApiKeys = new ObservableCollection<ApiKeyDefinition>(ApiKeys);
-			OnPropertyChanged(() => ApiKeys);
+			Update();
+		}
+
+		private void GenerateSecret(object parameter)
+		{
+			var key = parameter as ApiKeyDefinition;
+			if(key == null)
+				return;
+			key.Secret = Base62Util.ToBase62(Guid.NewGuid()).Replace("-", "");
+			Update();
 		}
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
 			return TaskEx.FromResult<IList<object>>(ApplicationModel.Current.Server.Value.Databases.Cast<object>().ToList());
+		}
+
+		public void Update()
+		{
+			ApiKeys = new ObservableCollection<ApiKeyDefinition>(ApiKeys);
+			OnPropertyChanged(() => ApiKeys);
 		}
 	}
 }

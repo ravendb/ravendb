@@ -1,5 +1,9 @@
 ﻿using System;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Net;
 using System.Threading;
 using Raven.Abstractions.Extensions;
@@ -9,6 +13,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+	using Raven.Abstractions.Data;
+
 	///<summary>
 	/// Create the HTTP Json Requests to the RavenDB Server
 	/// and manages the http cache
@@ -157,12 +163,18 @@ namespace Raven.Client.Connection
 
 		private volatile bool disposed;
 
-		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest)
+		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, NameValueCollection additionalHeaders = null)
 		{
 			if (httpJsonRequest.CachedRequestDetails == null)
 				throw new InvalidOperationException("Cannot get cached response from a request that has no cached information");
 			httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
 			httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
+
+			if (additionalHeaders != null && additionalHeaders[Constants.RavenForcePrimaryServerCheck] != null)
+			{
+				httpJsonRequest.ResponseHeaders.Add(Constants.RavenForcePrimaryServerCheck, additionalHeaders[Constants.RavenForcePrimaryServerCheck]);
+			}
+
 			IncrementCachedRequests();
 			return httpJsonRequest.CachedRequestDetails.Data.CloneToken();
 		}

@@ -120,5 +120,10 @@ namespace Raven.Abstractions.Linq
 		{
 			return 0;
 		}
+
+		public static implicit operator string(DynamicNullObject self)
+		{
+			return null;
+		}
 	}
 }

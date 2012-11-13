@@ -18,9 +18,6 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection.Async;
-#endif
 
 namespace Raven.Client.Indexes
 {

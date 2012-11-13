@@ -6,6 +6,7 @@
 			 xmlns:Data="clr-namespace:Raven.Abstractions.Data;assembly=Raven.Client.Silverlight" 
 			 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+			 xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
@@ -18,6 +19,7 @@
 		<DataTemplate x:Key="ApiKeyTemplate" DataType="Data:ApiKeyDefinition">
 			<Grid Margin="4" x:Name="grid">
 				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
@@ -48,36 +50,90 @@
 				<TextBox Grid.Row="0"
 						 Grid.Column="1"
                          Grid.ColumnSpan="2"
-						 Text="{Binding Name, Mode=TwoWay}" 
+						 Text="{Binding Name, Mode=TwoWay}"
+						 LostFocus="NameChanged"
                          Margin="5"/>
 
 				<TextBlock Grid.Row="1" 
 						   Text="Secret:" 
 						   VerticalAlignment="Center"/>
 
-				<TextBox Grid.Row="1"
-						 Grid.Column="1"
-                         Grid.ColumnSpan="2"
-						 Text="{Binding Secret, Mode=TwoWay}" 
-                         Margin="5"/>
+				<Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="5">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<TextBox Text="{Binding Secret, Mode=TwoWay}" IsEnabled="False"/>
+					<HyperlinkButton Content="Generate Secret" 
+									 Grid.Column="1" 
+									 VerticalAlignment="Center"
+									 Command="{Binding DataContext.GenerateSecretCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+									 CommandParameter="{Binding}"/>
+				</Grid>
 
 				<TextBlock Grid.Row="2" 
+						   Text="Full Api Key:"
+						   VerticalAlignment="Center"/>
+				<TextBox Grid.Row="2"
+						 Grid.Column="1"
+                         Grid.ColumnSpan="2"
+						 IsReadOnly="True"
+						 Text="{Binding Converter={StaticResource GetFullApiKeyConverter}}" 
+                         Margin="5"
+						 x:Name="FullApiKey">
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu>
+							<ContextMenu:MenuItem Header="Copy Api Key to Clipboard"
+                                                  Command="{StaticResource CopyToClipboardCommand}"
+												  CommandParameter="{Binding Text, ElementName=FullApiKey}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
+				</TextBox>
+
+				<TextBlock Grid.Row="3" 
+						   Text="Connection String:"
+						   VerticalAlignment="Center"/>
+				<TextBox Grid.Row="3"
+						 Grid.Column="1"
+                         Grid.ColumnSpan="2"
+						 IsReadOnly="True"
+						 Text="{Binding Converter={StaticResource GetFullConnectionStringConverter}}" 
+                         Margin="5"
+						 x:Name="ConnectionString">
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu>
+							<ContextMenu:MenuItem Header="Copy Connection String to Clipboard"
+                                                  Command="{StaticResource CopyToClipboardCommand}"
+												  CommandParameter="{Binding Text, ElementName=ConnectionString}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
+				</TextBox>
+
+				<TextBlock Grid.Row="4" 
 						   Text="Enabled:" 
 						   VerticalAlignment="Center"/>
 
-				<CheckBox Grid.Row="2"
+				<CheckBox Grid.Row="4"
                           Grid.Column="1"
                           Grid.ColumnSpan="2"
                           IsChecked="{Binding Enabled, Mode=TwoWay}"
                           Margin="5"/>
 
-				<TextBlock Grid.Row="3" 
+				<TextBlock Grid.Row="5" 
 						   Text="Databases:"
                            Margin="5"
 						   VerticalAlignment="Top"/>
 
 				<sdk:DataGrid Margin="5"
-                              Grid.Row="3"
+                              Grid.Row="5"
                               Grid.Column="1"
                               ItemsSource="{Binding Databases}"
                               AutoGenerateColumns="False"
@@ -143,7 +199,7 @@
 					</sdk:DataGrid.Columns>
 				</sdk:DataGrid>
 				<Button Style="{StaticResource Style_Button_MouseOverChrome}"
-                            Grid.Row="3"
+                            Grid.Row="5"
                             Grid.Column="2" 
                             HorizontalAlignment="Right" 
                             VerticalAlignment="Top"
@@ -212,7 +268,7 @@
 			<ListBox Style="{StaticResource Databases_FluidList}"
                              ItemsSource="{Binding ApiKeys}"
                              SelectedItem="{Binding SelectedApiKey, Mode=TwoWay}"
-                             ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
+                             ItemContainerStyle="{StaticResource Style_ListBoxItem_ApiKey}"
                              ItemTemplate="{StaticResource ApiKeyTemplate}"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Margin="10">

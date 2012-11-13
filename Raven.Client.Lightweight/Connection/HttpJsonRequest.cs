@@ -8,7 +8,11 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+#if !SILVERLIGHT
 using System.IO.Compression;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -24,6 +28,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+	using Raven.Abstractions.Data;
+
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
 	/// </summary>
@@ -46,6 +52,12 @@ namespace Raven.Client.Connection
 		private Stream postedStream;
 		private bool writeCalled;
 		public static readonly string ClientVersion = typeof (HttpJsonRequest).Assembly.GetName().Version.ToString();
+
+		private string primaryUrl;
+
+		private string operationUrl;
+
+		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -215,19 +227,18 @@ namespace Raven.Client.Connection
 						throw;
 
 					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+					if (httpWebResponse == null ||
+					    (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+					     httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
 						throw;
 
-					using (httpWebResponse)
+					if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
 					{
-						if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
-						{
-							HandleForbbidenResponse(httpWebResponse);
-							throw;
-						}
-						if (HandleUnauthorizedResponse(httpWebResponse) == false)
-							throw;
+						HandleForbbidenResponse(httpWebResponse);
+						throw;
 					}
+					if (HandleUnauthorizedResponse(httpWebResponse) == false)
+						throw;
 				}
 			}
 		}
@@ -338,6 +349,9 @@ namespace Raven.Client.Connection
 
 			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
+
+			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
+
 			using (response)
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
@@ -393,7 +407,9 @@ namespace Raven.Client.Connection
 				&& CachedRequestDetails != null)
 			{
 				factory.UpdateCacheTime(this);
-				var result = factory.GetCachedResponse(this);
+				var result = factory.GetCachedResponse(this, httpWebResponse.Headers);
+
+				HandleReplicationStatusChanges(httpWebResponse.Headers, primaryUrl, operationUrl);
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
@@ -468,6 +484,33 @@ namespace Raven.Client.Connection
 				webRequest.Headers[header.Key] = header.Value;
 			}
 			return this;
+		}
+
+		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+		{
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+				return this;
+			if(replicationInformer.GetFailureCount(thePrimaryUrl) <=0)
+				return this; // not because of failover, no need to do this.
+
+			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
+			webRequest.Headers.Add(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(thePrimaryUrl));
+			webRequest.Headers.Add(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
+
+			primaryUrl = thePrimaryUrl;
+			operationUrl = currentUrl;
+
+			HandleReplicationStatusChanges = handleReplicationStatusChanges;
+
+			return this;
+		}
+
+		private static string ToRemoteUrl(string primaryUrl)
+		{
+			var uriBuilder = new UriBuilder(primaryUrl);
+			if(uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
+				uriBuilder.Host = Environment.MachineName;
+			return uriBuilder.Uri.ToString();
 		}
 
 		/// <summary>
@@ -728,6 +771,24 @@ namespace Raven.Client.Connection
 			{
 				return new CompletedTask(e);
 			}
+		}
+
+		public Task ExecuteWriteAsync(byte[] data)
+		{
+			try
+			{
+				Write(new MemoryStream(data));
+				return ExecuteRequestAsync();
+			}
+			catch (Exception e)
+			{
+				return new CompletedTask(e);
+			}
+		}
+
+		public Task WriteAsync(string serializeObject)
+		{
+			return Task.Factory.FromAsync(BeginWrite, EndWrite, serializeObject, null);
 		}
 	}
 }

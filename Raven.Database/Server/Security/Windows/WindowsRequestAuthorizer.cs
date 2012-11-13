@@ -71,7 +71,7 @@ namespace Raven.Database.Server.Security.Windows
 			}
 			var databaseName = database().Name ?? string.Empty;
 
-			if (userCreated && (user.Principal.IsInRole(WindowsBuiltInRole.Administrator) || user.AdminDatabases.Contains(databaseName)))
+			if (userCreated && (user.Principal.IsAdministrator() || user.AdminDatabases.Contains(databaseName)))
 				return true;
 
 			var httpRequest = ctx.Request;

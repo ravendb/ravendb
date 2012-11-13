@@ -220,11 +220,17 @@ namespace Raven.Client.Linq
 		///<summary>
 		/// Get the last equality term for the query
 		///</summary>
-		public KeyValuePair<string, string> GetLastEqualityTerm()
+		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
 			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+			if (isAsync)
+			{
+				var luceneQueryasync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
+				return ((IRavenQueryInspector)luceneQueryasync).GetLastEqualityTerm(true);
+			}
+
 			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-			return ((IRavenQueryInspector)luceneQuery).GetLastEqualityTerm();
+			return ((IRavenQueryInspector) luceneQuery).GetLastEqualityTerm();
 		}
 
 #if SILVERLIGHT

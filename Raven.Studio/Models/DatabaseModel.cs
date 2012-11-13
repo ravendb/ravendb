@@ -9,7 +9,6 @@ using Raven.Bundles.Replication.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-using Raven.Client.Silverlight.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;

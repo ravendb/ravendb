@@ -119,6 +119,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
 		{
+			if(IsLoaded(id))
+				return new Lazy<TResult>(() => Load<TResult>(id));
 			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
 			return AddLazyOperation(lazyLoadOperation, onEval);
 		}

@@ -1707,7 +1707,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///   The last term that we asked the query to use equals on
 		/// </summary>
-		public KeyValuePair<string, string> GetLastEqualityTerm()
+		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
 			return lastEquality;
 		}

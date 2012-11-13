@@ -15,6 +15,10 @@ namespace Raven.Abstractions.Data
 			InDatabaseKeyVerificationDocumentContents.EnsureSnapshot();
 		}
 		
+		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
+		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
+		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
+		
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";

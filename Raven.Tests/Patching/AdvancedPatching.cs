@@ -10,7 +10,6 @@ using Raven.Json.Linq;
 using Raven.Database.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Exceptions;
 
 namespace Raven.Tests.Patching
 {
@@ -77,6 +76,18 @@ namespace Raven.Tests.Patching
 			Assert.Equal(result["Email"].Value<string>(), "somebody@somewhere.com");
 		}
 
+		[Fact]
+		public void CanUseMathFloor()
+		{
+			var doc = RavenJObject.Parse("{\"Email\":' somebody@somewhere.com '}");
+			const string script = "this.Age =  Math.floor(1.6);";
+			var patch = new ScriptedPatchRequest()
+			{
+				Script = script,
+			};
+			var result = new ScriptedJsonPatcher().Apply(doc, patch);
+			Assert.Equal(result["Age"].Value<int>(), 1);
+		}
 
 		[Fact]
 		public void CanUseSplit()

@@ -94,6 +94,27 @@ namespace Jint.Native {
             //function.Scope = new JsScope(PrototypeProperty);
             return function;
         }
+
+		public JsFunction NewMath(Func<double, JsInstance> impl)
+		{
+			JsFunction function = new MathFunction(impl, PrototypeProperty);
+			function.PrototypeProperty = Global.ObjectClass.New(function);
+			return function;
+		}
+
+		public JsFunction NewMath(Func<JsInstance> impl)
+		{
+			JsFunction function = new MathFunction(impl, PrototypeProperty);
+			function.PrototypeProperty = Global.ObjectClass.New(function);
+			return function;
+		}
+		public JsFunction NewMath(Func<double, double, JsInstance> impl)
+		{
+			JsFunction function = new MathFunction(impl, PrototypeProperty);
+			function.PrototypeProperty = Global.ObjectClass.New(function);
+			return function;
+		}
+
         public JsFunction New<T>(Func<T, JsInstance> impl, int length) where T : JsInstance {
             JsFunction function = new ClrImplDefinition<T>(impl, length, PrototypeProperty);
             function.PrototypeProperty = Global.ObjectClass.New(function);

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Jint.Expressions;
-using Jint.Delegates;
 using System.IO;
 using Jint.Native;
 using System.Reflection;
@@ -962,7 +961,7 @@ var fakeButton = new Test.FakeButton();");
             .SetDebugMode(true)
             .SetFunction("assert", new Action<object, object>(Assert.AreEqual))
             .SetFunction("print", new Action<string>(System.Console.WriteLine))
-            .SetParameter("foo", null);
+            .SetParameter("foo", (object)null);
 
             // strict equlity ecma 262.3 11.9.6 x === y: If type of (x) is null return true.
             jint.Run(@"

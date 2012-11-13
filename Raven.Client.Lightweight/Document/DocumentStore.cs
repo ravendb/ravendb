@@ -23,7 +23,6 @@ using Raven.Client.Document.Async;
 #if SILVERLIGHT
 using System.Net.Browser;
 using Raven.Client.Silverlight.Connection;
-using Raven.Client.Silverlight.Connection.Async;
 #else
 using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
@@ -127,10 +126,11 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			MaxNumberOfCachedRequests = 2048;
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
+			Conventions = new DocumentConvention();
 #else
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string,string>();
+			Conventions = new DocumentConvention{AllowMultipuleAsyncOperations = true};
 #endif
-			Conventions = new DocumentConvention();
 		}
 
 		private string identifier;
@@ -475,7 +475,6 @@ namespace Raven.Client.Document
 			Conventions.HandleUnauthorizedResponse = response =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
-				response.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
 				{
@@ -508,7 +507,6 @@ namespace Raven.Client.Document
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
-				unauthorizedResponse.Close();
 
 				if (string.IsNullOrEmpty(oauthSource) == false)
 				{
@@ -541,7 +539,7 @@ namespace Raven.Client.Document
 		{
 			if (credentials != null)
 			{
-				var authHeaders = response.Headers["WWW-Authentication"];
+				var authHeaders = response.Headers["WWW-Authenticate"];
 				if (authHeaders == null ||
 					(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
 					)
@@ -606,19 +604,10 @@ namespace Raven.Client.Document
 			};
 #endif
 
-#if SILVERLIGHT
-			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
-				.ExecuteRequestAsync();
-#endif
 			asyncDatabaseCommandsGenerator = () =>
 			{
-
-#if SILVERLIGHT
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, task, GetReplicationInformerForDatabase, null);
-#else
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
-#endif
+
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);

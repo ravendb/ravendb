@@ -166,6 +166,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool DisableProfiling { get; set; }
 
+		/// <summary>
+		/// Enable multipule async operations
+		/// </summary>
+		public bool AllowMultipuleAsyncOperations { get; set; }
+
 		///<summary>
 		/// A list of type converters that can be used to translate the document key (string)
 		/// to whatever type it is that is used on the entity, if the type isn't already a string
