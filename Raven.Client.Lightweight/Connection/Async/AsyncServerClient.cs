@@ -1347,7 +1347,7 @@ namespace Raven.Client.Connection.Async
 			readStripingBase = -1;// this means that will have to use the master url first
 		}
 
-		public HttpJsonRequest CreateRequest(string method, string requestUrl)
+		public HttpJsonRequest CreateRequest(string requestUrl, string method)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
