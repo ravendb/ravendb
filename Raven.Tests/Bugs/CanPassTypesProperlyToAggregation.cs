@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanPassTypesProperlyToAggregation 
+	public class CanPassTypesProperlyToAggregation
 	{
 		private class Coin
 		{
@@ -34,21 +34,21 @@ namespace Raven.Tests.Bugs
 			Assert.Equal(@"docs.GroupBy(y => y.Denomination).Select(g => new {
     Denomination = g.Key,
     Cost = Enumerable.Sum(g, z => ((double)((double) z.Cost)))
-})", code);				   
+})", code);
 		}
 
 		[Fact]
 		public void WillProperlyCompileWhenUsingToString()
 		{
 			Expression<Func<IEnumerable<Coin>, IEnumerable<object>>> query = x => from y in x
-																				  group y by y.Denomination
-																					  into g
-																					  select
-																						new
-																						{
-																							Denomination = g.Key,
-																							Cost = g.First().Cost.ToString()
-																						};
+			                                                                      group y by y.Denomination
+			                                                                      into g
+			                                                                      select
+				                                                                      new
+				                                                                      {
+					                                                                      Denomination = g.Key,
+					                                                                      Cost = g.First().Cost.ToString()
+				                                                                      };
 
 
 			var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<Coin, Coin>(query, new DocumentConvention(), "docs", false);
@@ -57,6 +57,6 @@ namespace Raven.Tests.Bugs
     Denomination = g.Key,
     Cost = ((double) g.FirstOrDefault().Cost).ToString()
 })", code);
-		} 
+		}
 	}
 }
