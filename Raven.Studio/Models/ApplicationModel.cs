@@ -44,6 +44,7 @@ namespace Raven.Studio.Models
 			Alerts = new ObservableCollection<Alert>();
 
 			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
+			Server.Value.SelectedDatabase.Value.Status.PropertyChanged += (sender, args) => OnPropertyChanged(() => StatusImage);
 			State = new ApplicationState();
 		}
 
