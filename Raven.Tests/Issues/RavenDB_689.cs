@@ -6,7 +6,6 @@ namespace Raven.Tests.Issues
 	using System.IO;
 	using System.Threading;
 
-	using Raven.Abstractions.Data;
 	using Raven.Abstractions.Extensions;
 	using Raven.Client;
 	using Raven.Client.Exceptions;
@@ -62,10 +61,8 @@ namespace Raven.Tests.Issues
 			var attachment = store2.DatabaseCommands.GetAttachment("users/1");
 			store2.DatabaseCommands.PutAttachment("users/1", attachment.Etag, new MemoryStream(new byte[] { 2 }), attachment.Metadata);
 
-			Thread.Sleep(TimeSpan.FromSeconds(5));
-
-			WaitForAttachment(store1, "users/1", a => Assert.Equal(new byte[] { 1 }, a.Data().ReadData()));
-			WaitForAttachment(store3, "users/1", a => Assert.Equal(new byte[] { 2 }, a.Data().ReadData()));
+			WaitFor(store1.DatabaseCommands.GetAttachment, "users/1", a => Assert.Equal(new byte[] { 1 }, a.Data().ReadData()));
+			WaitFor(store3.DatabaseCommands.GetAttachment, "users/1", a => Assert.Equal(new byte[] { 2 }, a.Data().ReadData()));
 
 			attachment = store1.DatabaseCommands.GetAttachment("users/1");
 			store1.DatabaseCommands.PutAttachment("users/1", attachment.Etag, new MemoryStream(new byte[] { 3 }), attachment.Metadata);
@@ -136,11 +133,9 @@ namespace Raven.Tests.Issues
 				store.DatabaseCommands.PutAttachment("users/1", null, new MemoryStream(expectedData), c1.Metadata);
 			}
 
-			Thread.Sleep(TimeSpan.FromSeconds(10));
-
-			WaitForAttachment(store1, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
-			WaitForAttachment(store2, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
-			WaitForAttachment(store3, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
+			WaitFor(store1.DatabaseCommands.GetAttachment, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
+			WaitFor(store2.DatabaseCommands.GetAttachment, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
+			WaitFor(store3.DatabaseCommands.GetAttachment, "users/1", a => Assert.Equal(expectedData, a.Data().ReadData()));
 		}
 
 		[Fact]
@@ -175,10 +170,15 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			Thread.Sleep(TimeSpan.FromSeconds(5));
+			using (var session = store1.OpenSession())
+			{
+				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(1, doc.Tick));
+			}
 
-			Assert.Equal(1, WaitForDocument<User>(store1, "users/1").Tick);
-			Assert.Equal(2, WaitForDocument<User>(store3, "users/1").Tick);
+			using (var session = store3.OpenSession())
+			{
+				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(2, doc.Tick));
+			}
 
 			using (var session = store1.OpenSession())
 			{
@@ -265,26 +265,34 @@ namespace Raven.Tests.Issues
 				expectedTick = long.Parse(c1.DataAsJson["Tick"].ToString());
 			}
 
-			Thread.Sleep(TimeSpan.FromSeconds(5));
+			using (var session = store1.OpenSession())
+			{
+				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(expectedTick, doc.Tick));
+			}
 
-			Assert.Equal(expectedTick, WaitForDocument<User>(store1, "users/1").Tick);
-			Assert.Equal(expectedTick, WaitForDocument<User>(store2, "users/1").Tick);
-			Assert.Equal(expectedTick, WaitForDocument<User>(store3, "users/1").Tick);
+			using (var session = store2.OpenSession())
+			{
+				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(expectedTick, doc.Tick));
+			}
+
+			using (var session = store3.OpenSession())
+			{
+				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(expectedTick, doc.Tick));
+			}
 		}
 
-		private void WaitForAttachment(IDocumentStore store, string attachmentId, Action<Attachment> assert)
+		private T WaitFor<T>(Func<string, T> getFunction, string entityId, Action<T> assert)
 		{
-			Attachment attachment = null;
 			Exception lastException = null;
 
 			for (var i = 0; i < RetriesCount; i++)
 			{
 				try
 				{
-					attachment = WaitForAttachement(store, attachmentId);
-					assert(attachment);
+					var entity = getFunction(entityId);
+					assert(entity);
 
-					return;
+					return entity;
 				}
 				catch (Exception e)
 				{
