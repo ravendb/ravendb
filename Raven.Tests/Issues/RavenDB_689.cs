@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Issues
+﻿using Raven.Tests.Bundles.Replication;
+
+namespace Raven.Tests.Issues
 {
 	using System;
 	using System.IO;
@@ -6,7 +8,6 @@
 
 	using Raven.Abstractions.Data;
 	using Raven.Abstractions.Extensions;
-	using Raven.Bundles.Tests.Replication;
 	using Raven.Client;
 	using Raven.Client.Exceptions;
 	using Raven.Json.Linq;
