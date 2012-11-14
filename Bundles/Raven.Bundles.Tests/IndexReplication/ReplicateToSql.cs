@@ -34,7 +34,7 @@ namespace Raven.Bundles.Tests.IndexReplication
 
 		public CanReplicateToSql()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(CanReplicateToSql)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 			ravenDbServer = new RavenDbServer(

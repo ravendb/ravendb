@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
@@ -21,7 +20,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "GET", "POST" }; }
+			get { return new[] {"GET", "POST"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -57,8 +56,8 @@ namespace Raven.Database.Server.Responders
 				case "POST":
 					var json = context.ReadJson();
 					var id = Database.Put(null, Guid.Empty, json,
-										  context.Request.Headers.FilterHeaders(),
-										  GetRequestTransaction(context));
+					                      context.Request.Headers.FilterHeaders(),
+					                      GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + Uri.EscapeUriString(id.Key));
 					context.WriteJson(id);
 					break;

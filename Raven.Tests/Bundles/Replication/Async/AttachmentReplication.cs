@@ -12,7 +12,7 @@ using Xunit;
 using Raven.Abstractions.Extensions;
 using System;
 
-namespace Raven.Bundles.Tests.Replication.Async
+namespace Raven.Tests.Bundles.Replication.Async
 {
 	public class AttachmentReplication : ReplicationBase
 	{

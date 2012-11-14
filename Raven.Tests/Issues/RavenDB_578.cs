@@ -1,8 +1,8 @@
-﻿namespace Raven.Tests.Issues
+﻿using Raven.Tests.Bundles.Replication;
+
+namespace Raven.Tests.Issues
 {
 	using System.Threading;
-
-	using Raven.Bundles.Tests.Replication;
 	using Raven.Client.Exceptions;
 
 	using Xunit;

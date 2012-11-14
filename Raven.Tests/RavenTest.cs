@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -124,12 +125,9 @@ namespace Raven.Tests
 		public ITransactionalStorage NewTransactionalStorage()
 		{
 			ITransactionalStorage newTransactionalStorage;
-			string storageType = null;
-
-			if (!string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("raventest_storage_engine")))
-				storageType = System.Environment.GetEnvironmentVariable("raventest_storage_engine");
-			else
-				storageType = System.Configuration.ConfigurationManager.AppSettings["Raven/StorageEngine"];
+			string storageType = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("raventest_storage_engine"))
+				                     ? ConfigurationManager.AppSettings["Raven/StorageEngine"]
+				                     : Environment.GetEnvironmentVariable("raventest_storage_engine");
 
 			if (storageType == "munin")
 				newTransactionalStorage = new Raven.Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = DbDirectory, }, () => { });

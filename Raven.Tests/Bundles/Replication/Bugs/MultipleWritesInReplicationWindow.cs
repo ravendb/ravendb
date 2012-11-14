@@ -1,8 +1,7 @@
 using System.Threading;
-using Raven.Client.Exceptions;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication.Bugs
+namespace Raven.Tests.Bundles.Replication.Bugs
 {
 	public class MultipleWritesInReplicationWindow : ReplicationBase
 	{

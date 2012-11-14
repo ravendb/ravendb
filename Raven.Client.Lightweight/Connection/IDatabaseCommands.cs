@@ -298,6 +298,13 @@ namespace Raven.Client.Connection
 		/// <param name="suggestionQuery">The suggestion query.</param>
 		SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
 
+		/// <summary>
+		/// Return a list of documents that based on the MoreLikeThisQuery.
+		/// </summary>
+		/// <param name="query">The more like this query parameters</param>
+		/// <returns></returns>
+		MultiLoadResult MoreLikeThis(MoreLikeThisQuery query);
+
 		///<summary>
 		/// Get the all terms stored in the index for the specified field
 		/// You can page through the results by use fromValue parameter as the 

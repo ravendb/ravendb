@@ -660,6 +660,18 @@ namespace Raven.Client.Embedded
 			return database.ExecuteSuggestionQuery(index, suggestionQuery);
 		}
 
+		/// <summary>
+		/// Return a list of documents that based on the MoreLikeThisQuery.
+		/// </summary>
+		/// <param name="query">The more like this query parameters</param>
+		/// <returns></returns>
+		public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var result = database.ExecuteMoreLikeThisQuery(query, TransactionInformation);
+			return result.Result;
+		}
+
 		///<summary>
 		/// Get the possible terms for the specified field in the index 
 		/// You can page through the results by use fromValue parameter as the 

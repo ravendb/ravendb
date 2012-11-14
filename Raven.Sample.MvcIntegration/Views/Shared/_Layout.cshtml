@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>@ViewBag.Title</title>
+	<link href="~/Content/bootstrap.css" rel="stylesheet" />
+	<link href="~/Content/Site.css" rel="stylesheet" />
+    @Raven.Client.MvcIntegration.RavenProfiler.CurrentRequestSessions()
+</head>
+<body>
+    @RenderBody()
+
+    @RenderSection("scripts", required: false)
+</body>
+</html>

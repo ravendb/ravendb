@@ -1,14 +1,10 @@
 using System;
-using System.IO;
-using System.Text;
-using System.Transactions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Json.Linq;
+using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Compression
+namespace Raven.Tests.Bundles.Compression
 {
 	public class Crud : Compression
 	{

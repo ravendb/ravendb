@@ -3,20 +3,17 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
 using Xunit;
-using System.Linq;
 
-namespace Raven.Bundles.Tests.Versioning
+namespace Raven.Tests.Bundles.Versioning
 {
 	public class Versioning : VersioningTest
 	{
-
 		[Fact]
 		public void Will_automatically_set_metadata()
 		{

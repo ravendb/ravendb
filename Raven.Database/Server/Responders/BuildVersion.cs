@@ -3,13 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class BuildVersion :AbstractRequestResponder
+	public class BuildVersion : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -18,7 +17,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new []{"GET"}; }
+			get { return new[] {"GET"}; }
 		}
 
 		public override void Respond(IHttpContext context)

@@ -4,9 +4,9 @@ using System.Text;
 
 namespace Raven.Abstractions.Data
 {
-	public class MoreLikeThisQueryParameters
+	public class MoreLikeThisQuery
 	{
-		public MoreLikeThisQueryParameters()
+		public MoreLikeThisQuery()
 		{
 			MapGroupFields = new NameValueCollection();
 		}
@@ -79,8 +79,11 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public NameValueCollection MapGroupFields { get; set; }
 
-		public string GetRequestUri(string index)
+		public string GetRequestUri()
 		{
+			if (string.IsNullOrEmpty(IndexName))
+				throw new InvalidOperationException("Index name cannot be null or empty");
+
 			var uri = new StringBuilder();
 
 			string pathSuffix = string.Empty;
@@ -99,7 +102,7 @@ namespace Raven.Abstractions.Data
 				pathSuffix = DocumentId;
 			}
 
-			uri.AppendFormat("/morelikethis/?index={0}&docid={1}&", Uri.EscapeUriString(index), Uri.EscapeDataString(pathSuffix));
+			uri.AppendFormat("/morelikethis/?index={0}&docid={1}&", Uri.EscapeUriString(IndexName), Uri.EscapeDataString(pathSuffix));
 			if (Fields != null)
 			{
 				foreach (var field in Fields)
@@ -124,57 +127,6 @@ namespace Raven.Abstractions.Data
 			if (StopWordsDocumentId != null)
 				uri.AppendFormat("stopWords={0}&", StopWordsDocumentId);
 			return uri.ToString();
-		}
-
-		public static MoreLikeThisQueryParameters GetParametersFromPath(string path, NameValueCollection query)
-		{
-			var results = new MoreLikeThisQueryParameters
-			{
-				IndexName = query.Get("index"),
-				Fields = query.GetValues("fields"),
-				Boost = query.Get("boost").ToNullableBool(),
-				MaximumNumberOfTokensParsed = query.Get("maxNumTokens").ToNullableInt(),
-				MaximumQueryTerms = query.Get("maxQueryTerms").ToNullableInt(),
-				MaximumWordLength = query.Get("maxWordLen").ToNullableInt(),
-				MinimumDocumentFrequency = query.Get("minDocFreq").ToNullableInt(),
-				MinimumTermFrequency = query.Get("minTermFreq").ToNullableInt(),
-				MinimumWordLength = query.Get("minWordLen").ToNullableInt(),
-				StopWordsDocumentId = query.Get("stopWords"),
-			};
-
-			var keyValues = query.Get("docid").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-			foreach(var keyValue in keyValues)
-			{
-				var split = keyValue.IndexOf('=');
-
-				if (split >= 0)
-				{
-					results.MapGroupFields.Add(keyValue.Substring(0, split), keyValue.Substring(split+1));
-				} 
-				else
-				{
-					results.DocumentId = keyValue;
-				}
-			}
-
-			return results;
-		}
-	}
-
-	internal static class ParametersParsingHelpers
-	{
-		public static int? ToNullableInt(this string value)
-		{
-			int ret;
-			if (value == null || !int.TryParse(value, out ret)) return null;
-			return ret;
-		}
-
-		public static bool? ToNullableBool(this string value)
-		{
-			bool ret;
-			if (value == null || !bool.TryParse(value, out ret)) return null;
-			return ret;
 		}
 	}
 }

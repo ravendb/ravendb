@@ -443,15 +443,15 @@ task CreateNugetPackages -depends Compile {
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
 	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40 }
 	New-Item $nuget_dir\RavenDB.Embedded\tools -Type directory | Out-Null
-		
-	New-Item $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Client.UniqueConstraints.nuspec $nuget_dir\RavenDB.Client.UniqueConstraints\RavenDB.Client.UniqueConstraints.nuspec
-	@("Raven.Client.UniqueConstraints.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 }
 	
-	New-Item $nuget_dir\RavenDB.Bundles.Authentication\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Authentication.nuspec $nuget_dir\RavenDB.Bundles.Authentication\RavenDB.Bundles.Authentication.nuspec
-	@("Raven.Bundles.Authentication.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Authentication\lib\net40 }
-
+	# Client packages
+	@("Authorization", "UniqueConstraints") | Foreach-Object { 
+		$name = $_;
+		New-Item $nuget_dir\RavenDB.Client.$name\lib\net40 -Type directory | Out-Null
+		Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec $nuget_dir\RavenDB.Client.$name\RavenDB.Client.$name.nuspec
+		@("Raven.Client.$_.???") |% { Copy-Item $build_dir\$_ $nuget_dir\RavenDB.Client.$name\lib\net40 }
+	}
+	
 	New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Authorization.nuspec $nuget_dir\RavenDB.Bundles.Authorization\RavenDB.Bundles.Authorization.nuspec
 	@("Raven.Bundles.Authorization.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Authorization\lib\net40 }

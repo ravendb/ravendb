@@ -77,7 +77,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQueryParameters
+					var mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQuery
 					{
 						DocumentId = "tracks/1",
 						Fields = new[] { "Genre", "Artist" },
@@ -87,7 +87,7 @@ namespace Raven.Tests.Bugs
 					});
 					Assert.NotEmpty(mlt);
 
-					mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQueryParameters
+					mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQuery
 					{
 						DocumentId = "tracks/1",
 						Fields = new[] { "FreeText" },
@@ -98,7 +98,7 @@ namespace Raven.Tests.Bugs
 					});
 					Assert.NotEmpty(mlt);
 
-					mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQueryParameters
+					mlt = session.Advanced.MoreLikeThis<Track, TracksIndex>(new MoreLikeThisQuery
 					{
 						MinimumTermFrequency = 0,
 						MinimumDocumentFrequency = 0,

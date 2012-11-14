@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Bundles.CascadeDelete</id>
-		<version>1.0</version>
+		<version>1.2</version>
 		<title>RavenDB Cascade Delete Bundle</title>
 		<authors>Hibernating Rhinos</authors>
 		<description>The cascade delete bundle allows for a specified set of documents and attachments to be deleted when the document that owns it is deleted. Typical usage scenarios include deleting an attachment that is referenced by a document or removing a set of child documents referenced by a parent document.</description>

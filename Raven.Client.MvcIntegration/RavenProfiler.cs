@@ -21,12 +21,12 @@ namespace Raven.Client.MvcIntegration
 		{
 			var existing = RouteTable.Routes
 				.Select(x =>
-				        	{
-				        		var route = x as Route;
-				        		if (route == null)
-				        			return null;
-				        		return route.RouteHandler;
-				        	})
+				{
+					var route = x as Route;
+					if (route == null)
+						return null;
+					return route.RouteHandler;
+				})
 				.OfType<RavenProfilingHandler>()
 				.FirstOrDefault();
 
@@ -74,8 +74,8 @@ namespace Raven.Client.MvcIntegration
 			using (var stream = typeof(RavenProfiler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration.Content.index.html"))
 			{
 				return new StreamReader(stream).ReadToEnd()
-					.Replace("{|id|}", string.Join(",", sessionList.Select(guid => "'" + guid + "'")))
-					.Replace("{|rootUrl|}", rootUrl)
+					.Replace("'{id}'", string.Join(",", sessionList.Select(guid => "'" + guid + "'")))
+					.Replace("{rootUrl}", rootUrl)
 					;
 			}
 		}

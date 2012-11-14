@@ -5,8 +5,6 @@ using client::Raven.Bundles.Authorization.Model;
 
 
 using System.Collections.Generic;
-using Raven.Bundles.Tests.Versioning;
-
 using Raven.Client.Exceptions;
 using Xunit;
 using System.Linq;

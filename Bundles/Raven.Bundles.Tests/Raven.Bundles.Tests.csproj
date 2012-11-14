@@ -78,13 +78,13 @@
     <Compile Include="Authorization\Reading.cs" />
     <Compile Include="Authorization\Writing.cs" />
     <Compile Include="CascadeDelete\CascadeDelete.cs" />
+    <Compile Include="Company.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
     <Compile Include="IndexedProperties\IndexedProperties.cs" />
     <Compile Include="IndexReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Replication\ReplicationDestinationDisabled.cs" />
     <Compile Include="Replication\ReplicationWithOAuth.cs" />
-    <Compile Include="TestUtil.cs" />
     <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy.cs" />

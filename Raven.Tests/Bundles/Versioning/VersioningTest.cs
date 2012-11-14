@@ -1,11 +1,10 @@
-﻿
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
 using Raven.Server;
 
-namespace Raven.Bundles.Tests.Versioning
+namespace Raven.Tests.Bundles.Versioning
 {
 	public class VersioningTest : IDisposable
 	{

@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Client</id>
-		<version>1.0</version>
+		<version>1.2</version>
 		<title>RavenDB Client</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>This package includes the client API of RavenDB.</summary>

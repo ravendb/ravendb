@@ -3,36 +3,32 @@ using Raven.Bundles.Replication.Tasks;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Tests.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Extensions;
 using Raven.Server;
+using Raven.Tests.Bundles.Replication;
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	
 	public class RavenDB_560 : ReplicationBase
 	{
-		public class Item
+		private class Item
 		{
 		}
-
+		
 		private RavenDbServer server1;
-
 		private RavenDbServer server2;
-
 		private DocumentStore store1;
-
 		private DocumentStore store2;
 
 		[Fact]
 		public void ClientShouldGetInformationFromSecondaryServerThatItsPrimaryServerMightBeUp()
 		{
-			server1 = this.CreateServer(8111, "D1");
-			server2 = this.CreateServer(8112, "D2");
+			server1 = CreateServer(8111, "D1");
+			server2 = CreateServer(8112, "D2");
 
 			store1 = new DocumentStore
 			{

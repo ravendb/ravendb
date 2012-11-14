@@ -40,6 +40,5 @@ namespace Raven.Client.Document
 		/// The conflict listeners
 		/// </summary>
 		public IDocumentConflictListener[] ConflictListeners { get; set; }
-
 	}
 }

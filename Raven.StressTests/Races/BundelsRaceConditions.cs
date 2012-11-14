@@ -1,4 +1,4 @@
-using Raven.Bundles.Tests.Replication;
+using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Shard.BlogModel;
 using Xunit;
 

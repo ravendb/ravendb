@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 using Xunit;
 using Raven.Abstractions.Extensions;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class AttachmentReplication : ReplicationBase
 	{

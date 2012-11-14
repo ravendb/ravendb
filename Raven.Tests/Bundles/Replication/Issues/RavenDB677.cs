@@ -2,7 +2,6 @@
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Responders;
-using Raven.Bundles.Tests.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;

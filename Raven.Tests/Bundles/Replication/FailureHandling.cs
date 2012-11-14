@@ -3,13 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Net;
 using System.Threading;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Exceptions;
+using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class FailureHandling : ReplicationBase
 	{
