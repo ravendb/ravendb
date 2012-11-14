@@ -221,6 +221,8 @@ namespace Raven.Database.Indexing
 			if (nextBatch == null)
 				return null;
 
+			if (System.Threading.Tasks.Task.CurrentId == nextBatch.Task.Id)
+				return null;
 			try
 			{
 				futureIndexBatches.TryRemove(nextBatch);
@@ -533,7 +535,7 @@ namespace Raven.Database.Indexing
 					Log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
 				}
 				context.CancellationToken.ThrowIfCancellationRequested();
-				
+
 				context.IndexStorage.Index(index, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
 			catch (OperationCanceledException)
