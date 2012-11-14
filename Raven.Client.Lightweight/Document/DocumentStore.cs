@@ -390,8 +390,6 @@ namespace Raven.Client.Document
 #endif
 			try
 			{
-				InitializeProfiling();
-
 				InitializeInternal();
 
 				InitializeSecurity();
