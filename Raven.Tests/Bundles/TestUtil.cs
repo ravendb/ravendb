@@ -3,22 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using Raven.Client;
 using Xunit;
 
 namespace Raven.Tests.Bundles
 {
 	public static class TestUtil
 	{
-		public static void WaitForIndexing(IDocumentStore store)
-		{
-			while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
-			{
-				Thread.Sleep(100);
-			}
-		}
-
 		public static bool ContainsSequence<T>(this IList<T> haystack, IList<T> needle)
 		{
 			int lastIndexToCheck = haystack.Count - needle.Count;

@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.Configuration;
 using System.Diagnostics;
@@ -32,6 +31,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.TestHelpers;
 using Raven.Tests.Document;
 using Xunit;
 
@@ -206,12 +206,9 @@ namespace Raven.Tests
 		{
 		}
 
-		public static void WaitForIndexing(IDocumentStore store)
+		protected static void WaitForIndexing(IDocumentStore store)
 		{
-			while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
-			{
-				Thread.Sleep(100);
-			}
+			RavenTestUtil.WaitForIndexing(store);
 		}
 
 		protected void WaitForAllRequestsToComplete(RavenDbServer server)
