@@ -441,6 +441,7 @@ namespace Raven.Client.Document
 
 		public void InitializeProfiling()
 		{
+			Conventions.DisableProfiling = false;
 			jsonRequestFactory.LogRequest += (sender, args) =>
 			{
 				if (Conventions.DisableProfiling)

@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs
 			using(GetNewServer())
 			using(var store = new DocumentStore{Url =  "http://localhost:8079"})
 			{
-				store.Conventions.DisableProfiling = false;
+				store.InitializeProfiling();
 				store.Initialize();
 				// make the replication check here
 				using(var session = store.OpenSession())
@@ -41,7 +41,7 @@ namespace Raven.Tests.Bugs
 			using (GetNewServer())
 			using (var store = new DocumentStore {Url = "http://localhost:8079"})
 			{
-				store.Conventions.DisableProfiling = false; 
+				store.InitializeProfiling();
 				store.Initialize();
 				// make the replication check here
 				using (var session = store.OpenSession())
@@ -70,7 +70,7 @@ namespace Raven.Tests.Bugs
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
-				store.Conventions.DisableProfiling = false; 
+				store.InitializeProfiling();
 				store.Initialize();
 				
 				// make hilo & replication checks here
