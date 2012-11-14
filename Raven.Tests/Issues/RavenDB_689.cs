@@ -265,20 +265,38 @@ namespace Raven.Tests.Issues
 				expectedTick = long.Parse(c1.DataAsJson["Tick"].ToString());
 			}
 
-			using (var session = store1.OpenSession())
-			{
-				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(expectedTick, doc.Tick));
-			}
+			WaitFor(
+				id =>
+				{
+					using (var session = store1.OpenSession())
+					{
+						return session.Load<User>(id);
+					}
+				},
+				"users/1",
+				doc => Assert.Equal(expectedTick, doc.Tick));
 
-			using (var session = store2.OpenSession())
-			{
-				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(expectedTick, doc.Tick));
-			}
+			WaitFor(
+				id =>
+				{
+					using (var session = store2.OpenSession())
+					{
+						return session.Load<User>(id);
+					}
+				},
+				"users/1",
+				doc => Assert.Equal(expectedTick, doc.Tick));
 
-			using (var session = store3.OpenSession())
-			{
-				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(expectedTick, doc.Tick));
-			}
+			WaitFor(
+				id =>
+				{
+					using (var session = store3.OpenSession())
+					{
+						return session.Load<User>(id);
+					}
+				},
+				"users/1",
+				doc => Assert.Equal(expectedTick, doc.Tick));
 		}
 
 		private T WaitFor<T>(Func<string, T> getFunction, string entityId, Action<T> assert)
