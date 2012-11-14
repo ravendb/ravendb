@@ -74,6 +74,10 @@ namespace Raven.Bundles.Replication.Triggers
 		private void HandleConflictedAttachment(Attachment attachment)
 		{
 			var conflicts = attachment.Data().ToJObject().Value<RavenJArray>("Conflicts");
+
+			if (conflicts == null)
+				return;
+
 			var currentSource = Database.TransactionalStorage.Id.ToString();
 
 			foreach (var c in conflicts)
