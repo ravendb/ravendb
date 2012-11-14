@@ -146,7 +146,7 @@ var RavenDBProfiler = (function ($) {
 			options = $.extend({}, opt, {});
 			container = $('<div class="ravendb-profiler-results"><div id="ravendb-session-container"/><p/> <a href="#" class="ravendb-toggle ravendb-close">Close</a></div>')
 				.appendTo('body');
-
+			createUI();
 			$('body').ajaxComplete(function (event, xhrRequest, ajaxOptions) {
 				if (ajaxOptions.url.indexOf(options.url) != -1)
 					return;
