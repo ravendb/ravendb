@@ -13,7 +13,7 @@ using Raven.Abstractions.Extensions;
 namespace Raven.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
+	[ExportMetadata("Order", 10001)]
 	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
 	public class RemoveConflictOnAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
 	{

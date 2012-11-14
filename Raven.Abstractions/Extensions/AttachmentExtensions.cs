@@ -7,7 +7,7 @@
 
 	public static class AttachmentExtensions
 	{
-		public static bool IsConflictAttachment(this Attachment attachment)
+		public static bool IsConflictAttachment(this Attachment attachment, RavenJObject attachmentData)
 		{
 			var conflict = attachment.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
 			if (conflict == null || conflict.Value<bool>() == false)
@@ -21,7 +21,7 @@
 				return false;
 			}
 
-			var conflicts = attachment.Data().ToJObject().Value<RavenJArray>("Conflicts");
+			var conflicts = attachmentData.Value<RavenJArray>("Conflicts");
 			if (conflicts != null)
 			{
 				return false;

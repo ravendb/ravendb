@@ -46,9 +46,11 @@ namespace Raven.Bundles.Replication.Triggers
 				if (attachment == null)
 					return;
 
-				if (attachment.IsConflictAttachment() == false && HasConflict(attachment))
+				var attachmentData = attachment.Data().ToJObject();
+
+				if (attachment.IsConflictAttachment(attachmentData) == false && HasConflict(attachment, attachmentData))
 				{
-					HandleConflictedAttachment(attachment);
+					HandleConflictedAttachment(attachmentData);
 					return;
 				}
 
@@ -71,9 +73,9 @@ namespace Raven.Bundles.Replication.Triggers
 		
 		}
 
-		private void HandleConflictedAttachment(Attachment attachment)
+		private void HandleConflictedAttachment(RavenJObject attachmentData)
 		{
-			var conflicts = attachment.Data().ToJObject().Value<RavenJArray>("Conflicts");
+			var conflicts = attachmentData.Value<RavenJArray>("Conflicts");
 
 			if (conflicts == null)
 				return;
@@ -114,11 +116,11 @@ namespace Raven.Bundles.Replication.Triggers
 					});
 		}
 
-		private bool HasConflict(Attachment attachment)
+		private bool HasConflict(Attachment attachment, RavenJObject attachmentData)
 		{
 			var conflict = attachment.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
 
-			return conflict != null && conflict.Value<bool>() && attachment.Data().ToJObject().Value<RavenJArray>("Conflicts") != null;
+			return conflict != null && conflict.Value<bool>() && attachmentData.Value<RavenJArray>("Conflicts") != null;
 		}
 	}
 }
