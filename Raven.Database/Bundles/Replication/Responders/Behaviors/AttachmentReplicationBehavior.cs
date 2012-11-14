@@ -106,7 +106,7 @@ namespace Raven.Bundles.Replication.Responders
 		protected override bool TryResolveConflict(string id, RavenJObject metadata, byte[] data, Attachment existing)
 		{
 			return ReplicationConflictResolvers.Any(replicationConflictResolver =>
-			                                        replicationConflictResolver.TryResolve(id, metadata, data, existing));
+			                                        replicationConflictResolver.TryResolve(id, metadata, data, existing, Actions.Attachments.GetAttachment));
 		}
 	}
 }
