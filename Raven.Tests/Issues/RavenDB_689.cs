@@ -170,15 +170,27 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			using (var session = store1.OpenSession())
-			{
-				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(1, doc.Tick));
-			}
+			WaitFor(
+				id =>
+				{
+					using (var session = store1.OpenSession())
+					{
+						return session.Load<User>(id);
+					}
+				},
+				"users/1",
+				doc => Assert.Equal(1, doc.Tick));
 
-			using (var session = store3.OpenSession())
-			{
-				WaitFor(session.Load<User>, "users/1", doc => Assert.Equal(2, doc.Tick));
-			}
+			WaitFor(
+				id =>
+				{
+					using (var session = store3.OpenSession())
+					{
+						return session.Load<User>(id);
+					}
+				},
+				"users/1",
+				doc => Assert.Equal(2, doc.Tick));
 
 			using (var session = store1.OpenSession())
 			{
