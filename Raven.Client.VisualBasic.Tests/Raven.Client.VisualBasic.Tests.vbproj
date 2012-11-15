@@ -131,6 +131,10 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.TestHelpers\Raven.TestHelpers.csproj">
+      <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
+      <Name>Raven.TestHelpers</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
       <Name>Raven.Tests</Name>
