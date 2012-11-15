@@ -48,6 +48,7 @@ namespace Raven.Tests
 		protected override void ModifyConfiguration(RavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/Esent/CircularLog"] = "false";
+			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
 		}
 
 		public override void Dispose()
