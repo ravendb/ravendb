@@ -686,8 +686,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				return;
 			}
 
-			throw new NotSupportedException("Method not supported: " + expression.Method.DeclaringType.Name + "." +
-			                                expression.Method.Name);
+			var method = expression.Method.DeclaringType.Name + "." + expression.Method.Name;
+			throw new NotSupportedException(string.Format("Method not supported: {0}. Expression: {1}.", method, expression));
 		}
 
 		private void VisitLinqExtensionsMethodCall(MethodCallExpression expression)
@@ -817,7 +817,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				case "Any":
 				{
-					if (expression.Arguments.First().Type == typeof(string))
+					if (expression.Arguments.Count == 1 && expression.Arguments[0].Type == typeof(string))
 					{
 						luceneQuery.OpenSubclause();
 						luceneQuery.Where("*:*");
