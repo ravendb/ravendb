@@ -237,7 +237,7 @@ namespace Raven.Database.Indexing
 			IEnumerable<string> fields = fieldsToFetch.Fields;
 
 			if (fieldsToFetch.FetchAllStoredFields)
-				fields = fields.Concat(document.GetFields().Cast<IFieldable>().Select(x => x.Name));
+				fields = fields.Concat(document.GetFields().Select(x => x.Name));
 
 			var q = fields
 				.SelectMany(name => document.GetFields(name) ?? new Field[0])

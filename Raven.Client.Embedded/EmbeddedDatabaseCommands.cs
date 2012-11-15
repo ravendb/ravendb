@@ -490,12 +490,20 @@ namespace Raven.Client.Embedded
 		/// <param name="commandDatas">The command data.</param>
 		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders; 
-			return database.Batch(commandDatas.Select(cmd=>
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var batchResults = database.Batch(commandDatas.Select(cmd =>
 			{
 				cmd.TransactionInformation = TransactionInformation;
 				return cmd;
 			}));
+			if(batchResults != null)
+			{
+				foreach (var batchResult in batchResults.Where(batchResult => batchResult != null && batchResult.Metadata != null && batchResult.Metadata.IsSnapshot))
+				{
+					batchResult.Metadata = (RavenJObject) batchResult.Metadata.CreateSnapshot();
+				}
+			}
+			return batchResults;
 		}
 
 		/// <summary>

@@ -25,7 +25,7 @@ namespace Raven.Database.Impl
 {
 	public class DocumentRetriever : ITranslatorDatabaseAccessor
 	{
-		private static ILog log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -64,15 +64,15 @@ namespace Raven.Database.Impl
 			triggers.Apply(
 				trigger =>
 				trigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation,
-				               transactionInformation));
-		
+							   transactionInformation));
+
 			return resultingDocument;
 		}
 
 		private JsonDocument RetrieveDocumentInternal(
 			IndexQueryResult queryResult,
 			HashSet<string> loadedIds,
-			FieldsToFetch fieldsToFetch, 
+			FieldsToFetch fieldsToFetch,
 			IndexDefinition indexDefinition)
 		{
 			var queryScore = queryResult.Score;
@@ -91,13 +91,15 @@ namespace Raven.Database.Impl
 				return document;
 			}
 
+			JsonDocument doc = null;
+
 			if (fieldsToFetch.IsProjection)
 			{
 				if (indexDefinition.IsMapReduce == false)
 				{
 					bool hasStoredFields = false;
 					FieldStorage value;
-					if(indexDefinition.Stores.TryGetValue(Constants.AllFields, out value))
+					if (indexDefinition.Stores.TryGetValue(Constants.AllFields, out value))
 					{
 						hasStoredFields = value != FieldStorage.No;
 					}
@@ -125,10 +127,10 @@ namespace Raven.Database.Impl
 					.ToArray();
 				if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
 				{
-					var doc = GetDocumentWithCaching(queryResult.Key);
+					doc = GetDocumentWithCaching(queryResult.Key);
 					if (doc != null)
 					{
-						if(fetchingId) 
+						if (fetchingId)
 						{
 							queryResult.Projection[Constants.DocumentIdFieldName] = doc.Key;
 						}
@@ -144,12 +146,26 @@ namespace Raven.Database.Impl
 				}
 			}
 
+			var metadata = GetMetadata(doc);
+			metadata.Remove("@id");
+			metadata[Constants.TemporaryScoreValue] = queryScore;
 			return new JsonDocument
 			{
 				Key = queryResult.Key,
 				DataAsJson = queryResult.Projection,
-				Metadata = new RavenJObject{{Constants.TemporaryScoreValue, queryScore}}
+				Metadata = metadata
 			};
+		}
+
+		private static RavenJObject GetMetadata(JsonDocument doc)
+		{
+			if (doc == null)
+				return new RavenJObject();
+
+			if (doc.Metadata.IsSnapshot)
+				return (RavenJObject) doc.Metadata.CreateSnapshot();
+
+			return doc.Metadata;
 		}
 
 
@@ -166,15 +182,20 @@ namespace Raven.Database.Impl
 			return doc;
 		}
 
-	    public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
-	    {
+		public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
+		{
 			if (doc == null || doc.Metadata == null)
 				return;
 
-			doc.Metadata["@id"] = new RavenJValue(doc.Key);
-	    }
+			if (doc.Metadata.IsSnapshot)
+			{
+				doc.Metadata = (RavenJObject)doc.Metadata.CreateSnapshot();
+			}
 
-	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
+			doc.Metadata["@id"] = doc.Key;
+		}
+
+		public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
 		{
 			var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition);
 			if (doc == null)
@@ -197,10 +218,10 @@ namespace Raven.Database.Impl
 						break;
 					case ReadVetoResult.ReadAllow.Deny:
 						return new T
-						       	{
+								{
 									Etag = Guid.Empty,
 									LastModified = DateTime.MinValue,
-						       		NonAuthoritativeInformation = false,
+									NonAuthoritativeInformation = false,
 									Key = document.Key,
 									Metadata = new RavenJObject
 						       		           	{
@@ -212,7 +233,7 @@ namespace Raven.Database.Impl
 						       		           			                   	}
 						       		           			}
 						       		           	}
-						       	};
+								};
 					case ReadVetoResult.ReadAllow.Ignore:
 						log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
 						return null;
@@ -247,7 +268,7 @@ namespace Raven.Database.Impl
 			itemsToInclude.Add(id);
 			return new DynamicNullObject();
 		}
-		
+
 		public dynamic Include(IEnumerable<string> ids)
 		{
 			foreach (var id in ids)
@@ -260,7 +281,7 @@ namespace Raven.Database.Impl
 		public dynamic Load(string id)
 		{
 			var document = GetDocumentWithCaching(id);
-			if(document == null)
+			if (document == null)
 				return new DynamicNullObject();
 			return new DynamicJsonObject(document.ToJson());
 		}
@@ -281,7 +302,7 @@ namespace Raven.Database.Impl
 			{
 				items.Add(Load(itemId));
 			}
-			return new DynamicList(items.Select(x => (object) x).ToArray());
+			return new DynamicList(items.Select(x => (object)x).ToArray());
 		}
 	}
 }
