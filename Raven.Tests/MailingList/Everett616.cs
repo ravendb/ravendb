@@ -42,7 +42,7 @@ namespace Raven.Tests.MailingList
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 20,
-  'Date': '2012-02-28T16:05:18.7359910Z',
+  'Date': '2012-02-28T16:05:18.7359910+00:00',
   'Key': null,
   'OrderNumber': null,
   'PurchaseOrderNumber': null,
