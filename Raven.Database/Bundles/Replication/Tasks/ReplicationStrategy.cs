@@ -37,8 +37,7 @@ namespace Raven.Bundles.Replication.Tasks
 			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)) // don't replicate system docs
 			{
 				if (key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilo documents
-					return false;
-				return true;
+					return true;
 			}
 			return false;
 		}
