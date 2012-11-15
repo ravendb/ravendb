@@ -441,6 +441,8 @@ namespace Raven.Client.Document
 
 		public void InitializeProfiling()
 		{
+			if (jsonRequestFactory == null)
+				throw new InvalidOperationException("Cannot call InitializeProfiling() before Initialize() was called.");
 			Conventions.DisableProfiling = false;
 			jsonRequestFactory.LogRequest += (sender, args) =>
 			{
