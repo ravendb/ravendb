@@ -30,7 +30,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 
-namespace Raven.TestHelpers
+namespace Raven.Tests.Helpers
 {
 	public class RavenTestBase : IDisposable
 	{

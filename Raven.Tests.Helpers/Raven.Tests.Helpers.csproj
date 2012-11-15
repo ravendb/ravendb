@@ -7,8 +7,8 @@
     <ProjectGuid>{14F2D508-8E06-407B-9451-97E99538E26B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.TestHelpers</RootNamespace>
-    <AssemblyName>Raven.TestHelpers</AssemblyName>
+    <RootNamespace>Raven.Tests.Helpers</RootNamespace>
+    <AssemblyName>Raven.Tests.Helpers</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>

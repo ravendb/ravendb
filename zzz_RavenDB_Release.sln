@@ -91,7 +91,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Dat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.MvcIntegration", "Raven.Sample.MvcIntegration\Raven.Sample.MvcIntegration.csproj", "{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.TestHelpers", "Raven.TestHelpers\Raven.TestHelpers.csproj", "{14F2D508-8E06-407B-9451-97E99538E26B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Helpers", "Raven.Tests.Helpers\Raven.Tests.Helpers.csproj", "{14F2D508-8E06-407B-9451-97E99538E26B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

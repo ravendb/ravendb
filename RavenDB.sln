@@ -1,28 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NuGet", "NuGet", "{081F76C1-F429-4E7D-9402-76B446EE29EA}"
-	ProjectSection(SolutionItems) = preProject
-		NuGet\RavenDB.AspNetHost.nuspec = NuGet\RavenDB.AspNetHost.nuspec
-		NuGet\RavenDB.Bundles.Authentication.nuspec = NuGet\RavenDB.Bundles.Authentication.nuspec
-		NuGet\RavenDB.Bundles.Authorization.nuspec = NuGet\RavenDB.Bundles.Authorization.nuspec
-		NuGet\RavenDB.Bundles.CascadeDelete.nuspec = NuGet\RavenDB.Bundles.CascadeDelete.nuspec
-		NuGet\RavenDB.Bundles.IndexReplication.nuspec = NuGet\RavenDB.Bundles.IndexReplication.nuspec
-		NuGet\RavenDB.Bundles.MoreLikeThis.nuspec = NuGet\RavenDB.Bundles.MoreLikeThis.nuspec
-		NuGet\RavenDB.Bundles.nuspec = NuGet\RavenDB.Bundles.nuspec
-		NuGet\RavenDB.Bundles.Quotas.nuspec = NuGet\RavenDB.Bundles.Quotas.nuspec
-		NuGet\RavenDB.Bundles.UniqueConstraints.nuspec = NuGet\RavenDB.Bundles.UniqueConstraints.nuspec
-		NuGet\RavenDB.Bundles.Versioning.nuspec = NuGet\RavenDB.Bundles.Versioning.nuspec
-		NuGet\RavenDB.Client.Debug.nuspec = NuGet\RavenDB.Client.Debug.nuspec
-		NuGet\RavenDB.Client.FSharp.nuspec = NuGet\RavenDB.Client.FSharp.nuspec
-		NuGet\RavenDB.Client.MoreLikeThis.nuspec = NuGet\RavenDB.Client.MoreLikeThis.nuspec
-		NuGet\RavenDB.Client.MvcIntegration.nuspec = NuGet\RavenDB.Client.MvcIntegration.nuspec
-		NuGet\RavenDB.Client.UniqueConstraints.nuspec = NuGet\RavenDB.Client.UniqueConstraints.nuspec
-		NuGet\RavenDB.Client.Versioning.nuspec = NuGet\RavenDB.Client.Versioning.nuspec
-		NuGet\RavenDB.Database.nuspec = NuGet\RavenDB.Database.nuspec
-		NuGet\RavenDB.Embedded.nuspec = NuGet\RavenDB.Embedded.nuspec
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6828A6A5-B925-4716-8D08-2B26353C54C2} = {6828A6A5-B925-4716-8D08-2B26353C54C2}
@@ -61,7 +39,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{561AA2
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{DB0F0968-FB58-4A29-8BEA-F73E55D92665}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.TestHelpers", "Raven.TestHelpers\Raven.TestHelpers.csproj", "{14F2D508-8E06-407B-9451-97E99538E26B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Helpers", "Raven.Tests.Helpers\Raven.Tests.Helpers.csproj", "{14F2D508-8E06-407B-9451-97E99538E26B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1164,9 +1142,9 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{267AC60C-751E-42E9-AA18-66035DEFF63A} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
-		{129E5462-F398-499C-B69B-FC07666C6A31} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
 		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
+		{129E5462-F398-499C-B69B-FC07666C6A31} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
+		{267AC60C-751E-42E9-AA18-66035DEFF63A} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
 		{14F2D508-8E06-407B-9451-97E99538E26B} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
 	EndGlobalSection
 EndGlobal

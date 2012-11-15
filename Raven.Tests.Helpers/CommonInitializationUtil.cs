@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.TestHelpers
+namespace Raven.Tests.Helpers
 {
 	public class CommonInitializationUtil
 	{

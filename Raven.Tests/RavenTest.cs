@@ -10,8 +10,8 @@ using System.Reflection;
 using NLog;
 using Raven.Abstractions;
 using Raven.Database.Util;
-using Raven.TestHelpers;
 using Raven.Tests.Document;
+using Raven.Tests.Helpers;
 
 namespace Raven.Tests
 {
