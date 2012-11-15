@@ -61,12 +61,31 @@ namespace Raven.Database.Impl
 			if (resultingDocument == null)
 				return null;
 
+			var doc = new JsonDocument
+			{
+				Key = resultingDocument.Key,
+				Etag = resultingDocument.Etag,
+				LastModified = resultingDocument.LastModified,
+				SerializedSizeOnDisk = resultingDocument.SerializedSizeOnDisk,
+				SkipDeleteFromIndex = resultingDocument.SkipDeleteFromIndex,
+				NonAuthoritativeInformation = resultingDocument.NonAuthoritativeInformation,
+				TempIndexScore = resultingDocument.TempIndexScore,
+				DataAsJson =
+					resultingDocument.DataAsJson.IsSnapshot
+						? (RavenJObject) resultingDocument.DataAsJson.CreateSnapshot()
+						: resultingDocument.DataAsJson,
+				Metadata =
+					resultingDocument.Metadata.IsSnapshot
+						? (RavenJObject) resultingDocument.Metadata.CreateSnapshot()
+						: resultingDocument.Metadata,
+			};
+
 			triggers.Apply(
 				trigger =>
-				trigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation,
+				trigger.OnRead(doc.Key, doc.DataAsJson, doc.Metadata, operation,
 							   transactionInformation));
 
-			return resultingDocument;
+			return doc;
 		}
 
 		private JsonDocument RetrieveDocumentInternal(
