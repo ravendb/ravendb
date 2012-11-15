@@ -39,8 +39,8 @@ namespace Raven.Tests
 {
 	public class RavenTest : WithNLog, IDisposable
 	{
-		protected const string DbDirectory = @".\TestDb\";
-		protected const string DbName = DbDirectory + @"DocDb.esb";
+		protected const string DataDir = @".\TestDatabase\";
+		protected const string DbName = DataDir + @"DocDb.esb";
 		private string path;
 		private readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 
@@ -130,9 +130,9 @@ namespace Raven.Tests
 				                     : Environment.GetEnvironmentVariable("raventest_storage_engine");
 
 			if (storageType == "munin")
-				newTransactionalStorage = new Raven.Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = DbDirectory, }, () => { });
+				newTransactionalStorage = new Raven.Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = DataDir, }, () => { });
 			else
-				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = DbDirectory, }, () => { });
+				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = DataDir, }, () => { });
 
 			newTransactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;
@@ -311,7 +311,7 @@ namespace Raven.Tests
 
 			ClearDatabaseDirectory();
 
-			Directory.CreateDirectory(DbDirectory);
+			Directory.CreateDirectory(DataDir);
 		}
 
 		protected void ClearDatabaseDirectory()
@@ -323,7 +323,7 @@ namespace Raven.Tests
 				try
 				{
 					IOExtensions.DeleteDirectory(DbName);
-					IOExtensions.DeleteDirectory(DbDirectory);
+					IOExtensions.DeleteDirectory(DataDir);
 					break;
 				}
 				catch (IOException)
