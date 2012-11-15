@@ -551,6 +551,7 @@
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
+    <Compile Include="MailingList\TriggerCanAccessFullMetadataInQueryProjection.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
     <Compile Include="MailingList\Zeitler.cs" />
