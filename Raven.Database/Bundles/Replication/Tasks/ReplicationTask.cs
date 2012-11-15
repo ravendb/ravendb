@@ -368,25 +368,26 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource)
 		{
-			var tuple = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
-			var jsonDocuments = tuple.Item1;
-			if (jsonDocuments == null || jsonDocuments.Length == 0)
+			var documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
+			if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
 			{
-				if (tuple.Item2 != destinationsReplicationInformationForSource.LastDocumentEtag)
+				if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag &&
+					// we don't notify remote server about updates to system docs, see: RavenDB-715
+					documentsToReplicate.AllFilteredDocumentsAreSystemDocuments == false)
 				{
-					SetLastReplicatedEtagForDocuments(destination, lastDocEtag: tuple.Item2);
+					SetLastReplicatedEtagForDocuments(destination, lastDocEtag: documentsToReplicate.LastEtag);
 				}
 				return null;
 			}
 			string lastError;
-			if (TryReplicationDocuments(destination, jsonDocuments, out lastError) == false)// failed to replicate, start error handling strategy
+			if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false)// failed to replicate, start error handling strategy
 			{
 				if (IsFirstFailue(destination))
 				{
 					log.Info(
 						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
-					if (TryReplicationDocuments(destination, jsonDocuments, out lastError))// success on second fail
+					if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError))// success on second fail
 					{
 						ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
 						return true;
@@ -466,7 +467,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return false;
 		}
 
-		private bool TryReplicationAttachments(ReplicationStrategy destination, RavenJArray jsonAttachments, out string ErrorMessage)
+		private bool TryReplicationAttachments(ReplicationStrategy destination, RavenJArray jsonAttachments, out string errorMessage)
 		{
 			try
 			{
@@ -480,7 +481,7 @@ namespace Raven.Bundles.Replication.Tasks
 				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
-				ErrorMessage = "";
+				errorMessage = "";
 				return true;
 			}
 			catch (WebException e)
@@ -495,7 +496,7 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							var ravenJObject = RavenJObject.Parse(error);
 							log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
-							ErrorMessage = error;
+							errorMessage = error;
 							return false;
 						}
 						catch (Exception)
@@ -503,20 +504,20 @@ namespace Raven.Bundles.Replication.Tasks
 						}
 
 						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
-						ErrorMessage = error;
+						errorMessage = error;
 					}
 				}
 				else
 				{
 					log.WarnException("Replication to " + destination + " had failed", e);
-					ErrorMessage = e.Message;
+					errorMessage = e.Message;
 				}
 				return false;
 			}
 			catch (Exception e)
 			{
 				log.WarnException("Replication to " + destination + " had failed", e);
-				ErrorMessage = e.Message;
+				errorMessage = e.Message;
 				return false;
 			}
 		}
@@ -571,10 +572,16 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private Tuple<RavenJArray, Guid> GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
+		private class JsonDocumentsToReplicate
 		{
-			RavenJArray jsonDocuments = null;
-			Guid lastDocumentEtag = Guid.Empty;
+			public Guid LastEtag { get; set; }
+			public RavenJArray Documents { get; set; }
+			public bool AllFilteredDocumentsAreSystemDocuments { get; set; }
+		}
+
+		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
+		{
+			var result = new JsonDocumentsToReplicate();
 			try
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
@@ -584,27 +591,30 @@ namespace Raven.Bundles.Replication.Tasks
 					int docsSinceLastReplEtag = 0;
 					List<JsonDocument> docsToReplicate;
 					List<JsonDocument> filteredDocsToReplicate;
-					lastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+					result.LastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 					while (true)
 					{
-						docsToReplicate = actions.Documents.GetDocumentsAfter(lastDocumentEtag, 100, 1024 * 1024 * 10)
-							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", lastDocumentEtag, 100)
-										.Select(x => new JsonDocument
-										{
-											Etag = x.Etag,
-											Key = x.Key,
-											Metadata = x.Data,
-											DataAsJson = new RavenJObject()
-										}))
+						docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 100, 1024*1024*10)
+							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, 100)
+								        .Select(x => new JsonDocument
+								        {
+									        Etag = x.Etag,
+									        Key = x.Key,
+									        Metadata = x.Data,
+									        DataAsJson = new RavenJObject()
+								        }))
 							.OrderBy(x => x.Etag)
 							.ToList();
 
-						filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(destinationId, document.Key, document.Metadata)).ToList();
+						filteredDocsToReplicate =
+							docsToReplicate.Where(document => destination.FilterDocuments(destinationId, document.Key, document.Metadata)).
+								ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
+						result.AllFilteredDocumentsAreSystemDocuments =
+							docsToReplicate.All(doc => destination.IsSystemDocumentId(doc.Key));
 
-						if (docsToReplicate.Count == 0 ||
-							filteredDocsToReplicate.Count != 0)
+						if (docsToReplicate.Count == 0 || filteredDocsToReplicate.Count != 0)
 						{
 							break;
 						}
@@ -613,7 +623,7 @@ namespace Raven.Bundles.Replication.Tasks
 						Debug.Assert(jsonDocument.Etag != null);
 						Guid documentEtag = jsonDocument.Etag.Value;
 						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", documentEtag);
-						lastDocumentEtag = documentEtag;
+						result.LastEtag = documentEtag;
 					}
 
 					log.Debug(() =>
@@ -637,7 +647,7 @@ namespace Raven.Bundles.Replication.Tasks
 											 destinationsReplicationInformationForSource.LastDocumentEtag);
 					});
 
-					jsonDocuments = new RavenJArray(filteredDocsToReplicate
+					result.Documents = new RavenJArray(filteredDocsToReplicate
 														.Select(x =>
 														{
 															DocumentRetriever.EnsureIdInMetadata(x);
@@ -650,7 +660,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastDocumentEtag, e);
 			}
-			return Tuple.Create(jsonDocuments, lastDocumentEtag);
+			return result;
 		}
 
 
