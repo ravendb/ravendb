@@ -21,8 +21,8 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
-				store.Conventions.DisableProfiling = false;
 				store.Initialize();
+				store.InitializeProfiling();
 				using (var session = store.OpenSession())
 				{
 					// handle the initial request for replication information
@@ -57,8 +57,8 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
-				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
+				store.InitializeProfiling(); 
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -101,8 +101,8 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
-				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
+				store.InitializeProfiling();
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -145,8 +145,8 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
-				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
+				store.InitializeProfiling();
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -194,8 +194,8 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
-				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
+				store.InitializeProfiling();
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -245,8 +245,8 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
-				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
+				store.InitializeProfiling(); 
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
