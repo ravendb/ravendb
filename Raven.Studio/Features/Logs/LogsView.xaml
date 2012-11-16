@@ -148,7 +148,8 @@
 			<Border BorderBrush="#FFEAE7E4"
 					Background="{StaticResource Brush_SubtleBackground2}"
 					BorderThickness="1"
-					Grid.Row="2">
+					Grid.Row="2"
+                    TextOptions.TextHintingMode="Animated">
 				<Grid DataContext="{Binding ElementName=LogsList, Path=SelectedItem}"
 					  Visibility="{Binding ElementName=LogsList, Path=SelectedItem, Converter={StaticResource HiddenWhenNull}}">
 					<Grid.ColumnDefinitions>
