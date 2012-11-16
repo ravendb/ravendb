@@ -1573,7 +1573,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (type == typeof(DateTimeOffset))
 			{
 				var val = (DateTimeOffset)whereParams.Value;
-				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite);
+				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
 			}
 			
 			if(type == typeof(decimal))
@@ -1661,7 +1661,7 @@ If you really want to do in memory filtering on the data returned from the query
 				return dateStr;
 			}
 			if (whereParams.Value is DateTimeOffset)
-				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite);
+				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
 
 			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{

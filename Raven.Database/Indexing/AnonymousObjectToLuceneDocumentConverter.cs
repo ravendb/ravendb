@@ -204,7 +204,7 @@ namespace Raven.Database.Indexing
 				}
 				else
 				{
-					dtoStr = val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite);
+					dtoStr = val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
 				}
 				yield return CreateFieldWithCaching(name, dtoStr, storage,
 						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
