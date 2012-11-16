@@ -1234,6 +1234,7 @@
     <Resource Include="Assets\Images\whatif_tiny.png" />
     <Resource Include="Assets\Images\restore_tiny.png" />
     <Resource Include="Assets\Images\export_details_tiny.png" />
+    <Resource Include="Assets\Images\import_csv_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

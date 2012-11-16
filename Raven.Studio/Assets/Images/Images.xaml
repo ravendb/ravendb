@@ -74,5 +74,6 @@
     <BitmapImage x:Key="Image_ExecutePatch_Tiny" UriSource="execute_patch_tiny.png"/>
     <BitmapImage x:Key="Image_WhatIf_Tiny" UriSource="whatif_tiny.png"/>
     <BitmapImage x:Key="Image_ExportDetails_Tiny" UriSource="export_details_tiny.png"/>
+    <BitmapImage x:Key="Image_ImportCsv_Tiny" UriSource="import_csv_tiny.png"/>
     
 </ResourceDictionary>
