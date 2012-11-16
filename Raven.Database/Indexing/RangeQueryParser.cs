@@ -57,10 +57,13 @@ namespace Raven.Database.Indexing
 
 		protected override Query GetWildcardQuery(string field, string termStr)
 		{
-			if (field == "*" && termStr == "*")
+			if (termStr == "*")
 			{
-				return NewMatchAllDocsQuery();
+				return field == "*" ? 
+					NewMatchAllDocsQuery() : 
+					NewWildcardQuery(new Term(field, termStr));
 			}
+
 			var fieldQuery = GetFieldQuery(field, termStr);
 
 			var tq = fieldQuery as TermQuery;

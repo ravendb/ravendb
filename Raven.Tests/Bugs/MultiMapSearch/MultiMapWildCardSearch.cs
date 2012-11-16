@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs.MultiMapSearch
 
                     session.Store(new Person
                     {
-                        Id = "1", 
+                        PortalId = "1", 
                         FirstName= "firstname",
                         LastName = "lastname"
                     });
@@ -46,6 +46,8 @@ namespace Raven.Tests.Bugs.MultiMapSearch
                     var result = query
                         .As<Account>()
                         .ToList();
+					
+					WaitForUserToContinueTheTest(store);
 
                     Assert.Equal(1, result.Count);
 
