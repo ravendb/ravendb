@@ -515,7 +515,18 @@ namespace Raven.Client.Connection
 
 			var result = webRequest.ReadResponseJson();
 
-			return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result));
+			return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result))
+				.Select(x => new Attachment
+				{
+					Etag = x.Etag,
+					Metadata = x.Metadata,
+					Size = x.Size,
+					Key = x.Key,
+					Data = () =>
+					{
+						throw new InvalidOperationException("Cannot get attachment data from an attachment header");
+					}
+				});
 		}
 
 		/// <summary>
@@ -554,6 +565,8 @@ namespace Raven.Client.Connection
 				}
 				else
 				{
+					webRequest.ExecuteRequest();
+
 					len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
 					data = () =>
 					{
