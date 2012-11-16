@@ -338,9 +338,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (attachments == null || attachments.Length == 0)
 			{
-				if (tuple.Item2 != destinationsReplicationInformationForSource.LastDocumentEtag)
+				if (tuple.Item2 != destinationsReplicationInformationForSource.LastAttachmentEtag)
 				{
-					SetLastReplicatedEtagForDocuments(destination, lastAttachmentEtag: tuple.Item2);
+					SetLastReplicatedEtagForServer(destination, lastAttachmentEtag: tuple.Item2);
 				}
 				return null;
 			}
@@ -371,11 +371,14 @@ namespace Raven.Bundles.Replication.Tasks
 			var documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
 			if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
 			{
-				if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag &&
-					// we don't notify remote server about updates to system docs, see: RavenDB-715
-					documentsToReplicate.AllFilteredDocumentsAreSystemDocuments == false)
+				if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
 				{
-					SetLastReplicatedEtagForDocuments(destination, lastDocEtag: documentsToReplicate.LastEtag);
+					// we don't notify remote server about updates to system docs, see: RavenDB-715
+					if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments  == 0 || 
+						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > 50)
+					{
+						SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
+					}
 				}
 				return null;
 			}
@@ -400,7 +403,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private void SetLastReplicatedEtagForDocuments(ReplicationStrategy destination, Guid? lastDocEtag = null, Guid? lastAttachmentEtag = null)
+		private void SetLastReplicatedEtagForServer(ReplicationStrategy destination, Guid? lastDocEtag = null, Guid? lastAttachmentEtag = null)
 		{
 			try
 			{
@@ -576,7 +579,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			public Guid LastEtag { get; set; }
 			public RavenJArray Documents { get; set; }
-			public bool AllFilteredDocumentsAreSystemDocuments { get; set; }
+			public int CountOfFilteredDocumentsWhichAreSystemDocuments { get; set; }
 		}
 
 		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
@@ -611,8 +614,7 @@ namespace Raven.Bundles.Replication.Tasks
 								ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
-						result.AllFilteredDocumentsAreSystemDocuments =
-							docsToReplicate.All(doc => destination.IsSystemDocumentId(doc.Key));
+						result.CountOfFilteredDocumentsWhichAreSystemDocuments = docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
 
 						if (docsToReplicate.Count == 0 || filteredDocsToReplicate.Count != 0)
 						{
