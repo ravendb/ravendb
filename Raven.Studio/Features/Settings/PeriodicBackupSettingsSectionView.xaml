@@ -4,7 +4,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-    mc:Ignorable="d"
+             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:System="clr-namespace:System;assembly=mscorlib"
+             mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400">
 
 		<Border x:Name="LayoutRoot" Style="{StaticResource Style_Border_SettingsSection}">
@@ -38,9 +39,13 @@
 							<ColumnDefinition Width="Auto"/>
 						</Grid.ColumnDefinitions>
 
-						<ComboBox SelectedIndex="{Binding IsS3Selected.Value, Converter={StaticResource BooleanToInt}, Mode=TwoWay}" VerticalAlignment="Center">
-							<ComboBoxItem Content="Glacier Vault Name: "/>
-							<ComboBoxItem Content="S3 Bucket Name: "/>
+						<ComboBox SelectedIndex="{Binding IsS3Selected.Value, Converter={StaticResource BooleanToInt}, Mode=TwoWay}" VerticalAlignment="Center" Width="150">
+                            <ComboBox.ItemsSource>
+                                <Behaviors:StringCollection>
+                                    <System:String>Glacier Vault Name:</System:String>
+                                    <System:String>S3 Bucket Name:</System:String>
+                                </Behaviors:StringCollection>
+                            </ComboBox.ItemsSource>
 						</ComboBox>
 
 						<TextBox Grid.Column="1" 

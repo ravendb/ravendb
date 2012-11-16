@@ -219,6 +219,7 @@
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
     <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
+    <Compile Include="Commands\ExportDocumentDetailsCommand.cs" />
     <Compile Include="Commands\RestoreCommand.cs" />
     <Compile Include="Commands\SaveSettingsCommand.cs" />
     <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
@@ -229,6 +230,11 @@
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
+    <Compile Include="Controls\ProgressWindow.xaml.cs">
+      <DependentUpon>ProgressWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
+    <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
@@ -835,6 +841,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\ProgressWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\QueryOptionsButton.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1223,6 +1233,8 @@
     <Resource Include="Assets\Images\execute_patch_tiny.png" />
     <Resource Include="Assets\Images\whatif_tiny.png" />
     <Resource Include="Assets\Images\restore_tiny.png" />
+    <Resource Include="Assets\Images\export_details_tiny.png" />
+    <Resource Include="Assets\Images\import_csv_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

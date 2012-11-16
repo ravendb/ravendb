@@ -185,12 +185,43 @@
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="0,5,0,0">
 				<TextBlock Text="Query"
-						   Margin="0,5,5,0"
-						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
-						   VerticalAlignment="Top" />
-
-				<Editors:QueryEditor x:Name="QueryEditor"
+						   Margin="0,0,5,0"
+						   Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Center"/>
+                    <Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Center">
+                        <i:Interaction.Behaviors>
+                            <Behaviors:ShowPopupWhilstMouseOver>
+                                <Behaviors:ShowPopupWhilstMouseOver.Popup>
+                                    <Popup>
+                                        <ContentControl Style="{StaticResource Style_InfoToolTip}">
+                                            <RichTextBlock MaxWidth="370" Margin="5">
+                                                <Paragraph>Queries use Lucene syntax.</Paragraph>
+                                                <Paragraph>Examples:
+                                                    <LineBreak/>
+                                                    <Span FontFamily="Consolas">
+                                                        <LineBreak/><Span Foreground="Blue">Name</Span>:Hi?berna*
+                                                        <LineBreak/>
+                                                        <LineBreak/>
+                                                        <Span Foreground="Blue">Count</Span>:[0 TO 10]
+                                                        <LineBreak/>
+                                                        <LineBreak/>
+                                                        <Span Foreground="Blue">Title</Span>:&quot;RavenDb Queries 101&quot; AND
+                                                        <Span Foreground="Blue">Price</Span>:[10.99 TO *]
+                                                    </Span>
+                                                    <LineBreak/>
+                                                </Paragraph>
+                                                <Paragraph>Press
+                                                    <Span FontStyle="Italic">Ctrl-Space</Span> to get hints on field names or values.</Paragraph>
+                                            </RichTextBlock>
+                                        </ContentControl>
+                                    </Popup>
+                                </Behaviors:ShowPopupWhilstMouseOver.Popup>
+                            </Behaviors:ShowPopupWhilstMouseOver>
+                        </i:Interaction.Behaviors>
+                    </Image>
+                </StackPanel>
+                <Editors:QueryEditor x:Name="QueryEditor"
 									 Grid.Row="1"
                                      IsTextDataBindingEnabled="False"
                                      BoundDocument="{Binding QueryDocument}">
