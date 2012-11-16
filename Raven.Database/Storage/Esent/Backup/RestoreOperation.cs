@@ -13,11 +13,15 @@ using System.Linq;
 
 namespace Raven.Storage.Esent.Backup
 {
+	using System.Threading;
+
 	public class RestoreOperation
 	{
 		private readonly Action<string> output;
 		private readonly string backupLocation;
 		private readonly string databaseLocation;
+
+		private bool defragmentationCompleted;
 
 		public RestoreOperation(string backupLocation, string databaseLocation, Action<string> output)
 		{
@@ -54,6 +58,7 @@ namespace Raven.Storage.Esent.Backup
 			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "Indexes")),
 				new DirectoryInfo(Path.Combine(databaseLocation, "Indexes")));
 
+			var dataFilePath = Path.Combine(databaseLocation, "Data");
 
 			JET_INSTANCE instance;
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
@@ -62,11 +67,17 @@ namespace Raven.Storage.Esent.Backup
 				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
 
-				var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
+				var fileThatGetsCreatedButDoesntSeemLikeItShould =
+					new FileInfo(
+						Path.Combine(
+							new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
+				
 				if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
 				{
-					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(Path.Combine(databaseLocation, "Data"));
+					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
 				}
+
+				DefragmentDatabase(instance, dataFilePath);
 			}
 			finally
 			{
@@ -90,6 +101,63 @@ namespace Raven.Storage.Esent.Backup
 			}
 
 			return directories.LastOrDefault() ?? backupLocation;
+		}
+
+		private void DefragmentDatabase(JET_INSTANCE instance, string dataFilePath)
+		{
+			JET_SESID sessionId = JET_SESID.Nil;
+			JET_DBID dbId = JET_DBID.Nil;
+
+			Api.JetInit(ref instance);
+
+			int passes = 1;
+			int seconds = 60;
+
+			defragmentationCompleted = false;
+
+			try
+			{
+				Api.JetBeginSession(instance, out sessionId, null, null);
+
+				Api.JetAttachDatabase(sessionId, dataFilePath, AttachDatabaseGrbit.None);
+				Api.JetOpenDatabase(sessionId, dataFilePath, null, out dbId, OpenDatabaseGrbit.None);
+
+				Api.JetDefragment2(sessionId, dbId, null, ref passes, ref seconds, DefragmentationStatusCallback, DefragGrbit.BatchStart);
+
+				output("Defragmentation started.");
+				Console.WriteLine("Defragmentation started.");
+
+				WaitForDefragmentationToComplete();
+
+				output("Defragmentation finished.");
+				Console.WriteLine("Defragmentation finished.");
+			}
+			finally
+			{
+				Api.JetCloseDatabase(sessionId, dbId, CloseDatabaseGrbit.None);
+				Api.JetDetachDatabase(sessionId, dataFilePath);
+				Api.JetEndSession(sessionId, EndSessionGrbit.None);
+			}
+		}
+
+		private JET_err DefragmentationStatusCallback(JET_SESID sesid, JET_DBID dbId, JET_TABLEID tableId, JET_cbtyp cbtyp, object data1, object data2, IntPtr ptr1, IntPtr ptr2)
+		{
+			defragmentationCompleted = cbtyp == JET_cbtyp.OnlineDefragCompleted;
+
+			return JET_err.Success;
+		}
+
+		private void WaitForDefragmentationToComplete()
+		{
+			while (!defragmentationCompleted)
+			{
+				output(".");
+				Console.Write(".");
+
+				Thread.Sleep(TimeSpan.FromSeconds(1));
+			}
+
+			Console.WriteLine();
 		}
 
 		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
