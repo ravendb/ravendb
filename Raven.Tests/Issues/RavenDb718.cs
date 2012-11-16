@@ -112,6 +112,7 @@ namespace Raven.Tests.Issues
 
 				Assert.Equal(1, results.Count());
 				Assert.Equal(DateTime.UtcNow.Date, results.First().SubscriptionEndDate.Date);
+				Assert.Equal(DateTimeKind.Utc, results.First().SubscriptionEndDate.Kind);
 			}
 		}
 	}
