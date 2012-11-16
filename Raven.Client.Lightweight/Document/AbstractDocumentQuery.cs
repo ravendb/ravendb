@@ -949,7 +949,7 @@ If you really want to do in memory filtering on the data returned from the query
 					Value = value
 				};
 				EnsureValidFieldName(whereParams);
-				theQueryText.Append(TransformToEqualValue(whereParams));
+				theQueryText.Append(TransformToEqualValue(whereParams).Replace(",", "`,`"));
 			}
 			theQueryText.Append(") ");
 		}
