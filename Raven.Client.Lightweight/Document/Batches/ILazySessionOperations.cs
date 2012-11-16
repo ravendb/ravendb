@@ -68,7 +68,9 @@ namespace Raven.Client.Document.Batches
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		Lazy<TResult> Load<TResult>(ValueType id, Action<TResult> onEval);	
+		Lazy<TResult> Load<TResult>(ValueType id, Action<TResult> onEval);
+
+		Lazy<T[]> LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25);
 	}
 
 	/// <summary>
