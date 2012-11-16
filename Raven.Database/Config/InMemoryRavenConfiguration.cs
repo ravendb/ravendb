@@ -852,5 +852,10 @@ namespace Raven.Database.Config
 			OAuthTokenCertificate = defaultConfiguration.OAuthTokenCertificate;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
 		}
+
+		public IEnumerable<string> GetConfigOptionsDocs()
+		{
+			return ConfigOptionDocs.OptionsDocs;
+		}
 	}
 }
