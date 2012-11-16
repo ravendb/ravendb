@@ -614,7 +614,7 @@ namespace Raven.Bundles.Replication.Tasks
 								ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
-						result.CountOfFilteredDocumentsWhichAreSystemDocuments = docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
+						result.CountOfFilteredDocumentsWhichAreSystemDocuments += docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
 
 						if (docsToReplicate.Count == 0 || filteredDocsToReplicate.Count != 0)
 						{
