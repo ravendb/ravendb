@@ -175,7 +175,7 @@
 					<Border Grid.Row="1"
 							Background="{StaticResource Brush_ToolbarBackground}"
 							CornerRadius="0">
-						<StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="5">
 
 							<Button Style="{StaticResource Style_Button_MouseOverChrome}"
 									Visibility="{Binding ShowObserved.Value, Converter={StaticResource BooleanToVisibility}}"
