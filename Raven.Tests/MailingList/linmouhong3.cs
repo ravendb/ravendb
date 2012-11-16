@@ -54,11 +54,11 @@ namespace Raven.Tests.MailingList
 
 				using (var session = Database.OpenSession())
 				{
-					var longUrls = new List<string> 
-                {
-                    "http://www.a.com",
-                    "http://ctow.sigcms.com/click?"
-                };
+					var longUrls = new List<string>
+					{
+						"http://www.a.com",
+						"http://ctow.sigcms.com/click?"
+					};
 
 					var query1 = session.Query<ShortUrlMap, ShortUrlMapIndex>()
 										.Customize(x => x.WaitForNonStaleResultsAsOfNow())
