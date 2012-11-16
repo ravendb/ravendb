@@ -375,7 +375,7 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					// we don't notify remote server about updates to system docs, see: RavenDB-715
 					if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments  == 0 || 
-						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > 50)
+						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > 15)
 					{
 						SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
 					}
