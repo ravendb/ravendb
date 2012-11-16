@@ -631,7 +631,9 @@ namespace Raven.Client.Document
 
 		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
 		{
-			return Lazily.LoadStartingWith<T>(keyPrefix, matches, start, pageSize).Value;
+			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize)
+						.Select(TrackEntity<T>)
+						.ToArray();
 		}
 
 		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)

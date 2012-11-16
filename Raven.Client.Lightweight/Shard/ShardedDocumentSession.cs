@@ -567,22 +567,20 @@ namespace Raven.Client.Shard
 
 		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
 		{
-			//IncrementRequestCount();
-			//var shards = GetCommandsToOperateOn(new ShardRequestData
-			//{
-			//	EntityType = typeof(T),
-			//	Keys = { keyPrefix }
-			//});
-			//var results = shardStrategy.ShardAccessStrategy.Apply(shards, new ShardRequestData
-			//{
-			//	EntityType = typeof(T),
-			//	Keys = { keyPrefix }
-			//}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize));
+			IncrementRequestCount();
+			var shards = GetCommandsToOperateOn(new ShardRequestData
+			{
+				EntityType = typeof(T),
+				Keys = { keyPrefix }
+			});
+			var results = shardStrategy.ShardAccessStrategy.Apply(shards, new ShardRequestData
+			{
+				EntityType = typeof(T),
+				Keys = { keyPrefix }
+			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize));
 
-			//return results.SelectMany(x => x).Select(TrackEntity<T>)
-			//	.ToList();
-
-			return Lazily.LoadStartingWith<T>(keyPrefix, matches, start, pageSize).Value;
+			return results.SelectMany(x => x).Select(TrackEntity<T>)
+				.ToArray();
 		}
 
 		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)
