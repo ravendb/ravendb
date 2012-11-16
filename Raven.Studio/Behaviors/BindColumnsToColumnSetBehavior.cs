@@ -221,7 +221,7 @@ namespace Raven.Studio.Behaviors
             {
                 column = new DataGridTemplateColumn()
                              {
-                                 ClipboardContentBinding = new Binding("Item.Document." + ExpandBinding(columnDefinition.Binding)) { Converter = DocumentPropertyToSingleLineStringConverter.Default },
+                                 ClipboardContentBinding = columnDefinition.CreateBinding("Item.Document."),
                                  Header = columnDefinition.Header,
                                  CellTemplate = cellTemplate,
                              };
@@ -288,13 +288,13 @@ namespace Raven.Studio.Behaviors
                 @"<DataTemplate  xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:Behaviors=""clr-namespace:Raven.Studio.Behaviors;assembly=Raven.Studio""
  xmlns:m=""clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions;assembly=Raven.Studio""
                                     xmlns:Converters=""clr-namespace:Raven.Studio.Infrastructure.Converters;assembly=Raven.Studio"">
-                                    <TextBlock Text=""{Binding Item.Document.$$$BindingPath$$$, Converter={m:Static Member=Converters:DocumentPropertyToSingleLineStringConverter.Trimmed}}""
+                                    <TextBlock Text=""{Binding $$$BindingPath$$$, Converter={m:Static Member=Converters:DocumentPropertyToSingleLineStringConverter.Trimmed}}""
                                                Behaviors:FadeTrimming.IsEnabled=""True"" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed=""True""
                                                VerticalAlignment=""Center""
                                                Margin=""5,0""/>
                                 </DataTemplate>";
 
-            templateString = templateString.Replace("$$$BindingPath$$$", ExpandBinding(columnDefinition.Binding));
+            templateString = templateString.Replace("$$$BindingPath$$$", columnDefinition.GetBindingPath("Item.Document."));
 
             try
             {
@@ -306,42 +306,6 @@ namespace Raven.Studio.Behaviors
             {
                 return null;
             }
-        }
-
-        private string ExpandBinding(string binding)
-        {
-	        if (binding.StartsWith("$JsonDocument:"))
-            {
-                return binding.Substring("$JsonDocument:".Length);
-            }
-	        if (binding.StartsWith("$Meta:"))
-	        {
-		        return "Metadata" + ExpandPropertyPathToXamlBinding(binding.Substring("$Meta:".Length));
-	        }
-			if (binding == "$Temp:Score")
-			{
-				return "TempIndexScore";
-			}
-	        else
-	        {
-		        return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
-	        }
-        }
-
-	    private string ExpandPropertyPathToXamlBinding(string binding)
-        {
-            // for example TestNested[0].MyProperty will be expanded to [TestNested][0][MyProperty]
-            var result = binding.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries)
-                .SelectMany(s => s.Split(new[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries))
-                .Aggregate(new StringBuilder(), (sb, next) =>
-                                                    {
-                                                        sb.Append('[');
-                                                        sb.Append(next);
-                                                        sb.Append(']');
-                                                        return sb;
-                                                    }, sb => sb.ToString());
-
-            return result;
         }
 
         private static void HandleColumnsModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

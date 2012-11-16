@@ -46,6 +46,7 @@ namespace Raven.Studio.Models
         private List<PriorityColumn> priorityColumns;
         private Func<DatabaseModel, IObservable<Unit>> observableGenerator;
         private IDisposable changesSubscription;
+        private ICommand exportDetailsCommand;
 
         public event EventHandler<EventArgs> RecentDocumentsChanged;
 
@@ -230,6 +231,13 @@ namespace Raven.Studio.Models
             }
         }
 
+        public ICommand ExportDetails
+        {
+            get { return exportDetailsCommand ?? (exportDetailsCommand = new ExportDocumentDetailsCommand(this)); }
+        }
+
+        public bool IsExportEnabled { get { return DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.Details; }}
+
         protected override void OnViewLoaded()
         {
             UpdateColumnSet();
@@ -262,6 +270,8 @@ namespace Raven.Studio.Models
         {
             (Documents.Source as DocumentsVirtualCollectionSourceBase).MetadataOnly =
                 DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly;
+
+            OnPropertyChanged(() => IsExportEnabled);
         }
 
         protected override void OnViewUnloaded()
