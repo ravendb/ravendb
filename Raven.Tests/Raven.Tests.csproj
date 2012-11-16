@@ -546,6 +546,7 @@
     <Compile Include="MailingList\Georgiosd.cs" />
     <Compile Include="MailingList\Holt.cs" />
     <Compile Include="MailingList\InIssues.cs" />
+    <Compile Include="MailingList\InQueries.cs" />
     <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
     <Compile Include="MailingList\linmouhong2.cs" />
     <Compile Include="MailingList\LinqInExtensionTests.cs" />
@@ -566,6 +567,7 @@
     <Compile Include="MailingList\TriggerCanAccessFullMetadataInQueryProjection.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
+    <Compile Include="MailingList\WildCardQuery.cs" />
     <Compile Include="MailingList\Zeitler.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="Spatial\Nick.cs" />
