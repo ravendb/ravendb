@@ -1653,7 +1653,13 @@ If you really want to do in memory filtering on the data returned from the query
 				return Constants.EmptyStringNotAnalyzed;
 
 			if (whereParams.Value is DateTime)
-				return ((DateTime)whereParams.Value).ToString(Default.DateTimeFormatsToWrite);
+			{
+				var dateTime = (DateTime) whereParams.Value;
+				var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite);
+				if(dateTime.Kind == DateTimeKind.Utc)
+					dateStr += "Z";
+				return dateStr;
+			}
 			if (whereParams.Value is DateTimeOffset)
 				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite);
 
