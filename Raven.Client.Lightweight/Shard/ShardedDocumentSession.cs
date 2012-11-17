@@ -565,7 +565,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -580,7 +580,21 @@ namespace Raven.Client.Shard
 			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize));
 
 			return results.SelectMany(x => x).Select(TrackEntity<T>)
-				.ToList();
+				.ToArray();
+		}
+
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)
+		{
+			IncrementRequestCount();
+			var cmds = GetCommandsToOperateOn(new ShardRequestData
+			{
+				EntityType = typeof(T),
+				Keys = { keyPrefix }
+			});
+
+			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, start, pageSize, this);
+
+			return AddLazyOperation<T[]>(lazyLoadOperation, null, cmds);
 		}
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands

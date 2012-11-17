@@ -112,7 +112,6 @@ namespace Raven.Tests.Spatial
 				RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
 				RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 
-			const double radius = 6.0;
 			QueryResult queryResult;
 			do
 			{

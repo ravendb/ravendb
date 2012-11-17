@@ -629,9 +629,18 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
 		{
-			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize).Select(TrackEntity<T>).ToList();
+			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize)
+						.Select(TrackEntity<T>)
+						.ToArray();
+		}
+
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)
+		{
+			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, start, pageSize, this);
+
+			return AddLazyOperation<T[]>(operation, null);
 		}
 	}
 }

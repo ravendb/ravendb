@@ -36,8 +36,6 @@ namespace Raven.Abstractions.Json
 					if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
 					                           DateTimeStyles.RoundtripKind, out time))
 					{
-						if (time.Kind == DateTimeKind.Unspecified)
-							return DateTime.SpecifyKind(time, DateTimeKind.Local);
 						if (s.EndsWith("+00:00"))
 							return time.ToUniversalTime();
 						return time;
