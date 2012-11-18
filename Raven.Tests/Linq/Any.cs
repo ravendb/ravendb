@@ -56,6 +56,46 @@ namespace Raven.Tests.Linq
 			}
 		}
 
+		[Fact]
+		public void CannotCountNullArraysWithAnyIfThereIsNothingElseStoredInTheIndex()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new TestDoc { StringArray = new[] { "one", "two" } });
+					session.Store(new TestDoc { StringArray = new string[0] });
+					session.Store(new TestDoc { StringArray = new string[0] });
+					session.SaveChanges();
+				}
+				WaitForUserToContinueTheTest(store);
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal(0, session.Query<TestDoc>().Customize(customization => customization.WaitForNonStaleResults()).Count(p => p.StringArray.Any() == false));
+				}
+			}
+		}
+
+		[Fact]
+		public void CanCountNullArraysWithAnyIfHaveAnotherPropertyStoredInTheIndex()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new TestDoc {SomeProperty = "Test", StringArray = new[] {"one", "two"}});
+					session.Store(new TestDoc {SomeProperty = "Test", StringArray = new string[0]});
+					session.Store(new TestDoc {SomeProperty = "Test", StringArray = new string[0]});
+					session.SaveChanges();
+				}
+				WaitForUserToContinueTheTest(store);
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal(2, session.Query<TestDoc>().Customize(customization => customization.WaitForNonStaleResults()).Count(p => p.StringArray.Any() == false && p.SomeProperty == "Test"));
+				}
+			}
+		}
+
 		private class OrderableEntity
 		{
 			public DateTime Order { get; set; }

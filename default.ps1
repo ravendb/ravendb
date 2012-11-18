@@ -387,7 +387,7 @@ task Upload -depends DoRelease {
 		
 		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
-		&$uploader "$uploadCategory" "$env:buildlabel" $file "$log"
+		Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
 			
 		if ($lastExitCode -ne 0) {
 			write-host "Failed to upload to S3: $lastExitCode"
@@ -474,6 +474,12 @@ task CreateNugetPackages -depends Compile {
 	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
 	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
 	New-Item $nuget_dir\RavenDB.AspNetHost\tools -Type directory | Out-Null
+	
+	New-Item $nuget_dir\RavenDB.Tests.Helpers\lib\net40 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Tests.Helpers.nuspec $nuget_dir\RavenDB.Tests.Helpers\RavenDB.Tests.Helpers.nuspec
+	@("Raven.Tests.Helpers.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Tests.Helpers\lib\net40 }
+	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
 	$nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){

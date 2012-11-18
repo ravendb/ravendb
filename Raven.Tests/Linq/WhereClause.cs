@@ -16,8 +16,8 @@ namespace Raven.Tests.Linq
 {
 	public class WhereClause : IDisposable
 	{
-		private IDocumentStore documentStore;
-		private IDocumentSession documentSession;
+		private readonly IDocumentStore documentStore;
+		private readonly IDocumentSession documentSession;
 
 
 		public WhereClause()
@@ -613,6 +613,30 @@ namespace Raven.Tests.Linq
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers.Where(x => x.Properties.Any());
 			Assert.Equal("Properties:*", q.ToString());
+		}
+		
+		[Fact]
+		public void AnyOnCollectionEqTrue()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Properties.Any() == true);
+			Assert.Equal("Properties:*", q.ToString());
+		}
+
+		[Fact]
+		public void AnyOnCollectionEqFalse()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Properties.Any() == false);
+			Assert.Equal("(*:* AND -Properties:*)", q.ToString());
+		}
+
+		[Fact]
+		public void AnyOnCollectionNegated()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => !x.Properties.Any());
+			Assert.Equal("(*:* AND -Properties:*)", q.ToString());
 		}
 
 		[Fact]
