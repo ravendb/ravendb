@@ -5,6 +5,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Client.Document;
@@ -24,12 +25,26 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
+			var x = RavenJObject.Parse(@"{
+  '_': null,
+  'SaleId': 'sales/1',
+  'Locations': [
+    {
+      'Lat': 37.78,
+      'Lng': 144.96
+    },
+    {
+      'Lat': 37.79,
+      'Lng': 144.96
+    }
+  ],
+  'TotalSold': 0,
+  '__document_id': 'sales/1'
+}");
+			var index = new Index_Sales_2fByLocation();
+			foreach (var VARIABLE in index.ReduceDefinition(new[]{new DynamicJsonObject(x)}))
 			{
-				using(var x = new CompiledIndexesNhsevidence2())
-				{
-					x.CanGetCorrectResults();
-				}
+				Console.WriteLine(VARIABLE);
 			}
 		}
 	}

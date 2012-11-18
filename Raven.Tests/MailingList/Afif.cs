@@ -101,13 +101,14 @@ namespace Raven.Tests.MailingList
 				Reduce = sitesales => from sitesale in sitesales
 									  group sitesale by sitesale.SaleId
 										  into sales
+										  let locations = sales.SelectMany(x => x.Locations)
 										  from sale in sales
 										  select new
 										  {
-											  _ = sale.Locations.Select(l => SpatialIndex.Generate(l.Lat, l.Lng)),
+											  _ = locations.Select(l => SpatialIndex.Generate(l.Lat, l.Lng)),
 											  // marking this as empty works
 											  sale.SaleId,
-											  Locations = sale.Locations,
+											  Locations = locations,
 											  TotalSold = sales.Sum(x => x.TotalSold)
 										  };
 			}
