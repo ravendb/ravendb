@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -27,22 +28,24 @@ namespace Raven.Tests
 		[Fact]
 		public void CreateIncrementalBackup()
 		{
-			var store = NewDocumentStore(requestedStorage: "esent");
-			using (var session = store.OpenSession())
+			using(var store = NewDocumentStore(requestedStorage: "esent"))
 			{
-				session.Store(new User { Name = "Fitzchak" });
-				session.SaveChanges();
-			}
-			store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
-			WaitForBackup(store.DocumentDatabase, true);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User {Name = "Fitzchak"});
+					session.SaveChanges();
+				}
+				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				WaitForBackup(store.DocumentDatabase, true);
 
-			using (var session = store.OpenSession())
-			{
-				session.Store(new User { Name = "Oren" });
-				session.SaveChanges();
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User {Name = "Oren"});
+					session.SaveChanges();
+				}
+				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				WaitForBackup(store.DocumentDatabase, true);
 			}
-			store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
-			WaitForBackup(store.DocumentDatabase, true);
 		}
 
 		protected override void ModifyConfiguration(RavenConfiguration configuration)
@@ -54,6 +57,7 @@ namespace Raven.Tests
 		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(BackupDir);
+			base.Dispose();
 		}
 	}
 }

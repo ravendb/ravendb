@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -89,6 +90,19 @@ namespace Raven.Database.Extensions
 						foreach (var processesUsingFile in processesUsingFiles)
 						{
 							stringBuilder.Append("\t").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
+								AppendLine();
+						}
+						throw new IOException(stringBuilder.ToString());
+					}
+					catch(IOException)
+					{
+						Debugger.Launch();
+						var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
+						var stringBuilder = new StringBuilder();
+						stringBuilder.Append("The following processes are locking ").Append(path).AppendLine();
+						foreach (var processesUsingFile in processesUsingFiles)
+						{
+							stringBuilder.Append(" ").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
 								AppendLine();
 						}
 						throw new IOException(stringBuilder.ToString());
