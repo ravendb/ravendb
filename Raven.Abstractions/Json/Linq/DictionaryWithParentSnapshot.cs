@@ -12,7 +12,6 @@ namespace Raven.Json.Linq
 		private static readonly RavenJToken DeletedMarker = new RavenJValue("*DeletedMarker*", JTokenType.Null);
 
 		private readonly DictionaryWithParentSnapshot parentSnapshot;
-		private bool isSnapshot;
 		private int count = -1;
 		private IDictionary<string, RavenJToken> localChanges;
 		private string snapshotMsg;
@@ -42,7 +41,7 @@ namespace Raven.Json.Linq
 
 		public void Add(string key, RavenJToken value)
 		{
-			if (isSnapshot)
+			if (IsSnapshot)
 				throw new InvalidOperationException(snapshotMsg ?? "Cannot modify a snapshot, this is probably a bug");
 
 			if (ContainsKey(key))
@@ -106,7 +105,7 @@ namespace Raven.Json.Linq
 
 		public bool Remove(string key)
 		{
-			if (isSnapshot)
+			if (IsSnapshot)
 				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
 
 			count = -1;
@@ -173,6 +172,8 @@ namespace Raven.Json.Linq
 			set
 			{
 				count = -1;
+				if(IsSnapshot)
+					throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
 				LocalChanges[key] = value;
 			}
 		}
@@ -250,10 +251,11 @@ namespace Raven.Json.Linq
 		}
 
 		public bool CaseInsensitivePropertyNames { get; set; }
+		public bool IsSnapshot { get; private set; }
 
 		public DictionaryWithParentSnapshot CreateSnapshot()
 		{
-			if(isSnapshot == false)
+			if(IsSnapshot == false)
 				throw new InvalidOperationException("Cannot create snapshot without previously calling EnsureSnapShot");
 			return new DictionaryWithParentSnapshot(this);
 		}
@@ -261,7 +263,7 @@ namespace Raven.Json.Linq
 		public void EnsureSnapshot(string msg = null)
 		{
 			snapshotMsg = msg;
-			isSnapshot = true;
+			IsSnapshot = true;
 		}
 	}
 }

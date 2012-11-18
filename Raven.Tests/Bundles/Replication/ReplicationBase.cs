@@ -12,14 +12,13 @@ using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Tests;
 using Xunit;
-using IOExtensions = Raven.Database.Extensions.IOExtensions;
 using System.Linq;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class ReplicationBase : IDisposable
 	{
@@ -27,7 +26,7 @@ namespace Raven.Bundles.Tests.Replication
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 
 		private const int PortRangeStart = 8079;
-		protected const int RetriesCount = 500;
+		protected int RetriesCount = 500;
 
 		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null)
 		{
@@ -207,6 +206,20 @@ namespace Raven.Bundles.Tests.Replication
 			           }, new RavenJObject());
 		}
 
+		protected void RemoveReplication(IDatabaseCommands source)
+		{
+			source.Put(
+				Constants.RavenReplicationDestinations,
+				null,
+				new RavenJObject 
+				{
+					                 {
+						                 "Destinations", new RavenJArray()
+					                 } 
+				},
+				new RavenJObject());
+		}
+
 		protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
 		{
 			TDocument document = null;
@@ -239,6 +252,35 @@ namespace Raven.Bundles.Tests.Replication
 				}
 			}
 			return document;
+		}
+
+		protected Attachment WaitForAttachement(IDocumentStore store2, string expectedId)
+		{
+			Attachment attachment = null;
+
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				attachment = store2.DatabaseCommands.GetAttachment(expectedId);
+				if (attachment != null)
+					break;
+				Thread.Sleep(100);
+			}
+			try
+			{
+				Assert.NotNull(attachment);
+			}
+			catch (Exception ex)
+			{
+				Thread.Sleep(TimeSpan.FromSeconds(10));
+
+				attachment = store2.DatabaseCommands.GetAttachment(expectedId);
+				if (attachment == null) throw;
+
+				throw new Exception(
+					"WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?",
+					ex);
+			}
+			return attachment;
 		}
 
 		protected void WaitForDocument(IDatabaseCommands commands, string expectedId)

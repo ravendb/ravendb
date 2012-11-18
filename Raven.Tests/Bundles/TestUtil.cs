@@ -7,7 +7,7 @@ using System.Threading;
 using Raven.Client;
 using Xunit;
 
-namespace Raven.Bundles.Tests
+namespace Raven.Tests.Bundles
 {
 	public static class TestUtil
 	{

@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Responders
 			var executeGetTermsQuery = Database.ExecuteGetTermsQuery(index, 
 			                                                         context.Request.QueryString["field"],
 			                                                         context.Request.QueryString["fromValue"],
-			                                                         context.GetPageSize(Database.Configuration.MaxPageSize)
+																	 context.GetPageSize(Database.Configuration.MaxPageSize)
 				);
 			context.WriteETag(Database.GetIndexEtag(index, null));
 			context.WriteJson(executeGetTermsQuery);

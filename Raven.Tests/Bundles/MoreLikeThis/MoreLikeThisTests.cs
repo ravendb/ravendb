@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -8,19 +7,20 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
 using Xunit;
-using MoreLikeThisQueryParameters = Raven.Abstractions.Data.MoreLikeThisQueryParameters;
 
-namespace Raven.Bundles.Tests.MoreLikeThis
+namespace Raven.Tests.Bundles.MoreLikeThis
 {
-	public class MoreLikeThisTests : TestWithInMemoryDatabase, IDisposable
+	public class MoreLikeThisTests : RavenTest
 	{
-		#region Test Setup
+		private readonly IDocumentStore store;
 
-		public MoreLikeThisTests() : base(config =>{})
+		public MoreLikeThisTests()
 		{
+			store = NewDocumentStore();
 		}
 
 		private static string GetLorem(int numWords)
@@ -37,20 +37,16 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			return output.ToString();
 		}
 
-		#endregion
-
-		#region Test Facts
-
 		[Fact]
-		public void Can_Get_Results()
+		public void CanGetResults()
 		{
-			string keyOfDocumentToCompareAgainst;
+			string id;
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
-				var dataQueriedFor = new Data { Body = "This is a test. Isn't it great? I hope I pass my test!" };
+				var dataQueriedFor = new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"};
 
 				var list = new List<Data>
 				{
@@ -64,67 +60,59 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 					new Data {Body = "test"}
 				};
 				list.ForEach(session.Store);
-
 				session.SaveChanges();
 
-				keyOfDocumentToCompareAgainst = session.Advanced.GetDocumentId(dataQueriedFor);
-
-				TestUtil.WaitForIndexing(documentStore);
+				id = session.Advanced.GetDocumentId(dataQueriedFor);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(keyOfDocumentToCompareAgainst);
+			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
 		}
 
 		[Fact]
-		public void Can_compare_documents_with_integer_identifiers()
+		public void CanCompareDocumentsWithIntegerIdentifiers()
 		{
-			string firstKeyToQueryFor;
-			string secondKeyToQueryFor;
+			string id;
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new OtherDataIndex().Execute(documentStore);
+				new OtherDataIndex().Execute(store);
 
-				var dataQueriedFor = new DataWithIntegerId { Id = 123, Body = "This is a test. Isn't it great? I hope I pass my test!" };
+				var dataQueriedFor = new DataWithIntegerId {Id = 123, Body = "This is a test. Isn't it great? I hope I pass my test!"};
 
 				var list = new List<DataWithIntegerId>
 				{
 					dataQueriedFor,
-					new DataWithIntegerId { Id = 234, Body = "I have a test tomorrow. I hate having a test"},
-					new DataWithIntegerId { Id = 3456, Body = "Cake is great."},
-					new DataWithIntegerId { Id = 3457, Body = "This document has the word test only once"},
-					new DataWithIntegerId { Id = 3458, Body = "test"},
-					new DataWithIntegerId { Id = 3459, Body = "test"},
+					new DataWithIntegerId {Id = 234, Body = "I have a test tomorrow. I hate having a test"},
+					new DataWithIntegerId {Id = 3456, Body = "Cake is great."},
+					new DataWithIntegerId {Id = 3457, Body = "This document has the word test only once"},
+					new DataWithIntegerId {Id = 3458, Body = "test"},
+					new DataWithIntegerId {Id = 3459, Body = "test"},
 				};
 				list.ForEach(session.Store);
-
 				session.SaveChanges();
 
-				firstKeyToQueryFor = session.Advanced.GetDocumentId(dataQueriedFor).ToLower();
+				id = session.Advanced.GetDocumentId(dataQueriedFor);
 
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			using (var session2 = documentStore.OpenSession())
-			{
-				var target = session2.Query<DataWithIntegerId>().Where(d => d.Id == 123).Single();
-				secondKeyToQueryFor = session2.Advanced.GetDocumentId(target);
-			}
+			Console.WriteLine("Test: '{0}'", id);
+			AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(id);
 
-			Console.WriteLine("querying for {0}, {1}", firstKeyToQueryFor, secondKeyToQueryFor);
-
-			AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(firstKeyToQueryFor);
-			AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(secondKeyToQueryFor);
+			id = id.ToLower();
+			Console.WriteLine("Test with lowercase: '{0}'", id);
+			AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(id);
 		}
-		
+
 		[Fact]
-		public void Can_Get_Results_when_index_has_slash_in_it()
+		public void CanGetResultsWhenIndexHasSlashInIt()
 		{
 			const string key = "datas/1";
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				var list = new List<Data>
 				{
@@ -138,10 +126,8 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 					new Data {Body = "test"}
 				};
 				list.ForEach(session.Store);
-
 				session.SaveChanges();
-
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
 			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
@@ -152,9 +138,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		{
 			const string key = "datas/4";
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				var list = new List<Data>
 				{
@@ -168,20 +154,18 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 					new Data {Body = "test"}
 				};
 				list.ForEach(session.Store);
-
 				session.SaveChanges();
-
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
 				{
 					DocumentId = key,
-					Fields = new[] { "Body" }
+					Fields = new[] {"Body"}
 				});
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 
 				Assert.Empty(list);
 			}
@@ -191,18 +175,18 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		public void Test_With_Lots_Of_Random_Data()
 		{
 			var key = "datas/1";
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				for (var i = 0; i < 100; i++)
 				{
-					var data = new Data { Body = GetLorem(200) };
+					var data = new Data {Body = GetLorem(200)};
 					session.Store(data);
 				}
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
 			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
@@ -212,21 +196,21 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		public void Do_Not_Pass_FieldNames()
 		{
 			var key = "datas/1";
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				for (var i = 0; i < 10; i++)
 				{
-					var data = new Data { Body = "Body" + i, WhitespaceAnalyzerField = "test test" };
+					var data = new Data {Body = "Body" + i, WhitespaceAnalyzerField = "test test"};
 					session.Store(data);
 				}
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
 				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
@@ -238,21 +222,21 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		public void Each_Field_Should_Use_Correct_Analyzer()
 		{
 			var key = "datas/1";
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				for (var i = 0; i < 10; i++)
 				{
-					var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com hotmail" };
+					var data = new Data {WhitespaceAnalyzerField = "bob@hotmail.com hotmail"};
 					session.Store(data);
 				}
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
 				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
@@ -260,21 +244,21 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			}
 
 			key = "datas/11";
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				for (var i = 0; i < 10; i++)
 				{
-					var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com" };
+					var data = new Data {WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com"};
 					session.Store(data);
 				}
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
 				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
@@ -287,9 +271,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		{
 			const string key = "datas/1";
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				var list = new List<Data>
 				{
@@ -302,15 +286,15 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
 				{
 					DocumentId = key,
-					Fields = new[] { "Body" },
+					Fields = new[] {"Body"},
 					MinimumDocumentFrequency = 2
 				});
 
@@ -323,9 +307,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		{
 			const string key = "datas/1";
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				var list = new List<Data>
 				{
@@ -337,20 +321,20 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
 				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
-					new MoreLikeThisQueryParameters
-						{
-							DocumentId = key,
-							Fields = new[] { "Body" },
-							MinimumWordLength = 3,
-							MinimumDocumentFrequency = 1,
-							Boost = true
-						});
+					new MoreLikeThisQuery
+					{
+						DocumentId = key,
+						Fields = new[] {"Body"},
+						MinimumWordLength = 3,
+						MinimumDocumentFrequency = 1,
+						Boost = true
+					});
 
 				Assert.NotEqual(0, list.Count());
 				Assert.Equal("I have a test tomorrow.", list[0].Body);
@@ -362,9 +346,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		{
 			const string key = "datas/1";
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				var list = new List<Data>
 				{
@@ -379,49 +363,45 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 				};
 				list.ForEach(session.Store);
 
-				session.Store(new StopWordsSetup { Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" } });
+				session.Store(new StopWordsSetup {Id = "Config/Stopwords", StopWords = new List<string> {"I", "A", "Be"}});
 
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(documentStore);
+				TestUtil.WaitForIndexing(store);
 			}
 
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
-																						{
-																							DocumentId = key,
-																							StopWordsDocumentId = "Config/Stopwords",
-																							MinimumDocumentFrequency = 1
-																						});
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
+				{
+					DocumentId = key,
+					StopWordsDocumentId = "Config/Stopwords",
+					MinimumDocumentFrequency = 1
+				});
 
 				Assert.Equal(5, list.Count());
 			}
 		}
 
-		#endregion
-
-		void AssetMoreLikeThisHasMatchesFor<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
+		private void AssetMoreLikeThisHasMatchesFor<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
 		{
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQueryParameters
+				var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQuery
 				{
 					DocumentId = documentKey,
-					Fields = new[] { "Body" }
+					Fields = new[] {"Body"}
 				});
 
 				Assert.NotEmpty(list);
 			}
 		}
 
-		#region Private Methods - Does NOT work!
-
 		private void InsertData()
 		{
-			using (var session = documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new DataIndex().Execute(store);
 
 				var list = new List<Data>
 				{
@@ -447,10 +427,6 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			}
 		}
 
-		#endregion
-
-		#region Data Classes
-
 		public class Data
 		{
 			public string Id { get; set; }
@@ -458,43 +434,39 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			public string WhitespaceAnalyzerField { get; set; }
 		}
 
-		public class DataWithIntegerId 
+		public class DataWithIntegerId
 		{
 			public long Id;
 			public string Body { get; set; }
 		}
-
-		#endregion
-
-		#region Indexes
 
 		public class DataIndex : AbstractIndexCreationTask<Data>
 		{
 			public DataIndex()
 			{
 				Map = docs => from doc in docs
-							  select new { doc.Body, doc.WhitespaceAnalyzerField };
+				              select new {doc.Body, doc.WhitespaceAnalyzerField};
 
 				Analyzers = new Dictionary<Expression<Func<Data, object>>, string>
 				{
 					{
 						x => x.Body,
 						typeof (StandardAnalyzer).FullName
-						},
+					},
 					{
 						x => x.WhitespaceAnalyzerField,
 						typeof (WhitespaceAnalyzer).FullName
-						}
+					}
 				};
 
 				Stores = new Dictionary<Expression<Func<Data, object>>, FieldStorage>
 				{
 					{
 						x => x.Body, FieldStorage.Yes
-						},
+					},
 					{
 						x => x.WhitespaceAnalyzerField, FieldStorage.Yes
-						}
+					}
 				};
 
 			}
@@ -505,27 +477,24 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			public OtherDataIndex()
 			{
 				Map = docs => from doc in docs
-							  select new { doc.Body};
+				              select new {doc.Body};
 
 				Analyzers = new Dictionary<Expression<Func<DataWithIntegerId, object>>, string>
 				{
 					{
 						x => x.Body,
 						typeof (StandardAnalyzer).FullName
-						}
+					}
 				};
 
 				Stores = new Dictionary<Expression<Func<DataWithIntegerId, object>>, FieldStorage>
 				{
 					{
 						x => x.Body, FieldStorage.Yes
-						}
+					}
 				};
 
 			}
 		}
-
-		#endregion
-
 	}
 }

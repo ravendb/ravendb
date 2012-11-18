@@ -180,6 +180,16 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void AnyWithPredicateShouldBeNotSupported()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name.Any(char.IsUpper));
+
+			var exception = Assert.Throws<NotSupportedException>(() => q.ToString());
+			Assert.Equal("Method not supported: Delegate.CreateDelegate. Expression: CreateDelegate(System.Func`2[System.Char,System.Boolean], null, Boolean IsUpper(Char)).", exception.Message);
+		}
+
+		[Fact]
 		public void BracesOverrideOperatorPrecedence_second_method()
 		{
 			var indexedUsers = GetRavenQueryInspector();

@@ -562,6 +562,7 @@
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
+    <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
@@ -594,7 +595,7 @@
     <Compile Include="Data\JsonDocumentMetadata.cs" />
     <Compile Include="Data\LicensingStatus.cs" />
     <Compile Include="Data\LogItem.cs" />
-    <Compile Include="Data\MoreLikeThisQueryParameters.cs" />
+    <Compile Include="Data\MoreLikeThisQuery.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />
     <Compile Include="Data\PatchRequest.cs" />
@@ -610,6 +611,7 @@
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
+    <Compile Include="Extensions\AttachmentExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />

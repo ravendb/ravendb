@@ -1,5 +1,4 @@
 ﻿using Raven.Abstractions.Indexing;
-using Raven.Bundles.Tests.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;

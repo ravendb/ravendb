@@ -133,7 +133,7 @@ namespace Raven.Server
 				}},
 				{"config-help", "Help about configuration options", key=>
 				{
-					actionToTake = PrintConfig;
+					actionToTake = () => PrintConfig(ravenConfiguration.GetConfigOptionsDocs());
 				}},
 				{"restore", 
 					"Restores a RavenDB database from backup",
@@ -220,7 +220,7 @@ namespace Raven.Server
 			configuration.Save(ConfigurationSaveMode.Full);
 		}
 
-		private static void PrintConfig()
+		private static void PrintConfig(IEnumerable<string> configOptions)
 		{
 			Console.WriteLine(
 				@"
@@ -233,7 +233,7 @@ Configuration options:
 ",
 				SystemTime.UtcNow.Year);
 
-			foreach (var configOptionDoc in ConfigOptionDocs.OptionsDocs)
+			foreach (var configOptionDoc in configOptions)
 			{
 				Console.WriteLine(configOptionDoc);
 				Console.WriteLine();

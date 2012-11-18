@@ -4,13 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 extern alias client;
+using System.Linq;
 using client::Raven.Client.Authorization;
 using client::Raven.Bundles.Authorization.Model;
-
-using System.Linq;
-
-using Raven.Bundles.Tests.Versioning;
-
 using Raven.Client.Exceptions;
 using Xunit;
 

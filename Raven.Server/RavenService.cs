@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.ServiceProcess;
 using Raven.Database.Config;
 using Task = System.Threading.Tasks.Task;
@@ -13,12 +14,16 @@ namespace Raven.Server
 {
 	internal partial class RavenService : ServiceBase
 	{
+		const int SERVICE_ACCEPT_PRESHUTDOWN = 0x100;
+		const int SERVICE_CONTROL_PRESHUTDOWN = 0xf;
+
 		private RavenDbServer server;
 		private Task startTask;
 
 		public RavenService()
 		{
 			InitializeComponent();
+			AcceptPreshutdown();
 		}
 
 		protected override void OnStart(string[] args)
@@ -60,11 +65,42 @@ namespace Raven.Server
 				do 
 				{
 					RequestAdditionalTime(10000);
-				} while(shutdownTask.Wait(9000));
+				} while(!shutdownTask.Wait(9000));
 			});
 
 			Task.WaitAll(shutdownTask, keepAliveTask);
 
+		}
+
+		protected override void OnShutdown()
+		{
+			var shutdownTask = startTask.ContinueWith(task =>
+			{
+				if (server != null)
+					server.Dispose();
+				return task;
+			});
+			Task.WaitAll(shutdownTask);
+		}
+
+		protected override void OnCustomCommand(int command)
+		{
+			base.OnCustomCommand(command);
+
+			if (command != SERVICE_CONTROL_PRESHUTDOWN) return;
+
+			this.Stop();
+		}
+
+		private void AcceptPreshutdown()
+		{
+			// http://www.sivachandran.in/2012/03/handling-pre-shutdown-notification-in-c.html
+			FieldInfo acceptedCommandsFieldInfo = typeof(ServiceBase).GetField("acceptedCommands", BindingFlags.Instance | BindingFlags.NonPublic);
+			if (acceptedCommandsFieldInfo == null)
+				return;
+
+			int value = (int)acceptedCommandsFieldInfo.GetValue(this);
+			acceptedCommandsFieldInfo.SetValue(this, value | SERVICE_ACCEPT_PRESHUTDOWN);
 		}
 	}
 }

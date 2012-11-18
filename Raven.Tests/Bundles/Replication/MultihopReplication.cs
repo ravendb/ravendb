@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Abstractions.Replication;
+﻿using Raven.Abstractions.Replication;
 using Raven.Client;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class MultihopReplication : ReplicationBase
 	{

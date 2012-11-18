@@ -11,6 +11,7 @@ namespace Raven.Studio.Features.Tasks
         {
             Name = "Csv Import";
             Description = "Import a csv file into a collection. Each column will be treated as a property.";
+            IconResource = "Image_ImportCsv_Tiny";
         }
 
         public override ICommand Action

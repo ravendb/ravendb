@@ -1,10 +1,8 @@
-﻿using System.Threading;
-using System.Linq;
-using Raven.Abstractions.Data;
+﻿using System.Linq;
 using Raven.Client.Connection;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class FailoverDisabled : ReplicationBase
 	{

@@ -11,6 +11,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
+	using Raven.Database.Bundles.Replication.Impl;
+
 	public abstract class SingleItemReplicationBehavior<TInternal, TExternal>
 	{
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -52,7 +54,7 @@ namespace Raven.Bundles.Replication.Responders
 
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
 				existingDocumentIsDeleted == false &&
-				(IsDirectChildOfCurrent(metadata, existingMetadata)))		// this update is direct child of the existing doc, so we are fine with overwriting this
+				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))		// this update is direct child of the existing doc, so we are fine with overwriting this
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
 				AddWithoutConflict(id, existingEtag, metadata, incoming);
@@ -61,7 +63,7 @@ namespace Raven.Bundles.Replication.Responders
 
 			if (existingDocumentIsInConflict == false &&				// if the current document is not in conflict, we can continue without having to keep conflict semantics
 				existingDocumentIsDeleted == true &&
-			    (IsDirectChildOfCurrent(metadata, existingMetadata)))	// this update is direct child of the existing doc, so we are fine with overwriting this
+				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))	// this update is direct child of the existing doc, so we are fine with overwriting this
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
 				AddWithoutConflict(id, null, metadata, incoming);
@@ -157,7 +159,7 @@ namespace Raven.Bundles.Replication.Responders
 				MarkAsDeleted(id, metadata);
 				return;
 			}
-			if(IsDirectChildOfCurrent(metadata, existingMetadata))// not modified
+			if(Historian.IsDirectChildOfCurrent(metadata, existingMetadata))// not modified
 			{
 				log.Debug("Delete of existing item {0} was replicated successfully from {1}", id, Src);
 				DeleteItem(id, existingEtag);
@@ -211,25 +213,6 @@ namespace Raven.Bundles.Replication.Responders
 				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
 				return new Guid(md5.ComputeHash(bytes)).ToString();
 			}
-		}
-
-
-		private static bool IsDirectChildOfCurrent(RavenJObject incomingMetadata, RavenJObject existingMetadata)
-		{
-			var version = new RavenJObject
-			{
-				{Constants.RavenReplicationSource, existingMetadata[Constants.RavenReplicationSource]},
-				{Constants.RavenReplicationVersion, existingMetadata[Constants.RavenReplicationVersion]},
-			};
-
-			var history = incomingMetadata[Constants.RavenReplicationHistory];
-			if (history == null || history.Type == JTokenType.Null) // no history, not a parent
-				return false;
-
-			if (history.Type != JTokenType.Array)
-				return false;
-
-			return history.Values().Contains(version, new RavenJTokenEqualityComparer());
 		}
 	}
 }

@@ -217,7 +217,11 @@
 								VerticalAlignment="Center"
 								Margin="0,0,4,0"
                                 HorizontalAlignment="Right">
-
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}" ToolTipService.ToolTip="Export to CSV" Command="{Binding ExportDetails}"
+                                Visibility="{Binding IsExportEnabled, Converter={StaticResource BooleanToVisibility}}" Margin="6,0">
+                            <Image Source="{StaticResource Image_ExportDetails_Tiny}"
+								   Stretch="None"/>
+                        </Button>
                         <Controls1:ViewSizeControl ViewSize="{Binding Path=Current.IndicatorPosition, Source={StaticResource DocumentSize}, Mode=TwoWay}" />
                     </StackPanel>
                 </Grid>

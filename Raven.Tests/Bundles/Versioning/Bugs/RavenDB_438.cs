@@ -1,8 +1,7 @@
-﻿using Raven.Client.Bundles.Versioning;
-using Xunit;
+﻿using Xunit;
 using System.Linq;
 
-namespace Raven.Bundles.Tests.Versioning.Bugs
+namespace Raven.Tests.Bundles.Versioning.Bugs
 {
 	public class RavenDB_438 : VersioningTest
 	{

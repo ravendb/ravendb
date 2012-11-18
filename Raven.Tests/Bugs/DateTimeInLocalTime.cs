@@ -8,7 +8,7 @@ namespace Raven.Tests.Bugs
 	public class DateTimeInLocalTime : RavenTest
 	{
 		[Fact]
-		public void CanSaveAndLoadSameTimeLocal()
+		public void CanSaveAndLoadSameTimeLocalTurnsIntoUnspecified()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs
 				{
 					var log = session.Load<ServiceExecutionLog>("ServiceExecutionLogs/1");
 					Assert.Equal(new DateTime(2010, 2, 17, 19, 06, 06), log.LastDateChecked);
-					Assert.Equal(DateTimeKind.Local, log.LastDateChecked.Kind);
+					Assert.Equal(DateTimeKind.Unspecified, log.LastDateChecked.Kind);
 				}
 			}
 		}

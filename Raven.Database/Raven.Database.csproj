@@ -162,6 +162,9 @@
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Bundles\Replication\Impl\Historian.cs" />
+    <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\DefaultDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\ReplicationStatistic.cs" />
     <Compile Include="Bundles\Replication\Responders\AdminPurgeTombstones.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\AttachmentReplicationBehavior.cs" />
@@ -209,7 +212,10 @@
     <Compile Include="Linq\Mono.Reflection\Image.cs" />
     <Compile Include="Linq\Mono.Reflection\Instruction.cs" />
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
+    <Compile Include="Linq\PrivateExtensions\DynamicEnumerable.cs" />
     <Compile Include="Linq\StringLiteralExpression.cs" />
+    <Compile Include="Queries\MoreLikeThisQueryRunner.cs" />
+    <Compile Include="Queries\MoreLikeThisQueryExtensions.cs" />
     <Compile Include="Queries\MatchNoDocsQuery.cs" />
     <Compile Include="Server\Abstractions\PrincipalWithDatabaseAccess.cs" />
     <Compile Include="Server\BeforeRequestEventArgs.cs" />

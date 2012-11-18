@@ -1367,7 +1367,11 @@ namespace Raven.Client.Indexes
 					Out(".");
 				}
 			}
-			if (node.Method.IsStatic && IsExtensionMethod(node) == false)
+			if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
+			{
+				Out("DynamicEnumerable.");
+			}
+			else if (node.Method.IsStatic && IsExtensionMethod(node) == false)
 			{
 				Out(node.Method.DeclaringType.Name);
 				Out(".");
@@ -1378,7 +1382,24 @@ namespace Raven.Client.Indexes
 			}
 			else
 			{
-				Out(node.Method.Name);
+				switch (node.Method.Name)
+				{
+					case "First":
+						Out("FirstOrDefault");
+						break;
+					case "Last":
+						Out("LastOrDefault");
+						break;
+					case "Single":
+						Out("SingleOrDefault");
+						break;
+					case "ElementAt":
+						Out("ElementAtOrDefault");
+						break;
+					default:
+						Out(node.Method.Name);
+						break;
+				}
 				Out("(");
 			}
 			var num2 = num;
@@ -1421,6 +1442,26 @@ namespace Raven.Client.Indexes
 			return node.Method.IsSpecialName && (node.Method.Name.StartsWith("get_") || node.Method.Name.StartsWith("set_"));
 		}
 
+		private static bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
+		{
+			if (node.Method.DeclaringType.Name == "Enumerable")
+			{
+				switch (node.Method.Name)
+				{
+					case "First":
+					case "FirstOrDefault":
+					case "Single":
+					case "SingleOrDefault":
+					case "Last":
+					case "LastOrDefault":
+					case "ElementAt":
+					case "ElementAtOrDefault":
+						return true;
+				}
+			}
+
+			return false;
+		}
 		private static bool IsExtensionMethod(MethodCallExpression node)
 		{
 			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
@@ -1437,12 +1478,6 @@ namespace Raven.Client.Indexes
 					case "OrderBy":
 					case "OrderByDescending":
 					case "DefaultIfEmpty":
-					case "First":
-					case "FirstOrDefault":
-					case "Single":
-					case "SingleOrDefault":
-					case "Last":
-					case "LastOrDefault":
 					case "Reverse":
 						return true;
 				}

@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Database;
+using Raven.Database.Data;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Expiration
@@ -74,14 +75,20 @@ namespace Raven.Bundles.Expiration
 				while (true)
 				{
 					const int pageSize = 1024;
-					var queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
+
+					QueryResultWithIncludes queryResult;
+
+					using (Database.DisableAllTriggersForCurrentThread())
 					{
-						Start = start,
-						PageSize = pageSize,
-						Cutoff = currentTime,
-						Query = query,
-						FieldsToFetch = new[] { "__document_id" }
-					});
+						queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
+						{
+							Start = start,
+							PageSize = pageSize,
+							Cutoff = currentTime,
+							Query = query,
+							FieldsToFetch = new[] { "__document_id" }
+						});
+					}
 
 					if(queryResult.Results.Count == 0)
 						break;

@@ -1,7 +1,7 @@
 using Raven.Client.Bundles.Versioning;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Versioning.Bugs
+namespace Raven.Tests.Bundles.Versioning.Bugs
 {
 	public class MultipleVersions : VersioningTest
 	{

@@ -11,11 +11,8 @@ namespace Raven.Bundles.Replication.Tasks
 	{
 		public bool FilterDocuments(string destinationId, string key, RavenJObject metadata)
 		{
-			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)) // don't replicate system docs
-			{
-				if (key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilo documents
-					return false;
-			}
+			if (IsSystemDocumentId(key)) 
+				return false;
 			if (metadata.ContainsKey(Constants.NotForReplication) && metadata.Value<bool>(Constants.NotForReplication)) // not explicitly marked to skip
 				return false;
 			if (metadata[Constants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
@@ -33,6 +30,16 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			return true;
 
+		}
+
+		public bool IsSystemDocumentId(string key)
+		{
+			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)) // don't replicate system docs
+			{
+				if (key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilo documents
+					return true;
+			}
+			return false;
 		}
 
 		public bool FilterAttachments(AttachmentInformation attachment, string destinationInstanceId)

@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Embedded</id>
-		<version>1.0</version>
+		<version>1.2</version>
 		<title>RavenDB Embedded</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>This package let you include RavenDB embedded in-process with your application.</summary>

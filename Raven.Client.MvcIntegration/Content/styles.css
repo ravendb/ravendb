@@ -38,7 +38,7 @@
     top: 1em;
     border: 1px solid black;
     background: white;
-    padding: 2em;
+    padding: 1em;
     border-radius: 5px;
     z-index: 2147483647;
 }
@@ -73,4 +73,14 @@
 {
     padding: 10px;
     margin-left: 10px;
+}
+
+pre.query {
+	margin: 0;
+	border: none;
+	background-color: white;
+}
+
+.ravendb-profiler-results h1 {
+	font-size: 24px;
 }

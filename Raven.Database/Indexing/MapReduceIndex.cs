@@ -10,8 +10,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -22,14 +20,11 @@ using Raven.Database.Plugins;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
-using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
-using Raven.Database.Tasks;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
@@ -37,10 +32,17 @@ namespace Raven.Database.Indexing
 
 	public class MapReduceIndex : Index
 	{
+		JsonSerializer jsonSerializer;
+
 		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition,
 							  AbstractViewGenerator viewGenerator, WorkContext context)
 			: base(directory, name, indexDefinition, viewGenerator, context)
 		{
+			jsonSerializer = new JsonSerializer();
+			foreach (var jsonConverter in Default.Converters)
+			{
+				jsonSerializer.Converters.Add(jsonConverter);
+			}
 		}
 
 		public override bool IsMapReduce
@@ -177,11 +179,14 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static RavenJObject GetMappedData(object doc)
+		private RavenJObject GetMappedData(object doc)
 		{
 			if (doc is IDynamicJsonObject)
 				return ((IDynamicJsonObject)doc).Inner;
-			return RavenJObject.FromObject(doc);
+			
+			var ravenJTokenWriter = new RavenJTokenWriter();
+			jsonSerializer.Serialize(ravenJTokenWriter, doc);
+			return (RavenJObject) ravenJTokenWriter.Token;
 		}
 
 		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache =

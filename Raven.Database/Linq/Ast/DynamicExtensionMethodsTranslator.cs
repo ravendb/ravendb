@@ -9,10 +9,9 @@ namespace Raven.Database.Linq.Ast
 	[CLSCompliant(false)]
 	public class DynamicExtensionMethodsTranslator : DepthFirstAstVisitor<object, object>
 	{
-		private static readonly string[] methodNames =
-			typeof(DynamicExtensionMethods)
-				.GetMethods(BindingFlags.Public | BindingFlags.Static)
-				.Select(x => x.Name).ToArray();
+		private static readonly string[] methodNames = typeof (DynamicExtensionMethods)
+			.GetMethods(BindingFlags.Public | BindingFlags.Static)
+			.Select(x => x.Name).ToArray();
 
 		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)
 		{

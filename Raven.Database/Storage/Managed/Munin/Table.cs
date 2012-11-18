@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -37,6 +38,17 @@ namespace Raven.Munin
 			set { parent.DictionaryStates[TableId].KeyToFilePositionInFiles = value; }
 		}
 
+
+		public DataTable ToDataTable_DEBUG()
+		{
+			var dt = new DataTable();
+			dt.Columns.Add("Key");
+			foreach (var key in Keys)
+			{
+				dt.Rows.Add(key.ToString(Formatting.None));
+			}
+			return dt;
+		}
 
 		private readonly ConcurrentDictionary<RavenJToken, Guid> keysModifiedInTx;
 

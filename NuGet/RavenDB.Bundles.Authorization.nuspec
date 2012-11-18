@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Bundles.Authorization</id>
-		<version>1.0</version>
+		<version>1.2</version>
 		<title>RavenDB Authorization Bundle</title>
 		<authors>Hibernating Rhinos</authors>
 		<description>The Authorization Bundle extend RavenDB and add document level permissions. The Auth Bundle allows to define permissions for a specific user, a group or using arbitrary tagging. The system is design to be high performance, scalable and flexible.</description>
@@ -10,7 +10,7 @@
 		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
 		<projectUrl>http://www.ravendb.net/</projectUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
-		<tags>nosql ravendb raven document database bundles</tags>
+		<tags>nosql ravendb raven document database bundles authorization</tags>
 		<dependencies>
 			<dependency id="RavenDB.Database" version=""/>
 		</dependencies>

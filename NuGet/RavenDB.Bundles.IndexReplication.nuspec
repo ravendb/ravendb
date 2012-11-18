@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Bundles.IndexReplication</id>
-		<version>1.0</version>
+		<version>1.2</version>
 		<title>RavenDB Index Replication Bundle</title>
 		<authors>Hibernating Rhinos</authors>
 		<description>RavenDB embedded database</description>

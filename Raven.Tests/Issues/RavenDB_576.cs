@@ -1,7 +1,7 @@
-﻿namespace Raven.Tests.Issues
-{
-	using Raven.Bundles.Tests.Replication;
+﻿using Raven.Tests.Bundles.Replication;
 
+namespace Raven.Tests.Issues
+{
 	using Xunit;
 
 	public class RavenDB_576 : ReplicationBase

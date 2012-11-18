@@ -490,12 +490,20 @@ namespace Raven.Client.Embedded
 		/// <param name="commandDatas">The command data.</param>
 		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders; 
-			return database.Batch(commandDatas.Select(cmd=>
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var batchResults = database.Batch(commandDatas.Select(cmd =>
 			{
 				cmd.TransactionInformation = TransactionInformation;
 				return cmd;
 			}));
+			if(batchResults != null)
+			{
+				foreach (var batchResult in batchResults.Where(batchResult => batchResult != null && batchResult.Metadata != null && batchResult.Metadata.IsSnapshot))
+				{
+					batchResult.Metadata = (RavenJObject) batchResult.Metadata.CreateSnapshot();
+				}
+			}
+			return batchResults;
 		}
 
 		/// <summary>
@@ -658,6 +666,18 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.ExecuteSuggestionQuery(index, suggestionQuery);
+		}
+
+		/// <summary>
+		/// Return a list of documents that based on the MoreLikeThisQuery.
+		/// </summary>
+		/// <param name="query">The more like this query parameters</param>
+		/// <returns></returns>
+		public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var result = database.ExecuteMoreLikeThisQuery(query, TransactionInformation);
+			return result.Result;
 		}
 
 		///<summary>
