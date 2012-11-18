@@ -96,7 +96,6 @@ namespace Raven.Database.Extensions
 					}
 					catch(IOException)
 					{
-						Debugger.Launch();
 						var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
 						var stringBuilder = new StringBuilder();
 						stringBuilder.Append("The following processes are locking ").Append(path).AppendLine();
