@@ -949,7 +949,7 @@ If you really want to do in memory filtering on the data returned from the query
 					Value = value
 				};
 				EnsureValidFieldName(whereParams);
-				theQueryText.Append(TransformToEqualValue(whereParams));
+				theQueryText.Append(TransformToEqualValue(whereParams).Replace(",", "`,`"));
 			}
 			theQueryText.Append(") ");
 		}
@@ -1565,12 +1565,15 @@ If you really want to do in memory filtering on the data returned from the query
 			if (type == typeof(DateTime))
 			{
 				var val = (DateTime)whereParams.Value;
-				return val.ToString(Default.DateTimeFormatsToWrite);
+				var s = val.ToString(Default.DateTimeFormatsToWrite);
+				if(val.Kind == DateTimeKind.Utc)
+					s += "Z";
+				return s;
 			}
 			if (type == typeof(DateTimeOffset))
 			{
 				var val = (DateTimeOffset)whereParams.Value;
-				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite);
+				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
 			}
 			
 			if(type == typeof(decimal))
@@ -1650,9 +1653,15 @@ If you really want to do in memory filtering on the data returned from the query
 				return Constants.EmptyStringNotAnalyzed;
 
 			if (whereParams.Value is DateTime)
-				return ((DateTime)whereParams.Value).ToString(Default.DateTimeFormatsToWrite);
+			{
+				var dateTime = (DateTime) whereParams.Value;
+				var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite);
+				if(dateTime.Kind == DateTimeKind.Utc)
+					dateStr += "Z";
+				return dateStr;
+			}
 			if (whereParams.Value is DateTimeOffset)
-				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite);
+				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
 
 			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{

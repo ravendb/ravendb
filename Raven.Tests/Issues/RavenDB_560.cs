@@ -97,7 +97,7 @@ namespace Raven.Tests.Issues
 				StopServer(server1);
 
 				// Fail few times so we will be sure that client does not try its primary url
-				for (int i = 0; i < 15; i++)
+				for (int i = 0; i < 2; i++)
 				{
 					Assert.NotNull(store.DatabaseCommands.Get("items/1"));
 				}
@@ -123,6 +123,8 @@ namespace Raven.Tests.Issues
 					Thread.Sleep(100);
 				}
 
+				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+				
 				Assert.NotNull(store.DatabaseCommands.Get("items/1"));
 
 				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
@@ -206,7 +208,7 @@ namespace Raven.Tests.Issues
 				this.StopServer(server1);
 
 				// Fail few times so we will be sure that client does not try its primary url
-				for (int i = 0; i < 15; i++)
+				for (int i = 0; i < 2; i++)
 				{
 					Assert.NotNull(store.AsyncDatabaseCommands.GetAsync("items/1").Result);
 				}

@@ -61,7 +61,7 @@
 					Width="Auto"
 					HorizontalAlignment="Left"
 					Command="{Binding Action}"
-					IsEnabled="{Binding CanExecute.Value,Mode=TwoWay}"
+					IsEnabled="{Binding CanExecute.Value}"
 					Padding="8,4"
 					MinWidth="100"
 					Margin="0,10" />

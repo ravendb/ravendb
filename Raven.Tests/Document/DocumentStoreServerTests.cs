@@ -26,6 +26,8 @@ using Raven.Tests.Spatial;
 
 namespace Raven.Tests.Document
 {
+	using System.Collections.Generic;
+
 	public class DocumentStoreServerTests : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
@@ -1168,6 +1170,43 @@ namespace Raven.Tests.Document
 
 			attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
 			Assert.Null(attachment);
+		}
+
+		[Fact]
+		public void Getting_attachment_metadata()
+		{
+			documentStore.DatabaseCommands.PutAttachment("sample", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+
+			var attachmentOnlyWithMetadata = documentStore.DatabaseCommands.HeadAttachment("sample");
+
+			Assert.Equal("World", attachmentOnlyWithMetadata.Metadata.Value<string>("Hello"));
+
+			var exception = Assert.Throws<InvalidOperationException>(() => attachmentOnlyWithMetadata.Data());
+
+			Assert.Equal("Cannot get attachment data because it was loaded using: HEAD", exception.Message);
+		}
+
+		[Fact]
+		public void Getting_headers_of_attachments_with_prefix()
+		{
+			documentStore.DatabaseCommands.PutAttachment("sample/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+			documentStore.DatabaseCommands.PutAttachment("example/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+			documentStore.DatabaseCommands.PutAttachment("sample/2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+
+			var attachmentHeaders = documentStore.DatabaseCommands.GetAttachmentHeadersStartingWith("sample", 0, 5).ToList();
+
+			Assert.Equal(2, attachmentHeaders.Count);
+
+			foreach (var attachment in attachmentHeaders)
+			{
+				Assert.True(attachment.Key.StartsWith("sample"));
+
+				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+				var exception = Assert.Throws<InvalidOperationException>(() => attachment.Data());
+
+				Assert.Equal("Cannot get attachment data from an attachment header", exception.Message);
+			}
 		}
 
 		[Fact]

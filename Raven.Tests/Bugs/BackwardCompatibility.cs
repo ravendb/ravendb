@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs
 			readonly ConcurrentDictionary<Type, HashSet<string>> typePropertiesCache = new ConcurrentDictionary<Type, HashSet<string>>();
 			readonly ConditionalWeakTable<object, Dictionary<string, RavenJToken>> missingProps = new ConditionalWeakTable<object, Dictionary<string, RavenJToken>>();
 
-			public void EntityToDocument(object entity, RavenJObject document, RavenJObject metadata)
+			public void EntityToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
 			{
 				Dictionary<string, RavenJToken> value;
 				if (missingProps.TryGetValue(entity, out value) == false)
@@ -53,7 +53,7 @@ namespace Raven.Tests.Bugs
 				}
 			}
 
-			public void DocumentToEntity(object entity, RavenJObject document, RavenJObject metadata)
+			public void DocumentToEntity(string key, object entity, RavenJObject document, RavenJObject metadata)
 			{
 				var hashSet = typePropertiesCache.GetOrAdd(entity.GetType(), type => new HashSet<string>(type.GetProperties().Select(x => x.Name)));
 				foreach (var propNotOnEntity in document.Keys.Where(s => hashSet.Contains(s) == false))

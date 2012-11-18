@@ -6,11 +6,17 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.MEF;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Impl;
+using Raven.Database.Plugins;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Issues;
+using System.Linq;
 
 namespace Raven.Tryouts
 {
@@ -18,17 +24,13 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			int x = int.MaxValue - 1;
-			Interlocked.Increment(ref x);
-			Interlocked.Increment(ref x);
-			Console.WriteLine(x);
-		}
-
-
-		public class Article
-		{
-			public string Text { get; set; }
-			public DateTime Date { get; set; }
+			for (int i = 0; i < 100; i++)
+			{
+				using(var x = new CompiledIndexesNhsevidence2())
+				{
+					x.CanGetCorrectResults();
+				}
+			}
 		}
 	}
 }

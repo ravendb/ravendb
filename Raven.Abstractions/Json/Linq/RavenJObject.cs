@@ -48,6 +48,10 @@ namespace Raven.Json.Linq
 		{
 			get { return Properties.Keys; }
 		}
+		public bool IsSnapshot
+		{
+			get { return Properties.IsSnapshot; }
+		}
 
 		public RavenJObject WithCaseInsensitivePropertyNames()
 		{

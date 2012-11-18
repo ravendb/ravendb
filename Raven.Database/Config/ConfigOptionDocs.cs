@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Config
 {
-	public class ConfigOptionDocs : IEnumerable<string>
+	internal class ConfigOptionDocs : IEnumerable<string>
 	{
 		public readonly static ConfigOptionDocs OptionsDocs = new ConfigOptionDocs
 		{
@@ -124,7 +124,7 @@ namespace Raven.Database.Config
 			return GetEnumerator();
 		}
 
-		public void Add(string option, string type, string range,  string doc)
+		private void Add(string option, string type, string range,  string doc)
 		{
 			inner.Add( new ConfigOption
 			{
@@ -135,7 +135,7 @@ namespace Raven.Database.Config
 			});
 		}
 
-		public class ConfigOption
+		internal class ConfigOption
 		{
 			public string Option { get;  set; }
 

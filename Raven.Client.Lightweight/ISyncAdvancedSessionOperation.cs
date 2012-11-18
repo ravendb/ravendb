@@ -4,8 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !SILVERLIGHT
+using System;
+
 using Raven.Client.Document.Batches;
-using System.Collections.Generic;
 using Raven.Client.Indexes;
 
 namespace Raven.Client
@@ -24,7 +25,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		IEnumerable<T> LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25);
+		T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25);
 
 		/// <summary>
 		/// Access the lazy operations

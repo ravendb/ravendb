@@ -11,6 +11,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
@@ -215,6 +216,7 @@ namespace Raven.Client.Document
 		}
 
 		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
+		private int requestCount;
 
 		/// <summary>
 		/// Get the default tag name for the specified type.
@@ -569,6 +571,11 @@ namespace Raven.Client.Document
 		/// Default: 5 minutes
 		/// </summary>
 		public TimeSpan MaxFailoverCheckPeriod { get; set; }
+
+		public int IncrementRequestCount()
+		{
+			return Interlocked.Increment(ref requestCount);
+		}
 	}
 
 

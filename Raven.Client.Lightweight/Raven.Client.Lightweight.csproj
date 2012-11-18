@@ -97,6 +97,7 @@
     <Compile Include="Document\AsyncMultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\AsyncHiLoKeyGenerator.cs" />
     <Compile Include="Document\Async\AsyncDocumentKeyGeneration.cs" />
+    <Compile Include="Document\Batches\LazyStartsWithOperation.cs" />
     <Compile Include="Document\OAuth\AbstractAuthenticator.cs" />
     <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
     <Compile Include="Document\OAuth\SecuredAuthenticator.cs" />

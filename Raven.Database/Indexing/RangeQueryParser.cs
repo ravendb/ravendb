@@ -57,18 +57,22 @@ namespace Raven.Database.Indexing
 
 		protected override Query GetWildcardQuery(string field, string termStr)
 		{
-			if (field == "*" && termStr == "*")
+			if (termStr == "*")
 			{
-				return NewMatchAllDocsQuery();
+				return field == "*" ? 
+					NewMatchAllDocsQuery() : 
+					NewWildcardQuery(new Term(field, termStr));
 			}
+
 			var fieldQuery = GetFieldQuery(field, termStr);
 
 			var tq = fieldQuery as TermQuery;
 			if (tq != null)
 				return NewWildcardQuery(tq.Term);
-			
+
+			var fieldQueryTypeName = fieldQuery == null ? "null" : fieldQuery.GetType().Name;
 			throw new InvalidOperationException("When trying to parse wildcard clause for field '" + field + "' with value '" +
-														termStr + "', we got a non term query, can't proceed: " + fieldQuery.GetType().Name + " " + fieldQuery);
+														termStr + "', we got a non term query, can't proceed: " + fieldQueryTypeName + " " + fieldQuery);
 		}
 
 		protected override Query GetFuzzyQuery(string field, string termStr, float minSimilarity)

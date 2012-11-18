@@ -13,6 +13,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
+	using Raven.Abstractions.Extensions;
+
 	/// <summary>
 	/// We can't allow real deletes when using replication, because
 	/// then we won't have any way to replicate the delete. Instead
@@ -43,15 +45,14 @@ namespace Raven.Bundles.Replication.Triggers
 				var attachment = Database.GetStatic(key);
 				if (attachment == null)
 					return;
-				deletedHistory.Value = attachment.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
-									   new RavenJArray();
 
-				deletedHistory.Value.Add(
-					new RavenJObject
+				if (attachment.IsConflictAttachment() == false && HasConflict(attachment))
 				{
-					{Constants.RavenReplicationVersion, attachment.Metadata[Constants.RavenReplicationVersion]},
-					{Constants.RavenReplicationSource, attachment.Metadata[Constants.RavenReplicationSource]}
-				});
+					HandleConflictedAttachment(attachment);
+					return;
+				}
+
+				HandleAttachment(attachment);
 			}
 		}
 
@@ -68,6 +69,59 @@ namespace Raven.Bundles.Replication.Triggers
 			Database.TransactionalStorage.Batch(accessor =>
 				accessor.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, key, metadata));
 		
+		}
+
+		private void HandleConflictedAttachment(Attachment attachment)
+		{
+			var attachmentDataStream = attachment.Data();
+			var attachmentData = attachmentDataStream.ToJObject();
+
+			var conflicts = attachmentData.Value<RavenJArray>("Conflicts");
+
+			if (conflicts == null)
+				return;
+
+			var currentSource = Database.TransactionalStorage.Id.ToString();
+
+			foreach (var c in conflicts)
+			{
+				var conflict = Database.GetStatic(c.Value<string>());
+				var conflictSource = conflict.Metadata.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
+
+				if (conflictSource != currentSource)
+					continue;
+
+				this.deletedHistory.Value = new RavenJArray
+				{
+					new RavenJObject
+					{
+						{ Constants.RavenReplicationVersion, conflict.Metadata[Constants.RavenReplicationVersion] },
+						{ Constants.RavenReplicationSource, conflict.Metadata[Constants.RavenReplicationSource] }
+					}
+				};
+
+				return;
+			}
+		}
+
+		private void HandleAttachment(Attachment document)
+		{
+			deletedHistory.Value = document.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
+									   new RavenJArray();
+
+			deletedHistory.Value.Add(
+					new RavenJObject
+					{
+						{Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
+						{Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
+					});
+		}
+
+		private bool HasConflict(Attachment attachment)
+		{
+			var conflict = attachment.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
+
+			return conflict != null && conflict.Value<bool>();
 		}
 	}
 }

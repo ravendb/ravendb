@@ -37,8 +37,6 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class ServerClient : IDatabaseCommands
 	{
-		private static int requestCount;
-
 		private readonly string url;
 		private readonly DocumentConvention convention;
 		private readonly ICredentials credentials;
@@ -172,7 +170,7 @@ namespace Raven.Client.Connection
 
 		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
-			int currentRequest = Interlocked.Increment(ref requestCount);
+			int currentRequest = convention.IncrementRequestCount();
 			return replicationInformer.ExecuteWithReplication(method, url, currentRequest, readStripingBase, operation);
 		}
 
@@ -517,7 +515,18 @@ namespace Raven.Client.Connection
 
 			var result = webRequest.ReadResponseJson();
 
-			return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result));
+			return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result))
+				.Select(x => new Attachment
+				{
+					Etag = x.Etag,
+					Metadata = x.Metadata,
+					Size = x.Size,
+					Key = x.Key,
+					Data = () =>
+					{
+						throw new InvalidOperationException("Cannot get attachment data from an attachment header");
+					}
+				});
 		}
 
 		/// <summary>
@@ -556,6 +565,8 @@ namespace Raven.Client.Connection
 				}
 				else
 				{
+					webRequest.ExecuteRequest();
+
 					len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
 					data = () =>
 					{

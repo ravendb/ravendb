@@ -150,7 +150,7 @@ namespace Raven.Studio.Features.Input
 
 			inputWindow.Closed += (sender, args) =>
 			{
-				if (inputWindow.DialogResult != null)
+				if (inputWindow.DialogResult == true)
 					onOkay();
 			};
 

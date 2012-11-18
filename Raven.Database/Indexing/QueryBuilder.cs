@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using Lucene.Net.Analysis;
+using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
@@ -22,9 +23,9 @@ namespace Raven.Database.Indexing
 	{
 		static readonly Regex untokenizedQuery = new Regex(@"([\w\d<>_]+?):[\s\(]*(\[\[.+?\]\])|,\s*(\[\[.+?\]\])\s*[,\)]", RegexOptions.Compiled);
 		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
-		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7})", RegexOptions.Compiled);
+		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
-		private static readonly Dictionary<string, Func<string, string[], Query>> queryMethods = new Dictionary<string, Func<string, string[], Query>>(StringComparer.InvariantCultureIgnoreCase)
+		private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.InvariantCultureIgnoreCase)
 		{
 			{"in", (field, args) => new TermsMatchQuery(field, args)},
 			{"emptyIn", (field, args) => new TermsMatchQuery(field, Enumerable.Empty<string>())}
@@ -68,23 +69,15 @@ namespace Raven.Database.Indexing
 			var termQuery = query as TermQuery;
 			if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
 			{
-				Func<string, string[], Query> value;
-				var indexOfFieldStart = termQuery.Term.Field.IndexOf('<');
-				var indexOfFieldEnd = termQuery.Term.Field.LastIndexOf('>');
-				if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)
-					return query;
-				var method = termQuery.Term.Field.Substring(1, indexOfFieldStart-1);
-				var field = termQuery.Term.Field.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart-1);
-
-				if (queryMethods.TryGetValue(method, out value) == false)
-				{
-					throw new InvalidOperationException("Method call " + termQuery.Term.Field + " is invalid.");
-				}
-				var parts = termQuery.Term.Text.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
-				return value(field, parts);
+				return HandleMethodsForQueryAndTerm(query, termQuery.Term);
+			}
+			var wildcardQuery = query as WildcardQuery;
+			if (wildcardQuery != null)
+			{
+				return HandleMethodsForQueryAndTerm(query, wildcardQuery.Term);
 			}
 			var booleanQuery = query as BooleanQuery;
-			if(booleanQuery != null)
+			if (booleanQuery != null)
 			{
 				foreach (var c in booleanQuery.Clauses)
 				{
@@ -93,12 +86,36 @@ namespace Raven.Database.Indexing
 				var requiresMerging = booleanQuery.Clauses.All(x => x.Query is IRavenLuceneMethodQuery);
 				if (requiresMerging == false)
 					return booleanQuery;
-				var first = (IRavenLuceneMethodQuery) booleanQuery.Clauses[0].Query;
+				var first = (IRavenLuceneMethodQuery)booleanQuery.Clauses[0].Query;
 				var ravenLuceneMethodQuery = booleanQuery.Clauses.Skip(1).Aggregate(first, (methodQuery, clause) => methodQuery.Merge(clause.Query));
 				return (Query)ravenLuceneMethodQuery;
 			}
-
 			return query;
+		}
+
+		private static Regex unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
+
+		private static Query HandleMethodsForQueryAndTerm(Query query, Term term)
+		{
+			Func<string, List<string>, Query> value;
+			var indexOfFieldStart = term.Field.IndexOf('<');
+			var indexOfFieldEnd = term.Field.LastIndexOf('>');
+			if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)
+				return query;
+			var method = term.Field.Substring(1, indexOfFieldStart - 1);
+			var field = term.Field.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
+
+			if (queryMethods.TryGetValue(method, out value) == false)
+			{
+				throw new InvalidOperationException("Method call " + term.Field + " is invalid.");
+			}
+			var parts = unescapedSplitter.Split(term.Text);
+			var list = new List<string>(
+					from part in parts
+					where string.IsNullOrWhiteSpace(part) == false
+					select part.Replace("`,`", ",")
+			);
+			return value(field, list);
 		}
 
 		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)

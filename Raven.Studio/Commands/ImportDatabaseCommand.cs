@@ -64,6 +64,7 @@ namespace Raven.Studio.Commands
 			totalIndexes = 0;
 
 			taskModel.TaskStatus = TaskStatus.Started;
+			taskModel.CanExecute.Value = false;
 			output(String.Format("Importing from {0}", openFile.File.Name));
 
 			var sw = Stopwatch.StartNew();
@@ -138,13 +139,18 @@ namespace Raven.Studio.Commands
 							.ContinueOnSuccess(
 								() =>
 								output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount, sw.ElapsedMilliseconds)))
-							.Finally(() => taskModel.TaskStatus = TaskStatus.Ended);
+							.Finally(() =>
+							{
+								taskModel.TaskStatus = TaskStatus.Ended;
+								taskModel.CanExecute.Value = true;
+							});
 					});
 			}
 
 			catch (Exception e)
 			{
 				taskModel.TaskStatus = TaskStatus.Ended;
+				taskModel.CanExecute.Value = true;
 				throw e;
 			}
 		}

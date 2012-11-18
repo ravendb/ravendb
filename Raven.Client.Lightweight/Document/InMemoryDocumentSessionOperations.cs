@@ -411,7 +411,7 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		public void Delete<T>(T entity)
 		{
-			if(ReferenceEquals(entity,null)) throw new ArgumentNullException("entity");
+			if (ReferenceEquals(entity, null)) throw new ArgumentNullException("entity");
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
 				throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
@@ -457,7 +457,7 @@ more responsive application.
 
 			foreach (var documentConversionListener in listeners.ConversionListeners)
 			{
-				documentConversionListener.DocumentToEntity(entity, documentFound, metadata);
+				documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
 			}
 
 			return entity;
@@ -653,7 +653,7 @@ more responsive application.
 							return task.Result;
 						});
 			}
-			
+
 			return GetOrGenerateDocumentKeyAsync(entity)
 				.ContinueWith(task =>
 				{
@@ -793,7 +793,7 @@ more responsive application.
 													"You cannot change the document key property of a entity loaded into the session");
 			}
 
-			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
+			var json = ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 
 			var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
 						   ? (documentMetadata.ETag ?? Guid.Empty)
@@ -835,7 +835,7 @@ more responsive application.
 				documentMetadata.Key = batchResult.Key;
 				documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
 				documentMetadata.Metadata = batchResult.Metadata;
-				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
+				documentMetadata.OriginalValue = ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 
 				TrySetIdentity(entity, batchResult.Key);
 
@@ -1016,12 +1016,12 @@ more responsive application.
 				documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
 				return false;
 
-			var newObj = ConvertEntityToJson(entity, documentMetadata.Metadata);
+			var newObj = ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 			return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue) == false ||
 				RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
 		}
 
-		private RavenJObject ConvertEntityToJson(object entity, RavenJObject metadata)
+		private RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
 		{
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
@@ -1036,7 +1036,7 @@ more responsive application.
 
 			foreach (var documentConversionListener in listeners.ConversionListeners)
 			{
-				documentConversionListener.EntityToDocument(entity, objectAsJson, metadata);
+				documentConversionListener.EntityToDocument(key, entity, objectAsJson, metadata);
 			}
 
 			return objectAsJson;
@@ -1337,7 +1337,7 @@ more responsive application.
 				{
 					IncludesUtil.Include(result, include, id =>
 					{
-						if(id == null)
+						if (id == null)
 							return;
 						if (IsLoaded(id) == false)
 							RegisterMissing(id);

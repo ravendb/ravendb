@@ -35,6 +35,8 @@ namespace Raven.Server
 		{
 			components = new System.ComponentModel.Container();
 			this.ServiceName = "RavenService";
+			this.CanShutdown = true;
+
 		}
 
 		#endregion
