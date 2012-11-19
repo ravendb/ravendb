@@ -48,13 +48,7 @@ namespace Raven.Bundles.Replication.Responders
 				MostRecentAttachmentEtag = mostRecentAttachmentEtag,
 				Stats = replicationTask == null
 					        ? new List<ReplicationStats>()
-					        : replicationTask.ReplicationFailureStats.Select(pair => new ReplicationStats
-					        {
-						        Url = pair.Key,
-						        FailureCount = pair.Value.Count,
-						        TimeStamp = pair.Value.Timestamp,
-								LastError = pair.Value.LastError
-					        }).ToList()
+					        : replicationTask.ReplicationStats.Values.ToList()
 			}));
 		}
 	}
