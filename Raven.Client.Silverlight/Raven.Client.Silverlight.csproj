@@ -642,6 +642,9 @@
     <Compile Include="..\Raven.Abstractions\Data\GetResponse.cs">
       <Link>Imports\Data\GetResponse.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\HighlightedField.cs">
+      <Link>Imports\Data\HighlightedField.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
       <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
     </Compile>

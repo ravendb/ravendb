@@ -31,6 +31,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Version = Lucene.Net.Util.Version;
+using Lucene.Net.Search.Vectorhighlight;
 
 namespace Raven.Database.Indexing
 {
@@ -797,10 +798,27 @@ namespace Raven.Database.Indexing
 							indexQuery.TotalSize.Value = search.TotalHits;
 							adjustStart = false;
 
-							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
+                            FastVectorHighlighter highlighter = null;
+							FieldQuery fieldQuery = null;
+
+						    if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
+						    {
+						        highlighter = new FastVectorHighlighter(
+						            FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
+						            FastVectorHighlighter.DEFAULT_FIELD_MATCH,
+						            new SimpleFragListBuilder(),
+						            new SimpleFragmentsBuilder(
+						                indexQuery.HighlighterPreTags ?? BaseFragmentsBuilder.COLORED_PRE_TAGS,
+						                indexQuery.HighlighterPostTags ?? BaseFragmentsBuilder.COLORED_POST_TAGS));
+
+						        fieldQuery = highlighter.GetFieldQuery(luceneQuery);
+						    }
+
+						    for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
-								Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+							    var scoreDoc = search.ScoreDocs[i];
+							    var document = indexSearcher.Doc(scoreDoc.Doc);
+								var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc.Score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
@@ -808,7 +826,21 @@ namespace Raven.Database.Indexing
 									continue;
 								}
 
-								returnedResults++;
+							    if (highlighter != null)
+							        indexQueryResult.HighlightFragments =
+							            this.indexQuery
+							                .HighlightedFields
+							                .ToDictionary(
+							                    x => x.Field,
+							                    x => highlighter.GetBestFragments(
+							                        fieldQuery,
+							                        indexSearcher.IndexReader,
+							                        scoreDoc.Doc,
+							                        x.Field,
+							                        x.FragmentLength,
+							                        x.FragmentCount));
+
+							    returnedResults++;
 								yield return indexQueryResult;
 								if (returnedResults == indexQuery.PageSize)
 									yield break;

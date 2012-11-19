@@ -66,6 +66,11 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public Guid ResultEtag { get; set; }
 
+        /// <summary>
+        /// Gets or sets highlighter results 
+        /// </summary>
+        public Dictionary<string, Dictionary<string, string[]>> HighlightFragments { get; set; }
+
 		/// <summary>
 		/// Gets or sets a value indicating whether any of the documents returned by this query
 		/// are non authoritative (modified by uncommitted transaction).
@@ -84,6 +89,7 @@ namespace Raven.Abstractions.Data
 		{
 			Results = new List<RavenJObject>();
 			Includes = new List<RavenJObject>();
+		    HighlightFragments = new Dictionary<string, Dictionary<string, string[]>>();
 		}
 
 		/// <summary>
@@ -106,17 +112,20 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public QueryResult CreateSnapshot()
 		{
-			return new QueryResult
-			{
-				Results = new List<RavenJObject>(Results.Select(x => (RavenJObject)x.CreateSnapshot())),
-				Includes = new List<RavenJObject>(Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
-				IndexEtag = IndexEtag,
-				IndexName = IndexName,
-				IndexTimestamp = IndexTimestamp,
-				IsStale = IsStale,
-				SkippedResults = SkippedResults,
-				TotalResults = TotalResults,
-			};
+		    return new QueryResult
+		    {
+		        Results = new List<RavenJObject>(this.Results.Select(x => (RavenJObject)x.CreateSnapshot())),
+		        Includes = new List<RavenJObject>(this.Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
+		        IndexEtag = this.IndexEtag,
+		        IndexName = this.IndexName,
+		        IndexTimestamp = this.IndexTimestamp,
+		        IsStale = this.IsStale,
+		        SkippedResults = this.SkippedResults,
+		        TotalResults = this.TotalResults,
+		        HighlightFragments = this.HighlightFragments.ToDictionary(
+		            pair => pair.Key,
+		            x => new Dictionary<string, string[]>(x.Value))
+		    };
 		}
 	}
 }

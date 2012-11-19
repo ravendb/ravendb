@@ -979,6 +979,7 @@ namespace Raven.Database
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
+		    var fragments = new Dictionary<string, Dictionary<string, string[]>>();
 			var stale = false;
 			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
@@ -1009,12 +1010,18 @@ namespace Raven.Database
 															: Constants.ReduceKeyFieldName);
 					Func<IndexQueryResult, bool> shouldIncludeInResults =
 						result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
-					var collection = from queryResult in IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
-									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
-										 into doc
-										 where doc != null
-										 let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
-										 select doc;
+				    var collection =
+				        from queryResult in
+				            IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
+				        select new
+				        {
+				            Document = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch),
+				            Fragments = queryResult.HighlightFragments
+				        }
+				        into docWithFragments
+				        where docWithFragments.Document != null
+				        let _ = nonAuthoritativeInformation |= (docWithFragments.Document.NonAuthoritativeInformation ?? false)
+				        select docWithFragments;
 
 					var transformerErrors = new List<string>();
 					IEnumerable<RavenJObject> results;
@@ -1022,7 +1029,7 @@ namespace Raven.Database
 						query.PageSize > 0 && // maybe they just want the stats?
 						viewGenerator.TransformResultsDefinition != null)
 					{
-						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
+						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.Document.ToJson())).ToArray();
 						var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
 						{
 							OnError =
@@ -1038,7 +1045,15 @@ namespace Raven.Database
 					}
 					else
 					{
-						results = collection.Select(x => x.ToJson());
+                        var resultList = new List<RavenJObject>();
+					    foreach (var docWithFragments in collection)
+					    {
+					        resultList.Add(docWithFragments.Document.ToJson());
+
+					        if (docWithFragments.Fragments != null)
+					            fragments.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
+					    }
+					    results = resultList;
 					}
 
 					list.AddRange(results);
@@ -1060,7 +1075,8 @@ namespace Raven.Database
 				IndexEtag = indexTimestamp.Item2,
 				ResultEtag = resultEtag,
 				IdsToInclude = idsToLoad,
-				LastQueryTime = SystemTime.UtcNow
+				LastQueryTime = SystemTime.UtcNow,
+                HighlightFragments = fragments
 			};
 		}
 
