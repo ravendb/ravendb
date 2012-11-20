@@ -38,7 +38,7 @@ namespace Raven.Abstractions.Smuggler
 		protected double maximumBatchChangePercentage = 0.3;
 
 		protected int minimumBatchSize = 10;
-		protected int maximumBatchSize = 512 * 1000;
+		protected int maximumBatchSize = 16 * 1000;
 
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
@@ -489,14 +489,14 @@ namespace Raven.Abstractions.Smuggler
 
 		private void ModifyBatchSize(SmugglerOptions options, TimeSpan currentProcessingTime)
 		{
-			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.5))
-				return;
-
 			var change = Math.Max(1, options.BatchSize / 3);
-			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.7))
+			int quarterTime = options.Timeout/4;
+			if (currentProcessingTime > TimeSpan.FromMilliseconds(quarterTime))
 				options.BatchSize -= change;
 			else
 				options.BatchSize += change;
+
+			options.BatchSize = Math.Min(maximumBatchSize, Math.Max(minimumBatchSize, options.BatchSize));
 		}
 
 	}
