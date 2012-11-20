@@ -624,7 +624,7 @@ namespace Raven.Client.Connection
 			var json = (RavenJArray)result;
 
 			return json
-				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+				.Select(x => x.Value<string>())
 				.ToArray();
 		}
 
