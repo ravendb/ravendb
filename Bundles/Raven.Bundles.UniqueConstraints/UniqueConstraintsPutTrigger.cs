@@ -1,4 +1,6 @@
-﻿namespace Raven.Bundles.UniqueConstraints
+﻿using System.Collections.Generic;
+
+namespace Raven.Bundles.UniqueConstraints
 {
 	using System.Linq;
 	using System.Text;
@@ -20,19 +22,32 @@
 
 			var properties = metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints);
 
-			if (properties == null || properties.Count() <= 0) 
+			if (properties == null || !properties.Any()) 
 				return;
 
 			var constraintMetaObject = new RavenJObject { { Constants.IsConstraintDocument, true } };
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
-				Database.Put(
-					"UniqueConstraints/" + entityName + propName + "/" + document.Value<string>(propName),
-					null,
-					RavenJObject.FromObject(new { RelatedId = key }),
-					constraintMetaObject,
-					transactionInformation);
+                var prop = document[propName];
+
+			    IEnumerable<string> relatedKeys;
+                var prefix = "UniqueConstraints/" + entityName + property + "/";
+
+			    if (prop is RavenJArray)
+			        relatedKeys = ((RavenJArray) prop).Select(p => p.Value<string>());
+			    else
+			        relatedKeys = new[] {prop.Value<string>()};
+
+                foreach (var relatedKey in relatedKeys)
+                {
+                    Database.Put(
+                        prefix + relatedKey,
+                        null,
+                        RavenJObject.FromObject(new {RelatedId = key}),
+                        constraintMetaObject,
+                        transactionInformation);
+                }
 			}
 		}
 
@@ -60,18 +75,28 @@
 
 			foreach (var property in properties)
 			{
-				var propName = ((RavenJValue)property).Value.ToString();
-				var checkKey = "UniqueConstraints/" + entityName + propName + "/" + document.Value<string>(propName);
-				var checkDoc = Database.Get(checkKey, transactionInformation);
-				if (checkDoc == null) 
-					continue;
+                var propName = property.Value<string>();
+                IEnumerable<string> checkKeys;
 
-				var checkId = checkDoc.DataAsJson.Value<string>("RelatedId");
+                var prefix = "UniqueConstraints/" + entityName + property + "/";
+                var prop = document[propName];
+                if (prop is RavenJArray)
+                    checkKeys = ((RavenJArray)prop).Select(p => p.Value<string>());
+                else
+                    checkKeys = new[] { prop.Value<string>() };
 
-				if (checkId != key)
-				{
-					invalidFields.Append(property + ", ");
-				}
+                foreach (var checkKey in checkKeys)
+                {
+                    var checkDoc = Database.Get(prefix + checkKey, transactionInformation);
+                    if (checkDoc == null)
+                        continue;
+
+                    var checkId = checkDoc.DataAsJson.Value<string>("RelatedId");
+
+                    if (checkId != key)
+                        invalidFields.Append(property + ", ");
+                    break;
+                }
 			}
 
 			if (invalidFields.Length > 0)
@@ -85,12 +110,10 @@
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith("Raven/"))
-			{
-				return;
-			}
+		    if (key.StartsWith("Raven/"))
+		        return;
 
-			var entityName = metadata.Value<string>(Constants.RavenEntityName) +"/";
+		    var entityName = metadata.Value<string>(Constants.RavenEntityName) +"/";
 
 			var properties = metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints);
 
@@ -109,12 +132,20 @@
 			foreach (var property in metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints))
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
+                IEnumerable<string> deleteKeys;
 
-				// Handle Updates in the Constraint
-				if (!oldJson.Value<string>(propName).Equals(document.Value<string>(propName)))
-				{
-					Database.Delete("UniqueConstraints/" + entityName + propName + "/" + oldJson.Value<string>(propName), null, transactionInformation);
-				}
+			    if (oldJson.Value<string>(propName).Equals(document.Value<string>(propName))) continue;
+
+                // Handle Updates in the constraint since it changed
+			    var prefix = "UniqueConstraints/" + entityName + property + "/";
+			    var prop = document[propName];
+			    if (prop is RavenJArray)
+			        deleteKeys = ((RavenJArray)prop).Select(p => p.Value<string>());
+			    else
+			        deleteKeys = new[] { prop.Value<string>() };
+
+			    foreach (var deleteKey in deleteKeys)
+			        Database.Delete(prefix + deleteKey, null, transactionInformation);
 			}
 		}
 	}
