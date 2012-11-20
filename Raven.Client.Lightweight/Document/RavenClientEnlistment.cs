@@ -108,7 +108,10 @@ namespace Raven.Client.Document
 
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
+					if (machineStoreForApplication.FileExists(TransactionRecoveryInformationFileName))
+					{
+						machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
+					}
 				}
 			}
 			catch (Exception e)
