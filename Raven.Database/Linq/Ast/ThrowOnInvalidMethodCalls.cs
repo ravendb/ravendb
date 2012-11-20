@@ -161,6 +161,15 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			if (castExpression.Descendants.Contains(simpleType) == false)
 				return;
 
+			foreach (var ancestor in simpleType.Ancestors)
+			{
+				if (ancestor == groupByExpression || groupByExpression.Ancestors.Contains(ancestor) || groupByExpression.Descendants.Contains(ancestor))
+					continue;
+
+				if (ancestor.Children.OfType<MemberReferenceExpression>().Any(ContainsGroupBy))
+					return;
+			}
+
 			var grouping = simpleType.NextSibling;
 
 			var lambda = grouping.Children.OfType<LambdaExpression>().First();
