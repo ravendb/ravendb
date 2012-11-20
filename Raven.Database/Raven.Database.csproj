@@ -381,7 +381,6 @@
     <Compile Include="Indexing\IIndexExtension.cs" />
     <Compile Include="Indexing\IndexSearcherHolder.cs" />
     <Compile Include="Indexing\ReducingExecuter.cs" />
-    <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Linq\Ast\CaptureQueryParameterNamesVisitor.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCalls.cs" />
     <Compile Include="Linq\Ast\TransformNullCoalasingOperatorTransformer.cs" />

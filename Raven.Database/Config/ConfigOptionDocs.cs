@@ -54,8 +54,7 @@ namespace Raven.Database.Config
 			
 
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
-			{"Raven/BackgroundTasksPriority", "string","Lowest,BelowNormal,Normal,AboveNormal,Highest", "The thread priority for indexing and other background tasks, (ignored if Raven/TaskScheduler is specified) default: Normal."},
-
+			
 			// Temp Indexing
 			{"Raven/TempIndexPromotionMinimumQueryCount", "int", "1 or higher","The number of times a temporary index has to be queries during the promotion threshold to become a permanent auto index. Default: 100."},
 			{"Raven/TempIndexPromotionThreshold", "int", null, "The promotion threshold for promoting a temporary dynamic index into a permanent auto index. The value is in second and refer to the length of time that the index have to get to the minimum query count value. Default: 10 minutes."},
