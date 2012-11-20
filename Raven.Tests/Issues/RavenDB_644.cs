@@ -96,9 +96,9 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		public class Index2 : AbstractIndexCreationTask<Item, Record2>
+		public class ValidFancyIndex : AbstractIndexCreationTask<Item, Record2>
 		{
-			public Index2()
+			public ValidFancyIndex()
 			{
 				Map = items => from i in items
 							   select new
@@ -207,14 +207,16 @@ namespace Raven.Tests.Issues
 
 			Assert.Contains("Reduce cannot contain Count() methods in grouping.", exception.Message);
 		}
-		public void T2()
+
+		[Fact]
+		public void ServerShouldNotThrow()
 		{
 			Assert.DoesNotThrow(
 				() =>
 				{
 					using (var store = NewDocumentStore())
 					{
-						new Index2().Execute(store);
+						new ValidFancyIndex().Execute(store);
 					}
 				});
 
