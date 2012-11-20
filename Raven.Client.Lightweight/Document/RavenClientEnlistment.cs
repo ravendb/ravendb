@@ -118,7 +118,8 @@ namespace Raven.Client.Document
 			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 			{
 				// docs says to retry: http://msdn.microsoft.com/en-us/library/system.io.isolatedstorage.isolatedstoragefile.deletefile%28v=vs.95%29.aspx
-				for (int i = 0; i < 10; i++)
+				int retries = 10;
+				while(true)
 				{
 					if (machineStoreForApplication.FileExists(TransactionRecoveryInformationFileName) == false)
 						break;
@@ -129,7 +130,13 @@ namespace Raven.Client.Document
 					}
 					catch (IsolatedStorageException)
 					{
-						Thread.Sleep(100);
+						retries -= 1;
+						if(retries > 0 )
+						{
+							Thread.Sleep(100);
+							continue;
+						}
+						throw;
 					}
 				}
 			}
