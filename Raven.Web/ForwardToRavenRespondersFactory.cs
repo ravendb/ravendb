@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Hosting;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -22,7 +22,7 @@ namespace Raven.Web
 		internal static HttpServer server;
 		private static readonly object locker = new object();
 
-		private static Logger log = LogManager.GetCurrentClassLogger();
+		private static ILog log = LogManager.GetCurrentClassLogger();
 
 		public class ReleaseRavenDBWhenAppDomainIsTornDown : IRegisteredObject
 		{
@@ -38,24 +38,24 @@ namespace Raven.Web
 						if (shutdownTask == null)
 						{
 							shutdownTask = Task.Factory.StartNew(Shutdown)
-								.ContinueWith(_ =>
-								              	{
-								              		GC.KeepAlive(_.Exception); // ensure no unobserved exception
-								              		HostingEnvironment.UnregisterObject(this);
-								              	});
+							                   .ContinueWith(_ =>
+							                   {
+								                   GC.KeepAlive(_.Exception); // ensure no unobserved exception
+								                   HostingEnvironment.UnregisterObject(this);
+							                   });
 						}
 					}
 				}
-				
+
 				if (immediate)
 				{
 					shutdownTask.Wait();
 					// we already called this from the task's continue with, but
 					// let us make sure that this is called _before_ we return 
 					// from this method when immediate = true.
-				HostingEnvironment.UnregisterObject(this);
+					HostingEnvironment.UnregisterObject(this);
+				}
 			}
-		}
 		}
 
 		public IHttpHandler GetHandler(HttpContext context, string requestType, string url, string pathTranslated)
