@@ -1386,7 +1386,7 @@
             </summary><param name="index">The zero-based index of the item to remove.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection.SetItem(System.Int32,ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange)"><summary>
             Replaces the element at the specified index.
             </summary><param name="index">The zero-based index of the item to replace.</param><param name="item">The new value for the element at the specified index.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection.#ctor(ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart)"><summary>
-            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> class.
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection" /> class.
             </summary><param name="chart">The <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> that owns this collection and the associated ranges.</param></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind"><summary>
             Specifies the various kinds of built-in aggregation functions.
             </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind.Average"><summary>
@@ -1623,21 +1623,17 @@
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.ShapeKind" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.ShapeKind" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange"><summary>
             Represents a qualitative range element for use within a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBulletGraph" />.
-            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Background"><summary>
-            Gets or sets the background <see cref="T:System.Windows.Media.Brush" /> of the range.
-            This is a dependency property.
-            </summary><value>
-            The background <see cref="T:System.Windows.Media.Brush" /> of the range.
-            The default value is <see langword="null" />.
-            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Value"><summary>
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Refresh"><summary>
+            Updates the range based on the current state.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Chart"><summary>
+            Gets the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBulletGraph" /> that owns this range.
+            </summary><value>The <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBulletGraph" /> that owns this range.</value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Value"><summary>
             Gets or sets the value of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange" />.
             This is a dependency property.
             </summary><value>
             The value of the range.
             The default value is <c>NaN</c>.
-            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.BackgroundProperty"><summary>
-            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Background" /> dependency property.  This field is read-only.
-            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Background" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.ValueProperty"><summary>
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.ValueProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Value" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange.Value" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesVisibility"><summary>
             Specifies the visibility of the various kinds of a line.
@@ -1755,6 +1751,16 @@
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Orientation" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Orientation" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRangeCollection"><summary>
             Represents a collection of <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange" /> objects.
-            </summary></member><member name="T:ActiproSoftware.Products.MicroCharts.SRName"><summary>
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRangeCollection.ClearItems"><summary>
+            Removes all items from the collection.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRangeCollection.InsertItem(System.Int32,ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange)"><summary>
+            Inserts an item into the collection at the specified index.
+            </summary><param name="index">The zero-based index at which <paramref name="item" /> should be inserted.</param><param name="item">The object to insert.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRangeCollection.RemoveItem(System.Int32)"><summary>
+            Removes the item at the specified index of the collection.
+            </summary><param name="index">The zero-based index of the item to remove.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRangeCollection.SetItem(System.Int32,ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRange)"><summary>
+            Replaces the element at the specified index.
+            </summary><param name="index">The zero-based index of the item to replace.</param><param name="item">The new value for the element at the specified index.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRangeCollection.#ctor(ActiproSoftware.Windows.Controls.MicroCharts.MicroBulletGraph)"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroQualitativeRangeCollection" /> class.
+            </summary><param name="chart">The <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBulletGraph" /> that owns this collection and the associated ranges.</param></member><member name="T:ActiproSoftware.Products.MicroCharts.SRName"><summary>
             Specifies the names of string resources for this assembly.
             </summary></member><member name="F:ActiproSoftware.Products.MicroCharts.SRName.ExAxisTypeNotSupported"><summary>An exception message string.</summary></member><member name="F:ActiproSoftware.Products.MicroCharts.SRName.ExTypeNotSupported"><summary>An exception message string.</summary></member></members></doc>
