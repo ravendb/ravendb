@@ -81,14 +81,14 @@ namespace Raven.Tests.Util
 			if (!_process.WaitForExit(10000))
 				throw new Exception("RavenDB command-line server did not halt within 10 seconds of pressing enter.");
 
-
 			string errorOutput = _process.StandardError.ReadToEnd();
+			string output = _process.StandardOutput.ReadToEnd();
 
 			if (!String.IsNullOrEmpty(errorOutput))
-				throw new Exception("RavendB command-line server finished with error text: " + errorOutput);
+				throw new Exception("RavendB command-line server finished with error text: " + errorOutput + "\r\n" + output);
 			
 			if (_process.ExitCode != 0)
-				throw new Exception("RavenDB command-line server finished with exit code: " + _process.ExitCode);
+				throw new Exception("RavenDB command-line server finished with exit code: " + _process.ExitCode + " " + output);
 			}
 
 		protected override void Shutdown()
