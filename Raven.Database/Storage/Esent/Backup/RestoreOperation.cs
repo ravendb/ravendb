@@ -60,13 +60,13 @@ namespace Raven.Storage.Esent.Backup
 
 			var dataFilePath = Path.Combine(databaseLocation, "Data");
 
+			bool hideTerminationException = false;
 			JET_INSTANCE instance;
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
 				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
-
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
 						Path.Combine(
@@ -79,9 +79,22 @@ namespace Raven.Storage.Esent.Backup
 
 				DefragmentDatabase(instance, dataFilePath);
 			}
+			catch(Exception)
+			{
+				hideTerminationException = true;
+				throw;
+			}
 			finally
 			{
-				Api.JetTerm(instance);
+				try
+				{
+					Api.JetTerm(instance);
+				}
+				catch (Exception)
+				{
+					if (hideTerminationException == false)
+						throw;
+				}
 			}
 		}
 
