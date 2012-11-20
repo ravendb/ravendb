@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Raven.Database.Bundles.Replication
+namespace Raven.Abstractions.Replication
 {
-	public class ReplicationStatistic
+	public class ReplicationStatistics
 	{
 		public string Self { get; set; }
 		public Guid MostRecentDocumentEtag { get; set; }
 		public Guid MostRecentAttachmentEtag { get; set; }
 		public List<ReplicationStats> Stats { get; set; }
 
-		public ReplicationStatistic()
+		public ReplicationStatistics()
 		{
 			Stats = new List<ReplicationStats>();
 		}
@@ -18,7 +18,7 @@ namespace Raven.Database.Bundles.Replication
 
 	public class ReplicationStats
 	{
-		internal int FailureCountInternal = 0;
+		public int FailureCountInternal = 0;
 		public string Url { get; set; }
 		public DateTime? LastHeartbeatReceived { get; set; }
 		public Guid? LastReplicatedEtag { get; set; }

@@ -13,6 +13,7 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
 using System.Linq;
 using Raven.Json.Linq;
+using Raven.Abstractions.Replication;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -41,7 +42,7 @@ namespace Raven.Bundles.Replication.Responders
 				mostRecentAttachmentEtag = accessor.Staleness.GetMostRecentAttachmentEtag();
 			});
 
-			context.WriteJson(RavenJObject.FromObject(new ReplicationStatistic
+			context.WriteJson(RavenJObject.FromObject(new ReplicationStatistics
 			{
 				Self = Database.ServerUrl,
 				MostRecentDocumentEtag = mostRecentDocumentEtag,

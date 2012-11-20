@@ -680,6 +680,7 @@
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
+    <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Smuggler\ISmugglerApi.cs" />
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerApiBase.cs" />
