@@ -207,6 +207,8 @@ namespace Raven.Tests.Issues
 
 			Assert.Contains("Reduce cannot contain Count() methods in grouping.", exception.Message);
 		}
+
+		[Fact]
 		public void T2()
 		{
 			Assert.DoesNotThrow(
