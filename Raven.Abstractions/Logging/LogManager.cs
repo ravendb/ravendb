@@ -1,17 +1,15 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using Raven.Abstractions.Logging.LogProviders;
 
 namespace Raven.Abstractions.Logging
 {
-	using System;
-	using System.Diagnostics;
-	using LogProviders;
-
 	public static class LogManager
 	{
-		private static ILogManager currentLogManager;
-		private static HashSet<Target> targets = new HashSet<Target>();
- 
+		private static readonly HashSet<Target> targets = new HashSet<Target>();
+
 		public static ILog GetCurrentClassLogger()
 		{
 #if SILVERLIGHT
@@ -22,6 +20,13 @@ namespace Raven.Abstractions.Logging
 			return GetLogger(stackFrame.GetMethod().DeclaringType);
 		}
 
+		private static ILogManager currentLogManager;
+		public static ILogManager CurrentLogManager
+		{
+			get { return currentLogManager ?? (currentLogManager = ResolveExtenalLogManager()); }
+			set { currentLogManager = value; }
+		}
+
 		public static ILog GetLogger(Type type)
 		{
 			return GetLogger(type.FullName);
@@ -29,15 +34,10 @@ namespace Raven.Abstractions.Logging
 
 		public static ILog GetLogger(string name)
 		{
-			ILogManager temp = currentLogManager ?? ResolveExtenalLogManager();
-			if (temp == null) 
+			ILogManager temp = CurrentLogManager;
+			if (temp == null)
 				return new LoggerExecutionWrapper(new NoOpLogger(), name, targets.ToArray());
 			return new LoggerExecutionWrapper(temp.GetLogger(name), name, targets.ToArray());
-		}
-
-		public static void SetCurrentLogManager(ILogManager logManager)
-		{
-			currentLogManager = logManager;
 		}
 
 		private static ILogManager ResolveExtenalLogManager()
