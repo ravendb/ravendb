@@ -20,6 +20,7 @@ using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Database;
 using Raven.Database.Config;
@@ -37,6 +38,7 @@ namespace Raven.Server
 			{
 				try
 				{
+					LogManager.EnsureValidLogger();
 					InteractiveRun(args);
 				}
 				catch (ReflectionTypeLoadException e)
