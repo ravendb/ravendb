@@ -39,37 +39,7 @@ namespace Raven.Tests.Util
 				throw new Exception("Could not find Raven.server.exe");
 			}
 
-			var configPath = exePath + ".config";
-
-			if (!File.Exists(configPath))
-			{
-				File.WriteAllText(configPath, @"<?xml version=""1.0"" encoding=""utf-8""?>
-<configuration>
-  <appSettings>
-	<add key=""Raven/DataDir"" value=""~/Data"" />
-	<add key=""Raven/AnonymousAccess"" value=""All"" />
-	<add key=""Raven/Port"" value=""8079""/>
-  </appSettings>
-  <runtime>
-	<loadFromRemoteSources enabled=""true"" />
-	<assemblyBinding xmlns=""urn:schemas-microsoft-com:asm.v1"">
-	  <probing privatePath=""Analyzers"" />
-	</assemblyBinding>
-  </runtime>
-</configuration>
-");
-			}
-
-			var doc = System.Xml.Linq.XDocument.Load(configPath);
-
-			var configSettings = doc.Root.Element("appSettings").Elements("add");
-			var dataDirSetting = configSettings.Where(e => e.Attribute("key").Value.ToLower() == "raven/datadir").Single();
-
-			dataDirSetting.SetAttributeValue("value", _dataDir);
-
-			doc.Save(configPath);
-
-			StartProcess(exePath);
+			StartProcess(exePath, "--ram --set=Raven/Port==8079");
 
 			Match match = WaitForConsoleOutputMatching(@"^Server Url: (http://.*/)\s*$");
 
