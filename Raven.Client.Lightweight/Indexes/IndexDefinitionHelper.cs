@@ -7,8 +7,6 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Indexes
 {
-	using System.Collections.Generic;
-
 	/// <summary>
 	/// Generate index definition from linq expressions
 	/// </summary>
