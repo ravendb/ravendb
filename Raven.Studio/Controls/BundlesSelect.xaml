@@ -45,7 +45,7 @@
 					   Margin="5"
 					   MouseLeftButtonDown="Toggle"/>			
 
-			<CheckBox x:Name="Expiration"
+			<CheckBox x:Name="DocumentExpiration"
 					  Checked="Checked"
 					  Unchecked="UnChecked"
 					  Grid.Row="2"

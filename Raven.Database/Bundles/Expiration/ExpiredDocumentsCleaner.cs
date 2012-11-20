@@ -19,7 +19,7 @@ using Raven.Database.Plugins;
 namespace Raven.Bundles.Expiration
 {
 	[InheritedExport(typeof(IStartupTask))]
-	[ExportMetadata("Bundle", "Expiration")]
+	[ExportMetadata("Bundle", "DocumentExpiration")]
 	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
 	{
 		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
