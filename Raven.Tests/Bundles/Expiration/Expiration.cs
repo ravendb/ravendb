@@ -36,7 +36,7 @@ namespace Raven.Tests.Bundles.Expiration
 				Settings =
 					{
 						{"Raven/Expiration/DeleteFrequencySeconds", "1"},
-						{"Raven/ActiveBundles", "Expiration"}
+						{"Raven/ActiveBundles", "DocumentExpiration"}
 					}
 			};
 			ravenConfiguration.PostInit();
