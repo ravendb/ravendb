@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.ServiceProcess;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Task = System.Threading.Tasks.Task;
 
@@ -32,12 +33,13 @@ namespace Raven.Server
 			{
 				try
 				{
+					LogManager.EnsureValidLogger();
 					server = new RavenDbServer(new RavenConfiguration());
 				}
 				catch (Exception e)
 				{
 					EventLog.WriteEntry("RavenDB service failed to start because of an error" + Environment.NewLine + e, EventLogEntryType.Error);
-					Stop();
+					Task.Factory.StartNew(Stop);
 				}
 			});
 
@@ -47,29 +49,28 @@ namespace Raven.Server
 					"Startup for RavenDB service seems to be taking longer than usual, moving initialization to a background thread",
 					EventLogEntryType.Warning);
 			}
-
 		}
 
 		protected override void OnStop()
 		{
 			var shutdownTask = startTask.ContinueWith(task =>
 			{
-				if(server != null) 
+				if (server != null)
 					server.Dispose();
 				return task;
 			});
-			var keepAliveTask = Task.Factory.StartNew(() => 
+
+			var keepAliveTask = Task.Factory.StartNew(() =>
 			{
-				if(shutdownTask.Wait(9000))
+				if (shutdownTask.Wait(9000))
 					return;
-				do 
+				do
 				{
 					RequestAdditionalTime(10000);
-				} while(!shutdownTask.Wait(9000));
+				} while (!shutdownTask.Wait(9000));
 			});
 
 			Task.WaitAll(shutdownTask, keepAliveTask);
-
 		}
 
 		protected override void OnShutdown()

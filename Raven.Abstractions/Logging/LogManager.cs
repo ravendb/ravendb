@@ -10,6 +10,11 @@ namespace Raven.Abstractions.Logging
 	{
 		private static readonly HashSet<Target> targets = new HashSet<Target>();
 
+		public static void EnsureValidLogger()
+		{
+			GetCurrentClassLogger();
+		}
+
 		public static ILog GetCurrentClassLogger()
 		{
 #if SILVERLIGHT
@@ -34,10 +39,13 @@ namespace Raven.Abstractions.Logging
 
 		public static ILog GetLogger(string name)
 		{
-			ILogManager temp = CurrentLogManager;
-			if (temp == null)
+			ILogManager logManager = CurrentLogManager;
+			if (logManager == null)
 				return new LoggerExecutionWrapper(new NoOpLogger(), name, targets.ToArray());
-			return new LoggerExecutionWrapper(temp.GetLogger(name), name, targets.ToArray());
+			
+			// This can throw in a case of invalid NLog.config file.
+			var log = logManager.GetLogger(name);
+			return new LoggerExecutionWrapper(log, name, targets.ToArray());
 		}
 
 		private static ILogManager ResolveExtenalLogManager()
