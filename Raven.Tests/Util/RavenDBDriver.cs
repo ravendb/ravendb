@@ -48,7 +48,7 @@ namespace Raven.Tests.Util
   <appSettings>
 	<add key=""Raven/DataDir"" value=""~/Data"" />
 	<add key=""Raven/AnonymousAccess"" value=""All"" />
-	<add key=""Raven/Port"" value=""8079"">
+	<add key=""Raven/Port"" value=""8079""/>
   </appSettings>
   <runtime>
 	<loadFromRemoteSources enabled=""true"" />
@@ -100,7 +100,13 @@ namespace Raven.Tests.Util
 
 		public void Should_finish_without_error()
 		{
-			_process.StandardInput.Write("q\r\n");
+			try
+			{
+				_process.StandardInput.Write("q\r\n");
+			}
+			catch (Exception)
+			{
+			}
 
 			if (!_process.WaitForExit(10000))
 				throw new Exception("RavenDB command-line server did not halt within 10 seconds of pressing enter.");
