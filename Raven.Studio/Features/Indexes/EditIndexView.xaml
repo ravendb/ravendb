@@ -379,7 +379,7 @@
 										<Popup>
 											<ContentControl Style="{StaticResource Style_InfoToolTip}">
 												<RichTextBlock MaxWidth="370" Margin="5">
-													<Paragraph>Maps tells how to find the data you are intrested in</Paragraph>
+													<Paragraph>Maps project the fields that we want to search on (to the index) or to group by (when using map/reduce).</Paragraph>
 													<Paragraph>
 														<LineBreak/>
 														Example:
@@ -464,7 +464,7 @@
 										<Popup>
 											<ContentControl Style="{StaticResource Style_InfoToolTip}">
 												<RichTextBlock MaxWidth="370" Margin="5">
-													<Paragraph>Reduce function allows to produce a smaller result set</Paragraph>
+													<Paragraph>Reduce function allows to aggregate results from multiple documents (group by).</Paragraph>
 													<Paragraph>
 														<LineBreak/>
 														Example:
@@ -478,8 +478,11 @@
 															<LineBreak/>
 															<Span Foreground="Blue">into</Span> g
 															<LineBreak/>
-															<Span Foreground="Blue">select new</Span> {g.Name, 
-															Amount = g.Sum(x => x.Amount)}
+															<Span Foreground="Blue">select new</Span> {
+															<LineBreak/>
+															<Span xml:space="preserve">    g.Key.Date, Amount = g.Sum(x => x.Amount)</Span>
+															<LineBreak/>
+															}
 														</Span>
 														<LineBreak/>
 													</Paragraph>
@@ -541,17 +544,18 @@
 										<Popup>
 											<ContentControl Style="{StaticResource Style_InfoToolTip}">
 												<RichTextBlock MaxWidth="370" Margin="5">
-													<Paragraph>Transform function allows live projection on server side</Paragraph>
+													<Paragraph>Transform function happens during the query, and allow to transform the results on the server side.</Paragraph>
 													<Paragraph>
 														<LineBreak/>
 														Example:
 														<Span FontFamily="Consolas">
 															<LineBreak/>
-															<Span Foreground="Blue">from</Span> result
-															<Span Foreground="Blue">in</Span> results
+															<Span Foreground="Blue">from</Span> order
+															<Span Foreground="Blue">in</Span> orders
 															<LineBreak/>
-															<Span Foreground="Blue">let</Span> data = database.Load&lt;MyClass&gt;(result.MyClassId)
-															<Span Foreground="Blue">select new</Span> {result.Date, Addtional = data.Name}
+															<Span Foreground="Blue">let</Span> customer = database.Load(order.CustomerId)
+															<LineBreak/>
+															<Span Foreground="Blue">select new</Span> {order.Date, order.Amount, customer.Name}
 														</Span>
 														<LineBreak/>
 													</Paragraph>
