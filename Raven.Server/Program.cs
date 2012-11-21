@@ -110,6 +110,7 @@ namespace Raven.Server
 		{
 			string backupLocation = null;
 			string restoreLocation = null;
+			bool defrag = false;
 			Action actionToTake = null;
 			bool launchBrowser = false;
 			var ravenConfiguration = new RavenConfiguration();
@@ -153,7 +154,12 @@ namespace Raven.Server
 						{
 							throw new OptionException("when using restore, source and destination must be specified", "restore");
 						}
-						RunRestoreOperation(backupLocation, restoreLocation);
+						RunRestoreOperation(backupLocation, restoreLocation, defrag);
+					}},
+				{"defrag", 
+					"Applicable only during restore, execute defrag after the restore is completed", key =>
+					{
+						defrag = true;
 					}},
 				{"dest=|destination=", "The {0:path} of the new new database", value => restoreLocation = value},
 				{"src=|source=", "The {0:path} of the backup", value => backupLocation = value},
@@ -250,7 +256,7 @@ Configuration options:
 			}
 		}
 
-		private static void RunRestoreOperation(string backupLocation, string databaseLocation)
+		private static void RunRestoreOperation(string backupLocation, string databaseLocation, bool defrag)
 		{
 			try
 			{
@@ -265,7 +271,7 @@ Configuration options:
 					ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 
 				}
-				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, s => {});
+				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, Console.WriteLine, defrag);
 			}
 			catch (Exception e)
 			{

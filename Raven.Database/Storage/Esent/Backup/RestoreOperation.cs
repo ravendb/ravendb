@@ -18,14 +18,16 @@ namespace Raven.Storage.Esent.Backup
 	public class RestoreOperation
 	{
 		private readonly Action<string> output;
+		private readonly bool defrag;
 		private readonly string backupLocation;
 		private readonly string databaseLocation;
 
 		private bool defragmentationCompleted;
 
-		public RestoreOperation(string backupLocation, string databaseLocation, Action<string> output)
+		public RestoreOperation(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			this.output = output;
+			this.defrag = defrag;
 			this.backupLocation = backupLocation.ToFullPath();
 			this.databaseLocation = databaseLocation.ToFullPath();
 		}
@@ -77,7 +79,10 @@ namespace Raven.Storage.Esent.Backup
 					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
 				}
 
-				DefragmentDatabase(instance, dataFilePath);
+				if (defrag)
+				{
+					DefragmentDatabase(instance, dataFilePath);
+				}
 			}
 			catch(Exception)
 			{
