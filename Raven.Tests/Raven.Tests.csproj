@@ -531,6 +531,7 @@
     <Compile Include="Issues\RavenDB_576.cs" />
     <Compile Include="Issues\RavenDB_560.cs" />
     <Compile Include="Issues\RavenDB_714.cs" />
+    <Compile Include="Issues\RavenDB_726.cs" />
     <Compile Include="Linq\Contains.cs" />
     <Compile Include="Linq\FirstOrDefault.cs" />
     <Compile Include="Linq\CanCallLastOnArray.cs" />
