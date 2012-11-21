@@ -203,14 +203,6 @@ namespace Raven.Client.Document
 			get { return theSession; }
 		}
 
-		/// <summary>
-		///   Gets the query text built so far
-		/// </summary>
-		protected StringBuilder QueryText
-		{
-			get { return theQueryText; }
-		}
-
 		protected Action<QueryResult> afterQueryExecutedCallback;
 		protected Guid? cutoffEtag;
 
@@ -1697,16 +1689,16 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Returns a <see cref = "System.String" /> that represents this instance.
+		///   Returns a <see cref = "System.String" /> that represents the query for this instance.
 		/// </summary>
 		/// <returns>
-		///   A <see cref = "System.String" /> that represents this instance.
+		///   A <see cref = "System.String" /> that represents the query for this instance.
 		/// </returns>
 		public override string ToString()
 		{
 			if (currentClauseDepth != 0)
 				throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", currentClauseDepth));
-			
+
 			return queryText.ToString().Trim();
 		}
 
