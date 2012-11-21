@@ -13,6 +13,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
+using System.Text;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
@@ -43,24 +44,21 @@ namespace Raven.Server
 				}
 				catch (ReflectionTypeLoadException e)
 				{
-					EmitWarningInRed();
-
-					Console.Error.WriteLine(e);
+					var sb = new StringBuilder();
+					sb.AppendLine(e.ToString());
 					foreach (var loaderException in e.LoaderExceptions)
 					{
-						Console.Error.WriteLine("- - - -");
-						Console.Error.WriteLine(loaderException);
+						sb.AppendLine("- - - -").AppendLine();
+						sb.AppendLine(loaderException.ToString());
 					}
 
-					WaitForUserInputAndExitWithError();
+					WaitForUserInputAndExitWithError(sb.ToString(), args);
 				}
 				catch (Exception e)
 				{
 					EmitWarningInRed();
 
-					Console.Error.WriteLine(e);
-
-					WaitForUserInputAndExitWithError();
+					WaitForUserInputAndExitWithError(e.ToString(), args);
 				}
 			}
 			else
@@ -77,8 +75,17 @@ namespace Raven.Server
 			return Environment.UserInteractive || (args != null && args.Length > 0);
 		}
 
-		private static void WaitForUserInputAndExitWithError()
+		private static void WaitForUserInputAndExitWithError(string msg, string[] args)
 		{
+			EmitWarningInRed();
+
+			Console.Error.WriteLine(msg);
+
+			if(args.Contains("--msgbox", StringComparer.InvariantCultureIgnoreCase) || 
+				args.Contains("/msgbox", StringComparer.InvariantCultureIgnoreCase))
+			{
+				MessageBox.Show(msg, "RavenDB Startup failure");
+			}
 			Console.WriteLine("Press any key to continue...");
 			try
 			{
