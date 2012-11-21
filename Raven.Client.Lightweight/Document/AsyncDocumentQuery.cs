@@ -636,7 +636,7 @@ namespace Raven.Client.Document
 																		 indexName, fields, projections, queryListeners)
 										{
 											pageSize = pageSize,
-											theQueryText = new StringBuilder(theQueryText.ToString()),
+											queryText = new StringBuilder(queryText.ToString()),
 											start = start,
 											timeout = timeout,
 											cutoff = cutoff,
