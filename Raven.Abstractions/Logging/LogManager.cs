@@ -12,7 +12,7 @@ namespace Raven.Abstractions.Logging
 
 		public static void EnsureValidLogger()
 		{
-			GetCurrentClassLogger();
+			GetLogger(typeof (LogManager));
 		}
 
 		public static ILog GetCurrentClassLogger()
