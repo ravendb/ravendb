@@ -19,7 +19,7 @@ namespace Raven.Tests.Util
 		readonly DocumentConvention _conventions;
 		readonly string _dataDir;
 
-		public string Url { get; private set;}
+		public string Url { get; private set; }
 
 		public RavenDBDriver(string shardName, DocumentConvention conventions)
 		{
@@ -28,7 +28,7 @@ namespace Raven.Tests.Util
 			_dataDir = GetPath(shardName);
 		}
 
-		public void Start() 
+		public void Start()
 		{
 			IOExtensions.DeleteDirectory(_dataDir);
 
@@ -39,7 +39,7 @@ namespace Raven.Tests.Util
 				throw new Exception("Could not find Raven.server.exe");
 			}
 
-			StartProcess(exePath, "--ram --set=Raven/Port==8079");
+			StartProcess(exePath, "--ram --set=Raven/Port==8079 --msgBox");
 
 			Match match = WaitForConsoleOutputMatching(@"^Server Url: (http://.*/)\s*$");
 
@@ -86,10 +86,10 @@ namespace Raven.Tests.Util
 
 			if (!String.IsNullOrEmpty(errorOutput))
 				throw new Exception("RavendB command-line server finished with error text: " + errorOutput + "\r\n" + output);
-			
+
 			if (_process.ExitCode != 0)
 				throw new Exception("RavenDB command-line server finished with exit code: " + _process.ExitCode + " " + output);
-			}
+		}
 
 		protected override void Shutdown()
 		{
