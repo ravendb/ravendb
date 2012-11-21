@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 			                                                   queryListeners)
 			{
 				pageSize = pageSize,
-				theQueryText = new StringBuilder(theQueryText.ToString()),
+				queryText = new StringBuilder(queryText.ToString()),
 				start = start,
 				timeout = timeout,
 				cutoff = cutoff,
@@ -840,10 +840,10 @@ namespace Raven.Client.Document
 		/// </returns>
 		public override string ToString()
 		{
-			var trim = QueryText.ToString().Trim();
-			if(isSpatialQuery)
-				return string.Format(CultureInfo.InvariantCulture, "{0} SpatialField: {1} QueryShape: {2} Relation: {3}", trim, spatialFieldName, queryShape, spatialRelation);
-			return trim;
+			var query = base.ToString();
+			if (isSpatialQuery)
+				return string.Format(CultureInfo.InvariantCulture, "{0} SpatialField: {1} QueryShape: {2} Relation: {3}", query, spatialFieldName, queryShape, spatialRelation);
+			return query;
 		}
 	}
 }

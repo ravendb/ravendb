@@ -120,7 +120,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// The query to use
 		/// </summary>
-		protected StringBuilder theQueryText = new StringBuilder();
+		protected StringBuilder queryText = new StringBuilder();
 
 		/// <summary>
 		///   which record to start reading from
@@ -203,14 +203,6 @@ namespace Raven.Client.Document
 			get { return theSession; }
 		}
 
-		/// <summary>
-		///   Gets the query text built so far
-		/// </summary>
-		protected StringBuilder QueryText
-		{
-			get { return theQueryText; }
-		}
-
 		protected Action<QueryResult> afterQueryExecutedCallback;
 		protected Guid? cutoffEtag;
 
@@ -291,7 +283,7 @@ namespace Raven.Client.Document
 			orderByFields = other.orderByFields;
 			sortByHints = other.sortByHints;
 			pageSize = other.pageSize;
-			theQueryText = other.theQueryText;
+			queryText = other.queryText;
 			start = other.start;
 			timeout = other.timeout;
 			theWaitForNonStaleResults = other.theWaitForNonStaleResults;
@@ -434,18 +426,18 @@ namespace Raven.Client.Document
 
 		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
-			var query = theQueryText.ToString();
+			var query = queryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);
 			return new QueryOperation(theSession,
-												indexName,
-												indexQuery,
-												projectionFields,
-												sortByHints,
-												theWaitForNonStaleResults,
-												setOperationHeaders,
-												timeout,
-												transformResultsFunc,
-												includes);
+			                          indexName,
+			                          indexQuery,
+			                          projectionFields,
+			                          sortByHints,
+			                          theWaitForNonStaleResults,
+			                          setOperationHeaders,
+			                          timeout,
+			                          transformResultsFunc,
+			                          includes);
 		}
 
 #if !SILVERLIGHT
@@ -776,14 +768,14 @@ If you really want to do in memory filtering on the data returned from the query
 		public void Where(string whereClause)
 		{
 			AppendSpaceIfRequired();
-			theQueryText.Append(whereClause);
+			queryText.Append(whereClause);
 		}
 
 		private void AppendSpaceIfRequired()
 		{
-			if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
+			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
 			{
-				theQueryText.Append(" ");
+				queryText.Append(" ");
 			}
 		}
 
@@ -829,7 +821,7 @@ If you really want to do in memory filtering on the data returned from the query
 			currentClauseDepth++;
 			AppendSpaceIfRequired();
 			NegateIfNeeded();
-			theQueryText.Append("(");
+			queryText.Append("(");
 		}
 
 		///<summary>
@@ -851,7 +843,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void CloseSubclause()
 		{
 			currentClauseDepth--;
-			theQueryText.Append(")");
+			queryText.Append(")");
 		}
 
 		/// <summary>
@@ -862,16 +854,16 @@ If you really want to do in memory filtering on the data returned from the query
 			EnsureValidFieldName(whereParams);
 			var transformToEqualValue = TransformToEqualValue(whereParams);
 			lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
-			if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
+			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
 			{
-				theQueryText.Append(" ");
+				queryText.Append(" ");
 			}
 
 			NegateIfNeeded();
 
-			theQueryText.Append(whereParams.FieldName);
-			theQueryText.Append(":");
-			theQueryText.Append(transformToEqualValue);
+			queryText.Append(whereParams.FieldName);
+			queryText.Append(":");
+			queryText.Append(transformToEqualValue);
 		}
 
 		private string EnsureValidFieldName(WhereParams whereParams)
@@ -906,7 +898,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (negate == false)
 				return;
 			negate = false;
-			theQueryText.Append("-");
+			queryText.Append("-");
 		}
 
 		/// <summary>
@@ -914,8 +906,8 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WhereIn(string fieldName, IEnumerable<object> values)
 		{
-			if (theQueryText.Length > 0 && char.IsWhiteSpace(theQueryText[theQueryText.Length - 1]) == false)
-				theQueryText.Append(" ");
+			if (queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false)
+				queryText.Append(" ");
 
 			NegateIfNeeded();
 
@@ -923,13 +915,13 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if(list.Count == 0)
 			{
-				theQueryText.Append("@emptyIn<")
+				queryText.Append("@emptyIn<")
 					.Append(fieldName)
 					.Append(">:(no-results)");
 				return;
 			}
 
-			theQueryText.Append("@in<")
+			queryText.Append("@in<")
 				.Append(fieldName)
 				.Append(">:(");
 
@@ -938,7 +930,7 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				if(first == false)
 				{
-					theQueryText.Append(",");
+					queryText.Append(",");
 				}
 				first = false;
 				var whereParams = new WhereParams
@@ -949,9 +941,9 @@ If you really want to do in memory filtering on the data returned from the query
 					Value = value
 				};
 				EnsureValidFieldName(whereParams);
-				theQueryText.Append(TransformToEqualValue(whereParams).Replace(",", "`,`"));
+				queryText.Append(TransformToEqualValue(whereParams).Replace(",", "`,`"));
 			}
-			theQueryText.Append(") ");
+			queryText.Append(") ");
 		}
 
 		/// <summary>
@@ -1002,9 +994,9 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WhereBetween(string fieldName, object start, object end)
 		{
-			if (theQueryText.Length > 0)
+			if (queryText.Length > 0)
 			{
-				theQueryText.Append(" ");
+				queryText.Append(" ");
 			}
 
 			if ((start ?? end) != null)
@@ -1014,11 +1006,11 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			theQueryText.Append(fieldName).Append(":{");
-			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
-			theQueryText.Append(" TO ");
-			theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams{Value = end, FieldName = fieldName}));
-			theQueryText.Append("}");
+			queryText.Append(fieldName).Append(":{");
+			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
+			queryText.Append(" TO ");
+			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams{Value = end, FieldName = fieldName}));
+			queryText.Append("}");
 		}
 
 		/// <summary>
@@ -1030,9 +1022,9 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WhereBetweenOrEqual(string fieldName, object start, object end)
 		{
-			if (theQueryText.Length > 0)
+			if (queryText.Length > 0)
 			{
-				theQueryText.Append(" ");
+				queryText.Append(" ");
 			}
 			if ((start ?? end) != null)
 				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
@@ -1041,11 +1033,11 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			theQueryText.Append(fieldName).Append(":[");
-			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
-			theQueryText.Append(" TO ");
-			theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
-			theQueryText.Append("]");
+			queryText.Append(fieldName).Append(":[");
+			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
+			queryText.Append(" TO ");
+			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
+			queryText.Append("]");
 		}
 
 		private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
@@ -1108,10 +1100,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void AndAlso()
 		{
-			if (theQueryText.Length < 1)
+			if (queryText.Length < 1)
 				return;
 
-			theQueryText.Append(" AND");
+			queryText.Append(" AND");
 		}
 
 		/// <summary>
@@ -1119,10 +1111,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void OrElse()
 		{
-			if (theQueryText.Length < 1)
+			if (queryText.Length < 1)
 				return;
 
-			theQueryText.Append(" OR");
+			queryText.Append(" OR");
 		}
 
 		/// <summary>
@@ -1136,7 +1128,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </remarks>
 		public void Boost(decimal boost)
 		{
-			if (theQueryText.Length < 1)
+			if (queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
@@ -1149,7 +1141,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (boost != 1m)
 			{
 				// 1.0 is the default
-				theQueryText.Append("^").Append(boost.ToString(CultureInfo.InvariantCulture));
+				queryText.Append("^").Append(boost.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1163,7 +1155,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </remarks>
 		public void Fuzzy(decimal fuzzy)
 		{
-			if (theQueryText.Length < 1)
+			if (queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
@@ -1173,18 +1165,18 @@ If you really want to do in memory filtering on the data returned from the query
 				throw new ArgumentOutOfRangeException("Fuzzy distance must be between 0.0 and 1.0");
 			}
 
-			var ch = theQueryText[theQueryText.Length - 1];
+			var ch = queryText[queryText.Length - 1];
 			if (ch == '"' || ch == ']')
 			{
 				// this check is overly simplistic
 				throw new InvalidOperationException("Fuzzy factor can only modify single word terms");
 			}
 
-			theQueryText.Append("~");
+			queryText.Append("~");
 			if (fuzzy != 0.5m)
 			{
 				// 0.5 is the default
-				theQueryText.Append(fuzzy.ToString(CultureInfo.InvariantCulture));
+				queryText.Append(fuzzy.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1198,7 +1190,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </remarks>
 		public void Proximity(int proximity)
 		{
-			if (theQueryText.Length < 1)
+			if (queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
@@ -1208,13 +1200,13 @@ If you really want to do in memory filtering on the data returned from the query
 				throw new ArgumentOutOfRangeException("proximity", "Proximity distance must be a positive number");
 			}
 
-			if (theQueryText[theQueryText.Length - 1] != '"')
+			if (queryText[queryText.Length - 1] != '"')
 			{
 				// this check is overly simplistic
 				throw new InvalidOperationException("Proximity distance can only modify a phrase");
 			}
 
-			theQueryText.Append("~").Append(proximity.ToString(CultureInfo.InvariantCulture));
+			queryText.Append("~").Append(proximity.ToString(CultureInfo.InvariantCulture));
 		}
 
 		/// <summary>
@@ -1518,7 +1510,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
 		{
-			theQueryText.Append(' ');
+			queryText.Append(' ');
 			
 			NegateIfNeeded();
 			switch (escapeQueryOptions)
@@ -1541,7 +1533,7 @@ If you really want to do in memory filtering on the data returned from the query
 			}
 			lastEquality = new KeyValuePair<string, string>(fieldName, "(" + searchTerms + ")");
 
-			theQueryText.Append(fieldName).Append(":").Append("(").Append(searchTerms).Append(")");
+			queryText.Append(fieldName).Append(":").Append("(").Append(searchTerms).Append(")");
 		}
 
 		private string TransformToEqualValue(WhereParams whereParams)
@@ -1697,20 +1689,17 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Returns a <see cref = "System.String" /> that represents this instance.
+		///   Returns a <see cref = "System.String" /> that represents the query for this instance.
 		/// </summary>
 		/// <returns>
-		///   A <see cref = "System.String" /> that represents this instance.
+		///   A <see cref = "System.String" /> that represents the query for this instance.
 		/// </returns>
 		public override string ToString()
 		{
 			if (currentClauseDepth != 0)
-			{
-				throw new InvalidOperationException(
-					string.Format("A clause was not closed correctly within this query, current clause depth = {0}",
-								  currentClauseDepth));
-			}
-			return theQueryText.ToString().Trim();
+				throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", currentClauseDepth));
+
+			return queryText.ToString().Trim();
 		}
 
 		/// <summary>
@@ -1723,7 +1712,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 		public void Intersect()
 		{
-			theQueryText.Append(Constants.IntersectSeperator);
+			queryText.Append(Constants.IntersectSeperator);
 		}
 
 		public void AddRootType(Type type)
