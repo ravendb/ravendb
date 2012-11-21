@@ -737,10 +737,11 @@ namespace Raven.Database.Indexing
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 						totalResults.Value = search.TotalHits;
 
-						foreach (var scoreDoc in search.ScoreDocs)
+						for (int index = indexQuery.Start; index < search.ScoreDocs.Length; index++)
 						{
+							var scoreDoc = search.ScoreDocs[index];
 							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.Doc].CloneToken();
-							foreach (var prop in ravenJObject.Where(x=>x.Key.EndsWith("_Range")).ToArray())
+							foreach (var prop in ravenJObject.Where(x => x.Key.EndsWith("_Range")).ToArray())
 							{
 								ravenJObject.Remove(prop.Key);
 							}
