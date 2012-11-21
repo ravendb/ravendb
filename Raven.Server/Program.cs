@@ -13,6 +13,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
+using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
 using NDesk.Options;
@@ -42,11 +43,11 @@ namespace Raven.Server
 				{
 					EmitWarningInRed();
 
-					Console.WriteLine(e);
+					Console.Error.WriteLine(e);
 					foreach (var loaderException in e.LoaderExceptions)
 					{
-						Console.WriteLine("- - - -");
-						Console.WriteLine(loaderException);
+						Console.Error.WriteLine("- - - -");
+						Console.Error.WriteLine(loaderException);
 					}
 
 					WaitForUserInputAndExitWithError();
@@ -55,7 +56,7 @@ namespace Raven.Server
 				{
 					EmitWarningInRed();
 
-					Console.WriteLine(e);
+					Console.Error.WriteLine(e);
 
 					WaitForUserInputAndExitWithError();
 				}
@@ -92,7 +93,7 @@ namespace Raven.Server
 		{
 			var old = Console.ForegroundColor;
 			Console.ForegroundColor = ConsoleColor.Red;
-			Console.WriteLine("A critical error occurred while starting the server. Please see the exception details bellow for more details:");
+			Console.Error.WriteLine("A critical error occurred while starting the server. Please see the exception details bellow for more details:");
 			Console.ForegroundColor = old;
 		}
 

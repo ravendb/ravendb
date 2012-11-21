@@ -63,7 +63,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				session.SaveChanges();
 
 				id = session.Advanced.GetDocumentId(dataQueriedFor);
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
@@ -94,7 +94,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 				id = session.Advanced.GetDocumentId(dataQueriedFor);
 
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			Console.WriteLine("Test: '{0}'", id);
@@ -127,7 +127,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				};
 				list.ForEach(session.Store);
 				session.SaveChanges();
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
@@ -155,7 +155,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				};
 				list.ForEach(session.Store);
 				session.SaveChanges();
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			using (var session = store.OpenSession())
@@ -165,7 +165,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 					DocumentId = key,
 					Fields = new[] {"Body"}
 				});
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 
 				Assert.Empty(list);
 			}
@@ -186,7 +186,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				}
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
@@ -207,7 +207,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				}
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			using (var session = store.OpenSession())
@@ -233,7 +233,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				}
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			using (var session = store.OpenSession())
@@ -255,7 +255,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				}
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			using (var session = store.OpenSession())
@@ -286,7 +286,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			using (var session = store.OpenSession())
@@ -321,7 +321,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			using (var session = store.OpenSession())
@@ -367,7 +367,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 				session.SaveChanges();
 
-				TestUtil.WaitForIndexing(store);
+				WaitForIndexing(store);
 			}
 
 			using (var session = store.OpenSession())
