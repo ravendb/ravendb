@@ -73,27 +73,31 @@ namespace Raven.Munin
 		{
 			lock (this)
 			{
+
 				if (disposed)
 					throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-			
+
 				bool success = false;
 				try
 				{
-					CurrentStates = new List<PersistentDictionaryState>(
-						globalStates.Select(x => new PersistentDictionaryState(x.Comparer)
-						{
-							KeyToFilePositionInFiles = x.KeyToFilePositionInFiles,
-							SecondaryIndicesState = x.SecondaryIndicesState.ToList()
-						}));
+					if (CurrentStates == null)
+					{
+						CurrentStates = new List<PersistentDictionaryState>(
+							globalStates.Select(x => new PersistentDictionaryState(x.Comparer)
+							                         {
+								                         KeyToFilePositionInFiles = x.KeyToFilePositionInFiles,
+								                         SecondaryIndicesState = x.SecondaryIndicesState.ToList()
+							                         }));
+					}
 
 					readWriteAction(Log);
 					success = true;
 				}
 				finally
 				{
-					if(success)
+					if (success)
 					{
-					pool.Clear();
+						pool.Clear();
 						globalStates = CurrentStates;
 					}
 					CurrentStates = null;
@@ -117,7 +121,10 @@ namespace Raven.Munin
 
 		public void BeginTx()
 		{
-			CurrentStates = globalStates;
+			lock (this)
+			{
+				CurrentStates = globalStates;
+			}	
 		}
 
 		public void CompleteTx()
