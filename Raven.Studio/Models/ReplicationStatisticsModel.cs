@@ -14,7 +14,7 @@ namespace Raven.Studio.Models
     {
         public ReplicationStatisticsModel()
         {
-			Stats = new List<ReplicationStats>();
+			Stats = new List<DestinationStats>();
             Name = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 
             documentStore = ApplicationModel.Current.Server.Value.DocumentStore;
@@ -57,6 +57,6 @@ namespace Raven.Studio.Models
 	    public string Name { get; set; }
         private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
         private readonly IDocumentStore documentStore;
-		public List<ReplicationStats> Stats { get; set; } 
+		public List<DestinationStats> Stats { get; set; } 
     }
 }

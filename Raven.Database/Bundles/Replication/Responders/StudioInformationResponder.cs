@@ -48,8 +48,8 @@ namespace Raven.Bundles.Replication.Responders
 				MostRecentDocumentEtag = mostRecentDocumentEtag,
 				MostRecentAttachmentEtag = mostRecentAttachmentEtag,
 				Stats = replicationTask == null
-					        ? new List<ReplicationStats>()
-					        : replicationTask.ReplicationStats.Values.ToList()
+					        ? new List<DestinationStats>()
+					        : replicationTask.DestinationStats.Values.ToList()
 			}));
 		}
 	}

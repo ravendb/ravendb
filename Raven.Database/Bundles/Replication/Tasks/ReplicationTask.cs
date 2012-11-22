@@ -39,17 +39,17 @@ namespace Raven.Bundles.Replication.Tasks
 			public int Value;
 		}
 
-		private readonly ConcurrentDictionary<string, ReplicationStats> replicationStats =
-			new ConcurrentDictionary<string, ReplicationStats>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
+			new ConcurrentDictionary<string, DestinationStats>(StringComparer.InvariantCultureIgnoreCase);
 
 		private DocumentDatabase docDb;
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
 		private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
-		public ConcurrentDictionary<string, ReplicationStats> ReplicationStats
+		public ConcurrentDictionary<string, DestinationStats> DestinationStats
 		{
-			get { return replicationStats; }
+			get { return destinationStats; }
 		}
 
 		public ConcurrentDictionary<string, DateTime> Heartbeats
@@ -432,7 +432,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void RecordFailure(string url, string lastError)
 		{
-			var stats = replicationStats.GetOrAdd(url, new ReplicationStats { Url = url });
+			var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
 			Interlocked.Increment(ref stats.FailureCountInternal);
 			stats.LastFailureTimestamp = SystemTime.UtcNow;
 			if (string.IsNullOrWhiteSpace(lastError) == false)
@@ -453,7 +453,7 @@ namespace Raven.Bundles.Replication.Tasks
 			Guid? lastReplicatedEtag = null, DateTime? lastReplicatedLastModified = null,
 			DateTime? lastHeartbeatReceived = null, string lastError = null)
 		{
-			var stats = replicationStats.GetOrAdd(url, new ReplicationStats { Url = url });
+			var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
 			Interlocked.Exchange(ref stats.FailureCountInternal, 0);
 			stats.LastSuccessTimestamp = SystemTime.UtcNow;
 
@@ -475,7 +475,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private bool IsFirstFailure(string url)
 		{
-			var destStats = replicationStats.GetOrAdd(url, new ReplicationStats { Url = url });
+			var destStats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
 			return destStats.FailureCount == 0;
 		}
 

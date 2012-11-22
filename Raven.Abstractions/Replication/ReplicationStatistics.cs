@@ -8,15 +8,15 @@ namespace Raven.Abstractions.Replication
 		public string Self { get; set; }
 		public Guid MostRecentDocumentEtag { get; set; }
 		public Guid MostRecentAttachmentEtag { get; set; }
-		public List<ReplicationStats> Stats { get; set; }
+		public List<DestinationStats> Stats { get; set; }
 
 		public ReplicationStatistics()
 		{
-			Stats = new List<ReplicationStats>();
+			Stats = new List<DestinationStats>();
 		}
 	}
 
-	public class ReplicationStats
+	public class DestinationStats
 	{
 		public int FailureCountInternal = 0;
 		public string Url { get; set; }
