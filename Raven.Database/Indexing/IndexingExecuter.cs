@@ -132,9 +132,8 @@ namespace Raven.Database.Indexing
 					{
 						var index = indexToWorkOn.Item1;
 						var docs = indexToWorkOn.Item2;
-						transactionalStorage.Batch(
-							actions => IndexDocuments(actions, index.IndexName, docs));
 
+						transactionalStorage.Batch(actions => IndexDocuments(actions, index.IndexName, docs));
 					});
 					indexingDuration = sw.Elapsed;
 				}
@@ -170,6 +169,7 @@ namespace Raven.Database.Indexing
 						}
 					});
 
+					CleanupDocumentsToRemove(lastEtag);
 					UpdateAutoThrottler(jsonDocs.Results, indexingDuration);
 				}
 
@@ -262,7 +262,8 @@ namespace Raven.Database.Indexing
 				// take one of them.
 				return new JsonResults
 				{
-					Results = items.SelectMany(x => x.Results).GroupBy(x => x.Key)
+					Results = items.SelectMany(x => x.Results)
+						.GroupBy(x => x.Key)
 						.Select(g => g.OrderBy(x => x.Etag).First())
 						.ToArray(),
 					LoadedFromDisk = items.Aggregate(false, (prev, results) => prev | results.LoadedFromDisk)
@@ -362,6 +363,13 @@ namespace Raven.Database.Indexing
 			return highestDoc;
 		}
 
+		private void CleanupDocumentsToRemove(Guid lastIndexedEtag)
+		{
+			var highest = new ComparableByteArray(lastIndexedEtag);
+
+			documentsToRemove.RemoveWhere(x => x.Etag == null || highest.CompareTo(x.Etag) <= 0);
+		}
+
 		private static System.Threading.Tasks.Task ObserveDiscardedTask(FutureIndexBatch source)
 		{
 			return source.Task.ContinueWith(task =>
@@ -457,6 +465,9 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
+					if (FilterDocuments(item.Doc, indexName))
+						continue;
+
 					// did we already indexed this document in this index?
 					var etag = item.Doc.Etag;
 					if (etag == null)
@@ -600,6 +611,57 @@ namespace Raven.Database.Indexing
 				lowest = new ComparableByteArray(etag);
 			}
 			return lowest.ToGuid();
+		}
+
+		private readonly ConcurrentSet<DocumentToRemove> documentsToRemove = new ConcurrentSet<DocumentToRemove>(new DocumentToRemoveEqualityComparer());
+
+		private bool FilterDocuments(JsonDocument document, string indexName)
+		{
+			var documentToRemove = new DocumentToRemove(document.Key, document.Etag, indexName);
+
+			if (documentsToRemove.Contains(documentToRemove))
+			{
+				documentsToRemove.TryRemove(documentToRemove);
+				return true;
+			}
+
+			return false;
+		}
+
+		internal class DocumentToRemove
+		{
+			public DocumentToRemove(string key, Guid? etag, string indexName)
+			{
+				this.Key = key;
+				this.Etag = etag;
+				this.IndexName = indexName;
+			}
+
+			public string Key { get; set; }
+
+			public Guid? Etag { get; set; }
+
+			public string IndexName { get; set; }
+		}
+
+		internal class DocumentToRemoveEqualityComparer : IEqualityComparer<DocumentToRemove>
+		{
+			public bool Equals(DocumentToRemove x, DocumentToRemove y)
+			{
+				return x.Key.Equals(y.Key, StringComparison.InvariantCultureIgnoreCase)
+					&& x.Etag == y.Etag
+					&& x.IndexName.Equals(y.IndexName, StringComparison.InvariantCultureIgnoreCase);
+			}
+
+			public int GetHashCode(DocumentToRemove obj)
+			{
+				return 1;
+			}
+		}
+
+		public void AfterDelete(string key, Guid? lastDocumentEtag, string indexName)
+		{
+			documentsToRemove.Add(new DocumentToRemove(key, lastDocumentEtag, indexName));
 		}
 	}
 }

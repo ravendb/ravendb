@@ -222,6 +222,8 @@ namespace Raven.Storage.Managed
 				return false;
 
 			metadata = readResult.Data().ToJObject();
+			if (metadata != null)
+				metadata.Add(Constants.Etag, existingEtag.ToString());
 
 			storage.Documents.Remove(new RavenJObject { { "key", key } });
 

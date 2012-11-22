@@ -473,6 +473,8 @@ namespace Raven.Storage.Esent.StorageActions
 			EnsureNotLockedByTransaction(key, null);
 
 			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+			if (metadata != null)
+				metadata.Add(Constants.Etag, existingEtag.ToString());
 
 			Api.JetDelete(session, Documents);
 			logger.Debug("Document with key '{0}' was deleted", key);
