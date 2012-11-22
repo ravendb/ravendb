@@ -104,6 +104,20 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected string[] orderByFields = new string[0];
 
+        /// <summary>
+        ///   The fields to highlight
+        /// </summary>
+        protected List<HighlightedField> highlightedFields = new List<HighlightedField>();
+
+        /// <summary>
+        ///   Highlighter pre tags
+        /// </summary>
+        protected string[] highlighterPreTags = new string[0];
+
+        /// <summary>
+        ///   Highlighter post tags
+        /// </summary>
+        protected string[] highlighterPostTags = new string[0];
 
 		/// <summary>
 		///   The types to sort the fields by (NULL if not specified)
@@ -153,6 +167,11 @@ namespace Raven.Client.Document
 		/// Holds the query stats
 		/// </summary>
 		protected RavenQueryStatistics queryStats = new RavenQueryStatistics();
+
+        /// <summary>
+        /// Holds the query highlightings
+        /// </summary>
+        protected RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -261,7 +280,7 @@ namespace Raven.Client.Document
 			this.indexName = indexName;
 			this.theSession = theSession;
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
-			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
+			this.AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
@@ -272,7 +291,13 @@ namespace Raven.Client.Document
 			}
 		}
 
-		/// <summary>
+	    private void UpdateStatsAndHighlightings(QueryResult queryResult)
+	    {
+	        this.queryStats.UpdateQueryStats(queryResult);
+	        this.highlightings.Update(queryResult);
+	    }
+
+	    /// <summary>
 		///   Initializes a new instance of the <see cref = "IDocumentQuery{T}" /> class.
 		/// </summary>
 		/// <param name = "other">The other.</param>
@@ -300,8 +325,11 @@ namespace Raven.Client.Document
 			queryStats = other.queryStats;
 			defaultOperator = other.defaultOperator;
 			defaultField = other.defaultField;
+		    highlightedFields = other.highlightedFields;
+		    highlighterPreTags = other.highlighterPreTags;
+		    highlighterPostTags = other.highlighterPostTags;
 
-			AfterQueryExecuted(queryStats.UpdateQueryStats);
+			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
 
 		#region TSelf Members
@@ -611,7 +639,30 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		/// <summary>
+	    IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, int fragmentLength, int fragmentCount)
+	    {
+	        this.Highlight(fieldName, fragmentLength, fragmentCount);
+	        return this;
+	    }
+
+	    IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
+	    {
+	        this.SetHighlighterTags(preTag, postTag);
+	        return this;
+	    }
+
+	    IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string[] preTags, string[] postTags)
+	    {
+	        this.SetHighlighterTags(preTags, postTags);
+	        return this;
+	    }
+
+	    public void SetHighlighterTags(string preTag, string postTag)
+	    {
+	        this.SetHighlighterTags(new[] {preTag}, new[] {postTag});
+	    }
+
+	    /// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name = "fieldName">Name of the field.</param>
@@ -637,6 +688,18 @@ namespace Raven.Client.Document
 			orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
 			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
 		}
+
+        public void Highlight(string fieldName, int fragmentLength, int fragmentCount)
+        {
+            highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount));
+        }
+
+	    public void SetHighlighterTags(string[] preTags, string[] postTags)
+	    {
+	        highlighterPreTags = preTags;
+	        highlighterPostTags = postTags;
+	    }
+
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -1466,40 +1529,46 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if(isSpatialQuery)
 			{
-				return new SpatialIndexQuery
-				{
-					GroupBy = groupByFields,
-					AggregationOperation = aggregationOp,
-					Query = query,
-					PageSize = pageSize ?? 128,
-					Start = start,
-					Cutoff = cutoff,
-					CutoffEtag = cutoffEtag,
-					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-					FieldsToFetch = fieldsToFetch,
-					SpatialFieldName = spatialFieldName,
-					QueryShape = queryShape,
-					SpatialRelation =  spatialRelation,
-					DistanceErrorPercentage = distanceErrorPct,
-					DefaultField = defaultField,
-					DefaultOperator = defaultOperator
-				};
+			    return new SpatialIndexQuery
+			    {
+			        GroupBy = groupByFields,
+			        AggregationOperation = aggregationOp,
+			        Query = query,
+			        PageSize = pageSize ?? 128,
+			        Start = start,
+			        Cutoff = cutoff,
+			        CutoffEtag = cutoffEtag,
+			        SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+			        FieldsToFetch = fieldsToFetch,
+			        SpatialFieldName = spatialFieldName,
+			        QueryShape = queryShape,
+			        SpatialRelation = spatialRelation,
+			        DistanceErrorPercentage = distanceErrorPct,
+			        DefaultField = defaultField,
+			        DefaultOperator = defaultOperator,
+			        HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
+                    HighlighterPreTags = highlighterPreTags.ToArray(),
+                    HighlighterPostTags = highlighterPostTags.ToArray()
+			    };
 			}
 
-			return new IndexQuery
-			{
-				GroupBy = groupByFields,
-				AggregationOperation = aggregationOp,
-				Query = query,
-				PageSize = pageSize ?? 128,
-				Start = start,
-				Cutoff = cutoff,
-				CutoffEtag = cutoffEtag,
-				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-				FieldsToFetch = fieldsToFetch,
-				DefaultField = defaultField,
-				DefaultOperator = defaultOperator
-			};
+		    return new IndexQuery
+		    {
+		        GroupBy = groupByFields,
+		        AggregationOperation = aggregationOp,
+		        Query = query,
+		        PageSize = pageSize ?? 128,
+		        Start = start,
+		        Cutoff = cutoff,
+		        CutoffEtag = cutoffEtag,
+		        SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+		        FieldsToFetch = fieldsToFetch,
+		        DefaultField = defaultField,
+		        DefaultOperator = defaultOperator,
+		        HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
+		        HighlighterPreTags = highlighterPreTags.ToArray(),
+		        HighlighterPostTags = highlighterPostTags.ToArray()
+		    };
 		}
 
 		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)", 

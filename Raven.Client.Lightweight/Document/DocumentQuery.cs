@@ -99,7 +99,10 @@ namespace Raven.Client.Document
 				queryShape = queryShape,
 				spatialRelation = spatialRelation,
 				distanceErrorPct = distanceErrorPct,
-				rootTypes = {typeof(T)}
+				rootTypes = {typeof(T)},
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -743,7 +746,25 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		/// <summary>
+	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(string fieldName, int fragmentLength, int fragmentCount)
+	    {
+	        Highlight(fieldName, fragmentLength, fragmentCount);
+	        return this;
+	    }
+
+	    public IDocumentQuery<T> Highlight<TValue>(
+	        Expression<Func<T, TValue>> propertySelector, int fragmentLength, int fragmentCount)
+	    {
+	        this.Highlight(GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount);
+	        return this;
+	    }
+
+	    void IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
+	    {
+	        this.SetHighlighterTags(new[]{preTag},new[]{postTag});
+	    }
+
+	    /// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>

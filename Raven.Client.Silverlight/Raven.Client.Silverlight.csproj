@@ -1014,6 +1014,9 @@
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\SearchOptions.cs">
       <Link>Imports\PublicExtensions\SearchOptions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\RavenQueryHighlightings.cs">
+      <Link>Imports\RavenQueryHighlightings.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
       <Link>Imports\RavenQueryStatistics.cs</Link>
     </Compile>

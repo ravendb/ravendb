@@ -6,7 +6,7 @@ namespace Raven.Abstractions.Data
     /// <summary>
     ///     Represent a field highlight options
     /// </summary>
-    public class HighlightedField
+    public sealed class HighlightedField
     {
         private static readonly Regex FieldOptionMatch =
             new Regex(@"^(?<Field>\w+):(?<FragmentLength>\d+),(?<FragmentCount>\d+)$",
@@ -17,20 +17,27 @@ namespace Raven.Abstractions.Data
 #endif
                 );
 
+        public HighlightedField(string field, int fragmentLength, int fragmentCount)
+        {
+            Field = field;
+            FragmentLength = fragmentLength;
+            FragmentCount = fragmentCount;
+        }
+
         /// <summary>
         ///     Gets or sets the field.
         /// </summary>
-        public string Field { get; set; }
+        public string Field { get; private set; }
 
         /// <summary>
         ///     Gets or sets the fragment length.
         /// </summary>
-        public int FragmentLength { get; set; }
+        public int FragmentLength { get; private set; }
 
         /// <summary>
         ///     Gets or sets a value indicating how many highlight fragments should be created for the field
         /// </summary>
-        public int FragmentCount { get; set; }
+        public int FragmentCount { get; private set; }
 
         /// <summary>
         ///     Converts the string representation of a field highlighting options to the <see cref="HighlightedField" /> class.
@@ -73,12 +80,7 @@ namespace Raven.Abstractions.Data
                 out fragmentCount))
                 return false;
 
-            result = new HighlightedField
-            {
-                Field = field,
-                FragmentLength = fragmentLength,
-                FragmentCount = fragmentCount,
-            };
+            result = new HighlightedField(field, fragmentLength, fragmentCount);
 
             return true;
         }
@@ -91,6 +93,11 @@ namespace Raven.Abstractions.Data
                 this.Field,
                 this.FragmentLength,
                 this.FragmentCount);
+        }
+
+        public HighlightedField Clone()
+        {
+            return new HighlightedField(Field, FragmentLength, FragmentCount);
         }
     }
 }

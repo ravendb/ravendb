@@ -69,7 +69,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Gets or sets highlighter results 
         /// </summary>
-        public Dictionary<string, Dictionary<string, string[]>> HighlightFragments { get; set; }
+        public Dictionary<string, Dictionary<string, string[]>> Highlightings { get; set; }
 
 		/// <summary>
 		/// Gets or sets a value indicating whether any of the documents returned by this query
@@ -89,7 +89,7 @@ namespace Raven.Abstractions.Data
 		{
 			Results = new List<RavenJObject>();
 			Includes = new List<RavenJObject>();
-		    HighlightFragments = new Dictionary<string, Dictionary<string, string[]>>();
+		    Highlightings = new Dictionary<string, Dictionary<string, string[]>>();
 		}
 
 		/// <summary>
@@ -122,7 +122,7 @@ namespace Raven.Abstractions.Data
 		        IsStale = this.IsStale,
 		        SkippedResults = this.SkippedResults,
 		        TotalResults = this.TotalResults,
-		        HighlightFragments = this.HighlightFragments.ToDictionary(
+		        Highlightings = this.Highlightings.ToDictionary(
 		            pair => pair.Key,
 		            x => new Dictionary<string, string[]>(x.Value))
 		    };

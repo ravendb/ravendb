@@ -252,6 +252,32 @@ namespace Raven.Client.Document
 		/// <param name = "fields">The fields.</param>
 		void OrderBy(params string[] fields);
 
+        /// <summary>
+        ///   Adds matches highlighting for the specified field.
+        /// </summary>
+        /// <remarks>
+        ///   The specified field should be analysed and stored for highlighter to work.
+        ///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+        /// </remarks>
+        /// <param name="fieldName">The field name to highlight.</param>
+        /// <param name="fragmentLength">The fragment length.</param>
+        /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+	    void Highlight(string fieldName, int fragmentLength, int fragmentCount);
+
+        /// <summary>
+        ///   Sets the tags to highlight matches with.
+        /// </summary>
+        /// <param name="preTag">Prefix tag.</param>
+        /// <param name="postTag">Postfix tag.</param>
+	    void SetHighlighterTags(string preTag, string postTag);
+
+        /// <summary>
+        ///   Sets the tags to highlight matches with.
+        /// </summary>
+        /// <param name="preTags">Prefix tags.</param>
+        /// <param name="postTags">Postfix tags.</param>
+	    void SetHighlighterTags(string[] preTags, string[] postTags);
+
 		/// <summary>
 		///   Instructs the query to wait for non stale results as of now.
 		/// </summary>

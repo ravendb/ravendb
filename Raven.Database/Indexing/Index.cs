@@ -827,7 +827,7 @@ namespace Raven.Database.Indexing
 								}
 
 							    if (highlighter != null)
-							        indexQueryResult.HighlightFragments =
+							        indexQueryResult.Highligtings =
 							            this.indexQuery
 							                .HighlightedFields
 							                .ToDictionary(

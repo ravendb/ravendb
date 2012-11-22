@@ -516,7 +516,25 @@ namespace Raven.Client.Document
 			return this;
 		}		
 
-		/// <summary>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight<TValue>(string fieldName, int fragmentLength, int fragmentCount)
+	    {
+	        Highlight(fieldName, fragmentLength, fragmentCount);
+	        return this;
+	    }
+
+	    public IAsyncDocumentQuery<T> Highlight<TValue>(
+	        Expression<Func<T, TValue>> propertySelector, int fragmentLength, int fragmentCount)
+	    {
+	        this.Highlight(GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount);
+	        return this;
+	    }
+
+	    void IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
+	    {
+	        this.SetHighlighterTags(new[]{preTag}, new[]{postTag});
+	    }
+
+	    /// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>
@@ -650,7 +668,10 @@ namespace Raven.Client.Document
 											negate = negate,
 											queryOperation = queryOperation,
 											queryStats = queryStats,
-											rootTypes = {typeof(T)}
+											rootTypes = {typeof(T)},
+                                            highlightedFields = new List<HighlightedField>(highlightedFields),
+                                            highlighterPreTags = highlighterPreTags,
+                                            highlighterPostTags = highlighterPostTags
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;

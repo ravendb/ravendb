@@ -103,17 +103,20 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public static QueryResult ToQueryResult(RavenJObject json, Guid etag)
 		{
-			var result = new QueryResult
-			             	{
-			             		IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-			             		IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-			             		IndexEtag = etag,
-			             		Results = ((RavenJArray) json["Results"]).Cast<RavenJObject>().ToList(),
-			             		Includes = ((RavenJArray) json["Includes"]).Cast<RavenJObject>().ToList(),
-			             		TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-			             		IndexName = json.Value<string>("IndexName"),
-			             		SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-			             	};
+		    var result = new QueryResult
+		    {
+		        IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+		        IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+		        IndexEtag = etag,
+		        Results = ((RavenJArray) json["Results"]).Cast<RavenJObject>().ToList(),
+		        Includes = ((RavenJArray) json["Includes"]).Cast<RavenJObject>().ToList(),
+		        TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+		        IndexName = json.Value<string>("IndexName"),
+		        SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+		        Highlightings =
+		            ((RavenJObject) json["Highlightings"])
+		                .JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>()
+		    };
 
 
 			if (json.ContainsKey("NonAuthoritativeInformation"))

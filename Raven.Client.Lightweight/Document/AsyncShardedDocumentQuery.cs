@@ -107,6 +107,9 @@ namespace Raven.Client.Document
 				aggregationOp = aggregationOp,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;

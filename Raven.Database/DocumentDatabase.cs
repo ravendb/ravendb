@@ -979,7 +979,7 @@ namespace Raven.Database
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
-		    var fragments = new Dictionary<string, Dictionary<string, string[]>>();
+		    var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
 			var stale = false;
 			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
@@ -1016,7 +1016,7 @@ namespace Raven.Database
 				        select new
 				        {
 				            Document = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch),
-				            Fragments = queryResult.HighlightFragments
+				            Fragments = queryResult.Highligtings
 				        }
 				        into docWithFragments
 				        where docWithFragments.Document != null
@@ -1051,7 +1051,7 @@ namespace Raven.Database
 					        resultList.Add(docWithFragments.Document.ToJson());
 
 					        if (docWithFragments.Fragments != null)
-					            fragments.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
+					            highlightings.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
 					    }
 					    results = resultList;
 					}
@@ -1076,7 +1076,7 @@ namespace Raven.Database
 				ResultEtag = resultEtag,
 				IdsToInclude = idsToLoad,
 				LastQueryTime = SystemTime.UtcNow,
-                HighlightFragments = fragments
+                Highlightings = highlightings
 			};
 		}
 
