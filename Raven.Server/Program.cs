@@ -83,13 +83,13 @@ namespace Raven.Server
 
 			if(args.Contains("--msgbox", StringComparer.InvariantCultureIgnoreCase) || 
 				args.Contains("/msgbox", StringComparer.InvariantCultureIgnoreCase))
-			{
+		{
 				MessageBox.Show(msg, "RavenDB Startup failure");
 			}
 			Console.WriteLine("Press any key to continue...");
 			try
 			{
-				Console.ReadKey(true);
+			Console.ReadKey(true);
 			}
 			catch
 			{
@@ -383,7 +383,7 @@ Configuration options:
 						TryClearingConsole();
 						done = true;
 					}
-				},
+					},
 				{
 					"gc", () =>
 					{
