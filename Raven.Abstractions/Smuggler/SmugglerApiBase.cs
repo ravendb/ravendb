@@ -38,7 +38,7 @@ namespace Raven.Abstractions.Smuggler
 		protected double maximumBatchChangePercentage = 0.3;
 
 		protected int minimumBatchSize = 10;
-		protected int maximumBatchSize = 16 * 1000;
+		protected int maximumBatchSize = 1024*4;
 
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
