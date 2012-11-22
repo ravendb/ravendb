@@ -48,8 +48,6 @@ namespace Raven.Abstractions.Data
 		public const string ActiveBundles = "Raven/ActiveBundles";
 		public const string RavenAlerts = "Raven/Alerts";
 
-		public const string Etag = "__etag";
-
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
 		public const string RavenLogsPath = "Raven/Esent/LogsPath";

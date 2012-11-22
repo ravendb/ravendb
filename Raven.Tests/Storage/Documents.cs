@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -102,7 +103,8 @@ namespace Raven.Tests.Storage
 			{
 				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 				RavenJObject metadata;
-				tx.Batch(mutator => mutator.Documents.DeleteDocument("Ayende", null, out metadata));
+				Guid? deletedETag;
+				tx.Batch(mutator => mutator.Documents.DeleteDocument("Ayende", null, out metadata, out deletedETag));
 			}
 
 			using (var tx = NewTransactionalStorage())
@@ -120,7 +122,8 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 				tx.Batch(accessor => Assert.Equal(1, accessor.Documents.GetDocumentsCount()));
 				RavenJObject metadata;
-				tx.Batch(mutator => mutator.Documents.DeleteDocument("Ayende", null, out metadata));
+				Guid? tag;
+				tx.Batch(mutator => mutator.Documents.DeleteDocument("Ayende", null, out metadata, out tag));
 
 				tx.Batch(accessor => Assert.Equal(0, accessor.Documents.GetDocumentsCount()));
 
