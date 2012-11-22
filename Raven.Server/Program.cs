@@ -13,6 +13,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
+using System.Text;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
@@ -20,6 +21,7 @@ using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Database;
 using Raven.Database.Config;
@@ -37,28 +39,26 @@ namespace Raven.Server
 			{
 				try
 				{
+					LogManager.EnsureValidLogger();
 					InteractiveRun(args);
 				}
 				catch (ReflectionTypeLoadException e)
 				{
-					EmitWarningInRed();
-
-					Console.Error.WriteLine(e);
+					var sb = new StringBuilder();
+					sb.AppendLine(e.ToString());
 					foreach (var loaderException in e.LoaderExceptions)
 					{
-						Console.Error.WriteLine("- - - -");
-						Console.Error.WriteLine(loaderException);
+						sb.AppendLine("- - - -").AppendLine();
+						sb.AppendLine(loaderException.ToString());
 					}
 
-					WaitForUserInputAndExitWithError();
+					WaitForUserInputAndExitWithError(sb.ToString(), args);
 				}
 				catch (Exception e)
 				{
 					EmitWarningInRed();
 
-					Console.Error.WriteLine(e);
-
-					WaitForUserInputAndExitWithError();
+					WaitForUserInputAndExitWithError(e.ToString(), args);
 				}
 			}
 			else
@@ -75,12 +75,21 @@ namespace Raven.Server
 			return Environment.UserInteractive || (args != null && args.Length > 0);
 		}
 
-		private static void WaitForUserInputAndExitWithError()
+		private static void WaitForUserInputAndExitWithError(string msg, string[] args)
 		{
+			EmitWarningInRed();
+
+			Console.Error.WriteLine(msg);
+
+			if(args.Contains("--msgbox", StringComparer.InvariantCultureIgnoreCase) || 
+				args.Contains("/msgbox", StringComparer.InvariantCultureIgnoreCase))
+		{
+				MessageBox.Show(msg, "RavenDB Startup failure");
+			}
 			Console.WriteLine("Press any key to continue...");
 			try
 			{
-				Console.ReadKey(true);
+			Console.ReadKey(true);
 			}
 			catch
 			{
@@ -101,6 +110,7 @@ namespace Raven.Server
 		{
 			string backupLocation = null;
 			string restoreLocation = null;
+			bool defrag = false;
 			Action actionToTake = null;
 			bool launchBrowser = false;
 			var ravenConfiguration = new RavenConfiguration();
@@ -144,7 +154,12 @@ namespace Raven.Server
 						{
 							throw new OptionException("when using restore, source and destination must be specified", "restore");
 						}
-						RunRestoreOperation(backupLocation, restoreLocation);
+						RunRestoreOperation(backupLocation, restoreLocation, defrag);
+					}},
+				{"defrag", 
+					"Applicable only during restore, execute defrag after the restore is completed", key =>
+					{
+						defrag = true;
 					}},
 				{"dest=|destination=", "The {0:path} of the new new database", value => restoreLocation = value},
 				{"src=|source=", "The {0:path} of the backup", value => backupLocation = value},
@@ -241,7 +256,7 @@ Configuration options:
 			}
 		}
 
-		private static void RunRestoreOperation(string backupLocation, string databaseLocation)
+		private static void RunRestoreOperation(string backupLocation, string databaseLocation, bool defrag)
 		{
 			try
 			{
@@ -256,7 +271,7 @@ Configuration options:
 					ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 
 				}
-				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, s => {});
+				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, Console.WriteLine, defrag);
 			}
 			catch (Exception e)
 			{
@@ -368,7 +383,7 @@ Configuration options:
 						TryClearingConsole();
 						done = true;
 					}
-				},
+					},
 				{
 					"gc", () =>
 					{
@@ -430,7 +445,7 @@ Document Database for the .Net Platform
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
-Command line ptions:",
+Command line options:",
 				SystemTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);

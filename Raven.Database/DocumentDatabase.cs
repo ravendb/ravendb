@@ -148,13 +148,6 @@ namespace Raven.Database
 			{
 				backgroundTaskScheduler = configuration.CustomTaskScheduler;
 			}
-			else if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
-			{
-				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
-					// we need a minimum of four task threads - one for indexing dispatch, one for reducing dispatch, one for tasks, one for indexing/reducing ops
-					Math.Max(4, configuration.MaxNumberOfParallelIndexTasks + 2),
-					configuration.BackgroundTasksPriority);
-			}
 			else
 			{
 				backgroundTaskScheduler = TaskScheduler.Current;
@@ -1609,11 +1602,11 @@ namespace Raven.Database
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup, databaseDocument);
 		}
 
-		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag = true)
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
-				transactionalStorage.Restore(backupLocation, databaseLocation, output);
+				transactionalStorage.Restore(backupLocation, databaseLocation, output, defrag);
 			}
 		}
 

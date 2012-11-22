@@ -54,8 +54,7 @@ namespace Raven.Database.Config
 			
 
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
-			{"Raven/BackgroundTasksPriority", "string","Lowest,BelowNormal,Normal,AboveNormal,Highest", "The thread priority for indexing and other background tasks, (ignored if Raven/TaskScheduler is specified) default: Normal."},
-
+			
 			// Temp Indexing
 			{"Raven/TempIndexPromotionMinimumQueryCount", "int", "1 or higher","The number of times a temporary index has to be queries during the promotion threshold to become a permanent auto index. Default: 100."},
 			{"Raven/TempIndexPromotionThreshold", "int", null, "The promotion threshold for promoting a temporary dynamic index into a permanent auto index. The value is in second and refer to the length of time that the index have to get to the minimum query count value. Default: 10 minutes."},
@@ -70,7 +69,7 @@ namespace Raven.Database.Config
 			{"Raven/MemoryCacheExpiration", "int", null, "The expiration value for documents in the internal document cache. Value is in seconds. Default: 5 minutes"},
 			// Esent
 			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default storage engine. Default: 25% of RAM on 64 bits, 256 MB on 32 bits."},
-			{"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 128."},
+			{"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 512."},
 			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in megabytes. Default: 64."},
 			{"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 16."},
 			{"Raven/Esent/MaxCursors", "int", null, "The maximum number of cursors allowed concurrently. Default: 2048."},

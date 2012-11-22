@@ -13,6 +13,7 @@ namespace Raven.Database.Server.Security
 				"/raven/studio.html",
 				"/silverlight/Raven.Studio.xap",
 				"/favicon.ico",
+				"/databases",
 				"/clientaccesspolicy.xml",
 				"/build/version",
 				"/OAuth/AccessToken",

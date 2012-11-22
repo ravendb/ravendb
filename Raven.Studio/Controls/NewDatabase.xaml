@@ -131,18 +131,18 @@
                            MouseLeftButtonDown="ToggleBundles"
 						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Encryption}"/>
 
-				<CheckBox x:Name="Expiration"
+                <CheckBox x:Name="DocumentExpiration"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="2"
                           Margin="5"
-						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Expiration}"/>
+                          IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=DocumentExpiration}"/>
 				<TextBlock Grid.Column="1"
                            Grid.Row="2"
                            Text="Expiration Bundle"
                            Margin="5"
                            MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Expiration}"/>
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=DocumentExpiration}"/>
 
 				<CheckBox x:Name="Quotas"
                           Checked="Checked"

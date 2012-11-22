@@ -18,14 +18,16 @@ namespace Raven.Storage.Esent.Backup
 	public class RestoreOperation
 	{
 		private readonly Action<string> output;
+		private readonly bool defrag;
 		private readonly string backupLocation;
 		private readonly string databaseLocation;
 
 		private bool defragmentationCompleted;
 
-		public RestoreOperation(string backupLocation, string databaseLocation, Action<string> output)
+		public RestoreOperation(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			this.output = output;
+			this.defrag = defrag;
 			this.backupLocation = backupLocation.ToFullPath();
 			this.databaseLocation = databaseLocation.ToFullPath();
 		}
@@ -60,13 +62,13 @@ namespace Raven.Storage.Esent.Backup
 
 			var dataFilePath = Path.Combine(databaseLocation, "Data");
 
+			bool hideTerminationException = false;
 			JET_INSTANCE instance;
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
 				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
-
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
 						Path.Combine(
@@ -77,11 +79,27 @@ namespace Raven.Storage.Esent.Backup
 					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
 				}
 
-				DefragmentDatabase(instance, dataFilePath);
+				if (defrag)
+				{
+					DefragmentDatabase(instance, dataFilePath);
+				}
+			}
+			catch(Exception)
+			{
+				hideTerminationException = true;
+				throw;
 			}
 			finally
 			{
-				Api.JetTerm(instance);
+				try
+				{
+					Api.JetTerm(instance);
+				}
+				catch (Exception)
+				{
+					if (hideTerminationException == false)
+						throw;
+				}
 			}
 		}
 

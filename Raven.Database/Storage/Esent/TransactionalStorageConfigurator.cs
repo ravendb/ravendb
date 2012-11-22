@@ -44,7 +44,7 @@ namespace Raven.Storage.Esent
 				TempDirectory = Path.Combine(logsPath, "temp"),
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
-				MaxVerPages = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 128), 1024 * 1024),
+				MaxVerPages = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 512), 1024 * 1024),
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 8192), 1024),

@@ -229,9 +229,21 @@ namespace Raven.Client.Linq
 			var query = processor.GetLuceneQueryFor(expression);
 			if (afterQueryExecuted != null)
 				query.AfterQueryExecuted(afterQueryExecuted);
+
+			var renamedFields = FieldsToFetch.Select(field =>
+			{
+				string value;
+				if (FieldsToRename.TryGetValue(field, out value) && value != null)
+					return value;
+				return field;
+			}).ToArray();
+
+			if (renamedFields.Length > 0)
+				query.AfterQueryExecuted(processor.RenameResults);
 		
 			if (FieldsToFetch.Count > 0)
-				query = query.SelectFields<S>(FieldsToFetch.ToArray());
+				query = query.SelectFields<S>(FieldsToFetch.ToArray(), renamedFields);
+
 			return query.Lazily(onEval);
 		}
 

@@ -45,7 +45,7 @@ Additional fields	: Title", exception.Message);
 				                                                                                               			"from user in docs.Users select new { user.Title }",
 				                                                                                               			"from post in docs.Posts select new { post.Title }"
 				                                                                                               		},
-																													Reduce = "from result in results group result by result.Title into g select new { Title = g.Key, Count = g.Count() }"
+																													Reduce = "from result in results group result by result.Title into g select new { Title = g.Key, Count = 1 }"
 				                                                                                               }));
 
 				Assert.Equal(

@@ -16,35 +16,36 @@ using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Document;
 using Raven.Tests.Issues;
 using System.Linq;
+using Raven.Tests.Util;
 
 namespace Raven.Tryouts
 {
 	internal class Program
 	{
+		[STAThread]
 		private static void Main()
 		{
-			var x = RavenJObject.Parse(@"{
-  '_': null,
-  'SaleId': 'sales/1',
-  'Locations': [
-    {
-      'Lat': 37.78,
-      'Lng': 144.96
-    },
-    {
-      'Lat': 37.79,
-      'Lng': 144.96
-    }
-  ],
-  'TotalSold': 0,
-  '__document_id': 'sales/1'
-}");
-			var index = new Index_Sales_2fByLocation();
-			foreach (var VARIABLE in index.ReduceDefinition(new[]{new DynamicJsonObject(x)}))
 			{
-				Console.WriteLine(VARIABLE);
+				var x = new DocumentStoreServerTests_DifferentProcess();
+				x.Can_promote_transactions();
+			}
+
+			using(var x = new RunExternalProcess())
+			{
+				x.can_use_RavenDB_in_a_remote_process();
+			}
+
+			using (var x = new RunExternalProcess())
+			{
+				x.can_use_RavenDB_in_a_remote_process_for_batch_operations();
+			}
+
+			using (var x = new RunExternalProcess())
+			{
+				x.can_use_RavenDB_in_a_remote_process_to_post_batch_operations();
 			}
 		}
 	}

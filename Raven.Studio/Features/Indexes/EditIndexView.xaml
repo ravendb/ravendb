@@ -336,7 +336,7 @@
 
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition Width="100" />
                         <ColumnDefinition />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -367,11 +367,39 @@
                                 Orientation="Horizontal">
                     </StackPanel>
 
-                    <TextBlock Text="Maps"
-                               Grid.Row="2"
-                               Margin="5,10,5,0"
-                               Style="{StaticResource Style_TextBlock_PagePartHeader}"
-                               VerticalAlignment="Top" />
+					<StackPanel Grid.Row="2" Margin="5,10,5,0" Orientation="Horizontal">
+						 <TextBlock Text="Maps" 
+									Margin="0,0,10,0"
+									Style="{StaticResource Style_TextBlock_PagePartHeader}"
+									VerticalAlignment="Top" />
+						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+							<i:Interaction.Behaviors>
+								<Behaviors:ShowPopupWhilstMouseOver>
+									<Behaviors:ShowPopupWhilstMouseOver.Popup>
+										<Popup>
+											<ContentControl Style="{StaticResource Style_InfoToolTip}">
+												<RichTextBlock MaxWidth="370" Margin="5">
+													<Paragraph>Maps project the fields that we want to search on (to the index) or to group by (when using map/reduce).</Paragraph>
+													<Paragraph>
+														<LineBreak/>
+														Example:
+														<Span FontFamily="Consolas">
+															<LineBreak/>
+															<Span Foreground="Blue">from</Span> post <Span Foreground="Blue">in</Span> posts
+															<LineBreak/>
+															<Span Foreground="Blue">select new</Span> { Title = post.Title }
+														</Span>
+														<LineBreak/>
+													</Paragraph>
+												</RichTextBlock>
+											</ContentControl>
+										</Popup>
+									</Behaviors:ShowPopupWhilstMouseOver.Popup>
+								</Behaviors:ShowPopupWhilstMouseOver>
+							</i:Interaction.Behaviors>
+						</Image>
+					</StackPanel>
+                   
                     <ItemsControl ItemsSource="{Binding Maps}"
                                   Grid.Row="2"
                                   Grid.Column="1"
@@ -420,12 +448,53 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <TextBlock Text="Reduce"
-                               Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}"
-                               Grid.Row="3"
-                               Margin="5,10,5,0"
-                               Style="{StaticResource Style_TextBlock_PagePartHeader}"
-                               VerticalAlignment="Top" />
+					<StackPanel Grid.Row="3" 
+								Margin="5,10,5,0" 
+								Orientation="Horizontal" 
+								Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}">
+						<TextBlock Text="Reduce"
+								   Margin="0,0,10,0"
+								   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+								   VerticalAlignment="Top" />
+
+						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+							<i:Interaction.Behaviors>
+								<Behaviors:ShowPopupWhilstMouseOver>
+									<Behaviors:ShowPopupWhilstMouseOver.Popup>
+										<Popup>
+											<ContentControl Style="{StaticResource Style_InfoToolTip}">
+												<RichTextBlock MaxWidth="370" Margin="5">
+													<Paragraph>Reduce function allows to aggregate results from multiple documents (group by).</Paragraph>
+													<Paragraph>
+														<LineBreak/>
+														Example:
+														<Span FontFamily="Consolas">
+															<LineBreak/>
+															<Span Foreground="Blue">from</Span> result
+															<Span Foreground="Blue">in</Span> results
+															<LineBreak/>
+															<Span Foreground="Blue">group</Span> result
+															<Span Foreground="Blue">by new</Span> {result.Date}
+															<LineBreak/>
+															<Span Foreground="Blue">into</Span> g
+															<LineBreak/>
+															<Span Foreground="Blue">select new</Span> {
+															<LineBreak/>
+															<Span xml:space="preserve">    g.Key.Date, Amount = g.Sum(x => x.Amount)</Span>
+															<LineBreak/>
+															}
+														</Span>
+														<LineBreak/>
+													</Paragraph>
+												</RichTextBlock>
+											</ContentControl>
+										</Popup>
+									</Behaviors:ShowPopupWhilstMouseOver.Popup>
+								</Behaviors:ShowPopupWhilstMouseOver>
+							</i:Interaction.Behaviors>
+						</Image>
+					</StackPanel>
+                    
                     <Grid Grid.Row="3"
                           Grid.Column="1"
                           Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}"
@@ -459,12 +528,46 @@
                                       Background="Transparent"
                                       HorizontalAlignment="Stretch" />
                     
-                    <TextBlock Text="Transform"
-                               Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}"
-                               Grid.Row="5"
-                               Margin="5,10,5,0"
-                               Style="{StaticResource Style_TextBlock_PagePartHeader}"
-                               VerticalAlignment="Top" />
+					<StackPanel Grid.Row="5" 
+								Margin="5,10,5,0" 
+								Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}" 
+								Orientation="Horizontal">
+						 <TextBlock Text="Transform"
+									Margin="0,0,10,0"
+									Style="{StaticResource Style_TextBlock_PagePartHeader}"
+									VerticalAlignment="Top" />
+
+						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+							<i:Interaction.Behaviors>
+								<Behaviors:ShowPopupWhilstMouseOver>
+									<Behaviors:ShowPopupWhilstMouseOver.Popup>
+										<Popup>
+											<ContentControl Style="{StaticResource Style_InfoToolTip}">
+												<RichTextBlock MaxWidth="370" Margin="5">
+													<Paragraph>Transform function happens during the query, and allow to transform the results on the server side.</Paragraph>
+													<Paragraph>
+														<LineBreak/>
+														Example:
+														<Span FontFamily="Consolas">
+															<LineBreak/>
+															<Span Foreground="Blue">from</Span> order
+															<Span Foreground="Blue">in</Span> orders
+															<LineBreak/>
+															<Span Foreground="Blue">let</Span> customer = database.Load(order.CustomerId)
+															<LineBreak/>
+															<Span Foreground="Blue">select new</Span> {order.Date, order.Amount, customer.Name}
+														</Span>
+														<LineBreak/>
+													</Paragraph>
+												</RichTextBlock>
+											</ContentControl>
+										</Popup>
+									</Behaviors:ShowPopupWhilstMouseOver.Popup>
+								</Behaviors:ShowPopupWhilstMouseOver>
+							</i:Interaction.Behaviors>
+						</Image>
+					</StackPanel>
+                   
                     <Grid Grid.Row="5"
                           Grid.Column="1"
                           Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}"

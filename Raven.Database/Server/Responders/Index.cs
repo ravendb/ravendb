@@ -23,6 +23,12 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
+	using System;
+	using System.Linq.Expressions;
+
+	using Raven.Database.Indexing;
+	using Raven.Database.Linq;
+
 	public class Index : AbstractRequestResponder
 	{
 		public override string UrlPattern
@@ -72,6 +78,7 @@ namespace Raven.Database.Server.Responders
 				context.Write("Expected json document with 'Map' or 'Maps' property");
 				return;
 			}
+
 			context.SetStatusToCreated("/indexes/" + Uri.EscapeUriString(index));
 			context.WriteJson(new { Index = Database.PutIndex(index, data) });
 		}

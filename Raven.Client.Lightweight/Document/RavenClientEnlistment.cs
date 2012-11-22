@@ -7,6 +7,7 @@
 using System;
 using System.IO;
 using System.IO.IsolatedStorage;
+using System.Threading;
 using System.Transactions;
 using Raven.Abstractions.Logging;
 
@@ -81,10 +82,7 @@ namespace Raven.Client.Document
 			{
 				session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
-				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
-				{
-					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
-			}
+				DeleteFile();
 			}
 			catch (Exception e)
 			{
@@ -106,16 +104,42 @@ namespace Raven.Client.Document
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
-				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
-				{
-					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
-				}
+				DeleteFile();
 			}
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not rollback distributed transaction", e);
 			}
 			enlistment.Done(); // will happen anyway, tx will be rolled back after timeout
+		}
+
+		private void DeleteFile()
+		{
+			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+			{
+				// docs says to retry: http://msdn.microsoft.com/en-us/library/system.io.isolatedstorage.isolatedstoragefile.deletefile%28v=vs.95%29.aspx
+				int retries = 10;
+				while(true)
+				{
+					if (machineStoreForApplication.FileExists(TransactionRecoveryInformationFileName) == false)
+						break;
+					try
+					{
+						machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
+						break;
+					}
+					catch (IsolatedStorageException)
+					{
+						retries -= 1;
+						if(retries > 0 )
+						{
+							Thread.Sleep(100);
+							continue;
+						}
+						throw;
+					}
+				}
+			}
 		}
 
 		/// <summary>
@@ -129,10 +153,7 @@ namespace Raven.Client.Document
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
-				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
-				{
-					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
-				}
+				DeleteFile();
 			}
 			catch (Exception e)
 			{
@@ -159,10 +180,7 @@ namespace Raven.Client.Document
 			{
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
-				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
-				{
-					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
-				}
+				DeleteFile();
 			}
 			catch (Exception e)
 			{

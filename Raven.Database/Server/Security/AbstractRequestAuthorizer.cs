@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
 
@@ -40,6 +41,8 @@ namespace Raven.Database.Server.Security
 			return (httpMethod == "GET" || httpMethod == "HEAD") ||
 				   httpMethod == "POST" && (requestPath == "/multi_get/" || requestPath == "/multi_get");
 		}
+
+		public abstract List<string> GetApprovedDatabases(IHttpContext context);
 
 		public abstract void Dispose();
 	}
