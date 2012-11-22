@@ -23,15 +23,13 @@ namespace Raven.Tests.Bugs
 								  from tag in doc.Tags
 								  select new
 								  {
-									  tag.Name,
-									  Count = 1
+									  tag.Name
 								  },
 					Reduce = results => from result in results
 										group result by result.Name into g
 										select new
 										{
-											Name = g.Key,
-											Count = g.Count()
+											Name = g.Key
 										}
 
 				}.ToIndexDefinition(store.Conventions);
@@ -63,7 +61,6 @@ namespace Raven.Tests.Bugs
 		public class BlogTagItem
 		{
 			public string Name { get; set; }
-			public int Count { get; set; }
 		}
 
 		public class Blog

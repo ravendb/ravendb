@@ -37,7 +37,6 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
-			BackgroundTasksPriority = ThreadPriority.Normal;
 			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 64 * 1024;
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
@@ -73,11 +72,6 @@ namespace Raven.Database.Config
 			var maxPageSizeStr = Settings["Raven/MaxPageSize"];
 			MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
 			MaxPageSize = Math.Max(MaxPageSize, 10);
-
-			var backgroundTasksPriority = Settings["Raven/BackgroundTasksPriority"];
-			BackgroundTasksPriority = backgroundTasksPriority == null
-								? ThreadPriority.Normal
-								: (ThreadPriority)Enum.Parse(typeof(ThreadPriority), backgroundTasksPriority);
 
 			var cacheMemoryLimitMegabytes = Settings["Raven/MemoryCacheLimitMegabytes"];
 			MemoryCacheLimitMegabytes = cacheMemoryLimitMegabytes == null
@@ -364,13 +358,6 @@ namespace Raven.Database.Config
 		/// Checking the index may take some time on large databases
 		/// </summary>
 		public bool ResetIndexOnUncleanShutdown { get; set; }
-
-		/// <summary>
-		/// What thread priority to give the various background tasks RavenDB uses (mostly for indexing)
-		/// Allowed values: Lowest, BelowNormal, Normal, AboveNormal, Highest
-		/// Default: Normal
-		/// </summary>
-		public ThreadPriority BackgroundTasksPriority { get; set; }
 
 		/// <summary>
 		/// The maximum allowed page size for queries. 

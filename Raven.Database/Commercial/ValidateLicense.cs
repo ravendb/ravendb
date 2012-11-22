@@ -37,7 +37,7 @@ namespace Raven.Database.Commercial
 			{"quotas","false"},
 
 			{"authorization","true"},
-			{"expiration","true"},
+			{"documentExpiration","true"},
 			{"replication","true"},
 			{"versioning","true"},
 		};

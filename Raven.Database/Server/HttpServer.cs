@@ -146,6 +146,11 @@ namespace Raven.Database.Server
 			}
 		}
 
+		public AbstractRequestAuthorizer RequestAuthorizer
+		{
+			get { return requestAuthorizer; }
+		}
+
 		private bool TryCreateDirectory(string path)
 		{
 			try

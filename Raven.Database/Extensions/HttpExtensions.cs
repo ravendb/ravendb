@@ -134,7 +134,7 @@ namespace Raven.Database.Extensions
 			streamWriter.Flush();
 		}
 
-		private static RavenJToken MinimizeToken(RavenJToken obj, int depth = 0)
+		public static RavenJToken MinimizeToken(RavenJToken obj, int depth = 0)
 		{
 			switch (obj.Type)
 			{

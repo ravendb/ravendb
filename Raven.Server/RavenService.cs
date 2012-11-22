@@ -7,15 +7,16 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.ServiceProcess;
+using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Server
 {
 	internal partial class RavenService : ServiceBase
 	{
-		const int SERVICE_ACCEPT_PRESHUTDOWN = 0x100;
-		const int SERVICE_CONTROL_PRESHUTDOWN = 0xf;
+		private const int SERVICE_ACCEPT_PRESHUTDOWN = 0x100;
+		private const int SERVICE_CONTROL_PRESHUTDOWN = 0xf;
 
 		private RavenDbServer server;
 		private Task startTask;
@@ -23,7 +24,7 @@ namespace Raven.Server
 		public RavenService()
 		{
 			InitializeComponent();
-			AcceptPreshutdown();
+			AcceptPreShutdown();
 		}
 
 		protected override void OnStart(string[] args)
@@ -32,44 +33,44 @@ namespace Raven.Server
 			{
 				try
 				{
+					LogManager.EnsureValidLogger();
 					server = new RavenDbServer(new RavenConfiguration());
 				}
 				catch (Exception e)
 				{
 					EventLog.WriteEntry("RavenDB service failed to start because of an error" + Environment.NewLine + e, EventLogEntryType.Error);
-					Stop();
+					Task.Factory.StartNew(Stop);
 				}
 			});
 
-			if(startTask.Wait(TimeSpan.FromSeconds(20)) == false)
+			if (startTask.Wait(TimeSpan.FromSeconds(20)) == false)
 			{
 				EventLog.WriteEntry(
 					"Startup for RavenDB service seems to be taking longer than usual, moving initialization to a background thread",
 					EventLogEntryType.Warning);
 			}
-
 		}
 
 		protected override void OnStop()
 		{
 			var shutdownTask = startTask.ContinueWith(task =>
 			{
-				if(server != null) 
+				if (server != null)
 					server.Dispose();
 				return task;
 			});
-			var keepAliveTask = Task.Factory.StartNew(() => 
+
+			var keepAliveTask = Task.Factory.StartNew(() =>
 			{
-				if(shutdownTask.Wait(9000))
+				if (shutdownTask.Wait(9000))
 					return;
-				do 
+				do
 				{
 					RequestAdditionalTime(10000);
-				} while(!shutdownTask.Wait(9000));
+				} while (!shutdownTask.Wait(9000));
 			});
 
 			Task.WaitAll(shutdownTask, keepAliveTask);
-
 		}
 
 		protected override void OnShutdown()
@@ -89,17 +90,17 @@ namespace Raven.Server
 
 			if (command != SERVICE_CONTROL_PRESHUTDOWN) return;
 
-			this.Stop();
+			Stop();
 		}
 
-		private void AcceptPreshutdown()
+		private void AcceptPreShutdown()
 		{
 			// http://www.sivachandran.in/2012/03/handling-pre-shutdown-notification-in-c.html
-			FieldInfo acceptedCommandsFieldInfo = typeof(ServiceBase).GetField("acceptedCommands", BindingFlags.Instance | BindingFlags.NonPublic);
+			FieldInfo acceptedCommandsFieldInfo = typeof (ServiceBase).GetField("acceptedCommands", BindingFlags.Instance | BindingFlags.NonPublic);
 			if (acceptedCommandsFieldInfo == null)
 				return;
 
-			int value = (int)acceptedCommandsFieldInfo.GetValue(this);
+			var value = (int) acceptedCommandsFieldInfo.GetValue(this);
 			acceptedCommandsFieldInfo.SetValue(this, value | SERVICE_ACCEPT_PRESHUTDOWN);
 		}
 	}

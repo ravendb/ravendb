@@ -55,30 +55,25 @@ namespace Raven.Studio.Commands
             var exporter = new Exporter(stream, collectionSource, columns);
 
             var exportTask = exporter.ExportAsync(cts.Token, progress => progressWindow.Progress = progress)
-                .ContinueOnUIThread(t =>
-                {
-                    // there's a bug in silverlight where if a ChildWindow gets closed too soon after it's opened, it leaves the UI
-                    // disabled; so delay closing the window by a few milliseconds
-                     TaskEx.Delay(TimeSpan.FromMilliseconds(50)).ContinueOnSuccessInTheUIThread(progressWindow.Close);
+                                     .ContinueOnUIThread(t =>
+                                     {
+                                         // there's a bug in silverlight where if a ChildWindow gets closed too soon after it's opened, it leaves the UI
+                                         // disabled; so delay closing the window by a few milliseconds
+                                         TaskEx.Delay(TimeSpan.FromMilliseconds(350))
+                                               .ContinueOnSuccessInTheUIThread(progressWindow.Close);
 
-                    if (t.IsFaulted)
-                    {
-                        ApplicationModel.Current.AddErrorNotification(t.Exception, "Exporting Report Failed");
-                    }
-                    else if (!t.IsCanceled)
-                    {
-                        ApplicationModel.Current.AddInfoNotification("Report Exported Succesfully");
-                    }
-                });
+                                         if (t.IsFaulted)
+                                         {
+                                             ApplicationModel.Current.AddErrorNotification(t.Exception,
+                                                                                           "Exporting Report Failed");
+                                         }
+                                         else if (!t.IsCanceled)
+                                         {
+                                             ApplicationModel.Current.AddInfoNotification("Report Exported Succesfully");
+                                         }
+                                     });
 
-            // delay opening the progress window for a fraction of a second, because the export might complete really quickly
-            TaskEx.Delay(TimeSpan.FromMilliseconds(250)).ContinueOnSuccessInTheUIThread(() =>
-            {
-                if (!exportTask.IsCompleted)
-                {
-                    progressWindow.Show();
-                }
-            });
+            progressWindow.Show();
         }
 
         private Stream GetOutputStream()

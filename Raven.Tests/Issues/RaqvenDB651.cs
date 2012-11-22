@@ -22,8 +22,6 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				WaitForUserToContinueTheTest(documentStore);
-
 				using (var session = documentStore.OpenSession())
 				{
 					var foo = session.Load<Foo>("foos/1");

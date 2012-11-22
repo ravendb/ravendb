@@ -16,8 +16,8 @@ namespace Raven.Tests.Linq
 {
 	public class WhereClause : IDisposable
 	{
-		private IDocumentStore documentStore;
-		private IDocumentSession documentSession;
+		private readonly IDocumentStore documentStore;
+		private readonly IDocumentSession documentSession;
 
 
 		public WhereClause()
@@ -614,6 +614,40 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers.Where(x => x.Properties.Any());
 			Assert.Equal("Properties:*", q.ToString());
 		}
+		
+		[Fact]
+		public void AnyOnCollectionEqTrue()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Properties.Any() == true);
+			Assert.Equal("Properties:*", q.ToString());
+		}
+
+		[Fact]
+		public void AnyOnCollectionEqFalse()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => x.Properties.Any() == false);
+			Assert.Equal("(*:* AND -Properties:*)", q.ToString());
+		}
+
+		[Fact]
+		public void AnyOnCollectionNegated()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(x => !x.Properties.Any());
+			Assert.Equal("(*:* AND -Properties:*)", q.ToString());
+		}
+
+		[Fact]
+		public void ComplexAnyWithPrecedingExpression()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => user.Name == null ||
+									   !user.Properties.Any(property => property.Key == "Language" && property.Value != null));
+
+			Assert.Equal(@"Name:[[NULL_VALUE]] OR (*:* AND -(Properties,Key:Language AND (-Properties,Value:[[NULL_VALUE]] AND Properties,Value:*)))", q.ToString());
+		}
 
 		[Fact]
 		public void WillWrapLuceneSaveKeyword_NOT()
@@ -671,6 +705,7 @@ namespace Raven.Tests.Linq
 		public class UserProperty
 		{
 			public string Key { get; set; }
+			public string Value { get; set; }
 		}
 
 		public void Dispose()

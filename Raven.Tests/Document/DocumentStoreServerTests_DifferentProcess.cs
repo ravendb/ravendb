@@ -12,6 +12,7 @@ using System.Transactions;
 using Raven.Client.Document;
 using Raven.Server;
 using Raven.Tests.Bugs;
+using Raven.Tests.Util;
 using Xunit;
 using Transaction = System.Transactions.Transaction;
 
@@ -22,12 +23,13 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_promote_transactions()
 		{
-			var process = Process.Start(GetRavenServerPath(), "--ram --set=Raven/Port==8079");
-			try
+			using (var driver = new RavenDBDriver("HelloShard", new DocumentConvention()))
 			{
-				WaitForNetwork("http://localhost:8079");
+				driver.Start();
 
-				using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+				WaitForNetwork(driver.Url);
+
+				using (var documentStore = new DocumentStore { Url = driver.Url  }.Initialize())
 				{
 					var company = new Company {Name = "Company Name"};
 					var durableEnlistment = new ManyDocumentsViaDTC.DummyEnlistmentNotification();
@@ -68,18 +70,6 @@ namespace Raven.Tests.Document
 					Assert.True(durableEnlistment.WasCommitted);
 				}
 			}
-			finally
-			{
-				process.Kill();
-			}
-		}
-
-		private static string GetRavenServerPath()
-		{
-			var localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Raven.Server.exe");
-			if(File.Exists(localPath))
-				return localPath;
-			return typeof (Program).Assembly.Location;
 		}
 
 		private static void WaitForNetwork(string url)

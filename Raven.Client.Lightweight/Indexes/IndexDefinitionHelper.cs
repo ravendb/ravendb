@@ -50,7 +50,7 @@ namespace Raven.Client.Indexes
 			var querySourceName = expr.Parameters.First(x => x.Type != typeof(IClientSideDatabase)).Name;
 
 			var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.InvariantCulture);
-			if(indexOfQuerySource == -1)
+			if (indexOfQuerySource == -1)
 				throw new InvalidOperationException("Cannot understand how to parse the query");
 
 			linqQuery = linqQuery.Substring(0, indexOfQuerySource) + querySource +
@@ -120,6 +120,65 @@ namespace Raven.Client.Indexes
 				break;
 			}
 			return linqQuery;
+		}
+
+		public static void ValidateReduce(LambdaExpression reduceExpression)
+		{
+			if (reduceExpression == null)
+				return;
+
+			var expression = reduceExpression.Body;
+			switch (expression.NodeType)
+			{
+				case ExpressionType.Call:
+					var methodCallExpression = ((MethodCallExpression)expression);
+					var anyGroupBy = methodCallExpression.Arguments.OfType<MethodCallExpression>().Any(x => x.Method.Name == "GroupBy");
+					var lambdaExpressions = methodCallExpression.Arguments.OfType<LambdaExpression>().ToList();
+					var anyLambda = lambdaExpressions.Any();
+					if (anyGroupBy && anyLambda)
+					{
+						foreach (var lambdaExpression in lambdaExpressions)
+						{
+							var rootQuery = TryCaptureQueryRoot(lambdaExpression);
+
+							if (!string.IsNullOrEmpty(rootQuery) && ContainsCountOnGrouping(lambdaExpression, rootQuery))
+							{
+								throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+							}
+						}
+					}
+					break;
+				default:
+					return;
+			}
+		}
+
+		private static bool ContainsCountOnGrouping(Expression expression, string grouping)
+		{
+			if (expression == null) 
+				return false;
+
+			switch (expression.NodeType)
+			{
+				case ExpressionType.Lambda:
+					var lambdaExpression = (LambdaExpression)expression;
+					return ContainsCountOnGrouping(lambdaExpression.Body, grouping);
+				case ExpressionType.New:
+					var newExpression = (NewExpression)expression;
+					return newExpression.Arguments.Any(argument => ContainsCountOnGrouping(argument, grouping));
+				case ExpressionType.Call:
+					var methodCallExpression = (MethodCallExpression)expression;
+					var methodName = methodCallExpression.Method.Name;
+					var parameters = methodCallExpression.Arguments.OfType<ParameterExpression>();
+					if (methodName == "Count" && parameters.Any(x => x.Name == grouping))
+					{
+						return true;
+					}
+
+					return false;
+				default:
+					return false;
+			}
 		}
 	}
 }

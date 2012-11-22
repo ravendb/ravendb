@@ -32,7 +32,7 @@ namespace Raven.Database.Indexing
 
 	public class MapReduceIndex : Index
 	{
-		JsonSerializer jsonSerializer;
+		readonly JsonSerializer jsonSerializer;
 
 		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition,
 							  AbstractViewGenerator viewGenerator, WorkContext context)
@@ -76,9 +76,10 @@ namespace Raven.Database.Indexing
 					GroupByDocumentId(context,
 									  RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats)))
 			{
+				var dynamicResults = mappedResultFromDocument.Select(x => (object)new DynamicJsonObject(RavenJObject.FromObject(x, jsonSerializer))).ToList();
 				foreach (
 					var doc in
-						RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument.GetEnumerator(), viewGenerator.ReduceDefinition, actions, context))
+						RobustEnumerationReduceDuringMapPhase(dynamicResults.GetEnumerator(), viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
 

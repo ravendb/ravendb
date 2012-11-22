@@ -240,22 +240,49 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
 
+		/// <summary>
+		/// Gets the Logs
+		/// </summary>
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
 
+		/// <summary>
+		/// Gets the license Status
+		/// </summary>
 		Task<LicensingStatus> GetLicenseStatusAsync();
 
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
 		Task<BuildNumber> GetBuildNumberAsync();
 
+		/// <summary>
+		/// Begins an async backup operation
+		/// </summary>
 		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
 
+		/// <summary>
+		/// Begins an async restore operation
+		/// </summary>
 		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null);
 
+		/// <summary>
+		/// Sends an async command that enables indexing
+		/// </summary>
 		Task StartIndexingAsync();
 
+		/// <summary>
+		/// Sends an async command that disables all indexing
+		/// </summary>
 		Task StopIndexingAsync();
 
+		/// <summary>
+		/// Get the indexing status
+		/// </summary>
 		Task<string> GetIndexingStatusAsync();
 
+		/// <summary>
+		/// Get documents with id of a specific prefix
+		/// </summary>
 		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>

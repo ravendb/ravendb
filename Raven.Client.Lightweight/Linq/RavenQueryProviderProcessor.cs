@@ -1314,7 +1314,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			return executeQuery;
 		}
 
-		private void RenameResults(QueryResult queryResult)
+		public void RenameResults(QueryResult queryResult)
 		{
 			for (int index = 0; index < queryResult.Results.Count; index++)
 			{
@@ -1346,6 +1346,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		}
 #else
 		private object ExecuteQuery<TProjection>()
+		{
+			throw new NotImplementedException("Not done yet");
+		}
+
+		public void RenameResults(QueryResult queryResult) 
 		{
 			throw new NotImplementedException("Not done yet");
 		}

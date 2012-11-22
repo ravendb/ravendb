@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server
@@ -63,6 +64,19 @@ namespace Raven.Database.Server
 		}
 
 		public abstract void Respond(IHttpContext context);
+
+		protected bool EnsureSystemDatabase(IHttpContext context)
+		{
+			if (SystemDatabase == Database)
+				return true;
+
+			context.SetStatusToBadRequest();
+			context.WriteJson(new
+			{
+				Error = "The request '" + context.GetRequestUrl() + "' can only be issued on the system database"
+			});
+			return false;
+		}
 
 		protected TransactionInformation GetRequestTransaction(IHttpContext context)
 		{

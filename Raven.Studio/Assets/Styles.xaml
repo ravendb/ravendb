@@ -2439,6 +2439,63 @@
 		</Setter>
 	</Style>
 
+	<Style x:Key="Style_ListBoxItem_WindowsAuth" TargetType="ListBoxItem">
+		<Setter Property="VerticalContentAlignment" Value="Stretch"/>
+		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+		<Setter Property="Padding" Value="15,6,60,6"/>
+		<Setter Property="Width" Value="Auto"/>
+		<Setter Property="MaxWidth" Value="550"/>
+		<Setter Property="MinWidth" Value="200"/>
+		<Setter Property="MinHeight" Value="60"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ListBoxItem">
+					<Grid Margin="8" d:DesignWidth="241" d:DesignHeight="112">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualState x:Name="Normal" />
+								<VisualState x:Name="MouseOver">
+								</VisualState>
+								<VisualState x:Name="Disabled">
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="FocusStates">
+								<VisualState x:Name="Focused">
+								</VisualState>
+								<VisualState x:Name="Unfocused"/>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualState x:Name="Unselected"/>
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<ColorAnimation Duration="0:0:0.05" To="{StaticResource Color_Contrast}" Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Color)" Storyboard.TargetName="OuterBorder" d:IsOptimized="True"/>
+										<ColorAnimation Duration="0:0:0.05" To="{StaticResource Color_Contrast}" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)" Storyboard.TargetName="OuterBorder" d:IsOptimized="True"/>
+										<DoubleAnimation Duration="0:0:0.05" To="1" Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Opacity)" Storyboard.TargetName="OuterBorder" d:IsOptimized="True"/>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<Border x:Name="OuterBorder" BorderThickness="1" Margin="0" CornerRadius="4">
+							<Border.BorderBrush>
+								<SolidColorBrush Color="Transparent"/>
+							</Border.BorderBrush>
+							<Border.Effect>
+								<DropShadowEffect Opacity="0.28" BlurRadius="7" ShadowDepth="1" Direction="0"/>
+							</Border.Effect>
+							<Border.Background>
+								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+									<GradientStop Color="#FFFEFEFE" Offset="0.025"/>
+									<GradientStop Color="#FFF1F1F1" Offset="0.825"/>
+								</LinearGradientBrush>
+							</Border.Background>
+						</Border>
+						<ContentPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
 	<Style x:Key="Style_ListBoxItem_ApiKey" TargetType="ListBoxItem">
 		<Setter Property="VerticalContentAlignment" Value="Stretch"/>
 		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>

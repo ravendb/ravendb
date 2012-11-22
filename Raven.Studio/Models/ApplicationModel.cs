@@ -44,6 +44,7 @@ namespace Raven.Studio.Models
 			Alerts = new ObservableCollection<Alert>();
 
 			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
+			Server.Value.SelectedDatabase.Value.Status.PropertyChanged += (sender, args) => OnPropertyChanged(() => StatusImage);
 			State = new ApplicationState();
 		}
 
@@ -127,6 +128,12 @@ namespace Raven.Studio.Models
 							objects.Insert(2, Environment.NewLine);
 							objects.Insert(3, Environment.NewLine);
 						}
+
+                        if (httpWebResponse.StatusCode == HttpStatusCode.Unauthorized)
+                        {
+                            objects.Insert(0, "Could not get authorization for this command.");
+                            objects.Insert(1, "If you should have access to this operation contact your admin and check the Raven/AnonymousAccess or the Windows Authentication settings in RavenDB ");
+                        }
 						details = objects.ToArray();
 					}
 				}

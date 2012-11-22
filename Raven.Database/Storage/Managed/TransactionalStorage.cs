@@ -182,7 +182,7 @@ namespace Raven.Storage.Managed
 		
 		}
 
-		public void Restore(string backupLocation, string databaseLocation, Action<string> output)
+		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			new RestoreOperation(backupLocation, databaseLocation, output).Execute();
 		}

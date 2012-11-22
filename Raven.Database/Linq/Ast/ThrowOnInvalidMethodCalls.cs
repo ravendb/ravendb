@@ -23,6 +23,13 @@ namespace Raven.Database.Linq.Ast
 			}
 		}
 
+		private readonly string groupByIdentifier;
+
+		public ThrowOnInvalidMethodCalls(string groupByIdentifier)
+		{
+			this.groupByIdentifier = groupByIdentifier;
+		}
+
 		public List<ForbiddenMethod> Members = new List<ForbiddenMethod>
 		{
 			new ForbiddenMethod(
@@ -53,6 +60,30 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			}
 
 			return base.VisitQueryLetClause(queryLetClause, data);
+		}
+
+		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)
+		{
+			if (!string.IsNullOrEmpty(groupByIdentifier))
+			{
+				var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
+				if (memberReferenceExpression != null)
+				{
+					if (memberReferenceExpression.MemberName == "Count")
+					{
+						var identifier = memberReferenceExpression.Target as IdentifierExpression;
+						if (identifier != null)
+						{
+							if (identifier.Identifier == groupByIdentifier)
+							{
+								throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+							}
+						}
+					}
+				}
+			}
+
+			return base.VisitInvocationExpression(invocationExpression, data);
 		}
 
 		private Expression SimplifyLetExpression(Expression expression)
@@ -90,6 +121,97 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			}
 
 			return base.VisitMemberReferenceExpression(memberReferenceExpression, data);
+		}
+
+		public override object VisitSimpleType(SimpleType simpleType, object data)
+		{
+			if (simpleType.Identifier.Contains("IGrouping"))
+			{
+				HandleGroupBy(simpleType);
+			}
+
+			return base.VisitSimpleType(simpleType, data);
+		}
+
+		private static void HandleGroupBy(SimpleType simpleType)
+		{
+			var initializer = simpleType.Ancestors.OfType<VariableInitializer>().Single();
+			var rootExpression = (InvocationExpression)initializer.Initializer;
+
+			var nodes = rootExpression.Children.Where(x => x.NodeType != NodeType.Token).ToList();
+			if (nodes.Count < 2)
+				return;
+
+			var memberReferences = nodes.OfType<MemberReferenceExpression>().ToList();
+			if (!memberReferences.Any())
+				return;
+
+			var groupByExpression = memberReferences.FirstOrDefault(ContainsGroupBy);
+			if (groupByExpression == null)
+				return;
+
+			var indexOfGroupByExpression = nodes.IndexOf(groupByExpression);
+			if (indexOfGroupByExpression != 0)
+				return;
+
+			var castExpression = nodes[indexOfGroupByExpression + 1] as CastExpression;
+			if (castExpression == null)
+				return;
+
+			if (castExpression.Descendants.Contains(simpleType) == false)
+				return;
+
+			foreach (var ancestor in simpleType.Ancestors)
+			{
+				if (ancestor == groupByExpression || groupByExpression.Ancestors.Contains(ancestor) || groupByExpression.Descendants.Contains(ancestor))
+					continue;
+
+				if (ancestor.Children.OfType<MemberReferenceExpression>().Any(ContainsGroupBy))
+					return;
+			}
+
+			var grouping = simpleType.NextSibling;
+
+			var lambda = grouping.Children.OfType<LambdaExpression>().First();
+			var parameter = lambda.Parameters.First();
+
+			foreach (var invocation in lambda.Descendants.OfType<InvocationExpression>())
+			{
+				var identifiers = invocation.Descendants.OfType<IdentifierExpression>().Where(x => x.Identifier == parameter.Name);
+
+				foreach (var identifier in identifiers)
+				{
+					var parent = identifier.Parent as InvocationExpression;
+					if (parent == null)
+						continue;
+
+					var member = (MemberReferenceExpression)parent.Target;
+
+					if (member.MemberName == "Count")
+					{
+						throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+					}
+				}
+			}
+		}
+
+		private static bool ContainsGroupBy(MemberReferenceExpression possibleGroupByExpression)
+		{
+			if (possibleGroupByExpression == null)
+				return false;
+
+			if (possibleGroupByExpression.MemberName == "GroupBy")
+				return true;
+
+			var invocation = possibleGroupByExpression.Target as InvocationExpression;
+			if (invocation == null)
+				return false;
+
+			var member = invocation.Target as MemberReferenceExpression;
+			if (member == null)
+				return false;
+
+			return ContainsGroupBy(member);
 		}
 
 		private static string GetTarget(MemberReferenceExpression memberReferenceExpression)
