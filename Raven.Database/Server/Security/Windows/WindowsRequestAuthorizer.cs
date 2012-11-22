@@ -98,7 +98,7 @@ namespace Raven.Database.Server.Security.Windows
 						if (isGetRequest && user.ReadOnlyDatabases.Contains(databaseName))
 							return true;
 					}
-					
+
 					onRejectingRequest();
 					return false;
 				default:
@@ -114,7 +114,7 @@ namespace Raven.Database.Server.Security.Windows
 				onRejectingRequest = () =>
 				{
 					ctx.Response.AddHeader("Raven-Required-Auth", "Windows");
-					ctx.SetStatusToForbidden();
+					ctx.SetStatusToUnauthorized();
 				};
 				return false;
 			}
@@ -122,7 +122,7 @@ namespace Raven.Database.Server.Security.Windows
 			var databaseAccessLists = GenerateDatabaseAccessLists(ctx);
 			UpdateUserPrincipal(ctx, databaseAccessLists);
 
-			onRejectingRequest = ctx.SetStatusToUnauthorized;
+			onRejectingRequest = ctx.SetStatusToForbidden;
 			return true;
 		}
 
