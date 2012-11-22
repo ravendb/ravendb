@@ -53,7 +53,7 @@ namespace Raven.Database.Server
 			catch (HttpListenerException e)
 			{
 				if (e.ErrorCode != 5) //access denies
-					throw;
+					throw new InvalidOperationException("Could not listen to port " + port, e);
 			}
 			return false;
 		}

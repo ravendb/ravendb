@@ -75,7 +75,7 @@
                               ItemsSource="{Binding Databases}"
                               AutoGenerateColumns="False"
                               MinHeight="56"
-                              MaxHeight="156"
+                              MaxHeight="336"
                               VerticalAlignment="Top"
                               VerticalScrollBarVisibility="Visible">
 					<i:Interaction.Behaviors>
@@ -182,7 +182,7 @@
 					<ListBox  Style="{StaticResource Databases_FluidList}"
 							  ItemsSource="{Binding RequiredUsers}"
 							  SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-							  ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
+							  ItemContainerStyle="{StaticResource Style_ListBoxItem_WindowsAuth}"
 							  ItemTemplate="{StaticResource WindowsAuthTemplate}"
 							  ScrollViewer.VerticalScrollBarVisibility="Auto">
 					</ListBox>
@@ -212,7 +212,7 @@
 					<ListBox  Style="{StaticResource Databases_FluidList}"
 							  ItemsSource="{Binding RequiredGroups}"
 							  SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-							  ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
+							  ItemContainerStyle="{StaticResource Style_ListBoxItem_WindowsAuth}"
 							  ItemTemplate="{StaticResource WindowsAuthTemplate}"
 							  ScrollViewer.VerticalScrollBarVisibility="Auto">
 					</ListBox>

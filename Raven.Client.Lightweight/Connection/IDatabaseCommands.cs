@@ -341,7 +341,7 @@ namespace Raven.Client.Connection
 		void Patch(string key, PatchRequest[] patches, Guid? etag);
 
 		/// <summary>
-		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// Sends a patch request for a specific document
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>

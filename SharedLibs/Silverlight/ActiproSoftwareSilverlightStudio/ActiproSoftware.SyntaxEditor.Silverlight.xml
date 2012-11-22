@@ -500,7 +500,12 @@
             Converts tabs at the beginning of the active view lines to spaces.
             </summary></member><member name="T:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView"><summary>
             Represents a text view within a <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor" /> control.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.CopyToClipboard"><summary>
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.Activate"><summary>
+            Activates this view.
+            </summary><remarks>
+            The currently-active view in the editor is the view that contains focus when focus is moved within the editor.
+            There is always a single view in an editor marked as active.
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.CopyToClipboard"><summary>
             Copies the currently selected text to the clipboard.
             </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.CopyAndAppendToClipboard"><summary>
             Copies the currently selected text and appends it to the existing text on the clipboard.
@@ -803,7 +808,10 @@
             </summary><param name="e">A <see cref="T:System.Windows.Input.MouseButtonEventArgs" /> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.OnMouseMove(System.Windows.Input.MouseEventArgs)"><summary>
             Invoked when an unhandled mouse move attached event is raised on this element. 
             Implement this method to add class handling for this event. 
-            </summary><param name="e">A <see cref="T:System.Windows.Input.MouseEventArgs" /> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.OnMouseWheel(System.Windows.Input.MouseWheelEventArgs)"><summary>
+            </summary><param name="e">A <see cref="T:System.Windows.Input.MouseEventArgs" /> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.OnMouseRightButtonDown(System.Windows.Input.MouseButtonEventArgs)"><summary>
+            Invoked when an unhandled <see cref="T:System.Windows.UIElement" />.<see cref="!:UIElement.MouseRightButtonDownEvent" /> attached event is raised on this element. 
+            Implement this method to add class handling for this event. 
+            </summary><param name="e">A <see cref="T:System.Windows.Input.MouseButtonEventArgs" /> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.OnMouseWheel(System.Windows.Input.MouseWheelEventArgs)"><summary>
             Invoked when an unhandled <see cref="T:System.Windows.UIElement" />.<see cref="F:System.Windows.UIElement.MouseWheelEvent" /> attached event is raised on this element. 
             Implement this method to add class handling for this event. 
             </summary><param name="e">A <see cref="T:System.Windows.Input.MouseWheelEventArgs" /> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.OnTextInput(System.Windows.Input.TextCompositionEventArgs)"><summary>
@@ -815,11 +823,6 @@
             The left or right mouse button must be pressed when this method is called.
             When the left button mouse selection starts, the mouse will be captured and further selection processing will
             be handled automatically.
-            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.Activate"><summary>
-            Activates this view.
-            </summary><remarks>
-            The currently-active view in the editor is the view that contains focus when focus is moved within the editor.
-            There is always a single view in an editor marked as active.
             </remarks></member><member name="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.EditorView.IsWhitespaceVisible"><summary>
             Gets whether whitespace (spaces and tabs) is visible.
             </summary><value><c>true</c> if whitespace (spaces and tabs) is visible; otherwise, <c>false</c>.
@@ -2317,7 +2320,11 @@
             Notifies that a property's value has changed.
             </summary><param name="name">The name of the property.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetSelectionSession.OnClosed(System.ComponentModel.CancelEventArgs)"><summary>
             Raises the <c>Closed</c> event.
-            </summary><param name="e">An <c>CancelEventArgs</c> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetSelectionSession.OnOpened(System.EventArgs)"><summary>
+            </summary><param name="e">An <c>CancelEventArgs</c> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetSelectionSession.OnCompletionSessionInitializing(ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.ICompletionSession)"><summary>
+            Called when the <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.ICompletionSession" /> used for this code snippet selection session in about to be initialized.
+            </summary><param name="session">The <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.ICompletionSession" /> to initialize.</param><remarks>
+            Override this method to set custom settings on the <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.ICompletionSession" /> before it is opened.
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetSelectionSession.OnOpened(System.EventArgs)"><summary>
             Raises the <c>Opened</c> event.
             </summary><param name="e">An <c>EventArgs</c> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetSelectionSession.Open(ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView)"><summary>
             Opens the session, attaching to the specified <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView" />.
@@ -2783,6 +2790,10 @@
             Use the default resolved settings.
             </summary></member><member name="T:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor"><summary>
             Represents a syntax-highlighting code editor control.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.ResetCommandBindings"><summary>
+            Resets the <c>CommandBindings</c> property to its default value.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.ResetInputBindings"><summary>
+            Resets the <c>InputBindings</c> property to its default value.
             </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.ShowPrintDialog"><summary>
             Displays the print dialog.
             </summary><returns><c>true</c> if the dialog was displayed successfully and printing occurred; otherwise, <c>false</c>.
@@ -2815,11 +2826,7 @@
             </summary><param name="e">A <c>PasteDragDropEventArgs</c> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.OnUserInterfaceUpdate(ActiproSoftware.Compatibility.RoutedEventArgsEx)"><summary>
             Invoked when an unhandled <c>UserInterfaceUpdate</c> attached event reaches an element in its route that is derived from this class.
             Implement this method to add class handling for this event. 
-            </summary><param name="e">A <c>RoutedEventArgs</c> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.ResetCommandBindings"><summary>
-            Resets the <c>CommandBindings</c> property to its default value.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.ResetInputBindings"><summary>
-            Resets the <c>InputBindings</c> property to its default value.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HitTest(System.Windows.Point)"><summary>
+            </summary><param name="e">A <c>RoutedEventArgs</c> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HitTest(System.Windows.Point)"><summary>
             Performs a hit test of the specified <see cref="T:System.Windows.Point" /> within the editor and returns detailed results in an <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IHitTestResult" />.
             </summary><param name="point">The <see cref="T:System.Windows.Point" /> to hit test, relative to editor's coordinates.</param><returns>An <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IHitTestResult" /> that contains the hit test results.</returns><remarks>
             Use <c>Mouse.GetPosition(editor)</c> to get a mouse <see cref="T:System.Windows.Point" /> relative to the editor.
@@ -2852,6 +2859,13 @@
             Gets or sets the default <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.Highlighting.IHighlightingStyleRegistry" /> to use.
             </summary><value>The default <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.Highlighting.IHighlightingStyleRegistry" /> to use.</value><remarks>
             If this property is <see langword="null" />, the <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.Highlighting.AmbientHighlightingStyleRegistry" /> will be used.
+            </remarks></member><member name="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HorizontalScrollBarVisibility"><summary>
+            Gets or sets the <see cref="T:System.Windows.Controls.ScrollBarVisibility" /> that specifies the visibility of the horizontal <see cref="T:System.Windows.Controls.Primitives.ScrollBar" />.
+            </summary><value>
+            The <see cref="T:System.Windows.Controls.ScrollBarVisibility" /> that specifies the visibility of the horizontal <see cref="T:System.Windows.Controls.Primitives.ScrollBar" />.
+            The default value is <c>Visible</c>.
+            </value><remarks><c>Visible</c> and <c>Auto</c> always show the <see cref="T:System.Windows.Controls.Primitives.ScrollBar" />.
+            <c>Hidden</c> and <c>Disabled</c> always hide the <see cref="T:System.Windows.Controls.Primitives.ScrollBar" />.
             </remarks></member><member name="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.IsCollapsibleRegionHighlightingEnabled"><summary>
             Gets or sets whether collapsible regions highlight when the mouse is over the outlining margin.
             </summary><value><c>true</c> if collapsible regions highlight when the mouse is over the outlining margin; otherwise, <c>false</c>.
@@ -2931,7 +2945,14 @@
             Gets or sets the <see cref="T:System.Windows.Media.Brush" /> to use when rendering the selection margin background.
             </summary><value>
             The <see cref="T:System.Windows.Media.Brush" /> to use when rendering the selection margin background.
-            </value></member><member name="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.ViewMarginFactories"><summary>
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.VerticalScrollBarVisibility"><summary>
+            Gets or sets the <see cref="T:System.Windows.Controls.ScrollBarVisibility" /> that specifies the visibility of the vertical <see cref="T:System.Windows.Controls.Primitives.ScrollBar" />.
+            </summary><value>
+            The <see cref="T:System.Windows.Controls.ScrollBarVisibility" /> that specifies the visibility of the vertical <see cref="T:System.Windows.Controls.Primitives.ScrollBar" />.
+            The default value is <c>Visible</c>.
+            </value><remarks><c>Visible</c> and <c>Auto</c> always show the <see cref="T:System.Windows.Controls.Primitives.ScrollBar" />.
+            <c>Hidden</c> and <c>Disabled</c> always hide the <see cref="T:System.Windows.Controls.Primitives.ScrollBar" />.
+            </remarks></member><member name="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.ViewMarginFactories"><summary>
             Gets the collection that contains the <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.Margins.IEditorViewMarginFactory" /> objects used to generate the margins for an <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView" />.
             </summary><value>
             A <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.Margins.IEditorViewMarginFactoryCollection" /> that contains the factories.
@@ -3190,7 +3211,9 @@
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.CaretBrush" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.CaretBrush" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HighlightingStyleRegistryProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HighlightingStyleRegistry" /> dependency property.  This field is read-only.
-            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HighlightingStyleRegistry" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.IsCollapsibleRegionHighlightingEnabledProperty"><summary>
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HighlightingStyleRegistry" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HorizontalScrollBarVisibilityProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HorizontalScrollBarVisibility" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.HorizontalScrollBarVisibility" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.IsCollapsibleRegionHighlightingEnabledProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.IsCollapsibleRegionHighlightingEnabled" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.IsCollapsibleRegionHighlightingEnabled" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.IsLineNumberMarginVisibleProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.IsLineNumberMarginVisible" /> dependency property.  This field is read-only.
@@ -3228,7 +3251,9 @@
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.SelectionBorderInactiveBrush" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.SelectionBorderInactiveBrush" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.SelectionMarginBackgroundProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.SelectionMarginBackground" /> dependency property.  This field is read-only.
-            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.SelectionMarginBackground" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.VisibleWhitespaceForegroundProperty"><summary>
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.SelectionMarginBackground" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.VerticalScrollBarVisibilityProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.VerticalScrollBarVisibility" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.VerticalScrollBarVisibility" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.VisibleWhitespaceForegroundProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.VisibleWhitespaceForeground" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.VisibleWhitespaceForeground" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.CutCopyDragEvent"><summary>
             Identifies the <see cref="E:ActiproSoftware.Windows.Controls.SyntaxEditor.SyntaxEditor.CutCopyDrag" /> routed event.  This field is read-only.
@@ -4067,7 +4092,9 @@
             Instances of this object can be registered with an <see cref="T:ActiproSoftware.Text.ISyntaxLanguage" /> using the 
             <see cref="M:ActiproSoftware.Text.Utility.IServiceLocator.RegisterService(System.Object,System.Object)" /> method.
             Once an instance is registered with the language as a service, its features can be used by the language.
-            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetProvider.GetPossibleShortcutSnapshotRange(ActiproSoftware.Text.TextSnapshotOffset)"><summary>
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetProvider.CreateSelectionSession(ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.ICodeSnippetFolder,ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.CodeSnippetTypes)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.ICodeSnippetSelectionSession" /> for use with a <see cref="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetProvider.RequestSelectionSession(ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView,ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.CodeSnippetTypes)" /> call.
+            </summary><param name="rootFolder">The root <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.ICodeSnippetFolder" /> to display.</param><param name="snippetType">A <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.CodeSnippetTypes" /> indicating the type of code snippets to include.</param><returns>The <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.ICodeSnippetSelectionSession" /> that was created.</returns></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation.CodeSnippetProvider.GetPossibleShortcutSnapshotRange(ActiproSoftware.Text.TextSnapshotOffset)"><summary>
             Returns a possible code snippet shortcut <see cref="T:ActiproSoftware.Text.TextSnapshotRange" />, located immediately before the specified <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
             </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> to examine.</param><returns>
             The <see cref="T:ActiproSoftware.Text.TextSnapshotRange" /> of the possible shortcut; or <c>TextSnapshotRange.Deleted</c> if there is no possible shortcut.
@@ -5910,6 +5937,10 @@
             Gets or sets whether the member symbols drop-down is displayed.
             </summary><value><c>true</c> if the member symbols drop-down is displayed; otherwise, <c>false</c>.
             The default value is <c>true</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.AreRootSymbolsSupported"><summary>
+            Gets or sets whether the root symbols drop-down is displayed.
+            </summary><value><c>true</c> if the root symbols drop-down is displayed; otherwise, <c>false</c>.
+            The default value is <c>true</c>.
             </value></member><member name="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.IsInSelectedMemberSymbol"><summary>
             Gets whether the attached <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.SyntaxEditor" />'s caret is within the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.SelectedMemberSymbol" />.
             </summary><value><c>true</c> if the attached <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.SyntaxEditor" />'s caret is within the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.SelectedMemberSymbol" />; otherwise, <c>false</c>.
@@ -5928,7 +5959,9 @@
             Gets or sets the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.SyntaxEditor" /> to monitor.
             </summary><value>The <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.SyntaxEditor" /> to monitor.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.AreMemberSymbolsSupportedProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.AreMemberSymbolsSupported" /> dependency property.  This field is read-only.
-            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.AreMemberSymbolsSupported" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.IsInSelectedMemberSymbolProperty"><summary>
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.AreMemberSymbolsSupported" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.AreRootSymbolsSupportedProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.AreRootSymbolsSupported" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.AreRootSymbolsSupported" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.IsInSelectedMemberSymbolProperty"><summary>
             Identifies the read-only <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.IsInSelectedMemberSymbol" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.IsInSelectedMemberSymbol" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.IsInSelectedRootSymbolProperty"><summary>
             Identifies the read-only <see cref="P:ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives.NavigableSymbolSelector.IsInSelectedRootSymbol" /> dependency property.  This field is read-only.

@@ -48,6 +48,7 @@ namespace Raven.Tests.Util
   <appSettings>
 	<add key=""Raven/DataDir"" value=""~/Data"" />
 	<add key=""Raven/AnonymousAccess"" value=""All"" />
+	<add key=""Raven/Port"" value=""8079"">
   </appSettings>
   <runtime>
 	<loadFromRemoteSources enabled=""true"" />
@@ -104,14 +105,15 @@ namespace Raven.Tests.Util
 			if (!_process.WaitForExit(10000))
 				throw new Exception("RavenDB command-line server did not halt within 10 seconds of pressing enter.");
 
-			if (_process.ExitCode != 0)
-				throw new Exception("RavenDB command-line server finished with exit code: " + _process.ExitCode);
-			
+
 			string errorOutput = _process.StandardError.ReadToEnd();
-			
+
 			if (!String.IsNullOrEmpty(errorOutput))
 				throw new Exception("RavendB command-line server finished with error text: " + errorOutput);
-		}
+			
+			if (_process.ExitCode != 0)
+				throw new Exception("RavenDB command-line server finished with exit code: " + _process.ExitCode);
+			}
 
 		protected override void Shutdown()
 		{

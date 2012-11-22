@@ -1134,8 +1134,7 @@ namespace Raven.Client.Connection.Async
 				.ContinueWith(task =>
 				{
 					var json = (RavenJArray)task.Result;
-					return json
-						.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+					return json.Select(x => x.ToString())
 						.ToArray();
 				});
 		}

@@ -63,13 +63,13 @@ namespace Raven.Database.Server.Security.Windows
 				onRejectingRequest();
 				return false;
 			}
-
 			PrincipalWithDatabaseAccess user = null;
 			if(userCreated)
 			{
 				user = (PrincipalWithDatabaseAccess)ctx.User;
 			}
-			var databaseName = database().Name ?? string.Empty;
+
+			var databaseName = database().Name ?? Constants.SystemDatabase;
 
 			if (userCreated && (user.Principal.IsAdministrator() || user.AdminDatabases.Contains(databaseName)))
 				return true;
@@ -171,6 +171,20 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 			return databaseAccessLists;
+		}
+
+		public override List<string> GetApprovedDatabases(IHttpContext context)
+		{
+			var user = context.User as PrincipalWithDatabaseAccess;
+			if(user == null)
+				return new List<string>();
+
+			var list = new List<string>();
+			list.AddRange(user.AdminDatabases);
+			list.AddRange(user.ReadOnlyDatabases);
+			list.AddRange(user.ReadWriteDatabases);
+
+			return list;
 		}
 
 		public override void Dispose()

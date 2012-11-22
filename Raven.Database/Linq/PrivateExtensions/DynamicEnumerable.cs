@@ -117,5 +117,52 @@ namespace Raven.Database.Linq.PrivateExtensions
 				return new DynamicNullObject();
 			return result;
 		}
+
+
+		private static IEnumerable<T> Yield<T>(IEnumerator<T> enumerator)
+		{
+			do
+			{
+				yield return enumerator.Current;
+			} while (enumerator.MoveNext());
+		}
+
+		public static dynamic Min<TSource>(IEnumerable<TSource> source)
+		{
+			if (source == null) return new DynamicNullObject();
+
+			var enumerator = source.GetEnumerator();
+			if (enumerator.MoveNext() == false)
+				return new DynamicNullObject();
+
+			var result = Yield(enumerator).Min();
+			if (ReferenceEquals(result, null))
+				return new DynamicNullObject();
+			return result;
+		}
+
+		public static dynamic Min<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> selector)
+		{
+			return Min(Enumerable.Select(source, selector));
+		}
+
+		public static dynamic Max<TSource>(IEnumerable<TSource> source)
+		{
+			if (source == null) return new DynamicNullObject();
+
+			var enumerator = source.GetEnumerator();
+			if (enumerator.MoveNext() == false)
+				return new DynamicNullObject();
+
+			var result = Yield(enumerator).Max();
+			if (ReferenceEquals(result, null))
+				return new DynamicNullObject();
+			return result;
+		}
+
+		public static dynamic Max<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> selector)
+		{
+			return Max(Enumerable.Select(source, selector));
+		}
 	}
 }

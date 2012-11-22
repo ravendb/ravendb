@@ -15,20 +15,6 @@ namespace Raven.Database.Server.Responders.Admin
 			get { return new[] { "POST" }; }
 		}
 
-
-		protected bool EnsureSystemDatabase(IHttpContext context)
-		{
-			if (SystemDatabase == Database)
-				return true;
-
-			context.SetStatusToBadRequest();
-			context.WriteJson(new
-			{
-				Error = "The request '" + context.GetRequestUrl() +"' can only be issued on the system database"
-			});
-			return false;
-		}
-
 		public override void Respond(IHttpContext context)
 		{
 			if (context.User.IsAdministrator() == false && context.User.IsAdministrator(Database) == false)
