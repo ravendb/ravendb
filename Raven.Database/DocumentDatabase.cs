@@ -789,8 +789,8 @@ namespace Raven.Database
 									Index = indexNameCopy
 								});
 								task.Keys.Add(key);
-								indexingExecuter.AfterDelete(key, deletedETag, indexName);
 							}
+							indexingExecuter.AfterDelete(key, deletedETag);
 							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 						}
 

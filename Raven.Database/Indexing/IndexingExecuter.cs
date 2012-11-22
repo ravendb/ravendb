@@ -465,7 +465,7 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
-					if (FilterDocuments(item.Doc, indexName))
+					if (FilterDocuments(item.Doc))
 						continue;
 
 					// did we already indexed this document in this index?
@@ -615,9 +615,9 @@ namespace Raven.Database.Indexing
 
 		private readonly ConcurrentSet<DocumentToRemove> documentsToRemove = new ConcurrentSet<DocumentToRemove>();
 
-		private bool FilterDocuments(JsonDocument document, string indexName)
+		private bool FilterDocuments(JsonDocument document)
 		{
-			var documentToRemove = new DocumentToRemove(document.Key, document.Etag, indexName);
+			var documentToRemove = new DocumentToRemove(document.Key, document.Etag);
 
 			if (documentsToRemove.Contains(documentToRemove))
 			{
@@ -630,29 +630,26 @@ namespace Raven.Database.Indexing
 
 		internal class DocumentToRemove
 		{
-			public DocumentToRemove(string key, Guid? etag, string indexName)
+			public DocumentToRemove(string key, Guid? etag)
 			{
-				this.Key = key;
-				this.Etag = etag;
-				this.IndexName = indexName;
+				Key = key;
+				Etag = etag;
 			}
 
 			public string Key { get; set; }
 
 			public Guid? Etag { get; set; }
 
-			public string IndexName { get; set; }
 
 			protected bool Equals(DocumentToRemove other)
 			{
-				return string.Equals(Key, other.Key) && Etag.Equals(other.Etag) && string.Equals(IndexName, other.IndexName);
+				return string.Equals(Key, other.Key) && Etag.Equals(other.Etag);
 			}
 
 			public override bool Equals(object obj)
 			{
 				if (ReferenceEquals(null, obj)) return false;
 				if (ReferenceEquals(this, obj)) return true;
-				if (obj.GetType() != this.GetType()) return false;
 				return Equals((DocumentToRemove) obj);
 			}
 
@@ -662,7 +659,6 @@ namespace Raven.Database.Indexing
 				{
 					int hashCode = (Key != null ? Key.GetHashCode() : 0);
 					hashCode = (hashCode*397) ^ Etag.GetHashCode();
-					hashCode = (hashCode*397) ^ (IndexName != null ? IndexName.GetHashCode() : 0);
 					return hashCode;
 				}
 			}
@@ -670,9 +666,9 @@ namespace Raven.Database.Indexing
 
 		
 
-		public void AfterDelete(string key, Guid? lastDocumentEtag, string indexName)
+		public void AfterDelete(string key, Guid? lastDocumentEtag)
 		{
-			documentsToRemove.Add(new DocumentToRemove(key, lastDocumentEtag, indexName));
+			documentsToRemove.Add(new DocumentToRemove(key, lastDocumentEtag));
 		}
 	}
 }
