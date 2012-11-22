@@ -1225,6 +1225,9 @@
     <Compile Include="..\Raven.Abstractions\Replication\ReplicationDocument.cs">
       <Link>Imports\Replication\ReplicationDocument.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Replication\ReplicationStatistics.cs">
+      <Link>Imports\Replication\ReplicationStatistics.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\IAsyncDatabaseCommands.cs">
       <Link>Imports\Connection\Async\IAsyncDatabaseCommands.cs</Link>
     </Compile>

@@ -179,9 +179,6 @@
     <Compile Include="..\Raven.Database\Bundles\Replication\Data\SourceReplicationInformation.cs">
       <Link>Features\Bundles\SourceReplicationInformation.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Database\Bundles\Replication\ReplicationStatistic.cs">
-      <Link>Features\Bundles\ReplicationStatistic.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Database\Bundles\Versioning\Data\VersioningConfiguration.cs">
       <Link>Features\Bundles\VersioningConfiguration.cs</Link>
     </Compile>

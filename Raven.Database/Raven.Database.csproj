@@ -165,13 +165,11 @@
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\Replication\ReplicationStatistic.cs" />
     <Compile Include="Bundles\Replication\Responders\AdminPurgeTombstones.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\AttachmentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\DocumentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\ReplicationHeartbeat.cs" />
-    <Compile Include="Bundles\Replication\Responders\ReplicationTopology.cs" />
     <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />

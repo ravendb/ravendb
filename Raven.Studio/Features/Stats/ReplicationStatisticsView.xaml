@@ -12,27 +12,43 @@
 		<DataTemplate x:Key="Replication_Statistics_Item_Tamplate">
 			<Grid Margin="4" x:Name="grid">
 				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="100" />
+					<ColumnDefinition Width="200" />
 					<ColumnDefinition Width="*" />
 				</Grid.ColumnDefinitions>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-				</Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
 				<TextBlock Text="Url" Style="{StaticResource Style_TextBlock_FieldName}"/>
 				<TextBlock Grid.Column="1" Text="{Binding Url}"/>
 
-				<TextBlock Grid.Row="1" Text="Failure Count" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FailureCount}"/>
+                <TextBlock Grid.Row="1" Text="LastHeartbeatReceived" Style="{StaticResource Style_TextBlock_FieldName}"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastHeartbeatReceived}"/>
 
-				<TextBlock Grid.Row="2" Text="TimeStamp" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TimeStamp}"/>
+                <TextBlock Grid.Row="2" Text="LastReplicatedEtag" Style="{StaticResource Style_TextBlock_FieldName}"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LastReplicatedEtag}"/>
 
-				<TextBlock Grid.Row="3" Text="Last Error" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LastError}"/>
+                <TextBlock Grid.Row="3" Text="LastReplicatedLastModified" Style="{StaticResource Style_TextBlock_FieldName}"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LastReplicatedLastModified}"/>
+
+                <TextBlock Grid.Row="4" Text="LastSuccessTimestamp" Style="{StaticResource Style_TextBlock_FieldName}"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding LastSuccessTimestamp}"/>
+
+                <TextBlock Grid.Row="5" Text="LastFailureTimestamp" Style="{StaticResource Style_TextBlock_FieldName}"/>
+                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding LastFailureTimestamp}"/>
+
+                <TextBlock Grid.Row="6" Text="FailureCount" Style="{StaticResource Style_TextBlock_FieldName}"/>
+                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding FailureCount}"/>
+
+                <TextBlock Grid.Row="7" Text="LastError" Style="{StaticResource Style_TextBlock_FieldName}"/>
+				<TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding LastError}"/>
 			</Grid>
 		</DataTemplate>
 	</UserControl.Resources>

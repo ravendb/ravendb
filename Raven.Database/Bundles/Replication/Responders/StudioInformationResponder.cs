@@ -13,6 +13,7 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
 using System.Linq;
 using Raven.Json.Linq;
+using Raven.Abstractions.Replication;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -41,20 +42,14 @@ namespace Raven.Bundles.Replication.Responders
 				mostRecentAttachmentEtag = accessor.Staleness.GetMostRecentAttachmentEtag();
 			});
 
-			context.WriteJson(RavenJObject.FromObject(new ReplicationStatistic
+			context.WriteJson(RavenJObject.FromObject(new ReplicationStatistics
 			{
 				Self = Database.ServerUrl,
 				MostRecentDocumentEtag = mostRecentDocumentEtag,
 				MostRecentAttachmentEtag = mostRecentAttachmentEtag,
 				Stats = replicationTask == null
-					        ? new List<ReplicationStats>()
-					        : replicationTask.ReplicationFailureStats.Select(pair => new ReplicationStats
-					        {
-						        Url = pair.Key,
-						        FailureCount = pair.Value.Count,
-						        TimeStamp = pair.Value.Timestamp,
-								LastError = pair.Value.LastError
-					        }).ToList()
+					        ? new List<DestinationStats>()
+					        : replicationTask.DestinationStats.Values.ToList()
 			}));
 		}
 	}
