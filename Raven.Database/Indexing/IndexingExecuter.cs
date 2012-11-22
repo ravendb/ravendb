@@ -342,7 +342,10 @@ namespace Raven.Database.Indexing
 
 		private static Guid GetNextHighestEtag(JsonDocument[] past)
 		{
-			return GetHighestEtag(past).Etag.Value;
+			JsonDocument jsonDocument = GetHighestEtag(past);
+			if(jsonDocument == null)
+				return Guid.Empty;
+			return jsonDocument.Etag ?? Guid.Empty;
 		}
 
 
