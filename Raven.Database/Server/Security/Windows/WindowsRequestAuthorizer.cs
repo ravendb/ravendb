@@ -131,32 +131,25 @@ namespace Raven.Database.Server.Security.Windows
 			if (ctx.User is PrincipalWithDatabaseAccess)
 				return;
 
-			var adminList = new List<string>();
-			var readOnlyList = new List<string>();
-			var readWriteList = new List<string>();
-
 			if (databaseAccessLists.ContainsKey(ctx.User.Identity.Name) == false)
 			{
 				ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User);
 				return;
 			}
 
+			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal) ctx.User);
+
 			foreach (var databaseAccess in databaseAccessLists[ctx.User.Identity.Name])
 			{
 				if (databaseAccess.Admin)
-					adminList.Add(databaseAccess.TenantId);
+					user.AdminDatabases.Add(databaseAccess.TenantId);
 				else if (databaseAccess.ReadOnly)
-					readOnlyList.Add(databaseAccess.TenantId);
+					user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
 				else
-					readWriteList.Add(databaseAccess.TenantId);
+					user.ReadWriteDatabases.Add(databaseAccess.TenantId);
 			}
 
-			ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User)
-			{
-				AdminDatabases = adminList,
-				ReadOnlyDatabases = readOnlyList,
-				ReadWriteDatabases = readWriteList
-			};
+			ctx.User = user;
 		}
 
 		private Dictionary<string, List<DatabaseAccess>> GenerateDatabaseAccessLists(IHttpContext ctx)
