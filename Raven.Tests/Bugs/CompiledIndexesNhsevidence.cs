@@ -4,17 +4,13 @@ using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.Globalization;
 using System.Linq;
-using System.Threading;
-using Raven.Database.Indexing;
-using Raven.Imports.Newtonsoft.Json;
-using NLog;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Database.Linq;
-using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -23,7 +19,7 @@ namespace Raven.Tests.Bugs
 	[CLSCompliant(false)]
 	public class CompiledIndexesNhsevidence : RavenTest
 	{
-		[Fact(Skip = "Sometimes fail because of non stale result after 15 seconds - race condition")]
+		[Fact]
 		public void CanGetCorrectResults()
 		{
 			for (int x = 0; x < 50; x++)
@@ -35,6 +31,7 @@ namespace Raven.Tests.Bugs
 					{
 						AddRecord(store, 1);
 					}
+
 					ReadRecords(store, 60);
 				}
 			}
@@ -44,11 +41,10 @@ namespace Raven.Tests.Bugs
 		{
 			using(var session = store.OpenSession())
 			{
-				for (int i = 0; i < 6; i++)
+				for (int i = 0; i < 1; i++)
 				{
-					int count = session.Query<object>("view" + (i + 1))
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToList().Count;
+					var count = session.Query<object>("view" + (i + 1))
+					                   .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(3))).Count();
 
 					Assert.Equal(shouldBe, count);
 				}
@@ -69,7 +65,7 @@ namespace Raven.Tests.Bugs
 					{
 						item.Items.Add(new Item()
 						{
-							Id = j + 1,
+							Id = Guid.NewGuid(),
 							Email = string.Format("rob{0}@text.com", i + 1),
 							Name = string.Format("rob{0}", i + 1)
 						});
@@ -106,7 +102,7 @@ namespace Raven.Tests.Bugs
 
 		public class Item
 		{
-			public int Id { get; set; }
+			public Guid Id { get; set; }
 			public string Name { get; set; }
 			public string Email { get; set; }
 		}
@@ -149,19 +145,18 @@ namespace Raven.Tests.Bugs
 					if(o["@metadata"]["Raven-Entity-Name"] != "TestClasses")
 						continue;
 					var testClass = FromRaven(o);
-					
+
 					foreach (var item in testClass.Items)
 					{
 						yield return new
 						{
-							__document_id = o.Id,
+							o.__document_id,
 							UserId = item.Id,
 							item.Name,
 							item.Email
 						};
 					}
 				}
-				yield break;
 			}
 
 
@@ -169,7 +164,7 @@ namespace Raven.Tests.Bugs
 			{
 				var jobject = (RavenJObject)o.Inner;
 				var item = ((TestClass)jobject.Deserialize(typeof(TestClass), Conventions.Document));
-
+				item.Id = jobject.Value<RavenJObject>("@metadata").Value<string>("@id");
 				if (item == null)
 					throw new ApplicationException("Deserialisation failed");
 
@@ -184,14 +179,7 @@ namespace Raven.Tests.Bugs
 			public static readonly DocumentConvention Document = new DocumentConvention
 			{
 				FindTypeTagName = t => t.GetType() == typeof(TestClass) ? "testclass" : null,
-				MaxNumberOfRequestsPerSession = 3000,
-				DocumentKeyGenerator = (cmd, doc) =>
-				{
-					if (doc is TestClass)
-						return ((TestClass)doc).Id;
-
-					return null;
-				}
+				MaxNumberOfRequestsPerSession = 3000
 			};
 		}
 
@@ -225,5 +213,6 @@ namespace Raven.Tests.Bugs
 		public class View6 : TestClassView
 		{
 		}
+
 	}
 }
