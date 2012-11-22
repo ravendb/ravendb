@@ -613,7 +613,7 @@ namespace Raven.Database.Indexing
 			return lowest.ToGuid();
 		}
 
-		private readonly ConcurrentSet<DocumentToRemove> documentsToRemove = new ConcurrentSet<DocumentToRemove>(new DocumentToRemoveEqualityComparer());
+		private readonly ConcurrentSet<DocumentToRemove> documentsToRemove = new ConcurrentSet<DocumentToRemove>();
 
 		private bool FilterDocuments(JsonDocument document, string indexName)
 		{
@@ -642,22 +642,33 @@ namespace Raven.Database.Indexing
 			public Guid? Etag { get; set; }
 
 			public string IndexName { get; set; }
-		}
 
-		internal class DocumentToRemoveEqualityComparer : IEqualityComparer<DocumentToRemove>
-		{
-			public bool Equals(DocumentToRemove x, DocumentToRemove y)
+			protected bool Equals(DocumentToRemove other)
 			{
-				return x.Key.Equals(y.Key, StringComparison.InvariantCultureIgnoreCase)
-					&& x.Etag == y.Etag
-					&& x.IndexName.Equals(y.IndexName, StringComparison.InvariantCultureIgnoreCase);
+				return string.Equals(Key, other.Key) && Etag.Equals(other.Etag) && string.Equals(IndexName, other.IndexName);
 			}
 
-			public int GetHashCode(DocumentToRemove obj)
+			public override bool Equals(object obj)
 			{
-				return 1;
+				if (ReferenceEquals(null, obj)) return false;
+				if (ReferenceEquals(this, obj)) return true;
+				if (obj.GetType() != this.GetType()) return false;
+				return Equals((DocumentToRemove) obj);
+			}
+
+			public override int GetHashCode()
+			{
+				unchecked
+				{
+					int hashCode = (Key != null ? Key.GetHashCode() : 0);
+					hashCode = (hashCode*397) ^ Etag.GetHashCode();
+					hashCode = (hashCode*397) ^ (IndexName != null ? IndexName.GetHashCode() : 0);
+					return hashCode;
+				}
 			}
 		}
+
+		
 
 		public void AfterDelete(string key, Guid? lastDocumentEtag, string indexName)
 		{
