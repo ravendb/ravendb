@@ -554,14 +554,16 @@ namespace Raven.Database.Indexing
 
 		public void AfterCommit(JsonDocument[] docs)
 		{
-			if (docs.Length == 0)
+			if (futureIndexBatches.Count > 512 || // this is optimization, and we need to make sure we don't overuse memory
+				docs.Length == 0)
 				return;
-
+			
 			foreach (var doc in docs)
 			{
 				DocumentRetriever.EnsureIdInMetadata(doc);
 			}
 
+			
 			futureIndexBatches.Add(new FutureIndexBatch
 			{
 				StartingEtag = DecrementEtag(GetLowestEtag(docs)),
