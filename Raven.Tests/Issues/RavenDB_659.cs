@@ -67,7 +67,7 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				store.DatabaseCommands.Delete("users/3", null);
+				store.DatabaseCommands.Delete("users/1", null);
 				store.DatabaseCommands.Delete("users/4", null);
 
 				store.DocumentDatabase.SpinBackgroundWorkers();
