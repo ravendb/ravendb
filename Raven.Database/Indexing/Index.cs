@@ -310,28 +310,36 @@ namespace Raven.Database.Indexing
 						indexWriter = CreateIndexWriter(directory);
 					}
 
-					var stats = new IndexingWorkStats();
+					var locker = directory.MakeLock("writing-to-index.lock");
 					try
 					{
-						var changedDocs = action(indexWriter, searchAnalyzer, stats);
-						docCountSinceLastOptimization += changedDocs;
-						shouldRecreateSearcher = changedDocs > 0;
-						foreach (IIndexExtension indexExtension in indexExtensions.Values)
+						var stats = new IndexingWorkStats();
+						try
 						{
-							indexExtension.OnDocumentsIndexed(currentlyIndexDocuments);
+							var changedDocs = action(indexWriter, searchAnalyzer, stats);
+							docCountSinceLastOptimization += changedDocs;
+							shouldRecreateSearcher = changedDocs > 0;
+							foreach (IIndexExtension indexExtension in indexExtensions.Values)
+							{
+								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments);
+							}
 						}
+						catch (Exception e)
+						{
+							context.AddError(name, null, e.ToString());
+							throw;
+						}
+
+						UpdateIndexingStats(context, stats);
+
+						WriteTempIndexToDiskIfNeeded(context);
+
+						Flush(); // just make sure changes are flushed to disk
 					}
-					catch (Exception e)
+					finally
 					{
-						context.AddError(name, null, e.ToString());
-						throw;
+						locker.Release();
 					}
-
-					UpdateIndexingStats(context, stats);
-
-					WriteTempIndexToDiskIfNeeded(context);
-
-					Flush(); // just make sure changes are flushed to disk
 				}
 				finally
 				{
