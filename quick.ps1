@@ -1,1 +1,1 @@
-.\psake.ps1 -task ReleaseNoTests 
+.\build.cmd ReleaseNoTests 
