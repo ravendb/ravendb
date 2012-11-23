@@ -32,6 +32,8 @@ namespace Jint {
 
         public bool DebugMode { get; set; }
         public int MaxRecursions { get; set; }
+		public int MaxSteps { get; set; }
+
 
         public JsInstance Returned { get { return returnInstance; } }
         public bool AllowClr { get; set; }
@@ -115,7 +117,8 @@ namespace Jint {
             get { return Scopes.Peek(); }
         }
 
-        protected void EnterScope(JsDictionaryObject scope) {
+
+	    protected void EnterScope(JsDictionaryObject scope) {
             Scopes.Push(new JsScope(CurrentScope, scope));
         }
 
@@ -139,6 +142,7 @@ namespace Jint {
                 if (DebugMode) {
                     OnStep(CreateDebugInformation(statement));
                 }
+				EnsureSteps();
                 Result = null;
                 statement.Accept(this);
 
@@ -149,8 +153,16 @@ namespace Jint {
             }
         }
 
+	    private void EnsureSteps()
+	    {
+		    if (steps++ > MaxSteps)
+		    {
+			    throw new JsException(Global.ErrorClass.New("Too many steps in script"));
+		    }
+	    }
 
-        public void Visit(AssignmentExpression statement) {
+
+	    public void Visit(AssignmentExpression statement) {
             switch (statement.AssignmentOperator) {
                 case AssignmentOperator.Assign: statement.Right.Accept(this);
                     break;
@@ -263,7 +275,7 @@ namespace Jint {
                 if (DebugMode) {
                     OnStep(CreateDebugInformation(s));
                 }
-
+				EnsureSteps();
                 s.Accept(this);
 
                 if (StopStatementFlow()) {
@@ -280,7 +292,7 @@ namespace Jint {
                 if (DebugMode) {
                     OnStep(CreateDebugInformation(s));
                 }
-
+				EnsureSteps();
                 Result = null;
                 typeFullname = null;
 
@@ -299,7 +311,9 @@ namespace Jint {
         }
 
         protected BreakStatement breakStatement = null;
-        public void Visit(BreakStatement statement) {
+	    private int steps;
+
+	    public void Visit(BreakStatement statement) {
             breakStatement = statement;
         }
 
@@ -1635,5 +1649,9 @@ namespace Jint {
 
         #endregion
 
+	    public void ResetSteps()
+	    {
+		    steps = 0;
+	    }
     }
 }

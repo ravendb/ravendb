@@ -26,6 +26,7 @@ namespace Jint {
             permissionSet = new PermissionSet(PermissionState.None);
             Visitor.AllowClr = allowClr;
             MaxRecursions = 400;
+	        MaxSteps = 100 * 1000;
 
             var global = Visitor.Global as JsObject;
 
@@ -190,9 +191,11 @@ namespace Jint {
 
             Visitor.DebugMode = this.DebugMode;
             Visitor.MaxRecursions = this.MaxRecursions;
+	        Visitor.MaxSteps = this.MaxSteps;
             Visitor.PermissionSet = permissionSet;
             Visitor.AllowClr = allowClr;
             Visitor.Result = null;
+	        Visitor.ResetSteps();
 
             if (DebugMode) {
                 Visitor.Step += OnStep;
@@ -262,6 +265,7 @@ namespace Jint {
         public List<BreakPoint> BreakPoints { get; private set; }
         public bool DebugMode { get; private set; }
         public int MaxRecursions { get; private set; }
+		public int MaxSteps { get; private set; }
         public List<string> WatchList { get; set; }
 
         public JintEngine SetDebugMode(bool debugMode) {
@@ -276,6 +280,16 @@ namespace Jint {
             MaxRecursions = maxRecursions;
             return this;
         }
+
+
+		/// <summary>
+		/// Defines the max allowed number of steps in the script
+		/// </summary>
+		public JintEngine SetMaxSteps(int maxSteps)
+		{
+			MaxSteps = maxSteps;
+			return this;
+		}
 
         #endregion
 
