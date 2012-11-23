@@ -74,6 +74,7 @@ namespace Raven.Studio.Commands
 						}
 						
 						session.Store(document);
+						session.SaveChangesAsync();
 					});
 			}
 
