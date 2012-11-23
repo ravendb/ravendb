@@ -146,6 +146,8 @@ namespace Raven.Client
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
 	    IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount = 3);
 
+	    IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, out RavenQueryHighlightings highlightings);
+
         /// <summary>
         ///   Sets the tags to highlight matches with.
         /// </summary>

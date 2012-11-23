@@ -24,7 +24,5 @@ namespace Raven.Client.Linq
         /// <param name="action">The action.</param>
         /// <returns></returns>
         IRavenQueryable<T> Customize(Action<IDocumentQueryCustomization> action);
-
-        IRavenQueryable<T> Highlights(out RavenQueryHighlightings highlightings);
     }
 }

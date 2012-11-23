@@ -124,12 +124,6 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-	    public IRavenQueryable<T> Highlights(out RavenQueryHighlightings queryHighlightings)
-	    {
-	        queryHighlightings = highlightings;
-	        return this;
-	    }
-
 	    /// <summary>
 		/// Returns a <see cref="System.String"/> that represents this instance.
 		/// </summary>

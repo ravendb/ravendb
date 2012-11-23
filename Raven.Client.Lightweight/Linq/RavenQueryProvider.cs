@@ -148,7 +148,7 @@ namespace Raven.Client.Linq
 				var makeGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
 				var args = new object[]
 				{
-					this, ravenQueryStatistics, indexName, expression, queryGenerator
+					this, ravenQueryStatistics, highlightings, indexName, expression, queryGenerator
 #if !SILVERLIGHT
 					, databaseCommands
 #endif

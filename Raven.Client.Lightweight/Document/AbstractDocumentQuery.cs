@@ -637,6 +637,15 @@ namespace Raven.Client.Document
 	        return this;
 	    }
 
+	    IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, int fragmentLength,
+	        int fragmentCount, out RavenQueryHighlightings queryHighlightings)
+	    {
+	        this.Highlight(fieldName, fragmentLength, fragmentCount);
+	        queryHighlightings = this.highlightings;
+	        return this;
+	    }
+
+
 	    IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
 	    {
 	        this.SetHighlighterTags(preTag, postTag);

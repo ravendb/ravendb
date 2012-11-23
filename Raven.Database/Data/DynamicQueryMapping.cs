@@ -26,6 +26,8 @@ namespace Raven.Database.Data
 		public AggregationOperation AggregationOperation { get; set; }
 		public string TemporaryIndexName { get; set; }
 		public string PermanentIndexName { get; set; }
+        public string[] HighlightedFields { get; set; }
+
 		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
 
 		public DynamicQueryMapping()
@@ -129,6 +131,12 @@ namespace Raven.Database.Data
 			{
 				index.SortOptions[ToFieldName(descriptor.Field)] = descriptor.FieldType;
 			}
+
+		    foreach (var field in HighlightedFields)
+		    {
+		        index.Stores[field] = FieldStorage.Yes;
+                index.Indexes[field] = FieldIndexing.Analyzed;
+		    }
 			return index;
 		}
 
@@ -251,6 +259,7 @@ namespace Raven.Database.Data
 				AggregationOperation = query.AggregationOperation.RemoveOptionals(),
 				DynamicAggregation = query.AggregationOperation.HasFlag(AggregationOperation.Dynamic),
 				ForEntityName = entityName,
+                HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x=>x.Field).ToArray(),
 				SortDescriptors = GetSortInfo(fieldName =>
 				{
 					if (fields.Any(x => x.Item2 == fieldName || x.Item2 == (fieldName + "_Range")) == false)
@@ -359,6 +368,11 @@ namespace Raven.Database.Data
 														  .Select(x => x.Field)
 														  .OrderBy(x => x)));
 			}
+            if (map.HighlightedFields != null && map.HighlightedFields.Length > 0)
+            {
+                indexName = string.Format("{0}Highlight{1}", indexName,
+                    string.Join("", map.HighlightedFields.OrderBy(x => x)));
+            }
 			string groupBy = null;
 			if (AggregationOperation != AggregationOperation.None)
 			{

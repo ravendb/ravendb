@@ -391,7 +391,7 @@ namespace Raven.Database.Indexing
 
 		private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index)
 		{
-		    var termVector = store == Field.Store.YES && index == Field.Index.ANALYZED
+		    var termVector = store == Field.Store.YES && (index == Field.Index.ANALYZED || index == Field.Index.ANALYZED_NO_NORMS)
 		        ? Field.TermVector.WITH_POSITIONS_OFFSETS // For FastVectorHighlighter
 		        : Field.TermVector.NO; 
 
