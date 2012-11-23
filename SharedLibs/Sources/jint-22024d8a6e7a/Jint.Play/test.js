@@ -1,4 +1,1 @@
-﻿var i = 0;
-while (true) {
-	i++;
-}
+﻿eval('while(true){}');

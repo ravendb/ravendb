@@ -136,7 +136,9 @@ namespace Jint {
             exit = false;
             lastIdentifier = String.Empty;
 
-            foreach (var statement in program.Statements) {
+			EnsureSteps();
+			foreach (var statement in program.Statements)
+			{
                 CurrentStatement = statement;
 
                 if (DebugMode) {
@@ -271,7 +273,9 @@ namespace Jint {
         }
 
         public void Visit(CommaOperatorStatement statement) {
-            foreach (var s in statement.Statements) {
+			EnsureSteps();
+			foreach (var s in statement.Statements)
+			{
                 if (DebugMode) {
                     OnStep(CreateDebugInformation(s));
                 }
@@ -286,7 +290,9 @@ namespace Jint {
 
         public void Visit(BlockStatement statement) {
             Statement oldStatement = CurrentStatement;
-            foreach (var s in statement.Statements) {
+			EnsureSteps();
+			foreach (var s in statement.Statements)
+			{
                 CurrentStatement = s;
 
                 if (DebugMode) {
