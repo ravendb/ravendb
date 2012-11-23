@@ -80,7 +80,8 @@ namespace Raven.Tests.Storage
 					if (data.Delete)
 					{
 						RavenJObject metadata;
-						mutator.Documents.DeleteDocument(data.Key, null, out metadata);
+						Guid? tag;
+						mutator.Documents.DeleteDocument(data.Key, null, out metadata, out tag);
 					}
 					else
 						mutator.Documents.AddDocument(data.Key, null, data.Data, data.Metadata);

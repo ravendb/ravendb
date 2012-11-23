@@ -132,9 +132,8 @@ namespace Raven.Database.Indexing
 					{
 						var index = indexToWorkOn.Item1;
 						var docs = indexToWorkOn.Item2;
-						transactionalStorage.Batch(
-							actions => IndexDocuments(actions, index.IndexName, docs));
 
+						transactionalStorage.Batch(actions => IndexDocuments(actions, index.IndexName, docs));
 					});
 					indexingDuration = sw.Elapsed;
 				}
@@ -170,6 +169,7 @@ namespace Raven.Database.Indexing
 						}
 					});
 
+					CleanupDocumentsToRemove(lastEtag);
 					UpdateAutoThrottler(jsonDocs.Results, indexingDuration);
 				}
 
@@ -262,7 +262,8 @@ namespace Raven.Database.Indexing
 				// take one of them.
 				return new JsonResults
 				{
-					Results = items.SelectMany(x => x.Results).GroupBy(x => x.Key)
+					Results = items.SelectMany(x => x.Results)
+						.GroupBy(x => x.Key)
 						.Select(g => g.OrderBy(x => x.Etag).First())
 						.ToArray(),
 					LoadedFromDisk = items.Aggregate(false, (prev, results) => prev | results.LoadedFromDisk)
@@ -341,7 +342,10 @@ namespace Raven.Database.Indexing
 
 		private static Guid GetNextHighestEtag(JsonDocument[] past)
 		{
-			return GetHighestEtag(past).Etag.Value;
+			JsonDocument jsonDocument = GetHighestEtag(past);
+			if(jsonDocument == null)
+				return Guid.Empty;
+			return jsonDocument.Etag ?? Guid.Empty;
 		}
 
 
@@ -360,6 +364,13 @@ namespace Raven.Database.Indexing
 				highestDoc = past[i];
 			}
 			return highestDoc;
+		}
+
+		private void CleanupDocumentsToRemove(Guid lastIndexedEtag)
+		{
+			var highest = new ComparableByteArray(lastIndexedEtag);
+
+			documentsToRemove.RemoveWhere(x => x.Etag == null || highest.CompareTo(x.Etag) <= 0);
 		}
 
 		private static System.Threading.Tasks.Task ObserveDiscardedTask(FutureIndexBatch source)
@@ -457,6 +468,9 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
+					if (FilterDocuments(item.Doc))
+						continue;
+
 					// did we already indexed this document in this index?
 					var etag = item.Doc.Etag;
 					if (etag == null)
@@ -600,6 +614,64 @@ namespace Raven.Database.Indexing
 				lowest = new ComparableByteArray(etag);
 			}
 			return lowest.ToGuid();
+		}
+
+		private readonly ConcurrentSet<DocumentToRemove> documentsToRemove = new ConcurrentSet<DocumentToRemove>();
+
+		private bool FilterDocuments(JsonDocument document)
+		{
+			var documentToRemove = new DocumentToRemove(document.Key, document.Etag);
+
+			if (documentsToRemove.Contains(documentToRemove))
+			{
+				documentsToRemove.TryRemove(documentToRemove);
+				return true;
+			}
+
+			return false;
+		}
+
+		internal class DocumentToRemove
+		{
+			public DocumentToRemove(string key, Guid? etag)
+			{
+				Key = key;
+				Etag = etag;
+			}
+
+			public string Key { get; set; }
+
+			public Guid? Etag { get; set; }
+
+
+			protected bool Equals(DocumentToRemove other)
+			{
+				return string.Equals(Key, other.Key) && Etag.Equals(other.Etag);
+			}
+
+			public override bool Equals(object obj)
+			{
+				if (ReferenceEquals(null, obj)) return false;
+				if (ReferenceEquals(this, obj)) return true;
+				return Equals((DocumentToRemove) obj);
+			}
+
+			public override int GetHashCode()
+			{
+				unchecked
+				{
+					int hashCode = (Key != null ? Key.GetHashCode() : 0);
+					hashCode = (hashCode*397) ^ Etag.GetHashCode();
+					return hashCode;
+				}
+			}
+		}
+
+		
+
+		public void AfterDelete(string key, Guid? lastDocumentEtag)
+		{
+			documentsToRemove.Add(new DocumentToRemove(key, lastDocumentEtag));
 		}
 	}
 }

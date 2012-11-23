@@ -325,6 +325,7 @@ namespace Raven.Storage.Managed
 				{"level", level},
 				{"sourceBucket", sourceBucket},
 				{"bucket", bucket},
+				{"timestamp", SystemTime.UtcNow}
 			}, ms.ToArray());
 		}
 

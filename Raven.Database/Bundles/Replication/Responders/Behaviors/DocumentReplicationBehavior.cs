@@ -19,7 +19,8 @@ namespace Raven.Bundles.Replication.Responders
 		protected override void DeleteItem(string id, Guid etag)
 		{
 			RavenJObject _;
-			Actions.Documents.DeleteDocument(id, etag, out _);
+			Guid? __;
+			Actions.Documents.DeleteDocument(id, etag, out _, out __);
 		}
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)

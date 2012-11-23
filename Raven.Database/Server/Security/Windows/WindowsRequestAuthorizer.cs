@@ -57,14 +57,14 @@ namespace Raven.Database.Server.Security.Windows
 		public override bool Authorize(IHttpContext ctx)
 		{
 			Action onRejectingRequest;
-			var userCreated = TryCreateUser(ctx, out onRejectingRequest);
+			var databaseName = database().Name ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
 				onRejectingRequest();
 				return false;
 			}
 			
-			var databaseName = database().Name ?? Constants.SystemDatabase;
 			PrincipalWithDatabaseAccess user = null;
 			if(userCreated)
 			{
@@ -106,13 +106,17 @@ namespace Raven.Database.Server.Security.Windows
 			}
 		}
 
-		private bool TryCreateUser(IHttpContext ctx, out Action onRejectingRequest)
+		private bool TryCreateUser(IHttpContext ctx, string databaseName, out Action onRejectingRequest)
 		{
 			var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
 			{
 				onRejectingRequest = () =>
 				{
+					ProvideDebugAuthInfo(ctx, new
+					{
+						Reason = "User is null or not authenticated"
+					});
 					ctx.Response.AddHeader("Raven-Required-Auth", "Windows");
 					ctx.SetStatusToUnauthorized();
 				};
@@ -120,26 +124,55 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 			var databaseAccessLists = GenerateDatabaseAccessLists(ctx);
-			UpdateUserPrincipal(ctx, databaseAccessLists);
+			var user = UpdateUserPrincipal(ctx, databaseAccessLists);
 
-			onRejectingRequest = ctx.SetStatusToForbidden;
+			onRejectingRequest = () =>
+			{
+				ctx.SetStatusToForbidden();
+
+				ProvideDebugAuthInfo(ctx, new
+				{
+					user.ExplicitlyConfigured,
+					user.Identity.Name,
+					user.AdminDatabases,
+					user.ReadOnlyDatabases,
+					user.ReadWriteDatabases,
+					DatabaseName = databaseName
+				});
+			};
 			return true;
 		}
 
-		private void UpdateUserPrincipal(IHttpContext ctx, Dictionary<string, List<DatabaseAccess>> databaseAccessLists)
+		private static void ProvideDebugAuthInfo(IHttpContext ctx, object msg)
+		{
+			string debugAuth = ctx.Request.QueryString["debug-auth"];
+			if(debugAuth  == null)
+				return;
+
+			bool shouldProvideDebugAuthInformation;
+			if (bool.TryParse(debugAuth, out shouldProvideDebugAuthInformation) && shouldProvideDebugAuthInformation)
+			{
+				ctx.WriteJson(msg);
+			}
+		}
+
+		private PrincipalWithDatabaseAccess UpdateUserPrincipal(IHttpContext ctx, Dictionary<string, List<DatabaseAccess>> databaseAccessLists)
 		{
 			if (ctx.User is PrincipalWithDatabaseAccess)
-				return;
-
-			if (databaseAccessLists.ContainsKey(ctx.User.Identity.Name) == false)
-			{
-				ctx.User = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User);
-				return;
-			}
+				return (PrincipalWithDatabaseAccess) ctx.User;
 
 			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal) ctx.User);
+			
+			List<DatabaseAccess> list;
+			if (databaseAccessLists.TryGetValue(ctx.User.Identity.Name, out list) == false)
+			{
+				ctx.User = user;
+				user.ExplicitlyConfigured = false;
+				return user;
+			}
+			user.ExplicitlyConfigured = true;
 
-			foreach (var databaseAccess in databaseAccessLists[ctx.User.Identity.Name])
+			foreach (var databaseAccess in list) 
 			{
 				if (databaseAccess.Admin)
 					user.AdminDatabases.Add(databaseAccess.TenantId);
@@ -150,6 +183,7 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 			ctx.User = user;
+			return user;
 		}
 
 		private Dictionary<string, List<DatabaseAccess>> GenerateDatabaseAccessLists(IHttpContext ctx)

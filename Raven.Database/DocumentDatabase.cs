@@ -764,7 +764,8 @@ namespace Raven.Database
 					{
 						DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
 
-						if (actions.Documents.DeleteDocument(key, etag, out metadataVar))
+						Guid? deletedETag;
+						if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
 						{
 							deleted = true;
 							foreach (var indexName in IndexDefinitionStorage.IndexNames)
@@ -789,6 +790,7 @@ namespace Raven.Database
 								});
 								task.Keys.Add(key);
 							}
+							indexingExecuter.AfterDelete(key, deletedETag);
 							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 						}
 

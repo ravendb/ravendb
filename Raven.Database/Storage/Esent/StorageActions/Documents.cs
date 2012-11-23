@@ -456,7 +456,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata)
+		public bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata, out Guid? deletedETag)
 		{
 			metadata = null;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
@@ -464,6 +464,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
+				deletedETag = null;
 				return false;
 			}
 			if (Api.TryMoveFirst(session, Details))
@@ -473,6 +474,7 @@ namespace Raven.Storage.Esent.StorageActions
 			EnsureNotLockedByTransaction(key, null);
 
 			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+			deletedETag = existingEtag;
 
 			Api.JetDelete(session, Documents);
 			logger.Debug("Document with key '{0}' was deleted", key);
