@@ -119,7 +119,7 @@ namespace Raven.Client.Linq
 								luceneQuery.Where("*:*");
 								luceneQuery.AndAlso();
 								luceneQuery.NegateNext();
-								VisitMethodCall((MethodCallExpression) unaryExpressionOp);
+								VisitMethodCall((MethodCallExpression) unaryExpressionOp, negated: true);
 								luceneQuery.CloseSubclause();
 								break;
 							default:
@@ -638,7 +638,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 		}
 
-		private void VisitMethodCall(MethodCallExpression expression)
+		private void VisitMethodCall(MethodCallExpression expression, bool negated = false)
 		{
 			if (expression.Method.DeclaringType != typeof (string) && expression.Method.Name == "Equals")
 			{
@@ -675,7 +675,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			if (expression.Method.DeclaringType == typeof (Enumerable))
 			{
-				VisitEnumerableMethodCall(expression);
+				VisitEnumerableMethodCall(expression, negated);
 				return;
 			}
 
@@ -811,12 +811,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				chainedWhere = true;
 		}
 
-		private void VisitEnumerableMethodCall(MethodCallExpression expression)
+		private void VisitEnumerableMethodCall(MethodCallExpression expression, bool negated)
 		{
 			switch (expression.Method.Name)
 			{
 				case "Any":
 				{
+					if(negated)
+						throw new InvalidOperationException("Cannot process negated Any(), see RavenDB-732 http://issues.hibernatingrhinos.com/issue/RavenDB-732");
 					if (expression.Arguments.Count == 1 && expression.Arguments[0].Type == typeof(string))
 					{
 						luceneQuery.OpenSubclause();
