@@ -267,6 +267,8 @@ function ExecutePatchScript(docInner){{
 
 			jintEngine.Run(GetFromResources("Raven.Database.Json.Map.js"));
 
+			jintEngine.Run(GetFromResources("Raven.Database.Json.lodash.js"));
+
 			jintEngine.Run(GetFromResources("Raven.Database.Json.RavenDB.js"));
 
 			jintEngine.SetFunction("LoadDocument", ((Func<string, object>)(value =>
