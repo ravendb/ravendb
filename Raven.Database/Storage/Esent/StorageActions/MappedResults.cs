@@ -221,7 +221,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value;
 				if (string.Equals(indexFromDb, index, StringComparison.InvariantCultureIgnoreCase) == false ||
-					string.Equals(keyFromDb, reduceKey, StringComparison.InvariantCultureIgnoreCase) == false ||
+					string.Equals(keyFromDb, reduceKey, StringComparison.Ordinal) == false || // the key is explicitly compared using case sensitive approach
 					bucketFromDb != bucket)
 				{
 					// this is a continue instead of a break because with lond reduce keys, we might have multiple items that have
@@ -318,7 +318,8 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				var key = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["reduce_key"]);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["bucket"]).Value;
-				if (string.Equals(key, reduceKey, StringComparison.InvariantCultureIgnoreCase) == false ||
+				// we explicitly compare the key just as we would during the group by phase, using case sensitive approach
+				if (string.Equals(key, reduceKey, StringComparison.Ordinal) == false || 
 					bucketFromDb != bucket)
 					continue;
 				returnedResults = true;
