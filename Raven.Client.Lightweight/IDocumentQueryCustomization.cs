@@ -134,19 +134,18 @@ namespace Raven.Client
 		/// </summary>
 		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 
-         /// <summary>
-        ///   Adds matches highlighting for the specified field.
-        /// </summary>
-        /// <remarks>
-        ///   The specified field should be analysed and stored for highlighter to work.
-        ///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
-        /// </remarks>
-        /// <param name="fieldName">The field name to highlight.</param>
-        /// <param name="fragmentLength">The fragment length.</param>
-        /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-	    IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount = 3);
-
-	    IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, out RavenQueryHighlightings highlightings);
+	    /// <summary>
+	    ///   Adds matches highlighting for the specified field.
+	    /// </summary>
+	    /// <remarks>
+	    ///   The specified field should be analysed and stored for highlighter to work.
+	    ///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+	    /// </remarks>
+	    /// <param name="fieldName">The field name to highlight.</param>
+	    /// <param name="fragmentLength">The fragment length.</param>
+	    /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+	    /// <param name="highlightings">Field highlightings for all results.</param>
+	    IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
         /// <summary>
         ///   Sets the tags to highlight matches with.

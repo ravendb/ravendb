@@ -102,6 +102,7 @@
     <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
     <Compile Include="Document\OAuth\SecuredAuthenticator.cs" />
     <Compile Include="Exceptions\ServerRequestError.cs" />
+    <Compile Include="FieldHighlightings.cs" />
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
