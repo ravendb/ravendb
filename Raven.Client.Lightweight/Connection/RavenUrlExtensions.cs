@@ -76,9 +76,13 @@ namespace Raven.Client.Connection
 
 		public static string NoCache(this string url)
 		{
+#if !SILVERLIGHT 
+			return url;
+#else
 			return (url.Contains("?"))
 				? url + "&noCache=" + Guid.NewGuid().GetHashCode()
 				: url + "?noCache=" + Guid.NewGuid().GetHashCode();
+#endif
 		}
 
 		public static Uri ToUri(this string url)
