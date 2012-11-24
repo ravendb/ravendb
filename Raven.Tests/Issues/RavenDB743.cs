@@ -67,5 +67,40 @@ namespace Raven.Tests.Issues
 				}
 			}
 		}
+
+		[Fact]
+		public void MixedCaseReduce_Complex()
+		{
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Country = "Israel" });
+					for (int i = 0; i < 10; i++)
+					{
+						session.Store(new User { Country = "ISRAEL" });
+						session.Store(new User { Country = "israel" });
+					}
+					session.Store(new User { Country = "Israel" });
+					
+					session.SaveChanges();
+				}
+
+				new UsersByCountry().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					var r = session.Query<UsersByCountry.Result, UsersByCountry>()
+						   .Customize(x => x.WaitForNonStaleResults())
+						   .ToList()
+						   .OrderBy(x=>x.Country)
+						   .ToList();
+					Assert.Equal(3, r.Count);
+					Assert.Equal(10, r[0].Count);
+					Assert.Equal(2, r[1].Count);
+					Assert.Equal(10, r[2].Count);
+				}
+			}
+		}
 	}
 }
