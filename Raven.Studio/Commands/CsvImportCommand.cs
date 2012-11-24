@@ -43,7 +43,7 @@ namespace Raven.Studio.Commands
 
 			var streamReader = openFile.File.OpenText();
 
-			var importImpl = new ImportImpl(streamReader, openFile.File.Name, taskModel, output,DatabaseCommands);
+			var importImpl = new ImportImpl(streamReader, openFile.File.Name, taskModel, output, DatabaseCommands);
 			importImpl.ImportAsync()
 				.ContinueWith(task =>
 				{
@@ -95,7 +95,7 @@ namespace Raven.Studio.Commands
 						}
 						else
 						{
-							document[column] = record[column];
+							document[column] = SetValueInDocument(record[column]);
 						}
 					}
 
@@ -113,7 +113,7 @@ namespace Raven.Studio.Commands
 					}
 				}
 
-				if(batch.Count > 0)
+				if (batch.Count > 0)
 				{
 					return FlushBatch(batch)
 						.ContinueWith(t => t.IsCompleted ? ImportAsync() : t)
@@ -124,6 +124,44 @@ namespace Raven.Studio.Commands
 				taskModel.TaskStatus = TaskStatus.Ended;
 
 				return new CompletedTask();
+			}
+
+			private static RavenJToken SetValueInDocument(string value)
+			{
+				if (string.IsNullOrEmpty(value))
+				{
+					return value;
+				}
+
+				char ch = value[0];
+				if (ch == '[' || ch == '{')
+				{
+					try
+					{
+						return RavenJToken.Parse(value);
+					}
+					catch (Exception)
+					{
+						// ignoring failure to parse, will proceed to insert as a string value
+					}
+				}
+				else if (char.IsDigit(ch))
+				{
+					// maybe it is a number?
+					long longResult;
+					if (long.TryParse(value, out longResult))
+					{
+						return longResult;
+					}
+
+					decimal decimalResult;
+					if (decimal.TryParse(value, out decimalResult))
+					{
+						return decimalResult;
+					}
+				}
+
+				return value;
 			}
 
 			Task FlushBatch(List<RavenJObject> batch)
