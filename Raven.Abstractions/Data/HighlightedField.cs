@@ -1,3 +1,9 @@
+// -----------------------------------------------------------------------
+//  <copyright file="HighlightedField.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -9,7 +15,7 @@ namespace Raven.Abstractions.Data
     public sealed class HighlightedField
     {
         private static readonly Regex FieldOptionMatch =
-            new Regex(@"^(?<Field>\w+):(?<FragmentLength>\d+),(?<FragmentCount>\d+)$",
+            new Regex(@"^(?<Field>\w+):(?<FragmentLength>\d+),(?<FragmentCount>\d+),(?<FragmentsField>\d+)$",
 #if !SILVERLIGHT
                 RegexOptions.Compiled
 #else
@@ -17,11 +23,12 @@ namespace Raven.Abstractions.Data
 #endif
                 );
 
-        public HighlightedField(string field, int fragmentLength, int fragmentCount)
+        public HighlightedField(string field, int fragmentLength, int fragmentCount, string fragmentsField)
         {
             Field = field;
             FragmentLength = fragmentLength;
             FragmentCount = fragmentCount;
+            FragmentsField = fragmentsField;
         }
 
         /// <summary>
@@ -40,11 +47,16 @@ namespace Raven.Abstractions.Data
         public int FragmentCount { get; private set; }
 
         /// <summary>
+        ///     Gets or sets the field in query result item for highlighting fragments
+        /// </summary>
+        public string FragmentsField { get; private set; }
+
+        /// <summary>
         ///     Converts the string representation of a field highlighting options to the <see cref="HighlightedField" /> class.
         /// </summary>
         /// <param name="value">
         ///     Field highlighting options
-        ///     <example>Text:250,3,&lt;b&gt;,&lt;/b&gt;</example>
+        ///     <example>Text:250,3,TextFragments</example>
         /// </param>
         /// <param name="result"></param>
         /// <returns></returns>
@@ -80,7 +92,12 @@ namespace Raven.Abstractions.Data
                 out fragmentCount))
                 return false;
 
-            result = new HighlightedField(field, fragmentLength, fragmentCount);
+            var fragmentsField = match.Groups["FragmentsField"].Value;
+
+            if (string.IsNullOrWhiteSpace(fragmentsField))
+                return false;
+
+            result = new HighlightedField(field, fragmentLength, fragmentCount, fragmentsField);
 
             return true;
         }
@@ -97,7 +114,7 @@ namespace Raven.Abstractions.Data
 
         public HighlightedField Clone()
         {
-            return new HighlightedField(Field, FragmentLength, FragmentCount);
+            return new HighlightedField(Field, FragmentLength, FragmentCount, FragmentsField);
         }
     }
 }

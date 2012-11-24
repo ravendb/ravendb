@@ -746,22 +746,58 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(string fieldName, int fragmentLength, int fragmentCount)
+	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
+	        string fieldName, 
+            int fragmentLength, 
+            int fragmentCount, 
+            string fragmentsField)
 	    {
-	        Highlight(fieldName, fragmentLength, fragmentCount);
+	        Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
 	        return this;
 	    }
 
-	    public IDocumentQuery<T> Highlight<TValue>(
-	        Expression<Func<T, TValue>> propertySelector, int fragmentLength, int fragmentCount)
+	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
+            string fieldName, 
+            int fragmentLength, 
+            int fragmentCount, 
+            out FieldHighlightings highlightings)
 	    {
-	        this.Highlight(GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount);
+	        this.Highlight(fieldName, fragmentLength, fragmentCount, out highlightings);
 	        return this;
 	    }
 
-	    void IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
+	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
+	        Expression<Func<T, TValue>> propertySelector, 
+            int fragmentLength, 
+            int fragmentCount,
+	        Expression<Func<T, IEnumerable>> fragmentsPropertySelector)
+	    {
+	        var fieldName = this.GetMemberQueryPath(propertySelector);
+            var fragmentsField = this.GetMemberQueryPath(fragmentsPropertySelector);
+	        this.Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
+	        return this;
+	    }
+
+	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
+	        Expression<Func<T, TValue>> propertySelector, 
+            int fragmentLength, 
+            int fragmentCount,
+	        out FieldHighlightings fieldHighlightings)
+	    {
+	        this.Highlight(this.GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
+	        return this;
+	    }
+
+	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
 	    {
 	        this.SetHighlighterTags(new[]{preTag},new[]{postTag});
+	        return this;
+	    }
+
+	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string[] preTags, string[] postTags)
+	    {
+	        this.SetHighlighterTags(preTags, postTags);
+	        return this;
 	    }
 
 	    /// <summary>

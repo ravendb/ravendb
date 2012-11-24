@@ -1045,7 +1045,7 @@ namespace Raven.Database
 					    {
 					        resultList.Add(docWithFragments.Document.ToJson());
 
-					        if (docWithFragments.Fragments != null)
+					        if (docWithFragments.Fragments != null && docWithFragments.Document.Key != null)
 					            highlightings.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
 					    }
 					    results = resultList;

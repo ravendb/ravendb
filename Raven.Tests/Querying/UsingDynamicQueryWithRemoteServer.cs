@@ -14,282 +14,399 @@ using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingDynamicQueryWithRemoteServer : RemoteClientTest, IDisposable
-	{
-		private readonly string path;
-		private readonly RavenDbServer ravenDbServer;
-		private readonly IDocumentStore documentStore;
+    public class UsingDynamicQueryWithRemoteServer : RemoteClientTest, IDisposable
+    {
+        private readonly IDocumentStore documentStore;
+        private readonly string path;
+        private readonly RavenDbServer ravenDbServer;
 
-		public UsingDynamicQueryWithRemoteServer()
-		{
-			const int port = 8079;
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
+        public UsingDynamicQueryWithRemoteServer()
+        {
+            const int port = 8079;
+            this.path = this.GetPath("TestDb");
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 
-			ravenDbServer = GetNewServer(port, path);
-			documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
-		}
+            this.ravenDbServer = this.GetNewServer(port, this.path);
+            this.documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
+        }
 
-		public override void Dispose()
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            this.documentStore.Dispose();
+            this.ravenDbServer.Dispose();
+            IOExtensions.DeleteDirectory(this.path);
+            base.Dispose();
+        }
 
-		[Fact]
-		public void CanPerformDynamicQueryUsingClientLinqQuery()
-		{
-			var blogOne = new Blog
-			              	{
-			              		Title = "one",
-			              		Category = "Ravens"
-			              	};
-			var blogTwo = new Blog
-			              	{
-			              		Title = "two",
-			              		Category = "Rhinos"
-			              	};
-			var blogThree = new Blog
-			                	{
-			                		Title = "three",
-			                		Category = "Rhinos"
-			                	};
+        [Fact]
+        public void CanPerformDynamicQueryUsingClientLinqQuery()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title = "two",
+                Category = "Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "three",
+                Category = "Rhinos"
+            };
 
-			using (var s = documentStore.OpenSession())
-			{
-				s.Store(blogOne);
-				s.Store(blogTwo);
-				s.Store(blogThree);
-				s.SaveChanges();
-			}
+            using (var s = this.documentStore.OpenSession())
+            {
+                s.Store(blogOne);
+                s.Store(blogTwo);
+                s.Store(blogThree);
+                s.SaveChanges();
+            }
 
-			using (var s = documentStore.OpenSession())
-			{
-				var results = s.Query<Blog>()
-					.Customize(x => x.WaitForNonStaleResultsAsOfNow())
-					.Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
-					.ToArray();
+            using (var s = this.documentStore.OpenSession())
+            {
+                var results = s.Query<Blog>()
+                               .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                               .Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
+                               .ToArray();
 
-				var blogs = s.Advanced.LuceneQuery<Blog>()
-					.Where("Category:Rhinos AND Title.Length:3")
-					.ToArray();
+                var blogs = s.Advanced.LuceneQuery<Blog>()
+                             .Where("Category:Rhinos AND Title.Length:3")
+                             .ToArray();
 
-				Assert.Equal(1, results.Length);
-				Assert.Equal("two", results[0].Title);
-				Assert.Equal("Rhinos", results[0].Category);
-			}
-		}
+                Assert.Equal(1, results.Length);
+                Assert.Equal("two", results[0].Title);
+                Assert.Equal("Rhinos", results[0].Category);
+            }
+        }
 
-		[Fact]
-		public void CanPerformDynamicQueryUsingClientLuceneQuery()
-		{
-			var blogOne = new Blog
-			              	{
-			              		Title = "one",
-			              		Category = "Ravens"
-			              	};
-			var blogTwo = new Blog
-			              	{
-			              		Title = "two",
-			              		Category = "Rhinos"
-			              	};
-			var blogThree = new Blog
-			                	{
-			                		Title = "three",
-			                		Category = "Rhinos"
-			                	};
+        [Fact]
+        public void CanPerformDynamicQueryUsingClientLuceneQuery()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title = "two",
+                Category = "Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "three",
+                Category = "Rhinos"
+            };
 
-			using (var s = documentStore.OpenSession())
-			{
-				s.Store(blogOne);
-				s.Store(blogTwo);
-				s.Store(blogThree);
-				s.SaveChanges();
-			}
+            using (var s = this.documentStore.OpenSession())
+            {
+                s.Store(blogOne);
+                s.Store(blogTwo);
+                s.Store(blogThree);
+                s.SaveChanges();
+            }
 
-			using (var s = documentStore.OpenSession())
-			{
-				var results = s.Advanced.LuceneQuery<Blog>()
-					.Where("Title.Length:3 AND Category:Rhinos")
-					.WaitForNonStaleResultsAsOfNow().ToArray();
+            using (var s = this.documentStore.OpenSession())
+            {
+                var results = s.Advanced.LuceneQuery<Blog>()
+                               .Where("Title.Length:3 AND Category:Rhinos")
+                               .WaitForNonStaleResultsAsOfNow().ToArray();
 
-				Assert.Equal(1, results.Length);
-				Assert.Equal("two", results[0].Title);
-				Assert.Equal("Rhinos", results[0].Category);
-			}
-		}
+                Assert.Equal(1, results.Length);
+                Assert.Equal("two", results[0].Title);
+                Assert.Equal("Rhinos", results[0].Category);
+            }
+        }
 
-		[Fact]
-		public void CanPerformProjectionUsingClientLinqQuery()
-		{
-			var blogOne = new Blog
-			              	{
-			              		Title = "one",
-			              		Category = "Ravens",
-			              		Tags = new Tag[]
-			              		       	{
-			              		       		new Tag() {Name = "tagOne"},
-			              		       		new Tag() {Name = "tagTwo"}
-			              		       	}
-			              	};
+        [Fact]
+        public void CanPerformProjectionUsingClientLinqQuery()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens",
+                Tags = new[]
+                {
+                    new Tag {Name = "tagOne"},
+                    new Tag {Name = "tagTwo"}
+                }
+            };
 
-			using (var s = documentStore.OpenSession())
-			{
-				s.Store(blogOne);
-				s.SaveChanges();
-			}
+            using (var s = this.documentStore.OpenSession())
+            {
+                s.Store(blogOne);
+                s.SaveChanges();
+            }
 
-			using (var s = documentStore.OpenSession())
-			{
-				var results = s.Query<Blog>()
-					.Where(x => x.Title == "one" && x.Tags.Any(y => y.Name == "tagTwo"))
-					.Select(x => new
-					             	{
-					             		x.Category,
-					             		x.Title
-					             	})
-					.Single();
+            using (var s = this.documentStore.OpenSession())
+            {
+                var results = s.Query<Blog>()
+                               .Where(x => x.Title == "one" && x.Tags.Any(y => y.Name == "tagTwo"))
+                               .Select(x => new
+                               {
+                                   x.Category,
+                                   x.Title
+                               })
+                               .Single();
 
-				Assert.Equal("one", results.Title);
-				Assert.Equal("Ravens", results.Category);
-			}
-		}
+                Assert.Equal("one", results.Title);
+                Assert.Equal("Ravens", results.Category);
+            }
+        }
 
-		[Fact]
-		public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
-		{
-			using (var s = documentStore.OpenSession())
-			{
-				s.Store(new Tag());
-				s.SaveChanges();
-			}
+        [Fact]
+        public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
+        {
+            using (var s = this.documentStore.OpenSession())
+            {
+                s.Store(new Tag());
+                s.SaveChanges();
+            }
 
-			using (var s = documentStore.OpenSession())
-			{
-				var results = s.Query<Blog>()
-					.Select(b => new {b.Category})
-					.ToArray();
-				Assert.Equal(0, results.Length);
-			}
-		}
+            using (var s = this.documentStore.OpenSession())
+            {
+                var results = s.Query<Blog>()
+                               .Select(b => new {b.Category})
+                               .ToArray();
+                Assert.Equal(0, results.Length);
+            }
+        }
 
-		[Fact]
-		public void CanPerformLinqOrderByOnNumericField()
-		{
-			var blogOne = new Blog
-			              	{
-			              		SortWeight = 2
-			              	};
+        [Fact]
+        public void CanPerformLinqOrderByOnNumericField()
+        {
+            var blogOne = new Blog
+            {
+                SortWeight = 2
+            };
 
-			var blogTwo = new Blog
-			              	{
-			              		SortWeight = 4
-			              	};
+            var blogTwo = new Blog
+            {
+                SortWeight = 4
+            };
 
-			var blogThree = new Blog
-			                	{
-			                		SortWeight = 1
-			                	};
+            var blogThree = new Blog
+            {
+                SortWeight = 1
+            };
 
-			using (var s = documentStore.OpenSession())
-			{
-				s.Store(blogOne);
-				s.Store(blogTwo);
-				s.Store(blogThree);
-				s.SaveChanges();
-			}
+            using (var s = this.documentStore.OpenSession())
+            {
+                s.Store(blogOne);
+                s.Store(blogTwo);
+                s.Store(blogThree);
+                s.SaveChanges();
+            }
 
-			using (var s = documentStore.OpenSession())
-			{
-				var resultDescending = (from blog in s.Query<Blog>()
-				                        orderby blog.SortWeight descending
-				                        select blog).ToArray();
+            using (var s = this.documentStore.OpenSession())
+            {
+                var resultDescending = (from blog in s.Query<Blog>()
+                                        orderby blog.SortWeight descending
+                                        select blog).ToArray();
 
-				var resultAscending = (from blog in s.Query<Blog>()
-				                       orderby blog.SortWeight ascending
-				                       select blog).ToArray();
+                var resultAscending = (from blog in s.Query<Blog>()
+                                       orderby blog.SortWeight ascending
+                                       select blog).ToArray();
 
-				Assert.Equal(4, resultDescending[0].SortWeight);
-				Assert.Equal(2, resultDescending[1].SortWeight);
-				Assert.Equal(1, resultDescending[2].SortWeight);
+                Assert.Equal(4, resultDescending[0].SortWeight);
+                Assert.Equal(2, resultDescending[1].SortWeight);
+                Assert.Equal(1, resultDescending[2].SortWeight);
 
-				Assert.Equal(1, resultAscending[0].SortWeight);
-				Assert.Equal(2, resultAscending[1].SortWeight);
-				Assert.Equal(4, resultAscending[2].SortWeight);
+                Assert.Equal(1, resultAscending[0].SortWeight);
+                Assert.Equal(2, resultAscending[1].SortWeight);
+                Assert.Equal(4, resultAscending[2].SortWeight);
+            }
+        }
 
-			}
-		}
+        [Fact]
+        public void CanPerformLinqOrderByOnTextField()
+        {
+            var blogOne = new Blog
+            {
+                Title = "aaaaa"
+            };
 
-		[Fact]
-		public void CanPerformLinqOrderByOnTextField()
-		{
-			var blogOne = new Blog
-			              	{
-			              		Title = "aaaaa"
-			              	};
+            var blogTwo = new Blog
+            {
+                Title = "ccccc"
+            };
 
-			var blogTwo = new Blog
-			              	{
-			              		Title = "ccccc"
-			              	};
+            var blogThree = new Blog
+            {
+                Title = "bbbbb"
+            };
 
-			var blogThree = new Blog
-			                	{
-			                		Title = "bbbbb"
-			                	};
+            using (var s = this.documentStore.OpenSession())
+            {
+                s.Store(blogOne);
+                s.Store(blogTwo);
+                s.Store(blogThree);
+                s.SaveChanges();
+            }
 
-			using (var s = documentStore.OpenSession())
-			{
-				s.Store(blogOne);
-				s.Store(blogTwo);
-				s.Store(blogThree);
-				s.SaveChanges();
-			}
+            using (var s = this.documentStore.OpenSession())
+            {
+                var resultDescending = (from blog in s.Query<Blog>()
+                                        orderby blog.Title descending
+                                        select blog).ToArray();
 
-			using (var s = documentStore.OpenSession())
-			{
-				var resultDescending = (from blog in s.Query<Blog>()
-				                        orderby blog.Title descending
-				                        select blog).ToArray();
+                var resultAscending = (from blog in s.Query<Blog>()
+                                       orderby blog.Title ascending
+                                       select blog).ToArray();
 
-				var resultAscending = (from blog in s.Query<Blog>()
-				                       orderby blog.Title ascending
-				                       select blog).ToArray();
+                Assert.Equal("ccccc", resultDescending[0].Title);
+                Assert.Equal("bbbbb", resultDescending[1].Title);
+                Assert.Equal("aaaaa", resultDescending[2].Title);
 
-				Assert.Equal("ccccc", resultDescending[0].Title);
-				Assert.Equal("bbbbb", resultDescending[1].Title);
-				Assert.Equal("aaaaa", resultDescending[2].Title);
+                Assert.Equal("aaaaa", resultAscending[0].Title);
+                Assert.Equal("bbbbb", resultAscending[1].Title);
+                Assert.Equal("ccccc", resultAscending[2].Title);
+            }
+        }
 
-				Assert.Equal("aaaaa", resultAscending[0].Title);
-				Assert.Equal("bbbbb", resultAscending[1].Title);
-				Assert.Equal("ccccc", resultAscending[2].Title);
+        [Fact]
+        public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
+        {
+            var blogOne = new Blog
+            {
+                Title = "Lorem ipsum dolor sit amet, target word, consectetur adipiscing elit.",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title =
+                    "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
+                Category = "The Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "Target cras vitae felis arcu word.",
+                Category = "Los Rhinos"
+            };
 
-			}
-		}
+            using (var store = this.NewDocumentStore())
+            {
+                string blogOneId;
+                string blogTwoId;
+                using (var s = store.OpenSession())
+                {
+                    s.Store(blogOne);
+                    s.Store(blogTwo);
+                    s.Store(blogThree);
+                    s.SaveChanges();
 
-		public class Blog
-		{
-			public User User { get; set; }
+                    blogOneId = s.Advanced.GetDocumentId(blogOne);
+                    blogTwoId = s.Advanced.GetDocumentId(blogTwo);
+                }
 
-			public string Title { get; set; }
+                using (var s = store.OpenSession())
+                {
+                    FieldHighlightings titleHighlightings;
+                    FieldHighlightings categoryHighlightings;
 
-			public Tag[] Tags { get; set; }
+                    var results = s.Advanced.LuceneQuery<Blog>()
+                                   .Highlight("Title", 18, 2, out titleHighlightings)
+                                   .Highlight("Category", 18, 2, out categoryHighlightings)
+                                   .SetHighlighterTags("*", "*")
+                                   .Where("Title:(target word) OR Category:rhinos")
+                                   .WaitForNonStaleResultsAsOfNow()
+                                   .ToArray();
 
-			public int SortWeight { get; set; }
+                    Assert.Equal(3, results.Length);
+                    Assert.NotEmpty(titleHighlightings.GetFragments(blogOneId));
+                    Assert.Empty(categoryHighlightings.GetFragments(blogOneId));
 
-			public string Category { get; set; }
-		}
+                    Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
+                    Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+                }
+            }
+        }
 
-		public class Tag
-		{
-			public string Name { get; set; }
-		}
+        [Fact]
+        public void CanPerformDynamicQueryWithHighlighting()
+        {
+            var blogOne = new Blog
+            {
+                Title = "Lorem ipsum dolor sit amet, target word, consectetur adipiscing elit.",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title =
+                    "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
+                Category = "The Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "Target cras vitae felis arcu word.",
+                Category = "Los Rhinos"
+            };
 
-		public class User
-		{
-			public string Name { get; set; }
-		}
-	}
+            using (var store = this.NewDocumentStore())
+            {
+                string blogOneId;
+                string blogTwoId;
+                using (var s = store.OpenSession())
+                {
+                    s.Store(blogOne);
+                    s.Store(blogTwo);
+                    s.Store(blogThree);
+                    s.SaveChanges();
+
+                    blogOneId = s.Advanced.GetDocumentId(blogOne);
+                    blogTwoId = s.Advanced.GetDocumentId(blogTwo);
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    FieldHighlightings titleHighlightings = null;
+                    FieldHighlightings categoryHighlightings = null;
+
+                    var results = s.Query<Blog>()
+                                   .Customize(
+                                       c =>
+                                       c.Highlight("Title", 18, 2, out titleHighlightings)
+                                        .Highlight("Category", 18, 2, out categoryHighlightings)
+                                        .SetHighlighterTags("*", "*")
+                                        .WaitForNonStaleResultsAsOfNow())
+                                   .Search(x => x.Category, "rhinos")
+                                   .Search(x => x.Title, "target word")
+                                   .ToArray();
+
+                    Assert.Equal(3, results.Length);
+                    Assert.NotEmpty(titleHighlightings.GetFragments(blogOneId));
+                    Assert.Empty(categoryHighlightings.GetFragments(blogOneId));
+
+                    Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
+                    Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+                }
+            }
+        }
+
+        public class Blog
+        {
+            public User User { get; set; }
+
+            public string Title { get; set; }
+
+            public Tag[] Tags { get; set; }
+
+            public int SortWeight { get; set; }
+
+            public string Category { get; set; }
+        }
+
+        public class Tag
+        {
+            public string Name { get; set; }
+        }
+
+        public class User
+        {
+            public string Name { get; set; }
+        }
+    }
 }

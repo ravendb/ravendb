@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using Raven.Client;
 using Xunit;
 
 namespace Raven.Tests.Querying
@@ -169,6 +170,123 @@ namespace Raven.Tests.Querying
 			}
 		}
 
+        [Fact]
+        public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
+        {
+            var blogOne = new Blog
+            {
+                Title = "Lorem ipsum dolor sit amet, target word, consectetur adipiscing elit.",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title = "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
+                Category = "The Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "Target cras vitae felis arcu word.",
+                Category = "Los Rhinos"
+            };
+
+            using (var store = this.NewDocumentStore())
+            {
+                string blogOneId;
+                string blogTwoId;
+                using (var s = store.OpenSession())
+                {
+                    s.Store(blogOne);
+                    s.Store(blogTwo);
+                    s.Store(blogThree);
+                    s.SaveChanges();
+
+                    blogOneId = s.Advanced.GetDocumentId(blogOne);
+                    blogTwoId = s.Advanced.GetDocumentId(blogTwo);
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    FieldHighlightings titleHighlightings;
+                    FieldHighlightings categoryHighlightings;
+
+                    var results = s.Advanced.LuceneQuery<Blog>()
+                        .Highlight("Title", 18, 2, out titleHighlightings)
+                        .Highlight("Category", 18, 2, out categoryHighlightings)
+                        .SetHighlighterTags("*","*")
+                        .Where("Title:(target word) OR Category:rhinos")
+                        .WaitForNonStaleResultsAsOfNow()
+                        .ToArray();
+
+                    Assert.Equal(3, results.Length);
+                    Assert.NotEmpty(titleHighlightings.GetFragments(blogOneId));
+                    Assert.Empty(categoryHighlightings.GetFragments(blogOneId));
+
+                    Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
+                    Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+                }
+            }
+        }
+
+        [Fact]
+        public void CanPerformDynamicQueryWithHighlighting()
+        {
+            var blogOne = new Blog
+            {
+                Title = "Lorem ipsum dolor sit amet, target word, consectetur adipiscing elit.",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title = "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
+                Category = "The Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "Target cras vitae felis arcu word.",
+                Category = "Los Rhinos"
+            };
+
+            using (var store = this.NewDocumentStore())
+            {
+                string blogOneId;
+                string blogTwoId;
+                using (var s = store.OpenSession())
+                {
+                    s.Store(blogOne);
+                    s.Store(blogTwo);
+                    s.Store(blogThree);
+                    s.SaveChanges();
+
+                    blogOneId = s.Advanced.GetDocumentId(blogOne);
+                    blogTwoId = s.Advanced.GetDocumentId(blogTwo);
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    FieldHighlightings titleHighlightings = null;
+                    FieldHighlightings categoryHighlightings = null;
+
+                    var results = s.Query<Blog>()
+                                   .Customize(
+                                       c =>
+                                       c.Highlight("Title", 18, 2, out titleHighlightings)
+                                        .Highlight("Category", 18, 2, out categoryHighlightings)
+                                        .SetHighlighterTags("*", "*")
+                                        .WaitForNonStaleResultsAsOfNow())
+                                   .Search(x => x.Category, "rhinos")
+                                   .Search(x => x.Title, "target word")
+                                   .ToArray();
+
+                    Assert.Equal(3, results.Length);
+                    Assert.NotEmpty(titleHighlightings.GetFragments(blogOneId));
+                    Assert.Empty(categoryHighlightings.GetFragments(blogOneId));
+
+                    Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
+                    Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+                }
+            }
+        }
+       
 		public class Blog
 		{
 			public string Title

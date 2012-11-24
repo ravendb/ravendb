@@ -631,14 +631,19 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-	    IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, int fragmentLength,
-	        int fragmentCount, out FieldHighlightings queryHighlightings)
+	    IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
+            string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
 	    {
-	        this.Highlight(fieldName, fragmentLength, fragmentCount);
-	        queryHighlightings = this.highlightings.AddField(fieldName);
+	        this.Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
 	        return this;
 	    }
 
+	    IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
+	        string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+	    {
+	        this.Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
+	        return this;
+	    }
 
 	    IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
 	    {
@@ -684,9 +689,15 @@ namespace Raven.Client.Document
 			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
 		}
 
-        public void Highlight(string fieldName, int fragmentLength, int fragmentCount)
+        public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
         {
-            highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount));
+            highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
+        }
+
+        public void Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+        {
+            highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
+            fieldHighlightings = highlightings.AddField(fieldName);
         }
 
 	    public void SetHighlighterTags(string[] preTags, string[] postTags)

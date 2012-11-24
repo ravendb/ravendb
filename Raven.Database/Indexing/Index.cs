@@ -817,8 +817,12 @@ namespace Raven.Database.Indexing
 						            FastVectorHighlighter.DEFAULT_FIELD_MATCH,
 						            new SimpleFragListBuilder(),
 						            new SimpleFragmentsBuilder(
-						                indexQuery.HighlighterPreTags ?? BaseFragmentsBuilder.COLORED_PRE_TAGS,
-						                indexQuery.HighlighterPostTags ?? BaseFragmentsBuilder.COLORED_POST_TAGS));
+						                indexQuery.HighlighterPreTags.Any()
+						                    ? indexQuery.HighlighterPreTags
+						                    : BaseFragmentsBuilder.COLORED_PRE_TAGS,
+						                indexQuery.HighlighterPostTags.Any()
+						                    ? indexQuery.HighlighterPostTags
+						                    : BaseFragmentsBuilder.COLORED_POST_TAGS));
 
 						        fieldQuery = highlighter.GetFieldQuery(luceneQuery);
 						    }
@@ -836,18 +840,34 @@ namespace Raven.Database.Indexing
 								}
 
 							    if (highlighter != null)
-							        indexQueryResult.Highligtings =
-							            this.indexQuery
-							                .HighlightedFields
-							                .ToDictionary(
-							                    x => x.Field,
-							                    x => highlighter.GetBestFragments(
-							                        fieldQuery,
-							                        indexSearcher.IndexReader,
-							                        scoreDoc.Doc,
-							                        x.Field,
-							                        x.FragmentLength,
-							                        x.FragmentCount));
+							    {
+							        var highlightings =
+							            from highlightedField in this.indexQuery.HighlightedFields
+							            select new
+							            {
+							                highlightedField.Field,
+                                            highlightedField.FragmentsField,
+							                Fragments = highlighter.GetBestFragments(
+							                    fieldQuery,
+							                    indexSearcher.IndexReader,
+							                    scoreDoc.Doc,
+							                    highlightedField.Field,
+							                    highlightedField.FragmentLength,
+							                    highlightedField.FragmentCount)
+							            }
+							            into fieldHighlitings
+							            where fieldHighlitings.Fragments != null &&
+							                  fieldHighlitings.Fragments.Length > 0
+							            select fieldHighlitings;
+
+							        if (fieldsToFetch.IsProjection || parent.IsMapReduce)
+							            foreach (var highlighting in highlightings)
+							                indexQueryResult.Projection[highlighting.FragmentsField]
+							                    = new RavenJArray(highlighting.Fragments);
+							        else
+							            indexQueryResult.Highligtings = highlightings
+							                .ToDictionary(x => x.Field, x => x.Fragments);
+							    }
 
 							    returnedResults++;
 								yield return indexQueryResult;
