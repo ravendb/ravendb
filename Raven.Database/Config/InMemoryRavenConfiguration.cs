@@ -45,8 +45,8 @@ namespace Raven.Database.Config
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
 
-		    CreatePluginsDirectoryIfNotExisting = true;
-		    CreateAnalyzersDirectoryIfNotExisting = true;
+			CreatePluginsDirectoryIfNotExisting = true;
+			CreateAnalyzersDirectoryIfNotExisting = true;
 
 			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory / 2);
 			MaxNumberOfParallelIndexTasks = 8;
@@ -650,8 +650,8 @@ namespace Raven.Database.Config
 			}
 		}
 
-        public bool CreatePluginsDirectoryIfNotExisting { get; set; }
-        public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
+		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
+		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
 		public string OAuthTokenServer { get; set; }
 
@@ -701,7 +701,7 @@ namespace Raven.Database.Config
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
 
 		public TimeSpan MaxIndexingRunLatency { get; set; }
-		
+
 		internal bool IsTenantDatabase { get; set; }
 
 		[Browsable(false)]
