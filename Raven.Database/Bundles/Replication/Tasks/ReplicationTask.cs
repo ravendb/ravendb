@@ -626,16 +626,21 @@ namespace Raven.Bundles.Replication.Tasks
 						docsSinceLastReplEtag += docsToReplicate.Count;
 						result.CountOfFilteredDocumentsWhichAreSystemDocuments += docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
 
+						if (docsToReplicate.Count > 0)
+						{
+							var lastDoc = docsToReplicate.Last();
+							Debug.Assert(lastDoc.Etag != null);
+							result.LastEtag = lastDoc.Etag.Value;
+							if (lastDoc.LastModified.HasValue)
+								result.LastLastModified = lastDoc.LastModified.Value;
+						}
+
 						if (docsToReplicate.Count == 0 || filteredDocsToReplicate.Count != 0)
 						{
 							break;
 						}
 
-						JsonDocument jsonDocument = docsToReplicate.Last();
-						Debug.Assert(jsonDocument.Etag != null);
-						Guid documentEtag = jsonDocument.Etag.Value;
-						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", documentEtag);
-						result.LastEtag = documentEtag;
+						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", result.LastEtag);
 					}
 
 					log.Debug(() =>
@@ -658,10 +663,6 @@ namespace Raven.Bundles.Replication.Tasks
 											 string.Join(", ", diff),
 											 destinationsReplicationInformationForSource.LastDocumentEtag);
 					});
-
-					var lastDoc = filteredDocsToReplicate.LastOrDefault();
-					if (lastDoc != null && lastDoc.LastModified.HasValue)
-						result.LastLastModified = lastDoc.LastModified.Value;
 
 					result.Documents = new RavenJArray(filteredDocsToReplicate
 														.Select(x =>
