@@ -117,8 +117,14 @@ namespace Raven.Database.Server
 
 			if (configuration.RunInMemory == false)
 			{
-				TryCreateDirectory(configuration.PluginsDirectory);
-				TryCreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Analyzers"));
+			    if (configuration.CreatePluginsDirectoryIfNotExisting)
+			    {
+			        TryCreateDirectory(configuration.PluginsDirectory);
+			    }
+			    if (configuration.CreateAnalyzersDirectoryIfNotExisting)
+			    {
+			        TryCreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Analyzers"));
+			    }
 			}
 
 			SystemDatabase = resourceStore;
