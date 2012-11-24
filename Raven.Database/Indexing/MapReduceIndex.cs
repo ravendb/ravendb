@@ -456,7 +456,7 @@ namespace Raven.Database.Indexing
 				var fields = GetFields(doc, out boost).ToList();
 
 				string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
-				reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
+				reduceKeyField.SetValue(reduceKeyAsString);
 
 				luceneDoc.GetFields().Clear();
 				luceneDoc.Boost = boost;
@@ -490,7 +490,7 @@ namespace Raven.Database.Indexing
 				foreach (var reduceKey in ReduceKeys)
 				{
 					var entryKey = reduceKey;
-					indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
+					indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey));
 					batchers.ApplyAndIgnoreAllErrors(
 						exception =>
 						{
