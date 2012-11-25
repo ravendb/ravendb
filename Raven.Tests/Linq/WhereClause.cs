@@ -642,24 +642,6 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void AnyOnCollectionNegated()
-		{
-			var indexedUsers = GetRavenQueryInspector();
-			var q = indexedUsers.Where(x => !x.Properties.Any());
-			Assert.Equal("(*:* AND -Properties:*)", q.ToString());
-		}
-
-		[Fact]
-		public void ComplexAnyWithPrecedingExpression()
-		{
-			var indexedUsers = GetRavenQueryInspector();
-			var q = indexedUsers.Where(user => user.Name == null ||
-									   !user.Properties.Any(property => property.Key == "Language" && property.Value != null));
-
-			Assert.Equal(@"Name:[[NULL_VALUE]] OR (*:* AND -(Properties,Key:Language AND (-Properties,Value:[[NULL_VALUE]] AND Properties,Value:*)))", q.ToString());
-		}
-
-		[Fact]
 		public void WillWrapLuceneSaveKeyword_NOT()
 		{
 			var indexedUsers = GetRavenQueryInspector();
