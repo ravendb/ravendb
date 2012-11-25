@@ -139,7 +139,7 @@ namespace Raven.Bundles.UniqueConstraints
 
                 // Handle Updates in the constraint since it changed
 			    var prefix = "UniqueConstraints/" + entityName + property + "/";
-			    var prop = document[propName];
+			    var prop = oldDoc.DataAsJson[propName];
 				if (prop == null || prop.Type == JTokenType.Null)
 					continue;
 				var array = prop as RavenJArray;

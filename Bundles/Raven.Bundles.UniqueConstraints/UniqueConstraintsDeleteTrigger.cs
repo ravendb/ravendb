@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Bundles.UniqueConstraints
 {
@@ -36,6 +37,8 @@ namespace Raven.Bundles.UniqueConstraints
 
 				var prefix = "UniqueConstraints/" + entityName + property + "/"; // UniqueConstraints/EntityNamePropertyName/
 				var prop = doc.DataAsJson[propName];
+				if (prop == null || prop.Type == JTokenType.Null)
+					continue;
 				var array = prop as RavenJArray;
 				var checkKeys = array != null ? array.Select(p => p.Value<string>()) : new[] {prop.Value<string>()};
 
