@@ -524,6 +524,7 @@
     <Compile Include="Issues\Ravendb718\DateTime_QueryMultiMapTests.cs" />
     <Compile Include="Issues\Ravendb718\DateTime_QueryStaticTests.cs" />
     <Compile Include="Issues\Ravendb718\DateTime_QueryTransformTests.cs" />
+    <Compile Include="Issues\RavenDB743.cs" />
     <Compile Include="Issues\RavenDB_554.cs" />
     <Compile Include="Issues\RavenDB_578.cs" />
     <Compile Include="Issues\RavenDB_644.cs" />

@@ -1,4 +1,8 @@
-﻿namespace Raven.Bundles.UniqueConstraints
+﻿using System.Collections.Generic;
+using System.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
+
+namespace Raven.Bundles.UniqueConstraints
 {
 	using Abstractions.Data;
 	using Database.Plugins;
@@ -29,13 +33,19 @@
 
 			foreach (var property in uniqueConstraits)
 			{
-				var value = property.Value<string>();
-				if(value == null)
-					continue;
-				var checkKey = "UniqueConstraints/" + entityName + property + "/" +
-							   Util.EscapeUniqueValue(doc.DataAsJson.Value<string>(value));
+				var propName = property.Value<string>(); // the name of the constraint property
 
-				Database.Delete(checkKey, null, transactionInformation);
+				var prefix = "UniqueConstraints/" + entityName + property + "/"; // UniqueConstraints/EntityNamePropertyName/
+				var prop = doc.DataAsJson[propName];
+				if (prop == null || prop.Type == JTokenType.Null)
+					continue;
+				var array = prop as RavenJArray;
+				var checkKeys = array != null ? array.Select(p => p.Value<string>()) : new[] {prop.Value<string>()};
+
+				foreach (var checkKey in checkKeys)
+				{
+					Database.Delete(prefix + Util.EscapeUniqueValue(checkKey), null, transactionInformation);
+				}
 			}
 		}
 	}

@@ -17,3 +17,4 @@ The Raven Datbase is making use of the following OSS projects:
 * IronJS - (https://github.com/fholm/IronJS/) under the Apache license (https://github.com/fholm/IronJS/blob/master/LICENSE.txt)
 * Mono.Cecil - (https://github.com/jbevain/cecil/) under the MIT license: http://www.mono-project.com/Licensing
 * KBCsv - (http://kbcsv.codeplex.com) under the MS-PL license http://kbcsv.codeplex.com/license
+* lodash.js / underscore.js - (http://lodash.com) under the MIT license http://lodash.com/license

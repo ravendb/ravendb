@@ -44,7 +44,7 @@ namespace Raven.Database.Indexing
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
 		private readonly DocumentDatabase documentDatabase;
-		private const string IndexVersion = "1.2.18";
+		private const string IndexVersion = "2.0.0.1";
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;

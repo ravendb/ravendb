@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Ionic.Zlib;
+using Raven.Abstractions.Util;
 using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -70,6 +71,8 @@ namespace Raven.Client.Silverlight.Connection
 
 		private HttpJsonRequestFactory factory;
 
+		private static Task noopWaitForTask = new CompletedTask();
+
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -82,9 +85,8 @@ namespace Raven.Client.Silverlight.Connection
 			this.conventions = conventions;
 			this.factory = factory;
 			webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
-			var tcs = new TaskCompletionSource<object>();
-			tcs.SetResult(null);
-			WaitForTask = tcs.Task;
+			noopWaitForTask = new CompletedTask();
+			WaitForTask = noopWaitForTask;
 
 			webRequest.Headers["Raven-Client-Version"] = ClientVersion;
 

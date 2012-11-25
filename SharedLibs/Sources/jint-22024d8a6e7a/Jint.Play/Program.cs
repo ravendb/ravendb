@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using Jint.Native;
 
 namespace Jint.Play
 {
@@ -18,12 +20,24 @@ namespace Jint.Play
                 .SetFunction("write", new Action<string>(t => Console.WriteLine(t)))
                 .SetFunction("stop", new Action(delegate() { Console.WriteLine(); }));
             sw.Reset();
-            sw.Start();
+	        jint.SetMaxRecursions(50);
+	        jint.SetMaxSteps(10*1000);
 
-            Console.WriteLine(jint.Run("Math.floor(1.5)"));
-           
+			sw.Start();
+			try
+			{
+				Console.WriteLine(
+					jint.Run(File.ReadAllText(@"C:\Work\ravendb-1.2\SharedLibs\Sources\jint-22024d8a6e7a\Jint.Play\test.js")));
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+			}
+	        finally 
+	        {
+				Console.WriteLine("{0}ms", sw.ElapsedMilliseconds);
+			}
 
-            Console.WriteLine("{0}ms", sw.ElapsedMilliseconds);
         }
     }
 }

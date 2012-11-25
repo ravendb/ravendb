@@ -74,7 +74,9 @@ namespace Raven.Studio.Commands
 						}
 						
 						session.Store(document);
-					});
+						session.SaveChangesAsync().Catch();
+					})
+					.Catch();
 			}
 
             var versioningSettings = settingsModel.GetSection<VersioningSettingsSectionModel>();

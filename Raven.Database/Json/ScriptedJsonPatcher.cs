@@ -250,7 +250,6 @@ namespace Raven.Database.Json
 
 		internal static JintEngine CreateEngine(ScriptedPatchRequest patch)
 		{
-			AssertValidScript(patch.Script);
 			var wrapperScript = String.Format(@"
 function ExecutePatchScript(docInner){{
   (function(doc){{
@@ -260,10 +259,15 @@ function ExecutePatchScript(docInner){{
 ", patch.Script, patch.Script.EndsWith(";") ? String.Empty : ";");
 
 			var jintEngine = new JintEngine()
-				.AllowClr(false);
+				.AllowClr(false)
+				.SetDebugMode(false)
+				.SetMaxRecursions(50)
+				.SetMaxSteps(10*1000);
 
 
 			jintEngine.Run(GetFromResources("Raven.Database.Json.Map.js"));
+
+			jintEngine.Run(GetFromResources("Raven.Database.Json.lodash.js"));
 
 			jintEngine.Run(GetFromResources("Raven.Database.Json.RavenDB.js"));
 
@@ -293,27 +297,6 @@ function ExecutePatchScript(docInner){{
 					continue;
 				Debug.Add(o.ToString());
 			}
-		}
-
-		private static readonly Regex ForbiddenKeywords =
-			new Regex(@"(^ \s * (while|for) ) | ([};] \s* (while|for))", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
-
-		private static readonly Regex ForbiddenEval =
-			new Regex(@"(^|\s) eval \s* \(", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
-
-		private static readonly Regex ForbiddenFunction =
-			new Regex(@"(?<! \. \s* (Map|Remove|Where|RemoveWhere|filter) \s* \() function ((\s*\()| (\s+ \w+\())", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
-
-		private static void AssertValidScript(string script)
-		{
-			if (script.Length > 4096)
-				throw new NotSupportedException("Script is too complex, please use scripts that are less than 4KB in size");
-			if (ForbiddenKeywords.IsMatch(script))
-				throw new NotSupportedException("Keywords 'while' and 'for' are not supported");
-			if (ForbiddenEval.IsMatch(script))
-				throw new NotSupportedException("Function 'eval' is not supported");
-			if (ForbiddenFunction.IsMatch(script))
-				throw new NotSupportedException("Defining functions is not supported");
 		}
 
 		private static string GetFromResources(string resourceName)

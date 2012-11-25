@@ -151,6 +151,16 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void IsNullOrEmpty_Any_Negated_Not_Supported()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => !user.Name.Any());
+
+			var exception = Assert.Throws<InvalidOperationException>(() => q.ToString());
+			Assert.Equal("Cannot process negated Any(), see RavenDB-732 http://issues.hibernatingrhinos.com/issue/RavenDB-732", exception.Message);
+		}
+
+		[Fact]
 		public void IsNullOrEmpty_AnyEqTrue()
 		{
 			var indexedUsers = GetRavenQueryInspector();
@@ -629,24 +639,6 @@ namespace Raven.Tests.Linq
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers.Where(x => x.Properties.Any() == false);
 			Assert.Equal("(*:* AND -Properties:*)", q.ToString());
-		}
-
-		[Fact]
-		public void AnyOnCollectionNegated()
-		{
-			var indexedUsers = GetRavenQueryInspector();
-			var q = indexedUsers.Where(x => !x.Properties.Any());
-			Assert.Equal("(*:* AND -Properties:*)", q.ToString());
-		}
-
-		[Fact]
-		public void ComplexAnyWithPrecedingExpression()
-		{
-			var indexedUsers = GetRavenQueryInspector();
-			var q = indexedUsers.Where(user => user.Name == null ||
-									   !user.Properties.Any(property => property.Key == "Language" && property.Value != null));
-
-			Assert.Equal(@"Name:[[NULL_VALUE]] OR (*:* AND -(Properties,Key:Language AND (-Properties,Value:[[NULL_VALUE]] AND Properties,Value:*)))", q.ToString());
 		}
 
 		[Fact]
