@@ -26,8 +26,6 @@ namespace Raven.Bundles.UniqueConstraints
 			if (properties == null || properties.Length <= 0)
 				return;
 
-			var constraintMetaObject = new RavenJObject { { Constants.IsConstraintDocument, true } };
-			constraintMetaObject.EnsureSnapshot();
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue) property).Value.ToString();
@@ -43,10 +41,10 @@ namespace Raven.Bundles.UniqueConstraints
 				foreach (var relatedKey in relatedKeys)
 				{
 					Database.Put(
-						prefix + relatedKey,
+						prefix + Util.EscapeUniqueValue(relatedKey),
 						null,
 						RavenJObject.FromObject(new {RelatedId = key}),
-						constraintMetaObject,
+						new RavenJObject { { Constants.IsConstraintDocument, true } },
 						transactionInformation);
 				}
 			}
@@ -89,7 +87,7 @@ namespace Raven.Bundles.UniqueConstraints
 
 				foreach (var checkKey in checkKeys)
 				{
-					var checkDoc = Database.Get(prefix + checkKey, transactionInformation);
+					var checkDoc = Database.Get(prefix + Util.EscapeUniqueValue(checkKey), transactionInformation);
 
 					if (checkDoc == null)
 						continue;
@@ -150,7 +148,7 @@ namespace Raven.Bundles.UniqueConstraints
 
 			    foreach (var deleteKey in deleteKeys)
 			    {
-				    Database.Delete(prefix + deleteKey, null, transactionInformation);
+					Database.Delete(prefix + Util.EscapeUniqueValue(deleteKey), null, transactionInformation);
 			    }
 
 			}

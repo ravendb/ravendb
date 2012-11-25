@@ -41,7 +41,7 @@ namespace Raven.Bundles.UniqueConstraints
 
 				foreach (var checkKey in checkKeys)
 				{
-					Database.Delete(prefix + checkKey, null, transactionInformation);
+					Database.Delete(prefix + Util.EscapeUniqueValue(checkKey), null, transactionInformation);
 				}
 			}
 		}
