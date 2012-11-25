@@ -12,6 +12,7 @@
     <AssemblyName>Raven.Client.MvcIntegration</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <JSLintSkip>\Content\vendor\|\Content\ravendb-profiler-scripts.js|\Content2\|\Content\require.js</JSLintSkip>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -70,37 +71,67 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\ravendb-profiler-scripts.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\session-template.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\ravendb-profiler.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Content\styles.css" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\request-details.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\yepnope.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\jquery-1.6.1.min.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\jquery.tmpl.min.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\totals.tmpl.html" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Content\index.html" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <EmbeddedResource Include="Content\vendor\require.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\profiler.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\vendor\jquery-1.8.3.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\vendor\backbone.js" />
+    <EmbeddedResource Include="Content\vendor\underscore.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\ProfilerButton.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\ProfilerView.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\SessionView.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\RequestView.js" />
+    <EmbeddedResource Include="Content\models\ProfilerData.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\models\Session.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\models\Request.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\models\SessionCollection.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\templateHelper.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\RequestDetailsView.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\templates\requestDetails.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\vendor\text.js" />
+    <EmbeddedResource Include="Content\views\templates\session.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\templates\request.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\views\templates\profiler.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />

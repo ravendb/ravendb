@@ -45,7 +45,7 @@ namespace Raven.Client.MvcIntegration
 			var path = context.Request.QueryString["path"];
 			if(string.IsNullOrEmpty(path) == false)
 			{
-				HandlePathRequest(context, path);
+				HandlePathRequest(context, path.TrimStart('/'));
 			}
 			else
 			{
