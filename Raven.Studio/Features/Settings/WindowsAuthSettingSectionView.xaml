@@ -48,12 +48,24 @@
 				<TextBlock Grid.Row="0" 
 						   Text="Name:"
 						   VerticalAlignment="Center"/>
-				<TextBox Grid.Row="0"
-						 Grid.Column="1"
-                         Grid.ColumnSpan="2"
-						 Text="{Binding Name, Mode=TwoWay}" 
-                         Margin="5"/>
-
+				<sdk:AutoCompleteBox x:Name="name"
+									 Grid.Column="1"
+									 Grid.ColumnSpan="2"
+									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+									 MinimumPrefixLength="0"
+									 IsTextCompletionEnabled="True"
+									 VerticalAlignment="Center"
+									 Margin="5,5,5,0">
+					<i:Interaction.Behaviors>
+						<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext.WindowsAuthName, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+					</i:Interaction.Behaviors>
+					<i:Interaction.Triggers>
+						<i:EventTrigger EventName="GotFocus">
+							<Behaviors:ShowAutoCompleteDropDown/>
+						</i:EventTrigger>
+					</i:Interaction.Triggers>
+				</sdk:AutoCompleteBox>
+				
 				<TextBlock Grid.Row="1" 
 						   Text="Enabled:" 
 						   VerticalAlignment="Center"/>
@@ -93,7 +105,7 @@
                                                          VerticalAlignment="Center"
                                                          Margin="5,5,5,0">
 										<i:Interaction.Behaviors>
-											<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+											<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext.DatabaseSuggestionProvider, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
 										</i:Interaction.Behaviors>
 										<i:Interaction.Triggers>
 											<i:EventTrigger EventName="GotFocus">
