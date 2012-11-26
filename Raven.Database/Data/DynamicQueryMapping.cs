@@ -132,7 +132,7 @@ namespace Raven.Database.Data
 				index.SortOptions[ToFieldName(descriptor.Field)] = descriptor.FieldType;
 			}
 
-		    foreach (var field in HighlightedFields)
+		    foreach (var field in HighlightedFields.EmptyIfNull())
 		    {
 		        index.Stores[field] = FieldStorage.Yes;
                 index.Indexes[field] = FieldIndexing.Analyzed;

@@ -817,10 +817,10 @@ namespace Raven.Database.Indexing
 						            FastVectorHighlighter.DEFAULT_FIELD_MATCH,
 						            new SimpleFragListBuilder(),
 						            new SimpleFragmentsBuilder(
-						                indexQuery.HighlighterPreTags.Any()
+						                indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
 						                    ? indexQuery.HighlighterPreTags
 						                    : BaseFragmentsBuilder.COLORED_PRE_TAGS,
-						                indexQuery.HighlighterPostTags.Any()
+						                indexQuery.HighlighterPostTags != null && indexQuery.HighlighterPostTags.Any()
 						                    ? indexQuery.HighlighterPostTags
 						                    : BaseFragmentsBuilder.COLORED_POST_TAGS));
 
