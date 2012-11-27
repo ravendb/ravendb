@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
@@ -13,6 +14,9 @@ namespace Raven.Client.Embedded.Changes
 		private readonly EmbeddableObserableWithTask<IndexChangeNotification> indexesObservable;
 		private readonly EmbeddableObserableWithTask<DocumentChangeNotification> documentsObservable;
 
+		private readonly BlockingCollection<Action> enqueuedActions = new BlockingCollection<Action>();
+		private Task enqueuedTask;
+
 		public EmbeddableDatabaseChanges(EmbeddableDocumentStore embeddableDocumentStore, Action onDispose)
 		{
 			this.onDispose = onDispose;
@@ -20,8 +24,19 @@ namespace Raven.Client.Embedded.Changes
 			indexesObservable = new EmbeddableObserableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObserableWithTask<DocumentChangeNotification>();
 
-			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += indexesObservable.Notify;
-			embeddableDocumentStore.DocumentDatabase.TransportState.OnDocumentChangeNotification += documentsObservable.Notify;
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += (o, notification) => Enqueue(() => indexesObservable.Notify(o, notification));
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnDocumentChangeNotification += (o, notification) => Enqueue(() => documentsObservable.Notify(o, notification));
+
+			enqueuedTask = Task.Factory.StartNew(() =>
+			{
+				while (true)
+				{
+					var action = enqueuedActions.Take();
+					if (action == null)
+						return;
+					action();
+				}
+			});
 		}
 
 		public bool Connected { get; private set; }
@@ -62,7 +77,9 @@ namespace Raven.Client.Embedded.Changes
 
 		public void Dispose()
 		{
+			enqueuedActions.Add(null);
 			onDispose();
+			enqueuedTask.Wait();
 		}
 	}
 }

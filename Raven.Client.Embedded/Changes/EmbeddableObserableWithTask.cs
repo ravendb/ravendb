@@ -28,14 +28,12 @@ namespace Raven.Client.Embedded.Changes
 
 		public void Notify(object sender, T e)
 		{
-			// we want to match to the way we work in reomte, where this is raised from a separate thread
-			Task.Factory.StartNew(() =>
+			foreach (var observer in registered)
 			{
-				foreach (var observer in registered)
-				{
-					observer.OnNext(e);
-				}
-			});
+				observer.OnNext(e);
+			}
 		}
+
+
 	}
 }
