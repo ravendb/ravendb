@@ -11,7 +11,7 @@ namespace Raven.Client.Embedded.Changes
 {
 	internal class EmbeddableObserableWithTask<T> : IObservableWithTask<T>
 	{
-		ConcurrentSet<IObserver<T>> registered = new ConcurrentSet<IObserver<T>>();
+		readonly ConcurrentSet<IObserver<T>> registered = new ConcurrentSet<IObserver<T>>();
 
 		public IDisposable Subscribe(IObserver<T> observer)
 		{
@@ -28,10 +28,14 @@ namespace Raven.Client.Embedded.Changes
 
 		public void Notify(object sender, T e)
 		{
-			foreach (var observer in registered)
+			// we want to match to the way we work in reomte, where this is raised from a separate thread
+			Task.Factory.StartNew(() =>
 			{
-				observer.OnNext(e);
-			}
+				foreach (var observer in registered)
+				{
+					observer.OnNext(e);
+				}
+			});
 		}
 	}
 }

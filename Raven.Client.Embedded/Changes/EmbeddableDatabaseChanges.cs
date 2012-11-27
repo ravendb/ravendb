@@ -49,7 +49,7 @@ namespace Raven.Client.Embedded.Changes
 		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
 		{
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
-				notification => string.Equals(docId, notification.Name, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(docId, notification.Id, StringComparison.InvariantCultureIgnoreCase));
 		}
 
 		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
@@ -57,7 +57,7 @@ namespace Raven.Client.Embedded.Changes
 			if (docIdPrefix == null) throw new ArgumentNullException("docIdPrefix");
 
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
-				notification => notification.Name.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
 		}
 
 		public void Dispose()
