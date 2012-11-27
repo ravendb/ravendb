@@ -82,16 +82,22 @@ namespace Raven.Studio.Commands
 			public Task ImportAsync()
 			{
 				var batch = new List<RavenJObject>();
+				var columns = header.Values.Where(x => x.StartsWith("@") == false).ToArray();
 				while (enumerator.MoveNext())
 				{
 					var record = enumerator.Current;
 					var document = new RavenJObject();
 					var id = Guid.NewGuid().ToString("N");
-					foreach (var column in header.Values)
+					RavenJObject metadata = null;
+					foreach (var column in columns)
 					{
-						if (string.Compare("id", column, StringComparison.InvariantCultureIgnoreCase) == 0)
+						if (string.Equals("id", column, StringComparison.InvariantCultureIgnoreCase))
 						{
 							id = record[column];
+						}
+						else if(string.Equals("Raven-Entity-Name", column, StringComparison.InvariantCultureIgnoreCase))
+						{
+							metadata = new RavenJObject { { "Raven-Entity-Name", record[column] } };
 						}
 						else
 						{
@@ -99,7 +105,7 @@ namespace Raven.Studio.Commands
 						}
 					}
 
-					var metadata = new RavenJObject { { "Raven-Entity-Name", entity } };
+					metadata = metadata ?? new RavenJObject {{"Raven-Entity-Name", entity}};
 					document.Add("@metadata", metadata);
 					metadata.Add("@id", id);
 
@@ -145,7 +151,7 @@ namespace Raven.Studio.Commands
 						// ignoring failure to parse, will proceed to insert as a string value
 					}
 				}
-				else if (char.IsDigit(ch))
+				else if (char.IsDigit(ch) || ch == '-' || ch == '.')
 				{
 					// maybe it is a number?
 					long longResult;
