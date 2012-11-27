@@ -10,12 +10,12 @@ namespace Raven.Abstractions.Data
 	public class DocumentChangeNotification : EventArgs
 	{
 		public DocumentChangeTypes Type { get; set; }
-		public string Name { get; set; }
+		public string Id { get; set; }
 		public Guid? Etag { get; set; }
 
 		public override string ToString()
 		{
-			return string.Format("{0} on {1}", Type, Name);
+			return string.Format("{0} on {1}", Type, Id);
 		}
 	}
 

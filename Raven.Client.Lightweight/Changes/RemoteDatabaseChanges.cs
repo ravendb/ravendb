@@ -210,7 +210,7 @@ namespace Raven.Client.Changes
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
 				counter,
-				notification => string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(notification.Id, docId, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError = taskedObservable.Error;
@@ -317,7 +317,7 @@ namespace Raven.Client.Changes
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
 				counter,
-				notification => notification.Name.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
