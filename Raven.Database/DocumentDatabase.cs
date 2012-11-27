@@ -616,7 +616,7 @@ namespace Raven.Database
 								PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
 								RaiseNotifications(new DocumentChangeNotification
 								{
-									Name = key,
+									Id = key,
 									Type = DocumentChangeTypes.Put,
 									Etag = newEtag,
 								});
@@ -800,7 +800,7 @@ namespace Raven.Database
 								DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
 								RaiseNotifications(new DocumentChangeNotification
 								{
-									Name = key,
+									Id = key,
 									Type = DocumentChangeTypes.Delete,
 								});
 							});
