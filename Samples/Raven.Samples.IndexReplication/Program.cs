@@ -15,9 +15,9 @@ using Raven.Client.Indexes;
 
 namespace Raven.Samples.IndexReplication
 {
-	public class Questions_VoteTotals : AbstractIndexCreationTask<Question>
+	public class Questions_TitleAndVoteCount : AbstractIndexCreationTask<Question>
 	{
-		public Questions_VoteTotals()
+		public Questions_TitleAndVoteCount()
 		{
 			Map = questions => from question in questions
 							   select new
@@ -37,7 +37,7 @@ namespace Raven.Samples.IndexReplication
 
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
 			{
-				new Questions_VoteTotals().Execute(documentStore);
+				new Questions_TitleAndVoteCount().Execute(documentStore);
 
 				using (var s = documentStore.OpenSession())
 				{
@@ -56,7 +56,7 @@ namespace Raven.Samples.IndexReplication
 
 					var indexReplicationDestination = new Raven.Bundles.IndexReplication.Data.IndexReplicationDestination
 					{
-						Id = "Raven/IndexReplication/Questions/VoteTotals",
+						Id = "Raven/IndexReplication/Questions/TitleAndVoteCount",
 						ColumnsMapping =
 						{
 							{"Title", "Title"},
