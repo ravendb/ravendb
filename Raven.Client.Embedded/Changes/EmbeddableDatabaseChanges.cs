@@ -24,8 +24,10 @@ namespace Raven.Client.Embedded.Changes
 			indexesObservable = new EmbeddableObserableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObserableWithTask<DocumentChangeNotification>();
 
-			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += (o, notification) => Enqueue(() => indexesObservable.Notify(o, notification));
-			embeddableDocumentStore.DocumentDatabase.TransportState.OnDocumentChangeNotification += (o, notification) => Enqueue(() => documentsObservable.Notify(o, notification));
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += (o, notification) => 
+				enqueuedActions.Add(() => indexesObservable.Notify(o, notification));
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnDocumentChangeNotification += (o, notification) =>
+				 enqueuedActions.Add(() => documentsObservable.Notify(o, notification));
 
 			enqueuedTask = Task.Factory.StartNew(() =>
 			{
