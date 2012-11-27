@@ -49,11 +49,6 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\..\Raven.Client.Lightweight.FSharp\Raven.Client.Lightweight.FSharp.fsproj">
-      <Name>Raven.Client.Lightweight.FSharp</Name>
-      <Project>{6996133d-ee21-4cc8-b29b-f6222ee476bb}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Name>Raven.Client.Lightweight</Name>
       <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>
