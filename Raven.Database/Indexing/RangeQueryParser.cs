@@ -48,11 +48,7 @@ namespace Raven.Database.Indexing
 			var fieldQuery = GetFieldQuery(field, termStr);
 
 			var tq = fieldQuery as TermQuery;
-			if(tq != null) 
-				return NewPrefixQuery(tq.Term);
-
-			throw new InvalidOperationException("When trying to parse prefix clause for field '" + field + "' with value '" +
-			                                    termStr + "', we got a non term query, can't proceed: " + fieldQuery.GetType().Name + " " + fieldQuery);
+			return NewPrefixQuery(tq != null ? tq.Term : new Term(field, termStr));
 		}
 
 		protected override Query GetWildcardQuery(string field, string termStr)
@@ -67,12 +63,8 @@ namespace Raven.Database.Indexing
 			var fieldQuery = GetFieldQuery(field, termStr);
 
 			var tq = fieldQuery as TermQuery;
-			if (tq != null)
-				return NewWildcardQuery(tq.Term);
+			return NewWildcardQuery(tq != null ? tq.Term : new Term(field, termStr));
 
-			var fieldQueryTypeName = fieldQuery == null ? "null" : fieldQuery.GetType().Name;
-			throw new InvalidOperationException("When trying to parse wildcard clause for field '" + field + "' with value '" +
-														termStr + "', we got a non term query, can't proceed: " + fieldQueryTypeName + " " + fieldQuery);
 		}
 
 		protected override Query GetFuzzyQuery(string field, string termStr, float minSimilarity)
@@ -80,12 +72,7 @@ namespace Raven.Database.Indexing
 			var fieldQuery = GetFieldQuery(field, termStr);
 
 			var tq = fieldQuery as TermQuery;
-			if (tq != null)
-				return NewFuzzyQuery(tq.Term, minSimilarity, FuzzyPrefixLength);
-
-			throw new InvalidOperationException("When trying to parse fuzzy clause for field '" + field + "' with value '" +
-												termStr + "', we got a non term query, can't proceed: " + fieldQuery.GetType().Name + " " + fieldQuery);
-	
+			return NewFuzzyQuery(tq != null ? tq.Term : new Term(field, termStr), minSimilarity, FuzzyPrefixLength);
 		}
 
 		protected override Query GetFieldQuery(string field, string queryText)
