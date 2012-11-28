@@ -193,7 +193,7 @@ namespace Raven.Database.Server
 		{
 			get
 			{
-				var activeDatbases = ResourcesStoresCache.Where(x => x.Value.Status == TaskStatus.RanToCompletion).Select(x => new
+				var activeDatabases = ResourcesStoresCache.Where(x => x.Value.Status == TaskStatus.RanToCompletion).Select(x => new
 				{
 					Name = x.Key,
 					Database = x.Value.Result
@@ -203,7 +203,7 @@ namespace Raven.Database.Server
 					TotalNumberOfRequests = NumberOfRequests,
 					Uptime = SystemTime.UtcNow - startUpTime,
 					LoadedDatabases =
-						from documentDatabase in activeDatbases
+						from documentDatabase in activeDatabases
 								.Concat(new[] { new { Name = "System", Database = SystemDatabase } })
 						let totalSizeOnDisk = documentDatabase.Database.GetTotalSizeOnDisk()
 						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)

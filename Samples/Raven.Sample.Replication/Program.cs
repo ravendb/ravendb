@@ -3,37 +3,68 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using Raven.Client.Exceptions;
-
 namespace Raven.Sample.Replication
 {
-	class Program
+	using System;
+	using System.Collections.Generic;
+
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Replication;
+	using Raven.Client;
+	using Raven.Client.Document;
+	using Raven.Client.Exceptions;
+
+	public class Program
 	{
+		private const string Url1 = "http://localhost:8079";
+
+		private const string Url2 = "http://localhost:8078";
+
+		private const string DatabaseName = "ReplicationSampleDB";
+
 		static void Main()
 		{
-			var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialize();
-			var documentStore2 = new DocumentStore { Url = "http://localhost:8081" }.Initialize();
-		   
-			using(var session1 = documentStore1.OpenSession())
+			var store1 = new DocumentStore
+							 {
+								 Url = Url1
+							 };
+
+			var store2 = new DocumentStore
+							 {
+								 Url = Url2
+							 };
+
+			store1.Initialize();
+			store2.Initialize();
+
+			CreateDatabase(store1, DatabaseName);
+			Console.WriteLine("Created {0} database on {1}.", DatabaseName, store1.Url);
+			CreateDatabase(store2, DatabaseName);
+			Console.WriteLine("Created {0} database on {1}.", DatabaseName, store2.Url);
+
+			using (var session1 = store1.OpenSession(DatabaseName))
 			{
 				session1.Store(new User { Id = "users/ayende", Name = "Ayende" });
 				session1.SaveChanges();
 			}
 
-			using (var session2 = documentStore2.OpenSession())
+			Console.WriteLine("Created document users/ayende on {0}.", store1.Url);
+
+			using (var session2 = store2.OpenSession(DatabaseName))
 			{
 				session2.Store(new User { Id = "users/ayende", Name = "Oren" });
 				session2.SaveChanges();
 			}
-			Console.WriteLine("Conflicted documents set up");
-			Console.WriteLine("Please setup replicaton now...");
+
+			Console.WriteLine("Created document users/ayende on {0}.", store2.Url);
+
+			CreateReplication(store1, DatabaseName, Url2, DatabaseName);
+			Console.WriteLine("Created Replication document on {0}.", store1.Url);
+
+			Console.WriteLine("Press any key to continue...");
 			Console.ReadLine();
 
-			using (var session2 = documentStore2.OpenSession())
+			using (var session2 = store2.OpenSession(DatabaseName))
 			{
 				try
 				{
@@ -41,29 +72,75 @@ namespace Raven.Sample.Replication
 				}
 				catch (ConflictException e)
 				{
-					Console.WriteLine("Choose which document you want to preserve:");
+					Console.WriteLine("Found conflict in users/ayende on {0}. Choose which document you want to preserve:", Url2);
 					var list = new List<JsonDocument>();
 					for (int i = 0; i < e.ConflictedVersionIds.Length; i++)
 					{
-						var doc = documentStore2.DatabaseCommands.Get(e.ConflictedVersionIds[i]);
+						var doc = store2.DatabaseCommands.ForDatabase(DatabaseName).Get(e.ConflictedVersionIds[i]);
 						list.Add(doc);
 						Console.WriteLine("{0}. {1}", i, doc.DataAsJson);
 					}
+
 					var select = int.Parse(Console.ReadLine());
 					var resolved = list[select];
-					documentStore2.DatabaseCommands.Put("users/ayende", null, resolved.DataAsJson, resolved.Metadata);
+					store2.DatabaseCommands.ForDatabase(DatabaseName).Put("users/ayende", null, resolved.DataAsJson, resolved.Metadata);
 				}
 			}
 
 			Console.WriteLine("Conflict resolved...");
+			Console.WriteLine("Press any key to continue...");
 			Console.ReadLine();
 
-			using (var session2 = documentStore2.OpenSession())
+			using (var session = store2.OpenSession(DatabaseName))
 			{
-				var user = session2.Load<User>("users/ayende");
+				var user = session.Load<User>("users/ayende");
 				Console.WriteLine(user.Name);
 				user.Name = "Ayende Rahien";
-				session2.SaveChanges();
+				session.SaveChanges();
+			}
+
+			store1.Dispose();
+			store2.Dispose();
+		}
+
+		private static void CreateDatabase(IDocumentStore documentStore, string databaseName)
+		{
+			using (IDocumentSession session = documentStore.OpenSession())
+			{
+				var databaseDocument = new DatabaseDocument
+				{
+					Id = "Raven/Databases/" + databaseName,
+					Settings =
+						new Dictionary<string, string>
+								                       {
+									                       {"Raven/DataDir","~\\Databases\\" + databaseName},
+									                       {"Raven/ActiveBundles","Replication"}
+								                       }
+				};
+
+				session.Store(databaseDocument);
+				session.SaveChanges();
+			}
+		}
+
+		private static void CreateReplication(IDocumentStore documentStore, string sourceDatabaseName, string destinationUrl, string destinationDatabaseName)
+		{
+			using (var session = documentStore.OpenSession(sourceDatabaseName))
+			{
+				var replicationDocument = new ReplicationDocument
+				{
+					Destinations = new List<ReplicationDestination>
+							                                         {
+								                                         new ReplicationDestination
+									                                         {
+										                                         Url = destinationUrl, 
+																				 Database = destinationDatabaseName
+									                                         }
+							                                         }
+				};
+
+				session.Store(replicationDocument);
+				session.SaveChanges();
 			}
 		}
 	}

@@ -185,7 +185,7 @@ namespace Raven.VisualHost
 			MessageBox.Show("Setup replication between all servers (Master/Slave)");
 		}
 
-		private void setupDatbasesToolStripMenuItem_Click(object sender, EventArgs e)
+		private void setupDatabasesToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			foreach (var ravenDbServer in servers)
 			{

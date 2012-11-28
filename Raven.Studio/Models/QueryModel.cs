@@ -184,6 +184,7 @@ namespace Raven.Studio.Models
             {
                 showFields = value;
                 OnPropertyChanged(() => ShowFields);
+				Requery();
             }
 	    }
 
@@ -195,6 +196,7 @@ namespace Raven.Studio.Models
 			{
 				showEntries = value;
 				OnPropertyChanged(() => ShowEntries);
+				Requery();
 			}
 		}
 
