@@ -11,7 +11,8 @@
     <RootNamespace>Raven.Samples.IndexReplication</RootNamespace>
     <AssemblyName>Raven.Samples.IndexReplication</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
@@ -51,6 +52,10 @@
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Bundles\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj">
+      <Project>{2728bba7-5142-445e-baa5-142a25e0666d}</Project>
+      <Name>Raven.Bundles.IndexReplication</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
