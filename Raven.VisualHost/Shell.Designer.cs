@@ -36,7 +36,7 @@
 			this.setupMasterMasterReplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.setupSlaveMasterReplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.ravenOverfowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			this.setupDatbasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.setupDatabasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.stopIndexingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.sToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.StartServers = new System.Windows.Forms.Button();
@@ -111,17 +111,17 @@
 			// ravenOverfowToolStripMenuItem
 			// 
 			this.ravenOverfowToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.setupDatbasesToolStripMenuItem});
+            this.setupDatabasesToolStripMenuItem});
 			this.ravenOverfowToolStripMenuItem.Name = "ravenOverfowToolStripMenuItem";
 			this.ravenOverfowToolStripMenuItem.Size = new System.Drawing.Size(99, 20);
 			this.ravenOverfowToolStripMenuItem.Text = "&Raven Overfow";
 			// 
-			// setupDatbasesToolStripMenuItem
+			// setupDatabasesToolStripMenuItem
 			// 
-			this.setupDatbasesToolStripMenuItem.Name = "setupDatbasesToolStripMenuItem";
-			this.setupDatbasesToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
-			this.setupDatbasesToolStripMenuItem.Text = "&Setup Datbases";
-			this.setupDatbasesToolStripMenuItem.Click += new System.EventHandler(this.setupDatbasesToolStripMenuItem_Click);
+			this.setupDatabasesToolStripMenuItem.Name = "setupDatabasesToolStripMenuItem";
+			this.setupDatabasesToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
+			this.setupDatabasesToolStripMenuItem.Text = "&Setup Databases";
+			this.setupDatabasesToolStripMenuItem.Click += new System.EventHandler(this.setupDatabasesToolStripMenuItem_Click);
 			// 
 			// stopIndexingToolStripMenuItem
 			// 
@@ -226,7 +226,7 @@
 		private System.Windows.Forms.ToolStripMenuItem setupSlaveMasterReplicationToolStripMenuItem;
 		private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
 		private System.Windows.Forms.ToolStripMenuItem ravenOverfowToolStripMenuItem;
-		private System.Windows.Forms.ToolStripMenuItem setupDatbasesToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem setupDatabasesToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem stopIndexingToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem sToolStripMenuItem;
 
