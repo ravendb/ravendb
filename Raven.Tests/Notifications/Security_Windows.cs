@@ -47,7 +47,7 @@ namespace Raven.Tests.Notifications
 				DocumentChangeNotification changeNotification;
 				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
-				Assert.Equal("items/1", changeNotification.Name);
+				Assert.Equal("items/1", changeNotification.Id);
 				Assert.Equal(changeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}

@@ -11,7 +11,7 @@ namespace Raven.Client.Embedded.Changes
 {
 	internal class EmbeddableObserableWithTask<T> : IObservableWithTask<T>
 	{
-		ConcurrentSet<IObserver<T>> registered = new ConcurrentSet<IObserver<T>>();
+		readonly ConcurrentSet<IObserver<T>> registered = new ConcurrentSet<IObserver<T>>();
 
 		public IDisposable Subscribe(IObserver<T> observer)
 		{
@@ -33,5 +33,7 @@ namespace Raven.Client.Embedded.Changes
 				observer.OnNext(e);
 			}
 		}
+
+
 	}
 }

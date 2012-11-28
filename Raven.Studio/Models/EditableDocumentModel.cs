@@ -852,7 +852,7 @@ namespace Raven.Studio.Models
 
 		private void HandleChangeNotification(DocumentChangeNotification notification)
 		{
-			if (notification.Name.Equals(DocumentKey, StringComparison.InvariantCulture))
+			if (notification.Id.Equals(DocumentKey, StringComparison.InvariantCulture))
 			{
 				if (notification.Type == DocumentChangeTypes.Put && notification.Etag != Etag)
 				{

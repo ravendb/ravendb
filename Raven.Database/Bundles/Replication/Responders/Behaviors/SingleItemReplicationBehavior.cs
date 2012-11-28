@@ -79,7 +79,7 @@ namespace Raven.Bundles.Replication.Responders
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 			                                                                            Database.RaiseNotifications(new DocumentChangeNotification
 			                                                                            {
-			                                                                            	Name = id,
+			                                                                            	Id = id,
 			                                                                            	Type = ReplicationConflict
 			                                                                            }));
 
@@ -170,7 +170,7 @@ namespace Raven.Bundles.Replication.Responders
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 																						Database.RaiseNotifications(new DocumentChangeNotification
 																						{
-																							Name = id,
+																							Id = id,
 																							Type = DocumentChangeTypes.ReplicationConflict
 																						}));
 			var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
