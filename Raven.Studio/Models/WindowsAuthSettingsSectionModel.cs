@@ -119,7 +119,13 @@ namespace Raven.Studio.Models
 	{
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
-			return TaskEx.FromResult<IList<object>>(new List<object> { "AUTHORITY\\Network Service", "AppPool\\DefaultAppPool" });
+			return TaskEx.FromResult<IList<object>>(new List<object>
+			{
+				@"NT AUTHORITY\Network Service", 
+				@"IIS AppPool\DefaultAppPool",
+				@"NT AUTHORITY\Local Service", 
+				@"NT AUTHORITY\System", 
+			});
 		}
 	}
 }
