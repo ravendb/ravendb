@@ -292,6 +292,7 @@ namespace Raven.Client.Connection
 			var newWebRequest = (HttpWebRequest)WebRequest.Create(Url);
 			newWebRequest.Method = webRequest.Method;
 			HttpRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			newWebRequest.UseDefaultCredentials = webRequest.UseDefaultCredentials;
 			newWebRequest.Credentials = webRequest.Credentials;
 			action(newWebRequest);
 
