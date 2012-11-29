@@ -51,7 +51,7 @@ namespace Raven.Tests.Notifications
 				DocumentChangeNotification documentChangeNotification;
 				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(3)));
 
-				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal("items/1", documentChangeNotification.Id);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 				Thread.Sleep(1000);
@@ -87,7 +87,7 @@ namespace Raven.Tests.Notifications
 				DocumentChangeNotification DocumentChangeNotification;
 				Assert.True(list.TryTake(out DocumentChangeNotification, TimeSpan.FromSeconds(2)));
 
-				Assert.Equal("items/1", DocumentChangeNotification.Name);
+				Assert.Equal("items/1", DocumentChangeNotification.Id);
 				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Delete);
 
 				((RemoteDatabaseChanges) taskObservable).DisposeAsync().Wait();

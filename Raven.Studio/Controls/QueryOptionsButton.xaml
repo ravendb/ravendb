@@ -49,14 +49,14 @@
                     <CheckBox IsChecked="{Binding ShowFields, Mode=TwoWay}"
                               HorizontalAlignment="Left"
                               ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents"
-                              Margin="4" Content="Show fields">
+                              Margin="4" Content="Show Fields">
                     </CheckBox>
 
 
                     <CheckBox IsChecked="{Binding ShowEntries, Mode=TwoWay}"
                               HorizontalAlignment="Left"
                               ToolTipService.ToolTip="Show the raw index entries instead of matching documents"
-                              Margin="4" Content="Index entries">
+                              Margin="4" Content="Index Entries">
                     </CheckBox>
 
                     <CheckBox IsChecked="{Binding SkipTransformResults, Mode=TwoWay}"

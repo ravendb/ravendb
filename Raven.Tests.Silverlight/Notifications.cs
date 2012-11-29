@@ -59,7 +59,7 @@ namespace Raven.Tests.Silverlight
 
 				yield return tcs.Task;
 
-				Assert.AreEqual("companies/1", tcs.Task.Result.Name);
+				Assert.AreEqual("companies/1", tcs.Task.Result.Id);
 			}
 		}
 	}

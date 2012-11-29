@@ -12,7 +12,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class WindowsAuthSettingsSectionModel : SettingsSectionModel, IAutoCompleteSuggestionProvider
+	public class WindowsAuthSettingsSectionModel : SettingsSectionModel
 	{
 		private int selectedTab;
 
@@ -23,6 +23,8 @@ namespace Raven.Studio.Models
 			RequiredUsers = new ObservableCollection<WindowsAuthData>();
 			RequiredGroups = new ObservableCollection<WindowsAuthData>();
 			SelectedList = new ObservableCollection<WindowsAuthData>();
+			DatabaseSuggestionProvider = new DatabaseSuggestionProvider();
+			WindowsAuthName = new WindowsAuthName();
 
 			ApplicationModel.DatabaseCommands.ForDefaultDatabase()
 				.GetAsync("Raven/Authorization/WindowsSettings")
@@ -44,6 +46,8 @@ namespace Raven.Studio.Models
 				});
 		}
 
+		public WindowsAuthName WindowsAuthName { get; set; }
+		public DatabaseSuggestionProvider DatabaseSuggestionProvider { get; set; }
 		public Observable<WindowsAuthDocument> Document { get; set; }
 		public ObservableCollection<WindowsAuthData> RequiredUsers { get; set; }
 		public ObservableCollection<WindowsAuthData> RequiredGroups { get; set; }
@@ -101,10 +105,27 @@ namespace Raven.Studio.Models
 			OnPropertyChanged(() => RequiredUsers);
 			OnPropertyChanged(() => RequiredGroups);
 		}
+	}
 
+	public class DatabaseSuggestionProvider : IAutoCompleteSuggestionProvider
+	{
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
 			return TaskEx.FromResult<IList<object>>(ApplicationModel.Current.Server.Value.Databases.Cast<object>().ToList());
+		}
+	}
+
+	public class WindowsAuthName : IAutoCompleteSuggestionProvider
+	{
+		public Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			return TaskEx.FromResult<IList<object>>(new List<object>
+			{
+				@"NT AUTHORITY\Network Service", 
+				@"IIS AppPool\DefaultAppPool",
+				@"NT AUTHORITY\Local Service", 
+				@"NT AUTHORITY\System", 
+			});
 		}
 	}
 }
