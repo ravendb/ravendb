@@ -19,7 +19,7 @@ namespace Raven.Client.Document.DTC
 	{
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-		public void Execute(IDatabaseCommands commands)
+		public void Execute(Guid myResourceManagerId, IDatabaseCommands commands)
 		{
 			var resourceManagersRequiringRecovery = new HashSet<Guid>();
 			using (var store = IsolatedStorageFile.GetMachineStoreForDomain())
@@ -29,10 +29,24 @@ namespace Raven.Client.Document.DTC
 					var txId = Guid.Empty;
 					try
 					{
-						using (var fileStream = store.OpenFile(file, FileMode.Open, FileAccess.Read))
-						using(var reader = new BinaryReader(fileStream))
+						IsolatedStorageFileStream stream;
+						try
+						{
+							stream = store.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+						}
+						catch (Exception e)
+						{
+							logger.WarnException("Could not open recovery information: " + file +", this is expected if it is an active transaction / held by another server", e);
+							continue;
+						}
+						using (stream)
+						using(var reader = new BinaryReader(stream))
 						{
 							var resourceManagerId = new Guid(reader.ReadString());
+
+							if(myResourceManagerId != resourceManagerId)
+								continue; // it doesn't belong to us, ignore
+
 							txId = new Guid(reader.ReadString());
 
 							var db = reader.ReadString();
