@@ -12,7 +12,7 @@
     <AssemblyName>Raven.Client.MvcIntegration</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <JSLintSkip>\Content\vendor\|\Content\ravendb-profiler-scripts.js|\Content2\|\Content\require.js</JSLintSkip>
+    <JSLintSkip>\Content\vendor\|\Content\ravendb-profiler-scripts.js|\Content2\|\Content\require.js|\Content\raven-profiler.min.js|\js\vendor\|\js\require.js|\js\r.js</JSLintSkip>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -74,67 +74,76 @@
     <EmbeddedResource Include="Content\styles.css" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="js\build.cmd" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Content\index.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\vendor\require.js" />
+    <EmbeddedResource Include="js\require.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\profiler.js" />
+    <EmbeddedResource Include="js\profiler.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\vendor\jquery-1.8.3.js" />
+    <EmbeddedResource Include="js\vendor\jquery-1.8.3.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\vendor\backbone.js" />
-    <EmbeddedResource Include="Content\vendor\underscore.js" />
+    <EmbeddedResource Include="js\vendor\backbone.js" />
+    <EmbeddedResource Include="js\vendor\underscore.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\ProfilerButton.js" />
+    <EmbeddedResource Include="js\views\ProfilerButton.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\ProfilerView.js" />
+    <EmbeddedResource Include="js\views\ProfilerView.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\SessionView.js" />
+    <EmbeddedResource Include="js\views\SessionView.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\RequestView.js" />
-    <EmbeddedResource Include="Content\models\ProfilerData.js" />
+    <EmbeddedResource Include="js\views\RequestView.js" />
+    <EmbeddedResource Include="js\models\ProfilerData.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\models\Session.js" />
+    <EmbeddedResource Include="js\models\Session.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\models\Request.js" />
+    <EmbeddedResource Include="js\models\Request.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\models\SessionCollection.js" />
+    <EmbeddedResource Include="js\views\templateHelper.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\templateHelper.js" />
+    <EmbeddedResource Include="js\views\RequestDetailsView.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\RequestDetailsView.js" />
+    <EmbeddedResource Include="js\views\templates\requestDetails.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\templates\requestDetails.html" />
+    <EmbeddedResource Include="js\vendor\text.js" />
+    <EmbeddedResource Include="js\views\templates\session.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\vendor\text.js" />
-    <EmbeddedResource Include="Content\views\templates\session.html" />
+    <EmbeddedResource Include="js\views\templates\request.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\templates\request.html" />
+    <EmbeddedResource Include="js\views\templates\profiler.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\views\templates\profiler.html" />
+    <EmbeddedResource Include="Content\raven-profiler.min.js" />
+    <Content Include="js\app.build.js" />
+    <EmbeddedResource Include="js\models\SessionCollection.js" />
+    <Content Include="js\r.js" />
+    <EmbeddedResource Include="js\config.js" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
+  <PropertyGroup>
+    <PreBuildEvent>$(ProjectDir)..\tools\node.exe $(ProjectDir)js\r.js -o $(ProjectDir)js\app.build.js out=$(ProjectDir)Content\raven-profiler.min.js</PreBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

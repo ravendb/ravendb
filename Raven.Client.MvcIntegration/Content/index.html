@@ -1,17 +1,6 @@
+<script type="text/javascript" src="{|rootUrl|}?path=raven-profiler.min.js"></script>
 <script>
-    var require = {
-        baseUrl: '{|rootUrl|}?path=',
-        paths: {
-            'jquery': 'vendor/jquery-1.8.3',
-            'backbone': 'vendor/backbone',
-            'underscore': 'vendor/underscore',
-            'text': 'vendor/text'
-        }
-    };
-</script>
-<script type="text/javascript" src="{|rootUrl|}?path=vendor/require.js"></script>
-<script>
-    require(['profiler'], function(profiler) {
-        profiler.initialize({ id: [{|id|}], url: '{|rootUrl|}'});
+    ravenprofiler.require(['profiler'], function(init) {
+        init({ sessionIds: [{|id|}], rootUrl: '{|rootUrl|}'});
     });
 </script>
