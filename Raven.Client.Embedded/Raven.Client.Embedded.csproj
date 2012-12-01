@@ -60,6 +60,7 @@
     <Compile Include="Changes\EmbeddableObserableWithTask.cs" />
     <Compile Include="Changes\FilteringObservableWithTask.cs" />
     <Compile Include="EmbeddableDocumentStore.cs" />
+    <Compile Include="EmbeddedAsyncServerClient.cs" />
     <Compile Include="EmbeddedDatabaseCommands.cs" />
   </ItemGroup>
   <ItemGroup>
