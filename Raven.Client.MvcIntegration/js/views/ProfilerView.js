@@ -18,12 +18,13 @@
             },
             initialize: function () {
                 this.model.sessions.on('change', this.renderTotals, this);
+                this.model.sessions.on('change', this.adjustColumns, this);
                 this.model.sessions.on('add', this.addSession, this);
                 this.model.on('change:profilerVisibility', this.renderVisibility, this);
             },
 
             render: function () {
-                this.$el.hide();
+                this.renderVisibility();
                 this.$el.html(this.template());
                 this.renderTotals();
                 this.renderSessions();
@@ -46,7 +47,6 @@
             addSession: function (session) {
                 var sessionView = new SessionView({ model: session });
                 this.$('#ravendb-session-container').append(sessionView.el);
-                this.adjustColumns();
             },
 
             adjustColumns: function () {
@@ -67,7 +67,8 @@
             },
 
             renderVisibility: function () {
-                this.$el.toggle(this.model.get('profilerVisibility'));
+                var visibility = this.model.get('profilerVisibility') ? 'visible' : 'hidden';
+                this.$el.css({ visibility: visibility });
             },
 
             close: function () {
