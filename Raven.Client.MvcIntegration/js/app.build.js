@@ -8,5 +8,5 @@
     },
     namespace: "ravenprofiler",
     name: "profiler",
-    include: ["requireLib"]
+    include: ["requireLib", "config"]
 })
