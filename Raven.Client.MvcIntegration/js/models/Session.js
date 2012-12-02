@@ -5,12 +5,8 @@
 	],
 	function (Backbone, Request) {
 		return Backbone.Model.extend({
-			initialize: function () {
-				this.requests = new Backbone.Collection(null, { model: Request });
-				this.on('change', function () {
-					this.requests.reset(this.get('Requests'));
-				}, this);
-				this.fetch();
+			initialize: function (data) {
+				this.requests = new Backbone.Collection(data.Requests, { model: Request });
 			},
 
 			parse: function (response) {

@@ -17,8 +17,7 @@
 			},
 
 			initialize: function () {
-				this.model.sessions.on('change', this.renderTotals, this);
-				this.model.sessions.on('change', this.adjustColumns, this);
+				this.model.sessions.on('add', this.renderTotals, this);
 				this.model.sessions.on('add', this.addSession, this);
 				this.model.on('change:profilerVisibility', this.renderVisibility, this);
 			},
@@ -27,7 +26,6 @@
 				this.renderVisibility();
 				this.$el.html(this.template());
 				this.renderTotals();
-				this.renderSessions();
 				return this;
 			},
 
@@ -35,18 +33,10 @@
 				this.$('h1').html(this.totalsTemplate({ model: this.model, helper: templateHelper }));
 			},
 
-			renderSessions: function () {
-				var sessionViews = [];
-				this.model.sessions.each(function (session) {
-					var sessionView = new SessionView({ model: session });
-					sessionViews.push(sessionView.render().el);
-				});
-				this.$('#ravendb-session-container').append(sessionViews);
-			},
-
 			addSession: function (session) {
 				var sessionView = new SessionView({ model: session });
-				this.$('#ravendb-session-container').append(sessionView.el);
+				this.$('#ravendb-session-container').append(sessionView.render().el);
+				this.adjustColumns();
 			},
 
 			adjustColumns: function () {

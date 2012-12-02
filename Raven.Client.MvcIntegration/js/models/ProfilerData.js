@@ -1,19 +1,27 @@
 ﻿define(
 	[
+		'jquery',
 		'underscore',
 		'backbone',
-		'./SessionCollection'
+		'./Session'
 	],
-	function (_, Backbone, SessionCollection) {
+	function ($, _, Backbone, Session) {
 		return Backbone.Model.extend({
 			defaults: {
 				profilerVisibility: false
 			},
 
 			initialize: function (options) {
-				this.sessions = new SessionCollection(null, { url: options.sessionUrl });
+				this.sessionUrl = options.sessionUrl;
+				this.sessions = new Backbone.Collection(null, { model: Session });
 			},
 
+			loadSessionData: function (sessionIdList) {
+				var sessionCollection = this.sessions;
+				$.get(this.sessionUrl, { id: sessionIdList }, function (sessions) {
+					sessionCollection.add(sessions);
+				});
+			},
 			addSessions: function (sessionIdList) {
 				_(sessionIdList).each(function (id) {
 					this.sessions.add({ id: id });
@@ -38,7 +46,7 @@
 
 			handleResponse: function (event, xhrRequest) {
 				var headerIds = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
-				this.addSessions(headerIds.split(', '));
+				this.loadSessionData(headerIds.split(', '));
 			}
 		});
 	}

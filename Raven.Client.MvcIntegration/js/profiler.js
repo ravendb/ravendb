@@ -10,8 +10,8 @@ define(
 	function ($, _, ProfilerButton, ProfilerView, ProfilerData) {
 
 		return function (sessionIds, rootUrl) {
-			var profilerData = new ProfilerData({ sessionUrl: rootUrl + "?id=" });
-			profilerData.addSessions(sessionIds);
+			var profilerData = new ProfilerData({ sessionUrl: rootUrl });
+			profilerData.loadSessionData(sessionIds);
 
 			$('head').append($('<link>').attr('rel', 'stylesheet').attr('href', rootUrl + '?path=styles.css'));
 			$('body')

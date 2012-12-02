@@ -133,7 +133,6 @@
   <ItemGroup>
     <EmbeddedResource Include="Content\raven-profiler.min.js" />
     <None Include="js\build\app.build.js" />
-    <None Include="js\models\SessionCollection.js" />
     <None Include="js\build\r.js" />
     <None Include="js\config.js" />
   </ItemGroup>
