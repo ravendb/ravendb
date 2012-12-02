@@ -11,7 +11,6 @@
             },
 
             initialize: function (options) {
-                this.sessionUrl = options.sessionUrl;
                 this.sessions = new SessionCollection(null, { url: options.sessionUrl });
             },
 
@@ -37,10 +36,7 @@
                 return this.sessions.length;
             },
 
-            handleResponse: function (event, xhrRequest, ajaxOptions) {
-                if (ajaxOptions.url.indexOf(this.sessionUrl) !== -1) {
-                    return;
-                }
+            handleResponse: function (event, xhrRequest) {
                 var headerIds = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
                 this.addSessions(headerIds.split(', '));
             }

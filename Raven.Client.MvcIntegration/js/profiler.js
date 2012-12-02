@@ -1,4 +1,5 @@
-﻿define(
+﻿/*global window*/
+define(
     [
         'jquery',
         'underscore',
@@ -7,15 +8,19 @@
         'models/ProfilerData'
     ],
     function ($, _, ProfilerButton, ProfilerView, ProfilerData) {
-        return function (options) {
-            var profilerData = new ProfilerData({ sessionUrl: options.rootUrl + "?id=" });
-            profilerData.addSessions(options.sessionIds);
 
-            $('head').append($('<link>').attr('rel', 'stylesheet').attr('href', options.rootUrl + '?path=styles.css'));
+        return function (sessionIds, rootUrl) {
+            var profilerData = new ProfilerData({ sessionUrl: rootUrl + "?id=" });
+            profilerData.addSessions(sessionIds);
+
+            $('head').append($('<link>').attr('rel', 'stylesheet').attr('href', rootUrl + '?path=styles.css'));
             $('body')
                 .append(new ProfilerView({ model: profilerData }).render().el)
-                .append(new ProfilerButton({ model: profilerData }).render().el)
-                .on('ajaxComplete', _.bind(profilerData.handleResponse, profilerData));
+                .append(new ProfilerButton({ model: profilerData }).render().el);
+
+            if (typeof window.jQuery === 'function') { // bind to original jQuery ajaxComplete
+                window.jQuery('body').ajaxComplete(_.bind(profilerData.handleResponse, profilerData));
+            }
         };
     }
 );

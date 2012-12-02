@@ -29,7 +29,6 @@ define(
             showDetails: function () {
                 var view = new RequestDetailsView({ model: this.model });
                 this.$el.append(view.render().el);
-                return false;
             }
         });
     }
