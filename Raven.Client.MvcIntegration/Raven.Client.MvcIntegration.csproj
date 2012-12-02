@@ -12,6 +12,7 @@
     <AssemblyName>Raven.Client.MvcIntegration</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <JSLintSkip>\js\vendor\backbone.js|\js\vendor\jquery-1.8.3.js|\js\vendor\text.js|\js\vendor\underscore.js|\js\build\|\js\vendor\|\Content\raven-profiler.min.js</JSLintSkip>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -70,40 +71,79 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\ravendb-profiler-scripts.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\session-template.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\ravendb-profiler.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Content\styles.css" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\request-details.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\yepnope.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\jquery-1.6.1.min.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\jquery.tmpl.min.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\totals.tmpl.html" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Content\index.html" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="js\build\require.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\profiler.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\vendor\jquery-1.8.3.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\vendor\backbone.js" />
+    <None Include="js\vendor\underscore.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\ProfilerButton.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\ProfilerView.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\SessionView.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\RequestView.js" />
+    <None Include="js\models\ProfilerData.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\models\Session.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\models\Request.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\templateHelper.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\RequestDetailsView.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\templates\requestDetails.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\vendor\text.js" />
+    <None Include="js\views\templates\session.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\templates\request.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\views\templates\profiler.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\raven-profiler.min.js" />
+    <None Include="js\build\app.build.js" />
+    <None Include="js\build\r.js" />
+    <None Include="js\config.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="js\build\node.exe" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
+  <PropertyGroup>
+    <PreBuildEvent>$(ProjectDir)js\build\node.exe $(ProjectDir)js\build\r.js -o $(ProjectDir)js\build\app.build.js out=$(ProjectDir)\Content\raven-profiler.min.js</PreBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

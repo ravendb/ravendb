@@ -45,7 +45,7 @@ namespace Raven.Client.MvcIntegration
 			var path = context.Request.QueryString["path"];
 			if(string.IsNullOrEmpty(path) == false)
 			{
-				HandlePathRequest(context, path);
+				HandlePathRequest(context, path.TrimStart('/'));
 			}
 			else
 			{
@@ -79,8 +79,6 @@ namespace Raven.Client.MvcIntegration
 		{
 			if(path.EndsWith(".js"))
 				context.Response.ContentType = "application/javascript";
-			else if (path.EndsWith(".tmpl.html"))
-				context.Response.ContentType = "text/html";
 			else if (path.EndsWith(".css"))
 				context.Response.ContentType = "text/css";
 
