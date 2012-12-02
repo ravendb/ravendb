@@ -23,3 +23,10 @@
 require(['jquery'], function ($) {
     $.noConflict(true); // restore global $ and jQuery to original values
 });
+
+require(['underscore'], function (_) {
+    _.templateSettings = {
+        evaluate: /\{\[([\s\S]+?)\]\}/g,
+        interpolate: /\{\{([\s\S]+?)\}\}/g
+    };
+});

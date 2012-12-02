@@ -1,10 +1,10 @@
-<td><%= helper.round(data.DurationMilliseconds) %> ms</td>
-<td><%=data.Status%></td>
-<td><%=data.HttpResult%></td>
-<td><%=data.Method%></td>
-<td><%=helper.url(data.Url)%></td>
+<td>{{ helper.round(data.DurationMilliseconds) }} ms</td>
+<td>{{ data.Status }}</td>
+<td>{{ data.HttpResult }}</td>
+<td>{{ data.Method }}</td>
+<td>{{ helper.url(data.Url) }}</td>
 <td>
-    <pre><%=helper.query(data.Url)%></pre>
+    <pre>{{ helper.query(data.Url) }}</pre>
 </td>
 <td>
     <ul>

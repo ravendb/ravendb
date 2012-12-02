@@ -7,15 +7,15 @@
         'text!./templates/profiler.html',
         './templateHelper'
     ],
-    function ($, Backbone, _, SessionView, template, templateHelper) {
+    function ($, Backbone, _, SessionView, profilerTemplate, templateHelper) {
         return Backbone.View.extend({
             className: 'ravendb-profiler-results',
-            template: _.template(template),
-            totalsTemplate: _.template('<%= helper.round(model.totalRequestDuration()) %> ms waiting for server in <%= model.requestCount() %> request(s) for <%= model.sessionCount() %> sessions(s)'),
+            template: _.template(profilerTemplate),
+            totalsTemplate: _.template('{{ helper.round(model.totalRequestDuration()) }} ms waiting for server in {{ model.requestCount() }} request(s) for {{ model.sessionCount() }} sessions(s)'),
             events: {
                 'click a.close': 'close'
-
             },
+
             initialize: function () {
                 this.model.sessions.on('change', this.renderTotals, this);
                 this.model.sessions.on('change', this.adjustColumns, this);

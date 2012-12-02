@@ -31,7 +31,6 @@
                 var currentVisibility = this.model.get('profilerVisibility');
                 this.model.set({ profilerVisibility: !currentVisibility });
             }
-
         });
     }
 );
