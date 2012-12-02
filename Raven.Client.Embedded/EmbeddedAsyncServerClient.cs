@@ -175,8 +175,7 @@ namespace Raven.Client.Embedded
 
 		public Task EnsureSilverlightStartUpAsync()
 		{
-			// No sync equivalent on IDatabaseCommands. Method seems out of place on IAsyncDatabaseCommands.
-			throw new NotSupportedException();
+			throw new NotSupportedException("Method to be removed from IAsyncDatabaseCommands");
 		}
 
 		public IDisposable DisableAllCaching()
