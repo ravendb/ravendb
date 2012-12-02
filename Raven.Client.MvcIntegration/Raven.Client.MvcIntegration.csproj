@@ -12,6 +12,7 @@
     <AssemblyName>Raven.Client.MvcIntegration</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <JSLintSkip>\js\vendor\backbone.js|\js\vendor\jquery-1.8.3.js|\js\vendor\text.js|\js\vendor\underscore.js|\js\build\|\js\vendor\|\Content\raven-profiler.min.js</JSLintSkip>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

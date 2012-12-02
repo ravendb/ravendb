@@ -1,24 +1,21 @@
-.session-table > tbody > tr > td
-{
-    border-bottom: 1px dashed orange;
-    padding-bottom: 2px;
-    padding-top: 2px;
-}
-.session-table > tbody > tr > th
-{
+.session-table > tbody > tr > td {
     border-bottom: 1px dashed orange;
     padding-bottom: 2px;
     padding-top: 2px;
 }
 
-.session-table > tbody > tr > td
-{
+.session-table > tbody > tr > th {
+    border-bottom: 1px dashed orange;
+    padding-bottom: 2px;
+    padding-top: 2px;
+}
+
+.session-table > tbody > tr > td {
     padding-left: 10px;
 }
 
 
-.rdbprofilerbutton
-{
+.rdbprofilerbutton {
     position: absolute;
     left: 0;
     top: 0;
@@ -30,8 +27,7 @@
     cursor: pointer;
 }
 
-.ravendb-profiler-results
-{
+.ravendb-profiler-results {
     position: absolute;
     left: 0;
     top: 1em;
@@ -41,13 +37,12 @@
     border-radius: 5px;
     z-index: 2147483647;
 }
-.rdbResultHolder
-{
+
+.rdbResultHolder {
     padding-left: 1em;
 }
 
-.request-details
-{
+.request-details {
     position: absolute;
     left: 10px;
     top: 100px;
@@ -59,17 +54,14 @@
     max-width: 100%;
     padding: 15px;
     overflow: auto;
-    
 }
 
-.request-details-table td
-{
+.request-details-table td {
     padding: 10px;
     margin-left: 10px;
 }
 
-.request-details-table th
-{
+.request-details-table th {
     padding: 10px;
     margin-left: 10px;
 }
