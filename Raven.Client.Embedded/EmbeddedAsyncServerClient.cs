@@ -7,13 +7,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
-using Raven.Database;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
@@ -21,20 +18,30 @@ namespace Raven.Client.Embedded
 	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands
 	{
 		private readonly IDatabaseCommands databaseCommands;
-		private readonly DocumentDatabase documentDatabase;
 
-		public EmbeddedAsyncServerClient(IDatabaseCommands databaseCommands, DocumentDatabase documentDatabase)
+		public EmbeddedAsyncServerClient(IDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-			this.documentDatabase = documentDatabase;
 		}
 
 		public void Dispose()
-		{}
+		{
+		}
 
-		public ProfilingInformation ProfilingInformation { get { return databaseCommands.ProfilingInformation; } }
+		public ProfilingInformation ProfilingInformation
+		{
+			get { return databaseCommands.ProfilingInformation; }
+		}
 
-		public IDictionary<string, string> OperationsHeaders { get { throw new NotSupportedException(); } }
+		public IDictionary<string, string> OperationsHeaders
+		{
+			get
+			{
+				// IDatabaseCommands.OperationsHeaders is of type NameValueCollection. Should it, or this property,
+				// be changed to the types match?
+				throw new NotSupportedException();
+			}
+		}
 
 		public Task<JsonDocument> GetAsync(string key)
 		{
@@ -73,12 +80,8 @@ namespace Raven.Client.Embedded
 
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
-			RavenJArray json = documentDatabase.GetIndexes(start, pageSize);
-			//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-			IndexDefinition[] indexDefinitions = json
-				.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject) x)["definition"].ToString(), new JsonToJsonConverter()))
-				.ToArray();
-			return new CompletedTask<IndexDefinition[]>(indexDefinitions);
+			// No sync equivalent on IDatabaseCommands.
+			throw new NotSupportedException();
 		}
 
 		public Task ResetIndexAsync(string name)
@@ -122,17 +125,17 @@ namespace Raven.Client.Embedded
 
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database), documentDatabase);
+			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database));
 		}
 
 		public IAsyncDatabaseCommands ForDefaultDatabase()
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForDefaultDatabase(), documentDatabase);
+			return new EmbeddedAsyncServerClient(databaseCommands.ForDefaultDatabase());
 		}
 
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.With(credentialsForSession), documentDatabase);
+			return new EmbeddedAsyncServerClient(databaseCommands.With(credentialsForSession));
 		}
 
 		public Task<DatabaseStatistics> GetStatisticsAsync()
@@ -147,9 +150,10 @@ namespace Raven.Client.Embedded
 
 		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata)
 		{
+			// Should the data paramater be changed to a Stream type so it matches IDatabaseCommands.PutAttachment?
 			var stream = new MemoryStream();
 			stream.Write(data, 0, data.Length);
-			databaseCommands.PutAttachment(key, etag, stream, metadata); 
+			databaseCommands.PutAttachment(key, etag, stream, metadata);
 			return new CompletedTask();
 		}
 
@@ -171,6 +175,7 @@ namespace Raven.Client.Embedded
 
 		public Task EnsureSilverlightStartUpAsync()
 		{
+			// No sync equivalent on IDatabaseCommands. Method seems out of place on IAsyncDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
@@ -203,50 +208,49 @@ namespace Raven.Client.Embedded
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{
-			// No equivalent on IDatabaseCommands or DocumentDatabase.
+			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
 		public Task<LicensingStatus> GetLicenseStatusAsync()
 		{
-			// No equivalent on IDatabaseCommands or DocumentDatabase.
+			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
 		public Task<BuildNumber> GetBuildNumberAsync()
 		{
-			// No equivalent on IDatabaseCommands or DocumentDatabase.
+			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
 		{
-			// don't know what the incremental backup valud should be. Should it be added as a paramater to this method?
-			documentDatabase.StartBackup(backupLocation, false, databaseDocument); 
-			return new CompletedTask();
+			// No sync equivalent on IDatabaseCommands.
+			throw new NotSupportedException();
 		}
 
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null)
 		{
-			// No equivalent on IDatabaseCommands or DocumentDatabase.
+			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
 		public Task StartIndexingAsync()
 		{
-			// No equivalent on IDatabaseCommands or DocumentDatabase.
+			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
 		public Task StopIndexingAsync()
 		{
-			// No equivalent on IDatabaseCommands or DocumentDatabase.
+			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
 		public Task<string> GetIndexingStatusAsync()
 		{
-			// No equivalent on IDatabaseCommands or DocumentDatabase.
+			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 

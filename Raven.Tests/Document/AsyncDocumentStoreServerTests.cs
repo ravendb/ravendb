@@ -6,51 +6,65 @@
 using System;
 using Raven.Abstractions.Commands;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
-using Raven.Server;
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class AsyncDocumentStoreServerTests : RemoteClientTest, IDisposable
+	public class AysncEmbeddedDocumentStoreServerTests : AsyncDocumentStoreServerTests
 	{
-		private readonly string path;
-		private readonly int port;
-		private readonly RavenDbServer server;
-		private readonly IDocumentStore documentStore;
+		private readonly RavenTest ravenTest;
 
-		public AsyncDocumentStoreServerTests()
+		public AysncEmbeddedDocumentStoreServerTests()
 		{
-			port = 8079;
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-
-			server = GetNewServer(port, path);
-			documentStore = new DocumentStore { Url = "http://localhost:" + port }.Initialize();
+			ravenTest = new RavenTest();
+			DocumentStore = ravenTest.NewDocumentStore().Initialize();
 		}
 
 		public override void Dispose()
 		{
-			documentStore.Dispose();
-			server.Dispose();
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
+			DocumentStore.Dispose();
+			ravenTest.Dispose();
 		}
+	}
+
+	public class AysncRemoteDocumentStoreServerTests : AsyncDocumentStoreServerTests
+	{
+		private readonly string path;
+		private readonly RemoteClientTest ravenTest;
+
+		public AysncRemoteDocumentStoreServerTests()
+		{
+			ravenTest = new RemoteClientTest();
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
+			DocumentStore = ravenTest.NewRemoteDocumentStore().Initialize();
+		}
+
+		public override void Dispose()
+		{
+			DocumentStore.Dispose();
+			ravenTest.Dispose();
+		}
+	}
+
+	public class AsyncDocumentStoreServerTests : IDisposable
+	{
+		protected IDocumentStore DocumentStore { get; set; }
+
+		public virtual void Dispose(){}
 
 		[Fact]
 		public void Can_insert_sync_and_get_async()
 		{
 			var entity = new Company {Name = "Async Company"};
-			using (var session = documentStore.OpenSession())
+			using (var session = DocumentStore.OpenSession())
 			{
 				session.Store(entity);
 				session.SaveChanges();
 			}
 
-			using (var session = documentStore.OpenAsyncSession())
+			using (var session = DocumentStore.OpenAsyncSession())
 			{
 				var task = session.LoadAsync<Company>(entity.Id);
 
@@ -62,13 +76,13 @@ namespace Raven.Tests.Document
 		public void Can_insert_async_and_get_sync()
 		{
 			var entity = new Company {Name = "Async Company"};
-			using (var session = documentStore.OpenAsyncSession())
+			using (var session = DocumentStore.OpenAsyncSession())
 			{
 				session.Store(entity);
 				session.SaveChangesAsync().Wait();
 			}
 
-			using (var session = documentStore.OpenSession())
+			using (var session = DocumentStore.OpenSession())
 			{
 				var company = session.Load<Company>(entity.Id);
 
@@ -81,14 +95,14 @@ namespace Raven.Tests.Document
 		{
 			var entity1 = new Company {Name = "Async Company #1"};
 			var entity2 = new Company {Name = "Async Company #2"};
-			using (var session = documentStore.OpenAsyncSession())
+			using (var session = DocumentStore.OpenAsyncSession())
 			{
 				session.Store(entity1);
 				session.Store(entity2);
 				session.SaveChangesAsync().Wait();
 			}
 
-			using (var session = documentStore.OpenAsyncSession())
+			using (var session = DocumentStore.OpenAsyncSession())
 			{
 				var task = session.LoadAsync<Company>(new[] {entity1.Id, entity2.Id});
 				Assert.Equal(entity1.Name, task.Result[0].Name);
@@ -100,7 +114,7 @@ namespace Raven.Tests.Document
 		public void Can_defer_commands_until_savechanges_async()
 		{
 
-			using (var session = documentStore.OpenAsyncSession())
+			using (var session = DocumentStore.OpenAsyncSession())
 			{
 				var commands = new ICommandData[]
 				               	{
@@ -139,8 +153,8 @@ namespace Raven.Tests.Document
 				//Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 
-			Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
-			Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
+			Assert.Null(DocumentStore.DatabaseCommands.Get("rhino2"));
+			Assert.NotNull(DocumentStore.DatabaseCommands.Get("rhino1"));
 		}
 	}
 }
