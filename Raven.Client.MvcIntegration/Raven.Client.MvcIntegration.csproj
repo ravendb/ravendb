@@ -81,62 +81,62 @@
     <EmbeddedResource Include="Content\index.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\require.js" />
+    <None Include="js\require.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\profiler.js" />
+    <None Include="js\profiler.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\vendor\jquery-1.8.3.js" />
+    <None Include="js\vendor\jquery-1.8.3.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\vendor\backbone.js" />
-    <EmbeddedResource Include="js\vendor\underscore.js" />
+    <None Include="js\vendor\backbone.js" />
+    <None Include="js\vendor\underscore.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\ProfilerButton.js" />
+    <None Include="js\views\ProfilerButton.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\ProfilerView.js" />
+    <None Include="js\views\ProfilerView.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\SessionView.js" />
+    <None Include="js\views\SessionView.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\RequestView.js" />
-    <EmbeddedResource Include="js\models\ProfilerData.js" />
+    <None Include="js\views\RequestView.js" />
+    <None Include="js\models\ProfilerData.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\models\Session.js" />
+    <None Include="js\models\Session.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\models\Request.js" />
+    <None Include="js\models\Request.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\templateHelper.js" />
+    <None Include="js\views\templateHelper.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\RequestDetailsView.js" />
+    <None Include="js\views\RequestDetailsView.js" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\templates\requestDetails.html" />
+    <None Include="js\views\templates\requestDetails.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\vendor\text.js" />
-    <EmbeddedResource Include="js\views\templates\session.html" />
+    <None Include="js\vendor\text.js" />
+    <None Include="js\views\templates\session.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\templates\request.html" />
+    <None Include="js\views\templates\request.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="js\views\templates\profiler.html" />
+    <None Include="js\views\templates\profiler.html" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Content\raven-profiler.min.js" />
-    <Content Include="js\app.build.js" />
-    <EmbeddedResource Include="js\models\SessionCollection.js" />
-    <Content Include="js\r.js" />
-    <EmbeddedResource Include="js\config.js" />
+    <None Include="js\app.build.js" />
+    <None Include="js\models\SessionCollection.js" />
+    <None Include="js\r.js" />
+    <None Include="js\config.js" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
