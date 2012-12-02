@@ -10,7 +10,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using Raven.Abstractions.Json;
 using Raven.Client.Listeners;
 using Raven.Imports.Newtonsoft.Json;
@@ -303,6 +302,21 @@ namespace Raven.Client.Connection
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentException("Key cannot be null or empty", argName);
+		}
+
+		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
+		{
+			return ExecuteWithReplication("GET", url =>
+			{
+				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+				if (metadataOnly)
+					requestUri += "&metadata-only=true";
+				RavenJToken result = jsonRequestFactory
+					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+					.ReadResponseJson();
+				return ((RavenJArray)result).Cast<RavenJObject>().ToJsonDocuments().ToArray();
+			});
 		}
 
 		/// <summary>

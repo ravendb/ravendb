@@ -55,7 +55,7 @@ namespace Raven.Client.Embedded
 
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
 		{
-			throw new NotSupportedException();
+			return new CompletedTask<JsonDocument[]>(databaseCommands.GetDocuments(start, pageSize, metadataOnly));
 		}
 
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
@@ -175,7 +175,7 @@ namespace Raven.Client.Embedded
 
 		public Task EnsureSilverlightStartUpAsync()
 		{
-			throw new NotSupportedException("Method to be removed from IAsyncDatabaseCommands");
+			throw new NotSupportedException("Method to be removed from IAsyncDatabaseCommands (RavenDB-761)");
 		}
 
 		public IDisposable DisableAllCaching()

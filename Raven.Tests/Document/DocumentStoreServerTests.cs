@@ -557,6 +557,18 @@ namespace Raven.Tests.Document
 			}
 		}
 
+		[Fact]
+		public void Can_get_documents()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new Company { Name = "Company A", Id = "1" });
+				session.Store(new Company { Name = "Company B", Id = "2" });
+				session.SaveChanges();
+			}
+			JsonDocument[] jsonDocuments = documentStore.DatabaseCommands.GetDocuments(0, 10, true);
+			Assert.Equal(2, jsonDocuments.Length);
+		}
 
 		[Fact]
 		public void Can_delete_document()

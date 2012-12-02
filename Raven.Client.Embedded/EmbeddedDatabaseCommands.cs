@@ -474,14 +474,34 @@ namespace Raven.Client.Embedded
 
 			if (includes != null)
 			{
-			var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
-			foreach (var jsonDocument in multiLoadResult.Results)
-			{
-				includeCmd.Execute(jsonDocument);
-			}
+				var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
+				foreach (var jsonDocument in multiLoadResult.Results)
+				{
+					includeCmd.Execute(jsonDocument);
+				}
 			}
 
 			return multiLoadResult;
+		}
+
+		/// <summary>
+		/// Begins an async get operation for documents
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
+		{
+			// As this is embedded we don't care for the metadata only value
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database
+				.GetDocuments(start, pageSize, null)
+				.Cast<RavenJObject>()
+				.ToJsonDocuments()
+				.ToArray();
 		}
 
 		/// <summary>
