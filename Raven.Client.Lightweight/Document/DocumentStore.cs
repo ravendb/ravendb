@@ -409,7 +409,7 @@ namespace Raven.Client.Document
 				return;
 
 			var pendingTransactionRecovery = new PendingTransactionRecovery();
-			pendingTransactionRecovery.Execute(DatabaseCommands);
+			pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
 		}
 #endif
 		private void InitializeSecurity()

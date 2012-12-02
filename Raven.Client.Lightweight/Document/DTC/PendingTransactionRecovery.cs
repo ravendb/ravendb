@@ -55,7 +55,7 @@ namespace Raven.Client.Document.DTC
 								commands.ForDatabase(db) : 
 								commands.ForDefaultDatabase();
 
-							TransactionManager.Reenlist(resourceManagerId, fileStream.ReadData(), new InternalEnlistment(dbCmds, txId));
+							TransactionManager.Reenlist(resourceManagerId, stream.ReadData(), new InternalEnlistment(dbCmds, txId));
 							resourceManagersRequiringRecovery.Add(resourceManagerId);
 							logger.Info("Recovered transaction {0}", txId);
 						}
