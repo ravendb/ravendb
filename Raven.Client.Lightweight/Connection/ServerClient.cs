@@ -679,6 +679,23 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectGetIndexNames(start, pageSize, u));
 		}
 
+		public IndexDefinition[] GetIndexes(int start, int pageSize)
+		{
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var url2 = (operationUrl + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+				var result = request.ReadResponseJson();
+				var json = ((RavenJArray)result);
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+						return json
+							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+							.ToArray();
+			});
+		}
+
 		/// <summary>
 		/// Resets the specified index
 		/// </summary>

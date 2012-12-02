@@ -232,6 +232,18 @@ namespace Raven.Tests.Document
 			Assert.Equal(FieldIndexing.NotAnalyzed, indexDefinition.Indexes["Name"]);
 		}
 
+		[Fact]
+		public void CanGetIndexes()
+		{
+			documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
+			{
+				Map = companies => from c in companies
+								   select new { c.Name },
+				Indexes = { { x => x.Name, FieldIndexing.NotAnalyzed } }
+			});
+			var indexDefinitions = documentStore.DatabaseCommands.GetIndexes(0, 10);
+			Assert.NotNull(indexDefinitions.SingleOrDefault(d => d.Name == "Companies/Name"));
+		}
 
 		[Fact]
 		public void WillTrackEntitiesFromQuery()

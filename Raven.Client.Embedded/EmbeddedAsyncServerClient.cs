@@ -80,8 +80,7 @@ namespace Raven.Client.Embedded
 
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
+			return new CompletedTask<IndexDefinition[]>(databaseCommands.GetIndexes(start, pageSize));
 		}
 
 		public Task ResetIndexAsync(string name)

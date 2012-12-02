@@ -9,7 +9,9 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Json;
 using Raven.Database.Data;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -296,6 +298,20 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.GetIndexNames(start, pageSize)
 				.Select(x => x.Value<string>()).ToArray();
+		}
+
+		/// <summary>
+		/// Gets the indexes from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public IndexDefinition[] GetIndexes(int start, int pageSize)
+		{
+			//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+			return database
+				.GetIndexes(start, pageSize)
+				.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+				.ToArray();
 		}
 
 		/// <summary>

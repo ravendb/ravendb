@@ -51,7 +51,7 @@ namespace Raven.Client.Connection
 		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
-		/// Begins an async get operation for documents
+		/// Get documents from server
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
@@ -135,6 +135,13 @@ namespace Raven.Client.Connection
 		/// <param name="pageSize">Size of the page.</param>
 		/// <returns></returns>
 		string[] GetIndexNames(int start, int pageSize);
+
+		/// <summary>
+		/// Gets the indexes from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		IndexDefinition[] GetIndexes(int start, int pageSize);
 
 		/// <summary>
 		/// Resets the specified index
