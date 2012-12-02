@@ -56,8 +56,10 @@ namespace Raven.Database.Linq
 
 			foreach (var type in asm.GetTypes())
 			{
-				foreach (var methodInfo in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+				foreach (var methodInfo in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
 				{
+					if (methodInfo.DeclaringType != type)
+						continue;
 					foreach (var instruction in methodInfo.GetInstructions())
 					{
 						if (instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Call &&
@@ -90,9 +92,9 @@ namespace Raven.Database.Linq
 
 		private static string PrepareSecurityMessage(MemberInfo memberInfo)
 		{
-			var attributes = Enumerable.ToArray(GetAttributesForMethodAndType(memberInfo, typeof(SecurityCriticalAttribute))
-			                                    	.Concat(GetAttributesForMethodAndType(memberInfo, typeof(HostProtectionAttribute)))
-			                                    	.Where(HasSecurityIssue));
+			var attributes = GetAttributesForMethodAndType(memberInfo, typeof(SecurityCriticalAttribute))
+				.Concat(GetAttributesForMethodAndType(memberInfo, typeof(HostProtectionAttribute)))
+				.Where(HasSecurityIssue).ToArray();
 
 			var forbiddenNamespace =
 				forbiddenNamespaces.FirstOrDefault(
