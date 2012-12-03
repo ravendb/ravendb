@@ -117,8 +117,6 @@ task Compile -depends Init {
 		
 		Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
-	} catch {
-		Throw
 	} finally { 
 		#new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
 		remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
@@ -387,10 +385,22 @@ task Upload -depends DoRelease {
 		
 		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
-		Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
+		
+		$uploadTryCount = 0
+		while ($uploadTryCount -lt 5){
+			$uploadTryCount += 1
+			Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
 			
+			if ($lastExitCode -ne 0) {
+				write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
+			}
+			else {
+				break
+			}
+		}
+		
 		if ($lastExitCode -ne 0) {
-			write-host "Failed to upload to S3: $lastExitCode"
+			write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount. Build will fail."
 			throw "Error: Failed to publish build"
 		}
 	}

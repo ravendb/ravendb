@@ -231,8 +231,7 @@ namespace Raven.Client.Connection
 				case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
 					return;
 				case FailoverBehavior.FailImmediately:
-					var allowReadFromAllServers = (conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) ==
-												  FailoverBehavior.ReadFromAllServers;
+					var allowReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 					if (allowReadFromAllServers && method == "GET")
 						return;
 					break;
@@ -502,7 +501,7 @@ namespace Raven.Client.Connection
 			T result;
 			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
 
-			var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
+			var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 			if (shouldReadFromAllServers && method == "GET")
 			{
 				var replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1);
@@ -579,8 +578,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				case ExecuteWithReplicationStates.Start:
 					state.ReplicationDestinations = ReplicationDestinationsUrls;
 
-					var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) ==
-													FailoverBehavior.ReadFromAllServers);
+					var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 					if (shouldReadFromAllServers && state.Method == "GET")
 					{
 						var replicationIndex = state.ReadStripingBase % (state.ReplicationDestinations.Count + 1);
