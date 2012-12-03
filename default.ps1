@@ -389,7 +389,7 @@ task Upload -depends DoRelease {
 		write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
 		
 		$uploadTryCount = 0
-		while ($uploadTryCount < 5){
+		while ($uploadTryCount -lt 5){
 			$uploadTryCount += 1
 			Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
 			
