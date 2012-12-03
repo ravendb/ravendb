@@ -117,8 +117,6 @@ task Compile -depends Init {
 		
 		Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
-	} catch {
-		Throw
 	} finally { 
 		#new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
 		remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
