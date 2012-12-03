@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 
 		public Includes()
 		{
-			server = GetNewServer(8079, GetPath(DbName));
+			server = GetNewServer(8079, GetPath(DataDir));
 
 			store = new DocumentStore
 			{

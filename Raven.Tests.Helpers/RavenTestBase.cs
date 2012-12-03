@@ -34,8 +34,7 @@ namespace Raven.Tests.Helpers
 {
 	public class RavenTestBase : IDisposable
 	{
-		protected const string DataDir = @".\TestDatabase\";
-		protected const string DbName = DataDir + @"DocDb.esb";
+		protected readonly string DataDir = string.Format(@".\TestDatabase-{0}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"));
 
 		private string path;
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
@@ -305,7 +304,6 @@ namespace Raven.Tests.Helpers
 			{
 				try
 				{
-					IOExtensions.DeleteDirectory(DbName);
 					IOExtensions.DeleteDirectory(DataDir);
 					break;
 				}
