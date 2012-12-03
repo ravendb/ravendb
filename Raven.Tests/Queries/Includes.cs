@@ -15,7 +15,7 @@ namespace Raven.Tests.Queries
 
 		public Includes()
 		{
-			server = GetNewServer(8079, GetPath(DbName));
+			server = GetNewServer(8079, GetPath(DataDir));
 
 			store = new DocumentStore
 			{

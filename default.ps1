@@ -387,10 +387,22 @@ task Upload -depends DoRelease {
 		
 		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
-		Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
+		
+		$uploadTryCount = 0
+		while ($uploadTryCount -lt 5){
+			$uploadTryCount += 1
+			Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
 			
+			if ($lastExitCode -ne 0) {
+				write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
+			}
+			else {
+				break
+			}
+		}
+		
 		if ($lastExitCode -ne 0) {
-			write-host "Failed to upload to S3: $lastExitCode"
+			write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount. Build will fail."
 			throw "Error: Failed to publish build"
 		}
 	}
