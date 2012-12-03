@@ -53,6 +53,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Bundles", "Bundles", "{0B41
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.IndexReplication", "Bundles\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj", "{2728BBA7-5142-445E-BAA5-142A25E0666D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.MvcIntegration", "Samples\Raven.Sample.MvcIntegration\Raven.Sample.MvcIntegration.csproj", "{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -273,6 +275,16 @@ Global
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Release|x86.ActiveCfg = Release|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
