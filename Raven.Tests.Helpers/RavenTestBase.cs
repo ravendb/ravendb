@@ -48,9 +48,10 @@ namespace Raven.Tests.Helpers
 		}
 
 		public EmbeddableDocumentStore NewDocumentStore(
-			bool deleteDirectory = true,
+			bool runInMemory = true,
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
+			bool deleteDirectory = true,
 			bool deleteDirectoryOnDispose = true)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(RavenTestBase)).CodeBase);
@@ -63,7 +64,7 @@ namespace Raven.Tests.Helpers
 					DefaultStorageTypeName = GetDefaultStorageType(requestedStorage),
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					RunInMemory = false,
+					RunInMemory = runInMemory,
 					Port = 8079
 				}
 			};
