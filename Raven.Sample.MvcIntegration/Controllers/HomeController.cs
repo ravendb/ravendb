@@ -22,6 +22,11 @@ namespace Raven.Sample.MvcIntegration.Controllers
 			return View();
 		}
 
+		public ActionResult NoRequests()
+		{
+			return View("Index");
+		}
+
 		public JsonResult SingleSessionGet()
 		{
 			List<TodoItem> items;
