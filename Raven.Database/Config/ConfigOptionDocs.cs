@@ -16,8 +16,8 @@ namespace Raven.Database.Config
 
 			// Paths
 			{"Raven/DataDir", "string", null,"The path for the database directory. Can use ~\\ as the root, in which case the path will start from the server base directory. Default: ~\\Data."},
-			{"Raven/IndexStoragePath", "string", null,"The path for the indexes on disk. Useful if you want to store the indexes on another HD for performance reasons. Default: ~\\Data\\Indexes."},
-			{"Raven/Esent/LogsPath", "string", null,"The path for the esent logs. Useful if you want to store the indexes on another HD for performance reasons. Default: ~\\Data\\Logs."},
+			{"Raven/IndexStoragePath", "string", null,"The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons. Default: ~\\Data\\Indexes."},
+			{"Raven/Esent/LogsPath", "string", null,"The path for the esent logs. Useful if you want to store the indexes on another HDD for performance reasons. Default: ~\\Data\\Logs."},
 
 			// Authentication
 			{"Raven/AnonymousAccess", "string", "Get,All,None", "Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users. Default: Get."},
@@ -50,14 +50,14 @@ namespace Raven.Database.Config
 			{"Raven/InitialNumberOfItemsToIndexInSingleBatch", "int", null, "The number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},
 			{"Raven/AvailableMemoryForRaisingIndexBatchSizeLimit", "int", null, "The minimum amount of memory available for us to double the size of InitialNumberOfItemsToIndexInSingleBatch if we need to."},
 			{"Raven/ResetIndexOnUncleanShutdown","bool", "false", "When the database is shut down rudely, determine whatever to reset the index or to check it. Note that checking the index may take some time on large databases."},
-			{"Raven/MaxIndexingRunLatency", "TimeSpan", "00:01:00", "What is the suggested max latency for a single indexing run that allows the database to increase the indexing batch size"},
+			{"Raven/MaxIndexingRunLatency", "TimeSpan", "00:05:00", "What is the suggested max latency for a single indexing run that allows the database to increase the indexing batch size"},
 			
 
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
 			
 			// Temp Indexing
-			{"Raven/TempIndexPromotionMinimumQueryCount", "int", "1 or higher","The number of times a temporary index has to be queries during the promotion threshold to become a permanent auto index. Default: 100."},
-			{"Raven/TempIndexPromotionThreshold", "int", null, "The promotion threshold for promoting a temporary dynamic index into a permanent auto index. The value is in second and refer to the length of time that the index have to get to the minimum query count value. Default: 10 minutes."},
+			{"Raven/TempIndexPromotionMinimumQueryCount", "int", "1 or higher","The number of times a temporary index has to be queried during the promotion threshold to become a permanent auto index. Default: 100."},
+			{"Raven/TempIndexPromotionThreshold", "int", null, "The promotion threshold for promoting a temporary dynamic index into a permanent auto index. The value is in second and refer to the length of time that the index have to get to the minimum query count value. Default: 60000 (once a minute)."},
 			{"Raven/TempIndexCleanupPeriod","int", null, "How often will temp dynamic indexes be purged from the system. The value is in seconds. Default: 10 minutes."},
 			{"Raven/TempIndexCleanupThreshold","int",null, "How long does a temporary index hang around if there are no queries made to it. The value is in seconds. Default: 20 minutes."},
 			{"Raven/TempIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a temporary index held in memory. When a temporary dynamic index exceeds that value, it will be using on disk indexing, rather then RAM indexing. Default: 25 MB."},
@@ -65,13 +65,13 @@ namespace Raven.Database.Config
 			// Memory
 			{"Raven/MemoryCacheLimitMegabytes", "int", null, "The max size in MB for the internal document cache inside RavenDB server, default is half of the machine available RAM minus the size of the esent cache."},
 			{"Raven/MemoryCacheLimitPercentage","int", "0-99", "The percentage of memory that the internal document cache inside RavenDB server will use, default: auto."},
-			{"Raven/MemoryCacheLimitCheckInterval", "TimeSpan", "HH:MM:SS", "The internal for checking that the internal document cache inside RavenDB server will be cleaned, default: 2 minutes."},
+			{"Raven/MemoryCacheLimitCheckInterval", "TimeSpan", "HH:MM:SS", "The internal for checking that the internal document cache inside RavenDB server will be cleaned."},
 			{"Raven/MemoryCacheExpiration", "int", null, "The expiration value for documents in the internal document cache. Value is in seconds. Default: 5 minutes"},
 			// Esent
 			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default storage engine. Default: 25% of RAM on 64 bits, 256 MB on 32 bits."},
 			{"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 512."},
 			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in megabytes. Default: 64."},
-			{"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 16."},
+			{"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 8192."},
 			{"Raven/Esent/MaxCursors", "int", null, "The maximum number of cursors allowed concurrently. Default: 2048."},
 			{"Raven/Esent/DbExtensionSize", "int", null, "The size that the database file will be enlarged with when the file is full. The value is in megabytes. Lower values result in smaller file size, but slower performance when the database size grows. Default: 8."},
 			{"Raven/Esent/CircularLog", "bool", "true / false", "Whatever circular logs will be used, defaults to true. If you want to use incremental backups, you need to turn this off, but logs will only be truncated on backup."},
@@ -84,7 +84,7 @@ namespace Raven.Database.Config
 			// Plugins
 			{"Raven/PluginsDirectory", "string", null, "The location of the plugins directory for this database. Default: ~\\Plugins."},
 			{"Raven/BundlesSearchPattern", "string", null, "Allow to limit the loaded plugins by specifying a search pattern, such as Raven.*.dll. Multiple values can be specified, separated by a semi column (;)."},
-			{"Raven/ActiveBundles", "string", null, "Semi-column separated list of bundles names, such as: 'Replication;Versioning'. If the value is not specified, none of the bundles are installed."},
+			{"Raven/ActiveBundles", "string", null, "Semicolon separated list of bundles names, such as: 'Replication;Versioning'. If the value is not specified, none of the bundles are installed."},
 
 			// Obsolete
 			{"Raven/WebDir", "string", null, "The location of the web directory for known files that makes up the RavenDB internal website. Default: Raven/WebUI"},
