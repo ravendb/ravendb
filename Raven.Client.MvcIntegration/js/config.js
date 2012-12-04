@@ -1,9 +1,9 @@
 ﻿require.config({
 	paths: {
-		'jquery': '../Scripts/jquery',
-		'backbone': '../Scripts/backbone',
-		'underscore': '../Scripts/underscore',
-		'text': '../Scripts/text'
+		'jquery': 'vendor/jquery',
+		'backbone': 'vendor/backbone',
+		'underscore': 'vendor/underscore',
+		'text': 'vendor/text'
 	},
 	shim: {
 		underscore: {

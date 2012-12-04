@@ -100,7 +100,7 @@
   <ItemGroup>
     <Content Include="Content\bootstrap.css" />
     <Content Include="Global.asax" />
-    <Content Include="Scripts\jquery.js" />
+    <Content Include="Scripts\jquery.min.js" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>

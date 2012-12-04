@@ -43,3 +43,4 @@ Raven.Web/Tenants/
 Raven.Web/NLog.config
 *.*crunch*
 Testresults
+/Raven.Client.MvcIntegration/Content/ravendb-profiler.min.js
