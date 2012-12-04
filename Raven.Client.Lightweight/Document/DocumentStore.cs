@@ -222,6 +222,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected virtual void SetConnectionStringSettings(RavenConnectionStringOptions options)
 		{
+			if (options.ResourceManagerId != Guid.Empty)
+				ResourceManagerId = options.ResourceManagerId;
 			if (options.Credentials != null)
 				Credentials = options.Credentials;
 			if (string.IsNullOrEmpty(options.Url) == false)
