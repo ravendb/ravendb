@@ -53,7 +53,7 @@ namespace Raven.Client.Document
 		/// Loads the specified id.
 		/// </summary>
 		/// <param name="id">The id.</param>
-		public Task<T> Load(string id)
+		public Task<T> LoadAsync(string id)
 		{
 			return session.LoadAsyncInternal<T>(new[] {id}, includes.ToArray()).ContinueWith(x => x.Result.FirstOrDefault());
 		}
@@ -71,10 +71,10 @@ namespace Raven.Client.Document
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		public Task<T> Load(ValueType id)
+		public Task<T> LoadAsync(ValueType id)
 		{
 			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T), false);
-			return Load(idAsStr);
+			return LoadAsync(idAsStr);
 		}
 
 		/// <summary>
@@ -91,7 +91,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <typeparam name="TResult"></typeparam>
 		/// <param name="ids">The ids.</param>
-		public Task<TResult[]> Load<TResult>(params string[] ids)
+		public Task<TResult[]> LoadAsync<TResult>(params string[] ids)
 		{
 			return session.LoadAsyncInternal<TResult>(ids, includes.ToArray());
 		}
@@ -101,9 +101,9 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <typeparam name="TResult"></typeparam>
 		/// <param name="id">The id.</param>
-		public Task<TResult> Load<TResult>(string id)
+		public Task<TResult> LoadAsync<TResult>(string id)
 		{
-			return Load<TResult>(new[] { id }).ContinueWith(x => x.Result.FirstOrDefault());
+			return LoadAsync<TResult>(new[] { id }).ContinueWith(x => x.Result.FirstOrDefault());
 		}
 
 		/// <summary>
@@ -118,10 +118,10 @@ namespace Raven.Client.Document
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		public Task<TResult> Load<TResult>(ValueType id)
+		public Task<TResult> LoadAsync<TResult>(ValueType id)
 		{
 			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			return Load<TResult>(new[] { idAsStr }).ContinueWith(x => x.Result.FirstOrDefault());
+			return LoadAsync<TResult>(new[] { idAsStr }).ContinueWith(x => x.Result.FirstOrDefault());
 		}
 	}
 }
