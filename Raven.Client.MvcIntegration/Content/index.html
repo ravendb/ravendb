@@ -1,6 +1,6 @@
-<script type="text/javascript" src="{rootUrl}?path=yepnope.min.js"></script>
-<script type="text/javascript">
-	yepnope([{ test: window.jQuery, nope: '{rootUrl}?path=jquery.min.js' }, 
-			{ test: window.jQuery && window.jQuery.fn.tmpl, nope: '{rootUrl}?path=jquery.tmpl.min.js' }, 
-			{load: '{rootUrl}?path=ravendb-profiler-scripts.js', complete: function() { jQuery(function() { RavenDBProfiler.initalize({ id:['{id}'], url: '{rootUrl}' }); }) } }]);
+<script type="text/javascript" src="{rootUrl}?path=ravendb-profiler.min.js"></script>
+<script>
+	RavenDBProfiler.require(['profiler'], function(init) {
+		init(['{id}'], '{rootUrl}');
+	});
 </script>

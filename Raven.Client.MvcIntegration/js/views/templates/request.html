@@ -1,0 +1,14 @@
+<td>{{ helper.round(data.DurationMilliseconds) }} ms</td>
+<td>{{ data.Status }}</td>
+<td>{{ data.HttpResult }}</td>
+<td>{{ data.Method }}</td>
+<td>{{ helper.url(data.Url) }}</td>
+<td>
+	<pre class="query">{{ helper.query(data.Url) }}</pre>
+</td>
+<td>
+	<ul>
+		<li><a href="#" class="show-full-url">Show Url</a></li>
+		<li><a href="#" class="show-request-details">Request Details</a></li>
+	</ul>
+</td>

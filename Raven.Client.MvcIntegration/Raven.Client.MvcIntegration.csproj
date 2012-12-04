@@ -69,39 +69,47 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\ravendb-profiler-scripts.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\session-template.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\ravendb-profiler.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Content\styles.css" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\request-details.tmpl.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Content\Templates\totals.tmpl.html" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Content\index.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\jquery.min.js" />
-    <EmbeddedResource Include="Content\yepnope.min.js" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\jquery.tmpl.min.js" />
+    <Content Include="Scripts\jquery-1.8.2.js" />
+    <EmbeddedResource Include="Content\ravendb-profiler.min.js" />
+    <None Include="js\app.build.js" />
+    <Content Include="Tools\node.exe" />
+    <None Include="js\config.js" />
+    <None Include="js\models\ProfilerData.js" />
+    <None Include="js\models\Request.js" />
+    <None Include="js\models\Session.js" />
+    <None Include="js\profiler.js" />
+    <Content Include="Scripts\text.js" />
+    <None Include="js\views\ProfilerButton.js" />
+    <None Include="js\views\ProfilerView.js" />
+    <None Include="js\views\RequestDetailsView.js" />
+    <None Include="js\views\RequestView.js" />
+    <None Include="js\views\SessionView.js" />
+    <None Include="js\views\templateHelper.js" />
+    <None Include="js\views\templates\profiler.html" />
+    <None Include="js\views\templates\request.html" />
+    <None Include="js\views\templates\requestDetails.html" />
+    <None Include="js\views\templates\session.html" />
+    <Content Include="Scripts\backbone.js" />
+    <Content Include="Scripts\r.js" />
+    <Content Include="Scripts\require.js" />
+    <Content Include="Scripts\underscore.js" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>$(ProjectDir)Tools\node.exe $(ProjectDir)Scripts\r.js -o $(ProjectDir)js\app.build.js out=$(ProjectDir)Content\ravendb-profiler.min.js</PreBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
