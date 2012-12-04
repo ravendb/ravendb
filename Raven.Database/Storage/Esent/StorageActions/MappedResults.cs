@@ -25,7 +25,7 @@ namespace Raven.Storage.Esent.StorageActions
 	{
 		private static readonly ThreadLocal<SHA1> localSha1 = new ThreadLocal<SHA1>(() => new SHA1Managed());
 
-		public byte[] HashReduceKey(string reduceKey)
+		public static byte[] HashReduceKey(string reduceKey)
 		{
 			return localSha1.Value.ComputeHash(Encoding.UTF8.GetBytes(reduceKey));
 		}
