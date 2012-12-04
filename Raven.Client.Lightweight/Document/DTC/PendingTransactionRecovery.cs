@@ -19,20 +19,35 @@ namespace Raven.Client.Document.DTC
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		public void Execute(IDatabaseCommands commands)
+		public void Execute(Guid myResourceManagerId, IDatabaseCommands commands)
 		{
 			var resourceManagersRequiringRecovery = new HashSet<Guid>();
 			using (var store = IsolatedStorageFile.GetMachineStoreForDomain())
 			{
+				var filesToDelete = new List<string>();
 				foreach (var file in store.GetFileNames("*.recovery-information"))
 				{
 					var txId = Guid.Empty;
 					try
 					{
-						using (var fileStream = store.OpenFile(file, FileMode.Open, FileAccess.Read))
-						using(var reader = new BinaryReader(fileStream))
+						IsolatedStorageFileStream stream;
+						try
+						{
+							stream = store.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+						}
+						catch (Exception e)
+						{
+							logger.WarnException("Could not open recovery information: " + file +", this is expected if it is an active transaction / held by another server", e);
+							continue;
+						}
+						using (stream)
+						using(var reader = new BinaryReader(stream))
 						{
 							var resourceManagerId = new Guid(reader.ReadString());
+
+							if(myResourceManagerId != resourceManagerId)
+								continue; // it doesn't belong to us, ignore
+							filesToDelete.Add(file);
 							txId = new Guid(reader.ReadString());
 
 							var db = reader.ReadString();
@@ -41,7 +56,7 @@ namespace Raven.Client.Document.DTC
 								commands.ForDatabase(db) : 
 								commands.ForDefaultDatabase();
 
-							TransactionManager.Reenlist(resourceManagerId, fileStream.ReadData(), new InternalEnlistment(dbCmds, txId));
+							TransactionManager.Reenlist(resourceManagerId, stream.ReadData(), new InternalEnlistment(dbCmds, txId));
 							resourceManagersRequiringRecovery.Add(resourceManagerId);
 							logger.Info("Recovered transaction {0}", txId);
 						}
@@ -65,7 +80,7 @@ namespace Raven.Client.Document.DTC
 				}
 
 				var errors = new List<Exception>();
-				foreach (var file in store.GetFileNames("*.recovery-information"))
+				foreach (var file in filesToDelete)
 				{
 					try
 					{

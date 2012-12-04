@@ -261,7 +261,7 @@ namespace Raven.Client.Document
 #if DEBUG
 			GC.SuppressFinalize(this);
 #endif
-
+			
 
 			var tasks = new List<Task>();
 			foreach (var databaseChange in databaseChanges)
@@ -340,7 +340,7 @@ namespace Raven.Client.Document
 				var session = new DocumentSession(this, listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
 					{
-						DatabaseName = options.Database
+						DatabaseName = options.Database ?? DefaultDatabase
 					};
 				AfterSessionCreated(session);
 				return session;
@@ -424,7 +424,7 @@ namespace Raven.Client.Document
 
 #if !SILVERLIGHT
 				RecoverPendingTransactions();
-
+		
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)
 				{
 					DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
@@ -457,8 +457,11 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 		private void RecoverPendingTransactions()
 		{
+			if (EnlistInDistributedTransactions == false)
+				return;
+
 			var pendingTransactionRecovery = new PendingTransactionRecovery();
-			pendingTransactionRecovery.Execute(DatabaseCommands);
+			pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
 		}
 #endif
 
@@ -527,12 +530,12 @@ namespace Raven.Client.Document
 			};
 
 			Conventions.HandleForbiddenResponseAsync = forbiddenResponse =>
-			{
+					{
 				if (ApiKey == null)
-				{
+						{
 					AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse);
 					return null;
-				}
+						}
 
 				return null;
 			};
@@ -541,19 +544,19 @@ namespace Raven.Client.Document
 		private void AssertUnuthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
 		{
 			if (credentials != null)
-			{
+		{
 				var authHeaders = response.Headers["WWW-Authenticate"];
 				if (authHeaders == null ||
 					(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
 					)
-				{
+			{
 					// we are trying to do windows auth, but we didn't get the windows auth headers
 					throw new SecurityException(
 						"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
 						+" but either worng credentials where entered or the specified server does not support Windows authentication." +
 						Environment.NewLine +
 						"If you are running inside IIS, make sure to enable Windows authentication.");
-				}
+			}
 			}
 		}
 
@@ -563,7 +566,7 @@ namespace Raven.Client.Document
 			{
 				var requiredAuth = response.Headers["Raven-Required-Auth"];
 				if (requiredAuth == "Windows")
-				{
+		{
 					// we are trying to do windows auth, but we didn't get the windows auth headers
 					throw new SecurityException(
 						"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
