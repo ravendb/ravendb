@@ -78,9 +78,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Scripts\jquery-1.8.2.js" />
     <EmbeddedResource Include="Content\ravendb-profiler.min.js" />
     <None Include="js\app.build.js" />
+    <Content Include="Scripts\jquery.js" />
     <Content Include="Tools\node.exe" />
     <None Include="js\config.js" />
     <None Include="js\models\ProfilerData.js" />

@@ -1,6 +1,6 @@
 ﻿require.config({
 	paths: {
-		'jquery': '../Scripts/jquery-1.8.2',
+		'jquery': '../Scripts/jquery',
 		'backbone': '../Scripts/backbone',
 		'underscore': '../Scripts/underscore',
 		'text': '../Scripts/text'

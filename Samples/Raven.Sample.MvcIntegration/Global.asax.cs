@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Web;
-using System.Web.Http;
 using System.Web.Mvc;
 using System.Web.Routing;
 using Raven.Client;
@@ -14,7 +13,6 @@ namespace Raven.Sample.MvcIntegration
 		{
 			AreaRegistration.RegisterAllAreas();
 
-			WebApiConfig.Register(GlobalConfiguration.Configuration);
 			RouteConfig.RegisterRoutes(RouteTable.Routes);
 
 			Store = new DocumentStore
