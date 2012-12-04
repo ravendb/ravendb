@@ -26,7 +26,7 @@
 
 			string uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + 
 				Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value);
-			var constraintDoc = session.Include("Id").Load<ConstraintDocument>(uniqueId);
+			var constraintDoc = session.Include<ConstraintDocument>(x => x.RelatedId).Load(uniqueId);
 			if (constraintDoc == null)
 				return default(T);
 
@@ -61,7 +61,7 @@
 						Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString()));
 				}
 
-				ConstraintDocument[] constraintDocs = session.Include("Id").Load<ConstraintDocument>(constraintsIds.ToArray());
+				ConstraintDocument[] constraintDocs = session.Include<ConstraintDocument>(x => x.RelatedId).Load(constraintsIds.ToArray());
 
 				foreach (var constraintDoc in constraintDocs)
 				{
