@@ -24,6 +24,7 @@ namespace Raven.Client.Document.DTC
 			var resourceManagersRequiringRecovery = new HashSet<Guid>();
 			using (var store = IsolatedStorageFile.GetMachineStoreForDomain())
 			{
+				var filesToDelete = new List<string>();
 				foreach (var file in store.GetFileNames("*.recovery-information"))
 				{
 					var txId = Guid.Empty;
@@ -46,7 +47,7 @@ namespace Raven.Client.Document.DTC
 
 							if(myResourceManagerId != resourceManagerId)
 								continue; // it doesn't belong to us, ignore
-
+							filesToDelete.Add(file);
 							txId = new Guid(reader.ReadString());
 
 							var db = reader.ReadString();
@@ -79,7 +80,7 @@ namespace Raven.Client.Document.DTC
 				}
 
 				var errors = new List<Exception>();
-				foreach (var file in store.GetFileNames("*.recovery-information"))
+				foreach (var file in filesToDelete)
 				{
 					try
 					{
