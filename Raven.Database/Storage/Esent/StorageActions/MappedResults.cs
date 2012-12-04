@@ -4,10 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
@@ -17,12 +18,18 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
-using Raven.Munin;
 
 namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IMappedResultsStorageAction
 	{
+		private static readonly ThreadLocal<SHA1> localSha1 = new ThreadLocal<SHA1>(() => new SHA1Managed());
+
+		public byte[] HashReduceKey(string reduceKey)
+		{
+			return localSha1.Value.ComputeHash(Encoding.UTF8.GetBytes(reduceKey));
+		}
+
 		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data)
 		{
 			Guid etag = uuidGenerator.CreateSequentialUuid();
@@ -31,6 +38,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["hashed_reduce_key"], HashReduceKey(reduceKey));
 				var mapBucket = IndexingUtil.MapBucket(docId);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"], mapBucket);
 
@@ -60,6 +68,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["view"], view, Encoding.Unicode);
 				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["level"], level);
 				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
+				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["hashed_reduce_key"], HashReduceKey(reduceKey));
 				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["bucket"], bucket);
 				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["source_bucket"], sourceBucket);
 
@@ -91,6 +100,8 @@ namespace Raven.Storage.Esent.StorageActions
 								  view, Encoding.Unicode);
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"],
 								  reduceKeysAndBukcet.ReduceKey, Encoding.Unicode);
+					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["hashed_reduce_key"],
+												  HashReduceKey(reduceKeysAndBukcet.ReduceKey));
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"],
 								  uuidGenerator.CreateSequentialUuid());
@@ -132,13 +143,15 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete)
 		{
-			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_reduce_key_and_bucket");
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_bucket_and_hashed_reduce_key");
 			Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
 			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
 				yield break;
 
-			var reader = new OptimizedIndexReader(session, ScheduledReductions, take);
+			// this isn't used for optimized reading, but to make it easier to delete records
+			// later on
+			var reader = new OptimizedIndexReader(session, ScheduledReductions, take); 
 			itemsToDelete.Add(reader);
 			var seen = new HashSet<Tuple<string, int>>();
 			do
@@ -158,11 +171,13 @@ namespace Raven.Storage.Esent.StorageActions
 				if (levelFromDb > level)
 					break;
 
-				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
 				var bucket =
 					Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"], RetrieveColumnGrbit.RetrieveFromIndex).
 						Value;
 
+				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions,
+											   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
+			
 				if (seen.Add(Tuple.Create(reduceKey, bucket)))
 				{
 					foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKey, bucket))
@@ -194,10 +209,10 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(string index, string reduceKey, int bucket)
 		{
-			Api.JetSetCurrentIndex(session, MappedResults, "by_view_reduce_key_and_bucket");
+			Api.JetSetCurrentIndex(session, MappedResults, "by_view_bucket_and_hashed_reduce_key");
 			Api.MakeKey(session, MappedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, MappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, MappedResults, bucket, MakeKeyGrbit.None);
+			Api.MakeKey(session, MappedResults, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
 			{
@@ -210,8 +225,8 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			Api.MakeKey(session, MappedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, MappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, MappedResults, bucket, MakeKeyGrbit.None);
+			Api.MakeKey(session, MappedResults, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 
 			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			bool returnedResults = false;
@@ -221,11 +236,11 @@ namespace Raven.Storage.Esent.StorageActions
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value;
 				if (string.Equals(indexFromDb, index, StringComparison.InvariantCultureIgnoreCase) == false ||
-					string.Equals(keyFromDb, reduceKey, StringComparison.Ordinal) == false || // the key is explicitly compared using case sensitive approach
-					bucketFromDb != bucket)
+					bucketFromDb != bucket || 
+					string.Equals(keyFromDb, reduceKey, StringComparison.Ordinal) == false // the key is explicitly compared using case sensitive approach
+					)
 				{
-					// this is a continue instead of a break because with lond reduce keys, we might have multiple items that have
-					// the same index key, so we go through them one at a time and compare the full key
+					// we might have a hash collision, so we will just skip and try the next one
 					continue; 
 				}
 				yield return new MappedResultInfo
@@ -258,32 +273,28 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket)
 		{
-			Api.JetSetCurrentIndex(session, ReducedResults, "by_view_level_reduce_key_and_source_bucket");
+			Api.JetSetCurrentIndex(session, ReducedResults, "by_view_level_source_bucket_and_hashed_reduce_key");
 			Api.MakeKey(session, ReducedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReducedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, ReducedResults, sourceBucket, MakeKeyGrbit.None);
+			Api.MakeKey(session, ReducedResults, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 
 			if (Api.TrySeek(session, ReducedResults, SeekGrbit.SeekEQ) == false)
 				return;
 
-			Api.MakeKey(session, ReducedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReducedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReducedResults, sourceBucket, MakeKeyGrbit.None);
-			Api.JetSetIndexRange(session, ReducedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
-
 			do
 			{
-				var indexFromDb = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["view"]);
-				var keyFromDb = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["reduce_key"]);
-				var bucketFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["source_bucket"]).Value;
+				var indexFromDb = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
+				var bucketFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["source_bucket"], RetrieveColumnGrbit.RetrieveFromIndex).Value;
 				if (string.Equals(indexFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false ||
-					string.Equals(keyFromDb, reduceKey, StringComparison.InvariantCultureIgnoreCase) == false ||
 					bucketFromDb != sourceBucket)
 				{
-					continue;
+					break;
 				}
+
+				var keyFromDb = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["reduce_key"]);
+				if (string.Equals(keyFromDb, reduceKey, StringComparison.Ordinal) == false)// case sensitive check on purpose
+					continue;
 
 
 				Api.JetDelete(session, ReducedResults);
@@ -292,11 +303,11 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(string index, string reduceKey, int level, int bucket)
 		{
-			Api.JetSetCurrentIndex(session, ReducedResults, "by_view_level_reduce_key_and_bucket");
+			Api.JetSetCurrentIndex(session, ReducedResults, "by_view_level_bucket_and_hashed_reduce_key");
 			Api.MakeKey(session, ReducedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReducedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, ReducedResults, bucket, MakeKeyGrbit.None);
+			Api.MakeKey(session, ReducedResults, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 
 			if (Api.TrySeek(session, ReducedResults, SeekGrbit.SeekEQ) == false)
 			{
@@ -310,17 +321,19 @@ namespace Raven.Storage.Esent.StorageActions
 
 			Api.MakeKey(session, ReducedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReducedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, ReducedResults, bucket, MakeKeyGrbit.None);
+			Api.MakeKey(session, ReducedResults, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, ReducedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 			bool returnedResults = false;
 			do
 			{
 				var key = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["reduce_key"]);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["bucket"]).Value;
+				if (bucketFromDb != bucket)
+					break;
+
 				// we explicitly compare the key just as we would during the group by phase, using case sensitive approach
-				if (string.Equals(key, reduceKey, StringComparison.Ordinal) == false || 
-					bucketFromDb != bucket)
+				if (string.Equals(key, reduceKey, StringComparison.Ordinal) == false)
 					continue;
 				returnedResults = true;
 				yield return new MappedResultInfo
@@ -471,10 +484,11 @@ namespace Raven.Storage.Esent.StorageActions
 				if (comparision > 0) // after the current item
 					break;
 
-				take -= 1;
-
 				if (results.Add(keyFromDb))
+				{
+					take -= 1;
 					yield return keyFromDb;
+				}
 			} while (Api.TryMoveNext(session, MappedResults) && take > 0);
 		}
 
@@ -483,10 +497,11 @@ namespace Raven.Storage.Esent.StorageActions
 			if (take <= 0)
 				yield break;
 
-			Api.JetSetCurrentIndex(session, MappedResults, "by_view_reduce_key_and_bucket");
+
+			// NOTE, this intentionally does a table scan for all the items in the same index.
+			// the reason it is allowed is that this is only applicable for debug, and never is used in production systems
+			Api.JetSetCurrentIndex(session, MappedResults, "by_view_bucket_and_hashed_reduce_key");
 			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, MappedResults, key, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.MakeKey(session, MappedResults, 0, MakeKeyGrbit.None);
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
 				yield break;
 
@@ -506,10 +521,8 @@ namespace Raven.Storage.Esent.StorageActions
 				if (indexCompare > 0)
 					break;
 				var keyCompare = string.Compare(key, keyFromDb, StringComparison.InvariantCultureIgnoreCase);
-				if (keyCompare < 0)
+				if (keyCompare != 0)
 					continue;
-				if (keyCompare > 0)
-					break;
 
 				take -= 1;
 
@@ -537,10 +550,12 @@ namespace Raven.Storage.Esent.StorageActions
 			if (take <= 0)
 				yield break;
 
-			Api.JetSetCurrentIndex(session, ReducedResults, "by_view_level_reduce_key_and_source_bucket");
+			// NOTE, this intentionally does a table scan for all the items in the same index.
+			// the reason it is allowed is that this is only applicable for debug, and never is used in production systems
+		
+			Api.JetSetCurrentIndex(session, ReducedResults, "by_view_level_source_bucket_and_hashed_reduce_key");
 			Api.MakeKey(session, ReducedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReducedResults, key, Encoding.Unicode, MakeKeyGrbit.None);
 			if (Api.TrySeek(session, ReducedResults, SeekGrbit.SeekGE) == false)
 				yield break;
 
@@ -565,10 +580,8 @@ namespace Raven.Storage.Esent.StorageActions
 				if (levelFromDb > level)
 					break;
 				var keyCompare = string.Compare(key, keyFromDb, StringComparison.InvariantCultureIgnoreCase);
-				if (keyCompare < 0)
+				if (keyCompare != 0)
 					continue;
-				if (keyCompare > 0)
-					break;
 
 				take -= 1;
 
