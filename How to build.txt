@@ -8,7 +8,7 @@ Requirements:
 In order to build this project, you need to execute the psake build script from the PowerShell console.
 You do this using the following command from the root project directory:
 
-	.\psake.ps1 default.ps1
+	.\build.cmd
 	
 You may need to allow script execution by running the following command as adminstrator:
 

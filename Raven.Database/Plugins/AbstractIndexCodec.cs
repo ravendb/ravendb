@@ -16,6 +16,12 @@ namespace Raven.Database.Plugins
 		{
 		}
 
+
+		public virtual void SecondStageInit()
+		{
+
+		}
+
 		public abstract Stream Encode(string key, Stream dataStream);
 
 		public abstract Stream Decode(string key, Stream dataStream);

@@ -118,7 +118,16 @@ namespace Raven.Database.Backup
 
 		public void Prepare()
 		{
-			var sourceFilesSnapshot = Directory.GetFiles(source);
+			string[] sourceFilesSnapshot;
+			try
+			{
+				sourceFilesSnapshot = Directory.GetFiles(source);
+			}
+			catch (Exception e)
+			{
+				logger.WarnException("Could not get directory files, maybe it was deleted", e);
+				return;
+			}
 			for (int index = 0; index < sourceFilesSnapshot.Length; index++)
 			{
 				var sourceFile = sourceFilesSnapshot[index];

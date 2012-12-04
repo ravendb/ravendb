@@ -185,7 +185,7 @@ namespace Raven.Database.Commercial
 			{
 				if (string.Equals(maxRam, "unlimited",StringComparison.InvariantCultureIgnoreCase) == false)
 				{
-					MemoryStatistics.MemoryLimit = int.Parse(maxRam);
+					MemoryStatistics.MemoryLimit = (int)(long.Parse(maxRam) / 1024 / 1024);
 				}
 			}
 			

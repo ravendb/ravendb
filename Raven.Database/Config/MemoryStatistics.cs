@@ -11,6 +11,9 @@ namespace Raven.Database.Config
 		private static bool failedToGetTotalPhysicalMemory;
 		private static int memoryLimit;
 
+		/// <summary>
+		///  This value is in MB
+		/// </summary>
 		public static int TotalPhysicalMemory
 		{
 			get
@@ -55,6 +58,10 @@ namespace Raven.Database.Config
 		}
 
 		private static bool memoryLimitSet;
+
+		/// <summary>
+		/// This value is in MB
+		/// </summary>
 		public static int MemoryLimit
 		{
 			get { return memoryLimit; }

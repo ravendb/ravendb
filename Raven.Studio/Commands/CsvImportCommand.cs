@@ -87,7 +87,7 @@ namespace Raven.Studio.Commands
 				{
 					var record = enumerator.Current;
 					var document = new RavenJObject();
-					var id = Guid.NewGuid().ToString("N");
+					string id = null;
 					RavenJObject metadata = null;
 					foreach (var column in columns)
 					{
@@ -98,6 +98,7 @@ namespace Raven.Studio.Commands
 						else if(string.Equals("Raven-Entity-Name", column, StringComparison.InvariantCultureIgnoreCase))
 						{
 							metadata = new RavenJObject { { "Raven-Entity-Name", record[column] } };
+							id = id ?? record[column] + "/";
 						}
 						else
 						{
@@ -107,7 +108,7 @@ namespace Raven.Studio.Commands
 
 					metadata = metadata ?? new RavenJObject {{"Raven-Entity-Name", entity}};
 					document.Add("@metadata", metadata);
-					metadata.Add("@id", id);
+					metadata.Add("@id", id ?? Guid.NewGuid().ToString());
 
 					batch.Add(document);
 

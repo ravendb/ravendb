@@ -205,6 +205,7 @@ namespace Raven.Database
 				indexingExecuter = new IndexingExecuter(workContext);
 
 				InitializeTriggersExceptIndexCodecs();
+				SecondStageInitialization();
 
 				ExecuteStartupTasks();
 			}
@@ -213,6 +214,20 @@ namespace Raven.Database
 				Dispose();
 				throw;
 			}
+		}
+
+		private void SecondStageInitialization()
+		{
+			DocumentCodecs.OfType<IRequiresDocumentDatabaseInitialization>()
+				.Concat(PutTriggers .OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexCodecs.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexQueryTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+			.Apply(initialization => initialization.SecondStageInit());
 		}
 
 		private void CompleteWorkContextSetup()

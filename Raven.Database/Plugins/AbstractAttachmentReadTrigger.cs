@@ -67,6 +67,11 @@ namespace Raven.Database.Plugins
 			Initialize();
 		}
 
+		public virtual void SecondStageInit()
+		{
+
+		}
+
 		public virtual void Initialize()
 		{
 		}
