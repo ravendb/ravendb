@@ -10,22 +10,30 @@
 			template: _.template(requestDetailsTemplate),
 			className: 'request-details',
 			events: {
-				'click a.close': 'close'
+				'click a': 'close'
+			},
+
+			initialize: function () {
+				this.model.on('change:activeRequest', this.render, this);
 			},
 
 			render: function () {
-				this.$el.html(this.template({ data: this.model.toJSON(), helper: templateHelper }));
-				this.toggleQueryDisplay();
+				var activeRequest = this.model.get('activeRequest');
+				if (!activeRequest) {
+					this.$el.empty();
+					this.$el.hide();
+					return this;
+				}
+
+				this.$el.html(this.template({ data: activeRequest.toJSON(), helper: templateHelper }));
+				this.$el.show();
+				this.$('.query').toggle(templateHelper.query(activeRequest.get('Url')).length > 0);
+				this.$('.postData').toggle(activeRequest.has('PostedData') && activeRequest.get('PostedData').length > 0);
 				return this;
 			},
 
-			toggleQueryDisplay: function () {
-				var hasQuery = templateHelper.query(this.model.get('Url')).length > 0;
-				this.$('.query').toggle(hasQuery);
-			},
-
 			close: function () {
-				this.remove();
+				this.model.set('activeRequest', null);
 				return false;
 			}
 		});

@@ -4,10 +4,9 @@ define(
 		'backbone',
 		'underscore',
 		'./templateHelper',
-		'text!./templates/request.html',
-		'./RequestDetailsView'
+		'text!./templates/request.html'
 	],
-	function (Backbone, _, templateHelper, requestTemplate, RequestDetailsView) {
+	function (Backbone, _, templateHelper, requestTemplate) {
 		return Backbone.View.extend({
 			template: _.template(requestTemplate),
 			tagName: 'tr',
@@ -27,8 +26,8 @@ define(
 			},
 
 			showDetails: function () {
-				var view = new RequestDetailsView({ model: this.model });
-				this.$el.append(view.render().el);
+				this.model.showDetails();
+				return false;
 			}
 		});
 	}

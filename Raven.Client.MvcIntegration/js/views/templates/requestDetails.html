@@ -1,8 +1,9 @@
-<div>
-	<h2>{{ data.Method }} {{ helper.url(data.Url) }}</h2>
-</div>
-<p />
-<div>
+<h2>
+	{{ data.Method }} {{ helper.url(data.Url) }}
+	<a href='#' title="Close">X</a>
+</h2>
+
+<div class="request-data">
 	<table class='request-details-table'>
 		<thead>
 			<tr>
@@ -17,21 +18,17 @@
 			</tr>
 		</tbody>
 	</table>
+
+	<div class="query">
+		<h3>Query</h3>
+		<pre class="query">{{ helper.query(data.Url) }}</pre>
+	</div>
+	
+	<div class="postData">
+		<h3>Posted Data</h3>
+		<pre class="prettyprint">{{ data.PostedData }}</pre>
+	</div>
+
+	<h3>Result</h3>
+	<pre class="prettyprint">{{ data.Result }}</pre>
 </div>
-<p />
-<div class="query">
-	<h3>Query</h3>
-	<pre class="query">{{ helper.query(data.Url) }}</pre>
-</div>
-<p />
-
-<a href='#' class='close'>Close</a>
-<p />
-<h2>Posted Data</h2>
-<pre class="prettyprint">{{ data.PostedData }}</pre>
-
-
-<h2>Result</h2>
-<pre class="prettyprint">{{ data.Result }}</pre>
-
-<a href='#' class='close'>Close</a>

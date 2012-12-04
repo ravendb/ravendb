@@ -8,12 +8,14 @@
 	function ($, _, Backbone, Session) {
 		return Backbone.Model.extend({
 			defaults: {
-				profilerVisibility: false
+				profilerVisibility: false,
+				activeRequest: null
 			},
 
 			initialize: function (options) {
 				this.sessionUrl = options.sessionUrl;
 				this.sessions = new Backbone.Collection(null, { model: Session });
+				this.sessions.on('toggleRequestDetails', this.toggleRequestDetails, this);
 			},
 
 			loadSessionData: function (sessionIdList) {
@@ -22,7 +24,7 @@
 					sessionCollection.add(sessions);
 				});
 			},
-			
+
 			addSessions: function (sessionIdList) {
 				_(sessionIdList).each(function (id) {
 					this.sessions.add({ id: id });
@@ -48,6 +50,11 @@
 			handleResponse: function (event, xhrRequest) {
 				var headerIds = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
 				this.loadSessionData(headerIds.split(', '));
+			},
+
+			toggleRequestDetails: function (request) {
+				var activeRequest = this.get('activeRequest');
+				this.set('activeRequest', (activeRequest !== request) ? request : null);
 			}
 		});
 	}
