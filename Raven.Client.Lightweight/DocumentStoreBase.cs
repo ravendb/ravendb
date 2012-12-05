@@ -30,7 +30,6 @@ namespace Raven.Client
 		protected DocumentStoreBase()
 		{
 			LastEtagHolder = new GlobalLastEtagHolder();
-			ResourceManagerId = Guid.NewGuid();
 		}
 
 		public abstract void Dispose();
@@ -120,6 +119,8 @@ namespace Raven.Client
 		}
 		/// <summary>
 		/// The resource manager id for the document store.
+		/// IMPORTANT: Using Guid.NewGuid() to set this value is almost certainly a mistake, you should set
+		/// it to a value that remains consistent between restart of the system.
 		/// </summary>
 		public Guid ResourceManagerId { get; set; }
 

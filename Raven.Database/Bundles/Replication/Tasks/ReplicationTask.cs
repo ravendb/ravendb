@@ -376,6 +376,8 @@ namespace Raven.Bundles.Replication.Tasks
 						SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
 					}
 				}
+				RecordLastEtagChecked(destination.ConnectionStringOptions.Url,
+					documentsToReplicate.LastEtag);
 				return null;
 			}
 			string lastError;
@@ -449,6 +451,12 @@ namespace Raven.Bundles.Replication.Tasks
 					  RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
 		}
 
+		private void RecordLastEtagChecked(string url, Guid lastEtagChecked)
+		{
+			var stats = destinationStats.GetOrDefault(url, new DestinationStats { Url = url });
+			stats.LastEtagCheckedForReplication = lastEtagChecked;
+		}
+
 		private void RecordSuccess(string url, 
 			Guid? lastReplicatedEtag = null, DateTime? lastReplicatedLastModified = null,
 			DateTime? lastHeartbeatReceived = null, string lastError = null)
@@ -458,8 +466,11 @@ namespace Raven.Bundles.Replication.Tasks
 			stats.LastSuccessTimestamp = SystemTime.UtcNow;
 
 			if (lastReplicatedEtag.HasValue)
+			{
+				stats.LastEtagCheckedForReplication = lastReplicatedEtag;
 				stats.LastReplicatedEtag = lastReplicatedEtag;
-			
+			}
+
 			if (lastReplicatedLastModified.HasValue)
 				stats.LastReplicatedLastModified = lastReplicatedLastModified;
 

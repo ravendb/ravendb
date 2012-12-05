@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.9";
+		public const string SchemaVersion = "4.0";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -454,6 +454,13 @@ namespace Raven.Storage.Esent
 				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "hashed_reduce_key", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				cbMax = 20,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp() | ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
 			{
 				cbMax = 16,
@@ -492,11 +499,11 @@ namespace Raven.Storage.Esent
 					szKey = "+view\0\0",
 					grbit = CreateIndexGrbit.IndexDisallowNull
 				},
-				new JET_INDEXCREATE
-				{
-					szIndexName = "by_view_level_reduce_key_and_bucket",
-					szKey = "+view\0+level\0+reduce_key\0+bucket\0\0",
-				});
+						new JET_INDEXCREATE
+						{
+							szIndexName = "by_view_level_bucket_and_hashed_reduce_key",
+							szKey = "+view\0+level\0+bucket\0+hashed_reduce_key\0\0",
+						});
 		}
 
 		private void CreateMapResultsTable(JET_DBID dbid)
@@ -532,6 +539,13 @@ namespace Raven.Storage.Esent
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "hashed_reduce_key", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				cbMax = 20,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp() | ColumndefGrbit.ColumnFixed
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
@@ -585,8 +599,8 @@ namespace Raven.Storage.Esent
 				},
 				new JET_INDEXCREATE
 				{
-					szIndexName = "by_view_reduce_key_and_bucket",
-					szKey = "+view\0+reduce_key\0+bucket\0\0",
+					szIndexName = "by_view_bucket_and_hashed_reduce_key",
+					szKey = "+view\0+bucket\0+hashed_reduce_key\0\0",
 				});
 		}
 
@@ -615,6 +629,13 @@ namespace Raven.Storage.Esent
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "hashed_reduce_key", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				cbMax = 20,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp() | ColumndefGrbit.ColumnFixed
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
@@ -669,13 +690,13 @@ namespace Raven.Storage.Esent
 			              },
 			              new JET_INDEXCREATE
 			              {
-				              szIndexName = "by_view_level_reduce_key_and_bucket",
-				              szKey = "+view\0+level\0+reduce_key\0+bucket\0\0",
+				              szIndexName = "by_view_level_bucket_and_hashed_reduce_key",
+							  szKey = "+view\0+level\0+bucket\0+hashed_reduce_key\0\0",
 						  },
 						  new JET_INDEXCREATE
 						  {
-							  szIndexName = "by_view_level_reduce_key_and_source_bucket",
-							  szKey = "+view\0+level\0+reduce_key\0+source_bucket\0\0",
+							  szIndexName = "by_view_level_source_bucket_and_hashed_reduce_key",
+							  szKey = "+view\0+level\0+source_bucket\0+hashed_reduce_key\0\0",
 						  });
 		}
 		private void CreateTasksTable(JET_DBID dbid)

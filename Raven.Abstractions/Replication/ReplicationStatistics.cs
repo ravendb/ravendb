@@ -21,6 +21,7 @@ namespace Raven.Abstractions.Replication
 		public int FailureCountInternal = 0;
 		public string Url { get; set; }
 		public DateTime? LastHeartbeatReceived { get; set; }
+		public Guid? LastEtagCheckedForReplication { get; set; }
 		public Guid? LastReplicatedEtag { get; set; }
 		public DateTime? LastReplicatedLastModified { get; set; }
 		public DateTime? LastSuccessTimestamp { get; set; }

@@ -63,7 +63,10 @@ namespace Raven.Database.Indexing
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 
-						var requiredReduceNextTime = persistedResults.Select(x => new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)).Distinct().ToArray();
+						var requiredReduceNextTime = persistedResults.Select(x => new ReduceKeyAndBucket(x.Bucket, x.ReduceKey))
+							.OrderBy(x=>x.Bucket)
+							.Distinct()
+							.ToArray();
 						foreach (var mappedResultInfo in requiredReduceNextTime)
 						{
 							actions.MapReduce.RemoveReduceResults(indexToWorkOn.IndexName, level + 1, mappedResultInfo.ReduceKey, mappedResultInfo.Bucket);

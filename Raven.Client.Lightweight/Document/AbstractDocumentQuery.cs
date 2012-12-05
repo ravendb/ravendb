@@ -1375,7 +1375,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			theWaitForNonStaleResults = true;
 			timeout = waitTimeout;
-			cutoffEtag = theSession.DocumentStore.GetLastWrittenEtag() ?? Guid.Empty;
+			cutoffEtag = theSession.DocumentStore.GetLastWrittenEtag();
 		}
 
 		/// <summary>
