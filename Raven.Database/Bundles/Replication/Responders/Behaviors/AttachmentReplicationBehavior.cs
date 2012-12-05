@@ -20,7 +20,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void DeleteItem(string id, Guid etag)
 		{
-			Actions.Attachments.DeleteAttachment(id, etag);
+			Database.DeleteStatic(id, etag);
 		}
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
@@ -30,7 +30,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, byte[] incoming)
 		{
-			Actions.Attachments.AddAttachment(id, etag, new MemoryStream(incoming), metadata);
+			Database.PutStatic(id, etag, new MemoryStream(incoming), metadata);
 		}
 
 		protected override void CreateConflict(string id, string newDocumentConflictId, string existingDocumentConflictId, Attachment existingItem, RavenJObject existingMetadata)
