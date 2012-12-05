@@ -55,7 +55,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanUpdateSuggestions_AfterRestart()
 		{
-			using (var store = NewDocumentStore(deleteDirectoryOnDispose: false))
+			using (var store = NewDocumentStore(runInMemory: false, deleteDirectoryOnDispose: false))
 			{
 				using (var session = store.OpenSession())
 				{
@@ -63,11 +63,10 @@ namespace Raven.Tests.Issues
 					session.Store(new {Name = "darsy"});
 					session.SaveChanges();
 				}
-				store.DatabaseCommands.PutIndex("test",
-				                                new IndexDefinition
-				                                {
-				                                	Map = "from doc in docs select new { doc.Name}"
-				                                });
+				store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				{
+					Map = "from doc in docs select new { doc.Name}"
+				});
 
 				WaitForIndexing(store);
 
@@ -78,7 +77,8 @@ namespace Raven.Tests.Issues
 				});
 				Assert.NotEmpty(suggestionQueryResult.Suggestions);
 			}
-			using (var store = NewDocumentStore(deleteDirectoryOnDispose: true, deleteDirectory: false))
+
+			using (var store = NewDocumentStore(runInMemory: false, deleteDirectoryOnDispose: true, deleteDirectory: false))
 			{
 				using (var session = store.OpenSession())
 				{
