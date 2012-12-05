@@ -51,7 +51,7 @@ namespace Raven.Tests.Indexes
 					var result = session.Query<Employees_CurrentCount.Result, Employees_CurrentCount>()
 										.Customize(x => x.WaitForNonStaleResults())
 										.ToList();
-
+					WaitForUserToContinueTheTest(documentStore);
 					Assert.Equal(2, result.FirstOrDefault().Count);
 				}
 

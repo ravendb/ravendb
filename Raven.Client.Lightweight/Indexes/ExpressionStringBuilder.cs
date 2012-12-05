@@ -1396,16 +1396,6 @@ namespace Raven.Client.Indexes
 					case "ElementAt":
 						Out("ElementAtOrDefault");
 						break;
-					case "Value":
-						if (node.Method.ReturnType == typeof (string))
-						{
-							if (_out[_out.Length - 1] == '.')
-								_out.Remove(_out.Length - 1, 1);
-							Out("[" + node.Arguments[0] + "]");
-							return node;
-						}
-						goto default;
-						
 					default:
 						Out(node.Method.Name);
 						break;
