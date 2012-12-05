@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -18,7 +14,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Silverlight.Connection;
 #endif
 using Raven.Database.Util;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
@@ -38,7 +33,6 @@ namespace Raven.Client.Changes
 		private readonly DocumentConvention conventions;
 		private readonly Action onDispose;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
-		private int reconnectAttemptsRemaining;
 		private IDisposable connection;
 
 		private static int connectionCounter;
@@ -71,13 +65,14 @@ namespace Raven.Client.Changes
 				.ServerPullAsync()
 				.ContinueWith(task =>
 								{
-									if (task.IsFaulted && reconnectAttemptsRemaining > 0)
+									if(disposed)
+										throw new ObjectDisposedException("RemoteDatabaseChanges");
+									if (task.IsFaulted)
 									{
 										logger.WarnException("Could not connect to server, will retry", task.Exception);
 										Connected = false;
 										ConnectionStatusCahnged(this, EventArgs.Empty);
 
-										reconnectAttemptsRemaining--;
 
 										return Time.Delay(TimeSpan.FromSeconds(15))
 											.ContinueWith(_ => EstablishConnection())
@@ -86,7 +81,6 @@ namespace Raven.Client.Changes
 
 									Connected = true;
 									ConnectionStatusCahnged(this, EventArgs.Empty);
-									reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
 									connection = (IDisposable)task.Result;
 									task.Result.Subscribe(this);
 
@@ -341,14 +335,14 @@ namespace Raven.Client.Changes
 			DisposeAsync();
 		}
 
-		private bool disposed;
+		private volatile bool disposed;
+
 		public Task DisposeAsync()
 		{
 			if (disposed)
 				return new CompletedTask();
 			disposed = true;
 			onDispose();
-			reconnectAttemptsRemaining = 0;
 			foreach (var keyValuePair in counters)
 			{
 				keyValuePair.Value.Dispose();
@@ -399,8 +393,6 @@ namespace Raven.Client.Changes
 		public void OnError(Exception error)
 		{
 			logger.ErrorException("Got error from server connection", error);
-			if (reconnectAttemptsRemaining <= 0)
-				return;
 
 			EstablishConnection()
 				.ObserveException()
