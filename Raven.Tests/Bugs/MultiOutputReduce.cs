@@ -32,10 +32,10 @@ namespace Raven.Tests.Bugs
 								session.Store(new Order
 								{
 									CustomerId = customerId,
-									Id = "orders/" + i +"/"+j
+									Id = "orders/" + i + "/" + j
 								});
 							}
-							
+
 							session.SaveChanges();
 						}
 					}
@@ -43,9 +43,9 @@ namespace Raven.Tests.Bugs
 					using (var session = store.OpenSession())
 					{
 						var searchResults = session.Query<SearchResult, Orders_Search>()
-							.Customize(x => x.WaitForNonStaleResults())
-							.Where(x => x.OrderId != null)
-							.ToList();
+						                           .Customize(x => x.WaitForNonStaleResults())
+						                           .Where(x => x.OrderId != null)
+						                           .ToList();
 						Assert.Equal(12*5, searchResults.Count);
 						foreach (var searchResult in searchResults)
 						{
@@ -80,35 +80,35 @@ namespace Raven.Tests.Bugs
 			public Orders_Search()
 			{
 				AddMap<Customer>(customers =>
-								 from customer in customers
-								 select new
-								 {
-									 CustomerId = customer.Id,
-									 CustomerName = customer.Name,
-									 OrderId = (string)null
-								 });
+				                 from customer in customers
+				                 select new
+				                 {
+					                 CustomerId = customer.Id,
+					                 CustomerName = customer.Name,
+					                 OrderId = (string) null
+				                 });
 
 				AddMap<Order>(orders =>
-								 from order in orders
-								 select new
-								 {
-									 OrderId = order.Id,
-									 CustomerName = (string)null,
-									 order.CustomerId
-								 });
+				              from order in orders
+				              select new
+				              {
+					              OrderId = order.Id,
+					              CustomerName = (string) null,
+					              order.CustomerId
+				              });
 
 				Reduce = results =>
-						 from searchResult in results
-						 group searchResult by searchResult.CustomerId
-							 into g
-							 let customerName = g.FirstOrDefault(x => x.CustomerName != null).CustomerName
-							 from item in g
-							 select new
-							 {
-								 CustomerName = customerName,
-								 item.OrderId,
-								 item.CustomerId
-							 };
+				         from searchResult in results
+				         group searchResult by searchResult.CustomerId
+				         into g
+				         let customerName = g.FirstOrDefault(x => x.CustomerName != null).CustomerName
+				         from item in g
+				         select new
+				         {
+					         CustomerName = customerName,
+					         item.OrderId,
+					         item.CustomerId
+				         };
 			}
 		}
 	}
