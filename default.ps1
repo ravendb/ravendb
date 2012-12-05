@@ -226,7 +226,7 @@ task CopySamples {
 	  Delete-Sample-Data-For-Release "$build_dir\Output\Samples\$sample" 
 	}
 	
-	cp "$base_dir\Samples\Raven.Samples.sln" "$build_dir\Output\Samples" -force
+	cp "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
 	cp "$base_dir\Samples\Samples.ps1" "$build_dir\Output\Samples" -force
 	  
 	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
