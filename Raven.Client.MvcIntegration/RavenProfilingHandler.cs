@@ -96,6 +96,8 @@ namespace Raven.Client.MvcIntegration
 					}
 				});
 				context.Response.Output.Write(value);
+				context.Response.ExpiresAbsolute = DateTime.Now.AddDays(1);
+				context.Response.Cache.SetCacheability(HttpCacheability.Private);
 				context.Response.AppendHeader("Content-encoding", "gzip");
 				context.Response.Filter = new GZipStream(context.Response.Filter, CompressionMode.Compress);
 			}
