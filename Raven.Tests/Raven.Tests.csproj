@@ -498,6 +498,7 @@
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
     <Compile Include="IncrementalBackupTest.cs" />
+    <Compile Include="Indexes\CastingInIndexDefinition.cs" />
     <Compile Include="Issues\RaqvenDB651.cs" />
     <Compile Include="Issues\RavenDB349.cs" />
     <Compile Include="Issues\RavenDB422.cs" />
