@@ -737,7 +737,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		#endregion
 
-		protected virtual bool IsServerDown(Exception e)
+		public virtual bool IsServerDown(Exception e)
 		{
 			var aggregateException = e as AggregateException;
 			if (aggregateException != null)
@@ -769,8 +769,8 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 					{
 						case HttpStatusCode.RequestTimeout:
 						case HttpStatusCode.BadGateway:
-						case HttpStatusCode.ServiceUnavailable:
 						case HttpStatusCode.GatewayTimeout:
+						case HttpStatusCode.ServiceUnavailable:
 							return true;
 					}
 				}
