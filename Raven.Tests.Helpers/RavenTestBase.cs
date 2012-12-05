@@ -55,16 +55,17 @@ namespace Raven.Tests.Helpers
 			bool deleteDirectoryOnDispose = true)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(RavenTestBase)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
+			path = Path.Combine(path, DataDir).Substring(6);
 
+			var storageType = GetDefaultStorageType(requestedStorage);
 			var documentStore = new EmbeddableDocumentStore
 			{
 				Configuration =
 				{
-					DefaultStorageTypeName = GetDefaultStorageType(requestedStorage),
+					DefaultStorageTypeName = storageType,
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					RunInMemory = runInMemory,
+					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 					Port = 8079
 				}
 			};

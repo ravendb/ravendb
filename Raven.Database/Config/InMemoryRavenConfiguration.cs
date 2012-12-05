@@ -688,14 +688,10 @@ namespace Raven.Database.Config
 			get
 			{
 				if (string.IsNullOrEmpty(indexStoragePath))
-					return Path.Combine(DataDirectory, "Indexes");
-
+					indexStoragePath = Path.Combine(DataDirectory, "Indexes");
 				return indexStoragePath;
 			}
-			set
-			{
-				indexStoragePath = value.ToFullPath();
-			}
+			set { indexStoragePath = value.ToFullPath(); }
 		}
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }

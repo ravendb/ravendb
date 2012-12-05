@@ -177,9 +177,11 @@ namespace Raven.Storage.Managed
 
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
 		{
+			if (configuration.RunInMemory)
+				throw new InvalidOperationException("Backup operation is not supported when running in memory. In order to enable backup operation please make sure that you persistent the data to disk by setting the RunInMemory configuration parameter value to false.");
+
 			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory, databaseDocument);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
-		
 		}
 
 		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
