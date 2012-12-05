@@ -323,7 +323,7 @@ namespace Raven.Database.Indexing
 				{
 					var jsonDocuments = GetJsonDocuments(nextEtag);
 					int localWork = workCounter;
-					while (jsonDocuments.Results.Length == 0 && context.DoWork && context.DoIndexing)
+					while (jsonDocuments.Results.Length == 0 && context.RunIndexing)
 					{
 						futureBatchStat.Retries++;
 
