@@ -10,6 +10,7 @@
 			template: _.template(requestDetailsTemplate),
 			className: 'request-details',
 			events: {
+				'click': function () { return false; },
 				'click a': 'close'
 			},
 

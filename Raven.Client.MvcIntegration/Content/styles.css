@@ -54,20 +54,6 @@
     top: 100px;
     border: 2px solid black;
     background-color: White;
-}
-.request-details h2 {
-    margin: 15px;
-    display: inline-block;
-}
-
-.request-details a {
-    text-decoration: none;
-    position: absolute;
-    right: 15px;
-    top: 15px;
-}
-
-.request-details .request-data {
     padding: 15px;
     overflow: auto;
     min-height: 300px;

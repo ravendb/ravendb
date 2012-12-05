@@ -14,6 +14,7 @@
 			template: _.template(profilerTemplate),
 			totalsTemplate: _.template('{{ helper.round(model.totalRequestDuration()) }} ms waiting for server in {{ model.requestCount() }} request(s) for {{ model.sessionCount() }} sessions(s)'),
 			events: {
+				'click': 'hideDetailsView',
 				'click a': 'close'
 			},
 
@@ -83,7 +84,13 @@
 						this.model.set({ profilerVisibility: false });
 					}
 				}
+			},
+
+			hideDetailsView: function () {
+				this.model.set('activeRequest', null);
+				return false;
 			}
+
 		});
 	}
 );

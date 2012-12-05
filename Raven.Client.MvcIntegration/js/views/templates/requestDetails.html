@@ -1,8 +1,4 @@
-<h2>
-	{{ data.Method }} {{ helper.url(data.Url) }}
-	<a href='#' title="Close">X</a>
-</h2>
-
+<h2>{{ data.Method }} {{ helper.url(data.Url) }}</h2>
 <div class="request-data">
 	<table class='request-details-table'>
 		<thead>
@@ -23,7 +19,7 @@
 		<h3>Query</h3>
 		<pre class="query">{{ helper.query(data.Url) }}</pre>
 	</div>
-	
+
 	<div class="postData">
 		<h3>Posted Data</h3>
 		<pre class="prettyprint">{{ data.PostedData }}</pre>
@@ -32,3 +28,4 @@
 	<h3>Result</h3>
 	<pre class="prettyprint">{{ data.Result }}</pre>
 </div>
+<a href="#">Close</a>
