@@ -31,6 +31,7 @@ namespace Raven.Client.Changes
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly DocumentConvention conventions;
+		private readonly ReplicationInformer replicationInformer;
 		private readonly Action onDispose;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
 		private IDisposable connection;
@@ -38,7 +39,7 @@ namespace Raven.Client.Changes
 		private static int connectionCounter;
 		private readonly string id;
 
-		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, Action onDispose)
+		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
 				 Base62Util.Base62Random();
@@ -46,6 +47,7 @@ namespace Raven.Client.Changes
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.conventions = conventions;
+			this.replicationInformer = replicationInformer;
 			this.onDispose = onDispose;
 			Task = EstablishConnection()
 				.ObserveException();
@@ -72,7 +74,12 @@ namespace Raven.Client.Changes
 										logger.WarnException("Could not connect to server, will retry", task.Exception);
 										Connected = false;
 										ConnectionStatusCahnged(this, EventArgs.Empty);
+										
+										if (disposed)
+											return task;
 
+										if (replicationInformer.IsServerDown(task.Exception) == false)
+											return task;
 
 										return Time.Delay(TimeSpan.FromSeconds(15))
 											.ContinueWith(_ => EstablishConnection())
