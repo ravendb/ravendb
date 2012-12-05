@@ -986,7 +986,7 @@ namespace Raven.Database.Server
 			}
 			else
 			{
-				ctx.SetStatusToNotAvailable();
+				ctx.SetStatusToNotFound();
 				ctx.WriteJson(new
 				{
 					Error = "Could not find a database named: " + tenantId
