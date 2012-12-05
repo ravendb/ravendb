@@ -86,6 +86,8 @@ namespace Raven.Database.Indexing
 				var requiresMerging = booleanQuery.Clauses.All(x => x.Query is IRavenLuceneMethodQuery);
 				if (requiresMerging == false)
 					return booleanQuery;
+				if (booleanQuery.Clauses.Count == 0)
+					return booleanQuery;
 				var first = (IRavenLuceneMethodQuery)booleanQuery.Clauses[0].Query;
 				var ravenLuceneMethodQuery = booleanQuery.Clauses.Skip(1).Aggregate(first, (methodQuery, clause) => methodQuery.Merge(clause.Query));
 				return (Query)ravenLuceneMethodQuery;
