@@ -116,14 +116,10 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, items, enumerator => context.TransactionaStorage.Batch(accessor =>
+			foreach (var mapResultItem in items)
 			{
-				while (enumerator.MoveNext())
-				{
-					var mapResultItem = enumerator.Current;
-					accessor.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
-				}
-			}));
+				actions.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
+			}
 
 			UpdateIndexingStats(context, stats);
 			actions.MapReduce.ScheduleReductions(name, 0, changed);
