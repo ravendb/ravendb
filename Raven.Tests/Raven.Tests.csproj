@@ -94,10 +94,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.Spatial.NTS, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Raven.Web\Bin\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualStudio.DebuggerVisualizers, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -535,6 +531,7 @@
     <Compile Include="Issues\RavenDB_560.cs" />
     <Compile Include="Issues\RavenDB_714.cs" />
     <Compile Include="Issues\RavenDB_726.cs" />
+    <Compile Include="Issues\RDoc_56.cs" />
     <Compile Include="Linq\Contains.cs" />
     <Compile Include="Linq\FirstOrDefault.cs" />
     <Compile Include="Linq\CanCallLastOnArray.cs" />
@@ -584,7 +581,6 @@
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
-    <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />
     <Compile Include="Spatial\SpatialTest2.cs" />
     <Compile Include="Bugs\spokeypokey.cs" />
