@@ -15,7 +15,13 @@ namespace Raven.Database.Server.Responders.Admin
 			if (EnsureSystemDatabase(context) == false)
 				return;
 
-			GC.Collect(2);
+			CollectGarbage(Database);
+		}
+
+		public static void CollectGarbage(DocumentDatabase database)
+		{
+			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+			database.TransactionalStorage.ClearCaches();
 			GC.WaitForPendingFinalizers();
 		}
 	}

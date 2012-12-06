@@ -232,6 +232,11 @@ namespace Raven.Storage.Managed
 			return newId;
 		}
 
+		public void ClearCaches()
+		{
+			// don't do anything here
+		}
+
 		private void MaybeOnIdle(object _)
 		{
 			var ticks = Interlocked.Read(ref lastUsageTime);

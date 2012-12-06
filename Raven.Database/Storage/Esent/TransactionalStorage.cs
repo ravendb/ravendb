@@ -275,6 +275,15 @@ namespace Raven.Storage.Esent
 			return newId;
 		}
 
+		public void ClearCaches()
+		{
+			var cacheSizeMax = SystemParameters.CacheSizeMax;
+			SystemParameters.CacheSize = 1; // force emptying of the cache
+			SystemParameters.CacheSizeMax = 1;
+			SystemParameters.CacheSize = 0;
+			SystemParameters.CacheSizeMax = cacheSizeMax;
+		}
+
 		public bool Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
 			try
