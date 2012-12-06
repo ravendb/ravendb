@@ -194,6 +194,12 @@ namespace Raven.Storage.Managed
 			return PersistenceSource.Read(stream => stream.Length);
 		}
 
+		public long GetDatabaseCacheSizeInBytes()
+		{
+			//TODO work out a way to get an accurate measurment for this!
+			return -1;
+		}
+
 		public string FriendlyName
 		{
 			get { return "Munin"; }
