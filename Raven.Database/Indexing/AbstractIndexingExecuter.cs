@@ -35,13 +35,13 @@ namespace Raven.Database.Indexing
 				LogContext.DatabaseName.Value = context.DatabaseName;
 				var name = GetType().Name;
 				var workComment = "WORK BY " + name;
-				while (context.DoWork)
+				while (context.DoWork && context.DoIndexing)
 				{
 					var foundWork = false;
 					try
 					{
 						foundWork = ExecuteIndexing();
-						while (context.DoWork) // we want to drain all of the pending tasks before the next run
+						while (context.DoWork && context.DoIndexing) // we want to drain all of the pending tasks before the next run
 						{
 							if (ExecuteTasks() == false)
 								break;

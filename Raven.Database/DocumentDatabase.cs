@@ -483,6 +483,15 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
+		public void StopIndexingWorkers()
+		{
+			workContext.StopIndexing();
+			indexingBackgroundTask.Wait();
+			reducingBackgroundTask.Wait();
+
+			backgroundWorkersSpun = false;
+		}
+
 		public WorkContext WorkContext
 		{
 			get { return workContext; }
@@ -498,6 +507,22 @@ namespace Raven.Database
 			backgroundWorkersSpun = true;
 
 			workContext.StartWork();
+			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+				indexingExecuter.Execute,
+				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+				new ReducingExecuter(workContext).Execute,
+				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+		}
+
+		public void SpinIndexingWorkers()
+		{
+			if (backgroundWorkersSpun)
+				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
+
+			backgroundWorkersSpun = true;
+
+			workContext.StartIndexing();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				indexingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);

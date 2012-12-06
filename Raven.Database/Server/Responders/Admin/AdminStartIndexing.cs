@@ -14,7 +14,7 @@ namespace Raven.Database.Server.Responders.Admin
 				Database.Configuration.MaxNumberOfParallelIndexTasks = Math.Max(1, int.Parse(concurrency));
 			}
 			
-			Database.SpinBackgroundWorkers();
+			Database.SpinIndexingWorkers();
 		}
 	}
 }

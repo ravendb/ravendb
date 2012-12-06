@@ -30,6 +30,7 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
+		private volatile bool doIndexing = true;
 		private int workCounter;
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -44,6 +45,11 @@ namespace Raven.Database.Indexing
 		public bool DoWork
 		{
 			get { return doWork; }
+		}
+
+		public bool DoIndexing
+		{
+			get { return doIndexing; }
 		}
 
 		public void UpdateFoundWork()
@@ -470,6 +476,21 @@ namespace Raven.Database.Indexing
 			{
 				futureBatchStats.TryRemove(source);
 			}
+		}
+
+		public void StopIndexing()
+		{
+			log.Debug("Stopping indexing workers");
+			doIndexing = false;
+			lock (waitForWork)
+			{
+				Monitor.PulseAll(waitForWork);
+			}
+		}
+
+		public void StartIndexing()
+		{
+			doIndexing = true;
 		}
 	}
 }
