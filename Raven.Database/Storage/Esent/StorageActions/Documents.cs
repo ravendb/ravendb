@@ -275,6 +275,18 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, Documents) && count < take);
 		}
 
+		public Guid GetBestNextDocumentEtag(Guid etag)
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+				return etag;
+
+
+			var val = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
+			                             RetrieveColumnGrbit.RetrieveFromIndex, null);
+			return new Guid(val);
+		}
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
