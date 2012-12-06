@@ -70,7 +70,11 @@ namespace Raven.Studio.Commands
 			jsonWriter.WriteStartArray();
 
 			ReadIndexes(0)
-				.Catch(exception => Infrastructure.Execute.OnTheUI(() => Finish(exception)));
+				.Catch(exception =>
+				{
+					taskModel.ReportError(exception);
+					Infrastructure.Execute.OnTheUI(() => Finish(exception));
+				});
 		}
 
 		private Task ReadIndexes(int totalCount)
@@ -78,33 +82,34 @@ namespace Raven.Studio.Commands
 			var url = ("/indexes/?start=" + totalCount + "&pageSize=" + BatchSize).NoCache();
 			var request = DatabaseCommands.CreateRequest(url, "GET");
 			return request.ReadResponseJsonAsync()
-				.ContinueOnSuccess(documents =>
-									{
-										var array = ((RavenJArray)documents);
-										if (array.Length == 0)
-										{
-											output(String.Format("Done with reading indexes, total: {0}", totalCount));
-											output(String.Format("Begin reading documents"));
+			              .ContinueOnSuccess(documents =>
+			              {
+				              var array = ((RavenJArray) documents);
+				              if (array.Length == 0)
+				              {
+					              output(String.Format("Done with reading indexes, total: {0}", totalCount));
+					              output(String.Format("Begin reading documents"));
 
-											jsonWriter.WriteEndArray();
-											jsonWriter.WritePropertyName("Docs");
-											jsonWriter.WriteStartArray();
+					              jsonWriter.WriteEndArray();
+					              jsonWriter.WritePropertyName("Docs");
+					              jsonWriter.WriteStartArray();
 
-											return ReadDocuments(Guid.Empty, 0);
-										}
-										else
-										{
-											totalCount += array.Length;
-											output(String.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", array.Length,
-																 totalCount));
-											foreach (RavenJToken item in array)
-											{
-												item.WriteTo(jsonWriter);
-											}
+					              return ReadDocuments(Guid.Empty, 0);
+				              }
+				              else
+				              {
+					              totalCount += array.Length;
+					              output(String.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", array.Length,
+					                                   totalCount));
+					              foreach (RavenJToken item in array)
+					              {
+						              item.WriteTo(jsonWriter);
+					              }
 
-											return ReadIndexes(totalCount);
-										}
-									});
+					              return ReadIndexes(totalCount);
+				              }
+			              })
+			              .Catch(exception => taskModel.ReportError(exception));
 		}
 
 		private Task ReadDocuments(Guid lastEtag, int totalCount)
@@ -112,31 +117,32 @@ namespace Raven.Studio.Commands
 			var url = ("/docs/?pageSize=" + BatchSize + "&etag=" + lastEtag).NoCache();
 			var request = DatabaseCommands.CreateRequest(url, "GET");
 			return request.ReadResponseJsonAsync()
-				.ContinueOnSuccess(docs =>
-									{
-										var array = ((RavenJArray)docs);
-										if (array.Length == 0)
-										{
-											output(String.Format("Done with reading documents, total: {0}", totalCount));
-											jsonWriter.WriteEndArray();
-											jsonWriter.WriteEndObject();
+			              .ContinueOnSuccess(docs =>
+			              {
+				              var array = ((RavenJArray) docs);
+				              if (array.Length == 0)
+				              {
+					              output(String.Format("Done with reading documents, total: {0}", totalCount));
+					              jsonWriter.WriteEndArray();
+					              jsonWriter.WriteEndObject();
 
-											return Infrastructure.Execute.OnTheUI(() => Finish(null));
-										}
-										else
-										{
-											totalCount += array.Length;
-											output(String.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Length,
-																 totalCount));
-											foreach (RavenJToken item in array)
-											{
-												item.WriteTo(jsonWriter);
-											}
-											lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+					              return Infrastructure.Execute.OnTheUI(() => Finish(null));
+				              }
+				              else
+				              {
+					              totalCount += array.Length;
+					              output(String.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Length,
+					                                   totalCount));
+					              foreach (RavenJToken item in array)
+					              {
+						              item.WriteTo(jsonWriter);
+					              }
+					              lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
-											return ReadDocuments(lastEtag, totalCount);
-										}
-									});
+					              return ReadDocuments(lastEtag, totalCount);
+				              }
+			              })
+			              .Catch(exception => taskModel.ReportError(exception));
 		}
 
 		private void Finish(Exception exception)
