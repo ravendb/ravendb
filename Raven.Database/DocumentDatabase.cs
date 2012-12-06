@@ -219,7 +219,7 @@ namespace Raven.Database
 		private void SecondStageInitialization()
 		{
 			DocumentCodecs.OfType<IRequiresDocumentDatabaseInitialization>()
-				.Concat(PutTriggers .OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
 				.Concat(DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
 				.Concat(IndexCodecs.OfType<IRequiresDocumentDatabaseInitialization>())
 				.Concat(IndexQueryTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
@@ -322,7 +322,7 @@ namespace Raven.Database
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
-					Prefetches = workContext.FutureBatchStats.OrderBy(x=>x.Timestamp).ToArray(),
+					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
@@ -475,8 +475,10 @@ namespace Raven.Database
 		public void StopBackgroundWorkers()
 		{
 			workContext.StopWork();
-			indexingBackgroundTask.Wait();
-			reducingBackgroundTask.Wait();
+			if (indexingBackgroundTask != null)
+				indexingBackgroundTask.Wait();
+			if (reducingBackgroundTask != null)
+				reducingBackgroundTask.Wait();
 
 			backgroundWorkersSpun = false;
 		}
@@ -613,7 +615,7 @@ namespace Raven.Database
 
 						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-						
+
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
 						actions.AfterCommit(new JsonDocument
@@ -677,12 +679,12 @@ namespace Raven.Database
 			// there is already a document with this id, this means that we probably need to search
 			// for an opening in potentially large data set. 
 			var lastKnownBusy = nextIdentityValue;
-			var maybeFree = nextIdentityValue*2;
+			var maybeFree = nextIdentityValue * 2;
 			var lastKnownFree = long.MaxValue;
 			while (true)
 			{
 				tries++;
-				if(actions.Documents.DocumentMetadataByKey(key + maybeFree, transactionInformation) == null)
+				if (actions.Documents.DocumentMetadataByKey(key + maybeFree, transactionInformation) == null)
 				{
 					if (lastKnownBusy + 1 == maybeFree)
 					{
@@ -696,7 +698,7 @@ namespace Raven.Database
 				else
 				{
 					lastKnownBusy = maybeFree;
-					maybeFree = Math.Min(lastKnownFree, maybeFree*2);
+					maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
 				}
 			}
 		}
@@ -935,6 +937,7 @@ namespace Raven.Database
 		{
 			if (name == null)
 				throw new ArgumentNullException("name");
+
 			name = name.Trim();
 
 			switch (FindIndexCreationOptions(definition, ref name))
@@ -1802,7 +1805,7 @@ namespace Raven.Database
 		{
 			AlertsDocument alertsDocument;
 			var alertsDoc = Get(Constants.RavenAlerts, null);
-			if (alertsDoc == null) 
+			if (alertsDoc == null)
 				alertsDocument = new AlertsDocument();
 			else
 				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
