@@ -52,10 +52,10 @@ namespace Raven.Database.Json
 
 		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch)
 		{
-			JintEngine ctx;
+			JintEngine jintEngine;
 			try
 			{
-				ctx = scriptsCache.CheckoutScript(patch);
+				jintEngine = scriptsCache.CheckoutScript(patch);
 			}
 			catch (NotSupportedException)
 			{
@@ -77,30 +77,31 @@ namespace Raven.Database.Json
 				{
 					if (kvp.Value is RavenJToken)
 					{
-						ctx.SetParameter(kvp.Key, ToJsInstance(ctx.Global, (RavenJToken)kvp.Value));
+						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, (RavenJToken)kvp.Value));
 					}
 					else
 					{
 						var rjt = RavenJToken.FromObject(kvp.Value);
-						var jsInstance = ToJsInstance(ctx.Global, rjt);
-						ctx.SetParameter(kvp.Key, jsInstance);
+						var jsInstance = ToJsInstance(jintEngine.Global, rjt);
+						jintEngine.SetParameter(kvp.Key, jsInstance);
 					}
 				}
-				var jsObject = ToJsObject(ctx.Global, doc);
-				ctx.CallFunction("ExecutePatchScript", jsObject);
+				var jsObject = ToJsObject(jintEngine.Global, doc);
+				jintEngine.ResetSteps();
+				jintEngine.CallFunction("ExecutePatchScript", jsObject);
 				foreach (var kvp in patch.Values)
 				{
-					ctx.RemoveParameter(kvp.Key);
+					jintEngine.RemoveParameter(kvp.Key);
 				}
-				OutputLog(ctx);
+				OutputLog(jintEngine);
 
-				scriptsCache.CheckinScript(patch, ctx);
+				scriptsCache.CheckinScript(patch, jintEngine);
 
 				return ToRavenJObject(jsObject);
 			}
 			catch (Exception errorEx)
 			{
-				OutputLog(ctx);
+				OutputLog(jintEngine);
 				var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + patch.Script;
 				var error = errorEx as JsException;
 				if (error != null)

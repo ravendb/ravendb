@@ -14,12 +14,14 @@ namespace Raven.Bundles.Encryption.Plugin
 	{
 		private EncryptionSettings settings;
 
-		public override void Initialize(DocumentDatabase database)
+		public override void Initialize()
 		{
-			settings = EncryptionSettingsManager.GetEncryptionSettingsForDatabase(database);
+			settings = EncryptionSettingsManager.GetEncryptionSettingsForDatabase(Database);
+		}
 
-
-			EncryptionSettingsManager.VerifyEncryptionKey(database, settings);
+		public override void SecondStageInit()
+		{
+			EncryptionSettingsManager.VerifyEncryptionKey(Database, settings);
 		}
 
 		public override Stream Encode(string key, RavenJObject data, RavenJObject metadata, Stream dataStream)

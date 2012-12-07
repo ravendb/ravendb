@@ -15,6 +15,7 @@ namespace Raven.Abstractions.Data
 		public NetworkCredential Credentials { get; set; }
 		public bool EnlistInDistributedTransactions { get; set; }
 		public string DefaultDatabase { get; set; }
+		public Guid ResourceManagerId { get; set; }
 		private string url;
 		public string Url
 		{
@@ -32,7 +33,7 @@ namespace Raven.Abstractions.Data
 		public override string ToString()
 		{
 			var user = Credentials == null ? "<none>" : Credentials.UserName;
-			return string.Format("Url: {3}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, Api Key: {4}", user, EnlistInDistributedTransactions, DefaultDatabase, Url, ApiKey);
+			return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
 		}
 	}
 
@@ -108,8 +109,6 @@ namespace Raven.Abstractions.Data
 						throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 					embeddedRavenConnectionStringOptions.RunInMemory = result;
 					break;
-				case "resourcemanagerid":
-					break;
 				case "datadir":
 					if(embeddedRavenConnectionStringOptions  == null)
 						goto default;
@@ -118,6 +117,9 @@ namespace Raven.Abstractions.Data
 					break;
 				case "enlist":
 					ConnectionStringOptions.EnlistInDistributedTransactions = bool.Parse(value);
+					break;
+				case "resourcemanagerid":
+					ConnectionStringOptions.ResourceManagerId = new Guid(value);
 					break;
 				case "url":
 					ConnectionStringOptions.Url = value;

@@ -205,6 +205,7 @@ namespace Raven.Database
 				indexingExecuter = new IndexingExecuter(workContext);
 
 				InitializeTriggersExceptIndexCodecs();
+				SecondStageInitialization();
 
 				ExecuteStartupTasks();
 			}
@@ -213,6 +214,20 @@ namespace Raven.Database
 				Dispose();
 				throw;
 			}
+		}
+
+		private void SecondStageInitialization()
+		{
+			DocumentCodecs.OfType<IRequiresDocumentDatabaseInitialization>()
+				.Concat(PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexCodecs.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexQueryTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+				.Concat(IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+			.Apply(initialization => initialization.SecondStageInit());
 		}
 
 		private void CompleteWorkContextSetup()
@@ -307,8 +322,10 @@ namespace Raven.Database
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
-					Prefetches = workContext.FutureBatchStats.OrderBy(x=>x.Timestamp).ToArray(),
+					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
+					DatabaseCacheSizeInBytes = workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes(),
+					DatabaseCacheSizeInMB = workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes() / 1024.0m / 1024.0m,
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
@@ -460,6 +477,17 @@ namespace Raven.Database
 		public void StopBackgroundWorkers()
 		{
 			workContext.StopWork();
+			if (indexingBackgroundTask != null)
+				indexingBackgroundTask.Wait();
+			if (reducingBackgroundTask != null)
+				reducingBackgroundTask.Wait();
+
+			backgroundWorkersSpun = false;
+		}
+
+		public void StopIndexingWorkers()
+		{
+			workContext.StopIndexing();
 			indexingBackgroundTask.Wait();
 			reducingBackgroundTask.Wait();
 
@@ -481,6 +509,22 @@ namespace Raven.Database
 			backgroundWorkersSpun = true;
 
 			workContext.StartWork();
+			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+				indexingExecuter.Execute,
+				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+				new ReducingExecuter(workContext).Execute,
+				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+		}
+
+		public void SpinIndexingWorkers()
+		{
+			if (backgroundWorkersSpun)
+				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
+
+			backgroundWorkersSpun = true;
+
+			workContext.StartIndexing();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				indexingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
@@ -598,7 +642,7 @@ namespace Raven.Database
 
 						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-						
+
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
 						actions.AfterCommit(new JsonDocument
@@ -616,7 +660,7 @@ namespace Raven.Database
 								PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
 								RaiseNotifications(new DocumentChangeNotification
 								{
-									Name = key,
+									Id = key,
 									Type = DocumentChangeTypes.Put,
 									Etag = newEtag,
 								});
@@ -662,12 +706,12 @@ namespace Raven.Database
 			// there is already a document with this id, this means that we probably need to search
 			// for an opening in potentially large data set. 
 			var lastKnownBusy = nextIdentityValue;
-			var maybeFree = nextIdentityValue*2;
+			var maybeFree = nextIdentityValue * 2;
 			var lastKnownFree = long.MaxValue;
 			while (true)
 			{
 				tries++;
-				if(actions.Documents.DocumentMetadataByKey(key + maybeFree, transactionInformation) == null)
+				if (actions.Documents.DocumentMetadataByKey(key + maybeFree, transactionInformation) == null)
 				{
 					if (lastKnownBusy + 1 == maybeFree)
 					{
@@ -681,7 +725,7 @@ namespace Raven.Database
 				else
 				{
 					lastKnownBusy = maybeFree;
-					maybeFree = Math.Min(lastKnownFree, maybeFree*2);
+					maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
 				}
 			}
 		}
@@ -800,7 +844,7 @@ namespace Raven.Database
 								DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
 								RaiseNotifications(new DocumentChangeNotification
 								{
-									Name = key,
+									Id = key,
 									Type = DocumentChangeTypes.Delete,
 								});
 							});
@@ -920,6 +964,7 @@ namespace Raven.Database
 		{
 			if (name == null)
 				throw new ArgumentNullException("name");
+
 			name = name.Trim();
 
 			switch (FindIndexCreationOptions(definition, ref name))
@@ -1803,7 +1848,7 @@ namespace Raven.Database
 		{
 			AlertsDocument alertsDocument;
 			var alertsDoc = Get(Constants.RavenAlerts, null);
-			if (alertsDoc == null) 
+			if (alertsDoc == null)
 				alertsDocument = new AlertsDocument();
 			else
 				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();

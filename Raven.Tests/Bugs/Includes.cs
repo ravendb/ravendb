@@ -3,26 +3,24 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Database.Indexing;
 using Raven.Server;
 using Raven.Tests.Bugs.TransformResults;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Includes : RemoteClientTest, IDisposable
+	public class Includes : RemoteClientTest
 	{
 		private readonly IDocumentStore store;
 		private readonly RavenDbServer server;
 
 		public Includes()
 		{
-			server = GetNewServer(8079, GetPath(DbName));
+			server = GetNewServer(8079, GetPath(DataDir));
 
 			store = new DocumentStore
 			{

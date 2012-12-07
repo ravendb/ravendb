@@ -34,8 +34,7 @@ namespace Raven.Tests.Helpers
 {
 	public class RavenTestBase : IDisposable
 	{
-		protected const string DataDir = @".\TestDatabase\";
-		protected const string DbName = DataDir + @"DocDb.esb";
+		protected readonly string DataDir = string.Format(@".\TestDatabase-{0}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"));
 
 		private string path;
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
@@ -49,22 +48,24 @@ namespace Raven.Tests.Helpers
 		}
 
 		public EmbeddableDocumentStore NewDocumentStore(
-			bool deleteDirectory = true,
+			bool runInMemory = true,
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
+			bool deleteDirectory = true,
 			bool deleteDirectoryOnDispose = true)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(RavenTestBase)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
+			path = Path.Combine(path, DataDir).Substring(6);
 
+			var storageType = GetDefaultStorageType(requestedStorage);
 			var documentStore = new EmbeddableDocumentStore
 			{
 				Configuration =
 				{
-					DefaultStorageTypeName = GetDefaultStorageType(requestedStorage),
+					DefaultStorageTypeName = storageType,
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					RunInMemory = false,
+					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 					Port = 8079
 				}
 			};
@@ -305,7 +306,6 @@ namespace Raven.Tests.Helpers
 			{
 				try
 				{
-					IOExtensions.DeleteDirectory(DbName);
 					IOExtensions.DeleteDirectory(DataDir);
 					break;
 				}

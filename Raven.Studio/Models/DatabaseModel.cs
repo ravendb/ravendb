@@ -68,7 +68,7 @@ namespace Raven.Studio.Models
 
 			databaseChanges.ConnectionStatusCahnged += (sender, args) =>
 			{
-				ApplicationModel.Current.Server.Value.IsConnected.Value = (sender as IDatabaseChanges).Connected;
+				ApplicationModel.Current.Server.Value.IsConnected.Value = ((IDatabaseChanges)sender).Connected;
 				OnPropertyChanged(() => ApplicationModel.Current.Server.Value.IsConnected);
 				UpdateStatus();
 			};

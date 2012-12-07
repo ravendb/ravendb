@@ -21,6 +21,7 @@ namespace Raven.Studio.Models
 		private string originalIndex;
 		private bool isNewIndex;
 		private bool hasUnsavedChanges;
+		public string OriginalName { get; private set; }
 
 		public IndexDefinitionModel()
 		{
@@ -111,6 +112,7 @@ namespace Raven.Studio.Models
 				HandleIndexNotFound(null);
 
 			Header = name;
+			OriginalName = name;
 			IsNewIndex = false;
 
 			DatabaseCommands.GetIndexAsync(name)
@@ -443,6 +445,17 @@ namespace Raven.Studio.Models
 					ApplicationModel.Current.AddNotification(new Notification("Index must have at least one map with data!", NotificationLevel.Error));
 					return;
 				}
+
+				if (index.IsNewIndex == false && index.OriginalName != index.Name)
+				{
+					if (AskUser.Confirmation("Can not rename and index",
+						                     "If you wish to save a new index with this new name press OK, to cancel the save command press Cancel") ==false)
+					{
+						ApplicationModel.Current.Notifications.Add(new Notification("Index Not Saved"));
+						return;
+					}
+				}
+
 				index.UpdateIndex();
 				if (index.Reduce == "")
 					index.Reduce = null;

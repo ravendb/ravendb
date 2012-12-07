@@ -14,7 +14,7 @@
 		<tags>nosql ravendb raven document database test</tags>
 		<dependencies>
 			<dependency id="RavenDB.Embedded" version="" />
-			<dependency id="xunit" version="" />
+			<dependency id="xunit" version="1.9.1" />
 		</dependencies>
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
 	</metadata>

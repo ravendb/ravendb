@@ -18,9 +18,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void DeleteItem(string id, Guid etag)
 		{
-			RavenJObject _;
-			Guid? __;
-			Actions.Documents.DeleteDocument(id, etag, out _, out __);
+			Database.Delete(id, etag, null);
 		}
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
@@ -30,7 +28,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, RavenJObject incoming)
 		{
-			Actions.Documents.AddDocument(id, etag, incoming, metadata);
+			Database.Put(id, etag, incoming, metadata, null);
 		}
 
 		protected override void CreateConflict(string id, string newDocumentConflictId, 

@@ -161,7 +161,23 @@ namespace Raven.Storage.Esent
 			}
 
 			return sizeInBytes;
+		}
 
+		public long GetDatabaseCacheSizeInBytes()
+		{
+			long cacheSizeInBytes = 0;
+			
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
+			{
+				int cacheSizeInPages = 0, pageSize = 0;
+				string test;
+				Api.JetGetSystemParameter(instance, pht.Session, JET_param.CacheSize, ref cacheSizeInPages, out test, 1024);
+				Api.JetGetSystemParameter(instance, pht.Session, JET_param.DatabasePageSize, ref pageSize, out test, 1024);
+
+				cacheSizeInBytes = ((long) cacheSizeInPages) * pageSize;
+			}
+
+			return cacheSizeInBytes;
 		}
 
 		public string FriendlyName
@@ -257,6 +273,15 @@ namespace Raven.Storage.Esent
 			});
 			Id = newId;
 			return newId;
+		}
+
+		public void ClearCaches()
+		{
+			var cacheSizeMax = SystemParameters.CacheSizeMax;
+			SystemParameters.CacheSize = 1; // force emptying of the cache
+			SystemParameters.CacheSizeMax = 1;
+			SystemParameters.CacheSize = 0;
+			SystemParameters.CacheSizeMax = cacheSizeMax;
 		}
 
 		public bool Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)

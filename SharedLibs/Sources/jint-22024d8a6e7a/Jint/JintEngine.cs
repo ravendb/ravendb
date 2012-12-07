@@ -175,6 +175,11 @@ namespace Jint {
             return Run(program, unwrap);
         }
 
+		public void ResetSteps()
+		{
+			Visitor.ResetSteps();
+		}
+
         /// <summary>
         /// Runs a set of JavaScript statements and optionally returns a value if return is called
         /// </summary>

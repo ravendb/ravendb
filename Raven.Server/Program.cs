@@ -26,6 +26,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Server.Responders.Admin;
 using Raven.Smuggler;
 
 namespace Raven.Server
@@ -367,11 +368,11 @@ Configuration options:
 						Console.WriteLine("Could not start browser: " + e.Message);
 					}
 				}
-				return InteractiveRun();
+				return InteractiveRun(server);
 			}
 		}
 
-		private static bool InteractiveRun()
+		private static bool InteractiveRun(RavenDbServer server)
 		{
 			bool? done = null;
 			var actions = new Dictionary<string,Action>
@@ -389,7 +390,7 @@ Configuration options:
 					{
 						long before = Process.GetCurrentProcess().WorkingSet64;
 						Console.WriteLine("Starting garbage collection, current memory is: {0:#,#.##;;0} MB", before / 1024d / 1024d);
-						GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+						AdminGc.CollectGarbage(server.Database);
 						var after = Process.GetCurrentProcess().WorkingSet64;
 						Console.WriteLine("Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB", after / 1024d / 1024d,
 										  (before - after) / 1024d / 1024d);

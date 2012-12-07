@@ -25,7 +25,7 @@ namespace Raven.Tests.Bugs
 
 		public AttachmentsWithCredentials()
 		{
-			path = GetPath(DbName);
+			path = GetPath(DataDir);
 			server = GetNewServer(8079, path);
 
 			store = new DocumentStore

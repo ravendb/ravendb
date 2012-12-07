@@ -15,7 +15,7 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Bundles.IndexedProperties
 {
-	[InheritedExport]
+	[InheritedExport(typeof(AbstractIndexUpdateTrigger))]
 	[ExportMetadata("Bundle", "IndexedProperties")]
 	public class IndexedPropertiesTrigger : AbstractIndexUpdateTrigger
 	{

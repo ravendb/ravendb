@@ -36,10 +36,6 @@ namespace Raven.Studio.Models
 
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel> { Value = new ServerModel() };
-			Server.Value.IsConnected.PropertyChanged += delegate
-			{
-				OnPropertyChanged(() => StatusImage);
-			};
 
 			Alerts = new ObservableCollection<Alert>();
 
@@ -164,14 +160,14 @@ namespace Raven.Studio.Models
 			//	});
 		}
 
-		public BitmapImage StatusImage
+		public Observable<BitmapImage> StatusImage
 		{
 			get
 			{
 				var url = new Uri("../Assets/Images/" + Server.Value.SelectedDatabase.Value.Status.Value + ".png", UriKind.Relative);
-				return new BitmapImage(url);
+				return new Observable<BitmapImage> { Value = new BitmapImage(url) };
 			}
-		}
+		} 
 
 		public int ErrorCount { get { return Notifications.Count(n => n.Level == NotificationLevel.Error); } }
 

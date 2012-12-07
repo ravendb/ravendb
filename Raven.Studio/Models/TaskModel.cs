@@ -1,4 +1,5 @@
-﻿using System.Windows.Input;
+﻿using System;
+using System.Windows.Input;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 
@@ -44,6 +45,16 @@ namespace Raven.Studio.Models
 					return taskInput.Name.Length * PixelsPerLetter;
 				return 0;
 			}
+		}
+
+		public void ReportError(Exception exception)
+		{
+			Output.Add("Error: " + exception.Message);
+		}
+
+		public void ReportError(string errorMsg)
+		{
+			Output.Add("Error: " + errorMsg);
 		}
 
 		private string name;
