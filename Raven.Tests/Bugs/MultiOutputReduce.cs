@@ -56,13 +56,13 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public class Customer
+		private class Customer
 		{
 			public string Id;
 			public string Name;
 		}
 
-		public class Order
+		private class Order
 		{
 			public string Id;
 			public string CustomerId;
