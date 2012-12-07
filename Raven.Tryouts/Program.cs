@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -28,25 +29,11 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			{
-				var x = new DocumentStoreServerTests_DifferentProcess();
-				x.Can_promote_transactions();
-			}
-
-			using(var x = new RunExternalProcess())
-			{
-				x.can_use_RavenDB_in_a_remote_process();
-			}
-
-			using (var x = new RunExternalProcess())
-			{
-				x.can_use_RavenDB_in_a_remote_process_for_batch_operations();
-			}
-
-			using (var x = new RunExternalProcess())
-			{
-				x.can_use_RavenDB_in_a_remote_process_to_post_batch_operations();
-			}
+			int versionPageSize = 0;
+			string paramString;
+			Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param)128, ref versionPageSize,
+									  out paramString, 0);
+			Console.WriteLine(versionPageSize / SystemParameters.DatabasePageSize);
 		}
 	}
 }
