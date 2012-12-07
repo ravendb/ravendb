@@ -217,7 +217,10 @@ namespace Raven.Database.Indexing
 
 		private JsonResults GetFutureJsonDocuments(Guid lastIndexedGuidForAllIndexes)
 		{
-			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == lastIndexedGuidForAllIndexes);
+			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
+				return null;
+			var nextDocEtag = GetNextDocEtag(lastIndexedGuidForAllIndexes);
+			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextDocEtag);
 			if (nextBatch == null)
 				return null;
 
@@ -239,8 +242,9 @@ namespace Raven.Database.Indexing
 				};
 				while (true)
 				{
-					var nextHighestEtag = GetNextHighestEtag(nextBatch.Task.Result.Results);
-					nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextHighestEtag);
+					var highestEtag = GetNextHighestEtag(nextBatch.Task.Result.Results);
+					nextDocEtag = GetNextDocEtag(highestEtag);
+					nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextDocEtag);
 					if (nextBatch == null)
 					{
 						break;
@@ -276,10 +280,20 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		private Guid GetNextDocEtag(Guid highestEtag)
+		{
+			Guid nextDocEtag = highestEtag;
+			context.TransactionaStorage.Batch(
+				accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(highestEtag); });
+			return nextDocEtag;
+		}
 
 
 		private void MaybeAddFutureBatch(JsonResults past)
 		{
+			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
+				return;
+
 			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 				return;
 			if (past.Results.Length == 0 || past.LoadedFromDisk == false)
@@ -568,6 +582,9 @@ namespace Raven.Database.Indexing
 
 		public void AfterCommit(JsonDocument[] docs)
 		{
+			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
+				return;
+
 			if (futureIndexBatches.Count > 512 || // this is optimization, and we need to make sure we don't overuse memory
 				docs.Length == 0)
 				return;
@@ -580,7 +597,7 @@ namespace Raven.Database.Indexing
 			
 			futureIndexBatches.Add(new FutureIndexBatch
 			{
-				StartingEtag = DecrementEtag(GetLowestEtag(docs)),
+				StartingEtag = GetLowestEtag(docs),
 				Task = new CompletedTask<JsonResults>(new JsonResults
 				{
 					Results = docs,
@@ -589,17 +606,6 @@ namespace Raven.Database.Indexing
 				Age = currentIndexingAge
 			});
 		}
-
-		private Guid DecrementEtag(Guid etag)
-		{
-			var bytes = etag.ToByteArray();
-			var changes = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0) - 1;
-			var restarts = BitConverter.ToInt64(bytes.Take(8).Reverse().ToArray(), 0);
-			if (restarts == 1 && changes == 0)// very first item, we start from 0-0
-				restarts = 0;
-			return new Guid(BitConverter.GetBytes(restarts).Reverse().Concat(BitConverter.GetBytes(changes).Reverse()).ToArray());
-		}
-
 
 		private static Guid GetLowestEtag(JsonDocument[] past)
 		{

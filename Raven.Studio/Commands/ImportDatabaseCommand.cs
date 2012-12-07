@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
 using Ionic.Zlib;
 using Raven.Imports.Newtonsoft.Json;
@@ -26,7 +25,7 @@ namespace Raven.Studio.Commands
 		private readonly Action<string> output;
 		private int totalCount;
 		private int totalIndexes;
-		private TaskModel taskModel;
+		private readonly TaskModel taskModel;
 
 		public ImportDatabaseCommand(TaskModel taskModel, Action<string> output)
 		{
@@ -79,12 +78,15 @@ namespace Raven.Studio.Commands
 			try
 			{
 				if (jsonReader.TokenType != JsonToken.StartObject)
+				{
+					taskModel.ReportError("StartObject was expected");
 					throw new InvalidOperationException("StartObject was expected");
+				}
 
 				// should read indexes now
 				if (jsonReader.Read() == false)
 				{
-					output("Invalid Json file specified!");
+					taskModel.ReportError("Invalid Json file specified!");
 					stream.Dispose();
 					return;
 				}
@@ -92,16 +94,25 @@ namespace Raven.Studio.Commands
 				output(String.Format("Begin reading indexes"));
 
 				if (jsonReader.TokenType != JsonToken.PropertyName)
+				{
+					taskModel.ReportError("PropertyName was expected");
 					throw new InvalidOperationException("PropertyName was expected");
+				}
 
 				if (Equals("Indexes", jsonReader.Value) == false)
+				{
+					taskModel.ReportError("Indexes property was expected");
 					throw new InvalidOperationException("Indexes property was expected");
+				}
 
 				if (jsonReader.Read() == false)
 					return;
 
 				if (jsonReader.TokenType != JsonToken.StartArray)
+				{
+					taskModel.ReportError("StartArray was expected");
 					throw new InvalidOperationException("StartArray was expected");
+				}
 
 				// import Indexes
 				WriteIndexes(jsonReader)
@@ -120,10 +131,16 @@ namespace Raven.Studio.Commands
 						}
 
 						if (jsonReader.TokenType != JsonToken.PropertyName)
+						{
+							taskModel.ReportError("PropertyName was expected");
 							throw new InvalidOperationException("PropertyName was expected");
+						}
 
 						if (Equals("Docs", jsonReader.Value) == false)
+						{
+							taskModel.ReportError("Docs property was expected");
 							throw new InvalidOperationException("Docs property was expected");
+						}
 
 						if (jsonReader.Read() == false)
 						{
@@ -133,24 +150,30 @@ namespace Raven.Studio.Commands
 						}
 
 						if (jsonReader.TokenType != JsonToken.StartArray)
+						{
+							taskModel.ReportError("StartArray was expected");
 							throw new InvalidOperationException("StartArray was expected");
+						}
 
 						WriteDocuments(jsonReader)
 							.ContinueOnSuccess(
 								() =>
 								output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount, sw.ElapsedMilliseconds)))
+							.Catch(exception => taskModel.ReportError(exception))
 							.Finally(() =>
 							{
 								taskModel.TaskStatus = TaskStatus.Ended;
 								taskModel.CanExecute.Value = true;
 							});
-					});
+					})
+					.Catch(exception => taskModel.ReportError(exception));
 			}
 
 			catch (Exception e)
 			{
 				taskModel.TaskStatus = TaskStatus.Ended;
 				taskModel.CanExecute.Value = true;
+				taskModel.ReportError(e);
 				throw e;
 			}
 		}
@@ -173,7 +196,8 @@ namespace Raven.Studio.Commands
 				output(String.Format("Importing index: {0}", indexName));
 
 				return DatabaseCommands.PutIndexAsync(indexName, index, overwrite: true)
-					.ContinueOnSuccess(() => WriteIndexes(jsonReader));
+					.ContinueOnSuccess(() => WriteIndexes(jsonReader))
+					.Catch(exception => taskModel.ReportError(exception));
 			}
 
 			return Infrastructure.Execute.EmptyResult<object>();
@@ -251,7 +275,7 @@ namespace Raven.Studio.Commands
 
 				if (jsonReader.Read() == false)
 				{
-					output("Invalid json file found!");
+					taskModel.ReportError("Invalid json file found!");
 					return false;
 				}
 			}

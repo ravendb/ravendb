@@ -54,7 +54,7 @@ namespace Raven.Studio.Features.Query
                             .Select(x => new ViewableDocument(x))
                             .ToArray();
 
-					SetCount(Math.Max(task.Result.TotalResults, documents.Length));
+					SetCount(Math.Max(task.Result.TotalResults - task.Result.SkippedResults, documents.Length));
 
                     return (IList<ViewableDocument>)documents;
                 });

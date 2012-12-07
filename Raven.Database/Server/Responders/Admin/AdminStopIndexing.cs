@@ -6,7 +6,7 @@ namespace Raven.Database.Server.Responders.Admin
 	{
 		public override void RespondToAdmin(IHttpContext context)
 		{
-			Database.StopBackgroundWorkers();
+			Database.StopIndexingWorkers();
 		}
 	}
 }

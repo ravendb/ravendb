@@ -37,7 +37,7 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public abstract IndexDefinition CreateIndexDefinition();
 
-		protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery,IEnumerable<object> enumerable)
+		protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
 		{
 			return enumerable.Take(indexQuery.PageSize);
 		}
@@ -114,7 +114,7 @@ namespace Raven.Client.Indexes
 			public static object Generate(double lat, double lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-			} 
+			}
 		}
 
 		/// <summary>
@@ -156,7 +156,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
-		protected IEnumerable<TResult> Recurse<TSource,TResult>(TSource source, Func<TSource, TResult> func)
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, TResult> func)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
@@ -165,6 +165,64 @@ namespace Raven.Client.Indexes
 		/// Allows to use lambdas recursively
 		/// </summary>
 		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IEnumerable<TResult>> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, ICollection<TResult>> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, ISet<TResult>> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, HashSet<TResult>> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+#if !SILVERLIGHT
+		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, SortedSet<TResult>> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+#endif
+
+		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IList<TResult>> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, TResult[]> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, List<TResult>> func)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
@@ -211,7 +269,7 @@ namespace Raven.Client.Indexes
 		}
 
 		private void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
-		                                      IndexDefinition indexDefinition)
+											  IndexDefinition indexDefinition)
 		{
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
@@ -255,7 +313,7 @@ namespace Raven.Client.Indexes
 
 		private ILog Logger = LogManager.GetCurrentClassLogger();
 		private Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
-		                                           DocumentConvention documentConvention, IndexDefinition indexDefinition)
+												   DocumentConvention documentConvention, IndexDefinition indexDefinition)
 		{
 			var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 			if (asyncServerClient == null)
@@ -301,12 +359,12 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
 	{
-		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery,IEnumerable<object> enumerable)
+		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
 		{
 			if (Reduce == null)
 				return enumerable.Take(indexQuery.PageSize);
 
-			return Conventions.ApplyReduceFunction(GetType(), typeof (TReduceResult), enumerable, () =>
+			return Conventions.ApplyReduceFunction(GetType(), typeof(TReduceResult), enumerable, () =>
 			{
 				var compile = Reduce.Compile();
 				return (objects => compile(objects.Cast<TReduceResult>()));

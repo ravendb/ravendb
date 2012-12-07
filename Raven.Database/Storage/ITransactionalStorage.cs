@@ -24,11 +24,13 @@ namespace Raven.Database.Storage
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
 		void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag);
 		long GetDatabaseSizeInBytes();
+		long GetDatabaseCacheSizeInBytes();
 
 		string FriendlyName { get; }
 		bool HandleException(Exception exception);
 
 		void Compact(InMemoryRavenConfiguration configuration);
 		Guid ChangeId();
+		void ClearCaches();
 	}
 }

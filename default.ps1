@@ -104,23 +104,19 @@ task Compile -depends Init {
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$buildartifacts_dir\" }
 	exec { &"$build_dir\Raven.ProjectRewriter.exe" }
 	
-	try { 
-		$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
-		$datDest = "$base_dir\Raven.Studio\Settings.dat"
-		echo $dat
-		if (Test-Path $dat) {
-			Copy-Item $dat $datDest -force
-		}
-		ElseIf ((Test-Path $datDest) -eq $false) {
-			New-Item $datDest -type file -force
-		}
-		
-		Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
-		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
-	} finally { 
-		#new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
-		remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
+	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
+	$datDest = "$base_dir\Raven.Studio\Settings.dat"
+	echo $dat
+	if (Test-Path $dat) {
+		Copy-Item $dat $datDest -force
 	}
+	ElseIf ((Test-Path $datDest) -eq $false) {
+		New-Item $datDest -type file -force
+	}
+	
+	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
+	remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
 }
 
 task FullStorageTest {
@@ -226,7 +222,7 @@ task CopySamples {
 	  Delete-Sample-Data-For-Release "$build_dir\Output\Samples\$sample" 
 	}
 	
-	cp "$base_dir\Samples\Raven.Samples.sln" "$build_dir\Output\Samples" -force
+	cp "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
 	cp "$base_dir\Samples\Samples.ps1" "$build_dir\Output\Samples" -force
 	  
 	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }

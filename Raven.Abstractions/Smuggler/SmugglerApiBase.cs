@@ -197,7 +197,7 @@ namespace Raven.Abstractions.Smuggler
 						Console.Write("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
 					}
 
-					Thread.Sleep(100);
+					Thread.Sleep(1000);
 					continue;
 				}
 				Console.WriteLine("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);

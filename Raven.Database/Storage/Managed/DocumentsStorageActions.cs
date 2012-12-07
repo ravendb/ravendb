@@ -68,6 +68,15 @@ namespace Raven.Storage.Managed
 			}
 		}
 
+		public Guid GetBestNextDocumentEtag(Guid etag)
+		{
+			var match = storage.Documents["ByEtag"].SkipAfter(new RavenJObject {{"etag", etag.ToByteArray()}})
+			                                      .FirstOrDefault();
+			if (match == null)
+				return etag;
+			return new Guid(match.Value<byte[]>("etag"));
+		}
+
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
 			return storage.Documents["ByKey"].SkipTo(new RavenJObject { { "key", idPrefix } })

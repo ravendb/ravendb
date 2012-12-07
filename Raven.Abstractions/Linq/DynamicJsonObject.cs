@@ -118,6 +118,16 @@ namespace Raven.Abstractions.Linq
 			return true;
 		}
 
+		public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
+		{
+			if(binder.Name == "Value" && args.Length == 1 && args[0] is string)
+			{
+				result = GetValue((string) args[0]);
+				return true;
+			}
+			return base.TryInvokeMember(binder, args, out result);
+		}
+
 		/// <summary>
 		/// Provides the implementation for operations that get a value by index. Classes derived from the <see cref="T:System.Dynamic.DynamicObject"/> class can override this method to specify dynamic behavior for indexing operations.
 		/// </summary>

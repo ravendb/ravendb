@@ -46,7 +46,8 @@ namespace Raven.Studio.Commands
 					startRestoreTask.CanExecute.Value = true;
 					startRestoreTask.TaskStatus = TaskStatus.Ended;
 				}
-			});
+			})
+			.Catch(exception => startRestoreTask.ReportError(exception));
 		}
 	}
 }
