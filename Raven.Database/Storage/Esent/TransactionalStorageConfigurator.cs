@@ -44,7 +44,8 @@ namespace Raven.Storage.Esent
 				TempDirectory = Path.Combine(logsPath, "temp"),
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
-				MaxVerPages = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 512), 1024 * 1024),
+				MaxVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 128), 1024 * 1024),
+				PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", 128), 1024 * 1024),
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 8192), 1024),
@@ -71,6 +72,19 @@ namespace Raven.Storage.Esent
 		{
 			//This doesn't suffer from overflow, do the division first (to make the number smaller) then multiply afterwards
 			double tempAmt = (double)sizeInMegabytes / SystemParameters.DatabasePageSize;
+			int finalSize = (int)(tempAmt * multiply);
+			return finalSize;
+		}
+
+		private static int TranslateToSizeInVersionPages(int sizeInMegabytes, int multiply)
+		{
+			const int JET_paramVerPageSize = 128;
+			int versionPageSize = 0;
+			string paramString;
+			Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param) JET_paramVerPageSize, ref versionPageSize,
+			                          out paramString, 0);
+			//This doesn't suffer from overflow, do the division first (to make the number smaller) then multiply afterwards
+			double tempAmt = (double)sizeInMegabytes / versionPageSize;
 			int finalSize = (int)(tempAmt * multiply);
 			return finalSize;
 		}
