@@ -48,18 +48,18 @@
 
 .request-details
 {
+    display: none;
     position: absolute;
     left: 10px;
     top: 100px;
     border: 2px solid black;
     background-color: White;
+    padding: 15px;
+    overflow: auto;
     min-height: 300px;
     min-width: 600px;
     max-height: 600px;
     max-width: 100%;
-    padding: 15px;
-    overflow: auto;
-    
 }
 
 .request-details-table td

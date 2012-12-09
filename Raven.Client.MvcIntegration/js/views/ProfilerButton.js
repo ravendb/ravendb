@@ -1,10 +1,8 @@
 ﻿define(
 	[
-		'jquery',
-		'underscore',
 		'backbone'
 	],
-	function ($, _, Backbone) {
+	function (Backbone) {
 		return Backbone.View.extend({
 			tagName: 'span',
 			className: 'rdbprofilerbutton',
@@ -12,19 +10,9 @@
 				'click': 'toggleProfiler'
 			},
 
-			initialize: function () {
-				$('body').on('keyup', _.bind(this.buttonClick, this));
-			},
-
 			render: function () {
 				this.$el.text('RavenDB Profiler');
 				return this;
-			},
-
-			buttonClick: function (event) {
-				if (event.keyCode === 27) { // esc
-					this.model.set({ profilerVisibility: false });
-				}
 			},
 
 			toggleProfiler: function () {

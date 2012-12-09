@@ -5,26 +5,30 @@
 		'underscore',
 		'./SessionView',
 		'text!./templates/profiler.html',
-		'./templateHelper'
+		'./templateHelper',
+		'./RequestDetailsView'
 	],
-	function ($, Backbone, _, SessionView, profilerTemplate, templateHelper) {
+	function ($, Backbone, _, SessionView, profilerTemplate, templateHelper, RequestDetailsView) {
 		return Backbone.View.extend({
 			className: 'ravendb-profiler-results',
 			template: _.template(profilerTemplate),
 			totalsTemplate: _.template('{{ helper.round(model.totalRequestDuration()) }} ms waiting for server in {{ model.requestCount() }} request(s) for {{ model.sessionCount() }} sessions(s)'),
 			events: {
-				'click a.close': 'close'
+				'click': 'hideDetailsView',
+				'click a': 'close'
 			},
 
 			initialize: function () {
 				this.model.sessions.on('add', this.renderTotals, this);
 				this.model.sessions.on('add', this.addSession, this);
 				this.model.on('change:profilerVisibility', this.renderVisibility, this);
+				$('body').on('keyup', _.bind(this.buttonClick, this));
 			},
 
 			render: function () {
 				this.renderVisibility();
 				this.$el.html(this.template());
+				this.$el.append(new RequestDetailsView({ model: this.model }).render().el);
 				this.renderTotals();
 				return this;
 			},
@@ -57,7 +61,12 @@
 			},
 
 			renderVisibility: function () {
-				var visibility = this.model.get('profilerVisibility') ? 'visible' : 'hidden';
+				var isVisible = this.model.get('profilerVisibility') === true,
+					visibility = 'visible';
+				if (!isVisible) {
+					visibility = 'hidden';
+					this.model.set({ activeRequest: null });
+				}
 				this.$el.css({ visibility: visibility });
 			},
 
@@ -65,7 +74,23 @@
 				var currentVisibility = this.model.get('profilerVisibility');
 				this.model.set({ profilerVisibility: !currentVisibility });
 				return false;
+			},
+
+			buttonClick: function (event) {
+				if (event.keyCode === 27) { // esc
+					if (this.model.get('activeRequest')) {
+						this.model.set('activeRequest', null);
+					} else {
+						this.model.set({ profilerVisibility: false });
+					}
+				}
+			},
+
+			hideDetailsView: function () {
+				this.model.set('activeRequest', null);
+				return false;
 			}
+
 		});
 	}
 );
