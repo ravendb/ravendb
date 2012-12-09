@@ -40,6 +40,8 @@ namespace Raven.Database.Tasks
 				keysToRemove = new HashSet<string>(Keys.Where(key=>FilterDocuments(context, accessor, key)));
 				accessor.Indexing.TouchIndexEtag(Index);
 			});
+			if (keysToRemove.Count == 0)
+				return;
 			context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);
 		}
 
