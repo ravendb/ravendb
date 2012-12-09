@@ -65,7 +65,6 @@ namespace Raven.Client.Document.OAuth
 		{
 #if !SILVERLIGHT
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-			authRequest.Credentials = credentials;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 #else
 			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource.NoCache()));
