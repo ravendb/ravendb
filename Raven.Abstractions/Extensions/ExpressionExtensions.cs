@@ -17,6 +17,38 @@ namespace Raven.Abstractions.Extensions
 	///</summary>
 	public static class ExpressionExtensions
 	{
+		public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)
+		{
+			var propertySeparator = '.';
+			var collectionSeparator = ',';
+			var collectionSeparatorAsString = collectionSeparator.ToString();
+			var propertyPath = path.ToPropertyPath(propertySeparator, collectionSeparator);
+			var properties = propertyPath.Split(propertySeparator);
+			var type = typeof(T);
+			foreach (var property in properties)
+			{
+				if (property.Contains(collectionSeparatorAsString))
+				{
+					var normalizedProperty = property.Replace(collectionSeparatorAsString, string.Empty);
+
+					if (type.IsArray)
+					{
+						type = type.GetElementType().GetProperty(normalizedProperty).PropertyType;
+					}
+					else
+					{
+						type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
+					}
+				}
+				else
+				{
+					type = type.GetProperty(property).PropertyType;
+				}
+			}
+
+			return type;
+		}
+
 		public static PropertyInfo ToProperty(this LambdaExpression expr)
 		{
 			var expression = expr.Body;
@@ -46,7 +78,7 @@ namespace Raven.Abstractions.Extensions
 		///<summary>
 		/// Turn an expression like x=&lt; x.User.Name to "User.Name"
 		///</summary>
-		public static string ToPropertyPath(this LambdaExpression expr, 
+		public static string ToPropertyPath(this LambdaExpression expr,
 			char propertySeparator = '.',
 			char collectionSeparator = ',')
 		{
@@ -74,7 +106,7 @@ namespace Raven.Abstractions.Extensions
 			private readonly string collectionSeparator;
 			public Stack<string> Results = new Stack<string>();
 
-			public PropertyPathExpressionVisitor(string propertySeparator,string collectionSeparator )
+			public PropertyPathExpressionVisitor(string propertySeparator, string collectionSeparator)
 			{
 				this.propertySeparator = propertySeparator;
 				this.collectionSeparator = collectionSeparator;
