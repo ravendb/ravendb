@@ -384,7 +384,7 @@ task Upload -depends DoRelease {
 		
 		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		write-host "Executing: $uploader '$global:uploadCategory' $file ""$log"""
-		&$uploader "$uploadCategory" $file "$log"
+		&$uploader "$uploadCategory" $env:buildlabel $file "$log"
 			
 		if ($lastExitCode -ne 0) {
 			write-host "Failed to upload to S3: $lastExitCode"

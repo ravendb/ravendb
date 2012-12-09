@@ -33,7 +33,10 @@ namespace Raven.Bundles.Replication.Triggers
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
 				// this is a conflict document, holding document keys in the 
 				// values of the properties
-				foreach (var prop in oldVersion.Metadata.Value<RavenJArray>("Conflicts"))
+				var conflicts = oldVersion.Metadata.Value<RavenJArray>("Conflicts");
+				if (conflicts == null)
+					return;
+				foreach (var prop in conflicts)
 				{
 					var id = prop.Value<string>();
 					Attachment attachment = Database.GetStatic(id);
