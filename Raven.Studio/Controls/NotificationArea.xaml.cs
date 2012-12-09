@@ -74,10 +74,6 @@ namespace Raven.Studio.Controls
 
                 if (item != null && item.Level == NotificationLevel.Error)
                 {
-                    if(item.Message == "NotFound ")
-                    {
-                        ApplicationModel.Current.Server.Value.IsConnected.Value = false;
-                    }
                     timer.Interval = TimeSpan.FromSeconds(6);
                 }
                 else
