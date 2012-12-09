@@ -120,6 +120,9 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentStore()
 		{
+#if !SILVERLIGHT
+			Credentials = CredentialCache.DefaultNetworkCredentials;
+#endif
 			ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
 #if !SILVERLIGHT
@@ -134,9 +137,7 @@ namespace Raven.Client.Document
 
 		private string identifier;
 
-		private bool defaultCredentials = true;
 #if !SILVERLIGHT
-		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
 #else
 		private ICredentials credentials = new NetworkCredential();
 #endif
@@ -145,15 +146,7 @@ namespace Raven.Client.Document
 		/// Gets or sets the credentials.
 		/// </summary>
 		/// <value>The credentials.</value>
-		public ICredentials Credentials
-		{
-			get { return credentials; }
-			set
-			{
-				credentials = value;
-				defaultCredentials = false;
-			}
-		}
+		public ICredentials Credentials { get; set; }
 
 		/// <summary>
 		/// Gets or sets the identifier for this store.
@@ -462,7 +455,7 @@ namespace Raven.Client.Document
 			
 			if (String.IsNullOrEmpty(ApiKey) == false)
 			{
-				credentials = null;
+				Credentials = null;
 			}
 
 			var basicAuthenticator = new BasicAuthenticator(ApiKey, jsonRequestFactory);
@@ -538,7 +531,7 @@ namespace Raven.Client.Document
 
 		private void AssertUnuthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
 		{
-			if (credentials == null) 
+			if (Credentials == null) 
 				return;
 
 			var authHeaders = response.Headers["WWW-Authenticate"];
@@ -557,7 +550,7 @@ namespace Raven.Client.Document
 
 		private void AssertForbiddenCredentialSupportWindowsAuth(HttpWebResponse response)
 		{
-			if (credentials == null) 
+			if (Credentials == null) 
 				return;
 
 			var requiredAuth = response.Headers["Raven-Required-Auth"];
@@ -601,7 +594,7 @@ namespace Raven.Client.Document
 					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
-				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId, listeners.ConflictListeners);
+				return new ServerClient(databaseUrl, Conventions, Credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId, listeners.ConflictListeners);
 			};
 #endif
 
@@ -616,7 +609,7 @@ namespace Raven.Client.Document
 #endif
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, Credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
@@ -693,7 +686,7 @@ namespace Raven.Client.Document
 				dbUrl = dbUrl + "/databases/" + database;
 
 			return new RemoteDatabaseChanges(dbUrl,
-				credentials,
+				Credentials,
 				jsonRequestFactory,
 				Conventions,
 				GetReplicationInformerForDatabase(database),
