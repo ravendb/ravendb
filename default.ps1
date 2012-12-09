@@ -521,3 +521,11 @@ task CreateNugetPackages -depends Compile {
 		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
 }
+
+TaskTearDown {
+	if ($LastExitCode -ne 0) {
+		write-host "TaskTearDown detected an error. Build failed."
+		# throw "TaskTearDown detected an error. Build failed."
+		exit 1
+	}
+}
