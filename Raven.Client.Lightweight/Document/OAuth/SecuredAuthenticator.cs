@@ -14,13 +14,11 @@ namespace Raven.Client.Document.OAuth
 	public class SecuredAuthenticator : AbstractAuthenticator
 	{
 		private string apiKey;
-		private readonly BasicAuthenticator basicAuthenticator;
 		private string currentOauthToken;
 
-		public SecuredAuthenticator(string apiKey, BasicAuthenticator basicAuthenticator)
+		public SecuredAuthenticator(string apiKey)
 		{
 			this.apiKey = apiKey;
-			this.basicAuthenticator = basicAuthenticator;
 		}
 
 		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
