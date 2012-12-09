@@ -91,6 +91,9 @@ namespace Raven.Studio.Commands
 					RavenJObject metadata = null;
 					foreach (var column in columns)
 					{
+						if (string.IsNullOrEmpty(column))
+							continue;
+
 						if (string.Equals("id", column, StringComparison.InvariantCultureIgnoreCase))
 						{
 							id = record[column];
@@ -166,6 +169,10 @@ namespace Raven.Studio.Commands
 					{
 						return decimalResult;
 					}
+				}
+				else if(ch == '"' && value.Length > 1 && value[value.Length-1] == '"')
+				{
+					return value.Substring(1, value.Length - 2);
 				}
 
 				return value;
