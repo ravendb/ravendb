@@ -737,6 +737,25 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		#endregion
 
+		public bool IsNotFound(Exception e)
+		{
+			var aggregateException = e as AggregateException;
+			if (aggregateException != null)
+			{
+				e = aggregateException.ExtractSingleInnerException();
+			}
+
+			var webException = (e as WebException) ?? (e.InnerException as WebException);
+			if (webException != null)
+			{
+				var httpWebResponse = webException.Response as HttpWebResponse;
+				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					return true;
+			}
+
+			return false;
+		}
+
 		public virtual bool IsServerDown(Exception e)
 		{
 			var aggregateException = e as AggregateException;

@@ -40,7 +40,6 @@ namespace Raven.Studio.Models
 			Alerts = new ObservableCollection<Alert>();
 
 			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
-			Server.Value.SelectedDatabase.Value.Status.PropertyChanged += (sender, args) => OnPropertyChanged(() => StatusImage);
 			State = new ApplicationState();
 		}
 
@@ -159,15 +158,6 @@ namespace Raven.Studio.Models
 			//		}
 			//	});
 		}
-
-		public Observable<BitmapImage> StatusImage
-		{
-			get
-			{
-				var url = new Uri("../Assets/Images/" + Server.Value.SelectedDatabase.Value.Status.Value + ".png", UriKind.Relative);
-				return new Observable<BitmapImage> { Value = new BitmapImage(url) };
-			}
-		} 
 
 		public int ErrorCount { get { return Notifications.Count(n => n.Level == NotificationLevel.Error); } }
 
