@@ -106,7 +106,7 @@ task Init -depends Verify40, Clean {
 }
 
 task BeforeCompile {
-	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
+	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings-v1.dat"
 	$datDest = "$base_dir\Raven.Studio\Settings.dat"
 	echo $dat
 	if (Test-Path $dat) {
