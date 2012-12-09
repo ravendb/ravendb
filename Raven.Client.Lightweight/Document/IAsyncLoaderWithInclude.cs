@@ -36,7 +36,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		Task<T> Load(string id);
+		Task<T> LoadAsync(string id);
 
 		/// <summary>
 		/// Loads the specified entities with the specified id after applying
@@ -50,14 +50,14 @@ namespace Raven.Client.Document
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		Task<T> Load(ValueType id);
+		Task<T> LoadAsync(ValueType id);
 
 		/// <summary>
 		/// Loads the specified ids.
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
-		Task<TResult[]> Load<TResult>(params string[] ids);
+		Task<TResult[]> LoadAsync<TResult>(params string[] ids);
 
 		/// <summary>
 		/// Loads the specified id.
@@ -65,7 +65,7 @@ namespace Raven.Client.Document
 		/// <typeparam name="TResult"></typeparam>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		Task<TResult> Load<TResult>(string id);
+		Task<TResult> LoadAsync<TResult>(string id);
 
 		/// <summary>
 		/// Loads the specified entities with the specified id after applying
@@ -79,6 +79,6 @@ namespace Raven.Client.Document
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		Task<TResult> Load<TResult>(ValueType id);
+		Task<TResult> LoadAsync<TResult>(ValueType id);
 	}
 }
