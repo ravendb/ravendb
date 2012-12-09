@@ -26,7 +26,6 @@ namespace Raven.Client.Document.OAuth
 		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
 		{
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
 			authRequest.Method = "POST";
