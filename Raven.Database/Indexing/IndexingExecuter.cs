@@ -628,13 +628,7 @@ namespace Raven.Database.Indexing
 		{
 			var documentToRemove = new DocumentToRemove(document.Key, document.Etag);
 
-			if (documentsToRemove.Contains(documentToRemove))
-			{
-				documentsToRemove.TryRemove(documentToRemove);
-				return true;
-			}
-
-			return false;
+			return documentsToRemove.TryRemove(documentToRemove);
 		}
 
 		internal class DocumentToRemove
