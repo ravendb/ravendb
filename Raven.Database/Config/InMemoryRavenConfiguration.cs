@@ -193,6 +193,9 @@ namespace Raven.Database.Config
 
 			RedirectStudioUrl = Settings["Raven/RedirectStudioUrl"];
 
+			DisableDocumentPreFetchingForIndexing = GetConfigurationValue<bool>("Raven/DisableDocumentPreFetchingForIndexing") ??
+			                                        false;
+
 			// Misc settings
 			WebDir = Settings["Raven/WebDir"] ?? GetDefaultWebDir();
 
@@ -666,6 +669,8 @@ namespace Raven.Database.Config
 				container = value;
 			}
 		}
+
+		public bool DisableDocumentPreFetchingForIndexing { get; set; }
 
 		public AggregateCatalog Catalog { get; set; }
 

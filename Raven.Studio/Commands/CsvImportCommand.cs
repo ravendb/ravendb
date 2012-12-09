@@ -94,18 +94,28 @@ namespace Raven.Studio.Commands
 						if (string.IsNullOrEmpty(column))
 							continue;
 
-						if (string.Equals("id", column, StringComparison.InvariantCultureIgnoreCase))
+						try
 						{
-							id = record[column];
+							if (string.Equals("id", column, StringComparison.InvariantCultureIgnoreCase))
+							{
+								id = record[column];
+							}
+							else if (string.Equals("Raven-Entity-Name", column, StringComparison.InvariantCultureIgnoreCase))
+							{
+								metadata = new RavenJObject {{"Raven-Entity-Name", record[column]}};
+								id = id ?? record[column] + "/";
+							}
+							else
+							{
+								document[column] = SetValueInDocument(record[column]);
+							}
 						}
-						else if(string.Equals("Raven-Entity-Name", column, StringComparison.InvariantCultureIgnoreCase))
+						catch (Exception e)
 						{
-							metadata = new RavenJObject { { "Raven-Entity-Name", record[column] } };
-							id = id ?? record[column] + "/";
-						}
-						else
-						{
-							document[column] = SetValueInDocument(record[column]);
+							taskModel.ReportError(e);
+							taskModel.ReportError("Import not completed");
+							taskModel.TaskStatus = TaskStatus.Ended;
+							return new CompletedTask();
 						}
 					}
 
