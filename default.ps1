@@ -299,8 +299,8 @@ task CreateDocs {
 	  return 
 	}
 	 
-  # we expliclty allows this to fail
-  & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\"
+	# we expliclty allows this to fail
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\" }
 }
 
 task CopyRootFiles -depends CreateDocs {
@@ -503,7 +503,7 @@ task CreateNugetPackages -depends Compile {
 			}
 		}
 		$nuspec.Save($_.FullName);
-		&"$tools_dir\nuget.exe" pack $_.FullName
+		Exec { &"$tools_dir\nuget.exe" pack $_.FullName }
 	}
 	
 	# Upload packages
@@ -514,7 +514,7 @@ task CreateNugetPackages -depends Compile {
 		
 		# Push to nuget repository
 		$packages | ForEach-Object {
-			&"$tools_dir\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey
+			Exec { &"$tools_dir\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey }
 		}
 	}
 	else {

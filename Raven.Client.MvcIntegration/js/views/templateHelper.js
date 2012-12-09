@@ -1,5 +1,4 @@
-﻿/*global window*/
-define({
+﻿define({
 	round: function (n) {
 		return Math.round(n * 100) / 100; // round to 2 points after period 
 	},

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Web;
 using System.Web.Routing;
@@ -95,6 +96,10 @@ namespace Raven.Client.MvcIntegration
 					}
 				});
 				context.Response.Output.Write(value);
+				context.Response.ExpiresAbsolute = DateTime.Now.AddDays(1);
+				context.Response.Cache.SetCacheability(HttpCacheability.Private);
+				context.Response.AppendHeader("Content-encoding", "gzip");
+				context.Response.Filter = new GZipStream(context.Response.Filter, CompressionMode.Compress);
 			}
 			else  // debug mode, probably
 			{
