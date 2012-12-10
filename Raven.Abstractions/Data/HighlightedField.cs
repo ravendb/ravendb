@@ -103,10 +103,11 @@ namespace Raven.Abstractions.Data
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "{0}:{1},{2}",
+                "{0}:{1},{2}{3}",
                 this.Field,
                 this.FragmentLength,
-                this.FragmentCount);
+                this.FragmentCount,
+                string.IsNullOrEmpty(this.FragmentsField) ? null : ',' + this.FragmentsField);
         }
 
         public HighlightedField Clone()

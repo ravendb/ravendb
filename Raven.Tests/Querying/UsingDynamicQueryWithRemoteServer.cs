@@ -455,7 +455,143 @@ namespace Raven.Tests.Querying
                 Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
             }
         }
-        
+
+        [Fact]
+        public void ExecutesQueryWithHighlightingsAndProjections()
+        {
+            const string indexName = "BlogsForHighlightingTests";
+            documentStore.DatabaseCommands.PutIndex(indexName,
+                new IndexDefinition
+                {
+                    Map = "from blog in docs.Blogs select new { blog.Title, blog.Category }",
+                    Stores =
+                    {
+                        {"Title", FieldStorage.Yes},
+                        {"Category", FieldStorage.Yes}
+                    },
+                    Indexes =
+                    {
+                        {"Title", FieldIndexing.Analyzed},
+                        {"Category", FieldIndexing.Analyzed}
+                    }
+                });
+
+            var blogOne = new Blog
+            {
+                Title = "Lorem ipsum dolor sit amet, target word, consectetur adipiscing elit.",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title =
+                    "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
+                Category = "The Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "Target cras vitae felis arcu word.",
+                Category = "Los Rhinos"
+            };
+
+            using (var s = documentStore.OpenSession())
+            {
+                s.Store(blogOne);
+                s.Store(blogTwo);
+                s.Store(blogThree);
+                s.SaveChanges();
+            }
+
+            using (var s = documentStore.OpenSession())
+            {
+                var results = s.Query<Blog>(indexName)
+                               .Customize(
+                                   c => c.WaitForNonStaleResults().Highlight("Title", 18, 2, "TitleFragments"))
+                               .Where(x => x.Title == "lorem" && x.Category == "ravens")
+                               .Select(x => new
+                               {
+                                   x.Title,
+                                   x.Category,
+                                   TitleFragments = default(string[])
+                               })
+                               .ToArray();
+
+                Assert.Equal(1, results.Length);
+                Assert.NotEmpty(results.First().TitleFragments);
+            }
+        }
+
+        [Fact]
+        public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
+        {
+            const string indexName = "BlogsForHighlightingMRTests";
+            documentStore.DatabaseCommands.PutIndex(indexName,
+                new IndexDefinition
+                {
+                    Map = "from blog in docs.Blogs select new { blog.Title, blog.Category }",
+                    Reduce = @"from result in results 
+                                   group result by result.Category into g
+                                   select new { Category = g.Key, Title = g.Select(x=>x.Title).Aggregate(string.Concat) }",
+                    Stores =
+                    {
+                        {"Title", FieldStorage.Yes},
+                        {"Category", FieldStorage.Yes}
+                    },
+                    Indexes =
+                    {
+                        {"Title", FieldIndexing.Analyzed},
+                        {"Category", FieldIndexing.Analyzed}
+                    }
+                });
+
+            var blogOne = new Blog
+            {
+                Title = "Lorem ipsum dolor sit amet, target word, consectetur adipiscing elit.",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title =
+                    "Maecenas mauris leo, feugiat sodales facilisis target word, pellentesque, suscipit aliquet turpis.",
+                Category = "The Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "Target cras vitae felis arcu word.",
+                Category = "Los Rhinos"
+            };
+
+            string blogOneId;
+            string blogTwoId;
+            using (var s = documentStore.OpenSession())
+            {
+                s.Store(blogOne);
+                s.Store(blogTwo);
+                s.Store(blogThree);
+                s.SaveChanges();
+
+                blogOneId = s.Advanced.GetDocumentId(blogOne);
+                blogTwoId = s.Advanced.GetDocumentId(blogTwo);
+            }
+
+            using (var s = documentStore.OpenSession())
+            {
+                var results = s.Query<Blog>(indexName)
+                               .Customize(
+                                   c => c.WaitForNonStaleResults().Highlight("Title", 18, 2, "TitleFragments"))
+                               .Where(x => x.Title == "lorem" && x.Category == "ravens")
+                               .Select(x => new
+                               {
+                                   x.Title,
+                                   x.Category,
+                                   TitleFragments = default(string[])
+                               })
+                               .ToArray();
+
+                Assert.Equal(1, results.Length);
+                Assert.NotEmpty(results.First().TitleFragments);
+            }
+        }
+
         public class Blog
         {
             public User User { get; set; }
