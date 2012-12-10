@@ -256,5 +256,11 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => IsConnected);
 			}
 		}
+
+		public void SetConnected(bool isConnected)
+		{
+			IsConnected.Value = isConnected;
+			OnPropertyChanged(() => IsConnected);
+		}
 	}
 }

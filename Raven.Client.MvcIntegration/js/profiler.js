@@ -1,5 +1,4 @@
-﻿/*global window*/
-define(
+﻿define(
 	[
 		'jquery',
 		'underscore',

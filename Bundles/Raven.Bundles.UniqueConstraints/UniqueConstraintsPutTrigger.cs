@@ -135,7 +135,8 @@ namespace Raven.Bundles.UniqueConstraints
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
 
-				if (oldJson.Value<string>(propName).Equals(document.Value<string>(propName))) continue;
+				var oldValue = oldJson.Value<string>(propName);
+				if (oldValue == null || oldValue.Equals(document.Value<string>(propName))) continue;
 
                 // Handle Updates in the constraint since it changed
 			    var prefix = "UniqueConstraints/" + entityName + property + "/";

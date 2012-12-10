@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Responders.Admin
 		}
 		public override void RespondToAdmin(IHttpContext context)
 		{
-			context.WriteJson(new { IndexingStatus = Database.WorkContext.DoWork ? "Indexing" : "Paused" });
+			context.WriteJson(new { IndexingStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused" });
 		}
 	}
 }

@@ -1,10 +1,10 @@
 ﻿({
 	baseUrl: "./",
-	mainConfigFile: "./config.js",
+	mainConfigFile: "config.js",
 	useSourceUrl: true,
 	optimize: "uglify",
 	paths: {
-		requireLib: "../Scripts/require"
+		requireLib: "vendor/require"
 	},
 	namespace: "RavenDBProfiler",
 	name: "profiler",
