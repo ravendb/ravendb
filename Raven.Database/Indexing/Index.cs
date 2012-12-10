@@ -846,7 +846,7 @@ namespace Raven.Database.Indexing
 							            select new
 							            {
 							                highlightedField.Field,
-                                            highlightedField.FragmentsField,
+							                highlightedField.FragmentsField,
 							                Fragments = highlighter.GetBestFragments(
 							                    fieldQuery,
 							                    indexSearcher.IndexReader,
@@ -861,10 +861,12 @@ namespace Raven.Database.Indexing
 							            select fieldHighlitings;
 
 							        if (fieldsToFetch.IsProjection || parent.IsMapReduce)
+							        {
 							            foreach (var highlighting in highlightings)
-							                indexQueryResult.Projection[highlighting.FragmentsField]
-							                    = new RavenJArray(highlighting.Fragments);
-							        else
+							                if (!string.IsNullOrEmpty(highlighting.FragmentsField))
+							                    indexQueryResult.Projection[highlighting.FragmentsField]
+							                        = new RavenJArray(highlighting.Fragments);
+							        } else
 							            indexQueryResult.Highligtings = highlightings
 							                .ToDictionary(x => x.Field, x => x.Fragments);
 							    }

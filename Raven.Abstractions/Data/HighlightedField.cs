@@ -15,7 +15,7 @@ namespace Raven.Abstractions.Data
     public sealed class HighlightedField
     {
         private static readonly Regex FieldOptionMatch =
-            new Regex(@"^(?<Field>\w+):(?<FragmentLength>\d+),(?<FragmentCount>\d+),(?<FragmentsField>\d+)$",
+            new Regex(@"^(?<Field>\w+):(?<FragmentLength>\d+),(?<FragmentCount>\d+)(,(?<FragmentsField>\w+))?$",
 #if !SILVERLIGHT
                 RegexOptions.Compiled
 #else
@@ -93,9 +93,6 @@ namespace Raven.Abstractions.Data
                 return false;
 
             var fragmentsField = match.Groups["FragmentsField"].Value;
-
-            if (string.IsNullOrWhiteSpace(fragmentsField))
-                return false;
 
             result = new HighlightedField(field, fragmentLength, fragmentCount, fragmentsField);
 
