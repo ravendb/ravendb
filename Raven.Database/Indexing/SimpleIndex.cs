@@ -77,10 +77,7 @@ namespace Raven.Database.Indexing
 						if (batch.SkipDeleteFromIndex[i] == false || 
 							context.ShouldRemoveFromIndex(documentId)) // maybe it is recently deleted?
 							indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
-						else
-						{
-							
-						}
+				
 						return doc;
 					})
 						.Where(x => x is FilteredDocument == false)

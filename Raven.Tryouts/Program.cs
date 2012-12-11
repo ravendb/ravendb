@@ -18,6 +18,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
 using Raven.Tests.Document;
+using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
 using System.Linq;
 using Raven.Tests.Util;
@@ -29,11 +30,14 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			int versionPageSize = 0;
-			string paramString;
-			Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param)128, ref versionPageSize,
-									  out paramString, 0);
-			Console.WriteLine(versionPageSize / SystemParameters.DatabasePageSize);
+			for (int i = 0; i < 1000; i++)
+			{
+				Console.WriteLine(i);
+				using (var x = new FacetedIndex())
+				{
+					x.CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others();
+				}
+			}
 		}
 	}
 }
