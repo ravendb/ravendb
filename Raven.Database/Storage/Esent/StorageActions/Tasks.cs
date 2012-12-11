@@ -103,6 +103,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return;
 			}
 
+			int totalTaskCount = 0;
 			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
@@ -140,7 +141,8 @@ namespace Raven.Storage.Esent.StorageActions
 						continue;
 					throw;
 				}
-			} while (Api.TryMoveNext(session, Tasks));
+				totalTaskCount++;
+			} while (Api.TryMoveNext(session, Tasks) && totalTaskCount < 1024);
 		}
 
 	}
