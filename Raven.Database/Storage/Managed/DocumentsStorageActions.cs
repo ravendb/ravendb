@@ -70,7 +70,7 @@ namespace Raven.Storage.Managed
 
 		public Guid GetBestNextDocumentEtag(Guid etag)
 		{
-			var match = storage.Documents["ByEtag"].SkipAfter(new RavenJObject {{"etag", etag.ToByteArray()}})
+			var match = storage.Documents["ByEtag"].SkipTo(new RavenJObject {{"etag", etag.ToByteArray()}})
 			                                      .FirstOrDefault();
 			if (match == null)
 				return etag;

@@ -279,7 +279,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				return etag;
 
 
