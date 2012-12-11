@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
 				return shapeWKT;
 
 			var radCapture = match.Groups[3];
-			var radius = double.Parse(radCapture.Value);
+			var radius = double.Parse(radCapture.Value, CultureInfo.InvariantCulture);
 
 			radius = (radius / EarthMeanRadiusKm) * RadiansToDegrees;
 
