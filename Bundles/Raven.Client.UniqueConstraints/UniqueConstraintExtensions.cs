@@ -18,7 +18,16 @@
 		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
-			var body = (MemberExpression)keySelector.Body;
+			MemberExpression body;
+			if (keySelector.Body is MemberExpression)
+			{
+				body = ((MemberExpression)keySelector.Body);
+			}
+			else
+			{
+				var op = ((UnaryExpression)keySelector.Body).Operand;
+				body = ((MemberExpression)op);
+			}
 			var propertyName = body.Member.Name;
 
 			var constraintDoc = session.Include("Id").Load<ConstraintDocument>("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + value);
