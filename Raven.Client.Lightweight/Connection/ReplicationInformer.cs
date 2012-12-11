@@ -737,7 +737,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		#endregion
 
-		public bool IsNotFound(Exception e)
+		public bool IsHttpStatus(Exception e, HttpStatusCode httpStatusCode)
 		{
 			var aggregateException = e as AggregateException;
 			if (aggregateException != null)
@@ -749,7 +749,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			if (webException != null)
 			{
 				var httpWebResponse = webException.Response as HttpWebResponse;
-				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+				if (httpWebResponse != null && httpWebResponse.StatusCode == httpStatusCode)
 					return true;
 			}
 
