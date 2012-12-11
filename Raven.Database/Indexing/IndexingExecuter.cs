@@ -344,10 +344,7 @@ namespace Raven.Database.Indexing
 
 						futureBatchStat.Retries++;
 
-						while(context.WaitForWork(TimeSpan.FromSeconds(10), ref localWork, "PreFetching") == false)
-						{
-							
-						}
+						context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching");
 					}
 					futureBatchStat.Duration = sp.Elapsed;
 					futureBatchStat.Size = jsonDocuments == null ? 0 : jsonDocuments.Results.Length;
