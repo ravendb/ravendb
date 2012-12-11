@@ -22,12 +22,18 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			if (AuthorizedDatabases == null)
 				return false;
-			var db = AuthorizedDatabases.FirstOrDefault(a => 
-				
-					string.Equals(a.TenantId,tenantId, StringComparison.OrdinalIgnoreCase) || 
-					string.Equals(a.TenantId, "*")
+			DatabaseAccess db;
+			if (string.Equals(tenantId, "<system>"))
+			{
+				db = AuthorizedDatabases.FirstOrDefault(access => string.Equals(access.TenantId, "<system>"));
+			}
+			else
+			{
+				db = AuthorizedDatabases.FirstOrDefault(a =>
+				                                        string.Equals(a.TenantId, tenantId, StringComparison.OrdinalIgnoreCase) ||
+				                                        string.Equals(a.TenantId, "*"));
+			}
 
-				);
 			if (db == null)
 				return false;
 
