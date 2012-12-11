@@ -630,5 +630,13 @@ namespace Raven.Database.Indexing
 		{
 			return GetIndexByName(index).GetIndexingPerformance();
 		}
+
+		public void Backup(string directory, string incrementalTag)
+		{
+			foreach (var index in indexes)
+			{
+				index.Value.Backup(directory, path, incrementalTag);
+			}
+		}
 	}
 }

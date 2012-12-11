@@ -45,14 +45,16 @@ namespace Raven.Storage.Esent.Backup
 			{
 				src = src.ToFullPath();
 				to = to.ToFullPath();
+				string basePath = to;
+				string incrementalTag = null;
 
 				var backupConfigPath = Path.Combine(to, "RavenDB.Backup");
 				if (Directory.Exists(to) && File.Exists(backupConfigPath)) // trying to backup to an existing backup folder
 				{
-					if (!incrementalBackup)
-						throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
+					//if (!incrementalBackup)
+					//	throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
 
-					var incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd hh-mm-ss");
+					incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd hh-mm-ss");
 					to = Path.Combine(to, incrementalTag);
 				}
 				else
@@ -65,11 +67,8 @@ namespace Raven.Storage.Esent.Backup
 				{
 					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"), Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")), incrementalBackup)
 				};
-				directoryBackups.AddRange(from index in Directory.GetDirectories(database.Configuration.IndexStoragePath)
-										  let fromIndex = Path.Combine(database.Configuration.IndexStoragePath, Path.GetFileName(index))
-										  let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
-										  let tempIndex = Path.Combine(src, Path.Combine("BackupTempDirectories", Guid.NewGuid().ToString("N")))
-										  select new DirectoryBackup(fromIndex, toIndex, tempIndex, incrementalBackup));
+
+				database.IndexStorage.Backup(basePath, incrementalTag);
 
 				foreach (var directoryBackup in directoryBackups)
 				{
