@@ -26,6 +26,8 @@ namespace Raven.Database.Indexing
 	{
 		private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
 
+		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.InvariantCultureIgnoreCase);
+
 		private readonly ConcurrentQueue<ActualIndexingBatchSize> lastActualIndexingBatchSize = new ConcurrentQueue<ActualIndexingBatchSize>();
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
@@ -493,6 +495,25 @@ namespace Raven.Database.Indexing
 		public void StartIndexing()
 		{
 			doIndexing = true;
+		}
+
+		public void MarkAsRemovedFromIndex(HashSet<string> keys)
+		{
+			foreach (var key in keys)
+			{
+				recentlyDeleted.TryRemove(key);
+			}
+		}
+
+		public bool ShouldRemoveFromIndex(string key)
+		{
+			var shouldRemoveFromIndex = recentlyDeleted.Contains(key);
+			return shouldRemoveFromIndex;
+		}
+
+		public void MarkDeleted(string key)
+		{
+			recentlyDeleted.Add(key);
 		}
 	}
 }

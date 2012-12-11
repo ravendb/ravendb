@@ -812,6 +812,7 @@ namespace Raven.Database
 						if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
 						{
 							deleted = true;
+							WorkContext.MarkDeleted(key);
 							foreach (var indexName in IndexDefinitionStorage.IndexNames)
 							{
 								AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);

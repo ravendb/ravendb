@@ -282,7 +282,7 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
-		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, IndexingWorkStats, int> action)
+		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, int> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
