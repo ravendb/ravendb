@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -51,8 +50,8 @@ namespace Raven.Storage.Esent.Backup
 				var backupConfigPath = Path.Combine(to, "RavenDB.Backup");
 				if (Directory.Exists(to) && File.Exists(backupConfigPath)) // trying to backup to an existing backup folder
 				{
-					//if (!incrementalBackup)
-					//	throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
+					if (!incrementalBackup)
+						throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
 
 					incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd hh-mm-ss");
 					to = Path.Combine(to, incrementalTag);

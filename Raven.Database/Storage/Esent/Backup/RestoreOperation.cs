@@ -57,8 +57,8 @@ namespace Raven.Storage.Esent.Backup
 
 			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "IndexDefinitions")),
 				new DirectoryInfo(Path.Combine(databaseLocation, "IndexDefinitions")));
-			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "Indexes")),
-				new DirectoryInfo(Path.Combine(databaseLocation, "Indexes")));
+
+			CopyIndexes();
 
 			var dataFilePath = Path.Combine(databaseLocation, "Data");
 
@@ -101,6 +101,94 @@ namespace Raven.Storage.Esent.Backup
 						throw;
 				}
 			}
+		}
+
+		private void CopyIndexes()
+		{
+			var directories = Directory.GetDirectories(backupLocation, "Inc*")
+				.OrderByDescending(dir => dir)
+				.ToList();
+			if (directories.Count == 0)
+			{
+				CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "Indexes")),
+				        new DirectoryInfo(Path.Combine(databaseLocation, "Indexes")));
+				return;
+			}
+
+			if (Directory.Exists(Path.Combine(databaseLocation, "Indexes")) == false)
+				Directory.CreateDirectory(Path.Combine(databaseLocation, "Indexes"));
+
+			var currentSubFolder = 0;
+			var lastInc = directories[currentSubFolder];
+			if(Directory.Exists(Path.Combine(lastInc, "Indexes")) == false)
+				return;
+			var indexes = Directory.GetDirectories(Path.Combine(lastInc, "Indexes"));
+
+			foreach (var index in indexes)
+			{
+				var indexName = index.Split(new[] {"\\"}, StringSplitOptions.RemoveEmptyEntries).Last();
+				var needed = File.OpenText(Path.Combine(index, "neededFiles.txt"));
+				var filesList =
+					needed.ReadToEnd().Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.RemoveEmptyEntries).Reverse();
+				var indexPath = Path.Combine(databaseLocation, "Indexes", indexName);
+				output("Copying Index: " + indexName);
+
+				if (Directory.Exists(indexPath) == false)
+					Directory.CreateDirectory(indexPath);
+
+
+				foreach (var neededFile in filesList)
+				{
+					currentSubFolder = 0;
+					var found = false;
+
+					while (found == false && currentSubFolder < directories.Count)
+					{
+						var currentFolder = Path.Combine(directories[currentSubFolder], "Indexes", indexName);
+						if (Directory.Exists(currentFolder))
+						{
+							var filesInDirectory = GetFilesNames(Directory.GetFiles(currentFolder));
+							if (filesInDirectory.Contains(neededFile))
+							{
+								found = true;
+								File.Copy(Path.Combine(currentFolder, neededFile), Path.Combine(indexPath, neededFile));
+							}
+						}
+
+						currentSubFolder++;
+					}
+
+					if (found == false)
+					{
+						var currentFolder = Path.Combine(backupLocation, "Indexes", indexName);
+						if (Directory.Exists(currentFolder))
+						{
+							var filesInDirectory = GetFilesNames(Directory.GetFiles(currentFolder));
+
+							if (filesInDirectory.Contains(neededFile))
+							{
+								found = true;
+								File.Copy(Path.Combine(currentFolder, neededFile), Path.Combine(indexPath, neededFile));
+							}
+						}
+					}
+
+					if(found == false)
+						output(string.Format("Error: File \"{0}\" is missing from index {1}", neededFile, indexName));
+				}
+			}
+		}
+
+		private string[] GetFilesNames(string[] fullPathNames)
+		{
+			var results = new string[fullPathNames.Length];
+
+			for (int i = 0; i < fullPathNames.Length; i++)
+			{
+				results[i] = fullPathNames[i].Split(new[] {"\\"}, StringSplitOptions.RemoveEmptyEntries).Last();
+			}
+
+			return results;
 		}
 
 		private string CombineIncrementalBackups()

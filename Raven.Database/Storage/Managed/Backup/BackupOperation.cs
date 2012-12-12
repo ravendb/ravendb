@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -52,7 +51,7 @@ namespace Raven.Storage.Managed.Backup
 										Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")), false)
 				};
 
-				database.IndexStorage.Backup(to, null);
+				database.IndexStorage.Backup(to);
 
 				persistentSource.Read(log =>
 				{

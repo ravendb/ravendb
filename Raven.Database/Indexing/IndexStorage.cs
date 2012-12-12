@@ -542,7 +542,7 @@ namespace Raven.Database.Indexing
 
 		private Index GetIndexByName(string indexName)
 		{
-			var result = indexes.Where(index => System.String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
+			var result = indexes.Where(index => String.Compare(index.Key, indexName, StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
 			if (result == null)
@@ -611,7 +611,7 @@ namespace Raven.Database.Indexing
 
 		public Index GetIndexInstance(string indexName)
 		{
-			return indexes.Where(index => String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
+			return indexes.Where(index => String.Compare(index.Key, indexName, StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
 		}
@@ -631,7 +631,7 @@ namespace Raven.Database.Indexing
 			return GetIndexByName(index).GetIndexingPerformance();
 		}
 
-		public void Backup(string directory, string incrementalTag)
+		public void Backup(string directory, string incrementalTag = null)
 		{
 			foreach (var index in indexes)
 			{
