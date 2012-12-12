@@ -137,6 +137,24 @@ namespace Raven.Storage.Managed
 		public void DeleteIndex(string name)
 		{
 			storage.IndexingStats.Remove(name);
+
+			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject { { "view", name } })
+			.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), name)))
+			{
+				storage.MappedResults.Remove(key);
+			}
+
+			foreach (var key in storage.ReduceResults["ByViewReduceKeyAndSourceBucket"].SkipTo(new RavenJObject { { "view", name } })
+				.TakeWhile(x => string.Equals(name, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase)))
+			{
+				storage.ReduceResults.Remove(key);
+			}
+
+			foreach (var key in storage.ScheduleReductions["ByView"].SkipTo(new RavenJObject { { "view", name } })
+				.TakeWhile(x => string.Equals(name, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase)))
+			{
+				storage.ScheduleReductions.Remove(key);
+			}
 		}
 
 		public IndexFailureInformation GetFailureRate(string index)
