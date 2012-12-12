@@ -180,7 +180,7 @@ namespace Raven.Storage.Esent
 		}
 
 		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
-		public long GetDatabaseTransactionCacheSizeInBytes()
+		public long GetDatabaseTransactionVersionSizeInBytes()
 		{
 			long transactionCacheSizeInBytes = 0;
 			try

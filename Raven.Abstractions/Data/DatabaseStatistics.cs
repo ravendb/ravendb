@@ -29,7 +29,7 @@ namespace Raven.Abstractions.Data
 		public class MemoryDetails
 		{
 			public decimal DatabaseCacheSizeInMB { get; set; }
-			public decimal DatabaseTransactionCacheSizeInMB { get; set; }
+			public decimal DatabaseTransactionVersionSizeInMB { get; set; }
 			public decimal ManagedMemorySizeInMB { get; set; }
 			public decimal TotalProcessMemorySizeInMB { get; set; }
 			
@@ -38,7 +38,7 @@ namespace Raven.Abstractions.Data
 				get
 				{
 					return TotalProcessMemorySizeInMB -
-					       (DatabaseCacheSizeInMB + DatabaseTransactionCacheSizeInMB + ManagedMemorySizeInMB);
+					       (DatabaseCacheSizeInMB + DatabaseTransactionVersionSizeInMB + ManagedMemorySizeInMB);
 				}
 			}
 		}
