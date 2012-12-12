@@ -27,13 +27,13 @@ namespace Raven.Storage.Managed
 
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
-		private TableStorage tableStroage;
+		private TableStorage tableStorage;
 
 		private OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
-		public TableStorage TableStroage
+		public TableStorage TableStorage
 		{
-			get { return tableStroage; }
+			get { return tableStorage; }
 		}
 
 		private IPersistentSource persistenceSource;
@@ -71,8 +71,8 @@ namespace Raven.Storage.Managed
 					idleTimer.Dispose();
 				if (persistenceSource != null)
 					persistenceSource.Dispose();
-				if (tableStroage != null)
-					tableStroage.Dispose();
+				if (tableStorage != null)
+					tableStorage.Dispose();
 			}
 			finally
 			{
@@ -120,13 +120,13 @@ namespace Raven.Storage.Managed
 		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			Interlocked.Exchange(ref lastUsageTime, SystemTime.UtcNow.ToBinary());
-			using (tableStroage.BeginTransaction())
+			using (tableStorage.BeginTransaction())
 			{
-				var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
+				var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, DocumentCodecs, documentCacher);
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
-				tableStroage.Commit();
+				tableStorage.Commit();
 				storageActionsAccessor.InvokeOnCommit();
 			}
 		}
@@ -152,22 +152,22 @@ namespace Raven.Storage.Managed
 						  ? (IPersistentSource)new MemoryPersistentSource()
 						  : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe);
 
-			tableStroage = new TableStorage(persistenceSource);
+			tableStorage = new TableStorage(persistenceSource);
 
 			idleTimer = new Timer(MaybeOnIdle, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
-			tableStroage.Initialze();
+			tableStorage.Initialze();
 
 			if (persistenceSource.CreatedNew)
 			{
 				Id = Guid.NewGuid();
-				Batch(accessor => tableStroage.Details.Put("id", Id.ToByteArray()));
+				Batch(accessor => tableStorage.Details.Put("id", Id.ToByteArray()));
 			}
 			else
 			{
-				using(tableStroage.BeginTransaction())
+				using(tableStorage.BeginTransaction())
 				{
-				var readResult = tableStroage.Details.Read("id");
+				var readResult = tableStorage.Details.Read("id");
 				Id = new Guid(readResult.Data());
 			}
 			}
@@ -225,8 +225,8 @@ namespace Raven.Storage.Managed
 			Guid newId = Guid.NewGuid();
 			Batch(accessor =>
 			{
-				tableStroage.Details.Remove("id");
-				tableStroage.Details.Put("id", newId.ToByteArray());
+				tableStorage.Details.Remove("id");
+				tableStorage.Details.Put("id", newId.ToByteArray());
 			});
 			Id = newId;
 			return newId;
@@ -247,7 +247,7 @@ namespace Raven.Storage.Managed
 			if (disposed)
 				return;
 
-			tableStroage.PerformIdleTasks();
+			tableStorage.PerformIdleTasks();
 		}
 
 		public void EnsureCapacity(int value)
