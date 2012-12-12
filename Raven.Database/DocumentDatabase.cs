@@ -44,6 +44,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
+using BitConverter = System.BitConverter;
 using Index = Raven.Database.Indexing.Index;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
@@ -324,8 +325,14 @@ namespace Raven.Database
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
-					DatabaseCacheSizeInBytes = workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes(),
-					DatabaseCacheSizeInMB = workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes() / 1024.0m / 1024.0m,
+					Memory = new DatabaseStatistics.MemoryDetails
+					{
+						DatabaseCacheSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes()),
+						DatabaseTransactionCacheSizeInMB =
+							ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionCacheSizeInBytes()),
+						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(forceFullCollection: false)),
+						TotalProcessMemorySizeInMB = ConvertBytesToMBs(Process.GetCurrentProcess().PrivateMemorySize64)
+					},
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
@@ -371,6 +378,11 @@ namespace Raven.Database
 
 				return result;
 			}
+		}
+
+		private decimal ConvertBytesToMBs(long bytes)
+		{
+			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
 		}
 
 		public InMemoryRavenConfiguration Configuration
