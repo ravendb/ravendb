@@ -197,6 +197,9 @@
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
+    <Compile Include="Indexing\LowerCaseKeywordTokenizer.cs" />
+    <Compile Include="Indexing\LowerCaseWhitespaceAnalyzer.cs" />
+    <Compile Include="Indexing\LowerCaseWhitespaceTokenizer.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
