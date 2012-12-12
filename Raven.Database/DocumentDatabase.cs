@@ -328,10 +328,9 @@ namespace Raven.Database
 					Memory = new DatabaseStatistics.MemoryDetails
 					{
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes()),
-						DatabaseTransactionCacheSizeInMB =
-							ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionCacheSizeInBytes()),
+						DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(forceFullCollection: false)),
-						TotalProcessMemorySizeInMB = ConvertBytesToMBs(Process.GetCurrentProcess().PrivateMemorySize64)
+						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64())
 					},
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
@@ -378,6 +377,12 @@ namespace Raven.Database
 
 				return result;
 			}
+		}
+
+		private static long GetCurrentProcessPrivateMemorySize64()
+		{
+			using (var p = Process.GetCurrentProcess())
+				return p.PrivateMemorySize64;
 		}
 
 		private decimal ConvertBytesToMBs(long bytes)

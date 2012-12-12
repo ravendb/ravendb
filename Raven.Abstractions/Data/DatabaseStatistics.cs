@@ -32,6 +32,7 @@ namespace Raven.Abstractions.Data
 			public decimal DatabaseTransactionCacheSizeInMB { get; set; }
 			public decimal ManagedMemorySizeInMB { get; set; }
 			public decimal TotalProcessMemorySizeInMB { get; set; }
+			
 			public decimal MemoryThatIsNotAccountedFor
 			{
 				get
