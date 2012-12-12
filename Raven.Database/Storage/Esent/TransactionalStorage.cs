@@ -186,8 +186,8 @@ namespace Raven.Storage.Esent
 		public long GetDatabaseTransactionCacheSizeInBytes()
 		{
 			long transactionCacheSizeInBytes = 0;
-			
-			//using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
+
+			try
 			{
 				const string categoryName = "Database";
 				var category = new PerformanceCounterCategory(categoryName);
@@ -196,21 +196,19 @@ namespace Raven.Storage.Esent
 				const string counterName = "Version Buckets Allocated";
 				if (ravenInstance != null && category.CounterExists(counterName))
 				{
-					try
+					using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
 					{
-						using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
-						{
-							//According to the pages below, 1 Version Store Page = 64k (65,536 bytes)
-							//http://managedesent.codeplex.com/discussions/248471 (1024 pages = 64 MB)
-							var value = counter.NextValue();
-							transactionCacheSizeInBytes = (long)(value * 65536);
-						}
-					}
-					catch (InvalidOperationException ioEx)
-					{
-						var test = ioEx.Message;
+						//According to the pages below, 1 Version Store Page = 64k (65,536 bytes)
+						//http://managedesent.codeplex.com/discussions/248471 (1024 pages = 64 MB)
+						var value = counter.NextValue();
+						transactionCacheSizeInBytes = (long)(value * 65536);
 					}
 				}
+			}
+			catch (InvalidOperationException ioEx)
+			{
+				//It's okay to swallow the error here, Esent Perf Counters only appear if you're running in debug mode
+				//So it's better to swallow the error and return 0, it's only for diagnostic statistics
 			}
 
 			return transactionCacheSizeInBytes;
