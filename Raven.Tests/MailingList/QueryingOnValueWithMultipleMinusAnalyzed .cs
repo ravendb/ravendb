@@ -16,24 +16,24 @@ namespace Raven.Tests.MailingList
 				var indexDefinition = new IndexDefinitionBuilder<Product>()
 				{
 					Map = products => from product in products
-									  select new
-									  {
-										  Query = new object[]
-                                          {
-                                              product.ItemNumber,
-                                              product.ItemDescription,
+										select new
+										{
+											Query = new object[]
+											{
+												product.ItemNumber,
+												product.ItemDescription,
 
-                                          },
-										  product.ProductId
+											},
+											product.ProductId
 
-									  },
+										},
 					Indexes =
-                    {
-                        {x => x.Query, FieldIndexing.Analyzed}
-                    },
+					{
+						{x => x.Query, FieldIndexing.Analyzed}
+					},
 					Analyzers =
 					{
-						{x=>x.Query, typeof(LowerCaseWhitespaceAnalyzer).AssemblyQualifiedName}
+						{x => x.Query, typeof (LowerCaseWhitespaceAnalyzer).AssemblyQualifiedName}
 					}
 
 				}.ToIndexDefinition(store.Conventions);
@@ -74,7 +74,7 @@ namespace Raven.Tests.MailingList
 						.WaitForNonStaleResults()
 						.WhereStartsWith(x => x.Query, "Q9HT180-Z-K")
 						.ToList();
-					
+
 					Assert.Equal(1, prods.Count);
 				}
 			}

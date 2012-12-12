@@ -1137,6 +1137,7 @@
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />
+    <Compile Include="MailingList\WhereInQueryTests.cs" />
     <Compile Include="WithNLog.cs" />
   </ItemGroup>
   <ItemGroup>
