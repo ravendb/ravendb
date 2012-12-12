@@ -387,7 +387,7 @@ namespace Raven.Database.Indexing
 		{
 			var highest = new ComparableByteArray(lastIndexedEtag);
 
-			documentsToRemove.RemoveWhere(x => x.Etag == null || highest.CompareTo(x.Etag) <= 0);
+			documentsToRemove.RemoveWhere(x => x.Etag == null || highest.CompareTo(x.Etag.Value) <= 0);
 		}
 
 		private static System.Threading.Tasks.Task ObserveDiscardedTask(FutureIndexBatch source)
