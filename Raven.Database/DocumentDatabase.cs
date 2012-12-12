@@ -1639,6 +1639,10 @@ namespace Raven.Database
 					throw new InvalidOperationException("Backup is already running");
 				}
 			}
+
+			if (incrementalBackup && Configuration.Settings["Raven/Esent/CircularLog"] != "false")
+				throw new InvalidOperationException("In order to run incremental backups you must have circular logging disabled");
+
 			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
 			{
 				Started = SystemTime.UtcNow,
