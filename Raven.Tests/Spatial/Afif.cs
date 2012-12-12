@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using FizzWare.NBuilder;
 using Raven.Abstractions.Data;
@@ -9,6 +10,7 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Spatial
 {
@@ -65,11 +67,13 @@ namespace Raven.Tests.Spatial
 
 		public class CanGetFacetsOnVehicleSpatialSearch :UsingEmbeddedRavenStoreWithVehicles
 		{
-			[Fact]
-			public void ShouldMatchMakeFacetsOnLocation()
+			[Theory]
+			[CriticalCultures]
+			public void ShouldMatchMakeFacetsOnLocation(CultureInfo criticalCulture)
 			{
 				FacetResults facetvalues;
 
+				using(new TemporaryCulture(criticalCulture))
 				using (var s = Store.OpenSession())
 				{
 					var index = typeof(ByVehicle).Name;
