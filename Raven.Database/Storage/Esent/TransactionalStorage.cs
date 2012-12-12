@@ -138,7 +138,7 @@ namespace Raven.Storage.Esent
 		{
 			if (new InstanceParameters(instance).Recovery == false)
 				throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to true.");
-			
+
 			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
@@ -192,19 +192,19 @@ namespace Raven.Storage.Esent
 				const string counterName = "Version Buckets Allocated";
 				if (ravenInstance != null && category.CounterExists(counterName))
 				{
-						using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
-						{
-							//According to the pages below, 1 Version Store Page = 64k (65,536 bytes)
-							//http://managedesent.codeplex.com/discussions/248471 (1024 pages = 64 MB)
-							var value = counter.NextValue();
-							transactionCacheSizeInBytes = (long)(value * 65536);
-						}
+					using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
+					{
+						//According to the pages below, 1 Version Store Page = 64k (65,536 bytes)
+						//http://managedesent.codeplex.com/discussions/248471 (1024 pages = 64 MB)
+						var value = counter.NextValue();
+						transactionCacheSizeInBytes = (long)(value * 65536);
 					}
+				}
 			}
 			catch (Exception e)
 			{
 				if (reportedGetDatabaseTransactionCacheSizeInBytesError == false)
-					{
+				{
 					reportedGetDatabaseTransactionCacheSizeInBytesError = true;
 					log.WarnException("Failed to get Version Buckets Allocated value, this error will only be reported once.", e);
 				}
@@ -348,7 +348,7 @@ namespace Raven.Storage.Esent
 				}
 				else
 				{
-					instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);					
+					instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
 				}
 
 				log.Info(@"Esent Settings:
