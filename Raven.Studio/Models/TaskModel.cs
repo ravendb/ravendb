@@ -2,6 +2,7 @@
 using System.Windows.Input;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -49,6 +50,9 @@ namespace Raven.Studio.Models
 
 		public void ReportError(Exception exception)
 		{
+			var aggregate = exception as AggregateException;
+			if (aggregate != null)
+				exception = aggregate.ExtractSingleInnerException();
 			Output.Add("Error: " + exception.Message);
 		}
 
