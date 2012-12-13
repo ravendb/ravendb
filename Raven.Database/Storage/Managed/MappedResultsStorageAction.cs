@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
@@ -17,11 +18,11 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
-using System.Linq;
 using Table = Raven.Munin.Table;
 
 namespace Raven.Storage.Managed
 {
+
 	public class MappedResultsStorageAction : IMappedResultsStorageAction
 	{
 		private readonly TableStorage storage;
@@ -172,29 +173,41 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete, string reduceKey = null)
 		{
 			var seen = new HashSet<Tuple<string, int>>();
 
-			foreach (var result in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(new RavenJObject
+			var keyCriteria = new RavenJObject
+			                  {
+				                  {"view", index},
+				                  {"level", level},
+			                  };
+
+			if(!string.IsNullOrEmpty(reduceKey))
 			{
-				{"view", index},
-				{"level", level},
-			}))
+				keyCriteria["reduceKey"] = reduceKey;
+			}
+
+			foreach (var result in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(keyCriteria))
 			{
 				var indexFromDb = result.Value<string>("view");
 				var levelFromDb = result.Value<int>("level");
+				var reduceKeyFromDb = result.Value<string>("reduceKey");
 
 				if (string.Equals(indexFromDb, index, StringComparison.InvariantCultureIgnoreCase) == false ||
 					levelFromDb != level)
 					break;
 
-				var reduceKey = result.Value<string>("reduceKey");
+				if (string.IsNullOrEmpty(reduceKey) == false && string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+				{
+					break;
+				}
+
 				var bucket = result.Value<int>("bucket");
 
-				if (seen.Add(Tuple.Create(reduceKey, bucket)))
+				if (seen.Add(Tuple.Create(reduceKeyFromDb, bucket)))
 				{
-					foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKey, bucket))
+					foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket))
 					{
 						take--;
 						yield return mappedResultInfo;
@@ -346,6 +359,35 @@ namespace Raven.Storage.Managed
 			{
 				storage.ReduceResults.Remove(result);
 			}
+		}
+
+		public IEnumerable<ReduceKeyInfo> GetInfoAboutScheduledReductions(string indexName, int level)
+		{
+			var reduceKeys = new HashSet<string>( StringComparer.InvariantCultureIgnoreCase);
+			var itemsCountByReduceKey = new Dictionary<string, int>();
+
+			foreach (var reduction in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(new RavenJObject
+			{
+				{"view", indexName},
+				{"level", level}
+			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
+								level == x.Value<int>("level")))
+			{
+				var reduceKey = reduction.Value<string>("reduceKey");
+				if(!reduceKeys.Contains(reduceKey))
+				{
+					reduceKeys.Add(reduceKey);
+					itemsCountByReduceKey[reduceKey] = 0;
+				}
+				
+				itemsCountByReduceKey[reduceKey]++;
+			}
+
+			return reduceKeys.Select(reduceKey => new ReduceKeyInfo()
+			                                      {
+				                                      ReduceKey = reduceKey,
+				                                      ItemsCount = itemsCountByReduceKey[reduceKey]
+			                                      });
 		}
 
 		public IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take)

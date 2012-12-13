@@ -141,7 +141,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete, string reduceKey = null)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_bucket_and_hashed_reduce_key");
 			Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -160,6 +160,8 @@ namespace Raven.Storage.Esent.StorageActions
 				var levelFromDb =
 					Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], RetrieveColumnGrbit.RetrieveFromIndex).
 						Value;
+				var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
+											   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
 
 				var compareResult = string.Compare(index, indexFromDb, StringComparison.InvariantCultureIgnoreCase);
 				if (compareResult < 0) // not yet here
@@ -170,17 +172,16 @@ namespace Raven.Storage.Esent.StorageActions
 					continue;
 				if (levelFromDb > level)
 					break;
+				if (string.IsNullOrEmpty(reduceKey) == false && string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+					break;
 
 				var bucket =
-					Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"], RetrieveColumnGrbit.RetrieveFromIndex).
-						Value;
-
-				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions,
-											   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
-			
-				if (seen.Add(Tuple.Create(reduceKey, bucket)))
+						Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"], RetrieveColumnGrbit.RetrieveFromIndex).
+							Value;
+				
+				if (seen.Add(Tuple.Create(reduceKeyFromDb, bucket)))
 				{
-					foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKey, bucket))
+					foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket))
 					{
 						take--;
 						yield return mappedResultInfo;
@@ -602,6 +603,49 @@ namespace Raven.Storage.Esent.StorageActions
 
 
 			} while (Api.TryMoveNext(session, ReducedResults) && take > 0);
+		}
+
+		public IEnumerable<ReduceKeyInfo> GetInfoAboutScheduledReductions(string indexName, int level)
+		{
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_bucket_and_hashed_reduce_key");
+			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
+				return Enumerable.Empty<ReduceKeyInfo>();
+
+			var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			var itemsCountByReduceKey = new Dictionary<string, int>();
+
+			do
+			{
+				var indexFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
+				                                             tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode,
+				                                             RetrieveColumnGrbit.RetrieveFromIndex);
+
+				var compareResult = string.Compare(indexName, indexFromDb, StringComparison.InvariantCultureIgnoreCase);
+				if (compareResult < 0) // not yet here
+					continue;
+				if (compareResult > 0) // after the record
+					break;
+
+				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions,
+											   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
+
+				if (!reduceKeys.Contains(reduceKey))
+				{
+					reduceKeys.Add(reduceKey);
+					itemsCountByReduceKey[reduceKey] = 0;
+				}
+
+				itemsCountByReduceKey[reduceKey]++;
+
+			} while (Api.TryMoveNext(session, ScheduledReductions));
+
+			return reduceKeys.Select(reduceKey => new ReduceKeyInfo()
+			{
+				ReduceKey = reduceKey,
+				ItemsCount = itemsCountByReduceKey[reduceKey]
+			});
 		}
 
 		private RavenJObject LoadMappedResults(string key)

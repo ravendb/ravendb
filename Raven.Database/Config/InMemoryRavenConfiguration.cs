@@ -41,6 +41,7 @@ namespace Raven.Database.Config
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
+			NumberOfItemsToExecuteReduceInSingleStep = 1024;
 			MaxIndexingRunLatency = TimeSpan.FromMinutes(5);
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
@@ -127,6 +128,12 @@ namespace Raven.Database.Config
 				InitialNumberOfItemsToReduceInSingleBatch = Math.Min(MaxNumberOfItemsToReduceInSingleBatch,
 																	InitialNumberOfItemsToReduceInSingleBatch);
 			}
+			var numberOfItemsToExecuteReduceInSingleStep = Settings["Raven/NumberOfItemsToExecuteReduceInSingleStep"];
+			if (numberOfItemsToExecuteReduceInSingleStep != null)
+			{
+				NumberOfItemsToExecuteReduceInSingleStep = int.Parse(numberOfItemsToExecuteReduceInSingleStep);
+			}
+
 			var initialNumberOfItemsToReduceInSingleBatch = Settings["Raven/InitialNumberOfItemsToReduceInSingleBatch"];
 			if (initialNumberOfItemsToReduceInSingleBatch != null)
 			{
@@ -422,6 +429,13 @@ namespace Raven.Database.Config
 		/// Default: 256 or 128 depending on CPU architecture
 		/// </summary>
 		public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
+
+		/// <summary>
+		/// The number that controls the if the reduce optimization is performed.
+		/// If the count of mapped results if less than this value then the reduce is executed in single step.
+		/// Default: 1024
+		/// </summary>
+		public int NumberOfItemsToExecuteReduceInSingleStep { get; set; }
 
 		/// <summary>
 		/// The maximum number of indexing tasks allowed to run in parallel

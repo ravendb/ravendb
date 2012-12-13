@@ -24,6 +24,9 @@ namespace Raven.Database.Indexing
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexToWorkOn.IndexName);
 			if (viewGenerator == null)
 				return;
+
+			PromoteSmallMappedResultsSetsToSingleReduce(indexToWorkOn);
+
 			TimeSpan reduceDuration = TimeSpan.Zero;
 			int totalCount = 0;
 			int totalSize = 0;
@@ -118,6 +121,51 @@ namespace Raven.Database.Indexing
 					autoTuner.AutoThrottleBatchSize(totalCount, totalSize, reduceDuration);
 				}
 			}
+		}
+
+		private void PromoteSmallMappedResultsSetsToSingleReduce(IndexToWorkOn indexToWorkOn)
+		{
+			transactionalStorage.Batch(actions =>
+			{
+				const int levelZero = 0;
+				const int promotedSecondLevel = 2;
+
+				var reduceKeysInfos = actions.MapReduce.GetInfoAboutScheduledReductions(indexToWorkOn.IndexName, levelZero);
+
+				foreach (var reduceKeyInfo in reduceKeysInfos.Where(x => x.ItemsCount < context.NumberOfItemsToExecuteReduceInSingleStep))
+				{
+					var existingItems = new List<object>();
+
+					var mappedResults = actions.MapReduce.GetItemsToReduce
+						(
+							take: reduceKeyInfo.ItemsCount,
+							level: levelZero,
+							reduceKey: reduceKeyInfo.ReduceKey,
+							index: indexToWorkOn.IndexName,
+							itemsToDelete: existingItems
+						).ToList();
+
+					foreach (var mappedResultInfo in mappedResults.Select(x => new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)))
+					{
+						actions.MapReduce.RemoveReduceResults(indexToWorkOn.IndexName, levelZero, mappedResultInfo.ReduceKey,
+						                                      mappedResultInfo.Bucket);
+					}
+
+					actions.MapReduce.DeleteScheduledReduction(existingItems);
+
+					var singleReduceItems = new List<ReduceKeyAndBucket>();
+
+					foreach (var mappedResultInfo in mappedResults)
+					{
+						actions.MapReduce.PutReducedResult(indexToWorkOn.IndexName, reduceKeyInfo.ReduceKey, promotedSecondLevel, mappedResultInfo.Bucket, 0,
+						                                   mappedResultInfo.Data);
+
+						singleReduceItems.Add(new ReduceKeyAndBucket(0, reduceKeyInfo.ReduceKey));
+					}
+
+					actions.MapReduce.ScheduleReductions(indexToWorkOn.IndexName, promotedSecondLevel, singleReduceItems);
+				}
+			});
 		}
 
 
