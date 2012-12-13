@@ -92,6 +92,12 @@ namespace Raven.Storage.Esent.Backup
 
 				File.WriteAllText(backupConfigPath, "Backup completed " + SystemTime.UtcNow);
 			}
+			catch (AggregateException e)
+			{
+				var ne = e.ExtractSingleInnerException();
+				log.ErrorException("Failed to complete backup", ne);
+				UpdateBackupStatus("Failed to complete backup because: " + ne.Message, BackupStatus.BackupMessageSeverity.Error);
+			}
 			catch (Exception e)
 			{
 				log.ErrorException("Failed to complete backup", e);
