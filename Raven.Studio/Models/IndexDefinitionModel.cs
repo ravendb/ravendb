@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -14,7 +16,7 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class IndexDefinitionModel : PageViewModel, IHasPageTitle
+	public class IndexDefinitionModel : PageViewModel, IHasPageTitle, IAutoCompleteSuggestionProvider
 	{
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
@@ -687,6 +689,12 @@ namespace Raven.Studio.Models
 				isNewIndex = value;
 				OnPropertyChanged(() => IsNewIndex);
 			}
+		}
+		public Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			var list = new List<object>();
+			list.Add("Analyzer Sample");
+			return TaskEx.FromResult<IList<object>>(list);
 		}
 	}
 }
