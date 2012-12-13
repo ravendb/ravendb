@@ -86,7 +86,7 @@ namespace Raven.Database.Indexing
 				if (booleanQuery.Clauses.Count == 0)
 					return booleanQuery;
 			
-				var mergeGroups = booleanQuery.Clauses.OfType<IRavenLuceneMethodQuery>().GroupBy(x => x.Field).ToArray();
+				var mergeGroups = booleanQuery.Clauses.Select(x=>x.Query).OfType<IRavenLuceneMethodQuery>().GroupBy(x => x.Field).ToArray();
 				if (mergeGroups.Length == 0)
 					return booleanQuery;
 
@@ -100,8 +100,9 @@ namespace Raven.Database.Indexing
 					}
 					var ravenLuceneMethodQuery = clauses.Skip(1).Aggregate(first, (methodQuery, clause) => methodQuery.Merge(clause));
 					booleanQuery.Clauses.First(x => ReferenceEquals(x.Query, first)).Query = (Query)ravenLuceneMethodQuery;
-					
 				}
+				if (booleanQuery.Clauses.Count == 1)
+					return booleanQuery.Clauses[0].Query;
 				return booleanQuery;
 			}
 			return query;
