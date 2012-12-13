@@ -34,12 +34,13 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			var stdAnalyzer = new StandardAnalyzer(Version.LUCENE_30);
-			var tokenStream = stdAnalyzer.ReusableTokenStream("test", new StringReader("Q9HT180-Z-Q"));
-			while (tokenStream.IncrementToken())
+			for (int i = 0; i < 100; i++)
 			{
-				var attribute = tokenStream.GetAttribute<ITermAttribute>();
-				Console.WriteLine(attribute.Term);
+				Console.WriteLine(i);
+				using(var x = new RavenDB_551())
+				{
+					x.CanGetErrorOnOptimisticDeleteInTransactionWhenDeletedInTransaction();
+				}
 			}
 				
 		}
