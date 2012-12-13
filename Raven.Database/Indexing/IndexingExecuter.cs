@@ -96,7 +96,7 @@ namespace Raven.Database.Indexing
 
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			currentIndexingAge++;
+			var indexingAge = Interlocked.Increment(ref currentIndexingAge);
 
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
@@ -120,7 +120,7 @@ namespace Raven.Database.Indexing
 				context.ReportIndexingActualBatchSize(jsonDocs.Results.Length);
 				context.CancellationToken.ThrowIfCancellationRequested();
 
-				MaybeAddFutureBatch(jsonDocs);
+				MaybeAddFutureBatch(jsonDocs, indexingAge);
 
 				if (jsonDocs.Results.Length > 0)
 				{
@@ -174,7 +174,7 @@ namespace Raven.Database.Indexing
 				}
 
 				// make sure that we don't have too much "future cache" items
-				foreach (var source in futureIndexBatches.Where(x => (currentIndexingAge - x.Age) > 25).ToList())
+				foreach (var source in futureIndexBatches.Where(x => (indexingAge - x.Age) > 25).ToList())
 				{
 					ObserveDiscardedTask(source);
 					futureIndexBatches.TryRemove(source);
@@ -289,7 +289,7 @@ namespace Raven.Database.Indexing
 		}
 
 
-		private void MaybeAddFutureBatch(JsonResults past)
+		private void MaybeAddFutureBatch(JsonResults past, int indexingAge)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
 				return;
@@ -332,12 +332,12 @@ namespace Raven.Database.Indexing
 			futureIndexBatches.Add(new FutureIndexBatch
 			{
 				StartingEtag = nextEtag,
-				Age = currentIndexingAge,
+				Age = indexingAge,
 				Task = System.Threading.Tasks.Task.Factory.StartNew(() =>
 				{
 					var jsonDocuments = GetJsonDocuments(nextEtag);
 					int localWork = workCounter;
-					while (jsonDocuments.Results.Length == 0 && context.DoWork)
+					while (jsonDocuments.Results.Length == 0 && context.RunIndexing)
 					{
 						futureBatchStat.Retries++;
 
@@ -348,7 +348,7 @@ namespace Raven.Database.Indexing
 					}
 					futureBatchStat.Duration = sp.Elapsed;
 					futureBatchStat.Size = jsonDocuments.Results.Length;
-					MaybeAddFutureBatch(jsonDocuments);
+					MaybeAddFutureBatch(jsonDocuments, indexingAge);
 					return jsonDocuments;
 				})
 			});
@@ -603,7 +603,7 @@ namespace Raven.Database.Indexing
 					Results = docs,
 					LoadedFromDisk = false
 				}),
-				Age = currentIndexingAge
+				Age = Interlocked.Increment(ref currentIndexingAge)
 			});
 		}
 
@@ -628,13 +628,7 @@ namespace Raven.Database.Indexing
 		{
 			var documentToRemove = new DocumentToRemove(document.Key, document.Etag);
 
-			if (documentsToRemove.Contains(documentToRemove))
-			{
-				documentsToRemove.TryRemove(documentToRemove);
-				return true;
-			}
-
-			return false;
+			return documentsToRemove.TryRemove(documentToRemove);
 		}
 
 		internal class DocumentToRemove

@@ -47,9 +47,9 @@ namespace Raven.Database.Indexing
 			get { return doWork; }
 		}
 
-		public bool DoIndexing
+		public bool RunIndexing
 		{
-			get { return doIndexing; }
+			get { return doWork && doIndexing; }
 		}
 
 		public void UpdateFoundWork()
@@ -146,12 +146,14 @@ namespace Raven.Database.Indexing
 		public void StartWork()
 		{
 			doWork = true;
+			doIndexing = true;
 		}
 
 		public void StopWork()
 		{
 			log.Debug("Stopping background workers");
 			doWork = false;
+			doIndexing = false;
 			lock (waitForWork)
 			{
 				Monitor.PulseAll(waitForWork);

@@ -78,7 +78,7 @@ namespace Raven.Client.Changes
 										if (disposed)
 											return task;
 
-										if (replicationInformer.IsServerDown(task.Exception) == false)
+										if (replicationInformer.IsServerDown(task.Exception) == false && replicationInformer.IsNotFound(task.Exception) == false)
 											return task;
 
 										return Time.Delay(TimeSpan.FromSeconds(15))

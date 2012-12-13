@@ -14,13 +14,11 @@ namespace Raven.Client.Document.OAuth
 {
 	public class BasicAuthenticator : AbstractAuthenticator
 	{
-		private readonly ICredentials credentials;
 		private readonly string apiKey;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 	
-		public BasicAuthenticator(ICredentials credentials, string apiKey, HttpJsonRequestFactory jsonRequestFactory)
+		public BasicAuthenticator(string apiKey, HttpJsonRequestFactory jsonRequestFactory)
 		{
-			this.credentials = credentials;
 			this.apiKey = apiKey;
 			this.jsonRequestFactory = jsonRequestFactory;
 		}
@@ -28,7 +26,6 @@ namespace Raven.Client.Document.OAuth
 
 		public Task<Action<HttpWebRequest>> HandleOAuthResponseAsync(string oauthSource)
 		{
-			
 			var authRequest = PrepareOAuthRequest(oauthSource);
 			return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
 				.AddUrlIfFaulting(authRequest.RequestUri)
@@ -68,7 +65,6 @@ namespace Raven.Client.Document.OAuth
 		{
 #if !SILVERLIGHT
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-			authRequest.Credentials = credentials;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 #else
 			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource.NoCache()));

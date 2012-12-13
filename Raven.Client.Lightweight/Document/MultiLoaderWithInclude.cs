@@ -12,6 +12,8 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Document
 {
+	using Raven.Abstractions.Util;
+
 	/// <summary>
 	/// Fluent implementation for specifying include paths
 	/// for loading documents
@@ -42,10 +44,17 @@ namespace Raven.Client.Document
 
 		public MultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
 		{
-			var fullId = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
-			var idPrefix = fullId.Replace("-1", string.Empty);
+			var type = path.ExtractTypeFromPath();
+			var fullId = this.session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
 
-			var id = path.ToPropertyPath() + "(" + idPrefix + ")";
+			var id = path.ToPropertyPath();
+
+			if (type != typeof(string))
+			{
+				var idPrefix = fullId.Replace("-1", string.Empty);
+
+				id += "(" + idPrefix + ")";
+			}
 
 			return Include(id);
 		}
@@ -83,7 +92,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public T Load(ValueType id)
 		{
-			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T), false);
+			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return Load(idAsStr);
 		}
 
@@ -113,7 +122,7 @@ namespace Raven.Client.Document
 		/// <param name="id">The id.</param>
 		public TResult Load<TResult>(string id)
 		{
-			return Load<TResult>(new[] {id}).FirstOrDefault();
+			return Load<TResult>(new[] { id }).FirstOrDefault();
 		}
 
 		/// <summary>
