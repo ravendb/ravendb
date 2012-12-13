@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -51,12 +50,8 @@ namespace Raven.Storage.Managed.Backup
 					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"),
 										Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")), false)
 				};
-				directoryBackups.AddRange(from index in Directory.GetDirectories(database.Configuration.IndexStoragePath)
-										  let fromIndex = Path.Combine(database.Configuration.IndexStoragePath, Path.GetFileName(index))
-										  let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
-										  let tempIndex = Path.Combine(src, Path.Combine("BackupTempDirectories",Guid.NewGuid().ToString("N")))
-										  select new DirectoryBackup(fromIndex, toIndex, tempIndex, false));
 
+				database.IndexStorage.Backup(to);
 
 				persistentSource.Read(log =>
 				{

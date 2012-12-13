@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -30,6 +31,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -63,6 +65,7 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
+		private static SnapshotDeletionPolicy snapshotter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
 		private ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
@@ -380,7 +383,8 @@ namespace Raven.Database.Indexing
 
 		private static IndexWriter CreateIndexWriter(Directory directory)
 		{
-			var indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
+			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+			var indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
 			using (indexWriter.MergeScheduler){}
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 
@@ -1166,6 +1170,55 @@ namespace Raven.Database.Indexing
 		public IndexingPerformanceStats[] GetIndexingPerformance()
 		{
 			return indexingPerformanceStats.ToArray();
+		}
+
+		public void Backup(string backupDirectory, string path, string incrementalTag)
+		{
+			Write(context, (writer, analyzer, arg3) =>
+			{
+				try
+				{
+					var existingFiles = new List<string>();
+					var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".txt");
+					var commit = snapshotter.Snapshot();
+					if (incrementalTag != null)
+						backupDirectory = Path.Combine(backupDirectory, incrementalTag);
+					var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
+					System.IO.Directory.CreateDirectory(saveToFolder);
+					if (File.Exists(allFilesPath))
+					{
+						existingFiles.AddRange(File.ReadLines(allFilesPath));
+					}
+
+					var allFilesStream = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath);
+					var needeFilesStream = File.CreateText(Path.Combine(saveToFolder, "neededFiles.txt"));
+
+					foreach (var fileName in commit.FileNames)
+					{
+						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+						if (File.Exists(fullPath))
+						{
+							if (existingFiles.Contains(fileName) == false)
+							{
+								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+								allFilesStream.WriteLine(fileName);
+							}
+							needeFilesStream.WriteLine(fileName);
+						}
+					}
+					allFilesStream.Dispose();
+					needeFilesStream.Dispose();
+				}
+				finally
+				{
+					
+					snapshotter.Release();
+				}
+
+				return 0;
+			});
+
+
 		}
 	}
 }
