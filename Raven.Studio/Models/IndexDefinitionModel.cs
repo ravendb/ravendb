@@ -692,8 +692,15 @@ namespace Raven.Studio.Models
 		}
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
-			var list = new List<object>();
-			list.Add("Analyzer Sample");
+			var list = new List<object>
+			{
+				"Raven.Database.Indexing.LowerCaseKeywordAnalyzer, Raven.Database",	
+				"Raven.Database.Indexing.LowerCaseWhitespaceAnalyzer, Raven.Database",
+				"Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.WhitespaceAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.StopAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.SimpleAnalyzer, Lucene.Net",
+			};
 			return TaskEx.FromResult<IList<object>>(list);
 		}
 	}
