@@ -108,6 +108,7 @@ namespace Raven.Storage.Esent.Backup
 			var directories = Directory.GetDirectories(backupLocation, "Inc*")
 				.OrderByDescending(dir => dir)
 				.ToList();
+
 			if (directories.Count == 0)
 			{
 				CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "Indexes")),
@@ -118,59 +119,37 @@ namespace Raven.Storage.Esent.Backup
 			if (Directory.Exists(Path.Combine(databaseLocation, "Indexes")) == false)
 				Directory.CreateDirectory(Path.Combine(databaseLocation, "Indexes"));
 
-			var currentSubFolder = 0;
-			var lastInc = directories[currentSubFolder];
-			if(Directory.Exists(Path.Combine(lastInc, "Indexes")) == false)
+			var latestIncrementalBackupDirectory = directories.First();
+			if(Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, "Indexes")) == false)
 				return;
-			var indexes = Directory.GetDirectories(Path.Combine(lastInc, "Indexes"));
 
-			foreach (var index in indexes)
+			directories.Add(backupLocation); // add the root (first full backup) to the end of the list (last place to look for)
+
+			foreach (var index in Directory.GetDirectories(Path.Combine(latestIncrementalBackupDirectory, "Indexes")))
 			{
-				var indexName = index.Split(new[] {"\\"}, StringSplitOptions.RemoveEmptyEntries).Last();
-				var needed = File.OpenText(Path.Combine(index, "neededFiles.txt"));
-				var filesList =
-					needed.ReadToEnd().Split(new[] {"\r\n", "\r", "\n"}, StringSplitOptions.RemoveEmptyEntries).Reverse();
+				var indexName = Path.GetFileName(index);
+				var filesList = File.ReadAllLines(Path.Combine(index, "index-files.required-for-index-restore"))
+					.Where(x=>string.IsNullOrEmpty(x) == false)
+					.Reverse();
 				var indexPath = Path.Combine(databaseLocation, "Indexes", indexName);
 				output("Copying Index: " + indexName);
 
 				if (Directory.Exists(indexPath) == false)
 					Directory.CreateDirectory(indexPath);
 
-
 				foreach (var neededFile in filesList)
 				{
-					currentSubFolder = 0;
 					var found = false;
 
-					while (found == false && currentSubFolder < directories.Count)
+					foreach (var directory in directories)
 					{
-						var currentFolder = Path.Combine(directories[currentSubFolder], "Indexes", indexName);
-						if (Directory.Exists(currentFolder))
-						{
-							var filesInDirectory = GetFilesNames(Directory.GetFiles(currentFolder));
-							if (filesInDirectory.Contains(neededFile))
-							{
-								found = true;
-								File.Copy(Path.Combine(currentFolder, neededFile), Path.Combine(indexPath, neededFile));
-							}
-						}
+						var possiblePathToFile = Path.Combine(directory, indexName, neededFile);
+						if (File.Exists(possiblePathToFile) == false) 
+							continue;
 
-						currentSubFolder++;
-					}
-
-					if (found == false)
-					{
-						var currentFolder = Path.Combine(backupLocation, "Indexes", indexName);
-						if (Directory.Exists(currentFolder))
-						{
-							var filesInDirectory = GetFilesNames(Directory.GetFiles(currentFolder));
-
-							if (filesInDirectory.Contains(neededFile))
-							{
-								found = true;
-								File.Copy(Path.Combine(currentFolder, neededFile), Path.Combine(indexPath, neededFile));
-							}
-						}
+						found = true;
+						File.Copy(possiblePathToFile, Path.Combine(indexPath, neededFile));
+						break;
 					}
 
 					if(found == false)
@@ -179,19 +158,7 @@ namespace Raven.Storage.Esent.Backup
 			}
 		}
 
-		private string[] GetFilesNames(string[] fullPathNames)
-		{
-			var results = new string[fullPathNames.Length];
-
-			for (int i = 0; i < fullPathNames.Length; i++)
-			{
-				results[i] = fullPathNames[i].Split(new[] {"\\"}, StringSplitOptions.RemoveEmptyEntries).Last();
-			}
-
-			return results;
-		}
-
-		private string CombineIncrementalBackups()
+		private void CombineIncrementalBackups()
 		{
 			var directories = Directory.GetDirectories(backupLocation, "Inc*")
 				.OrderBy(dir => dir)
@@ -205,8 +172,6 @@ namespace Raven.Storage.Esent.Backup
 					File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
 				}
 			}
-
-			return directories.LastOrDefault() ?? backupLocation;
 		}
 
 		private void DefragmentDatabase(JET_INSTANCE instance, string dataFilePath)

@@ -1658,8 +1658,13 @@ namespace Raven.Database
 				}
 			}
 
-			if (incrementalBackup && Configuration.Settings["Raven/Esent/CircularLog"] != "false")
-				throw new InvalidOperationException("In order to run incremental backups you must have circular logging disabled");
+			bool circularLogging;
+			if (incrementalBackup &&
+				TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
+				(bool.TryParse(Configuration.Settings["Raven/Esent/CircularLog"], out circularLogging) == false || circularLogging))
+			{
+				throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
+			}
 
 			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
 			{

@@ -61,7 +61,7 @@ namespace Raven.Tests.Storage
 			}, BackupDir, DataDir, s => { });
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
-
+			
 			var jObject = db.Get("ayende", null).ToJson();
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 			jObject = db.Get("itamar", null).ToJson();
@@ -69,7 +69,7 @@ namespace Raven.Tests.Storage
 		}
 
 		[Fact]
-		public void IncrementalBackupWithCircularLogCrushes()
+		public void IncrementalBackupWithCircularLogThrows()
 		{
 			db.Dispose();
 			db = new DocumentDatabase(new RavenConfiguration

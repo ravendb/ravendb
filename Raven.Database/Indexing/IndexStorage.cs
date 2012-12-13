@@ -633,10 +633,8 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string directory, string incrementalTag = null)
 		{
-			foreach (var index in indexes)
-			{
-				index.Value.Backup(directory, path, incrementalTag);
-			}
+			Parallel.ForEach(indexes.Values, index => 
+				index.Backup(directory, path, incrementalTag));
 		}
 	}
 }
