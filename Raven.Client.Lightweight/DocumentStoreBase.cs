@@ -3,6 +3,7 @@
 using System.Collections.Specialized;
 #endif
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using Raven.Abstractions.Data;
@@ -198,6 +199,46 @@ namespace Raven.Client
 		{
 			listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
 			return this;
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered conversion listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentConversionListener> RegisteredConversionListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentConversionListener>(listeners.ConversionListeners); }
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered query listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentQueryListener> RegisteredQueryListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentQueryListener>(listeners.QueryListeners); }
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered store listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentStoreListener> RegisteredStoreListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentStoreListener>(listeners.StoreListeners); }
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered delete listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentDeleteListener> RegisteredDeleteListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentDeleteListener>(listeners.DeleteListeners); }
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered conflict listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentConflictListener> RegisteredConflictListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
 		}
 
 		protected void AfterSessionCreated(InMemoryDocumentSessionOperations session)
