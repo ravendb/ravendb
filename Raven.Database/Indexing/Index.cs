@@ -65,7 +65,7 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
-		private static SnapshotDeletionPolicy snapshotter;
+		private SnapshotDeletionPolicy snapshotter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
 		private ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
@@ -385,7 +385,7 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		private static IndexWriter CreateIndexWriter(Directory directory)
+		private IndexWriter CreateIndexWriter(Directory directory)
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
 			var indexWriter = new IndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
@@ -1228,11 +1228,8 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				snapshotter.Release();
+					snapshotter.Release();
 			}
-
-
-
 		}
 	}
 }
