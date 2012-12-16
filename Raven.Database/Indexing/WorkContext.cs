@@ -240,13 +240,13 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public float ConcurrentRequests
+		public int ConcurrentRequests
 		{
 			get
 			{
 				if(useCounters == false)
 					return -1;
-				return ConcurrentRequestsCounter.NextValue();
+				return (int)ConcurrentRequestsCounter.NextValue();
 			}
 		}
 
