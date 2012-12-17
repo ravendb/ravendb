@@ -143,7 +143,7 @@ namespace Raven.Client.Document
 		/// <value>The store identifier.</value>
 		public string StoreIdentifier
 		{
-			get { return documentStore.Identifier; }
+			get { return documentStore.Identifier +";" + DatabaseName; }
 		}
 
 		/// <summary>
