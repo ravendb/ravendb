@@ -115,6 +115,15 @@ namespace Raven.Client.Document.Async
 		}
 
 		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+		{
+			return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+		}
+
+		/// <summary>
 		/// Loads the specified entities with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>

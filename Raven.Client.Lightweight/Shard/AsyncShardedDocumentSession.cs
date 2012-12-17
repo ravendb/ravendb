@@ -199,6 +199,11 @@ namespace Raven.Client.Shard
 			return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
 		}
 
+		public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+		{
+			return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+		}
+
 		#endregion
 
 		#region Queries

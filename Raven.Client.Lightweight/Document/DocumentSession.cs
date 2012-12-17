@@ -389,7 +389,11 @@ namespace Raven.Client.Document
 			return new MultiLoaderWithInclude<T>(this).Include(path);
 		}
 
-
+		/// <summary>
+		/// Begin a load while including the specified path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
 		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
 		{
 			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);

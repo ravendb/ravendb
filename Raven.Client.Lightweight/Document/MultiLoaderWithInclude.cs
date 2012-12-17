@@ -42,6 +42,10 @@ namespace Raven.Client.Document
 			return Include(path.ToPropertyPath());
 		}
 
+		/// <summary>
+		/// Includes the specified path.
+		/// </summary>
+		/// <param name="path">The path.</param>
 		public MultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
 		{
 			var type = path.ExtractTypeFromPath();
