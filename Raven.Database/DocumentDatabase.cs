@@ -1397,19 +1397,27 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
-				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
-				foreach (var doc in documents)
+				while (true)
 				{
-					if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
-						continue;
-					DocumentRetriever.EnsureIdInMetadata(doc);
-					var document = documentRetriever
-						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
-					if (document == null)
-						continue;
+					int docCount = 0;
+					var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
+					var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+					foreach (var doc in documents)
+					{
+						docCount++;
+						if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
+							continue;
+						DocumentRetriever.EnsureIdInMetadata(doc);
+						var document = documentRetriever
+							.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+						if (document == null)
+							continue;
 
-					list.Add(document.ToJson());
+						list.Add(document.ToJson());
+					}
+					if (list.Length != 0 || docCount == 0)
+						break;
+					start += docCount;
 				}
 			});
 			return list;
@@ -1420,19 +1428,29 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = etag == null ?
-					actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) :
-					actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
-				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
-				foreach (var doc in documents)
+				while (true)
 				{
-					DocumentRetriever.EnsureIdInMetadata(doc);
-					var document = documentRetriever
-						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
-					if (document == null)
-						continue;
+					var documents = etag == null ?
+						actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) :
+						actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
+					var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+					int docCount = 0;
+					foreach (var doc in documents)
+					{
+						docCount++;
+						if(etag != null)
+							etag = doc.Etag;
+						DocumentRetriever.EnsureIdInMetadata(doc);
+						var document = documentRetriever
+							.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+						if (document == null)
+							continue;
 
-					list.Add(document.ToJson());
+						list.Add(document.ToJson());
+					}
+					if (list.Length != 0 || docCount == 0)
+						break;
+					start += docCount;
 				}
 			});
 			return list;
