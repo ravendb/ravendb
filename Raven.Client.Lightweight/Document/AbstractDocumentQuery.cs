@@ -1642,7 +1642,7 @@ If you really want to do in memory filtering on the data returned from the query
 				sb.Remove(sb.Length - 1, 1);
 				sb.Remove(0, 1);
 			}
-			return RavenQuery.Escape(sb.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+			return "[[" + RavenQuery.Escape(sb.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, false) + "]]";
 		}
 
 		private Func<object,string> GetImplicitStringConvertion(Type type)
