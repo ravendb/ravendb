@@ -152,11 +152,11 @@ namespace Raven.Tests.MailingList
 									  p.Name,
 									  p.Brand,
 									  Any = new object[]
-                                              {
-                                                  p.Name,
-                                                  p.Brand
-                                              }
-								  };
+												  {
+													  p.Name,
+													  p.Brand
+												  }
+									  };
 			}
 		}
 

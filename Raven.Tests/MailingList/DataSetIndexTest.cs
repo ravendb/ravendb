@@ -113,12 +113,12 @@ namespace Raven.Tests.MailingList
 				{
 					SongId = "songs/" + x,
 					Attributes = new[]
-                    {
-                        new Attribute("Split_N1", x*0.99d ),
-                        new Attribute("Split_N4",x*0.01d),
-                        new Attribute("SoundCode","Rock"),
-                        new Attribute("Kat","T" + x)
-                    }.ToList()
+						{
+							new Attribute("Split_N1", x*0.99d ),
+							new Attribute("Split_N4",x*0.01d),
+							new Attribute("SoundCode","Rock"),
+							new Attribute("Kat","T" + x)
+						}.ToList()
 				}).ToList()
 			};
 			session.Store(set);
@@ -168,12 +168,12 @@ namespace Raven.Tests.MailingList
 				Sort(x => x.Date, SortOptions.String);
 
 				Stores = new Dictionary<Expression<Func<Result, object>>, FieldStorage>()
-                         {
-                             { e=>e.SongId, FieldStorage.Yes},
-                             { e=>e.SetId, FieldStorage.Yes},
-                             { e=>e.Attributes, FieldStorage.Yes},
-                             { e=>e.StationId, FieldStorage.Yes}
-                         };
+							 {
+								 { e=>e.SongId, FieldStorage.Yes},
+								 { e=>e.SetId, FieldStorage.Yes},
+								 { e=>e.Attributes, FieldStorage.Yes},
+								 { e=>e.StationId, FieldStorage.Yes}
+							 };
 			}
 		}
 

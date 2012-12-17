@@ -545,7 +545,7 @@
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
-    <Compile Include="MailingList\Cabanski.cs" />
+    <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
     <Compile Include="MailingList\ChrisMarisic.cs" />
