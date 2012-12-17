@@ -91,7 +91,7 @@ namespace Raven.Storage.Esent
 			return finalSize;
 		}
 
-		private static int GetVersionPageSize()
+		private static Lazy<int> VersionPageSize = new Lazy<int>(()=>
 		{
 			// see dicussion here: http://managedesent.codeplex.com/discussions/405939
 			const int JET_paramVerPageSize = 128;
@@ -107,6 +107,11 @@ namespace Raven.Storage.Esent
 				versionPageSize *= 2;
 			}
 			return Math.Min(versionPageSize, 64 * 1024);
+		}); 
+
+		public static int GetVersionPageSize()
+		{
+			return VersionPageSize.Value;
 		}
 
 		private int GetValueFromConfiguration(string name, int defaultValue)

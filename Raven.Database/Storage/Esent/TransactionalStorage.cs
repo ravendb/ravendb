@@ -182,23 +182,23 @@ namespace Raven.Storage.Esent
 		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
 		public long GetDatabaseTransactionVersionSizeInBytes()
 		{
-			long transactionCacheSizeInBytes = 0;
 			try
 			{
 				const string categoryName = "Database";
+				if (PerformanceCounterCategory.Exists(categoryName) == false)
+					return -1;
 				var category = new PerformanceCounterCategory(categoryName);
 				var instances = category.GetInstanceNames();
 				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith("Raven.Server"));
 				const string counterName = "Version Buckets Allocated";
-				if (ravenInstance != null && category.CounterExists(counterName))
+				if (ravenInstance == null || !category.CounterExists(counterName))
 				{
-					using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
-					{
-						//According to the pages below, 1 Version Store Page = 64k (65,536 bytes)
-						//http://managedesent.codeplex.com/discussions/248471 (1024 pages = 64 MB)
-						var value = counter.NextValue();
-						transactionCacheSizeInBytes = (long)(value * 65536);
-					}
+					return -2;
+				}
+				using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
+				{
+					var value = counter.NextValue();
+					return (long) (value*TransactionalStorageConfigurator.GetVersionPageSize());
 				}
 			}
 			catch (Exception e)
@@ -208,8 +208,8 @@ namespace Raven.Storage.Esent
 					reportedGetDatabaseTransactionCacheSizeInBytesError = true;
 					log.WarnException("Failed to get Version Buckets Allocated value, this error will only be reported once.", e);
 				}
+				return -3;
 			}
-			return transactionCacheSizeInBytes;
 		}
 
 		public string FriendlyName
