@@ -99,7 +99,8 @@ namespace Raven.Client.Document
 				queryShape = queryShape,
 				spatialRelation = spatialRelation,
 				distanceErrorPct = distanceErrorPct,
-				rootTypes = {typeof(T)}
+				rootTypes = {typeof(T)},
+				defaultField = defaultField,
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;

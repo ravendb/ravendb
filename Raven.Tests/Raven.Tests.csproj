@@ -545,6 +545,7 @@
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
+    <Compile Include="MailingList\Cabanski.cs" />
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
     <Compile Include="MailingList\ChrisMarisic.cs" />
@@ -581,6 +582,7 @@
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\TriggerCanAccessFullMetadataInQueryProjection.cs" />
+    <Compile Include="MailingList\Troy2.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />

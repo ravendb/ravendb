@@ -1558,10 +1558,10 @@ namespace Raven.Client.Connection
 		{
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&{2}",
 															  Uri.EscapeUriString(index),
 															  Uri.EscapeDataString(facetSetupDoc),
-															  Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
+															  query.GetMinimalQueryString());
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
