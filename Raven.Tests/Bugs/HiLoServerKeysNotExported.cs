@@ -107,7 +107,7 @@ namespace Raven.Tests.Bugs
 			                       				{
 			                       					Path = "Something",
 													ShouldMatch = true,
-													Value = "Something"
+													Value = "Something1"
 			                       				}
 			                       			}
 									});
