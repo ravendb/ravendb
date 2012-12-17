@@ -40,9 +40,12 @@ namespace Raven.Client.Document.Batches
 				Url = "/indexes/" + queryOperation.IndexName, 
 				Query = stringBuilder.ToString()
 			};
-			foreach (var header in headers)
+			if (headers != null)
 			{
-				request.Headers[header.Key] = header.Value;
+				foreach (var header in headers)
+				{
+					request.Headers[header.Key] = header.Value;
+				}
 			}
 			return request;
 		}
