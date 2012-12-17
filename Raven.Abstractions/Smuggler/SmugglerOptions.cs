@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Smuggler
 	{
 		public SmugglerOptions()
 		{
-			Filters = new Dictionary<string, string>();
+			Filters = new List<FilterSetting>();
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
 			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public string BackupPath { get; set; }
 
-		public Dictionary<string, string> Filters { get; set; }
+		public List<FilterSetting> Filters { get; set; }
 
 		public Guid LastDocsEtag { get; set; }
 		public Guid LastAttachmentEtag { get; set; }
@@ -63,17 +63,19 @@ namespace Raven.Abstractions.Smuggler
 		{
 			foreach (var filter in Filters)
 			{
-				var copy = filter;
-				foreach (var tuple in item.SelectTokenWithRavenSyntaxReturningFlatStructure(copy.Key))
+				bool matchedFilter = false;
+				foreach (var tuple in item.SelectTokenWithRavenSyntaxReturningFlatStructure(filter.Path))
 				{
 					if (tuple == null || tuple.Item1 == null)
 						continue;
 					var val = tuple.Item1.Type == JTokenType.String
 								? tuple.Item1.Value<string>()
 								: tuple.Item1.ToString(Formatting.None);
-					if (String.Equals(val, filter.Value, StringComparison.InvariantCultureIgnoreCase) == false)
-						return false;
+					matchedFilter |= String.Equals(val, filter.Value, StringComparison.InvariantCultureIgnoreCase) ==
+					                 filter.ShouldMatch;
 				}
+				if (matchedFilter == false)
+					return false;
 			}
 			return true;
 		}
@@ -85,5 +87,12 @@ namespace Raven.Abstractions.Smuggler
 		Documents = 0x1,
 		Indexes = 0x2,
 		Attachments = 0x4
+	}
+
+	public class FilterSetting
+	{
+		public string Path { get; set; }
+		public string Value { get; set; }
+		public bool ShouldMatch { get; set; }
 	}
 }
