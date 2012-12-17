@@ -8,7 +8,6 @@ using System.Linq;
 
 namespace Raven.Database.Util
 {
-
 	[DebuggerTypeProxy(typeof(ConcurrentSet<>.DebugProxy))]
 	public class ConcurrentSet<T> : IEnumerable<T>
 	{
