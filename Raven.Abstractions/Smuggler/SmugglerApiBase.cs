@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -166,6 +167,13 @@ namespace Raven.Abstractions.Smuggler
 
 				if (documents.Length == 0)
 				{
+					var databaseStatistics = GetStats();
+					if(lastEtag.CompareTo(databaseStatistics.LastDocEtag) < 0)
+					{
+						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}",lastEtag);
+						continue;
+					}
 					ShowProgress("Done with reading documents, total: {0}", totalCount);
 					return lastEtag;
 				}
@@ -434,8 +442,8 @@ namespace Raven.Abstractions.Smuggler
 			}
 
 
-			var currentDoc = BitConverter.ToInt64(databaseStatistics.LastDocEtag.ToByteArray().Reverse().ToArray(), 0);
-			var lastIndexed = BitConverter.ToInt64(earliestIndexedEtag.ToByteArray().Reverse().ToArray(), 0);
+			var currentDoc = Etag.GetChangesCount(databaseStatistics.LastDocEtag);
+			var lastIndexed = Etag.GetChangesCount(earliestIndexedEtag);
 
 			var distance = Math.Max(0, currentDoc - lastIndexed);
 			TimeSpan latency = TimeSpan.Zero;
