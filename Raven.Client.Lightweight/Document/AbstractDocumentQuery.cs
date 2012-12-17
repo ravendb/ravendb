@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -520,17 +521,15 @@ namespace Raven.Client.Document
 		/// </summary>
 		public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
+			var headers = new Dictionary<string,string>();
 			if (queryOperation == null)
 			{
-				foreach (var key in DatabaseCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
-				{
-					DatabaseCommands.OperationsHeaders.Remove(key);
-				}
 				ExecuteBeforeQueryListeners();
-				queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+				queryOperation = InitializeQueryOperation(headers.Add);
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+			lazyQueryOperation.SetHeaders(headers);
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
