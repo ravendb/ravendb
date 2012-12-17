@@ -34,7 +34,7 @@ namespace Raven.Storage.Esent
 			var circularLog = GetValueFromConfiguration("Raven/Esent/CircularLog", true);
 			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 64);
 			logFileSizeInMb = Math.Max(1, logFileSizeInMb/4);
-			return new InstanceParameters(jetInstance)
+			var instanceParameters = new InstanceParameters(jetInstance)
 			{
 				CircularLog = circularLog,
 				Recovery = true,
@@ -45,7 +45,6 @@ namespace Raven.Storage.Esent
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
 				MaxVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 512), 1024 * 1024),
-				PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", 512), 1024 * 1024),
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 8192), 1024),
@@ -55,6 +54,14 @@ namespace Raven.Storage.Esent
 				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 8), 1024 * 1024),
 				AlternateDatabaseRecoveryDirectory = path
 			};
+
+			if (string.IsNullOrEmpty(configuration.Settings["Raven/Esent/PreferredVerPages"]) == false)
+			{
+				instanceParameters.PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", 512),
+				                                                  1024*1024);
+			}
+
+			return instanceParameters;
 		}
 
 		public void LimitSystemCache()
