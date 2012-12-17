@@ -60,7 +60,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="10"/>
-            <RowDefinition Height="2*"/>
         </Grid.RowDefinitions>
 
         <Grid DataContext="{Binding Value}" Margin="{StaticResource Margin_ContentPage}">
