@@ -33,7 +33,7 @@ namespace Raven.Storage.Esent
 			}
 			var circularLog = GetValueFromConfiguration("Raven/Esent/CircularLog", true);
 			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 64);
-			logFileSizeInMb = Math.Max(1, logFileSizeInMb/4);
+			logFileSizeInMb = Math.Max(1, logFileSizeInMb / 4);
 			var instanceParameters = new InstanceParameters(jetInstance)
 			{
 				CircularLog = circularLog,
@@ -57,8 +57,8 @@ namespace Raven.Storage.Esent
 
 			if (string.IsNullOrEmpty(configuration.Settings["Raven/Esent/PreferredVerPages"]) == false)
 			{
-				instanceParameters.PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", 512),
-				                                                  1024*1024);
+				instanceParameters.PreferredVerPages = TranslateToSizeInVersionPages(
+					GetValueFromConfiguration("Raven/Esent/PreferredVerPages", 512), 1024 * 1024);
 			}
 
 			return instanceParameters;
@@ -85,15 +85,28 @@ namespace Raven.Storage.Esent
 
 		private static int TranslateToSizeInVersionPages(int sizeInMegabytes, int multiply)
 		{
+			//This doesn't suffer from overflow, do the division first (to make the number smaller) then multiply afterwards
+			double tempAmt = (double)sizeInMegabytes / GetVersionPageSize();
+			int finalSize = (int)(tempAmt * multiply);
+			return finalSize;
+		}
+
+		private static int GetVersionPageSize()
+		{
+			// see dicussion here: http://managedesent.codeplex.com/discussions/405939
 			const int JET_paramVerPageSize = 128;
 			int versionPageSize = 0;
 			string paramString;
-			Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param) JET_paramVerPageSize, ref versionPageSize,
-			                          out paramString, 0);
-			//This doesn't suffer from overflow, do the division first (to make the number smaller) then multiply afterwards
-			double tempAmt = (double)sizeInMegabytes / versionPageSize;
-			int finalSize = (int)(tempAmt * multiply);
-			return finalSize;
+			Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param)JET_paramVerPageSize, ref versionPageSize,
+									  out paramString, 0);
+
+			versionPageSize = Math.Max(versionPageSize, SystemParameters.DatabasePageSize * 2);
+
+			if (Environment.Is64BitProcess)
+			{
+				versionPageSize *= 2;
+			}
+			return Math.Min(versionPageSize, 64 * 1024);
 		}
 
 		private int GetValueFromConfiguration(string name, int defaultValue)

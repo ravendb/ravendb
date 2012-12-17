@@ -323,38 +323,16 @@ namespace Raven.Storage.Esent
 				DocumentCodecs = documentCodecs;
 				generator = uuidGenerator;
 
-				InstanceParameters instanceParameters;
+				InstanceParameters instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
+
 				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
-				{
-					instanceParameters = new InstanceParameters(instance)
-					{
-						CircularLog = true,
-						Recovery = false,
-						NoInformationEvent = false,
-						CreatePathIfNotExist = true,
-						TempDirectory = Path.Combine(path, "temp"),
-						SystemDirectory = Path.Combine(path, "system"),
-						LogFileDirectory = Path.Combine(path, "logs"),
-						MaxVerPages = 256,
-						BaseName = "RVN",
-						EventSource = "Raven",
-						LogBuffers = 8192,
-						LogFileSize = 256,
-						MaxSessions = TransactionalStorageConfigurator.MaxSessions,
-						MaxCursors = 1024,
-						DbExtensionSize = 128,
-						AlternateDatabaseRecoveryDirectory = path
-					};
-				}
-				else
-				{
-					instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
-				}
+					instanceParameters.Recovery = false;
 
 				log.Info(@"Esent Settings:
   MaxVerPages      = {0}
   CacheSizeMax     = {1}
-  DatabasePageSize = {2}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax, SystemParameters.DatabasePageSize);
+  DatabasePageSize = {2}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax,
+				         SystemParameters.DatabasePageSize);
 
 				Api.JetInit(ref instance);
 

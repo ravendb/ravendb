@@ -23,9 +23,7 @@ namespace Raven.Tests.Issues
 		[InlineData("esent")]
 		public void ShouldRemoveAllMapResultsAfterDeletingIndex(string storageType)
 		{
-			Environment.SetEnvironmentVariable("raventest_storage_engine", storageType);
-
-			using (var storage = NewTransactionalStorage())
+			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
 				storage.Batch(accessor =>
 				{
@@ -56,9 +54,7 @@ namespace Raven.Tests.Issues
 		[InlineData("esent")]
 		public void ShouldRemoveAllReduceResultsAfterDeletingIndex(string storageType)
 		{
-			Environment.SetEnvironmentVariable("raventest_storage_engine", storageType);
-
-			using (var storage = NewTransactionalStorage())
+			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
 				storage.Batch(accessor =>
 				{
@@ -89,9 +85,7 @@ namespace Raven.Tests.Issues
 		[InlineData("esent")]
 		public void ShouldRemoveAllScheduledReductionsAfterDeletingIndex(string storageType)
 		{
-			Environment.SetEnvironmentVariable("raventest_storage_engine", storageType);
-
-			using (var storage = NewTransactionalStorage())
+			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
 				storage.Batch(accessor =>
 				{
