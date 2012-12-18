@@ -1060,7 +1060,8 @@ namespace Raven.Storage.Esent
 				new JET_INDEXCREATE
 				{
 					szIndexName = "by_view_and_hashed_reduce_key",
-					szKey = "+view\0+reduce_key\0\0",
+					szKey = "+view\0+hashed_reduce_key\0+reduce_key\0\0",
+					grbit = CreateIndexGrbit.IndexUnique
 				});
 		}
 
