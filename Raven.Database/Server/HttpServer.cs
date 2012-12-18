@@ -205,7 +205,7 @@ namespace Raven.Database.Server
 					Uptime = SystemTime.UtcNow - startUpTime,
 					Memory = new
 					{
-						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
 						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(false)),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
 						Databases = allDbs.Select(db => new

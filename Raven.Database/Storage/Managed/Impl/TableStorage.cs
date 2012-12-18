@@ -134,10 +134,5 @@ namespace Raven.Storage.Managed.Impl
 		public Table Identity { get; private set; }
 
 		public Table ReduceKeys { get; private set; }
-
-		public override void Dispose()
-		{
-			base.Dispose();
-		}
 	}
 }
