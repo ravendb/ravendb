@@ -140,11 +140,14 @@ namespace Raven.Client.Indexes
 						foreach (var lambdaExpression in lambdaExpressions)
 						{
 							var rootQuery = TryCaptureQueryRoot(lambdaExpression);
+							if (string.IsNullOrEmpty(rootQuery))
+								continue;
 
-							if (!string.IsNullOrEmpty(rootQuery) && ContainsCountOnGrouping(lambdaExpression, rootQuery))
-							{
+							if (ContainsMethodInGrouping(lambdaExpression, rootQuery, "Count"))
 								throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
-							}
+							
+							if (ContainsMethodInGrouping(lambdaExpression, rootQuery, "Average"))
+								throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
 						}
 					}
 					break;
@@ -153,7 +156,7 @@ namespace Raven.Client.Indexes
 			}
 		}
 
-		private static bool ContainsCountOnGrouping(Expression expression, string grouping)
+		private static bool ContainsMethodInGrouping(Expression expression, string grouping, string method)
 		{
 			if (expression == null)
 				return false;
@@ -162,15 +165,15 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.Lambda:
 					var lambdaExpression = (LambdaExpression) expression;
-					return ContainsCountOnGrouping(lambdaExpression.Body, grouping);
+					return ContainsMethodInGrouping(lambdaExpression.Body, grouping, method);
 				case ExpressionType.New:
 					var newExpression = (NewExpression) expression;
-					return newExpression.Arguments.Any(argument => ContainsCountOnGrouping(argument, grouping));
+					return newExpression.Arguments.Any(argument => ContainsMethodInGrouping(argument, grouping, method));
 				case ExpressionType.Call:
 					var methodCallExpression = (MethodCallExpression) expression;
 					var methodName = methodCallExpression.Method.Name;
 					var parameters = methodCallExpression.Arguments.OfType<ParameterExpression>();
-					if (methodName == "Count" && parameters.Any(x => x.Name == grouping))
+					if (methodName == method && parameters.Any(x => x.Name == grouping))
 					{
 						return true;
 					}

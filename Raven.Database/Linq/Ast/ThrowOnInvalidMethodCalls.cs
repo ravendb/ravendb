@@ -68,16 +68,14 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 				var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
 				if (memberReferenceExpression != null)
 				{
-					if (memberReferenceExpression.MemberName == "Count")
+					var identifier = memberReferenceExpression.Target as IdentifierExpression;
+					if (identifier != null && identifier.Identifier == groupByIdentifier)
 					{
-						var identifier = memberReferenceExpression.Target as IdentifierExpression;
-						if (identifier != null)
-						{
-							if (identifier.Identifier == groupByIdentifier)
-							{
-								throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
-							}
-						}
+						if (memberReferenceExpression.MemberName == "Count")
+							throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+
+						if (memberReferenceExpression.MemberName == "Average")
+							throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
 					}
 				}
 			}
@@ -187,9 +185,10 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 					var member = (MemberReferenceExpression) parent.Target;
 
 					if (member.MemberName == "Count")
-					{
 						throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
-					}
+
+					if (member.MemberName == "Average")
+						throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
 				}
 			}
 		}
