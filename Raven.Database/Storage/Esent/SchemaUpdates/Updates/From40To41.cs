@@ -25,7 +25,8 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
 		public void Update(Session session, JET_DBID dbid)
 		{
-			CreateReduceKeysTable(session, dbid);
+			CreateReduceKeysCountsTable(session,dbid);
+			CreateReduceKeysStatusTable(session, dbid);
 
 			var countsPerKeyPerIndex = new Dictionary<string, Dictionary<string, int>>(StringComparer.InvariantCultureIgnoreCase);
 			using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
@@ -46,7 +47,26 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					countPerKey[reduceKey] = countPerKey.GetOrDefault(reduceKey) + 1;
 				}
 			}
-			using (var reduceKeys = new Table(session, dbid, "reduce_keys", OpenTableGrbit.None))
+			using (var reduceKeys = new Table(session, dbid, "reduce_keys_status", OpenTableGrbit.None))
+			{
+				var columnDictionary = Api.GetColumnDictionary(session, reduceKeys);
+				foreach (var countPerKey in countsPerKeyPerIndex)
+				{
+					foreach (var keyCount in countPerKey.Value)
+					{
+						using (var update = new Update(session, reduceKeys, JET_prep.Insert))
+						{
+							Api.SetColumn(session, reduceKeys, columnDictionary["view"], countPerKey.Key, Encoding.Unicode);
+							Api.SetColumn(session, reduceKeys, columnDictionary["reduce_key"], keyCount.Key, Encoding.Unicode);
+							Api.SetColumn(session, reduceKeys, columnDictionary["hashed_reduce_key"], DocumentStorageActions.HashReduceKey(keyCount.Key));
+							Api.SetColumn(session, reduceKeys, columnDictionary["reduce_type"], (int)ReduceType.MultiStep);
+							update.Save();
+						}
+					}
+				}
+			}
+
+			using (var reduceKeys = new Table(session, dbid, "reduce_keys_counts", OpenTableGrbit.None))
 			{
 				var columnDictionary = Api.GetColumnDictionary(session, reduceKeys);
 				foreach (var countPerKey in countsPerKeyPerIndex)
@@ -59,7 +79,6 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 							Api.SetColumn(session, reduceKeys, columnDictionary["reduce_key"], keyCount.Key, Encoding.Unicode);
 							Api.SetColumn(session, reduceKeys, columnDictionary["hashed_reduce_key"], DocumentStorageActions.HashReduceKey(keyCount.Key));
 							Api.SetColumn(session, reduceKeys, columnDictionary["mapped_items_count"], keyCount.Value);
-							Api.SetColumn(session, reduceKeys, columnDictionary["reduce_type"], (int)ReduceType.MultiStep);
 							update.Save();
 						}
 					}
@@ -78,10 +97,72 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 			SchemaCreator.UpdateVersion(session, dbid, "4.1");
 		}
 
-		private void CreateReduceKeysTable(Session session, JET_DBID dbid)
+		private void CreateReduceKeysCountsTable(Session session,JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "reduce_keys", 1, 80, out tableid);
+			Api.JetCreateTable(session, dbid, "reduce_keys_counts", 1, 80, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "view", new JET_COLUMNDEF
+			{
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = SchemaCreator.ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "reduce_key", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = SchemaCreator.ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "hashed_reduce_key", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				cbMax = 20,
+				grbit = SchemaCreator.ColumnNotNullIfOnHigherThanWindowsXp() | ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
+
+			var defaultValue = BitConverter.GetBytes(0);
+			Api.JetAddColumn(session, tableid, "mapped_items_count", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
+			}, defaultValue, defaultValue.Length, out columnid);
+
+			SchemaCreator.CreateIndexes(session,tableid,
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view",
+					szKey = "+view\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_and_hashed_reduce_key",
+					szKey = "+view\0+hashed_reduce_key\0+reduce_key\0\0",
+					grbit = CreateIndexGrbit.IndexUnique
+				});
+		}
+
+		private void CreateReduceKeysStatusTable(Session session, JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "reduce_keys_status", 1, 80, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
@@ -118,14 +199,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
-			var defaultValue = BitConverter.GetBytes(0);
-			Api.JetAddColumn(session, tableid, "mapped_items_count", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Long,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
-			}, defaultValue, defaultValue.Length, out columnid);
-
-			SchemaCreator.CreateIndexes(session, tableid,
+			SchemaCreator.CreateIndexes(session,tableid,
 				new JET_INDEXCREATE
 				{
 					szIndexName = "by_id",
@@ -146,6 +220,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 				});
 		}
 
+		
 
 	}
 }

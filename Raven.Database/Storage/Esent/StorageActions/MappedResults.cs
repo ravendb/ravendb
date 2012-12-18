@@ -654,35 +654,36 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void UpdatePerformedReduceType(string indexName, string reduceKey, ReduceType performedReduceType)
 		{
-			ExecuteOnReduceKey(indexName, reduceKey, () =>
+			ExecuteOnReduceKey(indexName, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns, () =>
 			{
-				using (var update = new Update(session, ReduceKeys, JET_prep.Replace))
+				using (var update = new Update(session, ReduceKeysStatus, JET_prep.Replace))
 				{
-					Api.SetColumn(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["reduce_type"], (int)performedReduceType);
+					Api.SetColumn(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"], (int)performedReduceType);
 
 					update.Save();
 				}
 			});
 		}
 
-		private void ExecuteOnReduceKey(string view, string reduceKey, Action action)
+		private void ExecuteOnReduceKey(string view, string reduceKey, 
+			Table table,
+			IDictionary<string, JET_COLUMNID> columnids,
+			 Action action)
 		{
 			var hashReduceKey = HashReduceKey(reduceKey);
 
-			Api.JetSetCurrentIndex(session, ReduceKeys, "by_view_and_hashed_reduce_key");
-			Api.MakeKey(session, ReduceKeys, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, ReduceKeys, hashReduceKey, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReduceKeys, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.JetSetCurrentIndex(session, table, "by_view_and_hashed_reduce_key");
+			Api.MakeKey(session, table, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, table, hashReduceKey, MakeKeyGrbit.None);
+			Api.MakeKey(session, table, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 
-			if (Api.TrySeek(session, ReduceKeys, SeekGrbit.SeekEQ) == false)
+			if (Api.TrySeek(session, table, SeekGrbit.SeekEQ) == false)
 			{
-				using (var update = new Update(session, ReduceKeys, JET_prep.Insert))
+				using (var update = new Update(session, table, JET_prep.Insert))
 				{
-					Api.SetColumn(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["view"], view, Encoding.Unicode);
-					Api.SetColumn(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["reduce_key"], reduceKey, Encoding.Unicode);
-					Api.SetColumn(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["hashed_reduce_key"], hashReduceKey);
-					Api.SetColumn(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["reduce_type"], (int)ReduceType.None);
-					Api.SetColumn(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["mapped_items_count"], 0);
+					Api.SetColumn(session, table, columnids["view"], view, Encoding.Unicode);
+					Api.SetColumn(session, table, columnids["reduce_key"], reduceKey, Encoding.Unicode);
+					Api.SetColumn(session, table, columnids["hashed_reduce_key"], hashReduceKey);
 
 					update.SaveAndGotoBookmark();
 				}
@@ -690,39 +691,30 @@ namespace Raven.Storage.Esent.StorageActions
 				return;
 			}
 
-			Api.MakeKey(session, ReduceKeys, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, ReduceKeys, hashReduceKey, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReduceKeys, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, table, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, table, hashReduceKey, MakeKeyGrbit.None);
+			Api.MakeKey(session, table, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 
-			Api.TrySetIndexRange(session, ReduceKeys, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+			Api.TrySetIndexRange(session, table, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
-				var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ReduceKeys,
-																 tableColumnsCache.ReduceKeysColumns["reduce_key"]);
+				var reduceKeyFromDb = Api.RetrieveColumnAsString(session, table, columnids["reduce_key"]);
 				if (StringComparer.Ordinal.Equals(reduceKey, reduceKeyFromDb) == false)
 					continue;
 
 				action();
 				return;
-			} while (Api.TryMoveNext(session, ReduceKeys));
+			} while (Api.TryMoveNext(session, table));
 		}
 
 		public ReduceType GetLastPerformedReduceType(string indexName, string reduceKey)
 		{
-			Api.JetSetCurrentIndex(session, ReduceKeys, "by_view_and_hashed_reduce_key");
-			Api.MakeKey(session, ReduceKeys, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, ReduceKeys, HashReduceKey(reduceKey), MakeKeyGrbit.None);
-
-			if (Api.TrySeek(session, ReduceKeys, SeekGrbit.SeekEQ) == false)
-				return ReduceType.None;
-
-			var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["reduce_key"]);
-
-			if (StringComparer.Ordinal.Equals(reduceKey, reduceKeyFromDb) == false)
-				return ReduceType.None;
-
-			var reduceType = Api.RetrieveColumnAsInt32(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["reduce_type"]);
-			return (ReduceType)reduceType.Value;
+			int reduceType = 0;
+			ExecuteOnReduceKey(indexName, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns, () =>
+			{
+				reduceType = Api.RetrieveColumnAsInt32(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"]).Value;
+			});
+			return (ReduceType)reduceType;
 		}
 
 		public IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey)
@@ -814,22 +806,22 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private void IncrementReduceKeyCounter(string view, string reduceKey)
 		{
-			ExecuteOnReduceKey(view, reduceKey, () =>
-			                                    Api.EscrowUpdate(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["mapped_items_count"], 1));
+			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
+				() => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], 1));
 		}
 
 		private void DecrementReduceKeyCounter(string view, string reduceKey)
 		{
-			ExecuteOnReduceKey(view, reduceKey, () =>
-				 Api.EscrowUpdate(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["mapped_items_count"], -1));
+			ExecuteOnReduceKey(view, reduceKey,ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, 
+				() => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -1));
 		}
 
 		private int GetNumberOfMappedItemsPerReduceKey(string view, string reduceKey)
 		{
 			int numberOfMappedItemsPerReduceKey = 0;
-			ExecuteOnReduceKey(view, reduceKey, () =>
+			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, () =>
 			{
-				numberOfMappedItemsPerReduceKey = Api.RetrieveColumnAsInt32(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["mapped_items_count"]).Value;
+				numberOfMappedItemsPerReduceKey = Api.RetrieveColumnAsInt32(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
 			});
 			
 			return numberOfMappedItemsPerReduceKey;
