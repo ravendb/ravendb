@@ -39,13 +39,18 @@ namespace Raven.Client
 		/// <param name="path">The path.</param>
 		IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
 
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Stores the specified entity with the specified etag.
 		/// The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
 		void Store(object entity, Guid etag);
-	
+
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
@@ -98,7 +103,7 @@ namespace Raven.Client
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
 		Task<T[]> LoadAsync<T>(string[] ids);
-		
+
 		/// <summary>
 		/// Begins the async save changes operation
 		/// </summary>

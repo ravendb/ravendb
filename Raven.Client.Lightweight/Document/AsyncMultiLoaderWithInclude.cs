@@ -41,6 +41,27 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Includes the specified path.
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
+		{
+			var type = path.ExtractTypeFromPath();
+			var fullId = this.session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
+
+			var id = path.ToPropertyPath();
+
+			if (type != typeof(string))
+			{
+				var idPrefix = fullId.Replace("-1", string.Empty);
+
+				id += "(" + idPrefix + ")";
+			}
+
+			return Include(id);
+		}
+
+		/// <summary>
 		/// Loads the specified ids.
 		/// </summary>
 		/// <param name="ids">The ids.</param>
