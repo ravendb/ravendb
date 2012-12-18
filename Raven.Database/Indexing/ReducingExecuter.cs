@@ -87,21 +87,21 @@ namespace Raven.Database.Indexing
 		private ReduceResultStats MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, List<object> itemsToDelete)
 		{
 			var result = new ReduceResultStats();
-
+			var needToMoveToMultiStep = new HashSet<string>();
 			foreach (var reduceKey in keysToReduce)
 			{
-				var key = reduceKey;
+				var localReduceKey = reduceKey;
 				transactionalStorage.Batch(actions =>
 				{
-					var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, key);
+					var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, localReduceKey);
 
 					if (lastPerformedReduceType != ReduceType.SingleStep) 
 						return;
-
+					needToMoveToMultiStep.Add(localReduceKey);
 					// we exceeded the limit of items to reduce in single step
 					// now we need to scheduce reductions at level 0 for all map results with given reduce key
-					var mappedItems = actions.MapReduce.GetMappedBuckets(index.IndexName, key).ToList();
-					actions.MapReduce.ScheduleReductions(index.IndexName, 0, mappedItems.Select(x => new ReduceKeyAndBucket(x, key)));
+					var mappedItems = actions.MapReduce.GetMappedBuckets(index.IndexName, localReduceKey).ToList();
+					actions.MapReduce.ScheduleReductions(index.IndexName, 0, mappedItems.Select(x => new ReduceKeyAndBucket(x, localReduceKey)));
 				});
 			}
 
@@ -176,12 +176,11 @@ namespace Raven.Database.Indexing
 				});
 			}
 
-			foreach (var reduceKey in keysToReduce)
+			foreach (var reduceKey in needToMoveToMultiStep)
 			{
-				transactionalStorage.Batch(actions =>
-				{
-					actions.MapReduce.UpdatePerformedReduceType(index.IndexName, reduceKey, ReduceType.MultiStep);
-				});
+				string localReduceKey = reduceKey;
+				transactionalStorage.Batch(actions => 
+					actions.MapReduce.UpdatePerformedReduceType(index.IndexName, localReduceKey, ReduceType.MultiStep));
 			}
 
 			return result;
