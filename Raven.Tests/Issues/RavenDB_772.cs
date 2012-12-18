@@ -10,7 +10,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldGetCorrectResultsIfReduceOptimizationWasApplied()
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage:"esent"))
+			using (var documentStore = NewDocumentStore())
 			{
 				const int reduceOptimizationLimit = 4;
 
@@ -64,7 +64,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldGetCorrectResultsIfNumberOfMappedItemsGoBelowAndNextAboveTheOptimizationLimit()
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage:"esent"))
+			using (var documentStore = NewDocumentStore())
 			{
 				const int reduceOptimizationLimit = 4;
 
@@ -132,7 +132,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldGetCorrectResultsIfMultiStepReduceWasUsedAndNextAllItemsWereRemoved()
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
+			using (var documentStore = NewDocumentStore())
 			{
 				const int reduceOptimizationLimit = 4;
 
