@@ -136,7 +136,7 @@ namespace Raven.Storage.Managed
 					break;
 			}
 
-			return mappedResultInfos;
+			return results.Values;
 		}
 
 		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
