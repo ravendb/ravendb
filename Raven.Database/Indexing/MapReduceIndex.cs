@@ -263,7 +263,7 @@ namespace Raven.Database.Indexing
 				}
 				actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBuckets);
 			});
-			Write(context, (writer, analyzer, stats) =>
+			Write((writer, analyzer, stats) =>
 			{
 				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
@@ -392,7 +392,7 @@ namespace Raven.Database.Indexing
 				var sw = Stopwatch.StartNew();
 				var start = SystemTime.UtcNow;
 				
-				parent.Write(Context, (indexWriter, analyzer, stats) =>
+				parent.Write((indexWriter, analyzer, stats) =>
 				{
 					stats.Operation = IndexingWorkStats.Status.Reduce;
 					try

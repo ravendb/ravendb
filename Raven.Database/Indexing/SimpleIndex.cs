@@ -42,7 +42,7 @@ namespace Raven.Database.Indexing
 			var sourceCount = 0;
 			var sw = Stopwatch.StartNew();
 			var start = SystemTime.UtcNow;
-			Write(context, (indexWriter, analyzer, stats) =>
+			Write((indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
@@ -74,8 +74,10 @@ namespace Raven.Database.Indexing
 									);
 							},
 							trigger => trigger.OnIndexEntryDeleted(documentId));
-						if(batch.SkipDeleteFromIndex[i] == false)
+						if (batch.SkipDeleteFromIndex[i] == false || 
+							context.ShouldRemoveFromIndex(documentId)) // maybe it is recently deleted?
 							indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
+				
 						return doc;
 					})
 						.Where(x => x is FilteredDocument == false)
@@ -227,7 +229,7 @@ namespace Raven.Database.Indexing
 
 		public override void Remove(string[] keys, WorkContext context)
 		{
-			Write(context, (writer, analyzer,stats) =>
+			Write((writer, analyzer,stats) =>
 			{
 				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));

@@ -44,6 +44,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
+using BitConverter = System.BitConverter;
 using Index = Raven.Database.Indexing.Index;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
@@ -324,8 +325,13 @@ namespace Raven.Database
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
-					DatabaseCacheSizeInBytes = workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes(),
-					DatabaseCacheSizeInMB = workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes() / 1024.0m / 1024.0m,
+					Memory = new DatabaseStatistics.MemoryDetails
+					{
+						DatabaseCacheSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes()),
+						DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
+						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(forceFullCollection: false)),
+						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64())
+					},
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
@@ -371,6 +377,17 @@ namespace Raven.Database
 
 				return result;
 			}
+		}
+
+		private static long GetCurrentProcessPrivateMemorySize64()
+		{
+			using (var p = Process.GetCurrentProcess())
+				return p.PrivateMemorySize64;
+		}
+
+		private decimal ConvertBytesToMBs(long bytes)
+		{
+			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
 		}
 
 		public InMemoryRavenConfiguration Configuration
@@ -812,6 +829,7 @@ namespace Raven.Database
 						if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
 						{
 							deleted = true;
+							WorkContext.MarkDeleted(key);
 							foreach (var indexName in IndexDefinitionStorage.IndexNames)
 							{
 								AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
@@ -1639,6 +1657,15 @@ namespace Raven.Database
 					throw new InvalidOperationException("Backup is already running");
 				}
 			}
+
+			bool circularLogging;
+			if (incrementalBackup &&
+				TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
+				(bool.TryParse(Configuration.Settings["Raven/Esent/CircularLog"], out circularLogging) == false || circularLogging))
+			{
+				throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
+			}
+
 			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
 			{
 				Started = SystemTime.UtcNow,

@@ -138,7 +138,7 @@ namespace Raven.Storage.Esent
 		{
 			if (new InstanceParameters(instance).Recovery == false)
 				throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to true.");
-			
+
 			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
@@ -165,19 +165,51 @@ namespace Raven.Storage.Esent
 
 		public long GetDatabaseCacheSizeInBytes()
 		{
-			long cacheSizeInBytes = 0;
-			
 			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
 			{
 				int cacheSizeInPages = 0, pageSize = 0;
-				string test;
-				Api.JetGetSystemParameter(instance, pht.Session, JET_param.CacheSize, ref cacheSizeInPages, out test, 1024);
-				Api.JetGetSystemParameter(instance, pht.Session, JET_param.DatabasePageSize, ref pageSize, out test, 1024);
+				string unused;
 
-				cacheSizeInBytes = ((long) cacheSizeInPages) * pageSize;
+				//JET_paramCacheSize
+				//When this parameter is read, the actual size of the cache in database pages is returned. This size can be used by the 
+				//application as an input to drive its manual adjustment of the cache size.
+				Api.JetGetSystemParameter(instance, pht.Session, JET_param.CacheSize, ref cacheSizeInPages, out unused, 1024);
+				Api.JetGetSystemParameter(instance, pht.Session, JET_param.DatabasePageSize, ref pageSize, out unused, 1024);
+				return ((long)cacheSizeInPages) * pageSize;
 			}
+		}
 
-			return cacheSizeInBytes;
+		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
+		public long GetDatabaseTransactionVersionSizeInBytes()
+		{
+			long transactionCacheSizeInBytes = 0;
+			try
+			{
+				const string categoryName = "Database";
+				var category = new PerformanceCounterCategory(categoryName);
+				var instances = category.GetInstanceNames();
+				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith("Raven.Server"));
+				const string counterName = "Version Buckets Allocated";
+				if (ravenInstance != null && category.CounterExists(counterName))
+				{
+					using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
+					{
+						//According to the pages below, 1 Version Store Page = 64k (65,536 bytes)
+						//http://managedesent.codeplex.com/discussions/248471 (1024 pages = 64 MB)
+						var value = counter.NextValue();
+						transactionCacheSizeInBytes = (long)(value * 65536);
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				if (reportedGetDatabaseTransactionCacheSizeInBytesError == false)
+				{
+					reportedGetDatabaseTransactionCacheSizeInBytesError = true;
+					log.WarnException("Failed to get Version Buckets Allocated value, this error will only be reported once.", e);
+				}
+			}
+			return transactionCacheSizeInBytes;
 		}
 
 		public string FriendlyName
@@ -338,7 +370,7 @@ namespace Raven.Storage.Esent
 			{
 				Dispose();
 				var fileAccessExeption = e as EsentFileAccessDeniedException;
-				if(fileAccessExeption == null)
+				if (fileAccessExeption == null)
 					throw new InvalidOperationException("Could not open transactional storage: " + database, e);
 				throw new InvalidOperationException("Could not write to location: " + path + ". Make sure you have read/write permissions for this path.", e);
 			}
@@ -395,7 +427,7 @@ namespace Raven.Storage.Esent
 					{
 						if (value != "unlimited")
 						{
-							maxSize = (int) ((long.Parse(value)*1024*1024)/SystemParameters.DatabasePageSize);
+							maxSize = (int)((long.Parse(value) * 1024 * 1024) / SystemParameters.DatabasePageSize);
 						}
 					}
 					Api.JetAttachDatabase2(session, database, maxSize, AttachDatabaseGrbit.None);

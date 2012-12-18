@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs
 		{
 			for (int xx = 0; xx < 50; xx++)
 			{
-				using (var store = NewDocumentStore(requestedStorage: "esent"))
+				using (var store = NewDocumentStore(requestedStorage: "munin"))
 				{
 					new Orders_Search().Execute(store);
 

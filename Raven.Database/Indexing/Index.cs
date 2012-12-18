@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -30,6 +31,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -63,9 +65,11 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
+		private static SnapshotDeletionPolicy snapshotter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
 		private ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
+		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
@@ -104,7 +108,7 @@ namespace Raven.Database.Indexing
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
-			if(indexingPerformanceStats.Count > 25)
+			if (indexingPerformanceStats.Count > 25)
 				indexingPerformanceStats.TryDequeue(out stats);
 		}
 
@@ -131,7 +135,7 @@ namespace Raven.Database.Indexing
 				if (currentIndexSearcherHolder != null)
 				{
 					var item = currentIndexSearcherHolder.SetIndexSearcher(null);
-					if(item.WaitOne(TimeSpan.FromSeconds(5)) == false)
+					if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
 					{
 						logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
 						Console.Beep();
@@ -282,7 +286,7 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
-		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, IndexingWorkStats, int> action)
+		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, int> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
@@ -313,13 +317,14 @@ namespace Raven.Database.Indexing
 					var locker = directory.MakeLock("writing-to-index.lock");
 					try
 					{
+						int changedDocs;
 						var stats = new IndexingWorkStats();
 						try
 						{
-							var changedDocs = action(indexWriter, searchAnalyzer, stats);
+							changedDocs = action(indexWriter, searchAnalyzer, stats);
 							docCountSinceLastOptimization += changedDocs;
 							shouldRecreateSearcher = changedDocs > 0;
-							foreach (IIndexExtension indexExtension in indexExtensions.Values)
+							foreach (var indexExtension in indexExtensions.Values)
 							{
 								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments);
 							}
@@ -330,11 +335,13 @@ namespace Raven.Database.Indexing
 							throw;
 						}
 
-						UpdateIndexingStats(context, stats);
+						if (changedDocs > 0)
+						{
+							UpdateIndexingStats(context, stats);
+							WriteTempIndexToDiskIfNeeded(context);
 
-						WriteTempIndexToDiskIfNeeded(context);
-
-						Flush(); // just make sure changes are flushed to disk
+							Flush(); // just make sure changes are flushed to disk
+						}
 					}
 					finally
 					{
@@ -380,8 +387,9 @@ namespace Raven.Database.Indexing
 
 		private static IndexWriter CreateIndexWriter(Directory directory)
 		{
-			var indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
-			using (indexWriter.MergeScheduler){}
+			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+			var indexWriter = new IndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
+			using (indexWriter.MergeScheduler) { }
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 
 			// RavenDB already manages the memory for those, no need for Lucene to do this as well
@@ -748,7 +756,7 @@ namespace Raven.Database.Indexing
 						for (int index = indexQuery.Start; index < search.ScoreDocs.Length; index++)
 						{
 							var scoreDoc = search.ScoreDocs[index];
-							var ravenJObject = (RavenJObject) termsDocs[scoreDoc.Doc].CloneToken();
+							var ravenJObject = (RavenJObject)termsDocs[scoreDoc.Doc].CloneToken();
 							foreach (var prop in ravenJObject.Where(x => x.Key.EndsWith("_Range")).ToArray())
 							{
 								ravenJObject.Remove(prop.Key);
@@ -801,7 +809,7 @@ namespace Raven.Database.Indexing
 							{
 								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 								moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, ref start);
-								pageSize += moreRequired*2;
+								pageSize += moreRequired * 2;
 							} while (moreRequired > 0);
 							indexQuery.TotalSize.Value = search.TotalHits;
 							adjustStart = false;
@@ -1000,7 +1008,7 @@ namespace Raven.Database.Indexing
 					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
 					if (q is MatchAllDocsQuery) return dq;
 
-					var bq = new BooleanQuery {{q, Occur.MUST}, {dq, Occur.MUST}};
+					var bq = new BooleanQuery { { q, Occur.MUST }, { dq, Occur.MUST } };
 					return bq;
 				}
 				return q;
@@ -1071,13 +1079,13 @@ namespace Raven.Database.Indexing
 					try
 					{
 						//indexSearcher.SetDefaultFieldSortScoring (sort.GetSort().Contains(SortField.FIELD_SCORE), false);
-						indexSearcher.SetDefaultFieldSortScoring (true, false);
-						var ret = indexSearcher.Search (luceneQuery, null, minPageSize, sort);
+						indexSearcher.SetDefaultFieldSortScoring(true, false);
+						var ret = indexSearcher.Search(luceneQuery, null, minPageSize, sort);
 						return ret;
 					}
 					finally
 					{
-						indexSearcher.SetDefaultFieldSortScoring (false, false);
+						indexSearcher.SetDefaultFieldSortScoring(false, false);
 					}
 				}
 				return indexSearcher.Search(luceneQuery, null, minPageSize);
@@ -1116,7 +1124,7 @@ namespace Raven.Database.Indexing
 
 			public int RecordResultsAlreadySeenForDistinctQuery(TopDocs search, bool adjustStart, ref int start)
 			{
-				if(min == -1)
+				if (min == -1)
 					min = start;
 				min = Math.Min(min, search.TotalHits);
 
@@ -1166,6 +1174,65 @@ namespace Raven.Database.Indexing
 		public IndexingPerformanceStats[] GetIndexingPerformance()
 		{
 			return indexingPerformanceStats.ToArray();
+		}
+
+		public void Backup(string backupDirectory, string path, string incrementalTag)
+		{
+			// this is called for the side effect of creating the snapshotter and the writer
+			// we explictly handle the backup outside of the write, to allow concurrent indexing
+			Write((writer, analyzer, stats) => 0);
+
+			try
+			{
+				var existingFiles = new List<string>();
+				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
+				var commit = snapshotter.Snapshot();
+				if (incrementalTag != null)
+					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
+				var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
+				System.IO.Directory.CreateDirectory(saveToFolder);
+				if (File.Exists(allFilesPath))
+				{
+					existingFiles.AddRange(File.ReadLines(allFilesPath));
+				}
+
+				using (var allFilesWriter = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath))
+				using (var neededFilesWriter = File.CreateText(Path.Combine(saveToFolder, "index-files.required-for-index-restore")))
+				{
+					foreach (var fileName in commit.FileNames)
+					{
+						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+
+						if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
+							continue;
+
+						if (File.Exists(fullPath) == false)
+							continue;
+
+						if (existingFiles.Contains(fileName) == false)
+						{
+							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+							allFilesWriter.WriteLine(fileName);
+						}
+						neededFilesWriter.WriteLine(fileName);
+					}
+					foreach (var fileName in new[] { "segments.gen", "index.version" })
+					{
+						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+						File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+						allFilesWriter.WriteLine(fileName);
+					}
+					allFilesWriter.Flush();
+					neededFilesWriter.Flush();
+				}
+			}
+			finally
+			{
+				snapshotter.Release();
+			}
+
+
+
 		}
 	}
 }

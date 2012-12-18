@@ -25,6 +25,7 @@ namespace Raven.Database.Storage
 		void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag);
 		long GetDatabaseSizeInBytes();
 		long GetDatabaseCacheSizeInBytes();
+		long GetDatabaseTransactionVersionSizeInBytes();
 
 		string FriendlyName { get; }
 		bool HandleException(Exception exception);

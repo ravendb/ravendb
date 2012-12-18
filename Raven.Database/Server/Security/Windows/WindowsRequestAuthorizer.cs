@@ -118,6 +118,10 @@ namespace Raven.Database.Server.Security.Windows
 						Reason = "User is null or not authenticated"
 					});
 					ctx.Response.AddHeader("Raven-Required-Auth", "Windows");
+					if (string.IsNullOrEmpty(Settings.OAuthTokenServer) == false)
+					{
+						ctx.Response.AddHeader("OAuth-Source", Settings.OAuthTokenServer);
+					}
 					ctx.SetStatusToUnauthorized();
 				};
 				return false;

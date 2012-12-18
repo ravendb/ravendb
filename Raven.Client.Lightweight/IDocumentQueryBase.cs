@@ -417,6 +417,20 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
 
 		/// <summary>
+		///   Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		/// <param name = "cutOffEtag">The cut off etag.</param>
+		/// <returns></returns>
+		TSelf WaitForNonStaleResultsAsOf(Guid cutOffEtag);
+
+		/// <summary>
+		///   Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+		/// </summary>
+		/// <param name = "cutOffEtag">The cut off etag.</param>
+		/// <param name = "waitTimeout">The wait timeout.</param>
+		TSelf WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout);
+
+		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.
 		///   This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>

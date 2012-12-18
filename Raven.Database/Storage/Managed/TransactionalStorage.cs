@@ -196,7 +196,11 @@ namespace Raven.Storage.Managed
 
 		public long GetDatabaseCacheSizeInBytes()
 		{
-			//TODO work out a way to get an accurate measurment for this!
+			return -1;
+		}
+
+		public long GetDatabaseTransactionVersionSizeInBytes()
+		{
 			return -1;
 		}
 

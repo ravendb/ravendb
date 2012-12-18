@@ -532,6 +532,7 @@
     <Compile Include="Issues\RavenDB_714.cs" />
     <Compile Include="Issues\RavenDB_726.cs" />
     <Compile Include="Issues\RavenDB_772.cs" />
+    <Compile Include="Issues\RavenDB_766.cs" />
     <Compile Include="Issues\RDoc_56.cs" />
     <Compile Include="Issues\RDoc_60.cs" />
     <Compile Include="Linq\Contains.cs" />
@@ -563,11 +564,13 @@
     <Compile Include="MailingList\LinqInExtensionTests.cs" />
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />
     <Compile Include="MailingList\Mare.cs" />
+    <Compile Include="MailingList\AnyBugTest.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
     <Compile Include="MailingList\Nullables.cs" />
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
+    <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
@@ -1135,6 +1138,7 @@
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />
+    <Compile Include="MailingList\WhereInQueryTests.cs" />
     <Compile Include="WithNLog.cs" />
   </ItemGroup>
   <ItemGroup>
