@@ -813,6 +813,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetSetCurrentIndex(session, ReduceKeys, "by_view_and_hashed_reduce_key");
 			Api.MakeKey(session, ReduceKeys, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ReduceKeys, hashReduceKey, MakeKeyGrbit.None);
+			Api.MakeKey(session, ReduceKeys, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 
 			if (Api.TrySeek(session, ReduceKeys, SeekGrbit.SeekEQ) == false)
 			{
