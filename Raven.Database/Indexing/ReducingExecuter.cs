@@ -48,15 +48,15 @@ namespace Raven.Database.Indexing
 				if (singleStepReduceKeys.Length > 0)
 				{
 					var reduceCounters = SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete);
-					totalCount += reduceCounters.Count;
-					totalSize += reduceCounters.Size;
+					totalCount += reduceCounters.count;
+					totalSize += reduceCounters.size;
 				}
 
 				if (multiStepsReduceKeys.Length > 0)
 				{
 					var reduceCounters = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete);
-					totalCount += reduceCounters.Count;
-					totalSize += reduceCounters.Size;
+					totalCount += reduceCounters.count;
+					totalSize += reduceCounters.size;
 				}
 
 				reduceDuration = sw.Elapsed;
@@ -125,8 +125,8 @@ namespace Raven.Database.Indexing
 
 					var sp = Stopwatch.StartNew();
 
-					result.Count += persistedResults.Count;
-					result.Size += persistedResults.Sum(x => x.Size);
+					result.count += persistedResults.Count;
+					result.size += persistedResults.Sum(x => x.Size);
 
 					if (Log.IsDebugEnabled)
 					{
@@ -191,7 +191,9 @@ namespace Raven.Database.Indexing
 		                                        List<object> itemsToDelete)
 		{
 			var result = new ReduceResultStats();
+			var needToMoveToSingleStep = new HashSet<string>();
 
+			Log.Debug(() => string.Format("Executing single step reduciong for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
 			transactionalStorage.Batch(actions =>
 			{
 				var scheduledItems = actions.MapReduce.GetItemsToReduce
@@ -208,19 +210,23 @@ namespace Raven.Database.Indexing
 				{
 					var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, reduceKey);
 
-					if (lastPerformedReduceType == ReduceType.MultiStep)
+					if (lastPerformedReduceType != ReduceType.MultiStep)
+						continue;
+
+					needToMoveToSingleStep.Add(reduceKey);
+					Log.Debug("Key {0} was moved from multi step to single step reduce, removing existing mapped results & reduce results records",
+						reduceKey);
+
+					// now we are in single step but previously multi step reduce was performed for the given key
+					var mappedBuckets = actions.MapReduce.GetMappedBuckets(index.IndexName, reduceKey).ToList();
+
+					// add scheduled items too to be sure we will delete reduce results of already deleted documents
+					mappedBuckets.AddRange(scheduledItems.Select(x => x.Bucket));
+
+					foreach (var mappedBucket in mappedBuckets.Distinct())
 					{
-						// now we are in single step but previously multi step reduce was performed for the given key
-						var mappedBuckets = actions.MapReduce.GetMappedBuckets(index.IndexName, reduceKey).ToList();
-
-						// add scheduled items too to be sure we will delete reduce results of already deleted documents
-						mappedBuckets.AddRange(scheduledItems.Select(x => x.Bucket));
-
-						foreach (var mappedBucket in mappedBuckets.Distinct())
-						{
-							actions.MapReduce.RemoveReduceResults(index.IndexName, 1, reduceKey, mappedBucket);
-							actions.MapReduce.RemoveReduceResults(index.IndexName, 2, reduceKey, mappedBucket / 1024);
-						}
+						actions.MapReduce.RemoveReduceResults(index.IndexName, 1, reduceKey, mappedBucket);
+						actions.MapReduce.RemoveReduceResults(index.IndexName, 2, reduceKey, mappedBucket / 1024);
 					}
 				}
 
@@ -231,8 +237,8 @@ namespace Raven.Database.Indexing
 						take: context.NumberOfItemsToExecuteReduceInSingleStep
 					).ToList();
 
-				result.Count += mappedResults.Count;
-				result.Size += mappedResults.Sum(x => x.Size);
+				result.count += mappedResults.Count;
+				result.size += mappedResults.Sum(x => x.Size);
 
 				var reduceKeys = new HashSet<string>(keysToReduce);
 
@@ -248,21 +254,20 @@ namespace Raven.Database.Indexing
 				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys);
 			});
 
-			foreach (var reduceKey in keysToReduce)
+			foreach (var reduceKey in needToMoveToSingleStep)
 			{
+				string localReduceKey = reduceKey;
 				transactionalStorage.Batch(actions =>
-				{
-					actions.MapReduce.UpdatePerformedReduceType(index.IndexName, reduceKey, ReduceType.SingleStep);
-				});
+					actions.MapReduce.UpdatePerformedReduceType(index.IndexName, localReduceKey, ReduceType.SingleStep));
 			}
 
 			return result;
 		}
 
-		public class ReduceResultStats
+		private class ReduceResultStats
 		{
-			public int Count;
-			public int Size;
+			public int count;
+			public int size;
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
