@@ -10,17 +10,19 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldGetCorrectResultsIfReduceOptimizationWasApplied()
 		{
-			using (var documentStore = NewDocumentStore())
+			using (var documentStore = NewDocumentStore(requestedStorage:"esent"))
 			{
-				documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = 4;
+				const int reduceOptimizationLimit = 4;
+
+				documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
 
 				new Countries_ByAbbreviationAndName().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{
-					for (int i = 0; i < 3; i++)
+					for (int i = 0; i < reduceOptimizationLimit - 1; i++)
 					{
-						session.Store(new Country(){Name = "Poland", Abbreviation = "PL"});
+						session.Store(new Country() { Name = "Poland", Abbreviation = "PL" });
 						session.Store(new Country() { Name = "Israel", Abbreviation = "IL" });
 					}
 					session.Store(new Country() { Name = "Poland", Abbreviation = "PL" });
@@ -32,8 +34,8 @@ namespace Raven.Tests.Issues
 				{
 					// should perform index with single reduce step for "IL" and multi reduce for "PL"
 					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>()
-					                     .Customize(x => x.WaitForNonStaleResults()).ToList();
-					
+										 .Customize(x => x.WaitForNonStaleResults()).ToList();
+
 					Assert.Equal(2, results.Count);
 					Assert.Equal(4, results.First(x => x.CountryAbbreviation == "PL").Count);
 					Assert.Equal(3, results.First(x => x.CountryAbbreviation == "IL").Count);
@@ -41,8 +43,8 @@ namespace Raven.Tests.Issues
 
 				using (var session = documentStore.OpenSession())
 				{
-					session.Store(new Country() { Name = "Israel", Abbreviation = "PL" });
-
+					// add item with reduce key "IL" to switch into multi step reduce
+					session.Store(new Country() { Name = "Israel", Abbreviation = "IL" });
 					session.SaveChanges();
 				}
 
@@ -53,8 +55,127 @@ namespace Raven.Tests.Issues
 										 .Customize(x => x.WaitForNonStaleResults()).ToList();
 
 					Assert.Equal(2, results.Count);
-					Assert.Equal(5, results.First(x => x.CountryAbbreviation == "PL").Count);
+					Assert.Equal(4, results.First(x => x.CountryAbbreviation == "PL").Count);
+					Assert.Equal(4, results.First(x => x.CountryAbbreviation == "IL").Count);
+				}
+			}
+		}
+
+		[Fact]
+		public void ShouldGetCorrectResultsIfNumberOfMappedItemsGoBelowAndNextAboveTheOptimizationLimit()
+		{
+			using (var documentStore = NewDocumentStore(requestedStorage:"esent"))
+			{
+				const int reduceOptimizationLimit = 4;
+
+				documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
+
+				new Countries_ByAbbreviationAndName().Execute(documentStore);
+
+				using (var session = documentStore.OpenSession())
+				{
+					for (int i = 0; i < reduceOptimizationLimit; i++)
+					{
+						session.Store(new Country() { Name = "Israel", Abbreviation = "IL" });
+					}
+
+					session.SaveChanges();
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					// here the reducing work will be done in multi step way
+					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>()
+										 .Customize(x => x.WaitForNonStaleResults()).ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(4, results.First(x => x.CountryAbbreviation == "IL").Count);
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					// delete one item to go below the reduceOptimizationLimit
+					session.Delete(session.Load<Country>("countries/1"));
+
+					session.SaveChanges();
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					// now the reduce will be done in single step (what's importatnt existing reduce results should be removed)
+					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>()
+										 .Customize(x => x.WaitForNonStaleResults()).ToList();
+
+					Assert.Equal(1, results.Count);
 					Assert.Equal(3, results.First(x => x.CountryAbbreviation == "IL").Count);
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					// add item to go back to multi step reduce
+					session.Store(new Country() { Name = "Israel", Abbreviation = "IL" });
+					session.SaveChanges();
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					// make sure that multi step reduce will return correct results
+					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>()
+										 .Customize(x => x.WaitForNonStaleResults()).ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(4, results.First(x => x.CountryAbbreviation == "IL").Count);
+				}
+			}
+		}
+
+		[Fact]
+		public void ShouldGetCorrectResultsIfMultiStepReduceWasUsedAndNextAllItemsWereRemoved()
+		{
+			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
+			{
+				const int reduceOptimizationLimit = 4;
+
+				documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
+
+				new Countries_ByAbbreviationAndName().Execute(documentStore);
+
+				using (var session = documentStore.OpenSession())
+				{
+					for (int i = 0; i < reduceOptimizationLimit; i++)
+					{
+						session.Store(new Country() { Name = "Israel", Abbreviation = "IL" });
+					}
+
+					session.SaveChanges();
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>()
+										 .Customize(x => x.WaitForNonStaleResults()).ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(4, results.First(x => x.CountryAbbreviation == "IL").Count);
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					// delete all items
+					session.Delete(session.Load<Country>("countries/1"));
+					session.Delete(session.Load<Country>("countries/2"));
+					session.Delete(session.Load<Country>("countries/3"));
+					session.Delete(session.Load<Country>("countries/4"));
+
+					session.SaveChanges();
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>()
+										 .Customize(x => x.WaitForNonStaleResults()).ToList();
+
+					Assert.Equal(0, results.Count);
 				}
 			}
 		}
@@ -78,12 +199,12 @@ namespace Raven.Tests.Issues
 
 		public Countries_ByAbbreviationAndName()
 		{
-			Map = countries => countries.Select(x => new {CountryAbbreviation = x.Abbreviation, Count = 1});
+			Map = countries => countries.Select(x => new { CountryAbbreviation = x.Abbreviation, Count = 1 });
 
 			Reduce =
 				results =>
 				results.GroupBy(x => x.CountryAbbreviation)
-				       .Select(g => new {CountryAbbreviation = g.Key, Count = g.Sum(c => c.Count)});
+					   .Select(g => new { CountryAbbreviation = g.Key, Count = g.Sum(c => c.Count) });
 		}
 	}
 }

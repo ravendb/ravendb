@@ -41,6 +41,8 @@ namespace Raven.Storage.Esent
 
 		public IDictionary<string, JET_COLUMNID> ListsColumns { get; set; }
 
+		public IDictionary<string, JET_COLUMNID> ReduceKeysColumns { get; set; }
+
 	    public void InitColumDictionaries(JET_INSTANCE instance, string database)
 	    {
 	        using (var session = new Session(instance))
@@ -82,6 +84,8 @@ namespace Raven.Storage.Esent
 	                    DetailsColumns = Api.GetColumnDictionary(session, details);
 	                using (var queue = new Table(session, dbid, "queue", OpenTableGrbit.None))
 	                    QueueColumns = Api.GetColumnDictionary(session, queue);
+					using (var reduceKeys = new Table(session, dbid, "reduce_keys", OpenTableGrbit.None))
+						ReduceKeysColumns = Api.GetColumnDictionary(session, reduceKeys);
 	            }
 	            finally
 	            {
