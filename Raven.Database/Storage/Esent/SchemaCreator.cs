@@ -500,11 +500,16 @@ namespace Raven.Storage.Esent
 					szKey = "+view\0\0",
 					grbit = CreateIndexGrbit.IndexDisallowNull
 				},
-						new JET_INDEXCREATE
-						{
-							szIndexName = "by_view_level_bucket_and_hashed_reduce_key",
-							szKey = "+view\0+level\0+bucket\0+hashed_reduce_key\0\0",
-						});
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_level_and_hashed_reduce_key",
+					szKey = "+view\0+level\0+hashed_reduce_key\0\0",
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_level_bucket_and_hashed_reduce_key",
+					szKey = "+view\0+level\0+bucket\0+hashed_reduce_key\0\0",
+				});
 		}
 
 		private void CreateMapResultsTable(JET_DBID dbid)

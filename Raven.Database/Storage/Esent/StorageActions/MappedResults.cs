@@ -145,8 +145,8 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, int take, bool loadData, List<object> itemsToDelete)
 		{
-			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_bucket_and_hashed_reduce_key");
-
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
+			
 			foreach (var reduceKey in reduceKeys)
 			{
 				Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -184,8 +184,7 @@ namespace Raven.Storage.Esent.StorageActions
 						continue;
 
 					var bucket =
-							Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"], RetrieveColumnGrbit.RetrieveFromIndex).
-								Value;
+							Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"]).Value;
 
 					if (seen.Add(Tuple.Create(reduceKeyFromDb, bucket)))
 					{
@@ -622,23 +621,21 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			var allKeysToReduce = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_bucket_and_hashed_reduce_key");
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view");
 			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, ScheduledReductions, 0, MakeKeyGrbit.None);
-			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
+			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekEQ) == false)
 				yield break;
-
+			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.TrySetIndexRange(session, ScheduledReductions,
+			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
 				var indexFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
 															 tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode,
 															 RetrieveColumnGrbit.RetrieveFromIndex);
 
-				var compareResult = string.Compare(indexName, indexFromDb, StringComparison.InvariantCultureIgnoreCase);
-				if (compareResult < 0) // not yet here
+				if (StringComparer.InvariantCultureIgnoreCase.Equals(indexName,indexFromDb) == false)
 					continue;
-				if (compareResult > 0) // after the record
-					break;
 
 				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions,
 											   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
