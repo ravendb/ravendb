@@ -1024,6 +1024,13 @@ namespace Raven.Storage.Esent
 				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "hashed_reduce_key", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				cbMax = 20,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp() | ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "reduce_type", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.Long,
@@ -1052,7 +1059,7 @@ namespace Raven.Storage.Esent
 				},
 				new JET_INDEXCREATE
 				{
-					szIndexName = "by_view_and_reduce_key",
+					szIndexName = "by_view_and_hashed_reduce_key",
 					szKey = "+view\0+reduce_key\0\0",
 				});
 		}
