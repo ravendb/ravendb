@@ -833,14 +833,14 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private void DecrementReduceKeyCounter(string view, string reduceKey)
 		{
-			ExecuteOnReduceKey(reduceKey, reduceKey, () =>
+			ExecuteOnReduceKey(view, reduceKey, () =>
 				 Api.EscrowUpdate(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["mapped_items_count"], -1));
 		}
 
 		private int GetNumberOfMappedItemsPerReduceKey(string view, string reduceKey)
 		{
 			int numberOfMappedItemsPerReduceKey = 0;
-			ExecuteOnReduceKey(reduceKey, reduceKey, () =>
+			ExecuteOnReduceKey(view, reduceKey, () =>
 			{
 				numberOfMappedItemsPerReduceKey =
 					Api.RetrieveColumnAsInt32(session, ReduceKeys, tableColumnsCache.ReduceKeysColumns["mapped_items_count"]).Value;
