@@ -441,7 +441,16 @@ namespace Raven.Database.Config
 		/// The maximum number of indexing tasks allowed to run in parallel
 		/// Default: The number of processors in the current machine
 		/// </summary>
-		public int MaxNumberOfParallelIndexTasks { get; set; }
+		public int MaxNumberOfParallelIndexTasks
+		{
+			get
+			{
+				if(MemoryStatistics.MaxParallelismSet)
+					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
+				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
+			}
+			set { maxNumberOfParallelIndexTasks = value; }
+		}
 
 		/// <summary>
 		/// Time (in milliseconds) the index has to be queried at least once in order for it to
@@ -691,6 +700,7 @@ namespace Raven.Database.Config
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
+		private int? maxNumberOfParallelIndexTasks;
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
 		/// </summary>
