@@ -95,9 +95,11 @@ namespace Raven.Database.Indexing
 				{
 					var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, localReduceKey);
 
+					if(lastPerformedReduceType != ReduceType.MultiStep)
+						needToMoveToMultiStep.Add(localReduceKey);
+
 					if (lastPerformedReduceType != ReduceType.SingleStep) 
 						return;
-					needToMoveToMultiStep.Add(localReduceKey);
 					// we exceeded the limit of items to reduce in single step
 					// now we need to scheduce reductions at level 0 for all map results with given reduce key
 					var mappedItems = actions.MapReduce.GetMappedBuckets(index.IndexName, localReduceKey).ToList();
@@ -209,10 +211,12 @@ namespace Raven.Database.Indexing
 				{
 					var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, reduceKey);
 
+					if (lastPerformedReduceType != ReduceType.SingleStep)
+						needToMoveToSingleStep.Add(reduceKey);
+
 					if (lastPerformedReduceType != ReduceType.MultiStep)
 						continue;
 
-					needToMoveToSingleStep.Add(reduceKey);
 					Log.Debug("Key {0} was moved from multi step to single step reduce, removing existing mapped results & reduce results records",
 						reduceKey);
 
