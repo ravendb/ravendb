@@ -198,13 +198,24 @@ namespace Raven.Database.Server
 					Name = x.Key,
 					Database = x.Value.Result
 				});
+				var allDbs = activeDatabases.Concat(new[] {new {Name = "System", Database = SystemDatabase}}).ToArray();
 				return new
 				{
 					TotalNumberOfRequests = NumberOfRequests,
 					Uptime = SystemTime.UtcNow - startUpTime,
+					Memory = new
+					{
+						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+						ManagedMemorySizeInMB = GC.GetTotalMemory(false),
+						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
+						Databases = allDbs.Select(db => new
+						{
+							db.Name,
+							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(db.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+						})
+					},
 					LoadedDatabases =
-						from documentDatabase in activeDatabases
-								.Concat(new[] { new { Name = "System", Database = SystemDatabase } })
+						from documentDatabase in allDbs
 						let totalSizeOnDisk = documentDatabase.Database.GetTotalSizeOnDisk()
 						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
 						select new
@@ -223,6 +234,17 @@ namespace Raven.Database.Server
 						}
 				};
 			}
+		}
+
+		private decimal ConvertBytesToMBs(long bytes)
+		{
+			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
+		}
+
+		private static long GetCurrentProcessPrivateMemorySize64()
+		{
+			using (var p = Process.GetCurrentProcess())
+				return p.PrivateMemorySize64;
 		}
 
 		public void Dispose()

@@ -325,13 +325,7 @@ namespace Raven.Database
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
-					Memory = new DatabaseStatistics.MemoryDetails
-					{
-						DatabaseCacheSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes()),
-						DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
-						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(forceFullCollection: false)),
-						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64())
-					},
+					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
@@ -354,7 +348,7 @@ namespace Raven.Database
 						typeof(AbstractAttachmentReadTrigger),
 						typeof(AbstractBackgroundTask),
 						typeof(IAlterConfiguration)
-						)
+						),
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -379,12 +373,7 @@ namespace Raven.Database
 			}
 		}
 
-		private static long GetCurrentProcessPrivateMemorySize64()
-		{
-			using (var p = Process.GetCurrentProcess())
-				return p.PrivateMemorySize64;
-		}
-
+	
 		private decimal ConvertBytesToMBs(long bytes)
 		{
 			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
