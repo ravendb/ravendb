@@ -95,13 +95,13 @@ namespace Raven.Database.Indexing
 				{
 					var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, key);
 
-					if (lastPerformedReduceType == ReduceType.SingleStep) 
-					{
-						// we exceeded the limit of items to reduce in single step
-						// now we need to scheduce reductions at level 0 for all map results with given reduce key
-						var mappedItems = actions.MapReduce.GetMappedBuckets(index.IndexName, key).ToList();
-						actions.MapReduce.ScheduleReductions(index.IndexName, 0, mappedItems.Select(x => new ReduceKeyAndBucket(x, key)));
-					}
+					if (lastPerformedReduceType != ReduceType.SingleStep) 
+						return;
+
+					// we exceeded the limit of items to reduce in single step
+					// now we need to scheduce reductions at level 0 for all map results with given reduce key
+					var mappedItems = actions.MapReduce.GetMappedBuckets(index.IndexName, key).ToList();
+					actions.MapReduce.ScheduleReductions(index.IndexName, 0, mappedItems.Select(x => new ReduceKeyAndBucket(x, key)));
 				});
 			}
 
