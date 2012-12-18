@@ -225,7 +225,7 @@ namespace Raven.Client.Connection
 					{
 						if(resolvingConflictRetries)
 							throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
-		
+
 						resolvingConflictRetries = true;
 						try
 						{
@@ -286,7 +286,7 @@ namespace Raven.Client.Connection
 					}
 				}
 				finally
-				{
+		{
 					resolvingConflict = false;
 				}
 			}
@@ -816,8 +816,8 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
 			
+
 			try
 			{
 				// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
@@ -836,7 +836,7 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
+			
 			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
 
@@ -1014,11 +1014,11 @@ namespace Raven.Client.Connection
 		}
 
 		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
-		{
+			{
 			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
 			if (!requiresRetry) 
 				return currentResult;
-
+				
 			if (resolvingConflictRetries)
 				throw new InvalidOperationException(
 					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
