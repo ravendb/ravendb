@@ -45,20 +45,18 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				Tuple<int, int> reduceCounters;
-
 				if (singleStepReduceKeys.Length > 0)
 				{
-					reduceCounters = SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete);
-					totalCount += reduceCounters.Item1;
-					totalSize += reduceCounters.Item2;
+					var reduceCounters = SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete);
+					totalCount += reduceCounters.Count;
+					totalSize += reduceCounters.Size;
 				}
 
 				if (multiStepsReduceKeys.Length > 0)
 				{
-					reduceCounters = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete);
-					totalCount += reduceCounters.Item1;
-					totalSize += reduceCounters.Item2;
+					var reduceCounters = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete);
+					totalCount += reduceCounters.Count;
+					totalSize += reduceCounters.Size;
 				}
 
 				reduceDuration = sw.Elapsed;
@@ -86,10 +84,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private Tuple<int, int> MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, List<object> itemsToDelete)
+		private ReduceResultStats MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, List<object> itemsToDelete)
 		{
-			var count = 0;
-			var size = 0;
+			var result = new ReduceResultStats();
 
 			foreach (var reduceKey in keysToReduce)
 			{
@@ -128,8 +125,8 @@ namespace Raven.Database.Indexing
 
 					var sp = Stopwatch.StartNew();
 
-					count += persistedResults.Count;
-					size += persistedResults.Sum(x => x.Size);
+					result.Count += persistedResults.Count;
+					result.Size += persistedResults.Sum(x => x.Size);
 
 					if (Log.IsDebugEnabled)
 					{
@@ -186,15 +183,14 @@ namespace Raven.Database.Indexing
 					actions.MapReduce.UpdatePerformedReduceType(index.IndexName, reduceKey, ReduceType.MultiStep);
 				});
 			}
-			
-			return new Tuple<int, int>(count, size);
+
+			return result;
 		}
 
-		private Tuple<int, int> SingleStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator,
+		private ReduceResultStats SingleStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator,
 		                                        List<object> itemsToDelete)
 		{
-			var count = 0;
-			var size = 0;
+			var result = new ReduceResultStats();
 
 			transactionalStorage.Batch(actions =>
 			{
@@ -214,7 +210,7 @@ namespace Raven.Database.Indexing
 
 					if (lastPerformedReduceType == ReduceType.MultiStep)
 					{
-						// now we are in multi step but previously single step reduce was performed for given key
+						// now we are in single step but previously multi step reduce was performed for the given key
 						var mappedBuckets = actions.MapReduce.GetMappedBuckets(index.IndexName, reduceKey).ToList();
 
 						// add scheduled items too to be sure we will delete reduce results of already deleted documents
@@ -229,14 +225,14 @@ namespace Raven.Database.Indexing
 				}
 
 				var mappedResults = actions.MapReduce.GetMappedResults(
-					index.IndexName, 
-					keysToReduce, 
-					loadData: true, 
-					take: context.NumberOfItemsToExecuteReduceInSingleStep)
-						.ToList();
+						index.IndexName, 
+						keysToReduce, 
+						loadData: true, 
+						take: context.NumberOfItemsToExecuteReduceInSingleStep
+					).ToList();
 
-				count += mappedResults.Count;
-				size += mappedResults.Sum(x => x.Size);
+				result.Count += mappedResults.Count;
+				result.Size += mappedResults.Sum(x => x.Size);
 
 				var reduceKeys = new HashSet<string>(keysToReduce);
 
@@ -260,15 +256,13 @@ namespace Raven.Database.Indexing
 				});
 			}
 
-			return new Tuple<int, int>(count, size);
+			return result;
 		}
 
-		private static MappedResultInfo GetLastByTimestamp(ICollection<MappedResultInfo> reduceKeyAndEtags)
+		public class ReduceResultStats
 		{
-			if (reduceKeyAndEtags == null || reduceKeyAndEtags.Count == 0)
-				return null;
-
-			return reduceKeyAndEtags.OrderByDescending(x => x.Timestamp).First();
+			public int Count;
+			public int Size;
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
@@ -279,7 +273,6 @@ namespace Raven.Database.Indexing
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
 		{
 			return null;
-			//return actions.Tasks.GetMergedTask<ReduceTask>();
 		}
 
 		protected override void FlushAllIndexes()
