@@ -2,16 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Json;
+using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
-	using Linq;
 
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
@@ -229,7 +228,12 @@ namespace Raven.Database.Indexing
 					}
 				}
 
-				var mappedResults = actions.MapReduce.GetMappedResults(index.IndexName, keysToReduce, true, context.NumberOfItemsToExecuteReduceInSingleStep).ToList();
+				var mappedResults = actions.MapReduce.GetMappedResults(
+					index.IndexName, 
+					keysToReduce, 
+					loadData: true, 
+					take: context.NumberOfItemsToExecuteReduceInSingleStep)
+						.ToList();
 
 				count += mappedResults.Count;
 				size += mappedResults.Sum(x => x.Size);
