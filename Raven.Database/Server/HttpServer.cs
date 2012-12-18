@@ -206,7 +206,7 @@ namespace Raven.Database.Server
 					Memory = new
 					{
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-						ManagedMemorySizeInMB = GC.GetTotalMemory(false),
+						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(false)),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
 						Databases = allDbs.Select(db => new
 						{

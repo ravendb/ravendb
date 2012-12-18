@@ -783,6 +783,9 @@
     <Compile Include="..\Raven.Abstractions\Util\AtomicDictionary.cs">
       <Link>Imports\Util\AtomicDictionary.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\Base62Util.cs">
+      <Link>Imports\Util\Base62Util.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Util\CompletedTask.cs">
       <Link>Imports\Util\CompletedTask.cs</Link>
     </Compile>
@@ -797,9 +800,6 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\RavenQuery.cs">
       <Link>Imports\Util\RavenQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Changes\Base62Util.cs">
-      <Link>Imports\Changes\Base62Util.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Changes\IDatabaseChanges.cs">
       <Link>Imports\Changes\IDatabaseChanges.cs</Link>

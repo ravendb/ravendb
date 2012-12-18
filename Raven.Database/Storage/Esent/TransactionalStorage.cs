@@ -14,6 +14,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
@@ -29,6 +30,7 @@ namespace Raven.Storage.Esent
 {
 	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
 	{
+		private static int instanceCounter;
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly string database;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -80,7 +82,8 @@ namespace Raven.Storage.Esent
 
 			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
-			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
+			uniqueRrefix = Interlocked.Increment(ref instanceCounter) + "/" + Base62Util.Base62Random();
+			Api.JetCreateInstance(out instance, uniqueRrefix + "/" + database);
 		}
 
 		public TableColumnsCache TableColumnsCache
@@ -180,16 +183,18 @@ namespace Raven.Storage.Esent
 		}
 
 		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
+		private string uniqueRrefix;
+
 		public long GetDatabaseTransactionVersionSizeInBytes()
 		{
 			try
 			{
-				const string categoryName = "Database";
+				const string categoryName = "Database ==> Instances";
 				if (PerformanceCounterCategory.Exists(categoryName) == false)
 					return -1;
 				var category = new PerformanceCounterCategory(categoryName);
 				var instances = category.GetInstanceNames();
-				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith("Raven.Server"));
+				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith(uniqueRrefix));
 				const string counterName = "Version Buckets Allocated";
 				if (ravenInstance == null || !category.CounterExists(counterName))
 				{

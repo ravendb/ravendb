@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
