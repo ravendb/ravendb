@@ -472,6 +472,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				}
 				else
 				{
+					webRequest.ExecuteRequest();
 					len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
 					data = () =>
 					{
