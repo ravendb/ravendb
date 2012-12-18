@@ -151,11 +151,18 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
-				if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
+				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
+				if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekEQ) == false)
 					yield break;
 
-				// this isn't used for optimized reading, but to make it easier to delete records
-				// later on
+				Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
+
+				Api.TrySetIndexRange(session, ScheduledReductions,
+				                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+				// this isn't used for optimized reading, but to make it easier to delete records later on
 				var reader = new OptimizedIndexReader(session, ScheduledReductions, take);
 				itemsToDelete.Add(reader);
 				var seen = new HashSet<Tuple<string, int>>();
@@ -168,17 +175,13 @@ namespace Raven.Storage.Esent.StorageActions
 					var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
 												   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
 
-					var compareResult = string.Compare(index, indexFromDb, StringComparison.InvariantCultureIgnoreCase);
-					if (compareResult < 0) // not yet here
+					if (string.Equals(index, indexFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 						continue;
-					if (compareResult > 0) // after the record
-						break;
-					if (levelFromDb < level)
+					if (levelFromDb != level)
 						continue;
-					if (levelFromDb > level)
-						break;
-					if (string.IsNullOrEmpty(reduceKey) == false && string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
-						break;
+					if (string.IsNullOrEmpty(reduceKey) == false &&
+					    string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+						continue;
 
 					var bucket =
 							Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"], RetrieveColumnGrbit.RetrieveFromIndex).
@@ -197,9 +200,7 @@ namespace Raven.Storage.Esent.StorageActions
 				} while (Api.TryMoveNext(session, ScheduledReductions) && take > 0);
 
 				if (take <= 0)
-				{
 					break;
-				}
 			}
 		}
 
@@ -625,7 +626,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ScheduledReductions, 0, MakeKeyGrbit.None);
 			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
-				return Enumerable.Empty<ReduceTypePerKey>();
+				yield break;
 
 			do
 			{
@@ -646,18 +647,12 @@ namespace Raven.Storage.Esent.StorageActions
 
 			} while (Api.TryMoveNext(session, ScheduledReductions));
 
-			var reduceTypesPerKeys = allKeysToReduce.ToDictionary(x => x, x => ReduceType.SingleStep);
-
 			foreach (var reduceKey in allKeysToReduce)
 			{
 				var count = GetNumberOfMappedItemsPerReduceKey(indexName, reduceKey);
-				if (count >= limitOfItemsToReduceInSingleStep)
-				{
-					reduceTypesPerKeys[reduceKey] = ReduceType.MultiStep;
-				}
+				var reduceType = count >= limitOfItemsToReduceInSingleStep ? ReduceType.MultiStep : ReduceType.SingleStep;
+				yield return new ReduceTypePerKey(reduceKey, reduceType);
 			}
-
-			return reduceTypesPerKeys.Select(x => new ReduceTypePerKey(x.Key, x.Value));
 		}
 
 		public void UpdatePerformedReduceType(string indexName, string reduceKey, ReduceType performedReduceType)
