@@ -82,8 +82,8 @@ namespace Raven.Storage.Esent
 
 			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
-			uniqueRrefix = Interlocked.Increment(ref instanceCounter) + "/" + Base62Util.Base62Random();
-			Api.JetCreateInstance(out instance, uniqueRrefix + "/" + database);
+			uniqueRrefix = Interlocked.Increment(ref instanceCounter) + "-" + Base62Util.Base62Random();
+			Api.JetCreateInstance(out instance, uniqueRrefix + "-" + database);
 		}
 
 		public TableColumnsCache TableColumnsCache
