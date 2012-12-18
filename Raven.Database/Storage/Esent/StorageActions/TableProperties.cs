@@ -111,5 +111,11 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			get { return details ?? (details = new Table(session, dbid, "details", OpenTableGrbit.None)); }
 		}
+
+		private Table reduceKeys;
+		protected Table ReduceKeys
+		{
+			get { return reduceKeys ?? (reduceKeys = new Table(session, dbid, "reduce_keys", OpenTableGrbit.None)); }
+		}
 	}
 }

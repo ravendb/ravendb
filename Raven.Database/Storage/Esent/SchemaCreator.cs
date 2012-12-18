@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "4.0";
+		public const string SchemaVersion = "4.1";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -44,6 +44,7 @@ namespace Raven.Storage.Esent
 					CreateQueueTable(dbid);
 					CreateListsTable(dbid);
 					CreateIdentityTable(dbid);
+					CreateReduceKeysTable(dbid);
 
 					tx.Commit(CommitTransactionGrbit.None);
 				}
@@ -601,6 +602,11 @@ namespace Raven.Storage.Esent
 				{
 					szIndexName = "by_view_bucket_and_hashed_reduce_key",
 					szKey = "+view\0+bucket\0+hashed_reduce_key\0\0",
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_and_hashed_reduce_key",
+					szKey = "+view\0+hashed_reduce_key\0\0",
 				});
 		}
 
@@ -989,6 +995,66 @@ namespace Raven.Storage.Esent
 				Api.SetColumn(session, tableid, attachmentCount, 0);
 				update.Save();
 			}
+		}
+
+		private void CreateReduceKeysTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "reduce_keys", 1, 80, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "view", new JET_COLUMNDEF
+			{
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "reduce_key", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "reduce_type", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			var defaultValue = BitConverter.GetBytes(0);
+			Api.JetAddColumn(session, tableid, "mapped_items_count", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
+			}, defaultValue, defaultValue.Length, out columnid);
+
+			CreateIndexes(tableid,
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view",
+					szKey = "+view\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_and_reduce_key",
+					szKey = "+view\0+reduce_key\0\0",
+				});
 		}
 
 		public static void UpdateVersion(Session session, JET_DBID dbid, string newVersion)

@@ -95,6 +95,16 @@ namespace Raven.Storage.Managed.Impl
 				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
 				{"ByViewLevelReduceKeyAndBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<int>("level"), x.Value<string>("reduceKey"), x.Value<int>("bucket"))},
 			});
+
+			ReduceKeys = Add(new Table(x => new RavenJObject()
+			{
+				{"view", x.Value<string>("view")},
+				{"reduceKey", x.Value<string>("reduceKey")}                                      
+			}, "ReduceTypesPerKey")
+			{
+				{"ByView", x=> x.Value<string>("view")},
+				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
+			});
 		}
 
 		public Table Lists { get; private set; }
@@ -122,6 +132,8 @@ namespace Raven.Storage.Managed.Impl
 		public Table Attachments { get; private set; }
 
 		public Table Identity { get; private set; }
+
+		public Table ReduceKeys { get; private set; }
 
 		public override void Dispose()
 		{

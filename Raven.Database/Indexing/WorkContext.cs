@@ -76,6 +76,11 @@ namespace Raven.Database.Indexing
 
 		public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }
 
+		public int NumberOfItemsToExecuteReduceInSingleStep
+		{
+			get { return Configuration.NumberOfItemsToExecuteReduceInSingleStep; }
+		}
+
 		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, string name)
 		{
 			return WaitForWork(timeout, ref workerWorkCounter, null, name);
