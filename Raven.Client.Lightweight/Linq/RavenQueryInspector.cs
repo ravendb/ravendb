@@ -37,7 +37,7 @@ namespace Raven.Client.Linq
 		public RavenQueryInspector(
 			IRavenQueryProvider provider, 
 			RavenQueryStatistics queryStats,
-            RavenQueryHighlightings highlightings,
+			RavenQueryHighlightings highlightings,
 			string indexName,
 			Expression expression,
 			InMemoryDocumentSessionOperations session
@@ -53,7 +53,7 @@ namespace Raven.Client.Linq
 			}
 			this.provider = provider.For<T>();
 			this.queryStats = queryStats;
-		    this.highlightings = highlightings;
+			this.highlightings = highlightings;
 			this.indexName = indexName;
 			this.session = session;
 #if !SILVERLIGHT
@@ -64,13 +64,13 @@ namespace Raven.Client.Linq
 			this.expression = expression ?? Expression.Constant(this);
 		}
 
-	    private void AfterQueryExecuted(QueryResult queryResult)
-	    {
-	        this.queryStats.UpdateQueryStats(queryResult);
-	        this.highlightings.Update(queryResult);
-	    }
+		private void AfterQueryExecuted(QueryResult queryResult)
+		{
+			this.queryStats.UpdateQueryStats(queryResult);
+			this.highlightings.Update(queryResult);
+		}
 
-	    #region IOrderedQueryable<T> Members
+		#region IOrderedQueryable<T> Members
 
 		Expression IQueryable.Expression
 		{
@@ -124,7 +124,7 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-	    /// <summary>
+		/// <summary>
 		/// Returns a <see cref="System.String"/> that represents this instance.
 		/// </summary>
 		/// <returns>

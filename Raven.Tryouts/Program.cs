@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
+using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Analysis.Tokenattributes;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -18,9 +21,11 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
 using Raven.Tests.Document;
+using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
 using System.Linq;
 using Raven.Tests.Util;
+using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Tryouts
 {
@@ -29,11 +34,15 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			int versionPageSize = 0;
-			string paramString;
-			Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param)128, ref versionPageSize,
-									  out paramString, 0);
-			Console.WriteLine(versionPageSize / SystemParameters.DatabasePageSize);
+			for (int i = 0; i < 100; i++)
+			{
+				Console.WriteLine(i);
+				using(var x = new RavenDB_551())
+				{
+					x.CanGetErrorOnOptimisticDeleteInTransactionWhenDeletedInTransaction();
+				}
+			}
+				
 		}
 	}
 }

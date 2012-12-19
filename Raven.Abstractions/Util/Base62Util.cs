@@ -5,19 +5,14 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Raven.Client.Changes
+namespace Raven.Abstractions.Util
 {
 	public class Base62Util
 	{
-		private static readonly Random random = new Random();
-
 		public static string Base62Random()
 		{
-			return Base62ToString(random.Next());
+			return Base62ToString(new Random().Next());
 		}
 
 		private static string Base62ToString(long value)

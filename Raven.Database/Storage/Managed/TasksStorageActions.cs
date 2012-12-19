@@ -88,6 +88,7 @@ namespace Raven.Storage.Managed
 						   StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("type"), taskType)
 				);
 
+			int totalTaskCount = 0;
 			foreach (var keyForTaskToTryMerging in keyForTaskToTryMergings)
 			{
 				var readResult = storage.Tasks.Read(keyForTaskToTryMerging);
@@ -110,6 +111,8 @@ namespace Raven.Storage.Managed
 				task.Merge(existingTask);
 
 				storage.Tasks.Remove(keyForTaskToTryMerging);
+				if (totalTaskCount++ > 1024)
+					break;
 			}
 		}
 

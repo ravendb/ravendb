@@ -83,14 +83,27 @@ namespace Raven.Database.Indexing
 				{
 					c.Query = HandleMethods(c.Query);
 				}
-				var requiresMerging = booleanQuery.Clauses.All(x => x.Query is IRavenLuceneMethodQuery);
-				if (requiresMerging == false)
-					return booleanQuery;
 				if (booleanQuery.Clauses.Count == 0)
 					return booleanQuery;
-				var first = (IRavenLuceneMethodQuery)booleanQuery.Clauses[0].Query;
-				var ravenLuceneMethodQuery = booleanQuery.Clauses.Skip(1).Aggregate(first, (methodQuery, clause) => methodQuery.Merge(clause.Query));
-				return (Query)ravenLuceneMethodQuery;
+			
+				var mergeGroups = booleanQuery.Clauses.Select(x=>x.Query).OfType<IRavenLuceneMethodQuery>().GroupBy(x => x.Field).ToArray();
+				if (mergeGroups.Length == 0)
+					return booleanQuery;
+
+				foreach (var mergeGroup in mergeGroups)
+				{
+					var clauses = mergeGroup.ToArray();
+					var first = clauses[0];
+					foreach (var mergedClause in clauses.Skip(1))
+					{
+						booleanQuery.Clauses.RemoveAll(x => ReferenceEquals(x.Query, mergedClause));
+					}
+					var ravenLuceneMethodQuery = clauses.Skip(1).Aggregate(first, (methodQuery, clause) => methodQuery.Merge(clause));
+					booleanQuery.Clauses.First(x => ReferenceEquals(x.Query, first)).Query = (Query)ravenLuceneMethodQuery;
+				}
+				if (booleanQuery.Clauses.Count == 1)
+					return booleanQuery.Clauses[0].Query;
+				return booleanQuery;
 			}
 			return query;
 		}

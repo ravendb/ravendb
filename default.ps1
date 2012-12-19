@@ -503,7 +503,7 @@ task CreateNugetPackages -depends Compile {
 			}
 		}
 		$nuspec.Save($_.FullName);
-		Exec { &"$tools_dir\nuget.exe" pack $_.FullName }
+		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
 	
 	# Upload packages
@@ -514,7 +514,7 @@ task CreateNugetPackages -depends Compile {
 		
 		# Push to nuget repository
 		$packages | ForEach-Object {
-			Exec { &"$tools_dir\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey }
+			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey }
 		}
 	}
 	else {

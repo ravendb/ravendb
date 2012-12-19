@@ -25,7 +25,7 @@ namespace Raven.Abstractions.Extensions
 			while (true)
 			{
 				if (e.InnerExceptions.Count != 1)
-					return null;
+					return e;
 
 				var aggregateException = e.InnerExceptions[0] as AggregateException;
 				if (aggregateException == null)

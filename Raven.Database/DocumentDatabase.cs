@@ -44,6 +44,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
+using BitConverter = System.BitConverter;
 using Index = Raven.Database.Indexing.Index;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
@@ -324,8 +325,7 @@ namespace Raven.Database
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
-					DatabaseCacheSizeInBytes = workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes(),
-					DatabaseCacheSizeInMB = workContext.TransactionaStorage.GetDatabaseCacheSizeInBytes() / 1024.0m / 1024.0m,
+					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
@@ -348,7 +348,7 @@ namespace Raven.Database
 						typeof(AbstractAttachmentReadTrigger),
 						typeof(AbstractBackgroundTask),
 						typeof(IAlterConfiguration)
-						)
+						),
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -371,6 +371,12 @@ namespace Raven.Database
 
 				return result;
 			}
+		}
+
+	
+		private decimal ConvertBytesToMBs(long bytes)
+		{
+			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
 		}
 
 		public InMemoryRavenConfiguration Configuration
@@ -812,6 +818,7 @@ namespace Raven.Database
 						if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
 						{
 							deleted = true;
+							WorkContext.MarkDeleted(key);
 							foreach (var indexName in IndexDefinitionStorage.IndexNames)
 							{
 								AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
@@ -1019,7 +1026,7 @@ namespace Raven.Database
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
-		    var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
+			var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
 			var stale = false;
 			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
@@ -1050,18 +1057,18 @@ namespace Raven.Database
 															: Constants.ReduceKeyFieldName);
 					Func<IndexQueryResult, bool> shouldIncludeInResults =
 						result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
-				    var collection =
-				        from queryResult in
-				            IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
-				        select new
-				        {
-				            Document = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch),
-				            Fragments = queryResult.Highligtings
-				        }
-				        into docWithFragments
-				        where docWithFragments.Document != null
-				        let _ = nonAuthoritativeInformation |= (docWithFragments.Document.NonAuthoritativeInformation ?? false)
-				        select docWithFragments;
+					var collection =
+						from queryResult in
+							IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
+						select new
+						{
+							Document = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch),
+							Fragments = queryResult.Highligtings
+						}
+						into docWithFragments
+						where docWithFragments.Document != null
+						let _ = nonAuthoritativeInformation |= (docWithFragments.Document.NonAuthoritativeInformation ?? false)
+						select docWithFragments;
 
 					var transformerErrors = new List<string>();
 					IEnumerable<RavenJObject> results;
@@ -1085,15 +1092,15 @@ namespace Raven.Database
 					}
 					else
 					{
-                        var resultList = new List<RavenJObject>();
-					    foreach (var docWithFragments in collection)
-					    {
-					        resultList.Add(docWithFragments.Document.ToJson());
+						var resultList = new List<RavenJObject>();
+						foreach (var docWithFragments in collection)
+						{
+							resultList.Add(docWithFragments.Document.ToJson());
 
-					        if (docWithFragments.Fragments != null && docWithFragments.Document.Key != null)
-					            highlightings.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
-					    }
-					    results = resultList;
+							if (docWithFragments.Fragments != null && docWithFragments.Document.Key != null)
+								highlightings.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
+						}
+						results = resultList;
 					}
 
 					list.AddRange(results);
@@ -1116,7 +1123,7 @@ namespace Raven.Database
 				ResultEtag = resultEtag,
 				IdsToInclude = idsToLoad,
 				LastQueryTime = SystemTime.UtcNow,
-                Highlightings = highlightings
+				Highlightings = highlightings
 			};
 		}
 
@@ -1395,19 +1402,27 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
-				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
-				foreach (var doc in documents)
+				while (true)
 				{
-					if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
-						continue;
-					DocumentRetriever.EnsureIdInMetadata(doc);
-					var document = documentRetriever
-						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
-					if (document == null)
-						continue;
+					int docCount = 0;
+					var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
+					var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+					foreach (var doc in documents)
+					{
+						docCount++;
+						if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
+							continue;
+						DocumentRetriever.EnsureIdInMetadata(doc);
+						var document = documentRetriever
+							.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+						if (document == null)
+							continue;
 
-					list.Add(document.ToJson());
+						list.Add(document.ToJson());
+					}
+					if (list.Length != 0 || docCount == 0)
+						break;
+					start += docCount;
 				}
 			});
 			return list;
@@ -1418,19 +1433,29 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = etag == null ?
-					actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) :
-					actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
-				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
-				foreach (var doc in documents)
+				while (true)
 				{
-					DocumentRetriever.EnsureIdInMetadata(doc);
-					var document = documentRetriever
-						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
-					if (document == null)
-						continue;
+					var documents = etag == null ?
+						actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) :
+						actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
+					var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+					int docCount = 0;
+					foreach (var doc in documents)
+					{
+						docCount++;
+						if(etag != null)
+							etag = doc.Etag;
+						DocumentRetriever.EnsureIdInMetadata(doc);
+						var document = documentRetriever
+							.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+						if (document == null)
+							continue;
 
-					list.Add(document.ToJson());
+						list.Add(document.ToJson());
+					}
+					if (list.Length != 0 || docCount == 0)
+						break;
+					start += docCount;
 				}
 			});
 			return list;
@@ -1655,6 +1680,15 @@ namespace Raven.Database
 					throw new InvalidOperationException("Backup is already running");
 				}
 			}
+
+			bool circularLogging;
+			if (incrementalBackup &&
+				TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
+				(bool.TryParse(Configuration.Settings["Raven/Esent/CircularLog"], out circularLogging) == false || circularLogging))
+			{
+				throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
+			}
+
 			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
 			{
 				Started = SystemTime.UtcNow,

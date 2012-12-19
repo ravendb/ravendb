@@ -304,7 +304,7 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-            var highlightings = new RavenQueryHighlightings();
+			var highlightings = new RavenQueryHighlightings();
 			var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, DatabaseCommands, null);
 			return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, DatabaseCommands, null);
 		}
@@ -390,7 +390,11 @@ namespace Raven.Client.Document
 			return new MultiLoaderWithInclude<T>(this).Include(path);
 		}
 
-
+		/// <summary>
+		/// Begin a load while including the specified path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
 		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
 		{
 			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);

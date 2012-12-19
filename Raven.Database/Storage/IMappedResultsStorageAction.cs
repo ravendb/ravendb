@@ -12,6 +12,8 @@ namespace Raven.Database.Storage
 {
 	public interface IMappedResultsStorageAction
 	{
+		IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize);
+		
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
@@ -23,10 +25,15 @@ namespace Raven.Database.Storage
 		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take);
 
 		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets);
-		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete);
+		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, int take, bool loadData, List<object> itemsToDelete);
 		ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete);
 		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
+		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int limitOfItemsToReduceInSingleStep);
+		void UpdatePerformedReduceType(string indexName, string reduceKey, ReduceType performedReduceType);
+		ReduceType GetLastPerformedReduceType(string indexName, string reduceKey);
+		IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey);
+		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData, int take);
 	}
 
 	public class ReduceKeyAndBucket
@@ -90,5 +97,30 @@ namespace Raven.Database.Storage
 		{
 			return string.Format("{0},{1}: {2}", ReduceKey, Bucket, Data == null ? "null" : Data.ToString(Formatting.None));
 		}
+	}
+
+	public class ReduceTypePerKey
+	{
+		public ReduceTypePerKey(string reduceKey, ReduceType type)
+		{
+			ReduceKey = reduceKey;
+			OperationTypeToPerform = type;
+		}
+
+		public string ReduceKey { get; set; }
+		public ReduceType OperationTypeToPerform { get; set; }
+	}
+
+	public class ReduceKeyAndCount
+	{
+		public int Count { get; set; }
+		public string Key { get; set; }
+	}
+
+	public enum ReduceType
+	{
+		None = 0,
+		SingleStep = 1,
+		MultiStep = 2,
 	}
 }

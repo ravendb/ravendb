@@ -28,20 +28,20 @@ namespace Raven.Client.Linq
 		private readonly string indexName;
 		private readonly IDocumentQueryGenerator queryGenerator;
 		private readonly RavenQueryStatistics ravenQueryStatistics;
-	    private readonly RavenQueryHighlightings highlightings;
+		private readonly RavenQueryHighlightings highlightings;
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 
-	    /// <summary>
+		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
 		/// </summary>
 		public RavenQueryProvider(
 			IDocumentQueryGenerator queryGenerator,
 			string indexName,
 			RavenQueryStatistics ravenQueryStatistics,
-            RavenQueryHighlightings highlightings
+			RavenQueryHighlightings highlightings
 #if !SILVERLIGHT
 , IDatabaseCommands databaseCommands
 #endif
@@ -54,7 +54,7 @@ namespace Raven.Client.Linq
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
 			this.ravenQueryStatistics = ravenQueryStatistics;
-		    this.highlightings = highlightings;
+			this.highlightings = highlightings;
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
@@ -135,9 +135,9 @@ namespace Raven.Client.Linq
 		{
 			return new RavenQueryInspector<S>(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
 #if !SILVERLIGHT
-			                                  , databaseCommands
+											  , databaseCommands
 #endif
-			                                  , asyncDatabaseCommands);
+											  , asyncDatabaseCommands);
 		}
 
 		IQueryable IQueryProvider.CreateQuery(Expression expression)

@@ -71,13 +71,13 @@ namespace Raven.Client.Document
 		{
 			var documentQuery = new DocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
-			                                                   theDatabaseCommands,
+															   theDatabaseCommands,
 #endif
-			                                                   theAsyncDatabaseCommands,
-			                                                   indexName, 
+															   theAsyncDatabaseCommands,
+															   indexName, 
 															   fields,
 															   projections,
-			                                                   queryListeners)
+															   queryListeners)
 			{
 				pageSize = pageSize,
 				queryText = new StringBuilder(queryText.ToString()),
@@ -100,9 +100,10 @@ namespace Raven.Client.Document
 				spatialRelation = spatialRelation,
 				distanceErrorPct = distanceErrorPct,
 				rootTypes = {typeof(T)},
-                highlightedFields = new List<HighlightedField>(highlightedFields),
-                highlighterPreTags = highlighterPreTags,
-                highlighterPostTags = highlighterPostTags
+				defaultField = defaultField,
+				highlightedFields = new List<HighlightedField>(highlightedFields),
+				highlighterPreTags = highlighterPreTags,
+				highlighterPostTags = highlighterPostTags
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -746,61 +747,61 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
-	        string fieldName, 
-            int fragmentLength, 
-            int fragmentCount, 
-            string fragmentsField)
-	    {
-	        Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
-	        return this;
-	    }
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
+			string fieldName, 
+			int fragmentLength, 
+			int fragmentCount, 
+			string fragmentsField)
+		{
+			Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
+			return this;
+		}
 
-	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
-            string fieldName, 
-            int fragmentLength, 
-            int fragmentCount, 
-            out FieldHighlightings highlightings)
-	    {
-	        this.Highlight(fieldName, fragmentLength, fragmentCount, out highlightings);
-	        return this;
-	    }
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
+			string fieldName, 
+			int fragmentLength, 
+			int fragmentCount, 
+			out FieldHighlightings highlightings)
+		{
+			this.Highlight(fieldName, fragmentLength, fragmentCount, out highlightings);
+			return this;
+		}
 
-	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
-	        Expression<Func<T, TValue>> propertySelector, 
-            int fragmentLength, 
-            int fragmentCount,
-	        Expression<Func<T, IEnumerable>> fragmentsPropertySelector)
-	    {
-	        var fieldName = this.GetMemberQueryPath(propertySelector);
-            var fragmentsField = this.GetMemberQueryPath(fragmentsPropertySelector);
-	        this.Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
-	        return this;
-	    }
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			Expression<Func<T, IEnumerable>> fragmentsPropertySelector)
+		{
+			var fieldName = this.GetMemberQueryPath(propertySelector);
+			var fragmentsField = this.GetMemberQueryPath(fragmentsPropertySelector);
+			this.Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
+			return this;
+		}
 
-	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
-	        Expression<Func<T, TValue>> propertySelector, 
-            int fragmentLength, 
-            int fragmentCount,
-	        out FieldHighlightings fieldHighlightings)
-	    {
-	        this.Highlight(this.GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
-	        return this;
-	    }
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			out FieldHighlightings fieldHighlightings)
+		{
+			this.Highlight(this.GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
+			return this;
+		}
 
-	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
-	    {
-	        this.SetHighlighterTags(new[]{preTag},new[]{postTag});
-	        return this;
-	    }
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
+		{
+			this.SetHighlighterTags(new[]{preTag},new[]{postTag});
+			return this;
+		}
 
-	    IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string[] preTags, string[] postTags)
-	    {
-	        this.SetHighlighterTags(preTags, postTags);
-	        return this;
-	    }
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string[] preTags, string[] postTags)
+		{
+			this.SetHighlighterTags(preTags, postTags);
+			return this;
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>
@@ -864,6 +865,28 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOf(cutOff, waitTimeout);
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <returns></returns>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag);
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
 			return this;
 		}
 

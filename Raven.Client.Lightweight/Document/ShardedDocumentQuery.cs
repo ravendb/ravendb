@@ -113,9 +113,9 @@ namespace Raven.Client.Document
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				rootTypes = {typeof(T)},
-                highlightedFields = new List<HighlightedField>(highlightedFields),
-                highlighterPreTags = highlighterPreTags,
-                highlighterPostTags = highlighterPostTags
+				highlightedFields = new List<HighlightedField>(highlightedFields),
+				highlighterPreTags = highlighterPreTags,
+				highlighterPostTags = highlighterPostTags
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -155,9 +155,9 @@ namespace Raven.Client.Document
 			AssertNoDuplicateIdsInResults(shardQueryOperations);
 
 			var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery,
-			                                                        shardQueryOperations.Select(x => x.CurrentQueryResults)
-			                                                        	.Where(x => x != null)
-			                                                        	.ToList());
+																	shardQueryOperations.Select(x => x.CurrentQueryResults)
+																		.Where(x => x != null)
+																		.ToList());
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];

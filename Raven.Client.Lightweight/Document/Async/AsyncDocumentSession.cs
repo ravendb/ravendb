@@ -115,6 +115,15 @@ namespace Raven.Client.Document.Async
 		}
 
 		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+		{
+			return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+		}
+
+		/// <summary>
 		/// Loads the specified entities with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
@@ -302,7 +311,7 @@ namespace Raven.Client.Document.Async
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-            var highlightings = new RavenQueryHighlightings();
+			var highlightings = new RavenQueryHighlightings();
 			return new RavenQueryInspector<T>(
 				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings,
 #if !SILVERLIGHT
@@ -310,7 +319,7 @@ namespace Raven.Client.Document.Async
 #endif
 			AsyncDatabaseCommands),
 				ravenQueryStatistics,
-                highlightings,
+				highlightings,
 				indexName,
 				null,
 				this,

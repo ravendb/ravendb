@@ -361,9 +361,9 @@ namespace Raven.Database.Indexing
 			protected bool Equals(FieldCacheKey other)
 			{
 				return string.Equals(name, other.name) && 
-                    Equals(index, other.index) &&
-                    Equals(store, other.store) &&
-                    Equals(termVector, other.termVector) &&
+					Equals(index, other.index) &&
+					Equals(store, other.store) &&
+					Equals(termVector, other.termVector) &&
 					multipleItemsSameField.SequenceEqual(other.multipleItemsSameField);
 			}
 

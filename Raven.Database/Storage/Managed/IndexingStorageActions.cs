@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -19,15 +18,19 @@ using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
 {
+	using System.Diagnostics;
+	using Abstractions.Extensions;
+
 	public class IndexingStorageActions : IIndexingStorageActions
 	{
 		private readonly TableStorage storage;
+		private readonly TimeSpan etagUpdateTimeout = TimeSpan.FromSeconds(2);
+		private readonly ReaderWriterLockSlim locker = new ReaderWriterLockSlim();
 
 		public IndexingStorageActions(TableStorage storage)
 		{
 			this.storage = storage;
 		}
-
 
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
@@ -40,10 +43,19 @@ namespace Raven.Storage.Managed
 
 		public IndexStats GetIndexStats(string index)
 		{
-			var readResult = storage.IndexingStats.Read(new RavenJObject {{"index", index}});
-			if(readResult == null)
-				return null;
-			return GetIndexStats(readResult);
+			locker.EnterReadLock();
+			try
+			{
+				var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index } });
+				if (readResult == null)
+					return null;
+				return GetIndexStats(readResult);
+			}
+			finally
+			{
+				locker.ExitReadLock();
+			}
+			
 		}
 
 		private static IndexStats GetIndexStats(Table.ReadResult readResult)
@@ -125,6 +137,24 @@ namespace Raven.Storage.Managed
 		public void DeleteIndex(string name)
 		{
 			storage.IndexingStats.Remove(name);
+
+			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject { { "view", name } })
+			.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), name)))
+			{
+				storage.MappedResults.Remove(key);
+			}
+
+			foreach (var key in storage.ReduceResults["ByViewReduceKeyAndSourceBucket"].SkipTo(new RavenJObject { { "view", name } })
+				.TakeWhile(x => string.Equals(name, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase)))
+			{
+				storage.ReduceResults.Remove(key);
+			}
+
+			foreach (var key in storage.ScheduleReductions["ByView"].SkipTo(new RavenJObject { { "view", name } })
+				.TakeWhile(x => string.Equals(name, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase)))
+			{
+				storage.ScheduleReductions.Remove(key);
+			}
 		}
 
 		public IndexFailureInformation GetFailureRate(string index)
@@ -157,15 +187,46 @@ namespace Raven.Storage.Managed
 
 		public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
 		{
-			var readResult = storage.IndexingStats.Read(index);
-			if (readResult == null)
-				throw new ArgumentException("There is no index with the name: " + index);
+			locker.EnterWriteLock();
+			try
+			{
+				bool updateOperationStatus = false;
 
-			var ravenJObject = (RavenJObject)readResult.Key.CloneToken();
-			ravenJObject["lastEtag"] = etag.ToByteArray();
-			ravenJObject["lastTimestamp"] = timestamp;
+				var sp = Stopwatch.StartNew();
 
-			storage.IndexingStats.UpdateKey(ravenJObject);
+				while (!updateOperationStatus)
+				{
+					var readResult = storage.IndexingStats.Read(index);
+					if (readResult == null)
+						throw new ArgumentException("There is no index with the name: " + index);
+
+					var ravenJObject = (RavenJObject)readResult.Key.CloneToken();
+
+					if (Buffers.Compare(ravenJObject.Value<byte[]>("lastEtag"), etag.ToByteArray()) >= 0)
+					{
+						break;
+					}
+
+					ravenJObject["lastEtag"] = etag.ToByteArray();
+					ravenJObject["lastTimestamp"] = timestamp;
+
+					updateOperationStatus = storage.IndexingStats.UpdateKey(ravenJObject);
+
+					if (!updateOperationStatus)
+					{
+						Thread.Sleep(100);
+					}
+
+					if (sp.Elapsed > etagUpdateTimeout)
+					{
+						break;
+					}
+				}
+			}
+			finally
+			{
+				locker.ExitWriteLock();
+			}
 		}
 
 		public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)

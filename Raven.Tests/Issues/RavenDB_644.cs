@@ -8,20 +8,21 @@ namespace Raven.Tests.Issues
 	using System;
 	using System.ComponentModel.Composition.Hosting;
 	using System.Linq;
-
 	using Raven.Abstractions.Indexing;
 	using Raven.Client.Indexes;
-
 	using Xunit;
 
+	/// <remarks>
+	/// Similar to RavenDB_783
+	/// </remarks>
 	public class RavenDB_644 : RavenTest
 	{
-		 public class Item
-		 {
-			 public int Year { get; set; }
+		public class Item
+		{
+			public int Year { get; set; }
 
-			 public int Number { get; set; }
-		 }
+			public int Number { get; set; }
+		}
 
 		public class Record
 		{
@@ -52,22 +53,22 @@ namespace Raven.Tests.Issues
 			public Index()
 			{
 				Map = items => from i in items
-							   select new
-									  {
-										  Year = i.Year,
-										  Number = i.Number,
-										  Count = 0
-									  };
+				               select new
+				               {
+					               Year = i.Year,
+					               Number = i.Number,
+					               Count = 0
+				               };
 
 				Reduce = records => from r in records
-									group r by new { r.Year, r.Number }
-									into yearAndNumber
-									select new
-									{
-										Year = yearAndNumber.Key.Year,
-										Number = yearAndNumber.Key.Number,
-										Count = yearAndNumber.Count()
-									};
+				                    group r by new { r.Year, r.Number }
+				                    into yearAndNumber
+				                    select new
+				                    {
+					                    Year = yearAndNumber.Key.Year,
+					                    Number = yearAndNumber.Key.Number,
+					                    Count = yearAndNumber.Count()
+				                    };
 			}
 		}
 
@@ -76,23 +77,23 @@ namespace Raven.Tests.Issues
 			public FancyIndex()
 			{
 				Map = items => from i in items
-							   select new
-							   {
-								   Year = i.Year,
-								   Number = i.Number,
-								   Count = 0
-							   };
+				               select new
+				               {
+					               Year = i.Year,
+					               Number = i.Number,
+					               Count = 0
+				               };
 
 				Reduce = records => from r in records
-									where r.Number == 10 && r.Year == 2010
-									group r by new { r.Year, r.Number }
-										into yearAndNumber
-										select new
-										{
-											Year = yearAndNumber.Key.Year,
-											Number = yearAndNumber.Key.Number,
-											Count = yearAndNumber.Where(x => x.Number == 0).Select(x => yearAndNumber.Count())
-										};
+				                    where r.Number == 10 && r.Year == 2010
+				                    group r by new { r.Year, r.Number }
+				                    into yearAndNumber
+				                    select new
+				                    {
+					                    Year = yearAndNumber.Key.Year,
+					                    Number = yearAndNumber.Key.Number,
+					                    Count = yearAndNumber.Where(x => x.Number == 0).Select(x => yearAndNumber.Count())
+				                    };
 			}
 		}
 
@@ -101,26 +102,26 @@ namespace Raven.Tests.Issues
 			public ValidFancyIndex()
 			{
 				Map = items => from i in items
-							   select new
-							   {
-								   Year = i.Year,
-								   Number = i.Number,
-								   Count =  new { i.Number, Count = 1 }
-							   };
+				               select new
+				               {
+					               Year = i.Year,
+					               Number = i.Number,
+					               Count = new { i.Number, Count = 1 }
+				               };
 
 				Reduce = records => from r in records
-				                    group r by new {r.Year, r.Number}
+				                    group r by new { r.Year, r.Number }
 				                    into yearAndNumber
 				                    select new
 				                    {
 					                    Year = yearAndNumber.Key.Year,
 					                    Number = yearAndNumber.Key.Number,
 					                    Count = yearAndNumber.GroupBy(x => x.Number)
-					                    .Select(g => new
-					                    {
-						                    Number = g.Key,
-						                    Count = g.Count()
-					                    })
+					                                         .Select(g => new
+					                                         {
+						                                         Number = g.Key,
+						                                         Count = g.Count()
+					                                         })
 				                    };
 			}
 		}
@@ -219,7 +220,6 @@ namespace Raven.Tests.Issues
 						new ValidFancyIndex().Execute(store);
 					}
 				});
-
 		}
 	}
 }

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IndexQuery.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -166,19 +166,28 @@ namespace Raven.Abstractions.Data
 			return path.ToString();
 		}
 
-        public string GetQueryString()
+        public string GetMinimalQueryString()
         {
             var sb = new StringBuilder();
-            AppendQueryString(sb);
+            AppendMinimalQueryString(sb);
             return sb.ToString();
         }
 
+
+		public string GetQueryString()
+		{
+			var sb = new StringBuilder();
+			AppendQueryString(sb);
+			return sb.ToString();
+		}
+
 		public void AppendQueryString(StringBuilder path)
 		{
-			path
-				.Append("?query=");
+			path.Append("?");
 
-			path.Append(Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")))
+			AppendMinimalQueryString(path);
+
+			path
 				.Append("&start=").Append(Start)
 				.Append("&pageSize=").Append(PageSize)
 				.Append("&aggregation=").Append(AggregationOperation);
@@ -187,13 +196,7 @@ namespace Raven.Abstractions.Data
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
-			if(string.IsNullOrEmpty(DefaultField) == false)
-			{
-				path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
-			}
-
-			if (DefaultOperator != QueryOperator.Or)
-				path.Append("&operator=AND");
+			
 			
             if (SkipTransformResults)
             {
@@ -215,15 +218,27 @@ namespace Raven.Abstractions.Data
             this.HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
             this.HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
 
-			var vars = GetCustomQueryStringVariables();
+			
 
+			if(DebugOptionGetIndexEntries)
+				path.Append("&debug=entries");
+		}
+
+		private void AppendMinimalQueryString(StringBuilder path)
+		{
+			path.Append("query=")
+				.Append(Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")));
+			if (string.IsNullOrEmpty(DefaultField) == false)
+			{
+				path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
+			}
+			if (DefaultOperator != QueryOperator.Or)
+				path.Append("&operator=AND");
+			var vars = GetCustomQueryStringVariables();
 			if (!string.IsNullOrEmpty(vars))
 			{
 				path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
 			}
-
-			if(DebugOptionGetIndexEntries)
-				path.Append("&debug=entries");
 		}
 
 		/// <summary>

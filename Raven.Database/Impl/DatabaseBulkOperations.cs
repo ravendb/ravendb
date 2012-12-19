@@ -64,9 +64,9 @@ namespace Raven.Database.Impl
 				PageSize = int.MaxValue,
 				FieldsToFetch = new[] { Constants.DocumentIdFieldName },
 				SortedFields = indexQuery.SortedFields,
-                HighlighterPreTags = indexQuery.HighlighterPreTags,
-                HighlighterPostTags = indexQuery.HighlighterPostTags,
-                HighlightedFields = indexQuery.HighlightedFields
+				HighlighterPreTags = indexQuery.HighlighterPreTags,
+				HighlighterPostTags = indexQuery.HighlighterPostTags,
+				HighlightedFields = indexQuery.HighlightedFields
 			};
 
 			bool stale;

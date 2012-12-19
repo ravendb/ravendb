@@ -161,6 +161,23 @@ namespace Raven.Studio.Commands
 			if (encryptionData != null)
 			{
 				settings[Constants.EncryptionKeySetting] = encryptionData.EncryptionKey.Text;
+				switch (encryptionData.EncryptionAlgorithem.SelectedValue.ToString())
+				{
+					case "DESC":
+						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
+						break;
+					case "RC2C":
+						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
+						break;
+					case "Rijndael":
+						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.RijndaelManaged, mscorlib";
+						break;
+					case "Triple DESC":
+						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
+						break;
+				}
+
+				settings[Constants.EncryptIndexes] = (encryptionData.EncryptIndexes.IsChecked ?? true).ToString();
 			}
 
 			return settings;

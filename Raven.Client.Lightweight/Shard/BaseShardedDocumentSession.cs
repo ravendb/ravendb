@@ -241,7 +241,7 @@ namespace Raven.Client.Shard
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-            var highlightings = new RavenQueryHighlightings();
+			var highlightings = new RavenQueryHighlightings();
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null);
 			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null);
 		}
