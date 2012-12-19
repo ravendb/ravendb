@@ -704,17 +704,20 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				using (var update = new Update(session, ReduceKeysStatus, JET_prep.Replace))
 				{
-					Api.SetColumn(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"], (int)performedReduceType);
+					Api.SetColumn(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"],
+					              (int) performedReduceType);
 
 					update.Save();
 				}
-			});
+			},
+			createIfMissing: true);
 		}
 
 		private void ExecuteOnReduceKey(string view, string reduceKey, 
 			Table table,
 			IDictionary<string, JET_COLUMNID> columnids,
-			 Action action)
+			Action action,
+			bool createIfMissing)
 		{
 			var hashReduceKey = HashReduceKey(reduceKey);
 
@@ -725,6 +728,8 @@ namespace Raven.Storage.Esent.StorageActions
 
 			if (Api.TrySeek(session, table, SeekGrbit.SeekEQ) == false)
 			{
+				if (createIfMissing == false)
+					return;
 				using (var update = new Update(session, table, JET_prep.Insert))
 				{
 					Api.SetColumn(session, table, columnids["view"], view, Encoding.Unicode);
@@ -759,7 +764,7 @@ namespace Raven.Storage.Esent.StorageActions
 			ExecuteOnReduceKey(indexName, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns, () =>
 			{
 				reduceType = Api.RetrieveColumnAsInt32(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"]).Value;
-			});
+			}, createIfMissing: false);
 			return (ReduceType)reduceType;
 		}
 
@@ -853,7 +858,8 @@ namespace Raven.Storage.Esent.StorageActions
 		private void IncrementReduceKeyCounter(string view, string reduceKey)
 		{
 			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
-				() => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], 1));
+				() => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], 1),
+				createIfMissing: true);
 		}
 
 		private void DecrementReduceKeyCounter(string view, string reduceKey)
@@ -863,26 +869,18 @@ namespace Raven.Storage.Esent.StorageActions
 			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, 
 				() =>
 				{
-					
-					var decrementedValue =
-						Api.RetrieveColumnAsInt32(session, ReduceKeysCounts,
-						                          tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value - 1;
-
-					if (decrementedValue > 0)
-					{
-						Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -1);
-					}
-					else
+					var result = Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -1);
+					if (result == 1)
 					{
 						Api.JetDelete(session, ReduceKeysCounts);
 						removeReducedKeyStatus = true;
 					}
-				});
+				}, createIfMissing: false);
 
 			if (removeReducedKeyStatus)
 			{
 				ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns,
-				                   () => Api.JetDelete(session, ReduceKeysStatus));
+				                   () => Api.JetDelete(session, ReduceKeysStatus), createIfMissing: false);
 			}
 		}
 
@@ -892,7 +890,7 @@ namespace Raven.Storage.Esent.StorageActions
 			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, () =>
 			{
 				numberOfMappedItemsPerReduceKey = Api.RetrieveColumnAsInt32(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
-			});
+			}, createIfMissing: false);
 			
 			return numberOfMappedItemsPerReduceKey;
 		}

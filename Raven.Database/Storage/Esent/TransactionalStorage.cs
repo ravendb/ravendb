@@ -460,6 +460,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		[CLSCompliant(false)]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
