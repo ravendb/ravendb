@@ -535,6 +535,7 @@
     <Compile Include="Issues\RavenDB_726.cs" />
     <Compile Include="Issues\RavenDB_772.cs" />
     <Compile Include="Issues\RavenDB_766.cs" />
+    <Compile Include="Issues\RavenDB_784.cs" />
     <Compile Include="Issues\RDoc_56.cs" />
     <Compile Include="Issues\RDoc_60.cs" />
     <Compile Include="Linq\Contains.cs" />

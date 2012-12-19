@@ -447,14 +447,26 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, MappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 
+			var deletedReduceKeys = new List<string>();
+
 			do
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
 				var viewFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 				if (StringComparer.InvariantCultureIgnoreCase.Equals(viewFromDb, view) == false)
 					continue;
+
+				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+				deletedReduceKeys.Add(reduceKey);
+
 				Api.JetDelete(session, MappedResults);
+
 			} while (Api.TryMoveNext(session, MappedResults));
+
+			foreach (var reduceKey in deletedReduceKeys)
+			{
+				DecrementReduceKeyCounter(view, reduceKey);
+			}
 		}
 
 		public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take)
@@ -846,8 +858,32 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private void DecrementReduceKeyCounter(string view, string reduceKey)
 		{
-			ExecuteOnReduceKey(view, reduceKey,ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, 
-				() => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -1));
+			var removeReducedKeyStatus = false;
+
+			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, 
+				() =>
+				{
+					
+					var decrementedValue =
+						Api.RetrieveColumnAsInt32(session, ReduceKeysCounts,
+						                          tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value - 1;
+
+					if (decrementedValue > 0)
+					{
+						Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -1);
+					}
+					else
+					{
+						Api.JetDelete(session, ReduceKeysCounts);
+						removeReducedKeyStatus = true;
+					}
+				});
+
+			if (removeReducedKeyStatus)
+			{
+				ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns,
+				                   () => Api.JetDelete(session, ReduceKeysStatus));
+			}
 		}
 
 		private int GetNumberOfMappedItemsPerReduceKey(string view, string reduceKey)

@@ -581,13 +581,15 @@ namespace Raven.Storage.Managed
 
 			var decrementedValue = rkey.Value<int>("mappedItemsCount") - 1;
 
-			if (decrementedValue < 0)
+			if (decrementedValue > 0)
 			{
-				decrementedValue = 0;
+				rkey["mappedItemsCount"] = decrementedValue;
+				storage.ReduceKeys.UpdateKey(rkey);
 			}
-
-			rkey["mappedItemsCount"] = decrementedValue;
-			storage.ReduceKeys.UpdateKey(rkey);
+			else
+			{
+				storage.ReduceKeys.Remove(rkey);
+			}
 		}
 
 		private int GetNumberOfMappedItemsPerReduceKey(string view, string reduceKey)
