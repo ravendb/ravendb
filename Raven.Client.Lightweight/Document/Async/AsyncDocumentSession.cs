@@ -124,14 +124,14 @@ namespace Raven.Client.Document.Async
 		}
 
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Begins the async load operation, with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
 		/// This method allows you to call:
-		/// Load{Post}(1)
+		/// LoadAsync{Post}(1)
 		/// And that call will internally be translated to 
-		/// Load{Post}("posts/1");
+		/// LoadAsync{Post}("posts/1");
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
@@ -139,6 +139,42 @@ namespace Raven.Client.Document.Async
 		{
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return LoadAsync<T>(documentKey);
+		}
+
+		/// <summary>
+		/// Begins the async multi-load operation, with the specified ids after applying
+		/// conventions on the provided ids to get the real document ids.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// LoadAsync{Post}(1,2,3)
+		/// And that call will internally be translated to 
+		/// LoadAsync{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public Task<T[]> LoadAsync<T>(params ValueType[] ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return LoadAsync<T>(documentKeys);
+		}
+
+		/// <summary>
+		/// Begins the async multi-load operation, with the specified ids after applying
+		/// conventions on the provided ids to get the real document ids.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// LoadAsync{Post}(new List&lt;int&gt;(){1,2,3})
+		/// And that call will internally be translated to 
+		/// LoadAsync{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return LoadAsync<T>(documentKeys);
 		}
 
 		/// <summary>
@@ -183,9 +219,14 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
-		public Task<T[]> LoadAsync<T>(string[] ids)
+		public Task<T[]> LoadAsync<T>(params string[] ids)
 		{
 			return LoadAsyncInternal<T>(ids, new string[0]);
+		}
+
+		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
+		{
+			return LoadAsyncInternal<T>(ids.ToArray(), new string[0]);
 		}
 
 		/// <summary>

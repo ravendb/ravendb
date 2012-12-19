@@ -162,6 +162,18 @@ namespace Raven.Client.Shard
 			return Load<T>(documentKey);
 		}
 
+		public T[] Load<T>(params ValueType[] ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Load<T>(documentKeys);
+		}
+
+		public T[] Load<T>(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Load<T>(documentKeys);
+		}
+
 		public T[] LoadInternal<T>(string[] ids)
 		{
 			return LoadInternal<T>(ids, new string[0]);
@@ -246,9 +258,26 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Loads the specified ids and a function to call when it is evaluated
 		/// </summary>
-		public Lazy<T[]> Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
 		{
 			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
+		}
+
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids)
+		{
+			return Lazily.Load<T>(ids, null);
+		}
+
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		Lazy<T[]> ILazySessionOperations.Load<T>(params string[] ids)
+		{
+			return Lazily.Load<T>(ids, null);
 		}
 
 		/// <summary>
@@ -262,7 +291,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Loads the specified id and a function to call when it is evaluated
 		/// </summary>
-		public Lazy<T> Load<T>(string id, Action<T> onEval)
+		Lazy<T> ILazySessionOperations.Load<T>(string id, Action<T> onEval)
 		{
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
 			{
@@ -293,7 +322,7 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Loads the specified entity with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
@@ -306,11 +335,11 @@ namespace Raven.Client.Shard
 		/// </remarks>
 		Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
 		{
-			return Lazily.Load<T>(id, null);
+			return Lazily.Load(id, (Action<T>) null);
 		}
 
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Loads the specified entity with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
@@ -321,10 +350,28 @@ namespace Raven.Client.Shard
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		public Lazy<T> Load<T>(ValueType id, Action<T> onEval)
+		Lazy<T> ILazySessionOperations.Load<T>(ValueType id, Action<T> onEval)
 		{
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			return Lazily.Load<T>(documentKey);
+			return Lazily.Load(documentKey, onEval);
+		}
+
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Lazily.Load<T>(documentKeys, null);
+		}
+
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Lazily.Load(documentKeys, onEval);
+		}
+
+		Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Lazily.Load<T>(documentKeys, null);
 		}
 
 		/// <summary>
@@ -344,16 +391,7 @@ namespace Raven.Client.Shard
 		{
 			return new LazyMultiLoaderWithInclude<T>(this).Include(path);
 		}
-
-		/// <summary>
-		/// Loads the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		Lazy<T[]> ILazySessionOperations.Load<T>(params string[] ids)
-		{
-			return Lazily.Load<T>(ids, null);
-		}
-
+		
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>

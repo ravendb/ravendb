@@ -106,15 +106,32 @@ namespace Raven.Client.Shard
 			});
 		}
 
+		public Task<T[]> LoadAsync<T>(params string[] ids)
+		{
+			return LoadAsyncInternal<T>(ids);
+		}
+
+		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
+		{
+			return LoadAsyncInternal<T>(ids.ToArray());
+		}
+
 		public Task<T> LoadAsync<T>(ValueType id)
 		{
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return LoadAsync<T>(documentKey);
 		}
 
-		public Task<T[]> LoadAsync<T>(string[] ids)
+		public Task<T[]> LoadAsync<T>(params ValueType[] ids)
 		{
-			return LoadAsyncInternal<T>(ids);
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return LoadAsyncInternal<T>(documentKeys.ToArray());
+		}
+
+		public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return LoadAsyncInternal<T>(documentKeys.ToArray());
 		}
 
 		public Task<T[]> LoadAsyncInternal<T>(string[] ids)
