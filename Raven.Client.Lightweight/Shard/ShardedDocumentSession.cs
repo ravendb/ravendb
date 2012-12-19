@@ -23,14 +23,13 @@ using Raven.Json.Linq;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
 
-
 namespace Raven.Client.Shard
 {
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
 	public class ShardedDocumentSession : BaseShardedDocumentSession<IDatabaseCommands>, IDocumentQueryGenerator,
-										  IDocumentSessionImpl, ISyncAdvancedSessionOperation
+	                                      IDocumentSessionImpl, ISyncAdvancedSessionOperation
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
@@ -41,23 +40,21 @@ namespace Raven.Client.Shard
 		/// <param name="documentStore"></param>
 		/// <param name="listeners"></param>
 		public ShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
-									  ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
-			: base(documentStore, listeners, id, shardStrategy, shardDbCommands)
-		{
-		}
+		                              ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
+			: base(documentStore, listeners, id, shardStrategy, shardDbCommands) { }
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
 			var shardRequestData = new ShardRequestData
-		{
-			EntityType = typeof(object),
-			Keys = { documentKey }
-		};
+			{
+				EntityType = typeof(object),
+				Keys = { documentKey }
+			};
 			var dbCommands = GetCommandsToOperateOn(shardRequestData);
 
 			var documents = shardStrategy.ShardAccessStrategy.Apply(dbCommands,
-																	shardRequestData,
-																	(commands, i) => commands.Get(documentKey));
+			                                                        shardRequestData,
+			                                                        (commands, i) => commands.Get(documentKey));
 
 			var document = documents.FirstOrDefault(x => x != null);
 			if (document != null)
@@ -114,7 +111,7 @@ namespace Raven.Client.Shard
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
 			{
-				return (T)existingEntity;
+				return (T) existingEntity;
 			}
 
 			IncrementRequestCount();
@@ -143,7 +140,7 @@ namespace Raven.Client.Shard
 			if (shardsContainThisDocument.Count() > 1)
 			{
 				throw new InvalidOperationException("Found document with id: " + id +
-													" on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+				                                    " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
 			}
 
 			return shardsContainThisDocument.FirstOrDefault();
@@ -163,6 +160,18 @@ namespace Raven.Client.Shard
 		{
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return Load<T>(documentKey);
+		}
+
+		public T[] Load<T>(params ValueType[] ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Load<T>(documentKeys);
+		}
+
+		public T[] Load<T>(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Load<T>(documentKeys);
 		}
 
 		public T[] LoadInternal<T>(string[] ids)
@@ -213,7 +222,7 @@ namespace Raven.Client.Shard
 						if (ReferenceEquals(results[itemPosition], default(T)) == false)
 						{
 							throw new InvalidOperationException("Found document with id: " + id +
-																" on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+							                                    " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
 						}
 						results[itemPosition] = loadResults[i];
 					}
@@ -223,7 +232,7 @@ namespace Raven.Client.Shard
 			{
 				object val;
 				entitiesByKey.TryGetValue(id, out val);
-				return (T)val;
+				return (T) val;
 			}).ToArray();
 		}
 
@@ -249,35 +258,52 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Loads the specified ids and a function to call when it is evaluated
 		/// </summary>
-		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
 		{
 			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
 		}
 
 		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids)
+		{
+			return Lazily.Load<T>(ids, null);
+		}
+
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		Lazy<T[]> ILazySessionOperations.Load<T>(params string[] ids)
+		{
+			return Lazily.Load<T>(ids, null);
+		}
+
+		/// <summary>
 		/// Loads the specified id.
 		/// </summary>
-		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
+		Lazy<T> ILazySessionOperations.Load<T>(string id)
 		{
-			return Lazily.Load(id, (Action<TResult>)null);
+			return Lazily.Load(id, (Action<T>) null);
 		}
 
 		/// <summary>
 		/// Loads the specified id and a function to call when it is evaluated
 		/// </summary>
-		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
+		Lazy<T> ILazySessionOperations.Load<T>(string id, Action<T> onEval)
 		{
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
 			{
 				Keys = { id },
-				EntityType = typeof(TResult)
+				EntityType = typeof(T)
 			});
 
-			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
-																								{
-																									var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
-																									return new DisposableAction(() => list.ForEach(x => x.Dispose()));
-																								}, id));
+			var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, () =>
+			{
+				var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
+				return new DisposableAction(() => list.ForEach(x => x.Dispose()));
+			}, id));
 			return AddLazyOperation(lazyLoadOperation, onEval, cmds);
 		}
 
@@ -285,18 +311,18 @@ namespace Raven.Client.Shard
 		{
 			pendingLazyOperations.Add(Tuple.Create(operation, cmds));
 			var lazyValue = new Lazy<T>(() =>
-											{
-												ExecuteAllPendingLazyOperations();
-												return (T)operation.Result;
-											});
+			{
+				ExecuteAllPendingLazyOperations();
+				return (T) operation.Result;
+			});
 			if (onEval != null)
-				onEvaluateLazy[operation] = result => onEval((T)result);
+				onEvaluateLazy[operation] = result => onEval((T) result);
 
 			return lazyValue;
 		}
 
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Loads the specified entity with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
@@ -307,13 +333,13 @@ namespace Raven.Client.Shard
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		Lazy<TResult> ILazySessionOperations.Load<TResult>(ValueType id)
+		Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
 		{
-			return Lazily.Load<TResult>(id, null);
+			return Lazily.Load(id, (Action<T>) null);
 		}
 
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Loads the specified entity with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
@@ -324,10 +350,28 @@ namespace Raven.Client.Shard
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		public Lazy<TResult> Load<TResult>(ValueType id, Action<TResult> onEval)
+		Lazy<T> ILazySessionOperations.Load<T>(ValueType id, Action<T> onEval)
 		{
-			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
-			return Lazily.Load<TResult>(documentKey);
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+			return Lazily.Load(documentKey, onEval);
+		}
+
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Lazily.Load<T>(documentKeys, null);
+		}
+
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Lazily.Load(documentKeys, onEval);
+		}
+
+		Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Lazily.Load<T>(documentKeys, null);
 		}
 
 		/// <summary>
@@ -347,16 +391,7 @@ namespace Raven.Client.Shard
 		{
 			return new LazyMultiLoaderWithInclude<T>(this).Include(path);
 		}
-
-		/// <summary>
-		/// Loads the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(params string[] ids)
-		{
-			return Lazily.Load<TResult>(ids, null);
-		}
-
+		
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>
@@ -371,7 +406,7 @@ namespace Raven.Client.Shard
 					EntityType = typeof(T),
 				})
 			})
-				.GroupBy(x => x.shards, new DbCmdsListComparer());
+			                      .GroupBy(x => x.shards, new DbCmdsListComparer());
 			var cmds = idsAndShards.SelectMany(idAndShard => idAndShard.Key).Distinct().ToList();
 
 			var multiLoadOperation = new MultiLoadOperation(this, () =>
@@ -421,16 +456,16 @@ namespace Raven.Client.Shard
 					var lazyOperations = operationPerShard.Select(x => x.Item1).ToArray();
 					var requests = lazyOperations.Select(x => x.CraeteRequest()).ToArray();
 					var multiResponses = shardStrategy.ShardAccessStrategy.Apply(operationPerShard.Key, new ShardRequestData(),
-																				 (commands, i) => commands.MultiGet(requests));
+					                                                             (commands, i) => commands.MultiGet(requests));
 
 					var sb = new StringBuilder();
 					foreach (var response in from shardReponses in multiResponses
-											 from getResponse in shardReponses
-											 where getResponse.RequestHasErrors()
-											 select getResponse)
+					                         from getResponse in shardReponses
+					                         where getResponse.RequestHasErrors()
+					                         select getResponse)
 						sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.Status, Environment.NewLine,
-										response.Result)
-							.AppendLine();
+						                response.Result)
+						  .AppendLine();
 
 					if (sb.Length > 0)
 						throw new InvalidOperationException(sb.ToString());
@@ -476,7 +511,7 @@ namespace Raven.Client.Shard
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null,
-											   listeners.QueryListeners);
+			                                   listeners.QueryListeners);
 		}
 
 		public IDocumentQuery<T> LuceneQuery<T>()
@@ -526,7 +561,6 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Cannot refresh a transient instance");
 			IncrementRequestCount();
 
-
 			var shardRequestData = new ShardRequestData
 			{
 				EntityType = typeof(T),
@@ -541,7 +575,7 @@ namespace Raven.Client.Shard
 					return false;
 
 				value.Metadata = jsonDocument.Metadata;
-				value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
+				value.OriginalMetadata = (RavenJObject) jsonDocument.Metadata.CloneToken();
 				value.ETag = jsonDocument.Etag;
 				value.OriginalValue = jsonDocument.DataAsJson;
 				var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
@@ -576,7 +610,7 @@ namespace Raven.Client.Shard
 			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize));
 
 			return results.SelectMany(x => x).Select(TrackEntity<T>)
-				.ToArray();
+			              .ToArray();
 		}
 
 		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)
@@ -612,4 +646,5 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+
 #endif
