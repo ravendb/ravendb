@@ -217,7 +217,7 @@ namespace Raven.Database.Indexing
 					if (lastPerformedReduceType != ReduceType.MultiStep)
 						continue;
 
-					Log.Debug("Key {0} was moved from multi step to single step reduce, removing existing mapped results & reduce results records",
+					Log.Debug("Key {0} was moved from multi step to single step reduce, removing existing reduce results records",
 						reduceKey);
 
 					// now we are in single step but previously multi step reduce was performed for the given key
