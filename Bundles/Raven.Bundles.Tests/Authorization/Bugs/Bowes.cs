@@ -16,14 +16,14 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 					{
 						Id = "Authorization/Roles/Administrator",
 						Permissions =
-                        {
-                            new client::Raven.Bundles.Authorization.Model.OperationPermission
-                            {
-                                Allow=true,
-                                Operation="OrgDocs/View",
-                                Tags=new List<string> { "OrgDoc" }
-                            }
-                        }
+						{
+							new client::Raven.Bundles.Authorization.Model.OperationPermission
+							{
+								Allow=true,
+								Operation="OrgDocs/View",
+								Tags=new List<string> { "OrgDoc" }
+							}
+						}
 					});
 
 			session.Store(
@@ -31,14 +31,14 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				{
 					Id = "Authorization/Roles/OrganizationUser",
 					Permissions =
-                        {
-                            new client::Raven.Bundles.Authorization.Model.OperationPermission
-                            {
-                                Allow=true,
-                                Operation="OrgDocs/View",
-                                Tags=new List<string> { "OrgDoc" }
-                            }
-                        }
+						{
+							new client::Raven.Bundles.Authorization.Model.OperationPermission
+							{
+								Allow=true,
+								Operation="OrgDocs/View",
+								Tags=new List<string> { "OrgDoc" }
+							}
+						}
 				});
 
 			session.Store(
@@ -126,9 +126,9 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions = 
-                        {
-                            new client::Raven.Bundles.Authorization.Model.DocumentPermission { Allow=true, Operation="OrgDocs/View",Role="Authorization/Roles/Administrator"}
-                        },
+						{
+							new client::Raven.Bundles.Authorization.Model.DocumentPermission { Allow=true, Operation="OrgDocs/View",Role="Authorization/Roles/Administrator"}
+						},
 					Tags = new List<string> { "Organizations/2" }
 				});
 
@@ -136,9 +136,9 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions = 
-                        {
-                            new client::Raven.Bundles.Authorization.Model.DocumentPermission { Allow=true, Operation="OrgDocs/View",Role="Authorization/Roles/Administrator"}
-                        },
+						{
+							new client::Raven.Bundles.Authorization.Model.DocumentPermission { Allow=true, Operation="OrgDocs/View",Role="Authorization/Roles/Administrator"}
+						},
 					Tags = new List<string> { "Organizations/1" }
 				});
 
@@ -146,9 +146,9 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions = 
-                        {
-                            new client::Raven.Bundles.Authorization.Model.DocumentPermission { Allow=true, Operation="OrgDocs/View",Role="Authorization/Roles/Administrator"}
-                        },
+						{
+							new client::Raven.Bundles.Authorization.Model.DocumentPermission { Allow=true, Operation="OrgDocs/View",Role="Authorization/Roles/Administrator"}
+						},
 					Tags = new List<string> { "Organizations/2" }
 				});
 			client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(session,
@@ -156,9 +156,9 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions = 
-                        {
-                            new client::Raven.Bundles.Authorization.Model.DocumentPermission { Allow=true, Operation="OrgDocs/View",Role="Authorization/Roles/Administrator"}
-                        },
+						{
+							new client::Raven.Bundles.Authorization.Model.DocumentPermission { Allow=true, Operation="OrgDocs/View",Role="Authorization/Roles/Administrator"}
+						},
 					Tags = new List<string> { "Organizations/2" }
 				});
 
