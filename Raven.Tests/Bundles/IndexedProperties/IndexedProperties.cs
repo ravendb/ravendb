@@ -35,7 +35,8 @@ namespace Raven.Tests.Bundles.IndexedProperties
 		private class OrderResults
 		{
 			public string CustomerId { get; set; }
-
+			public decimal Amount { get; set; }
+			public int Count { get; set; }
 			public decimal AverageOrderAmount { get; set; }
 		}
 
@@ -46,17 +47,23 @@ namespace Raven.Tests.Bundles.IndexedProperties
 				Map = orders => from order in orders
 								select new
 								{
-									CustomerId = order.CustomerId,
+									order.CustomerId,
+									Amount = order.TotalAmount,
+									Count = 1,
 									AverageOrderAmount = order.TotalAmount
 								};
 
 				Reduce = results => from result in results
 									group result by result.CustomerId
 										into g
+										let amount = g.Sum(x=>x.Amount)
+										let count = g.Sum(x=>x.Count)
 										select new
 										{
 											CustomerId = g.Key,
-											AverageOrderAmount = g.Average(x => x.AverageOrderAmount)
+											Count = count,
+											Amount = amount,
+											AverageOrderAmount = amount / count
 										};
 			}
 		}
