@@ -26,6 +26,8 @@ namespace Raven.Abstractions.Data
 
 		public decimal DatabaseTransactionVersionSizeInMB { get; set; }
 
+		public decimal DatabaseCacheInMB { get; set; }
+
 		public IndexStats[] Indexes { get; set; }
 
 		public ServerError[] Errors { get; set; }
