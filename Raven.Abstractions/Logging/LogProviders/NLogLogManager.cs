@@ -1,23 +1,21 @@
+using System;
+using System.Linq;
+using System.Reflection;
+
 namespace Raven.Abstractions.Logging.LogProviders
 {
-	using System;
-	using System.Linq;
-	using System.Linq.Expressions;
-	using System.Reflection;
-
-	public class NLogLogManager : ILogManager
+	public class NLogLogManager : LogManagerBase
 	{
-		private readonly Func<string, object> getLoggerByNameDelegate;
 		private static bool providerIsAvailabileOverride = true;
-		private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerType, true); 
-		
+		private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerTypeStatic, true);
+
 		public NLogLogManager()
+			: base(logger => new NLogLogger(logger))
 		{
-			if(!IsLoggerAvailable())
+			if (!IsLoggerAvailable())
 			{
 				throw new InvalidOperationException("NLog.LogManager not found");
 			}
-			getLoggerByNameDelegate = GetGetLoggerMethodCall();
 		}
 
 		public static bool ProviderIsAvailabileOverride
@@ -26,37 +24,55 @@ namespace Raven.Abstractions.Logging.LogProviders
 			set { providerIsAvailabileOverride = value; }
 		}
 
-		public ILog GetLogger(string name)
-		{
-			return new NLogLogger(getLoggerByNameDelegate(name));
-		}
-
 		public static bool IsLoggerAvailable()
 		{
 			return ProviderIsAvailabileOverride && LazyGetLogManagerType.Value != null;
 		}
 
-		private static Type GetLogManagerType()
+		protected override Type GetLogManagerType()
+		{
+			return GetLogManagerTypeStatic();
+		}
+
+		private static Type GetLogManagerTypeStatic()
 		{
 #if !SL_4
-			Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-			Assembly nlogAssembly = assemblies.FirstOrDefault(assembly => assembly.FullName.StartsWith("NLog,"));
+			Assembly nlogAssembly = GetNLogAssembly();
 			return nlogAssembly != null ? nlogAssembly.GetType("NLog.LogManager") : Type.GetType("NLog.LogManager, nlog");
 #else
 			return Type.GetType("NLog.LogManager, nlog");
 #endif
 		}
 
-		private static Func<string, object> GetGetLoggerMethodCall()
+		protected override Type GetNdcType()
 		{
-			Type logManagerType = GetLogManagerType();
-			MethodInfo method = logManagerType.GetMethod("GetLogger", new[] {typeof(string)});
-			ParameterExpression resultValue;
-			ParameterExpression keyParam = Expression.Parameter(typeof(string), "key");
-			MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {resultValue = keyParam});
-			return Expression.Lambda<Func<string, object>>(methodCall, new[] {resultValue}).Compile();
+#if !SL_4
+			Assembly nlogAssembly = GetNLogAssembly();
+			return nlogAssembly != null
+				       ? nlogAssembly.GetType("NLog.NestedDiagnosticsContext")
+					   : Type.GetType("NLog.NestedDiagnosticsContext, nlog");
+#else
+			return Type.GetType("NLog.NestedDiagnosticsContext, nlog");
+#endif
 		}
-	 
+
+#if !SL_4
+		private static Assembly GetNLogAssembly()
+		{
+			return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.FullName.StartsWith("NLog,"));
+		}
+#endif
+
+		protected override Type GetMdcType()
+		{
+#if !SL_4
+			Assembly log4NetAssembly = GetNLogAssembly();
+			return log4NetAssembly != null ? log4NetAssembly.GetType("NLog.MappedDiagnosticsContext") : Type.GetType("NLog.MappedDiagnosticsContext, nlog");
+#else
+			return Type.GetType("NLog.MappedDiagnosticsContext, nlog");
+#endif
+		}
+
 		public class NLogLogger : ILog
 		{
 			private readonly dynamic logger;
@@ -78,40 +94,40 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 			public void Log(LogLevel logLevel, Func<string> messageFunc)
 			{
-				switch(logLevel)
+				switch (logLevel)
 				{
 					case LogLevel.Debug:
-						if(logger.IsDebugEnabled)
+						if (logger.IsDebugEnabled)
 						{
 							logger.Debug(messageFunc());
 						}
 						break;
 					case LogLevel.Info:
-						if(logger.IsInfoEnabled)
+						if (logger.IsInfoEnabled)
 						{
 							logger.Info(messageFunc());
 						}
 						break;
 					case LogLevel.Warn:
-						if(logger.IsWarnEnabled)
+						if (logger.IsWarnEnabled)
 						{
 							logger.Warn(messageFunc());
 						}
 						break;
 					case LogLevel.Error:
-						if(logger.IsErrorEnabled)
+						if (logger.IsErrorEnabled)
 						{
 							logger.Error(messageFunc());
 						}
 						break;
 					case LogLevel.Fatal:
-						if(logger.IsFatalEnabled)
+						if (logger.IsFatalEnabled)
 						{
 							logger.Fatal(messageFunc());
 						}
 						break;
 					default:
-						if(logger.IsTraceEnabled)
+						if (logger.IsTraceEnabled)
 						{
 							logger.Trace(messageFunc());
 						}
@@ -122,7 +138,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
 				where TException : Exception
 			{
-				switch(logLevel)
+				switch (logLevel)
 				{
 					case LogLevel.Debug:
 						if (logger.IsDebugEnabled)

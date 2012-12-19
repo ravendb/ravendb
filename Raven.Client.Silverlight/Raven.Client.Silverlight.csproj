@@ -1038,6 +1038,7 @@
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
+    <Compile Include="Imports\Logging\LogProviders\LogManagerBase.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />

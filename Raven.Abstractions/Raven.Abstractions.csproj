@@ -654,6 +654,7 @@
     <Compile Include="Logging\LogLevel.cs" />
     <Compile Include="Logging\LogManager.cs" />
     <Compile Include="Logging\LogProviders\Log4NetLogManager.cs" />
+    <Compile Include="Logging\LogProviders\LogManagerBase.cs" />
     <Compile Include="Logging\LogProviders\NLogLogManager.cs" />
     <Compile Include="MEF\IPartMetadata.cs" />
     <Compile Include="MEF\OrderedPartCollection.cs" />
