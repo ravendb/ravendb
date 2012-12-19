@@ -199,7 +199,7 @@ namespace Raven.Database.Indexing
 			{
 				var scheduledItems = actions.MapReduce.GetItemsToReduce
 						(
-							take: context.NumberOfItemsToExecuteReduceInSingleStep,
+							take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 							level: 0,
 							reduceKeys: keysToReduce,
 							index: index.IndexName,
@@ -236,8 +236,8 @@ namespace Raven.Database.Indexing
 				var mappedResults = actions.MapReduce.GetMappedResults(
 						index.IndexName, 
 						keysToReduce, 
-						loadData: true, 
-						take: context.NumberOfItemsToExecuteReduceInSingleStep
+						loadData: true,
+						take: context.CurrentNumberOfItemsToReduceInSingleBatch
 					).ToList();
 
 				result.count += mappedResults.Count;
