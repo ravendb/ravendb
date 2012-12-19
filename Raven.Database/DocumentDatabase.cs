@@ -326,7 +326,6 @@ namespace Raven.Database
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
-					DatabaseCacheInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetLocalDatabaseSizeInBytes()),
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))

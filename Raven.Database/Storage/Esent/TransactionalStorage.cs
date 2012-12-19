@@ -166,22 +166,6 @@ namespace Raven.Storage.Esent
 			return sizeInBytes;
 		}
 
-		public long GetLocalDatabaseSizeInBytes()
-		{
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
-			{
-				int cacheSizeInPages = 0, pageSize = 0;
-				string unused;
-
-				//JET_paramCacheSize
-				//When this parameter is read, the actual size of the cache in database pages is returned. This size can be used by the 
-				//application as an input to drive its manual adjustment of the cache size.
-				Api.JetGetSystemParameter(instance, pht.Session, JET_param.CacheSize, ref cacheSizeInPages, out unused, 1024);
-				Api.JetGetSystemParameter(instance, pht.Session, JET_param.DatabasePageSize, ref pageSize, out unused, 1024);
-				return ((long)cacheSizeInPages) * pageSize;
-			}
-		}
-
 		public long GetDatabaseCacheSizeInBytes()
 		{
 			return SystemParameters.CacheSize*SystemParameters.DatabasePageSize;

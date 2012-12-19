@@ -211,7 +211,6 @@ namespace Raven.Database.Server
 						Databases = allDbs.Select(db => new
 						{
 							db.Name,
-							DatabaseCacheInMB = ConvertBytesToMBs(db.Database.TransactionalStorage.GetLocalDatabaseSizeInBytes()),
 							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(db.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						})
 					},

@@ -194,11 +194,6 @@ namespace Raven.Storage.Managed
 			return PersistenceSource.Read(stream => stream.Length);
 		}
 
-		public long GetLocalDatabaseSizeInBytes()
-		{
-			return -1;
-		}
-
 		public long GetDatabaseCacheSizeInBytes()
 		{
 			return -1;
