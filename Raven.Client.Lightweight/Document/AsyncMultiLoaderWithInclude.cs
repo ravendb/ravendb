@@ -76,9 +76,8 @@ namespace Raven.Client.Document
 		/// <param name="id">The id.</param>
 		public Task<T> LoadAsync(string id)
 		{
-			return session.LoadAsyncInternal<T>(new[] {id}, includes.ToArray()).ContinueWith(x => x.Result.FirstOrDefault());
+			return session.LoadAsyncInternal<T>(new[] { id }, includes.ToArray()).ContinueWith(x => x.Result.FirstOrDefault());
 		}
-
 
 		/// <summary>
 		/// Loads the specified entities with the specified id after applying
@@ -94,7 +93,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public Task<T> LoadAsync(ValueType id)
 		{
-			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T), false);
+			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return LoadAsync(idAsStr);
 		}
 

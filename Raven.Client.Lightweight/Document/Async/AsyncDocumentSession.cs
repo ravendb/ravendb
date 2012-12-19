@@ -30,9 +30,9 @@ namespace Raven.Client.Document.Async
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
 		public AsyncDocumentSession(DocumentStore documentStore,
-			IAsyncDatabaseCommands asyncDatabaseCommands,
-			DocumentSessionListeners listeners,
-			Guid id)
+		                            IAsyncDatabaseCommands asyncDatabaseCommands,
+		                            DocumentSessionListeners listeners,
+		                            Guid id)
 			: base(documentStore, listeners, id)
 		{
 			AsyncDatabaseCommands = asyncDatabaseCommands;
@@ -52,7 +52,7 @@ namespace Raven.Client.Document.Async
 		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
 		{
 			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize)
-				.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
+			                            .ContinueWith(task => (IEnumerable<T>) task.Result.Select(TrackEntity<T>).ToList());
 		}
 
 		/// <summary>
@@ -62,9 +62,9 @@ namespace Raven.Client.Document.Async
 		{
 			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
-				null,
+			                                 null,
 #endif
-				AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners);
+			                                 AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -79,9 +79,9 @@ namespace Raven.Client.Document.Async
 			}
 			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
-				null,
+			                                 null,
 #endif
-				AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners);
+			                                 AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -153,13 +153,12 @@ namespace Raven.Client.Document.Async
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
 				var tcs = new TaskCompletionSource<T>();
-				tcs.TrySetResult((T)entity);
+				tcs.TrySetResult((T) entity);
 				return tcs.Task;
 			}
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
 			return CompleteLoadAsync<T>(id, loadOperation);
-
 		}
 
 		private Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
@@ -168,14 +167,14 @@ namespace Raven.Client.Document.Async
 			using (loadOperation.EnterLoadContext())
 			{
 				return AsyncDatabaseCommands.GetAsync(id)
-					.ContinueWith(task =>
-					{
-						if (loadOperation.SetResult(task.Result) == false)
-							return Task.Factory.StartNew(() => loadOperation.Complete<T>());
+				                            .ContinueWith(task =>
+				                            {
+					                            if (loadOperation.SetResult(task.Result) == false)
+						                            return Task.Factory.StartNew(() => loadOperation.Complete<T>());
 
-						return CompleteLoadAsync<T>(id, loadOperation);
-					})
-					.Unwrap();
+					                            return CompleteLoadAsync<T>(id, loadOperation);
+				                            })
+				                            .Unwrap();
 			}
 		}
 
@@ -188,7 +187,6 @@ namespace Raven.Client.Document.Async
 		{
 			return LoadAsyncInternal<T>(ids, new string[0]);
 		}
-
 
 		/// <summary>
 		/// Begins the async multi load operation
@@ -206,13 +204,13 @@ namespace Raven.Client.Document.Async
 			using (multiLoadOperation.EnterMultiLoadContext())
 			{
 				return AsyncDatabaseCommands.GetAsync(ids, includes)
-					.ContinueWith(t =>
-					{
-						if (multiLoadOperation.SetResult(t.Result) == false)
-							return Task.Factory.StartNew(() => multiLoadOperation.Complete<T>());
-						return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
-					})
-					.Unwrap();
+				                            .ContinueWith(t =>
+				                            {
+					                            if (multiLoadOperation.SetResult(t.Result) == false)
+						                            return Task.Factory.StartNew(() => multiLoadOperation.Complete<T>());
+					                            return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
+				                            })
+				                            .Unwrap();
 			}
 		}
 
@@ -223,33 +221,33 @@ namespace Raven.Client.Document.Async
 		public Task SaveChangesAsync()
 		{
 			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
-				.ContinueWith(keysTask =>
-				{
-					keysTask.AssertNotFailed();
+			                                 .ContinueWith(keysTask =>
+			                                 {
+				                                 keysTask.AssertNotFailed();
 
-					var cachingScope = EntitiesToJsonCachingScope();
-					try
-					{
-						var data = PrepareForSaveChanges();
-						return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-							.ContinueWith(task =>
-							{
-								try
-								{
-									UpdateBatchResults(task.Result, data);
-								}
-								finally
-								{
-									cachingScope.Dispose();
-								}
-							});
-					}
-					catch
-					{
-						cachingScope.Dispose();
-						throw;
-					}
-				}).Unwrap();
+				                                 var cachingScope = EntitiesToJsonCachingScope();
+				                                 try
+				                                 {
+					                                 var data = PrepareForSaveChanges();
+					                                 return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
+					                                                             .ContinueWith(task =>
+					                                                             {
+						                                                             try
+						                                                             {
+							                                                             UpdateBatchResults(task.Result, data);
+						                                                             }
+						                                                             finally
+						                                                             {
+							                                                             cachingScope.Dispose();
+						                                                             }
+					                                                             });
+				                                 }
+				                                 catch
+				                                 {
+					                                 cachingScope.Dispose();
+					                                 throw;
+				                                 }
+			                                 }).Unwrap();
 		}
 
 		/// <summary>
@@ -315,9 +313,9 @@ namespace Raven.Client.Document.Async
 			return new RavenQueryInspector<T>(
 				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
 #if !SILVERLIGHT
-				null,
+				                          null,
 #endif
-			AsyncDatabaseCommands),
+				                          AsyncDatabaseCommands),
 				ravenQueryStatistics,
 				indexName,
 				null,

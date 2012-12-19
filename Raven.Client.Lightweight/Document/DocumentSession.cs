@@ -25,7 +25,7 @@ namespace Raven.Client.Document
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
-		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+	                               ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
@@ -56,9 +56,9 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
 		/// </summary>
 		public DocumentSession(DocumentStore documentStore,
-			DocumentSessionListeners listeners,
-			Guid id,
-			IDatabaseCommands databaseCommands)
+		                       DocumentSessionListeners listeners,
+		                       Guid id,
+		                       IDatabaseCommands databaseCommands)
 			: base(documentStore, listeners, id)
 		{
 			DatabaseCommands = databaseCommands;
@@ -98,18 +98,18 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Loads the specified id.
 		/// </summary>
-		/// <typeparam name="TResult"></typeparam>
+		/// <typeparam name="T"></typeparam>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
+		Lazy<T> ILazySessionOperations.Load<T>(string id)
 		{
-			return Lazily.Load(id, (Action<TResult>)null);
+			return Lazily.Load(id, (Action<T>) null);
 		}
 
 		/// <summary>
 		/// Loads the specified ids and a function to call when it is evaluated
 		/// </summary>
-		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
+		public Lazy<T[]> Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
 		{
 			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
 		}
@@ -117,11 +117,11 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Loads the specified id and a function to call when it is evaluated
 		/// </summary>
-		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
+		public Lazy<T> Load<T>(string id, Action<T> onEval)
 		{
-			if(IsLoaded(id))
-				return new Lazy<TResult>(() => Load<TResult>(id));
-			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
+			if (IsLoaded(id))
+				return new Lazy<T>(() => Load<T>(id));
+			var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
 			return AddLazyOperation(lazyLoadOperation, onEval);
 		}
 
@@ -137,10 +137,10 @@ namespace Raven.Client.Document
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		Lazy<TResult> ILazySessionOperations.Load<TResult>(ValueType id, Action<TResult> onEval)
+		Lazy<T> ILazySessionOperations.Load<T>(ValueType id, Action<T> onEval)
 		{
-			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
-			return Lazily.Load<TResult>(documentKey);
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+			return Lazily.Load<T>(documentKey);
 		}
 
 		/// <summary>
@@ -177,14 +177,14 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public T Load<T>(string id)
 		{
-			if (id == null) 
+			if (id == null)
 				throw new ArgumentNullException("id", "The document id cannot be null");
 			if (IsDeleted(id))
 				return default(T);
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
 			{
-				return (T)existingEntity;
+				return (T) existingEntity;
 			}
 
 			IncrementRequestCount();
@@ -218,7 +218,7 @@ namespace Raven.Client.Document
 		/// <param name="ids">The ids.</param>
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
+			return ((IDocumentSessionImpl) this).LoadInternal<T>(ids.ToArray());
 		}
 
 		/// <summary>
@@ -266,8 +266,8 @@ namespace Raven.Client.Document
 
 			// only load documents that aren't already cached
 			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
-				.Distinct(StringComparer.InvariantCultureIgnoreCase)
-				.ToArray();
+			                                 .Distinct(StringComparer.InvariantCultureIgnoreCase)
+			                                 .ToArray();
 
 			if (idsOfNotExistingObjects.Length > 0)
 			{
@@ -290,11 +290,10 @@ namespace Raven.Client.Document
 			{
 				object val;
 				entitiesByKey.TryGetValue(id, out val);
-				return (T)val;
+				return (T) val;
 			}).ToArray();
 		}
 
-		
 		/// <summary>
 		/// Queries the specified index using Linq.
 		/// </summary>
@@ -336,7 +335,7 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
 
 			value.Metadata = jsonDocument.Metadata;
-			value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
+			value.OriginalMetadata = (RavenJObject) jsonDocument.Metadata.CloneToken();
 			value.ETag = jsonDocument.Etag;
 			value.OriginalValue = jsonDocument.DataAsJson;
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
@@ -432,7 +431,6 @@ namespace Raven.Client.Document
 			}
 		}
 
-		
 		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
 		/// </summary>
@@ -538,11 +536,11 @@ namespace Raven.Client.Document
 			var lazyValue = new Lazy<T>(() =>
 			{
 				ExecuteAllPendingLazyOperations();
-				return (T)operation.Result;
+				return (T) operation.Result;
 			});
 
 			if (onEval != null)
-				onEvaluateLazy[operation] = theResult => onEval((T)theResult);
+				onEvaluateLazy[operation] = theResult => onEval((T) theResult);
 
 			return lazyValue;
 		}
@@ -556,7 +554,6 @@ namespace Raven.Client.Document
 			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
 			return AddLazyOperation(lazyOp, onEval);
 		}
-
 
 		public void ExecuteAllPendingLazyOperations()
 		{
@@ -589,7 +586,7 @@ namespace Raven.Client.Document
 			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
 			try
 			{
-				if(DatabaseCommands is ServerClient) // server mode
+				if (DatabaseCommands is ServerClient) // server mode
 				{
 					var requests = pendingLazyOperations.Select(x => x.CraeteRequest()).ToArray();
 					var responses = DatabaseCommands.MultiGet(requests);
@@ -598,7 +595,7 @@ namespace Raven.Client.Document
 						if (responses[i].RequestHasErrors())
 						{
 							throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
-																Environment.NewLine + responses[i].Result);
+							                                    Environment.NewLine + responses[i].Result);
 						}
 						pendingLazyOperations[i].HandleResponse(responses[i]);
 						if (pendingLazyOperations[i].RequiresRetry)
@@ -620,9 +617,7 @@ namespace Raven.Client.Document
 						}
 					}
 					return false;
-					
 				}
-				
 			}
 			finally
 			{
@@ -636,8 +631,8 @@ namespace Raven.Client.Document
 		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
 		{
 			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize)
-						.Select(TrackEntity<T>)
-						.ToArray();
+			                       .Select(TrackEntity<T>)
+			                       .ToArray();
 		}
 
 		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)
@@ -648,4 +643,5 @@ namespace Raven.Client.Document
 		}
 	}
 }
+
 #endif

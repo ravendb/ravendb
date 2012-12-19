@@ -12,8 +12,6 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Document
 {
-	using Raven.Abstractions.Util;
-
 	/// <summary>
 	/// Fluent implementation for specifying include paths
 	/// for loading documents
@@ -81,7 +79,6 @@ namespace Raven.Client.Document
 			return session.LoadInternal<T>(new[] { id }, includes.ToArray()).FirstOrDefault();
 		}
 
-
 		/// <summary>
 		/// Loads the specified entities with the specified id after applying
 		/// conventions on the provided id to get the real document id.
@@ -148,4 +145,5 @@ namespace Raven.Client.Document
 		}
 	}
 }
+
 #endif

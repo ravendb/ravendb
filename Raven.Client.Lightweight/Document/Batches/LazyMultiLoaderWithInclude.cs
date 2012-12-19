@@ -58,7 +58,6 @@ namespace Raven.Client.Document.Batches
 			return new Lazy<T>(() => results.Value.First());
 		}
 
-
 		/// <summary>
 		/// Loads the specified entities with the specified id after applying
 		/// conventions on the provided id to get the real document id.
@@ -73,7 +72,7 @@ namespace Raven.Client.Document.Batches
 		/// </remarks>
 		public Lazy<T> Load(ValueType id)
 		{
-			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T), false);
+			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return Load(idAsStr);
 		}
 
@@ -94,7 +93,7 @@ namespace Raven.Client.Document.Batches
 		/// <param name="id">The id.</param>
 		public Lazy<TResult> Load<TResult>(string id)
 		{
-			var lazy = Load<TResult>(new[] {id});
+			var lazy = Load<TResult>(new[] { id });
 			return new Lazy<TResult>(() => lazy.Value.FirstOrDefault());
 		}
 
@@ -112,10 +111,11 @@ namespace Raven.Client.Document.Batches
 		/// </remarks>
 		public Lazy<TResult> Load<TResult>(ValueType id)
 		{
-			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T), false);
-			var lazy = Load<TResult>(new[] {idAsStr});
+			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+			var lazy = Load<TResult>(new[] { idAsStr });
 			return new Lazy<TResult>(() => lazy.Value.FirstOrDefault());
 		}
 	}
 }
+
 #endif

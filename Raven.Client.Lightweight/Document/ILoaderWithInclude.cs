@@ -94,4 +94,5 @@ namespace Raven.Client.Document
 		TResult Load<TResult>(ValueType id);
 	}
 }
+
 #endif

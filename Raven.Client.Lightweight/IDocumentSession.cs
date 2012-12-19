@@ -65,7 +65,7 @@ namespace Raven.Client
 		/// Or whatever your conventions specify.
 		/// </remarks>
 		T Load<T>(ValueType id);
-		
+
 		/// <summary>
 		/// Queries the specified index using Linq.
 		/// </summary>
@@ -87,7 +87,6 @@ namespace Raven.Client
 		/// <returns></returns>
 		IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
-		
 		/// <summary>
 		/// Begin a load while including the specified path 
 		/// </summary>
@@ -98,14 +97,14 @@ namespace Raven.Client
 		/// Begin a load while including the specified path 
 		/// </summary>
 		/// <param name="path">The path.</param>
-		ILoaderWithInclude<T> Include<T>(Expression<Func<T,object>> path);
+		ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Begin a load while including the specified path 
 		/// </summary>
 		/// <param name="path">The path.</param>
 		ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
-	
+
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
@@ -135,4 +134,5 @@ namespace Raven.Client
 		void Store(dynamic entity, string id);
 	}
 }
+
 #endif
