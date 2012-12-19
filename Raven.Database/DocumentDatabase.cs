@@ -1812,7 +1812,17 @@ namespace Raven.Database
 			if (Configuration.RunInMemory)
 				return 0;
 			var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
-			var totalIndexSize = indexes.Sum(file => new FileInfo(file).Length);
+			var totalIndexSize = indexes.Sum(file =>
+			{
+				try
+				{
+					return new FileInfo(file).Length;
+				}
+				catch (FileNotFoundException)
+				{
+					return 0;
+				}
+			});
 
 			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
 		}
