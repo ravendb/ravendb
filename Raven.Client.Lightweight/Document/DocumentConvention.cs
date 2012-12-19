@@ -277,6 +277,12 @@ namespace Raven.Client.Document
 			{
 				return typeToRegisteredIdConvention.Item2(databaseCommands, entity);
 			}
+
+			if (listOfRegisteredIdConventionsAsync.Any(x => x.Item1.IsAssignableFrom(type)))
+			{
+				throw new InvalidOperationException("Id covention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
+			}
+
 			return DocumentKeyGenerator(databaseCommands, entity);
 		}
 #endif
@@ -289,6 +295,14 @@ namespace Raven.Client.Document
 			{
 				return typeToRegisteredIdConvention.Item2(databaseCommands, entity);
 			}
+
+#if !SILVERLIGHT
+			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
+			{
+				throw new InvalidOperationException("Id covention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
+			}
+#endif
+
 			return AsyncDocumentKeyGenerator(databaseCommands, entity);
 		}
 
