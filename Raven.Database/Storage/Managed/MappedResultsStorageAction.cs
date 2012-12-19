@@ -81,7 +81,7 @@ namespace Raven.Storage.Managed
 			{
 				storage.MappedResults.Remove(key);
 
-				var reduceKey = key.Value<string>("reduceKey"); 
+				var reduceKey = key.Value<string>("reduceKey");
 				removed.Add(new ReduceKeyAndBucket(key.Value<int>("bucket"), reduceKey));
 
 				DecrementReduceKeyCounter(view, reduceKey);
@@ -374,7 +374,7 @@ namespace Raven.Storage.Managed
 		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int limitOfItemsToReduceInSingleStep)
 		{
 			var allKeysToReduce = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-			
+
 			foreach (var reduction in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(new RavenJObject
 			{
 				{"view", indexName},
@@ -390,7 +390,7 @@ namespace Raven.Storage.Managed
 			foreach (var reduceKey in allKeysToReduce)
 			{
 				var count = GetNumberOfMappedItemsPerReduceKey(indexName, reduceKey);
-				if(count >= limitOfItemsToReduceInSingleStep)
+				if (count >= limitOfItemsToReduceInSingleStep)
 				{
 					reduceTypesPerKeys[reduceKey] = ReduceType.MultiStep;
 				}
@@ -407,18 +407,18 @@ namespace Raven.Storage.Managed
 				throw new ArgumentException(string.Format("There is no reduce key '{0}' for index '{1}'", reduceKey, indexName));
 
 			var key = (RavenJObject)readResult.Key.CloneToken();
-			key["reduceType"] = (int) reduceType;
+			key["reduceType"] = (int)reduceType;
 			storage.ReduceKeys.UpdateKey(key);
 		}
 
 		public ReduceType GetLastPerformedReduceType(string indexName, string reduceKey)
 		{
-			var readResult = storage.ReduceKeys.Read(new RavenJObject {{"view", indexName}, {"reduceKey", reduceKey}});
+			var readResult = storage.ReduceKeys.Read(new RavenJObject { { "view", indexName }, { "reduceKey", reduceKey } });
 
-			if(readResult == null)
+			if (readResult == null)
 				return ReduceType.None;
 
-			return (ReduceType) readResult.Key.Value<int>("reduceType");
+			return (ReduceType)readResult.Key.Value<int>("reduceType");
 		}
 
 		public IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey)
@@ -533,6 +533,19 @@ namespace Raven.Storage.Managed
 						   Size = readResult.Size,
 						   Data = LoadMappedResult(readResult)
 					   };
+		}
+
+		public IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize)
+		{
+			return storage.ReduceKeys["ByView"].SkipTo(new RavenJObject { { "view", view } })
+				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view))
+				.Skip(start)
+				.Take(pageSize)
+				.Select(token => new ReduceKeyAndCount
+				{
+					Count = token.Value<int>("mappedItemsCount"),
+					Key = token.Value<string>("reduceKey")
+				});
 		}
 
 		private void IncrementReduceKeyCounter(string view, string reduceKey)

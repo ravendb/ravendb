@@ -60,6 +60,40 @@ namespace Raven.Storage.Esent.StorageActions
 			IncrementReduceKeyCounter(view, reduceKey);
 		}
 
+		public IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize)
+		{
+			Api.JetSetCurrentIndex(session, ReduceKeysCounts, "by_view");
+			Api.MakeKey(session, ReduceKeysCounts, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, ReduceKeysCounts, SeekGrbit.SeekEQ) == false)
+				yield break;
+
+			Api.MakeKey(session, ReduceKeysCounts, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetIndexRange(session, ReduceKeysCounts, SetIndexRangeGrbit.RangeInclusive|SetIndexRangeGrbit.RangeUpperLimit);
+
+			while (start > 0)
+			{
+				start--;
+				if (Api.TryMoveNext(session, ReduceKeysCounts) == false)
+					yield break;
+			}
+
+			do
+			{
+				pageSize--;
+				var count =
+					Api.RetrieveColumnAsInt32(session, ReduceKeysCounts,
+					                          tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
+				var key = Api.RetrieveColumnAsString(session, ReduceKeysCounts,
+				                                     tableColumnsCache.ReduceKeysCountsColumns["reduce_key"], Encoding.Unicode);
+
+				yield return new ReduceKeyAndCount
+				{
+					Count = count,
+					Key = key
+				};
+			} while (Api.TryMoveNext(session, ReduceKeysCounts) && pageSize > 0);
+		}
+
 
 		public void PutReducedResult(string view, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data)
 		{

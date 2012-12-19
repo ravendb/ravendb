@@ -12,6 +12,8 @@ namespace Raven.Database.Storage
 {
 	public interface IMappedResultsStorageAction
 	{
+		IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize);
+		
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
@@ -107,6 +109,12 @@ namespace Raven.Database.Storage
 
 		public string ReduceKey { get; set; }
 		public ReduceType OperationTypeToPerform { get; set; }
+	}
+
+	public class ReduceKeyAndCount
+	{
+		public int Count { get; set; }
+		public string Key { get; set; }
 	}
 
 	public enum ReduceType
