@@ -136,84 +136,80 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
-			if (configuration.IsTenantDatabase == false)
+			using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
 			{
-				validateLicense = new ValidateLicense();
-				validateLicense.Execute(configuration);
-			}
-			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
-			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
+				if (configuration.IsTenantDatabase == false)
+				{
+					validateLicense = new ValidateLicense();
+					validateLicense.Execute(configuration);
+				}
+				AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
+				AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
-			Name = configuration.DatabaseName;
-			if (configuration.CustomTaskScheduler != null)
-			{
-				backgroundTaskScheduler = configuration.CustomTaskScheduler;
-			}
-			else
-			{
-				backgroundTaskScheduler = TaskScheduler.Current;
-			}
+				Name = configuration.DatabaseName;
+				backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Current;
 
-			ExtensionsState = new AtomicDictionary<object>();
-			Configuration = configuration;
+				ExtensionsState = new AtomicDictionary<object>();
+				Configuration = configuration;
 
-			ExecuteAlterConfiguration();
+				ExecuteAlterConfiguration();
 
-			configuration.Container.SatisfyImportsOnce(this);
+				configuration.Container.SatisfyImportsOnce(this);
 
-			workContext = new WorkContext
-			{
-				DatabaseName = Name,
-				IndexUpdateTriggers = IndexUpdateTriggers,
-				ReadTriggers = ReadTriggers,
-				RaiseIndexChangeNotification = RaiseNotifications,
-				TaskScheduler = backgroundTaskScheduler,
-				Configuration = configuration
-			};
+				workContext = new WorkContext
+				{
+					DatabaseName = Name,
+					IndexUpdateTriggers = IndexUpdateTriggers,
+					ReadTriggers = ReadTriggers,
+					RaiseIndexChangeNotification = RaiseNotifications,
+					TaskScheduler = backgroundTaskScheduler,
+					Configuration = configuration
+				};
 
-			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
+				TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
 
-			try
-			{
-				TransactionalStorage.Initialize(this, DocumentCodecs);
-			}
-			catch (Exception)
-			{
-				TransactionalStorage.Dispose();
-				throw;
-			}
+				try
+				{
+					TransactionalStorage.Initialize(this, DocumentCodecs);
+				}
+				catch (Exception)
+				{
+					TransactionalStorage.Dispose();
+					throw;
+				}
 
-			try
-			{
+				try
+				{
 
-				TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
+					TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
-				TransportState = new TransportState();
+					TransportState = new TransportState();
 
-				// Index codecs must be initialized before we try to read an index
-				InitializeIndexCodecTriggers();
+					// Index codecs must be initialized before we try to read an index
+					InitializeIndexCodecTriggers();
 
-				IndexDefinitionStorage = new IndexDefinitionStorage(
-					configuration,
-					TransactionalStorage,
-					configuration.DataDirectory,
-					configuration.Container.GetExportedValues<AbstractViewGenerator>(),
-					Extensions);
-				IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
+					IndexDefinitionStorage = new IndexDefinitionStorage(
+						configuration,
+						TransactionalStorage,
+						configuration.DataDirectory,
+						configuration.Container.GetExportedValues<AbstractViewGenerator>(),
+						Extensions);
+					IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
 
-				CompleteWorkContextSetup();
+					CompleteWorkContextSetup();
 
-				indexingExecuter = new IndexingExecuter(workContext);
+					indexingExecuter = new IndexingExecuter(workContext);
 
-				InitializeTriggersExceptIndexCodecs();
-				SecondStageInitialization();
+					InitializeTriggersExceptIndexCodecs();
+					SecondStageInitialization();
 
-				ExecuteStartupTasks();
-			}
-			catch (Exception)
-			{
-				Dispose();
-				throw;
+					ExecuteStartupTasks();
+				}
+				catch (Exception)
+				{
+					Dispose();
+					throw;
+				}
 			}
 		}
 
@@ -301,6 +297,7 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
+			using(LogManager.OpenMappedContext("datbase", Name ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
 				LogContext.DatabaseName.Value = Name;

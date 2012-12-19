@@ -867,6 +867,8 @@ namespace Raven.Database.Server
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			CurrentOperationContext.User.Value = null;
 			LogContext.DatabaseName.Value = CurrentDatabase.Name;
+			var disposable = LogManager.OpenMappedContext("database", CurrentDatabase.Name ?? Constants.SystemDatabase);
+			CurrentOperationContext.RequestDisposables.Value.Add(disposable);
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
@@ -880,6 +882,11 @@ namespace Raven.Database.Server
 				CurrentOperationContext.Headers.Value = new NameValueCollection();
 				CurrentOperationContext.User.Value = null;
 				LogContext.DatabaseName.Value = null;
+				foreach (var disposable in CurrentOperationContext.RequestDisposables.Value)
+				{
+					disposable.Dispose();
+				}
+				CurrentOperationContext.RequestDisposables.Value.Clear();
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
 			}

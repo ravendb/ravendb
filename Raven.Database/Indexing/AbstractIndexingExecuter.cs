@@ -31,6 +31,7 @@ namespace Raven.Database.Indexing
 
 		public void Execute()
 		{
+			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
 				LogContext.DatabaseName.Value = context.DatabaseName;

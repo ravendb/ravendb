@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -140,6 +141,7 @@ namespace Raven.Database.Indexing
 					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
 				}, (item, _, index) =>
 				{
+					using(LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
 					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 					{
 						LogContext.DatabaseName.Value = context.DatabaseName;
