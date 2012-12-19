@@ -292,7 +292,9 @@ users => from user in users
 		public class LocationAge
 		{
 			public string Location { get; set; }
-			public decimal Age { get; set; }
+			public decimal AverageAge { get; set; }
+			public int Count { get; set; }
+			public decimal AgeSum { get; set; }
 		}
 
 		public class Order
