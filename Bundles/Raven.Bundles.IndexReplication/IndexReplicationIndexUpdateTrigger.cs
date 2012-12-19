@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Concurrent;
 using System.Configuration;
@@ -56,17 +57,15 @@ namespace Raven.Bundles.IndexReplication
 
 			private readonly ConcurrentQueue<IDbCommand> commands = new ConcurrentQueue<IDbCommand>();
 
-
 			public ReplicateToSqlIndexUpdateBatcher(
-				DbProviderFactory providerFactory, 
-				string connectionString, 
+				DbProviderFactory providerFactory,
+				string connectionString,
 				IndexReplicationDestination destination)
 			{
 				_providerFactory = providerFactory;
 				_connectionString = connectionString;
 				this.destination = destination;
 			}
-
 
 			public override void OnIndexEntryCreated(string entryKey, Document document)
 			{
@@ -89,8 +88,8 @@ namespace Raven.Bundles.IndexReplication
 				sb.Length = sb.Length - 2;
 
 				sb.Append(") \r\nVALUES (")
-					.Append(pkParam.ParameterName)
-					.Append(", ");
+				  .Append(pkParam.ParameterName)
+				  .Append(", ");
 
 				foreach (var mapping in destination.ColumnsMapping)
 				{
@@ -183,7 +182,7 @@ namespace Raven.Bundles.IndexReplication
 				if (commands.Count == 0)
 					return;
 
-				using(var con = _providerFactory.CreateConnection())
+				using (var con = _providerFactory.CreateConnection())
 				{
 					con.ConnectionString = _connectionString;
 					con.Open();
