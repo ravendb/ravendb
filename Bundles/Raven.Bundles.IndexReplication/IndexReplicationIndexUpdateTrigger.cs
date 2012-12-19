@@ -182,7 +182,20 @@ namespace Raven.Bundles.IndexReplication
 
 			private string GetParameterName(string paramName)
 			{
-				return GetParameterNameFromBuilder(_commandBuilder, paramName);
+				switch (_providerFactory.GetType().Name)
+				{
+					case "SqlClientFactory":
+					case "MySqlClientFactory":
+						return "@" + paramName;
+
+					case "OracleClientFactory":
+					case "NpgsqlFactory":
+						return ":" + paramName;
+
+					default:
+						// If we don't know, try to get it from the CommandBuilder.
+						return GetParameterNameFromBuilder(_commandBuilder, paramName);
+				}
 			}
 
 			public override void Dispose()
