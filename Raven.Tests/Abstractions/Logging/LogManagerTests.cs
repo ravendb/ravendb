@@ -39,6 +39,22 @@ namespace Raven.Tests.Abstractions.Logging
 		}
 
 		[Fact]
+		public void When_neither_NLog_or_Log4Net_is_available_Then_can_open_mapped_context()
+		{
+			NLogLogManager.ProviderIsAvailabileOverride = false;
+			Log4NetLogManager.ProviderIsAvailabileOverride = false;
+			Assert.NotNull(LogManager.OpenMappedContext("key", "value"));
+		}
+
+		[Fact]
+		public void When_neither_NLog_or_Log4Net_is_available_Then_can_open_nested_context()
+		{
+			NLogLogManager.ProviderIsAvailabileOverride = false;
+			Log4NetLogManager.ProviderIsAvailabileOverride = false;
+			Assert.NotNull(LogManager.OpenNestedConext("context"));
+		}
+
+		[Fact]
 		public void When_a_custom_target_is_registered_Then_should_log_to_target()
 		{
 			NLogLogManager.ProviderIsAvailabileOverride = false;
