@@ -237,6 +237,11 @@ namespace Raven.Client.Shard
 			return new MultiLoaderWithInclude<T>(this).Include(path);
 		}
 
+		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+		{
+			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+		}
+
 		#endregion
 
 		#region Lazy loads
@@ -477,15 +482,6 @@ namespace Raven.Client.Shard
 		public IDocumentQuery<T> LuceneQuery<T>()
 		{
 			return LuceneQuery<T>(GetDynamicIndexName<T>());
-		}
-
-		#endregion
-
-		#region DatabaseCommands (not supported)
-
-		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
-		{
-			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
 		}
 
 		#endregion

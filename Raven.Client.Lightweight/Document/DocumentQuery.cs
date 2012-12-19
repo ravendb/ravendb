@@ -99,7 +99,8 @@ namespace Raven.Client.Document
 				queryShape = queryShape,
 				spatialRelation = spatialRelation,
 				distanceErrorPct = distanceErrorPct,
-				rootTypes = {typeof(T)}
+				rootTypes = {typeof(T)},
+				defaultField = defaultField,
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -807,6 +808,28 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOf(cutOff, waitTimeout);
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <returns></returns>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag);
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
 			return this;
 		}
 

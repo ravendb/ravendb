@@ -111,5 +111,17 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			get { return details ?? (details = new Table(session, dbid, "details", OpenTableGrbit.None)); }
 		}
+
+		private Table reduceKeysCounts;
+		protected Table ReduceKeysCounts
+		{
+			get { return reduceKeysCounts ?? (reduceKeysCounts = new Table(session, dbid, "reduce_keys_counts", OpenTableGrbit.None)); }
+		}
+
+		private Table reduceKeysStatus;
+		protected Table ReduceKeysStatus
+		{
+			get { return reduceKeysStatus ?? (reduceKeysStatus = new Table(session, dbid, "reduce_keys_status", OpenTableGrbit.None)); }
+		}
 	}
 }

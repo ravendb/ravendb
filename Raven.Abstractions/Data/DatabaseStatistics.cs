@@ -24,8 +24,7 @@ namespace Raven.Abstractions.Data
 		
 		public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }
 
-		public long DatabaseCacheSizeInBytes { get; set; }
-		public decimal DatabaseCacheSizeInMB { get; set; }
+		public decimal DatabaseTransactionVersionSizeInMB { get; set; }
 
 		public IndexStats[] Indexes { get; set; }
 

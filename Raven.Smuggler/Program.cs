@@ -46,11 +46,39 @@ namespace Raven.Smuggler
 			            			},
 			            		{
 			            			"metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
-			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters["@metadata." + key] = val
+			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters.Add(new FilterSetting
+			            			                       {
+				            			                       Path = "@metadata." + key,
+															   ShouldMatch = true,
+															   Value = val
+			            			                       })
+			            			},
+								{
+			            			"negative-metadata-filter:{=}", "Filter documents NOT matching a metadata property." + Environment.NewLine +
+			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters.Add(new FilterSetting
+			            			                       {
+				            			                       Path = "@metadata." + key,
+															   ShouldMatch = false,
+															   Value = val
+			            			                       })
 			            			},
 			            		{
 			            			"filter:{=}", "Filter documents by a document property" + Environment.NewLine +
-			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters[key] = val
+			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
+			            			              {
+													  Path = key,
+													  ShouldMatch = true,
+				            			              Value = val
+			            			              })
+			            			},
+								{
+			            			"negative-filter:{=}", "Filter documents NOT matching a document property" + Environment.NewLine +
+			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
+			            			              {
+													  Path = key,
+													  ShouldMatch = true,
+				            			              Value = val
+			            			              })
 			            			},
 								{"timeout:", "The timeout to use for requests", s => options.Timeout = int.Parse(s) },
 								{"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s) },

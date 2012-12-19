@@ -549,6 +549,39 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
+		/// </summary>
+		/// <param name="cutOff">The cut off.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
+		{
+			WaitForNonStaleResultsAsOf(cutOff, waitTimeout);
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <returns></returns>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag);
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
+			return this;
+		}
+
+		/// <summary>
 		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
 		/// current document store.
 		/// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
@@ -569,17 +602,6 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOfLastWrite(waitTimeout);
-			return this;
-		}
-
-		/// <summary>
-		/// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
-		/// </summary>
-		/// <param name="cutOff">The cut off.</param>
-		/// <param name="waitTimeout">The wait timeout.</param>
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
-		{
-			WaitForNonStaleResultsAsOf(cutOff, waitTimeout);
 			return this;
 		}
 

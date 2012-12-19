@@ -42,7 +42,7 @@ namespace Raven.Client.Changes
 		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
-			     Base62Util.Base62Random();
+				 Base62Util.Base62Random();
 			this.url = url;
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
@@ -59,56 +59,62 @@ namespace Raven.Client.Changes
 				return new CompletedTask();
 
 			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
-			{
-				AvoidCachingRequest = true
-			};
+									{
+										AvoidCachingRequest = true
+									};
 
 			return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
-			                         .ServerPullAsync()
-			                         .ContinueWith(task =>
-			                         {
-				                         if (disposed)
-					                         throw new ObjectDisposedException("RemoteDatabaseChanges");
-				                         if (task.IsFaulted)
-				                         {
-					                         logger.WarnException("Could not connect to server, will retry", task.Exception);
-					                         Connected = false;
-					                         ConnectionStatusCahnged(this, EventArgs.Empty);
+				.ServerPullAsync()
+				.ContinueWith(task =>
+								{
+									if(disposed)
+										throw new ObjectDisposedException("RemoteDatabaseChanges");
+									if (task.IsFaulted)
+									{
+										logger.WarnException("Could not connect to server, will retry", task.Exception);
+										Connected = false;
+										ConnectionStatusCahnged(this, EventArgs.Empty);
+										
+										if (disposed)
+											return task;
 
-					                         if (disposed)
-						                         return task;
 
-					                         if (replicationInformer.IsServerDown(task.Exception) == false && replicationInformer.IsNotFound(task.Exception) == false)
-						                         return task;
+										if (replicationInformer.IsServerDown(task.Exception) == false)
+											return task;
 
-					                         return Time.Delay(TimeSpan.FromSeconds(15))
-					                                    .ContinueWith(_ => EstablishConnection())
-					                                    .Unwrap();
-				                         }
+										if(replicationInformer.IsHttpStatus(task.Exception, 
+												HttpStatusCode.NotFound, 
+												HttpStatusCode.Forbidden))
+											return task;
 
-				                         Connected = true;
-				                         ConnectionStatusCahnged(this, EventArgs.Empty);
-				                         connection = (IDisposable) task.Result;
-				                         task.Result.Subscribe(this);
+										return Time.Delay(TimeSpan.FromSeconds(15))
+											.ContinueWith(_ => EstablishConnection())
+											.Unwrap();
+									}
 
-				                         Task prev = watchAllDocs ? Send("watch-docs", null) : new CompletedTask();
+									Connected = true;
+									ConnectionStatusCahnged(this, EventArgs.Empty);
+									connection = (IDisposable)task.Result;
+									task.Result.Subscribe(this);
 
-				                         if (watchAllIndexes)
-					                         prev = prev.ContinueWith(_ => Send("watch-indexes", null));
+									Task prev = watchAllDocs ? Send("watch-docs", null) : new CompletedTask();
 
-				                         prev = watchedDocs.Aggregate(prev, (cur, docId) => cur.ContinueWith(task1 => Send("watch-doc", docId)));
+									if (watchAllIndexes)
+										prev = prev.ContinueWith(_ => Send("watch-indexes", null));
 
-				                         prev = watchedPrefixes.Aggregate(prev, (cur, prefix) => cur.ContinueWith(task1 => Send("watch-prefix", prefix)));
+									prev = watchedDocs.Aggregate(prev, (cur, docId) => cur.ContinueWith(task1 => Send("watch-doc", docId)));
 
-				                         prev = watchedIndexes.Aggregate(prev, (cur, index) => cur.ContinueWith(task1 => Send("watch-indexes", index)));
+									prev = watchedPrefixes.Aggregate(prev, (cur, prefix) => cur.ContinueWith(task1 => Send("watch-prefix", prefix)));
 
-				                         return prev;
-			                         })
-			                         .Unwrap();
+									prev = watchedIndexes.Aggregate(prev, (cur, index) => cur.ContinueWith(task1 => Send("watch-indexes", index)));
+								
+									return prev;
+								})
+				.Unwrap();
 		}
 
 		public bool Connected { get; private set; }
-		public event EventHandler ConnectionStatusCahnged = delegate { };
+		public event EventHandler ConnectionStatusCahnged = delegate { }; 
 		public Task Task { get; private set; }
 
 		private Task AfterConnection(Func<Task> action)
@@ -118,7 +124,7 @@ namespace Raven.Client.Changes
 				task.AssertNotFailed();
 				return action();
 			})
-			           .Unwrap();
+			.Unwrap();
 		}
 
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
@@ -152,17 +158,17 @@ namespace Raven.Client.Changes
 			{
 				if (task.IsFaulted)
 					return null;
-				return (IDisposable) new DisposableAction(() =>
-				{
-					try
-					{
-						connection.Dispose();
-					}
-					catch (Exception)
-					{
-						// nothing to do here
-					}
-				});
+				return (IDisposable)new DisposableAction(() =>
+															{
+																try
+																{
+																	connection.Dispose();
+																}
+																catch (Exception)
+																{
+																	// nothing to do here
+																}
+															});
 			});
 
 			counter.Add(disposableTask);
@@ -220,7 +226,7 @@ namespace Raven.Client.Changes
 			{
 				if (task.IsFaulted)
 					return null;
-				return (IDisposable) new DisposableAction(() => connection.Dispose());
+				return (IDisposable)new DisposableAction(() => connection.Dispose());
 			});
 			counter.Add(disposableTask);
 			return taskedObservable;
@@ -255,7 +261,7 @@ namespace Raven.Client.Changes
 			{
 				if (task.IsFaulted)
 					return null;
-				return (IDisposable) new DisposableAction(() => connection.Dispose());
+				return (IDisposable)new DisposableAction(() => connection.Dispose());
 			});
 			counter.Add(disposableTask);
 			return taskedObservable;
@@ -291,7 +297,7 @@ namespace Raven.Client.Changes
 			{
 				if (task.IsFaulted)
 					return null;
-				return (IDisposable) new DisposableAction(() => connection.Dispose());
+				return (IDisposable)new DisposableAction(() => connection.Dispose());
 			});
 			counter.Add(disposableTask);
 			return taskedObservable;
@@ -327,7 +333,7 @@ namespace Raven.Client.Changes
 			{
 				if (task.IsFaulted)
 					return null;
-				return (IDisposable) new DisposableAction(() => connection.Dispose());
+				return (IDisposable)new DisposableAction(() => connection.Dispose());
 			});
 			counter.Add(disposableTask);
 			return taskedObservable;
@@ -361,16 +367,16 @@ namespace Raven.Client.Changes
 
 			return Send("disconnect", null).
 				ContinueWith(_ =>
-				{
-					try
-					{
-						connection.Dispose();
-					}
-					catch (Exception e)
-					{
-						logger.WarnException("Error when disposing of connection", e);
-					}
-				});
+								{
+									try
+									{
+										connection.Dispose();
+									}
+									catch (Exception e)
+									{
+										logger.WarnException("Error when disposing of connection", e);
+									}
+								});
 		}
 
 		public void OnNext(string dataFromConnection)
@@ -393,8 +399,7 @@ namespace Raven.Client.Changes
 					foreach (var counter in counters)
 					{
 						counter.Value.Send(indexChangeNotification);
-					}
-					break;
+					} break;
 			}
 		}
 
@@ -405,16 +410,16 @@ namespace Raven.Client.Changes
 			EstablishConnection()
 				.ObserveException()
 				.ContinueWith(task =>
-				{
-					if (task.IsFaulted == false)
-						return;
+								{
+									if (task.IsFaulted == false)
+										return;
 
-					foreach (var keyValuePair in counters)
-					{
-						keyValuePair.Value.Error(task.Exception);
-					}
-					counters.Clear();
-				});
+									foreach (var keyValuePair in counters)
+									{
+										keyValuePair.Value.Error(task.Exception);
+									}
+									counters.Clear();
+								});
 		}
 
 		public void OnCompleted()

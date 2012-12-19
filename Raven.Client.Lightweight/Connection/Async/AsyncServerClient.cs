@@ -689,17 +689,10 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 			return request.ExecuteWriteAsync(new RavenJObject
-				{
-					{"BackupLocation", backupLocation},
-					{"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
-				}.ToString(Formatting.None))
-				.ContinueWith(task =>
-				{
-					if (task.Exception != null)
-						return task;
-
-					return request.ExecuteRequestAsync();
-				}).Unwrap();
+			                                 {
+				                                 {"BackupLocation", backupLocation},
+				                                 {"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
+			                                 }.ToString(Formatting.None));
 		}
 
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null)

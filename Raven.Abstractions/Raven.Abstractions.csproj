@@ -687,11 +687,14 @@
     <Compile Include="Smuggler\SmugglerOptions.cs" />
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
+    <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
+    <Compile Include="Util\Etag.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
+    <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">

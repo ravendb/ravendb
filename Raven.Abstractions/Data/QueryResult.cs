@@ -43,8 +43,9 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The total results.</value>
 		public int TotalResults { get; set; }
+
 		/// <summary>
-		/// Gets or sets the skipped results (duplicate documents);
+		/// Gets or sets the skipped results
 		/// </summary>
 		/// <value>The skipped results.</value>
 		public int SkippedResults { get; set; }

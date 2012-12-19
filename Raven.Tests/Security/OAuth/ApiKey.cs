@@ -30,6 +30,7 @@ namespace Raven.Tests.Security.OAuth
 				Databases = new List<DatabaseAccess>
 				{
 					new DatabaseAccess{TenantId = "*"}, 
+					new DatabaseAccess{TenantId = Constants.SystemDatabase}, 
 				}
 			}), new RavenJObject(), null);
 		}

@@ -8,7 +8,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 {
 	public interface IRavenLuceneMethodQuery
 	{
-		IRavenLuceneMethodQuery Merge(Query other);
+		IRavenLuceneMethodQuery Merge(IRavenLuceneMethodQuery other);
 		string Field { get; }
 	}
 
@@ -130,7 +130,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			}
 		}
 
-		public IRavenLuceneMethodQuery Merge(Query other)
+		public IRavenLuceneMethodQuery Merge(IRavenLuceneMethodQuery other)
 		{
 			var termsMatchQuery = (TermsMatchQuery)other;
 			matches.AddRange(termsMatchQuery.matches);

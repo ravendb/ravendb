@@ -7,7 +7,7 @@ using ICSharpCode.NRefactory.CSharp;
 namespace Raven.Database.Linq.Ast
 {
 	[CLSCompliant(false)]
-	public class ThrowOnInvalidMethodCalls : DepthFirstAstVisitor<object,object>
+	public class ThrowOnInvalidMethodCalls : DepthFirstAstVisitor<object, object>
 	{
 		public class ForbiddenMethod
 		{
@@ -33,8 +33,8 @@ namespace Raven.Database.Linq.Ast
 		public List<ForbiddenMethod> Members = new List<ForbiddenMethod>
 		{
 			new ForbiddenMethod(
-				names: new []{"Now", "UtcNow"},
-				typeAliases: new[]{"DateTime", "System.DateTime", "DateTimeOffset", "System.DateTimeOffset"},
+				names: new[] { "Now", "UtcNow" },
+				typeAliases: new[] { "DateTime", "System.DateTime", "DateTimeOffset", "System.DateTimeOffset" },
 				error: @"Cannot use {0} during a map or reduce phase.
 The map or reduce functions must be referentially transparent, that is, for the same set of values, they always return the same results.
 Using {0} invalidate that premise, and is not allowed"),
@@ -52,7 +52,6 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 
 		public override object VisitQueryLetClause(QueryLetClause queryLetClause, object data)
 		{
-
 			if (SimplifyLetExpression(queryLetClause.Expression) is LambdaExpression)
 			{
 				var text = QueryParsingUtils.ToText(queryLetClause);
@@ -69,16 +68,14 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 				var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
 				if (memberReferenceExpression != null)
 				{
-					if (memberReferenceExpression.MemberName == "Count")
+					var identifier = memberReferenceExpression.Target as IdentifierExpression;
+					if (identifier != null && identifier.Identifier == groupByIdentifier)
 					{
-						var identifier = memberReferenceExpression.Target as IdentifierExpression;
-						if (identifier != null)
-						{
-							if (identifier.Identifier == groupByIdentifier)
-							{
-								throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
-							}
-						}
+						if (memberReferenceExpression.MemberName == "Count")
+							throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+
+						if (memberReferenceExpression.MemberName == "Average")
+							throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
 					}
 				}
 			}
@@ -101,7 +98,7 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 		{
 			if (lambdaExpression.Body == null || lambdaExpression.Body.IsNull)
 				return base.VisitLambdaExpression(lambdaExpression, data);
-			if(lambdaExpression.Body is BlockStatement == false)
+			if (lambdaExpression.Body is BlockStatement == false)
 				return base.VisitLambdaExpression(lambdaExpression, data);
 
 			var text = QueryParsingUtils.ToText(lambdaExpression);
@@ -136,7 +133,7 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 		private static void HandleGroupBy(SimpleType simpleType)
 		{
 			var initializer = simpleType.Ancestors.OfType<VariableInitializer>().Single();
-			var rootExpression = (InvocationExpression)initializer.Initializer;
+			var rootExpression = (InvocationExpression) initializer.Initializer;
 
 			var nodes = rootExpression.Children.Where(x => x.NodeType != NodeType.Token).ToList();
 			if (nodes.Count < 2)
@@ -185,12 +182,13 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 					if (parent == null)
 						continue;
 
-					var member = (MemberReferenceExpression)parent.Target;
+					var member = (MemberReferenceExpression) parent.Target;
 
 					if (member.MemberName == "Count")
-					{
 						throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
-					}
+
+					if (member.MemberName == "Average")
+						throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
 				}
 			}
 		}
@@ -217,11 +215,11 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 		private static string GetTarget(MemberReferenceExpression memberReferenceExpression)
 		{
 			var identifierExpression = memberReferenceExpression.Target as IdentifierExpression;
-			if(identifierExpression!=null)
+			if (identifierExpression != null)
 				return identifierExpression.Identifier;
 
 			var mre = memberReferenceExpression.Target as MemberReferenceExpression;
-			if(mre != null)
+			if (mre != null)
 				return GetTarget(mre) + "." + mre.MemberName;
 
 			return null;

@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -40,6 +41,13 @@ namespace Raven.Database.Smuggler
 				var array = GetAttachments(totalCount, lastEtag);
 				if (array.Length == 0)
 				{
+					var databaseStatistics = GetStats();
+					if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+					{
+						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
+						continue;
+					}
 					ShowProgress("Done with reading attachments, total: {0}", totalCount);
 					return lastEtag;
 				}
@@ -84,7 +92,7 @@ namespace Raven.Database.Smuggler
 		protected override RavenJArray GetDocuments(Guid lastEtag)
 		{
 			const int dummy = 0;
-			return _database.GetDocuments(dummy, 128, lastEtag);
+			return _database.GetDocuments(dummy, smugglerOptions.BatchSize, lastEtag);
 		}
 
 		protected override RavenJArray GetIndexes(int totalCount)

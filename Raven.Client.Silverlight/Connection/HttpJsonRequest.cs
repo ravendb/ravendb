@@ -389,7 +389,14 @@ namespace Raven.Client.Silverlight.Connection
 					   var observableLineStream = new ObservableLineStream(stream, () =>
 																					   {
 																						   webRequest.Abort();
-																						   task.Result.Close();
+																						   try
+																						   {
+																							   task.Result.Close();
+																						   }
+																						   catch (Exception)
+																						   {
+																							 // we expect an exception, because we aborted the connection
+																						   }
 																					   });
 					   observableLineStream.Start();
 					   return (IObservable<string>)observableLineStream;
