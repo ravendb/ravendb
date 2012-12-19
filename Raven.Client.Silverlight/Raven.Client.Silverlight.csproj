@@ -774,6 +774,9 @@
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\Log4NetLogManager.cs">
       <Link>Imports\Logging\LogProviders\Log4NetLogManager.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\LogManagerBase.cs">
+      <Link>Imports\Logging\LogProviders\LogManagerBase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
       <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
     </Compile>
@@ -1038,7 +1041,6 @@
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
-    <Compile Include="Imports\Logging\LogProviders\LogManagerBase.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
