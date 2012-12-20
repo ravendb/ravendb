@@ -25,6 +25,7 @@
 	<Converters:FirstLineOnlyConverter x:Key="FirstLineOnly" />
 	<Converters:GetFullApiKeyConverter x:Key="GetFullApiKeyConverter"/>
 	<Converters:GetFullConnectionStringConverter x:Key="GetFullConnectionStringConverter"/>
+	<Converters:GetApiKeyDirectLink x:Key="GetApiKeyDirectLink"/>
 	<Converters:StringEmptyToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedForValue"
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />

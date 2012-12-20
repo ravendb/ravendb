@@ -5,7 +5,7 @@
 					  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 					  mc:Ignorable="d" 
 					  x:Class="Raven.Studio.Controls.NewDatabase"
-					  Width="500" Height="270" 
+					  Width="500" Height="300" 
 					  Title="Create a New Database" 
 					  x:Name="NewDatabaseControl"
 					  Style="{StaticResource ChildWindowNoAnimationStyle}">
@@ -104,8 +104,9 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
 	
 				<CheckBox x:Name="Compression"
                           Checked="Checked"
@@ -195,6 +196,18 @@
                            Margin="5"
                            MouseLeftButtonDown="ToggleBundles"
 						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Authorization}"/>
+
+				<CheckBox x:Name="Periodic"
+                          Grid.Row="7"
+                          Margin="5"
+						  IsChecked="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=PeriodicBackup}"
+						  IsEnabled="False"/>
+				<TextBlock Grid.Column="1"
+                           Grid.Row="7"
+                           Text="Periodic Backup Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=PeriodicBackup}"/>
 			</Grid>
 		</Grid>
 		

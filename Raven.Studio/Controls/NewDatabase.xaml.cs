@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -6,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Infrastructure.Converters;
 using Raven.Studio.Models;
 using Raven.Client.Connection;
 
@@ -25,6 +27,12 @@ namespace Raven.Studio.Controls
 			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{
 				LicensingStatus.Value = ((RavenJObject)doc).Deserialize<LicensingStatus>(new DocumentConvention());
+				var hasPeriodic =(bool) new BundleNameToActiveConverter().Convert(LicensingStatus.Value, typeof (bool), "PeriodicBackup",
+				                                                            CultureInfo.InvariantCulture);
+				if (hasPeriodic)
+				{
+					Bundles.Add("PeriodicBackup");
+				}
 			});
 
 			

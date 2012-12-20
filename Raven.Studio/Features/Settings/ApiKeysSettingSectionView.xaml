@@ -25,6 +25,7 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="Auto" />
@@ -118,22 +119,45 @@
 				</TextBox>
 
 				<TextBlock Grid.Row="4" 
+						   Text="Direct link:"
+						   VerticalAlignment="Center"/>
+				<TextBox Grid.Row="4"
+						 Grid.Column="1"
+                         Grid.ColumnSpan="2"
+						 IsReadOnly="True"
+						 Text="{Binding Converter={StaticResource GetApiKeyDirectLink}}" 
+                         Margin="5"
+						 x:Name="DirectLink">
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu>
+							<ContextMenu:MenuItem Header="Copy Link to Clipboard"
+                                                  Command="{StaticResource CopyToClipboardCommand}"
+												  CommandParameter="{Binding Text, ElementName=DirectLink}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
+				</TextBox>
+
+				<TextBlock Grid.Row="5" 
 						   Text="Enabled:" 
 						   VerticalAlignment="Center"/>
 
-				<CheckBox Grid.Row="4"
+				<CheckBox Grid.Row="5"
                           Grid.Column="1"
                           Grid.ColumnSpan="2"
                           IsChecked="{Binding Enabled, Mode=TwoWay}"
                           Margin="5"/>
 
-				<TextBlock Grid.Row="5" 
+				<TextBlock Grid.Row="6" 
 						   Text="Databases:"
                            Margin="5"
 						   VerticalAlignment="Top"/>
 
 				<sdk:DataGrid Margin="5"
-                              Grid.Row="5"
+                              Grid.Row="6"
                               Grid.Column="1"
                               ItemsSource="{Binding Databases}"
                               AutoGenerateColumns="False"
@@ -199,7 +223,7 @@
 					</sdk:DataGrid.Columns>
 				</sdk:DataGrid>
 				<Button Style="{StaticResource Style_Button_MouseOverChrome}"
-                            Grid.Row="5"
+                            Grid.Row="6"
                             Grid.Column="2" 
                             HorizontalAlignment="Right" 
                             VerticalAlignment="Top"
