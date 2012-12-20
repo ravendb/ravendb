@@ -52,7 +52,7 @@ namespace Raven.SimulatedWorkLoad
 
 				createIndexes.CreateIndexesSecond();
 
-				Thread.Sleep(random.Next(50, 300));
+				Thread.Sleep(random.Next(50, 150));
 
 				if (count%100 == 0)
 				{
@@ -132,13 +132,13 @@ namespace Raven.SimulatedWorkLoad
 				return;
 
 			var databaseStatistics = documentStore.DatabaseCommands.GetStatistics();
-			if (createdMapIndexes2 == false && databaseStatistics.CountOfDocuments > 100 * 1000)
+			if (createdMapIndexes2 == false && databaseStatistics.CountOfDocuments > 25 * 1000)
 			{
 				new Users_Locations().Execute(documentStore);
 				createdMapIndexes2 = true;
 			}
 
-			if (createdMapReduceIndexes2 == false && databaseStatistics.CountOfDocuments > 150 * 1000)
+			if (createdMapReduceIndexes2 == false && databaseStatistics.CountOfDocuments > 40 * 1000)
 			{
 				new Users_Stats_ByStateAndcity().Execute(documentStore);
 				createdMapReduceIndexes2 = true;
