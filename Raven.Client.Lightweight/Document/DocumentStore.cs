@@ -470,7 +470,11 @@ namespace Raven.Client.Document
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
 
-				if (string.IsNullOrEmpty(oauthSource) == false)
+				if (string.IsNullOrEmpty(oauthSource) == false &&
+					
+					(oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false && ApiKey != null)
+
+					)
 				{
 					return basicAuthenticator.HandleOAuthResponse(oauthSource);
 				}
@@ -502,7 +506,11 @@ namespace Raven.Client.Document
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
 
-				if (string.IsNullOrEmpty(oauthSource) == false)
+				if (string.IsNullOrEmpty(oauthSource) == false &&
+					
+					(oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false && ApiKey != null)
+
+					)
 				{
 					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource);
 				}
