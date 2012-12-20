@@ -512,8 +512,6 @@ namespace Raven.Client.Document
 
 					)
 				{
-					if(oauthSource.EndsWith("/OAuth/API-Key", StringComparison.InvariantCultureIgnoreCase))
-						return securedAuthenticator.DoOAuthRequestAsync(oauthSource);
 					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource);
 				}
 
