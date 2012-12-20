@@ -281,6 +281,12 @@ namespace Raven.Database.Extensions
 			context.Response.StatusDescription = "Bad Request";
 		}
 
+		public static void SetStatusToPreconditionFailed(this IHttpContext context)
+		{
+			context.Response.StatusCode = 412;
+			context.Response.StatusDescription = "Precondition Failed";
+		}
+
 		public static void SetStatusToUnauthorized(this IHttpContext context)
 		{
 			context.Response.StatusCode = 401;

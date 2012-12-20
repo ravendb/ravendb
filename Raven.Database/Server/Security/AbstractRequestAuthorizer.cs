@@ -34,8 +34,6 @@ namespace Raven.Database.Server.Security
 		{
 		}
 
-		public abstract bool Authorize(IHttpContext context);
-
 		public static bool IsGetRequest(string httpMethod, string requestPath)
 		{
 			return (httpMethod == "GET" || httpMethod == "HEAD") ||

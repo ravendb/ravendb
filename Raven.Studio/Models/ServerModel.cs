@@ -62,7 +62,7 @@ namespace Raven.Studio.Models
 			};
 
 			var urlParser = new UrlParser(UrlUtil.Url);
-			var apiKey = urlParser.GetQueryParam("api-key");
+			var apiKey = urlParser.GetQueryParam("api-key") ?? "test/5sBm1oDjbX154bvGhuafxI";
 			if (string.IsNullOrEmpty(apiKey) == false)
 				documentStore.ApiKey = apiKey;
 
@@ -169,7 +169,7 @@ namespace Raven.Studio.Models
 				return string.Empty;
 
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
-				return "http://localhost:8080";
+				return "http://localhost/Raven.Web";
 			
             var localPath = HtmlPage.Document.DocumentUri.LocalPath;
 			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);

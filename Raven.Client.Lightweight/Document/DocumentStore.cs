@@ -375,9 +375,9 @@ namespace Raven.Client.Document
 #endif
 			try
 			{
-				InitializeInternal();
-
 				InitializeSecurity();
+
+				InitializeInternal();
 
 #if !SILVERLIGHT
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
@@ -471,10 +471,7 @@ namespace Raven.Client.Document
 				var oauthSource = response.Headers["OAuth-Source"];
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
-					
-					(oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false && ApiKey != null)
-
-					)
+					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
 					return basicAuthenticator.HandleOAuthResponse(oauthSource);
 				}
@@ -489,6 +486,7 @@ namespace Raven.Client.Document
 
 				return securedAuthenticator.DoOAuthRequest(oauthSource);
 			};
+#endif
 
 			Conventions.HandleForbiddenResponseAsync = forbiddenResponse =>
 			{
@@ -500,17 +498,13 @@ namespace Raven.Client.Document
 
 				return null;
 			};
-#endif
 
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
-					
-					(oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false && ApiKey != null)
-
-					)
+					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
 					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource);
 				}
@@ -525,16 +519,6 @@ namespace Raven.Client.Document
 				return securedAuthenticator.DoOAuthRequestAsync(oauthSource);
 			};
 
-			Conventions.HandleForbiddenResponseAsync = forbiddenResponse =>
-					{
-						if (ApiKey == null)
-						{
-							AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse);
-							return null;
-						}
-
-						return null;
-					};
 		}
 
 		private void AssertUnuthorizedCredentialSupportWindowsAuth(HttpWebResponse response)

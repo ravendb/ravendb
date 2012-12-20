@@ -134,7 +134,11 @@ namespace Raven.Client.Connection
 						return task;// effectively throw
 
 					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+					if (httpWebResponse == null || 
+						(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && 
+						 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+						 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
+					
 						return task; // effectively throw
 
 					if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
@@ -228,8 +232,9 @@ namespace Raven.Client.Connection
 
 					var httpWebResponse = e.Response as HttpWebResponse;
 					if (httpWebResponse == null ||
-					    (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
-					     httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+					    (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && 
+						 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+						 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 						throw;
 
 					if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
@@ -737,7 +742,10 @@ namespace Raven.Client.Connection
 						return task;// effectively throw
 
 					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+					if (httpWebResponse == null || 
+						(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && 
+						 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+						 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 						return task; // effectively throw
 
 					if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)

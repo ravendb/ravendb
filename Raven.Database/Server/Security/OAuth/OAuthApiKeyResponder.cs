@@ -131,7 +131,7 @@ namespace Raven.Database.Server.Security.OAuth
 				{ OAuthHelper.Keys.Challenge, OAuthServerHelper.EncryptSymmetric(OAuthHelper.DictionaryToString(challengeData)) }
 			};
 
-			context.SetStatusToUnauthorized();
+			context.SetStatusToPreconditionFailed();
 			context.Response.AddHeader("WWW-Authenticate", OAuthHelper.Keys.WWWAuthenticateHeaderKey + " " + OAuthHelper.DictionaryToString(responseData));
 		}
 

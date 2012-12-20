@@ -51,7 +51,7 @@ namespace Raven.Database.Server
 		private const int MaxConcurrentRequests = 192;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
-		readonly AbstractRequestAuthorizer requestAuthorizer;
+		readonly MixedModeRequestAuthorizer requestAuthorizer;
 
 		private readonly IBufferPool bufferPool = new BufferPool(BufferPoolStream.MaxBufferSize * 512, BufferPoolStream.MaxBufferSize);
 
@@ -152,7 +152,7 @@ namespace Raven.Database.Server
 			}
 		}
 
-		public AbstractRequestAuthorizer RequestAuthorizer
+		public MixedModeRequestAuthorizer RequestAuthorizer
 		{
 			get { return requestAuthorizer; }
 		}
