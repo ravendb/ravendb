@@ -143,7 +143,7 @@ namespace Raven.Client.Document
 		/// <value>The store identifier.</value>
 		public string StoreIdentifier
 		{
-			get { return documentStore.Identifier; }
+			get { return documentStore.Identifier +";" + DatabaseName; }
 		}
 
 		/// <summary>
@@ -1163,7 +1163,7 @@ more responsive application.
 		/// </summary>
 		protected IDisposable EntitiesToJsonCachingScope()
 		{
-			cachedJsonDocs = new Dictionary<object, RavenJObject>();
+			cachedJsonDocs = new Dictionary<object, RavenJObject>(ObjectReferenceEqualityComparerer<object>.Default);
 
 			return new DisposableAction(() => cachedJsonDocs = null);
 		}

@@ -52,7 +52,7 @@ namespace Raven.Database.Config
 			{"Raven/ResetIndexOnUncleanShutdown","bool", "false", "When the database is shut down rudely, determine whatever to reset the index or to check it. Note that checking the index may take some time on large databases."},
 			{"Raven/MaxIndexingRunLatency", "TimeSpan", "00:05:00", "What is the suggested max latency for a single indexing run that allows the database to increase the indexing batch size"},
 			{"Raven/DisableDocumentPreFetchingForIndexing", "bool", "false","Disable document prefetching for indexes"},
-
+			{"Raven/NumberOfItemsToExecuteReduceInSingleStep", "int", "10 - 100,000", "The number of items that will cause RavenDB to move to multi step reduce, default: 1,024"},
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
 			
 			// Temp Indexing
@@ -70,7 +70,7 @@ namespace Raven.Database.Config
 			// Esent
 			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default storage engine. Default: 25% of RAM on 64 bits, 256 MB on 32 bits."},
 			{"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 512."},
-			{"Raven/Esent/PreferredVerPages", "int", null, "The preferred size of version store (in memory modified data) available. If the value exceed that level, optional background tasks data are removed from the version store. The value is in megabytes. Default: 512."},
+			{"Raven/Esent/PreferredVerPages", "int", null, "The preferred size of version store (in memory modified data) available. If the value exceed that level, optional background tasks data are removed from the version store. The value is in megabytes. Default: 472."},
 			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in megabytes. Default: 64."},
 			{"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 8192."},
 			{"Raven/Esent/MaxCursors", "int", null, "The maximum number of cursors allowed concurrently. Default: 2048."},

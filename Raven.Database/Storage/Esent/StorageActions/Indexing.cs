@@ -166,7 +166,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetDelete(session, IndexesStatsReduce);
 			}
 
-			foreach (var table in new[]{MappedResults, ReducedResults, ScheduledReductions})
+			foreach (var table in new[]{MappedResults, ReducedResults, ScheduledReductions, ReduceKeysCounts, ReduceKeysStatus})
 			{
 				Api.JetSetCurrentIndex(session, table, "by_view");
 				Api.MakeKey(session, table, name, Encoding.Unicode, MakeKeyGrbit.NewKey);

@@ -1028,11 +1028,13 @@ namespace Raven.Tests.Document
 			documentStore.DatabaseCommands.PutIndex("AvgAgeByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
 			                                                            	{
 			                                                            		Map = users => from user in users
-			                                                            		               select new {user.Location, user.Age},
+			                                                            		               select new {user.Location, AgeSum=  user.Age, AverageAge = user.Age, Count = 1},
 			                                                            		Reduce = results => from loc in results
 			                                                            		                    group loc by loc.Location
 			                                                            		                    into g
-			                                                            		                    select new {Location = g.Key, Age = g.Average(x => x.Age)},
+																									let count = g.Sum(x=>x.Count)
+																									let age = g.Sum(x=>x.AgeSum)
+			                                                            		                    select new {Location = g.Key, AverageAge = age/ count, Count = count, AgeSum = age },
 			                                                            		Indexes = {{x => x.Location, FieldIndexing.NotAnalyzed}}
 			                                                            	});
 
@@ -1060,7 +1062,7 @@ namespace Raven.Tests.Document
 					.Single();
 
 				Assert.Equal("Tel Aviv", single.Location);
-				Assert.Equal(26.5m, single.Age);
+				Assert.Equal(26.5m, single.AverageAge);
 			}
 		}
 
@@ -1071,8 +1073,8 @@ namespace Raven.Tests.Document
 			                                                  	{
 			                                                  		Map = users => from user in users
 			                                                  		               select new {user.Age},
-			                                                  		Indexes = {{x => x.Age, FieldIndexing.Analyzed}},
-			                                                  		Stores = {{x => x.Age, FieldStorage.Yes}}
+			                                                  		Indexes = {{x => x.AverageAge, FieldIndexing.Analyzed}},
+																	Stores = { { x => x.AverageAge, FieldStorage.Yes } }
 			                                                  	});
 
 			using (var session = documentStore.OpenSession())
@@ -1115,8 +1117,8 @@ namespace Raven.Tests.Document
 			{
 				Map = users => from user in users
 								select new { user.Age },
-				Indexes = { { x => x.Age, FieldIndexing.Analyzed } },
-				Stores = { { x => x.Age, FieldStorage.Yes } }
+				Indexes = { { x => x.AverageAge, FieldIndexing.Analyzed } },
+				Stores = { { x => x.AverageAge, FieldStorage.Yes } }
 			});
 
 			using (var session = documentStore.OpenSession())

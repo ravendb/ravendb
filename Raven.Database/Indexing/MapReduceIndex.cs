@@ -109,16 +109,23 @@ namespace Raven.Database.Indexing
 					{
 						Data = data,
 						DocId = docId,
-						ReduceKey =	reduceKey
+						ReduceKey = reduceKey
 					});
 
 					changed.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), reduceKey));
 				}
 			}
 
+			int mapCount = 0;
 			foreach (var mapResultItem in items)
 			{
 				actions.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
+				if (mapCount++ % 50000 == 0)
+				{
+					// The reason this is here is to protect us from Version Store Out Of Memory error during indexing
+					// this can happen if we have indexes that output a VERY large number of items per doc.
+					actions.General.PulseTransaction();
+				}
 			}
 
 			UpdateIndexingStats(context, stats);
@@ -203,10 +210,10 @@ namespace Raven.Database.Indexing
 		{
 			if (doc is IDynamicJsonObject)
 				return ((IDynamicJsonObject)doc).Inner;
-			
+
 			var ravenJTokenWriter = new RavenJTokenWriter();
 			jsonSerializer.Serialize(ravenJTokenWriter, doc);
-			return (RavenJObject) ravenJTokenWriter.Token;
+			return (RavenJObject)ravenJTokenWriter.Token;
 		}
 
 		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache =
@@ -391,7 +398,7 @@ namespace Raven.Database.Indexing
 				var sourceCount = 0;
 				var sw = Stopwatch.StartNew();
 				var start = SystemTime.UtcNow;
-				
+
 				parent.Write((indexWriter, analyzer, stats) =>
 				{
 					stats.Operation = IndexingWorkStats.Status.Reduce;

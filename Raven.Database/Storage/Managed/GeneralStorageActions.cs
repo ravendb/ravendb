@@ -37,5 +37,10 @@ namespace Raven.Storage.Managed
 			storage.Identity.UpdateKey(new RavenJObject { { "name", name }, { "id", value } });
 		
 		}
+
+		public void PulseTransaction()
+		{
+			
+		}
 	}
 }

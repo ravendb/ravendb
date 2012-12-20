@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Xunit;
@@ -12,6 +13,40 @@ namespace Raven.Tests.Bugs
 {
 	public class Attachments : RavenTest
 	{
+		[Fact]
+		public void CanHeadExistingAttachment()
+		{
+			Attachment attachment;
+
+			using (var server = GetNewServer())
+			{
+				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				{
+					documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+					attachment = documentStore.DatabaseCommands.HeadAttachment("test");
+				}
+			}
+
+			Assert.NotNull(attachment);
+			Assert.Throws<InvalidOperationException>(() => attachment.Data());
+		}
+
+		[Fact]
+		public void CanHeadNonExistingAttachment()
+		{
+			Attachment attachment;
+
+			using (var server = GetNewServer())
+			{
+				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				{
+					attachment = documentStore.DatabaseCommands.HeadAttachment("test");
+				}
+			}
+
+			Assert.Null(attachment);
+		}
+
 		[Fact]
 		public void CanExportAttachments()
 		{

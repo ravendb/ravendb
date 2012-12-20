@@ -15,17 +15,12 @@ namespace Raven.Tests.Issues
 
 	public class RavenDB_766 : RavenTest
 	{
-		private const string TestName = "John#";
-		private const int NumberOfDifferentNames = 2;
-
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
 		public void ShouldRemoveAllMapResultsAfterDeletingIndex(string storageType)
 		{
-			Environment.SetEnvironmentVariable("raventest_storage_engine", storageType);
-
-			using (var storage = NewTransactionalStorage())
+			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
 				storage.Batch(accessor =>
 				{
@@ -56,9 +51,7 @@ namespace Raven.Tests.Issues
 		[InlineData("esent")]
 		public void ShouldRemoveAllReduceResultsAfterDeletingIndex(string storageType)
 		{
-			Environment.SetEnvironmentVariable("raventest_storage_engine", storageType);
-
-			using (var storage = NewTransactionalStorage())
+			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
 				storage.Batch(accessor =>
 				{
@@ -89,9 +82,7 @@ namespace Raven.Tests.Issues
 		[InlineData("esent")]
 		public void ShouldRemoveAllScheduledReductionsAfterDeletingIndex(string storageType)
 		{
-			Environment.SetEnvironmentVariable("raventest_storage_engine", storageType);
-
-			using (var storage = NewTransactionalStorage())
+			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
 				storage.Batch(accessor =>
 				{
@@ -115,10 +106,10 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce("a", 1, 10, new List<object>());
+					var results = accessor.MapReduce.GetItemsToReduce("a", new[] {"a"},  1, 10, true, new List<object>());
 					Assert.Equal(0, results.Count());
 
-					results = accessor.MapReduce.GetItemsToReduce("b", 1, 10, new List<object>());
+					results = accessor.MapReduce.GetItemsToReduce("b", new[] {"b"}, 1, 10, true, new List<object>());
 					Assert.Equal(2, results.Count());
 				});
 			}

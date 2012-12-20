@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -15,6 +16,8 @@ namespace Raven.Client.Document.Batches
 		private readonly QueryOperation queryOperation;
 		private readonly Action<QueryResult> afterQueryExecuted;
 		private readonly HashSet<string> includes;
+
+		private IDictionary<string,string> headers;
 
 		public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, HashSet<string> includes)
 		{
@@ -32,11 +35,19 @@ namespace Raven.Client.Document.Batches
 			{
 				stringBuilder.Append("&include=").Append(include);
 			}
-			return new GetRequest
+			var request = new GetRequest
 			{
-				Url = "/indexes/" + queryOperation.IndexName,
+				Url = "/indexes/" + queryOperation.IndexName, 
 				Query = stringBuilder.ToString()
 			};
+			if (headers != null)
+			{
+				foreach (var header in headers)
+				{
+					request.Headers[header.Key] = header.Value;
+				}
+			}
+			return request;
 		}
 
 		public object Result { get; set; }
@@ -99,6 +110,11 @@ namespace Raven.Client.Document.Batches
 		public void HandleEmbeddedResponse(object result)
 		{
 			HandleResponse((QueryResult)result);
+		}
+
+		public void SetHeaders(IDictionary<string,string> theHeaders)
+		{
+			headers = theHeaders;
 		}
 	}
 }

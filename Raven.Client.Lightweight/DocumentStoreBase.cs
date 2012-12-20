@@ -3,6 +3,7 @@
 using System.Collections.Specialized;
 #endif
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using Raven.Abstractions.Data;
@@ -152,13 +153,31 @@ namespace Raven.Client
 		protected readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
-		/// Registers the conflict listener.
+		/// Registers the convertion listener.
 		/// </summary>
-		/// <param name="conflictListener">The delete listener.</param>
-		/// <returns></returns>
-		public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
+		public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
 		{
-			listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
+			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
+			return this;
+		}
+
+		/// <summary>
+		/// Registers the query listener.
+		/// </summary>
+		/// <param name="queryListener">The query listener.</param>
+		public DocumentStoreBase RegisterListener(IDocumentQueryListener queryListener)
+		{
+			listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
+			return this;
+		}
+		
+		/// <summary>
+		/// Registers the store listener.
+		/// </summary>
+		/// <param name="documentStoreListener">The document store listener.</param>
+		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
+		{
+			listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
 			return this;
 		}
 
@@ -166,7 +185,6 @@ namespace Raven.Client
 		/// Registers the delete listener.
 		/// </summary>
 		/// <param name="deleteListener">The delete listener.</param>
-		/// <returns></returns>
 		public DocumentStoreBase RegisterListener(IDocumentDeleteListener deleteListener)
 		{
 			listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
@@ -174,20 +192,53 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Registers the query listener.
+		/// Registers the conflict listener.
 		/// </summary>
-		public DocumentStoreBase RegisterListener(IDocumentQueryListener queryListener)
+		/// <param name="conflictListener">The conflict listener.</param>
+		public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
 		{
-			listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
+			listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
 			return this;
 		}
+
 		/// <summary>
-		/// Registers the convertion listener.
+		/// Gets a read-only collection of the registered conversion listeners.
 		/// </summary>
-		public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
+		public ReadOnlyCollection<IDocumentConversionListener> RegisteredConversionListeners
 		{
-			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
-			return this;
+			get { return new ReadOnlyCollection<IDocumentConversionListener>(listeners.ConversionListeners); }
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered query listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentQueryListener> RegisteredQueryListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentQueryListener>(listeners.QueryListeners); }
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered store listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentStoreListener> RegisteredStoreListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentStoreListener>(listeners.StoreListeners); }
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered delete listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentDeleteListener> RegisteredDeleteListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentDeleteListener>(listeners.DeleteListeners); }
+		}
+
+		/// <summary>
+		/// Gets a read-only collection of the registered conflict listeners.
+		/// </summary>
+		public ReadOnlyCollection<IDocumentConflictListener> RegisteredConflictListeners
+		{
+			get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
 		}
 
 		protected void AfterSessionCreated(InMemoryDocumentSessionOperations session)
@@ -205,17 +256,6 @@ namespace Raven.Client
 		protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
 		public ILastEtagHolder LastEtagHolder { get; set; }
-
-		/// <summary>
-		/// Registers the store listener.
-		/// </summary>
-		/// <param name="documentStoreListener">The document store listener.</param>
-		/// <returns></returns>
-		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
-		{
-			listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
-			return this;
-		}
 
 		/// <summary>
 		///  Get the profiling information for the given id

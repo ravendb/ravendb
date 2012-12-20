@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Client.Document;
@@ -39,13 +40,18 @@ namespace Raven.Client
 		/// <param name="path">The path.</param>
 		IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
 
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Stores the specified entity with the specified etag.
 		/// The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
 		void Store(object entity, Guid etag);
-	
+
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
@@ -79,26 +85,61 @@ namespace Raven.Client
 		Task<T> LoadAsync<T>(string id);
 
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Begins the async multi-load operation
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
+		Task<T[]> LoadAsync<T>(params string[] ids);
+
+		/// <summary>
+		/// Begins the async multi-load operation
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
+		Task<T[]> LoadAsync<T>(IEnumerable<string> ids);
+
+		/// <summary>
+		/// Begins the async load operation, with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
 		/// This method allows you to call:
-		/// Load{Post}(1)
+		/// LoadAsync{Post}(1)
 		/// And that call will internally be translated to 
-		/// Load{Post}("posts/1");
+		/// LoadAsync{Post}("posts/1");
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
 		Task<T> LoadAsync<T>(ValueType id);
 
 		/// <summary>
-		/// Begins the async multi load operation
+		/// Begins the async multi-load operation, with the specified ids after applying
+		/// conventions on the provided ids to get the real document ids.
 		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <returns></returns>
-		Task<T[]> LoadAsync<T>(string[] ids);
-		
+		/// <remarks>
+		/// This method allows you to call:
+		/// LoadAsync{Post}(1,2,3)
+		/// And that call will internally be translated to 
+		/// LoadAsync{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		Task<T[]> LoadAsync<T>(params ValueType[] ids);
+
+		/// <summary>
+		/// Begins the async multi-load operation, with the specified ids after applying
+		/// conventions on the provided ids to get the real document ids.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// LoadAsync{Post}(new List&lt;int&gt;(){1,2,3})
+		/// And that call will internally be translated to 
+		/// LoadAsync{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids);
+
 		/// <summary>
 		/// Begins the async save changes operation
 		/// </summary>
