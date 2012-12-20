@@ -36,19 +36,28 @@ namespace Raven.SimulatedWorkLoad
 
 		private static void WriteToDatabase(List<Observing<User>> sources, Random random, CreateIndexes createIndexes)
 		{
+			int count = 0;
 			while (sources.Any(x => x.Completed == false))
 			{
 				var sizes = sources.Select(_ => random.Next(1, 40)).ToList();
-
+				count++;
 				Parallel.ForEach(sources, (observing, state, i) =>
 				{
-					observing.Release(sizes[(int) i]);
+					if (count%3 == 0) // do writes only every third run, ensure more reads than writes (more production)
+					{
+						observing.Release(sizes[(int) i]);
+					}
 					createIndexes.DoSomeOtherWork((int)i);
 				});
 
 				createIndexes.CreateIndexesSecond();
 
 				Thread.Sleep(random.Next(50, 300));
+
+				if (count%100 == 0)
+				{
+					createIndexes.Stats();
+				}
 			}
 		}
 
@@ -193,6 +202,15 @@ namespace Raven.SimulatedWorkLoad
 
 				session.SaveChanges();
 			}
+		}
+
+		public void Stats()
+		{
+			var databaseStatistics = documentStore.DatabaseCommands.GetStatistics();
+			Console.WriteLine("Wrote {0:#,#} documents, {1} out of {2} indexes stale",
+				databaseStatistics.CountOfDocuments,
+				databaseStatistics.StaleIndexes.Length,
+				databaseStatistics.CountOfIndexes);
 		}
 	}
 }
