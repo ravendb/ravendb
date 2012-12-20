@@ -240,6 +240,7 @@
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToToolTipCoverter.cs" />
+    <Compile Include="Infrastructure\Converters\GetApiKeyDirectLink.cs" />
     <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
