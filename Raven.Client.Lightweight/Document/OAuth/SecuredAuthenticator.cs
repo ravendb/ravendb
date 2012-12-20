@@ -138,10 +138,10 @@ namespace Raven.Client.Document.OAuth
 		}
 #endif
 
-public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
-{
-	return DoOAuthRequestAsync(oauthSource, null, null, null, 0);
-}
+		public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
+		{
+			return DoOAuthRequestAsync(oauthSource, null, null, null, 0);
+		}
 
 		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
 		{
@@ -215,6 +215,6 @@ public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
 						}
 					}).Unwrap();
 			}).Unwrap();
-		} 
+		}
 	}
 }
