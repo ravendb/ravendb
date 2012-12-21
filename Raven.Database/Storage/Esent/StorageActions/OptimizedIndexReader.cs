@@ -18,7 +18,8 @@ namespace Raven.Storage.Esent.StorageActions
 			public int Index;
 		}
 
-		private readonly byte[] bookmarkBuffer;
+		[ThreadStatic]
+		private static byte[] bookmarkBuffer;
 		private readonly JET_SESID session;
 		private readonly JET_TABLEID table;
 		private Func<T, bool> filter;
@@ -28,7 +29,10 @@ namespace Raven.Storage.Esent.StorageActions
 			primaryKeyIndexes = new List<Key>(size);
 			this.table = table;
 			this.session = session;
-			bookmarkBuffer = new byte[SystemParameters.BookmarkMost];
+			if (bookmarkBuffer == null)
+			{
+				bookmarkBuffer = new byte[SystemParameters.BookmarkMost];
+			}
 		}
 
 		public int Count
