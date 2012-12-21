@@ -46,9 +46,9 @@ namespace Raven.Bundles.Versioning.Triggers
 			{
 				RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
 			}
-			metadata.__ExteranlState["Next-Revision"] = revision;
+			metadata.__ExternalState["Next-Revision"] = revision;
 
-			metadata.__ExteranlState["Parent-Revision"] = metadata.Value<string>(VersioningUtil.RavenDocumentRevision);
+			metadata.__ExternalState["Parent-Revision"] = metadata.Value<string>(VersioningUtil.RavenDocumentRevision);
 
 			metadata[VersioningUtil.RavenDocumentRevisionStatus] = RavenJToken.FromObject("Current");
 			metadata[VersioningUtil.RavenDocumentRevision] = RavenJToken.FromObject(revision);
@@ -69,7 +69,7 @@ namespace Raven.Bundles.Versioning.Triggers
 				copyMetadata[Constants.RavenReadOnly] = true;
 				copyMetadata.Remove(VersioningUtil.RavenDocumentRevision);
 				object parentRevision;
-				metadata.__ExteranlState.TryGetValue("Parent-Revision", out parentRevision);
+				metadata.__ExternalState.TryGetValue("Parent-Revision", out parentRevision);
 				if (parentRevision != null)
 				{
 					copyMetadata[VersioningUtil.RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
@@ -77,7 +77,7 @@ namespace Raven.Bundles.Versioning.Triggers
 				}
 
 				object value;
-				metadata.__ExteranlState.TryGetValue("Next-Revision", out value);
+				metadata.__ExternalState.TryGetValue("Next-Revision", out value);
 				Database.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
 							 transactionInformation);
 
