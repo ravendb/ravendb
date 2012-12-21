@@ -20,10 +20,7 @@ namespace Raven.Studio.Models
 			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => OnPropertyChanged(() => SelectedDatabase);
 		}
 
-		public bool SingleTenant
-		{
-			get { return ApplicationModel.Current.Server.Value.SingleTenant; }
-		}
+	
 
 		private bool showSystem = false;
 		public IEnumerable<string> Databases
