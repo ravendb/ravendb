@@ -79,7 +79,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 					{
 						movedEnum = false;
 						var term = actualEnum.Term;
-						if (TermCompare(term) == false)
+						if (CompareTermAndMoveToNext(term, move: true) == false)
 							continue;
 						currentTerm = term;
 						return true;
@@ -90,6 +90,11 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			}
 
 			protected override bool TermCompare(Term term)
+			{
+				return CompareTermAndMoveToNext(term, move: false);
+			}
+
+			private bool CompareTermAndMoveToNext(Term term, bool move)
 			{
 				if (term.Field != termsMatchQuery.field)
 				{
@@ -110,8 +115,8 @@ namespace Raven.Database.Indexing.LuceneIntegration
 						break;
 					}
 					pos++;
-				}	
-				if (last > 0)
+				}
+				if (last > 0 && move)
 				{
 					MoveToCurrentTerm();
 					return false;
