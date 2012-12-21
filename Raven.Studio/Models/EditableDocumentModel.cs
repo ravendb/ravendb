@@ -925,9 +925,11 @@ namespace Raven.Studio.Models
 					.OrderBy(x => x.Key)
 					.Concat(new[]
 					        {
-						        new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : ""),
-						        new KeyValuePair<string, string>("Last-Modified", LastModified.HasValue ? LastModified.ToString() : ""),
-					        });
+						        new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : null),
+						        new KeyValuePair<string, string>("Last-Modified", LastModified.HasValue ? LastModified.Value.ToString("o") : null),
+						        new KeyValuePair<string, string>("Last-Modified", LastModified.HasValue ? LastModified.Value.ToLocalTime().ToString("G") + " (local)" : null),
+					        })
+					.Where(x => x.Value != null);
 			}
 		}
 

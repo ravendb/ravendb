@@ -10,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using Raven.Database.Data;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -118,26 +117,7 @@ namespace Raven.Client.Embedded
 		public JsonDocument Get(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jsonDocument = database.Get(key, TransactionInformation);
-			return EnsureLocalDate(jsonDocument);
-		}
-
-		private JsonDocument EnsureLocalDate(JsonDocument jsonDocument)
-		{
-			if (jsonDocument == null)
-				return null;
-			if (jsonDocument.LastModified != null)
-				jsonDocument.LastModified = jsonDocument.LastModified.Value.ToLocalTime();
-			return jsonDocument;
-		}
-
-		private JsonDocumentMetadata EnsureLocalDate(JsonDocumentMetadata jsonDocumentMetadata)
-		{
-			if (jsonDocumentMetadata == null)
-				return null;
-			if (jsonDocumentMetadata.LastModified != null)
-				jsonDocumentMetadata.LastModified = jsonDocumentMetadata.LastModified.Value.ToLocalTime();
-			return jsonDocumentMetadata;
+			return database.Get(key, TransactionInformation);
 		}
 
 		/// <summary>
@@ -396,8 +376,7 @@ namespace Raven.Client.Embedded
 			{
 				queryResult = database.Query(index, query.Clone());
 			}
-			EnsureLocalDate(queryResult.Results);
-
+			
 			var loadedIds = new HashSet<string>(
 				queryResult.Results
 				           .Where(x => x["@metadata"] != null)
@@ -416,26 +395,9 @@ namespace Raven.Client.Embedded
 				}
 
 				includeCmd.AlsoInclude(queryResult.IdsToInclude);
-
-				EnsureLocalDate(queryResult.Includes);
 			}
 
 			return queryResult;
-		}
-
-		private static void EnsureLocalDate(List<RavenJObject> docs)
-		{
-			foreach (var doc in docs)
-			{
-				RavenJToken metadata;
-				if (doc.TryGetValue(Constants.Metadata, out metadata) == false || metadata.Type != JTokenType.Object)
-					continue;
-				var lastModified = metadata.Value<DateTime?>(Constants.LastModified);
-				if (lastModified == null || lastModified.Value.Kind == DateTimeKind.Local)
-					continue;
-
-				((RavenJObject) metadata)[Constants.LastModified] = lastModified.Value.ToLocalTime();
-			}
 		}
 
 		/// <summary>
@@ -466,7 +428,7 @@ namespace Raven.Client.Embedded
 				                      Results = ids
 					                      .Select(id => database.Get(id, TransactionInformation))
 					                      .ToArray()
-					                      .Select(x => x == null ? null : EnsureLocalDate(x).ToJson())
+					                      .Select(x => x == null ? null : x.ToJson())
 					                      .ToList(),
 			                      };
 
@@ -812,8 +774,7 @@ namespace Raven.Client.Embedded
 		public JsonDocumentMetadata Head(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jsonDocumentMetadata = database.GetDocumentMetadata(key, TransactionInformation);
-			return EnsureLocalDate(jsonDocumentMetadata);
+			return database.GetDocumentMetadata(key, TransactionInformation);
 		}
 
 		/// <summary>

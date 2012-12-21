@@ -38,9 +38,6 @@ namespace Raven.Studio.Features.Documents
 			Id = inner.Metadata.IfPresent<string>("@id");
 			LastModified = inner.LastModified ?? DateTime.MinValue;
 
-			if (LastModified.Kind == DateTimeKind.Utc)
-				LastModified = LastModified.ToLocalTime();
-
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
 		}

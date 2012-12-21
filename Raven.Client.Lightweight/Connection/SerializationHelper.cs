@@ -133,6 +133,7 @@ namespace Raven.Client.Connection
 
 			var etag = headers["ETag"];
 			var lastModified = headers[Constants.LastModified];
+			var lastModifiedDate = DateTime.SpecifyKind(DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture), DateTimeKind.Utc);
 
 			return new JsonDocument
 			       {
@@ -140,7 +141,7 @@ namespace Raven.Client.Connection
 				       NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				       Key = key,
 				       Etag = HttpExtensions.EtagHeaderToGuid(etag),
-				       LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
+				       LastModified = lastModifiedDate,
 				       Metadata = meta
 			       };
 		}
@@ -172,12 +173,14 @@ namespace Raven.Client.Connection
 			var etag = headers["ETag"].First();
 			var lastModified = headers[Constants.LastModified].First();
 #endif
+			var lastModifiedDate = DateTime.SpecifyKind(DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture), DateTimeKind.Utc);
+
 			return new JsonDocumentMetadata
 			       {
 				       NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				       Key = key,
 				       Etag = HttpExtensions.EtagHeaderToGuid(etag),
-				       LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
+					   LastModified = lastModifiedDate,
 				       Metadata = meta
 			       };
 		}
