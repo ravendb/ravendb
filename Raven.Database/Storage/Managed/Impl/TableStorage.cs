@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Util;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;

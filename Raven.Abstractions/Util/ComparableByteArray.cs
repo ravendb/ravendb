@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 
-namespace Raven.Database.Util
+namespace Raven.Abstractions.Util
 {
 	public class ComparableByteArray : IComparable<ComparableByteArray>, IComparable
 	{
