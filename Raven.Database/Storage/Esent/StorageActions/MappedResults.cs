@@ -198,8 +198,15 @@ namespace Raven.Storage.Esent.StorageActions
 				                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
 				// this isn't used for optimized reading, but to make it easier to delete records later on
-				var reader = new OptimizedIndexReader(session, ScheduledReductions, take);
-				itemsToDelete.Add(reader);
+				OptimizedIndexReader reader;
+				if (itemsToDelete.Count == 0)
+				{
+					itemsToDelete.Add(reader = new OptimizedIndexReader(session, ScheduledReductions, take));
+				}
+				else
+				{
+					reader = (OptimizedIndexReader)itemsToDelete[0];
+				}
 				var seen = new HashSet<Tuple<string, int>>();
 				do
 				{
