@@ -391,7 +391,7 @@
 										<Popup>
 											<ContentControl Style="{StaticResource Style_InfoToolTip}">
 												<RichTextBlock MaxWidth="370" Margin="5">
-													<Paragraph>Maps tells how to find the data you are intrested in</Paragraph>
+                                                    <Paragraph>Maps project the fields that we want to search on (to the index) or to group by (when using map/reduce)</Paragraph>
 													<Paragraph>
 														<LineBreak/>
 														Example:
