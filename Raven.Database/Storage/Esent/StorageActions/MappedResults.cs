@@ -161,19 +161,25 @@ namespace Raven.Storage.Esent.StorageActions
 			var hasResult = false;
 			var result = new ScheduledReductionInfo();
 			var currentEtagBinary = Guid.Empty.ToByteArray();
-			foreach (var sortedBookmark in itemsToDelete.Cast<OptimizedIndexReader>().SelectMany(reader => reader.GetSortedBookmarks()))
+			foreach (OptimizedIndexReader reader in itemsToDelete)
 			{
-				Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark, sortedBookmark.Length);
-				var etagBinary = Api.RetrieveColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"]);
-				if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
+				foreach (var sortedBookmark in reader.GetSortedBookmarks())
 				{
-					hasResult = true;
-					var timestamp = Api.RetrieveColumnAsDateTime(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
-					result.Etag = etagBinary.TransfromToGuidWithProperSorting();
-					result.Timestamp = timestamp;
-				}
+					Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark.Item1, sortedBookmark.Item2);
+					var etagBinary = Api.RetrieveColumn(session, ScheduledReductions,
+					                                    tableColumnsCache.ScheduledReductionColumns["etag"]);
+					if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
+					{
+						hasResult = true;
+						var timestamp =
+							Api.RetrieveColumnAsDateTime(session, ScheduledReductions,
+							                             tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
+						result.Etag = etagBinary.TransfromToGuidWithProperSorting();
+						result.Timestamp = timestamp;
+					}
 
-				Api.JetDelete(session, ScheduledReductions);
+					Api.JetDelete(session, ScheduledReductions);
+				}
 			}
 			return hasResult ? result : null;
 		}
