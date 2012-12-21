@@ -7,6 +7,16 @@ using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
+	public static class IndexReaderBuffers
+	{
+		private static BufferManager buffers = BufferManager.CreateBufferManager(1024 * 1024 * 256, SystemParameters.BookmarkMost);
+
+		public static BufferManager Buffers
+		{
+			get { return buffers; }
+		}
+	}
+
 	// optimized according to this: http://managedesent.codeplex.com/discussions/274843#post680337
 	public class OptimizedIndexReader<T>
 		where T : class
@@ -21,23 +31,12 @@ namespace Raven.Storage.Esent.StorageActions
 			public int Index;
 		}
 
-		private static BufferManager buffers = BufferManager.CreateBufferManager(1024*1024*256, SystemParameters.BookmarkMost);
-
-		[ThreadStatic]
-		private static byte[] bookmarkBuffer;
-		private readonly JET_SESID session;
-		private readonly JET_TABLEID table;
 		private Func<T, bool> filter;
 
-		public OptimizedIndexReader(JET_SESID session, JET_TABLEID table, int size)
+		public OptimizedIndexReader(int size)
 		{
 			primaryKeyIndexes = new List<Key>(size);
-			this.table = table;
-			this.session = session;
-			if (bookmarkBuffer == null)
-			{
-				bookmarkBuffer = new byte[SystemParameters.BookmarkMost];
-			}
+			
 		}
 
 		public int Count
@@ -46,14 +45,24 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public void Add(T item)
+		public void Add(JET_SESID session, JET_TABLEID table, T item)
 		{
+			byte[] buffer;
 			int actualBookmarkSize;
-			Api.JetGetBookmark(session, table, bookmarkBuffer,
-			                   bookmarkBuffer.Length, out actualBookmarkSize);
 
-			var buffer = buffers.TakeBuffer(actualBookmarkSize);
-			Buffer.BlockCopy(bookmarkBuffer, 0, buffer, 0, actualBookmarkSize);
+			var largeBuffer = IndexReaderBuffers.Buffers.TakeBuffer(SystemParameters.BookmarkMost);
+			try
+			{
+				Api.JetGetBookmark(session, table, largeBuffer,
+								   largeBuffer.Length, out actualBookmarkSize);
+
+				buffer = IndexReaderBuffers.Buffers.TakeBuffer(actualBookmarkSize);
+				Buffer.BlockCopy(largeBuffer, 0, buffer, 0, actualBookmarkSize);
+			}
+			finally
+			{
+				IndexReaderBuffers.Buffers.ReturnBuffer(largeBuffer);
+			}
 			primaryKeyIndexes.Add(new Key
 			{
 				Buffer = buffer,
@@ -69,19 +78,18 @@ namespace Raven.Storage.Esent.StorageActions
 			foreach (var key in primaryKeyIndexes)
 			{
 				yield return Tuple.Create(key.Buffer, key.BufferLen);
-				buffers.ReturnBuffer(key.Buffer);
+				IndexReaderBuffers.Buffers.ReturnBuffer(key.Buffer);
 			}
 		}
 
-		public IEnumerable<TResult> Select<TResult>(Func<T,TResult> func)
+		public IEnumerable<TResult> Select<TResult>(JET_SESID session, JET_TABLEID table, Func<T, TResult> func)
 		{
 			SortPrimaryKeys();
 
 			return primaryKeyIndexes.Select(key =>
 			{
-				var bookmark = key.Buffer;
-				Api.JetGotoBookmark(session, table, bookmark, bookmark.Length);
-				buffers.ReturnBuffer(key.Buffer);
+				Api.JetGotoBookmark(session, table, key.Buffer, key.BufferLen);
+				IndexReaderBuffers.Buffers.ReturnBuffer(key.Buffer);
 
 				if (filter != null && filter(key.State) == false)
 					return null;
@@ -117,13 +125,13 @@ namespace Raven.Storage.Esent.StorageActions
 
 	public class OptimizedIndexReader : OptimizedIndexReader<object>
 	{
-		public OptimizedIndexReader(JET_SESID session, JET_TABLEID table, int size) : base(session, table, size)
+		public OptimizedIndexReader(int size) : base( size)
 		{
 		}
 
-		public void Add()
+		public void Add(JET_SESID session, JET_TABLEID table)
 		{
-			Add(null);
+			Add(session, table, null);
 		}
 
 		public OptimizedIndexReader Where(Func<bool> filter)
@@ -131,9 +139,9 @@ namespace Raven.Storage.Esent.StorageActions
 			return (OptimizedIndexReader)Where(_ => filter());
 		} 
 
-		public IEnumerable<TResult> Select<TResult>(Func<TResult> func)
+		public IEnumerable<TResult> Select<TResult>(JET_SESID session, JET_TABLEID table, Func<TResult> func)
 		{
-			return Select(_ => func());
+			return Select(session, table, _ => func());
 		}
 	}
 }

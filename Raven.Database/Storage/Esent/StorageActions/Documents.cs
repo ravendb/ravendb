@@ -184,13 +184,13 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MoveAfterLast(session, Documents);
 			if (TryMoveDocumentRecords(start, backward: true))
 				return Enumerable.Empty<JsonDocument>();
-			var optimizer = new OptimizedIndexReader(Session, Documents, take);
+			var optimizer = new OptimizedIndexReader(take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
-				optimizer.Add();
+				optimizer.Add(Session, Documents);
 			}
 
-			return optimizer.Select(ReadCurrentDocument);
+			return optimizer.Select(Session, Documents, ReadCurrentDocument);
 		}
 
 		private bool TryMoveDocumentRecords(int start, bool backward)
@@ -302,13 +302,13 @@ namespace Raven.Storage.Esent.StorageActions
 			if (TryMoveDocumentRecords(start, backward: false))
 				return Enumerable.Empty<JsonDocument>();
 
-			var optimizer = new OptimizedIndexReader(Session, Documents, take);
+			var optimizer = new OptimizedIndexReader(take);
 			do
 			{
-				optimizer.Add();
+				optimizer.Add(Session, Documents);
 			} while (Api.TryMoveNext(session, Documents) && optimizer.Count < take);
 
-			return optimizer.Select(ReadCurrentDocument);
+			return optimizer.Select(Session, Documents, ReadCurrentDocument);
 		}
 
 		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)

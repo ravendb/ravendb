@@ -207,7 +207,7 @@ namespace Raven.Storage.Esent.StorageActions
 				OptimizedIndexReader reader;
 				if (itemsToDelete.Count == 0)
 				{
-					itemsToDelete.Add(reader = new OptimizedIndexReader(session, ScheduledReductions, take));
+					itemsToDelete.Add(reader = new OptimizedIndexReader(take));
 				}
 				else
 				{
@@ -243,7 +243,7 @@ namespace Raven.Storage.Esent.StorageActions
 						}
 					}
 
-					reader.Add();
+					reader.Add(session, ScheduledReductions);
 				} while (Api.TryMoveNext(session, ScheduledReductions) && take > 0);
 
 				if (take <= 0)
