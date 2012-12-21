@@ -30,8 +30,10 @@ namespace Raven.Client.Document.OAuth
 				base.ConfigureRequest(sender, e);
 				return;
 			}
-			e.Request.Headers["Has-Api-Key"] = "true";
-
+			if (apiKey != null)
+			{
+				e.Request.Headers["Has-Api-Key"] = "true";
+			}
 		}
 
 		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
