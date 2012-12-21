@@ -43,7 +43,7 @@ namespace Raven.Studio.Commands
 							{
 								IsRunning = true
 							};
-						}).Catch();
+						}).Catch(exception => startBackupTask.ReportError(exception));
 				});
 		}
 	}

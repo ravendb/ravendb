@@ -18,14 +18,16 @@ namespace Raven.Storage.Esent.Backup
 	public class RestoreOperation
 	{
 		private readonly Action<string> output;
+		private readonly bool defrag;
 		private readonly string backupLocation;
 		private readonly string databaseLocation;
 
 		private bool defragmentationCompleted;
 
-		public RestoreOperation(string backupLocation, string databaseLocation, Action<string> output)
+		public RestoreOperation(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			this.output = output;
+			this.defrag = defrag;
 			this.backupLocation = backupLocation.ToFullPath();
 			this.databaseLocation = databaseLocation.ToFullPath();
 		}
@@ -55,18 +57,18 @@ namespace Raven.Storage.Esent.Backup
 
 			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "IndexDefinitions")),
 				new DirectoryInfo(Path.Combine(databaseLocation, "IndexDefinitions")));
-			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "Indexes")),
-				new DirectoryInfo(Path.Combine(databaseLocation, "Indexes")));
+
+			CopyIndexes();
 
 			var dataFilePath = Path.Combine(databaseLocation, "Data");
 
+			bool hideTerminationException = false;
 			JET_INSTANCE instance;
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
 				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
-
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
 						Path.Combine(
@@ -77,15 +79,86 @@ namespace Raven.Storage.Esent.Backup
 					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
 				}
 
-				DefragmentDatabase(instance, dataFilePath);
+				if (defrag)
+				{
+					DefragmentDatabase(instance, dataFilePath);
+				}
+			}
+			catch(Exception)
+			{
+				hideTerminationException = true;
+				throw;
 			}
 			finally
 			{
-				Api.JetTerm(instance);
+				try
+				{
+					Api.JetTerm(instance);
+				}
+				catch (Exception)
+				{
+					if (hideTerminationException == false)
+						throw;
+				}
 			}
 		}
 
-		private string CombineIncrementalBackups()
+		private void CopyIndexes()
+		{
+			var directories = Directory.GetDirectories(backupLocation, "Inc*")
+				.OrderByDescending(dir => dir)
+				.ToList();
+
+			if (directories.Count == 0)
+			{
+				CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "Indexes")),
+				        new DirectoryInfo(Path.Combine(databaseLocation, "Indexes")));
+				return;
+			}
+
+			if (Directory.Exists(Path.Combine(databaseLocation, "Indexes")) == false)
+				Directory.CreateDirectory(Path.Combine(databaseLocation, "Indexes"));
+
+			var latestIncrementalBackupDirectory = directories.First();
+			if(Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, "Indexes")) == false)
+				return;
+
+			directories.Add(backupLocation); // add the root (first full backup) to the end of the list (last place to look for)
+
+			foreach (var index in Directory.GetDirectories(Path.Combine(latestIncrementalBackupDirectory, "Indexes")))
+			{
+				var indexName = Path.GetFileName(index);
+				var filesList = File.ReadAllLines(Path.Combine(index, "index-files.required-for-index-restore"))
+					.Where(x=>string.IsNullOrEmpty(x) == false)
+					.Reverse();
+				var indexPath = Path.Combine(databaseLocation, "Indexes", indexName);
+				output("Copying Index: " + indexName);
+
+				if (Directory.Exists(indexPath) == false)
+					Directory.CreateDirectory(indexPath);
+
+				foreach (var neededFile in filesList)
+				{
+					var found = false;
+
+					foreach (var directory in directories)
+					{
+						var possiblePathToFile = Path.Combine(directory, indexName, neededFile);
+						if (File.Exists(possiblePathToFile) == false) 
+							continue;
+
+						found = true;
+						File.Copy(possiblePathToFile, Path.Combine(indexPath, neededFile));
+						break;
+					}
+
+					if(found == false)
+						output(string.Format("Error: File \"{0}\" is missing from index {1}", neededFile, indexName));
+				}
+			}
+		}
+
+		private void CombineIncrementalBackups()
 		{
 			var directories = Directory.GetDirectories(backupLocation, "Inc*")
 				.OrderBy(dir => dir)
@@ -99,8 +172,6 @@ namespace Raven.Storage.Esent.Backup
 					File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
 				}
 			}
-
-			return directories.LastOrDefault() ?? backupLocation;
 		}
 
 		private void DefragmentDatabase(JET_INSTANCE instance, string dataFilePath)

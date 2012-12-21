@@ -22,6 +22,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
+using Raven.Database.Bundles.Replication;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
@@ -38,24 +39,17 @@ namespace Raven.Bundles.Replication.Tasks
 			public int Value;
 		}
 
-		public class FailureCount
-		{
-			public int Count;
-			public DateTime Timestamp;
-			public string LastError;
-		}
-
-		private readonly ConcurrentDictionary<string, FailureCount> replicationFailureStats =
-			new ConcurrentDictionary<string, FailureCount>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
+			new ConcurrentDictionary<string, DestinationStats>(StringComparer.InvariantCultureIgnoreCase);
 
 		private DocumentDatabase docDb;
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
 		private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
-		public ConcurrentDictionary<string, FailureCount> ReplicationFailureStats
+		public ConcurrentDictionary<string, DestinationStats> DestinationStats
 		{
-			get { return replicationFailureStats; }
+			get { return destinationStats; }
 		}
 
 		public ConcurrentDictionary<string, DateTime> Heartbeats
@@ -347,21 +341,23 @@ namespace Raven.Bundles.Replication.Tasks
 			string lastError;
 			if (TryReplicationAttachments(destination, attachments, out lastError) == false)// failed to replicate, start error handling strategy
 			{
-				if (IsFirstFailue(destination))
+				if (IsFirstFailure(destination.ConnectionStringOptions.Url))
 				{
 					log.Info(
 						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
 					if (TryReplicationAttachments(destination, attachments, out lastError))// success on second fail
 					{
-						ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
+						RecordSuccess(destination.ConnectionStringOptions.Url,
+							lastReplicatedEtag: tuple.Item2);
 						return true;
 					}
 				}
-				IncrementFailureCount(destination, lastError);
+				RecordFailure(destination.ConnectionStringOptions.Url, lastError);
 				return false;
 			}
-			ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
+			RecordSuccess(destination.ConnectionStringOptions.Url,
+				lastReplicatedEtag: tuple.Item2);
 
 			return true;
 		}
@@ -380,26 +376,30 @@ namespace Raven.Bundles.Replication.Tasks
 						SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
 					}
 				}
+				RecordLastEtagChecked(destination.ConnectionStringOptions.Url,
+					documentsToReplicate.LastEtag);
 				return null;
 			}
 			string lastError;
 			if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false)// failed to replicate, start error handling strategy
 			{
-				if (IsFirstFailue(destination))
+				if (IsFirstFailure(destination.ConnectionStringOptions.Url))
 				{
 					log.Info(
 						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
 					if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError))// success on second fail
 					{
-						ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
+						RecordSuccess(destination.ConnectionStringOptions.Url,
+							documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
 						return true;
 					}
 				}
-				IncrementFailureCount(destination, lastError);
+				RecordFailure(destination.ConnectionStringOptions.Url, lastError);
 				return false;
 			}
-			ResetFailureCount(destination.ConnectionStringOptions.Url, lastError);
+			RecordSuccess(destination.ConnectionStringOptions.Url,
+				documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
 			return true;
 		}
 
@@ -432,42 +432,62 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private void IncrementFailureCount(ReplicationStrategy destination, string lastError)
+		private void RecordFailure(string url, string lastError)
 		{
-			var failureCount = replicationFailureStats.GetOrAdd(destination.ConnectionStringOptions.Url);
-			Interlocked.Increment(ref failureCount.Count);
-			failureCount.Timestamp = SystemTime.UtcNow;
+			var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
+			Interlocked.Increment(ref stats.FailureCountInternal);
+			stats.LastFailureTimestamp = SystemTime.UtcNow;
 			if (string.IsNullOrWhiteSpace(lastError) == false)
-				failureCount.LastError = lastError;
+				stats.LastError = lastError;
 
-			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination.ConnectionStringOptions.Url), null);
-			var failureInformation = new DestinationFailureInformation { Destination = destination.ConnectionStringOptions.Url };
+			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null);
+			var failureInformation = new DestinationFailureInformation { Destination = url };
 			if (jsonDocument != null)
 			{
 				failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
 			}
 			failureInformation.FailureCount += 1;
-			docDb.Put(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination.ConnectionStringOptions.Url), null,
+			docDb.Put(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
 					  RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
 		}
 
-		private void ResetFailureCount(string url, string lastError)
+		private void RecordLastEtagChecked(string url, Guid lastEtagChecked)
 		{
-			var failureCount = replicationFailureStats.GetOrAdd(url);
-			Interlocked.Exchange(ref failureCount.Count, 0);
-			failureCount.Timestamp = SystemTime.UtcNow;
-			if (string.IsNullOrWhiteSpace(lastError) == false)
-				failureCount.LastError = lastError;
+			var stats = destinationStats.GetOrDefault(url, new DestinationStats { Url = url });
+			stats.LastEtagCheckedForReplication = lastEtagChecked;
+		}
+
+		private void RecordSuccess(string url, 
+			Guid? lastReplicatedEtag = null, DateTime? lastReplicatedLastModified = null,
+			DateTime? lastHeartbeatReceived = null, string lastError = null)
+		{
+			var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
+			Interlocked.Exchange(ref stats.FailureCountInternal, 0);
+			stats.LastSuccessTimestamp = SystemTime.UtcNow;
+
+			if (lastReplicatedEtag.HasValue)
+			{
+				stats.LastEtagCheckedForReplication = lastReplicatedEtag;
+				stats.LastReplicatedEtag = lastReplicatedEtag;
+			}
+
+			if (lastReplicatedLastModified.HasValue)
+				stats.LastReplicatedLastModified = lastReplicatedLastModified;
+
+			if (lastHeartbeatReceived.HasValue)
+				stats.LastHeartbeatReceived = lastHeartbeatReceived;
+
+			if (!String.IsNullOrWhiteSpace(lastError))
+				stats.LastError = lastError;
+			
 			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
 						 null);
 		}
 
-		private bool IsFirstFailue(ReplicationStrategy destination)
+		private bool IsFirstFailure(string url)
 		{
-			FailureCount value;
-			if (replicationFailureStats.TryGetValue(destination.ConnectionStringOptions.Url, out value))
-				return value.Count == 0;
-			return false;
+			var destStats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
+			return destStats.FailureCount == 0;
 		}
 
 		private bool TryReplicationAttachments(ReplicationStrategy destination, RavenJArray jsonAttachments, out string errorMessage)
@@ -536,7 +556,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
-				request.ExecuteRequest();
+				request.ExecuteRequest();	
 				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
 				lastError = "";
 				return true;
@@ -578,6 +598,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private class JsonDocumentsToReplicate
 		{
 			public Guid LastEtag { get; set; }
+			public DateTime LastLastModified { get; set; }
 			public RavenJArray Documents { get; set; }
 			public int CountOfFilteredDocumentsWhichAreSystemDocuments { get; set; }
 		}
@@ -616,16 +637,21 @@ namespace Raven.Bundles.Replication.Tasks
 						docsSinceLastReplEtag += docsToReplicate.Count;
 						result.CountOfFilteredDocumentsWhichAreSystemDocuments += docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
 
+						if (docsToReplicate.Count > 0)
+						{
+							var lastDoc = docsToReplicate.Last();
+							Debug.Assert(lastDoc.Etag != null);
+							result.LastEtag = lastDoc.Etag.Value;
+							if (lastDoc.LastModified.HasValue)
+								result.LastLastModified = lastDoc.LastModified.Value;
+						}
+
 						if (docsToReplicate.Count == 0 || filteredDocsToReplicate.Count != 0)
 						{
 							break;
 						}
 
-						JsonDocument jsonDocument = docsToReplicate.Last();
-						Debug.Assert(jsonDocument.Etag != null);
-						Guid documentEtag = jsonDocument.Etag.Value;
-						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", documentEtag);
-						result.LastEtag = documentEtag;
+						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", result.LastEtag);
 					}
 
 					log.Debug(() =>
@@ -775,11 +801,14 @@ namespace Raven.Bundles.Replication.Tasks
 					log.WarnException("Replication is not enabled on: " + destination, e);
 				else
 					log.WarnException("Failed to contact replication destination: " + destination, e);
+				RecordFailure(destination.ConnectionStringOptions.Url, e.Message);
 			}
 			catch (Exception e)
 			{
 				log.WarnException("Failed to contact replication destination: " + destination, e);
+				RecordFailure(destination.ConnectionStringOptions.Url, e.Message);
 			}
+
 			return null;
 		}
 
@@ -885,7 +914,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void ResetFailureForHeartbeat(string src)
 		{
-			ResetFailureCount(src, string.Empty);
+			RecordSuccess(src, lastHeartbeatReceived: SystemTime.UtcNow);
 			docDb.WorkContext.ShouldNotifyAboutWork(() => "Replication Heartbeat from " + src);
 			docDb.WorkContext.NotifyAboutWork();
 		}

@@ -118,17 +118,33 @@ namespace Raven.Database.Backup
 
 		public void Prepare()
 		{
-			var sourceFilesSnapshot = Directory.GetFiles(source);
-			foreach (var sourceFile in sourceFilesSnapshot)
+			string[] sourceFilesSnapshot;
+			try
 			{
+				sourceFilesSnapshot = Directory.GetFiles(source);
+			}
+			catch (Exception e)
+			{
+				logger.WarnException("Could not get directory files, maybe it was deleted", e);
+				return;
+			}
+			for (int index = 0; index < sourceFilesSnapshot.Length; index++)
+			{
+				var sourceFile = sourceFilesSnapshot[index];
 				if (Path.GetFileName(sourceFile) == "write.lock")
 					continue; // skip the Lucene lock file
-			   
+
 				var destFileName = Path.Combine(tempPath, Path.GetFileName(sourceFile));
 				var success = CreateHardLink(destFileName, sourceFile, IntPtr.Zero);
 
 				if (success == false)
-					throw new Win32Exception();
+				{
+					// 'The system cannot find the file specified' is explicitly ignored here
+					if (Marshal.GetLastWin32Error() != 0x80004005)
+						throw new Win32Exception();
+					sourceFilesSnapshot[index] = null;
+					continue;
+				}
 
 				try
 				{
@@ -137,6 +153,7 @@ namespace Raven.Database.Backup
 				}
 				catch (IOException)
 				{
+					sourceFilesSnapshot[index] = null;
 					// something happened to this file, probably was removed somehow
 				}
 			}
@@ -146,6 +163,8 @@ namespace Raven.Database.Backup
 			// of all the files
 			foreach (var sourceFile in sourceFilesSnapshot)
 			{
+				if(sourceFile == null)
+					continue;
 				Notify("Hard linked " + sourceFile, BackupStatus.BackupMessageSeverity.Informational);
 			}
 		}

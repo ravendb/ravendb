@@ -1,17 +1,21 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging.LogProviders;
 
 namespace Raven.Abstractions.Logging
 {
-	using System;
-	using System.Diagnostics;
-	using LogProviders;
-
 	public static class LogManager
 	{
-		private static ILogManager currentLogManager;
-		private static HashSet<Target> targets = new HashSet<Target>();
- 
+		private static readonly HashSet<Target> targets = new HashSet<Target>();
+
+		public static void EnsureValidLogger()
+		{
+			GetLogger(typeof (LogManager));
+		}
+
 		public static ILog GetCurrentClassLogger()
 		{
 #if SILVERLIGHT
@@ -22,6 +26,13 @@ namespace Raven.Abstractions.Logging
 			return GetLogger(stackFrame.GetMethod().DeclaringType);
 		}
 
+		private static ILogManager currentLogManager;
+		public static ILogManager CurrentLogManager
+		{
+			get { return currentLogManager ?? (currentLogManager = ResolveExtenalLogManager()); }
+			set { currentLogManager = value; }
+		}
+
 		public static ILog GetLogger(Type type)
 		{
 			return GetLogger(type.FullName);
@@ -29,15 +40,13 @@ namespace Raven.Abstractions.Logging
 
 		public static ILog GetLogger(string name)
 		{
-			ILogManager temp = currentLogManager ?? ResolveExtenalLogManager();
-			if (temp == null) 
+			ILogManager logManager = CurrentLogManager;
+			if (logManager == null)
 				return new LoggerExecutionWrapper(new NoOpLogger(), name, targets.ToArray());
-			return new LoggerExecutionWrapper(temp.GetLogger(name), name, targets.ToArray());
-		}
-
-		public static void SetCurrentLogManager(ILogManager logManager)
-		{
-			currentLogManager = logManager;
+			
+			// This can throw in a case of invalid NLog.config file.
+			var log = logManager.GetLogger(name);
+			return new LoggerExecutionWrapper(log, name, targets.ToArray());
 		}
 
 		private static ILogManager ResolveExtenalLogManager()
@@ -75,6 +84,18 @@ namespace Raven.Abstractions.Logging
 			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
 				where TException : Exception
 			{}
+		}
+
+		public static IDisposable OpenNestedConext(string context)
+		{
+			ILogManager logManager = CurrentLogManager;
+			return logManager == null ? new DisposableAction(() =>{}) : logManager.OpenNestedConext(context);
+		}
+
+		public static IDisposable OpenMappedContext(string key, string value)
+		{
+			ILogManager logManager = CurrentLogManager;
+			return logManager == null ? new DisposableAction(() => {}) : logManager.OpenMappedContext(key, value);
 		}
 	}
 

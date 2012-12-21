@@ -14,6 +14,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
@@ -29,6 +30,7 @@ namespace Raven.Storage.Esent
 {
 	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
 	{
+		private static int instanceCounter;
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly string database;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -80,7 +82,8 @@ namespace Raven.Storage.Esent
 
 			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
-			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
+			uniqueRrefix = Interlocked.Increment(ref instanceCounter) + "-" + Base62Util.Base62Random();
+			Api.JetCreateInstance(out instance, uniqueRrefix + "-" + database);
 		}
 
 		public TableColumnsCache TableColumnsCache
@@ -138,14 +141,14 @@ namespace Raven.Storage.Esent
 		{
 			if (new InstanceParameters(instance).Recovery == false)
 				throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to true.");
-			
+
 			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
 
-		public void Restore(string backupLocation, string databaseLocation, Action<string> output)
+		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
-			new RestoreOperation(backupLocation, databaseLocation, output).Execute();
+			new RestoreOperation(backupLocation, databaseLocation, output, defrag).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()
@@ -161,7 +164,46 @@ namespace Raven.Storage.Esent
 			}
 
 			return sizeInBytes;
+		}
 
+		public long GetDatabaseCacheSizeInBytes()
+		{
+			return SystemParameters.CacheSize*SystemParameters.DatabasePageSize;
+		}
+
+		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
+		private string uniqueRrefix;
+
+		public long GetDatabaseTransactionVersionSizeInBytes()
+		{
+			try
+			{
+				const string categoryName = "Database ==> Instances";
+				if (PerformanceCounterCategory.Exists(categoryName) == false)
+					return -1;
+				var category = new PerformanceCounterCategory(categoryName);
+				var instances = category.GetInstanceNames();
+				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith(uniqueRrefix));
+				const string counterName = "Version Buckets Allocated";
+				if (ravenInstance == null || !category.CounterExists(counterName))
+				{
+					return -2;
+				}
+				using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
+				{
+					var value = counter.NextValue();
+					return (long) (value*TransactionalStorageConfigurator.GetVersionPageSize());
+				}
+			}
+			catch (Exception e)
+			{
+				if (reportedGetDatabaseTransactionCacheSizeInBytesError == false)
+				{
+					reportedGetDatabaseTransactionCacheSizeInBytesError = true;
+					log.WarnException("Failed to get Version Buckets Allocated value, this error will only be reported once.", e);
+				}
+				return -3;
+			}
 		}
 
 		public string FriendlyName
@@ -259,6 +301,15 @@ namespace Raven.Storage.Esent
 			return newId;
 		}
 
+		public void ClearCaches()
+		{
+			var cacheSizeMax = SystemParameters.CacheSizeMax;
+			SystemParameters.CacheSize = 1; // force emptying of the cache
+			SystemParameters.CacheSizeMax = 1;
+			SystemParameters.CacheSize = 0;
+			SystemParameters.CacheSizeMax = cacheSizeMax;
+		}
+
 		public bool Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
 			try
@@ -266,38 +317,16 @@ namespace Raven.Storage.Esent
 				DocumentCodecs = documentCodecs;
 				generator = uuidGenerator;
 
-				InstanceParameters instanceParameters;
+				InstanceParameters instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
+
 				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
-				{
-					instanceParameters = new InstanceParameters(instance)
-					{
-						CircularLog = true,
-						Recovery = false,
-						NoInformationEvent = false,
-						CreatePathIfNotExist = true,
-						TempDirectory = Path.Combine(path, "temp"),
-						SystemDirectory = Path.Combine(path, "system"),
-						LogFileDirectory = Path.Combine(path, "logs"),
-						MaxVerPages = 256,
-						BaseName = "RVN",
-						EventSource = "Raven",
-						LogBuffers = 8192,
-						LogFileSize = 256,
-						MaxSessions = TransactionalStorageConfigurator.MaxSessions,
-						MaxCursors = 1024,
-						DbExtensionSize = 128,
-						AlternateDatabaseRecoveryDirectory = path
-					};
-				}
-				else
-				{
-					instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
-				}
+					instanceParameters.Recovery = false;
 
 				log.Info(@"Esent Settings:
   MaxVerPages      = {0}
   CacheSizeMax     = {1}
-  DatabasePageSize = {2}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax, SystemParameters.DatabasePageSize);
+  DatabasePageSize = {2}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax,
+				         SystemParameters.DatabasePageSize);
 
 				Api.JetInit(ref instance);
 
@@ -313,7 +342,7 @@ namespace Raven.Storage.Esent
 			{
 				Dispose();
 				var fileAccessExeption = e as EsentFileAccessDeniedException;
-				if(fileAccessExeption == null)
+				if (fileAccessExeption == null)
 					throw new InvalidOperationException("Could not open transactional storage: " + database, e);
 				throw new InvalidOperationException("Could not write to location: " + path + ". Make sure you have read/write permissions for this path.", e);
 			}
@@ -370,7 +399,7 @@ namespace Raven.Storage.Esent
 					{
 						if (value != "unlimited")
 						{
-							maxSize = (int) ((long.Parse(value)*1024*1024)/SystemParameters.DatabasePageSize);
+							maxSize = (int)((long.Parse(value) * 1024 * 1024) / SystemParameters.DatabasePageSize);
 						}
 					}
 					Api.JetAttachDatabase2(session, database, maxSize, AttachDatabaseGrbit.None);
@@ -431,6 +460,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		[CLSCompliant(false)]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{

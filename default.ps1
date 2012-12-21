@@ -7,7 +7,7 @@ properties {
 	$packages_dir = "$base_dir\packages"
 	$buildartifacts_dir = "$build_dir\"
 	$sln_file = "$base_dir\zzz_RavenDB_Release.sln"
-	$version = "1.2"
+	$version = "2.0"
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
@@ -104,25 +104,19 @@ task Compile -depends Init {
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$buildartifacts_dir\" }
 	exec { &"$build_dir\Raven.ProjectRewriter.exe" }
 	
-	try { 
-		$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
-		$datDest = "$base_dir\Raven.Studio\Settings.dat"
-		echo $dat
-		if (Test-Path $dat) {
-			Copy-Item $dat $datDest -force
-		}
-		ElseIf ((Test-Path $datDest) -eq $false) {
-			New-Item $datDest -type file -force
-		}
-		
-		Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
-		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
-	} catch {
-		Throw
-	} finally { 
-		#new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
-		remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
+	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
+	$datDest = "$base_dir\Raven.Studio\Settings.dat"
+	echo $dat
+	if (Test-Path $dat) {
+		Copy-Item $dat $datDest -force
 	}
+	ElseIf ((Test-Path $datDest) -eq $false) {
+		New-Item $datDest -type file -force
+	}
+	
+	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
+	remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
 }
 
 task FullStorageTest {
@@ -228,7 +222,7 @@ task CopySamples {
 	  Delete-Sample-Data-For-Release "$build_dir\Output\Samples\$sample" 
 	}
 	
-	cp "$base_dir\Samples\Raven.Samples.sln" "$build_dir\Output\Samples" -force
+	cp "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
 	cp "$base_dir\Samples\Samples.ps1" "$build_dir\Output\Samples" -force
 	  
 	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
@@ -305,8 +299,8 @@ task CreateDocs {
 	  return 
 	}
 	 
-  # we expliclty allows this to fail
-  & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\"
+	# we expliclty allows this to fail
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\" }
 }
 
 task CopyRootFiles -depends CreateDocs {
@@ -387,10 +381,22 @@ task Upload -depends DoRelease {
 		
 		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
-		Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
+		
+		$uploadTryCount = 0
+		while ($uploadTryCount -lt 5){
+			$uploadTryCount += 1
+			Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
 			
+			if ($lastExitCode -ne 0) {
+				write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
+			}
+			else {
+				break
+			}
+		}
+		
 		if ($lastExitCode -ne 0) {
-			write-host "Failed to upload to S3: $lastExitCode"
+			write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount. Build will fail."
 			throw "Error: Failed to publish build"
 		}
 	}
@@ -497,7 +503,7 @@ task CreateNugetPackages -depends Compile {
 			}
 		}
 		$nuspec.Save($_.FullName);
-		&"$tools_dir\nuget.exe" pack $_.FullName
+		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
 	
 	# Upload packages
@@ -508,10 +514,18 @@ task CreateNugetPackages -depends Compile {
 		
 		# Push to nuget repository
 		$packages | ForEach-Object {
-			&"$tools_dir\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey
+			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey }
 		}
 	}
 	else {
 		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+	}
+}
+
+TaskTearDown {
+	if ($LastExitCode -ne 0) {
+		write-host "TaskTearDown detected an error. Build failed."
+		# throw "TaskTearDown detected an error. Build failed."
+		exit 1
 	}
 }

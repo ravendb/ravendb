@@ -103,7 +103,12 @@ namespace Raven.Tests.Bugs
 										BackupPath = DumpFile,
 										Filters =
 			                       			{
-			                       				{"Something", "something1"}
+			                       				new FilterSetting
+			                       				{
+			                       					Path = "Something",
+													ShouldMatch = true,
+													Value = "Something1"
+			                       				}
 			                       			}
 									});
 			Assert.True(File.Exists(DumpFile));

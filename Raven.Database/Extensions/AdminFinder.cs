@@ -120,25 +120,7 @@ namespace Raven.Database.Extensions
 
 			private static bool IsAdministratorNoCache(string username)
 			{
-				PrincipalContext ctx;
-				try
-				{
-					Domain.GetComputerDomain();
-					try
-					{
-						ctx = new PrincipalContext(ContextType.Domain);
-					}
-					catch (PrincipalServerDownException)
-					{
-						// can't access domain, check local machine instead 
-						ctx = new PrincipalContext(ContextType.Machine);
-					}
-				}
-				catch (ActiveDirectoryObjectNotFoundException)
-				{
-					// not in a domain
-					ctx = new PrincipalContext(ContextType.Machine);
-				}
+				var ctx = GeneratePrincipalContext();
 				var up = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
 				if (up != null)
 				{
@@ -150,6 +132,36 @@ namespace Raven.Database.Extensions
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountEnterpriseAdminsSid));
 				}
 				return false;
+			}
+
+			private static bool? useLocalMachine;
+			private static PrincipalContext GeneratePrincipalContext()
+			{
+				if(useLocalMachine == true)
+					return new PrincipalContext(ContextType.Machine);
+				try
+				{
+					if(useLocalMachine == null)
+					{
+						Domain.GetComputerDomain();
+						useLocalMachine = false;
+					}
+					try
+					{
+						return new PrincipalContext(ContextType.Domain);
+					}
+					catch (PrincipalServerDownException)
+					{
+						// can't access domain, check local machine instead 
+						return new PrincipalContext(ContextType.Machine);
+					}
+				}
+				catch (ActiveDirectoryObjectNotFoundException)
+				{
+					useLocalMachine = true;
+					// not in a domain
+					return new PrincipalContext(ContextType.Machine);
+				}
 			}
 		}
 

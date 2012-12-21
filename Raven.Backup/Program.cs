@@ -16,8 +16,8 @@ namespace Raven.Backup
 			                		{"url=", "RavenDB server {0:url}", url => op.ServerUrl = url},
 			                		{"dest=", "Full {0:path} to backup folder", path => op.BackupPath = path},
 			                		{"nowait", "Return immedialtey without waiting for a response from the server", _ => op.NoWait = true},
-			                		{"readkey", _ => doReadKeyOnExit = true},
-									{"incremental", s => incrementalBackup= true}
+			                		{"readkey", "Specifying this flag will make the utility wait for key press before exiting.", _ => doReadKeyOnExit = true},
+									{"incremental", "When specified, the backup process will be incremental when done to a folder where a previous backup lies. If dest is an empty folder, or it does not exist, a full backup will be created. For incremental backups to work, the configuration option Raven/Esent/CircularLog must be set to false.", s => incrementalBackup= true}
 			                	};
 
 			try

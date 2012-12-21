@@ -37,14 +37,17 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
-			BackgroundTasksPriority = ThreadPriority.Normal;
 			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 64 * 1024;
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
+			NumberOfItemsToExecuteReduceInSingleStep = 1024;
 			MaxIndexingRunLatency = TimeSpan.FromMinutes(5);
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
+
+			CreatePluginsDirectoryIfNotExisting = true;
+			CreateAnalyzersDirectoryIfNotExisting = true;
 
 			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory / 2);
 			MaxNumberOfParallelIndexTasks = 8;
@@ -73,11 +76,6 @@ namespace Raven.Database.Config
 			var maxPageSizeStr = Settings["Raven/MaxPageSize"];
 			MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
 			MaxPageSize = Math.Max(MaxPageSize, 10);
-
-			var backgroundTasksPriority = Settings["Raven/BackgroundTasksPriority"];
-			BackgroundTasksPriority = backgroundTasksPriority == null
-								? ThreadPriority.Normal
-								: (ThreadPriority)Enum.Parse(typeof(ThreadPriority), backgroundTasksPriority);
 
 			var cacheMemoryLimitMegabytes = Settings["Raven/MemoryCacheLimitMegabytes"];
 			MemoryCacheLimitMegabytes = cacheMemoryLimitMegabytes == null
@@ -130,6 +128,12 @@ namespace Raven.Database.Config
 				InitialNumberOfItemsToReduceInSingleBatch = Math.Min(MaxNumberOfItemsToReduceInSingleBatch,
 																	InitialNumberOfItemsToReduceInSingleBatch);
 			}
+			var numberOfItemsToExecuteReduceInSingleStep = Settings["Raven/NumberOfItemsToExecuteReduceInSingleStep"];
+			if (numberOfItemsToExecuteReduceInSingleStep != null)
+			{
+				NumberOfItemsToExecuteReduceInSingleStep = int.Parse(numberOfItemsToExecuteReduceInSingleStep);
+			}
+
 			var initialNumberOfItemsToReduceInSingleBatch = Settings["Raven/InitialNumberOfItemsToReduceInSingleBatch"];
 			if (initialNumberOfItemsToReduceInSingleBatch != null)
 			{
@@ -195,6 +199,9 @@ namespace Raven.Database.Config
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
 			RedirectStudioUrl = Settings["Raven/RedirectStudioUrl"];
+
+			DisableDocumentPreFetchingForIndexing = GetConfigurationValue<bool>("Raven/DisableDocumentPreFetchingForIndexing") ??
+			                                        false;
 
 			// Misc settings
 			WebDir = Settings["Raven/WebDir"] ?? GetDefaultWebDir();
@@ -366,13 +373,6 @@ namespace Raven.Database.Config
 		public bool ResetIndexOnUncleanShutdown { get; set; }
 
 		/// <summary>
-		/// What thread priority to give the various background tasks RavenDB uses (mostly for indexing)
-		/// Allowed values: Lowest, BelowNormal, Normal, AboveNormal, Highest
-		/// Default: Normal
-		/// </summary>
-		public ThreadPriority BackgroundTasksPriority { get; set; }
-
-		/// <summary>
 		/// The maximum allowed page size for queries. 
 		/// Default: 1024
 		/// Minimum: 10
@@ -431,10 +431,26 @@ namespace Raven.Database.Config
 		public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
 		/// <summary>
+		/// The number that controls the if the reduce optimization is performed.
+		/// If the count of mapped results if less than this value then the reduce is executed in single step.
+		/// Default: 1024
+		/// </summary>
+		public int NumberOfItemsToExecuteReduceInSingleStep { get; set; }
+
+		/// <summary>
 		/// The maximum number of indexing tasks allowed to run in parallel
 		/// Default: The number of processors in the current machine
 		/// </summary>
-		public int MaxNumberOfParallelIndexTasks { get; set; }
+		public int MaxNumberOfParallelIndexTasks
+		{
+			get
+			{
+				if(MemoryStatistics.MaxParallelismSet)
+					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
+				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
+			}
+			set { maxNumberOfParallelIndexTasks = value; }
+		}
 
 		/// <summary>
 		/// Time (in milliseconds) the index has to be queried at least once in order for it to
@@ -660,6 +676,9 @@ namespace Raven.Database.Config
 			}
 		}
 
+		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
+		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
+
 		public string OAuthTokenServer { get; set; }
 
 		#endregion
@@ -674,11 +693,14 @@ namespace Raven.Database.Config
 			}
 		}
 
+		public bool DisableDocumentPreFetchingForIndexing { get; set; }
+
 		public AggregateCatalog Catalog { get; set; }
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
+		private int? maxNumberOfParallelIndexTasks;
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
 		/// </summary>
@@ -695,20 +717,16 @@ namespace Raven.Database.Config
 			get
 			{
 				if (string.IsNullOrEmpty(indexStoragePath))
-					return Path.Combine(DataDirectory, "Indexes");
-
+					indexStoragePath = Path.Combine(DataDirectory, "Indexes");
 				return indexStoragePath;
 			}
-			set
-			{
-				indexStoragePath = value.ToFullPath();
-			}
+			set { indexStoragePath = value.ToFullPath(); }
 		}
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
 
 		public TimeSpan MaxIndexingRunLatency { get; set; }
-		
+
 		internal bool IsTenantDatabase { get; set; }
 
 		[Browsable(false)]

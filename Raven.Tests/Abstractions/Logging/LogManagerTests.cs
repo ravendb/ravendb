@@ -6,10 +6,14 @@ namespace Raven.Tests.Abstractions.Logging
 {
 	public class LogManagerTests
 	{
+		public LogManagerTests()
+		{
+			LogManager.CurrentLogManager = null;
+		}
+		
 		[Fact]
 		public void When_NLog_is_available_Then_should_get_NLogLogger()
 		{
-			LogManager.SetCurrentLogManager(null);
 			NLogLogManager.ProviderIsAvailabileOverride = true;
 			Log4NetLogManager.ProviderIsAvailabileOverride = true;
 			ILog logger = LogManager.GetCurrentClassLogger();
@@ -19,7 +23,6 @@ namespace Raven.Tests.Abstractions.Logging
 		[Fact]
 		public void When_Log4Net_is_available_Then_should_get_Log4NetLogger()
 		{
-			LogManager.SetCurrentLogManager(null);
 			NLogLogManager.ProviderIsAvailabileOverride = false;
 			Log4NetLogManager.ProviderIsAvailabileOverride = true;
 			ILog logger = LogManager.GetLogger(GetType());
@@ -29,7 +32,6 @@ namespace Raven.Tests.Abstractions.Logging
 		[Fact]
 		public void When_neither_NLog_or_Log4Net_is_available_Then_should_get_a_LoggerExecutionWrapper()
 		{
-			LogManager.SetCurrentLogManager(null);
 			NLogLogManager.ProviderIsAvailabileOverride = false;
 			Log4NetLogManager.ProviderIsAvailabileOverride = false;
 			ILog logger = LogManager.GetLogger(GetType());
@@ -37,9 +39,24 @@ namespace Raven.Tests.Abstractions.Logging
 		}
 
 		[Fact]
+		public void When_neither_NLog_or_Log4Net_is_available_Then_can_open_mapped_context()
+		{
+			NLogLogManager.ProviderIsAvailabileOverride = false;
+			Log4NetLogManager.ProviderIsAvailabileOverride = false;
+			Assert.NotNull(LogManager.OpenMappedContext("key", "value"));
+		}
+
+		[Fact]
+		public void When_neither_NLog_or_Log4Net_is_available_Then_can_open_nested_context()
+		{
+			NLogLogManager.ProviderIsAvailabileOverride = false;
+			Log4NetLogManager.ProviderIsAvailabileOverride = false;
+			Assert.NotNull(LogManager.OpenNestedConext("context"));
+		}
+
+		[Fact]
 		public void When_a_custom_target_is_registered_Then_should_log_to_target()
 		{
-			LogManager.SetCurrentLogManager(null);
 			NLogLogManager.ProviderIsAvailabileOverride = false;
 			Log4NetLogManager.ProviderIsAvailabileOverride = false;
 
@@ -52,8 +69,6 @@ namespace Raven.Tests.Abstractions.Logging
 			Assert.Equal(message, LogManager.GetTarget<TestTarget>().LastMessage);
 		}
 
-		#region Nested type: TestTarget
-
 		private class TestTarget : Target
 		{
 			internal string LastMessage { get; private set; }
@@ -63,7 +78,5 @@ namespace Raven.Tests.Abstractions.Logging
 				LastMessage = logEvent.FormattedMessage;
 			}
 		}
-
-		#endregion
 	}
 }

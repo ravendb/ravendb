@@ -57,7 +57,7 @@ namespace Raven.Storage.Esent.StorageActions
 			where T : class
 		{
 			bool existsInTx = IsDocumentModifiedInsideTransaction(key);
-			
+
 			if (transactionInformation != null && existsInTx)
 			{
 				var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
@@ -182,8 +182,8 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
-			if (TryMoveDocumentRecords(start, backward: true)) 
-					return Enumerable.Empty<JsonDocument>();
+			if (TryMoveDocumentRecords(start, backward: true))
+				return Enumerable.Empty<JsonDocument>();
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
@@ -195,7 +195,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private bool TryMoveDocumentRecords(int start, bool backward)
 		{
-			if (start <= 0) 
+			if (start <= 0)
 				return false;
 			if (backward)
 				start *= -1;
@@ -219,7 +219,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return ReadCurrentDocument(true);
 		}
 
-		private JsonDocument ReadCurrentDocument(bool checkTransactionStatus )
+		private JsonDocument ReadCurrentDocument(bool checkTransactionStatus)
 		{
 			int docSize;
 
@@ -238,7 +238,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			bool isDocumentModifiedInsideTransaction = false;
-			if(checkTransactionStatus)
+			if (checkTransactionStatus)
 				isDocumentModifiedInsideTransaction = IsDocumentModifiedInsideTransaction(key);
 			return new JsonDocument
 			{
@@ -275,6 +275,18 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, Documents) && count < take);
 		}
 
+		public Guid GetBestNextDocumentEtag(Guid etag)
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+				return etag;
+
+
+			var val = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
+										 RetrieveColumnGrbit.RetrieveFromIndex, null);
+			return new Guid(val);
+		}
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
@@ -283,12 +295,12 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				return Enumerable.Empty<JsonDocument>();
 
-				Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
-				if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
-					return Enumerable.Empty<JsonDocument>();
+			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
+			if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
+				return Enumerable.Empty<JsonDocument>();
 
 			if (TryMoveDocumentRecords(start, backward: false))
-						return Enumerable.Empty<JsonDocument>();
+				return Enumerable.Empty<JsonDocument>();
 
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
@@ -306,7 +318,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
 			if (isUpdate == false)
 				throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
-				                                    " does not exists");
+													" does not exists");
 
 			Guid newEtag = uuidGenerator.CreateSequentialUuid();
 			DateTime savedAt = SystemTime.UtcNow;
@@ -349,7 +361,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				if (etag != null && etag != Guid.Empty) // expected something to be there.
 					throw new ConcurrencyException("PUT attempted on document '" + key +
-					                               "' using a non current etag (document deleted)")
+												   "' using a non current etag (document deleted)")
 					{
 						ExpectedETag = etag.Value
 					};
@@ -456,7 +468,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata)
+		public bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata, out Guid? deletedETag)
 		{
 			metadata = null;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
@@ -464,6 +476,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
+				deletedETag = null;
 				return false;
 			}
 			if (Api.TryMoveFirst(session, Details))
@@ -473,6 +486,7 @@ namespace Raven.Storage.Esent.StorageActions
 			EnsureNotLockedByTransaction(key, null);
 
 			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+			deletedETag = existingEtag;
 
 			Api.JetDelete(session, Documents);
 			logger.Debug("Document with key '{0}' was deleted", key);
@@ -489,7 +503,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
-				if(etag != null && etag.Value != Guid.Empty)
+				if (etag != null && etag.Value != Guid.Empty)
 				{
 					throw new ConcurrencyException("DELETE attempted on document '" + key +
 											   "' using a non current etag")

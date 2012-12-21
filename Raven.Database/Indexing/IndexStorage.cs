@@ -44,7 +44,7 @@ namespace Raven.Database.Indexing
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
 		private readonly DocumentDatabase documentDatabase;
-		private const string IndexVersion = "1.2.18";
+		private const string IndexVersion = "2.0.0.1";
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -218,15 +218,19 @@ namespace Raven.Database.Indexing
 				else
 				{
 					EnsureIndexVersionMatches(indexName, directory);
-					if (directory.FileExists("write.lock")) // we had an unclean shutdown
+					if (directory.FileExists("write.lock"))// force lock release, because it was still open when we shut down
+					{
+						IndexWriter.Unlock(directory);
+						// for some reason, just calling unlock doesn't remove this file
+						directory.DeleteFile("write.lock");
+					} 
+					if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
 					{
 						if (configuration.ResetIndexOnUncleanShutdown)
 							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
 
 						CheckIndexAndRecover(directory, indexDirectory);
-						IndexWriter.Unlock(directory);
-						// for some reason, just calling unlock doesn't remove this file
-						directory.DeleteFile("write.lock");
+						directory.DeleteFile("writing-to-index.lock");
 					}
 				}
 			}
@@ -538,7 +542,7 @@ namespace Raven.Database.Indexing
 
 		private Index GetIndexByName(string indexName)
 		{
-			var result = indexes.Where(index => System.String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
+			var result = indexes.Where(index => String.Compare(index.Key, indexName, StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
 			if (result == null)
@@ -607,7 +611,7 @@ namespace Raven.Database.Indexing
 
 		public Index GetIndexInstance(string indexName)
 		{
-			return indexes.Where(index => String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
+			return indexes.Where(index => String.Compare(index.Key, indexName, StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
 		}
@@ -625,6 +629,12 @@ namespace Raven.Database.Indexing
 		public IndexingPerformanceStats[] GetIndexingPerformance(string index)
 		{
 			return GetIndexByName(index).GetIndexingPerformance();
+		}
+
+		public void Backup(string directory, string incrementalTag = null)
+		{
+			Parallel.ForEach(indexes.Values, index => 
+				index.Backup(directory, path, incrementalTag));
 		}
 	}
 }

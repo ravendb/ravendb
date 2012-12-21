@@ -15,6 +15,9 @@ namespace Raven.Studio.Infrastructure.Converters
 			if (name == null)
 				return "";
 
+			if (name == "PeriodicBackup")
+				return PeriodBackupToolTip(license);
+
 			if (license == null || license.Attributes == null)
 				return name + " Bundle";
 
@@ -28,7 +31,26 @@ namespace Raven.Studio.Infrastructure.Converters
 			if(result)
 				return name + " Bundle";
 
-			return name + " Bundles is not approved in you license";
+			return name + " Bundle is not approved in you license";
+		}
+
+		private string PeriodBackupToolTip(LicensingStatus license)
+		{
+			const string enabledMsg = "Periodic Backup is enabled accoring to your license, in order to activate it go to the settings section after creating the database";
+			if (license == null || license.Attributes == null)
+				return enabledMsg;
+
+			string active;
+			if (license.Attributes.TryGetValue("PeriodicBackup", out active) == false)
+				return enabledMsg;
+
+			bool result;
+			bool.TryParse(active, out result);
+
+			if (result)
+				return enabledMsg;
+
+			return "Periodic Backup Bundle is not approved in you license";
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

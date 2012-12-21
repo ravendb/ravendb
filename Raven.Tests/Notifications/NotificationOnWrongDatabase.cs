@@ -33,7 +33,10 @@ namespace Raven.Tests.Notifications
 			{
 				store.Initialize();
 				var taskObservable = store.Changes("does-not-exists");
-				Assert.Throws<AggregateException>(() => taskObservable.Task.Wait());
+				Assert.Throws<AggregateException>(() =>
+				{
+					taskObservable.Task.Wait(TimeSpan.FromSeconds(30));
+				});
 				// ensure the db still works
 				store.DatabaseCommands.GetStatistics();
 			}

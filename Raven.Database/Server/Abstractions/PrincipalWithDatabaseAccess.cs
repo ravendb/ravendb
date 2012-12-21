@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Security.Principal;
 
 namespace Raven.Database.Server.Abstractions
@@ -11,9 +12,9 @@ namespace Raven.Database.Server.Abstractions
 		{
 			Principal = principal;
 			Identity = principal.Identity;
-			AdminDatabases = new List<string>();
-			ReadOnlyDatabases = new List<string>();
-			ReadWriteDatabases = new List<string>();
+			AdminDatabases = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			ReadOnlyDatabases = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			ReadWriteDatabases = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		}
 
 		public bool IsInRole(string role)
@@ -21,9 +22,10 @@ namespace Raven.Database.Server.Abstractions
 			return Principal.IsInRole(role);
 		}
 
+		public bool? ExplicitlyConfigured { get; set; }
 		public IIdentity Identity { get; private set; }
-		public List<string> AdminDatabases { get; set; }
-		public List<string> ReadOnlyDatabases { get; set; }
-		public List<string> ReadWriteDatabases { get; set; }
+		public HashSet<string> AdminDatabases { get; private set; }
+		public HashSet<string> ReadOnlyDatabases { get; private set; }
+		public HashSet<string> ReadWriteDatabases { get; private set; }
 	}
 }

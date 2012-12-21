@@ -101,7 +101,7 @@ namespace Raven.Database.Indexing
 		}
 
 		private static readonly Regex CirlceShape =
-			new Regex(@"Circle \s* \( \s* (-?\d+.\d+?) \s+ (-?\d+.\d+?) \s+ d=(-?\d+.\d+?) \s* \)",
+			new Regex(@"Circle \s* \( \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ d=([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* \)",
 					  RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled | RegexOptions.IgnoreCase);
 		
 		private static string TranslateCircleFromKmToRadians(string shapeWKT)
@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
 				return shapeWKT;
 
 			var radCapture = match.Groups[3];
-			var radius = double.Parse(radCapture.Value);
+			var radius = double.Parse(radCapture.Value, CultureInfo.InvariantCulture);
 
 			radius = (radius / EarthMeanRadiusKm) * RadiansToDegrees;
 

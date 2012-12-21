@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -38,7 +39,7 @@ namespace Raven.Abstractions.Smuggler
 		protected double maximumBatchChangePercentage = 0.3;
 
 		protected int minimumBatchSize = 10;
-		protected int maximumBatchSize = 512 * 1000;
+		protected int maximumBatchSize = 1024*4;
 
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
@@ -166,6 +167,13 @@ namespace Raven.Abstractions.Smuggler
 
 				if (documents.Length == 0)
 				{
+					var databaseStatistics = GetStats();
+					if(lastEtag.CompareTo(databaseStatistics.LastDocEtag) < 0)
+					{
+						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}",lastEtag);
+						continue;
+					}
 					ShowProgress("Done with reading documents, total: {0}", totalCount);
 					return lastEtag;
 				}
@@ -197,7 +205,7 @@ namespace Raven.Abstractions.Smuggler
 						Console.Write("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
 					}
 
-					Thread.Sleep(100);
+					Thread.Sleep(1000);
 					continue;
 				}
 				Console.WriteLine("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
@@ -434,8 +442,8 @@ namespace Raven.Abstractions.Smuggler
 			}
 
 
-			var currentDoc = BitConverter.ToInt64(databaseStatistics.LastDocEtag.ToByteArray().Reverse().ToArray(), 0);
-			var lastIndexed = BitConverter.ToInt64(earliestIndexedEtag.ToByteArray().Reverse().ToArray(), 0);
+			var currentDoc = Etag.GetChangesCount(databaseStatistics.LastDocEtag);
+			var lastIndexed = Etag.GetChangesCount(earliestIndexedEtag);
 
 			var distance = Math.Max(0, currentDoc - lastIndexed);
 			TimeSpan latency = TimeSpan.Zero;
@@ -489,14 +497,14 @@ namespace Raven.Abstractions.Smuggler
 
 		private void ModifyBatchSize(SmugglerOptions options, TimeSpan currentProcessingTime)
 		{
-			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.5))
-				return;
-
 			var change = Math.Max(1, options.BatchSize / 3);
-			if (currentProcessingTime > TimeSpan.FromSeconds(options.Timeout / 0.7))
+			int quarterTime = options.Timeout/4;
+			if (currentProcessingTime > TimeSpan.FromMilliseconds(quarterTime))
 				options.BatchSize -= change;
 			else
 				options.BatchSize += change;
+
+			options.BatchSize = Math.Min(maximumBatchSize, Math.Max(minimumBatchSize, options.BatchSize));
 		}
 
 	}

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
@@ -107,7 +108,9 @@ namespace Raven.Studio.Models
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
-			return TaskEx.FromResult<IList<object>>(ApplicationModel.Current.Server.Value.Databases.Cast<object>().ToList());
+			var list = ApplicationModel.Current.Server.Value.Databases.Cast<object>().ToList();
+			list.Add("*");
+			return TaskEx.FromResult<IList<object>>(list);
 		}
 
 		public void Update()

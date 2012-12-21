@@ -10,5 +10,7 @@ namespace Raven.Database.Plugins
 	internal interface IRequiresDocumentDatabaseInitialization
 	{
 		void Initialize(DocumentDatabase database);
+
+		void SecondStageInit();
 	}
 }

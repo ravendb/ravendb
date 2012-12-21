@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Subjects;
+using System.Windows.Media.Imaging;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
@@ -29,6 +30,7 @@ namespace Raven.Studio.Models
 
         private readonly CompositeDisposable disposable = new CompositeDisposable();
 	    private IDatabaseChanges databaseChanges;
+		private Observable<string> status;
 
 		public Observable<TaskModel> SelectedTask { get; set; }
 		public Observable<DatabaseDocument> DatabaseDocument { get; set; }
@@ -57,6 +59,7 @@ namespace Raven.Studio.Models
 			{
 				Value = "Offline"
 			};
+			OnPropertyChanged(() => StatusImage);
 
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
 			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
@@ -64,12 +67,11 @@ namespace Raven.Studio.Models
 
 		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
 		        .SampleResponsive(TimeSpan.FromSeconds(2))
-		        .Subscribe(_ => RefreshStatistics(), exception => ApplicationModel.Current.Server.Value.IsConnected.Value = false);
+		        .Subscribe(_ => RefreshStatistics());
 
 			databaseChanges.ConnectionStatusCahnged += (sender, args) =>
 			{
-				ApplicationModel.Current.Server.Value.IsConnected.Value = (sender as IDatabaseChanges).Connected;
-				OnPropertyChanged(() => ApplicationModel.Current.Server.Value.IsConnected);
+				ApplicationModel.Current.Server.Value.SetConnected(((IDatabaseChanges)sender).Connected);
 				UpdateStatus();
 			};
 
@@ -79,6 +81,8 @@ namespace Raven.Studio.Models
 		private void UpdateStatus()
 		{
 			Status.Value = ApplicationModel.Current.Server.Value.IsConnected.Value ? "Online" : "Offline";
+			OnPropertyChanged(() => Status);
+			OnPropertyChanged(() => StatusImage);
 		}
 
 		public void UpdateDatabaseDocument()
@@ -178,7 +182,25 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseStatistics> Statistics { get; set; }
 
-		public Observable<string> Status { get; set; }
+		public Observable<string> Status
+		{
+			get { return status; }
+			set
+			{
+				status = value;
+				OnPropertyChanged(() => Status);
+				OnPropertyChanged(() => StatusImage);
+			}
+		}
+
+		public Observable<BitmapImage> StatusImage
+		{
+			get
+			{
+				var url = new Uri("../Assets/Images/" + Status.Value + ".png", UriKind.Relative);
+				return new Observable<BitmapImage> { Value = new BitmapImage(url) };
+			}
+		} 
 
 		private void RefreshStatistics()
 		{

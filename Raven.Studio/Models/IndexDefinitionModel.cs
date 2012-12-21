@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -14,13 +16,14 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class IndexDefinitionModel : PageViewModel, IHasPageTitle
+	public class IndexDefinitionModel : PageViewModel, IHasPageTitle, IAutoCompleteSuggestionProvider
 	{
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
 		private string originalIndex;
 		private bool isNewIndex;
 		private bool hasUnsavedChanges;
+		public string OriginalName { get; private set; }
 
 		public IndexDefinitionModel()
 		{
@@ -111,6 +114,7 @@ namespace Raven.Studio.Models
 				HandleIndexNotFound(null);
 
 			Header = name;
+			OriginalName = name;
 			IsNewIndex = false;
 
 			DatabaseCommands.GetIndexAsync(name)
@@ -443,6 +447,17 @@ namespace Raven.Studio.Models
 					ApplicationModel.Current.AddNotification(new Notification("Index must have at least one map with data!", NotificationLevel.Error));
 					return;
 				}
+
+				if (index.IsNewIndex == false && index.OriginalName != index.Name)
+				{
+					if (AskUser.Confirmation("Can not rename and index",
+						                     "If you wish to save a new index with this new name press OK, to cancel the save command press Cancel") ==false)
+					{
+						ApplicationModel.Current.Notifications.Add(new Notification("Index Not Saved"));
+						return;
+					}
+				}
+
 				index.UpdateIndex();
 				if (index.Reduce == "")
 					index.Reduce = null;
@@ -674,6 +689,19 @@ namespace Raven.Studio.Models
 				isNewIndex = value;
 				OnPropertyChanged(() => IsNewIndex);
 			}
+		}
+		public Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			var list = new List<object>
+			{
+				"Raven.Database.Indexing.LowerCaseKeywordAnalyzer, Raven.Database",	
+				"Raven.Database.Indexing.LowerCaseWhitespaceAnalyzer, Raven.Database",
+				"Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.WhitespaceAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.StopAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.SimpleAnalyzer, Lucene.Net",
+			};
+			return TaskEx.FromResult<IList<object>>(list);
 		}
 	}
 }

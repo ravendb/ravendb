@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -18,7 +14,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Silverlight.Connection;
 #endif
 using Raven.Database.Util;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
@@ -36,15 +31,15 @@ namespace Raven.Client.Changes
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly DocumentConvention conventions;
+		private readonly ReplicationInformer replicationInformer;
 		private readonly Action onDispose;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
-		private int reconnectAttemptsRemaining;
 		private IDisposable connection;
 
 		private static int connectionCounter;
 		private readonly string id;
 
-		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, Action onDispose)
+		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
 				 Base62Util.Base62Random();
@@ -52,6 +47,7 @@ namespace Raven.Client.Changes
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.conventions = conventions;
+			this.replicationInformer = replicationInformer;
 			this.onDispose = onDispose;
 			Task = EstablishConnection()
 				.ObserveException();
@@ -71,13 +67,25 @@ namespace Raven.Client.Changes
 				.ServerPullAsync()
 				.ContinueWith(task =>
 								{
-									if (task.IsFaulted && reconnectAttemptsRemaining > 0)
+									if(disposed)
+										throw new ObjectDisposedException("RemoteDatabaseChanges");
+									if (task.IsFaulted)
 									{
 										logger.WarnException("Could not connect to server, will retry", task.Exception);
 										Connected = false;
 										ConnectionStatusCahnged(this, EventArgs.Empty);
+										
+										if (disposed)
+											return task;
 
-										reconnectAttemptsRemaining--;
+
+										if (replicationInformer.IsServerDown(task.Exception) == false)
+											return task;
+
+										if(replicationInformer.IsHttpStatus(task.Exception, 
+												HttpStatusCode.NotFound, 
+												HttpStatusCode.Forbidden))
+											return task;
 
 										return Time.Delay(TimeSpan.FromSeconds(15))
 											.ContinueWith(_ => EstablishConnection())
@@ -86,7 +94,6 @@ namespace Raven.Client.Changes
 
 									Connected = true;
 									ConnectionStatusCahnged(this, EventArgs.Empty);
-									reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
 									connection = (IDisposable)task.Result;
 									task.Result.Subscribe(this);
 
@@ -210,7 +217,7 @@ namespace Raven.Client.Changes
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
 				counter,
-				notification => string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(notification.Id, docId, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError = taskedObservable.Error;
@@ -317,7 +324,7 @@ namespace Raven.Client.Changes
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
 				counter,
-				notification => notification.Name.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
@@ -341,14 +348,14 @@ namespace Raven.Client.Changes
 			DisposeAsync();
 		}
 
-		private bool disposed;
+		private volatile bool disposed;
+
 		public Task DisposeAsync()
 		{
 			if (disposed)
 				return new CompletedTask();
 			disposed = true;
 			onDispose();
-			reconnectAttemptsRemaining = 0;
 			foreach (var keyValuePair in counters)
 			{
 				keyValuePair.Value.Dispose();
@@ -399,8 +406,6 @@ namespace Raven.Client.Changes
 		public void OnError(Exception error)
 		{
 			logger.ErrorException("Got error from server connection", error);
-			if (reconnectAttemptsRemaining <= 0)
-				return;
 
 			EstablishConnection()
 				.ObserveException()

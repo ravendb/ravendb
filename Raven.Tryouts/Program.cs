@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
+using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Analysis.Tokenattributes;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -16,36 +20,29 @@ using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Document;
+using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
 using System.Linq;
+using Raven.Tests.Util;
+using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Tryouts
 {
 	internal class Program
 	{
+		[STAThread]
 		private static void Main()
 		{
-			var x = RavenJObject.Parse(@"{
-  '_': null,
-  'SaleId': 'sales/1',
-  'Locations': [
-    {
-      'Lat': 37.78,
-      'Lng': 144.96
-    },
-    {
-      'Lat': 37.79,
-      'Lng': 144.96
-    }
-  ],
-  'TotalSold': 0,
-  '__document_id': 'sales/1'
-}");
-			var index = new Index_Sales_2fByLocation();
-			foreach (var VARIABLE in index.ReduceDefinition(new[]{new DynamicJsonObject(x)}))
+			for (int i = 0; i < 100; i++)
 			{
-				Console.WriteLine(VARIABLE);
+				Console.WriteLine(i);
+				using(var x = new RavenDB_551())
+				{
+					x.CanGetErrorOnOptimisticDeleteInTransactionWhenDeletedInTransaction();
+				}
 			}
+				
 		}
 	}
 }

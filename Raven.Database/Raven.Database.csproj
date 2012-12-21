@@ -165,13 +165,11 @@
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\Replication\ReplicationStatistic.cs" />
     <Compile Include="Bundles\Replication\Responders\AdminPurgeTombstones.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\AttachmentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\DocumentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\ReplicationHeartbeat.cs" />
-    <Compile Include="Bundles\Replication\Responders\ReplicationTopology.cs" />
     <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
@@ -199,6 +197,9 @@
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
+    <Compile Include="Indexing\LowerCaseKeywordTokenizer.cs" />
+    <Compile Include="Indexing\LowerCaseWhitespaceAnalyzer.cs" />
+    <Compile Include="Indexing\LowerCaseWhitespaceTokenizer.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
@@ -381,7 +382,6 @@
     <Compile Include="Indexing\IIndexExtension.cs" />
     <Compile Include="Indexing\IndexSearcherHolder.cs" />
     <Compile Include="Indexing\ReducingExecuter.cs" />
-    <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Linq\Ast\CaptureQueryParameterNamesVisitor.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCalls.cs" />
     <Compile Include="Linq\Ast\TransformNullCoalasingOperatorTransformer.cs" />
@@ -634,9 +634,11 @@
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From39To40.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From38To39.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From36To37.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From37To38.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From40To41.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
@@ -740,6 +742,7 @@
     <EmbeddedResource Include="Json\Map.js" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
+    <EmbeddedResource Include="Json\lodash.js" />
     <Content Include="Server\WebUI\css\smoothness\images\ui-anim_basic_16x16.gif" />
     <Content Include="Server\WebUI\studio_not_found.html" />
     <Content Include="Server\WebUI\studio.html" />

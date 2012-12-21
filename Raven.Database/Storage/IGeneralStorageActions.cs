@@ -9,5 +9,7 @@ namespace Raven.Database.Storage
 	{
 		long GetNextIdentityValue(string name);
 		void SetIdentityValue(string name, long value);
+
+		void PulseTransaction();
 	}
 }

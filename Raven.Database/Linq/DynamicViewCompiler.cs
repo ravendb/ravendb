@@ -225,7 +225,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 				}
 			}
 
-			mapDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(), null);
+			mapDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(null), null);
 			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
 		}
 
@@ -271,19 +271,22 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			VariableInitializer reduceDefiniton;
 			AstNode groupBySource;
 			string groupByParamter;
+			string groupByIdentifier;
 			if (indexDefinition.Reduce.Trim().StartsWith("from"))
 			{
 				reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
 				var queryExpression = ((QueryExpression)reduceDefiniton.Initializer);
 				var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().First();
 				var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryGroupClause>().First();
+				groupByIdentifier = queryContinuationClause.Identifier;
 				groupBySource = queryGroupClause.Key;
 				groupByParamter = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryFromClause>().First().Identifier;
 			}
 			else
 			{
 				reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
-				var invocation = ((InvocationExpression)reduceDefiniton.Initializer);
+				var initialInvocation = ((InvocationExpression)reduceDefiniton.Initializer);
+				var invocation = initialInvocation;
 				var target = (MemberReferenceExpression)invocation.Target;
 				while (target.MemberName != "GroupBy")
 				{
@@ -293,13 +296,14 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 				var lambdaExpression = GetLambdaExpression(invocation);
 				groupByParamter = lambdaExpression.Parameters.First().Name;
 				groupBySource = lambdaExpression.Body;
+				groupByIdentifier = null;
 			}
 
 			var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
 			captureSelectNewFieldNamesVisitor.Clear();// reduce override the map fields
 			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 			reduceDefiniton.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForReduce, null);
-			reduceDefiniton.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(), null);
+			reduceDefiniton.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(groupByIdentifier), null);
 
 			ValidateMapReduceFields(mapFields);
 

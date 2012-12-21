@@ -49,7 +49,7 @@ namespace Raven.Studio.Features.Documents
                                               .Select(x => new ViewableDocument(x))
                                               .ToArray();
 
-                                      SetCount(task.Result.TotalResults);
+                                      SetCount(task.Result.TotalResults - task.Result.SkippedResults);
 
                                       return (IList<ViewableDocument>) documents;
                                   });

@@ -172,7 +172,8 @@ namespace Raven.Tests.Storage
 				Assert.Equal(1, actions.Documents.GetDocumentsCount());
 
 				RavenJObject metadata;
-				actions.Documents.DeleteDocument("a", null, out metadata);
+				Guid? tag;
+				actions.Documents.DeleteDocument("a", null, out metadata, out tag);
 			});
 
 

@@ -33,8 +33,8 @@ namespace Raven.Storage.Esent
 			}
 			var circularLog = GetValueFromConfiguration("Raven/Esent/CircularLog", true);
 			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 64);
-			logFileSizeInMb = Math.Max(1, logFileSizeInMb/4);
-			return new InstanceParameters(jetInstance)
+			logFileSizeInMb = Math.Max(1, logFileSizeInMb / 4);
+			var instanceParameters = new InstanceParameters(jetInstance)
 			{
 				CircularLog = circularLog,
 				Recovery = true,
@@ -44,7 +44,8 @@ namespace Raven.Storage.Esent
 				TempDirectory = Path.Combine(logsPath, "temp"),
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
-				MaxVerPages = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 128), 1024 * 1024),
+				MaxVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 512), 1024 * 1024),
+				PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", 472), 1024 * 1024),
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 8192), 1024),
@@ -54,6 +55,8 @@ namespace Raven.Storage.Esent
 				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 8), 1024 * 1024),
 				AlternateDatabaseRecoveryDirectory = path
 			};
+
+			return instanceParameters;
 		}
 
 		public void LimitSystemCache()
@@ -73,6 +76,37 @@ namespace Raven.Storage.Esent
 			double tempAmt = (double)sizeInMegabytes / SystemParameters.DatabasePageSize;
 			int finalSize = (int)(tempAmt * multiply);
 			return finalSize;
+		}
+
+		private static int TranslateToSizeInVersionPages(int sizeInMegabytes, int multiply)
+		{
+			//This doesn't suffer from overflow, do the division first (to make the number smaller) then multiply afterwards
+			double tempAmt = (double)sizeInMegabytes / GetVersionPageSize();
+			int finalSize = (int)(tempAmt * multiply);
+			return finalSize;
+		}
+
+		private static Lazy<int> VersionPageSize = new Lazy<int>(()=>
+		{
+			// see dicussion here: http://managedesent.codeplex.com/discussions/405939
+			const int JET_paramVerPageSize = 128;
+			int versionPageSize = 0;
+			string paramString;
+			Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param)JET_paramVerPageSize, ref versionPageSize,
+									  out paramString, 0);
+
+			versionPageSize = Math.Max(versionPageSize, SystemParameters.DatabasePageSize * 2);
+
+			if (Environment.Is64BitProcess)
+			{
+				versionPageSize *= 2;
+			}
+			return Math.Min(versionPageSize, 64 * 1024);
+		}); 
+
+		public static int GetVersionPageSize()
+		{
+			return VersionPageSize.Value;
 		}
 
 		private int GetValueFromConfiguration(string name, int defaultValue)

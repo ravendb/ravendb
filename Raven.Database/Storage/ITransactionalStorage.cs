@@ -22,13 +22,16 @@ namespace Raven.Database.Storage
 		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
 		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
-		void Restore(string backupLocation, string databaseLocation, Action<string> output);
+		void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag);
 		long GetDatabaseSizeInBytes();
+		long GetDatabaseCacheSizeInBytes();
+		long GetDatabaseTransactionVersionSizeInBytes();
 
 		string FriendlyName { get; }
 		bool HandleException(Exception exception);
 
 		void Compact(InMemoryRavenConfiguration configuration);
 		Guid ChangeId();
+		void ClearCaches();
 	}
 }

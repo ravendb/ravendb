@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 			                                                   queryListeners)
 			{
 				pageSize = pageSize,
-				theQueryText = new StringBuilder(theQueryText.ToString()),
+				queryText = new StringBuilder(queryText.ToString()),
 				start = start,
 				timeout = timeout,
 				cutoff = cutoff,
@@ -99,7 +99,8 @@ namespace Raven.Client.Document
 				queryShape = queryShape,
 				spatialRelation = spatialRelation,
 				distanceErrorPct = distanceErrorPct,
-				rootTypes = {typeof(T)}
+				rootTypes = {typeof(T)},
+				defaultField = defaultField,
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -811,6 +812,28 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <returns></returns>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag);
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
+			return this;
+		}
+
+		/// <summary>
 		/// EXPERT ONLY: Instructs the query to wait for non stale results.
 		/// This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>
@@ -840,10 +863,10 @@ namespace Raven.Client.Document
 		/// </returns>
 		public override string ToString()
 		{
-			var trim = QueryText.ToString().Trim();
-			if(isSpatialQuery)
-				return string.Format(CultureInfo.InvariantCulture, "{0} SpatialField: {1} QueryShape: {2} Relation: {3}", trim, spatialFieldName, queryShape, spatialRelation);
-			return trim;
+			var query = base.ToString();
+			if (isSpatialQuery)
+				return string.Format(CultureInfo.InvariantCulture, "{0} SpatialField: {1} QueryShape: {2} Relation: {3}", query, spatialFieldName, queryShape, spatialRelation);
+			return query;
 		}
 	}
 }

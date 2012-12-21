@@ -151,6 +151,16 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void IsNullOrEmpty_Any_Negated_Not_Supported()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			var q = indexedUsers.Where(user => !user.Name.Any());
+
+			var exception = Assert.Throws<InvalidOperationException>(() => q.ToString());
+			Assert.Equal("Cannot process negated Any(), see RavenDB-732 http://issues.hibernatingrhinos.com/issue/RavenDB-732", exception.Message);
+		}
+
+		[Fact]
 		public void IsNullOrEmpty_AnyEqTrue()
 		{
 			var indexedUsers = GetRavenQueryInspector();
@@ -632,14 +642,6 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void AnyOnCollectionNegated()
-		{
-			var indexedUsers = GetRavenQueryInspector();
-			var q = indexedUsers.Where(x => !x.Properties.Any());
-			Assert.Equal("(*:* AND -Properties:*)", q.ToString());
-		}
-
-		[Fact]
 		public void WillWrapLuceneSaveKeyword_NOT()
 		{
 			var indexedUsers = GetRavenQueryInspector();
@@ -695,6 +697,7 @@ namespace Raven.Tests.Linq
 		public class UserProperty
 		{
 			public string Key { get; set; }
+			public string Value { get; set; }
 		}
 
 		public void Dispose()

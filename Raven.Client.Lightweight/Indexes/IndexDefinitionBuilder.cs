@@ -94,6 +94,9 @@ namespace Raven.Client.Indexes
 				throw new InvalidOperationException(
 					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", GetType().Name));
 
+			if (Reduce != null)
+				IndexDefinitionHelper.ValidateReduce(Reduce);
+
 			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 			var indexDefinition = new IndexDefinition
 			{

@@ -225,7 +225,7 @@ namespace Raven.Client.Connection
 					{
 						if(resolvingConflictRetries)
 							throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
-		
+
 						resolvingConflictRetries = true;
 						try
 						{
@@ -286,7 +286,7 @@ namespace Raven.Client.Connection
 					}
 				}
 				finally
-				{
+		{
 					resolvingConflict = false;
 				}
 			}
@@ -624,7 +624,7 @@ namespace Raven.Client.Connection
 			var json = (RavenJArray)result;
 
 			return json
-				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+				.Select(x => x.Value<string>())
 				.ToArray();
 		}
 
@@ -816,8 +816,8 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
 			
+
 			try
 			{
 				// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
@@ -836,7 +836,7 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
+			
 			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
 
@@ -1014,11 +1014,11 @@ namespace Raven.Client.Connection
 		}
 
 		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
-		{
+			{
 			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
 			if (!requiresRetry) 
 				return currentResult;
-
+				
 			if (resolvingConflictRetries)
 				throw new InvalidOperationException(
 					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
@@ -1558,10 +1558,10 @@ namespace Raven.Client.Connection
 		{
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&{2}",
 															  Uri.EscapeUriString(index),
 															  Uri.EscapeDataString(facetSetupDoc),
-															  Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
+															  query.GetMinimalQueryString());
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)

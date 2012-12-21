@@ -1,6 +1,8 @@
-﻿using System.Windows.Input;
+﻿using System;
+using System.Windows.Input;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -44,6 +46,19 @@ namespace Raven.Studio.Models
 					return taskInput.Name.Length * PixelsPerLetter;
 				return 0;
 			}
+		}
+
+		public void ReportError(Exception exception)
+		{
+			var aggregate = exception as AggregateException;
+			if (aggregate != null)
+				exception = aggregate.ExtractSingleInnerException();
+			Output.Add("Error: " + exception.Message);
+		}
+
+		public void ReportError(string errorMsg)
+		{
+			Output.Add("Error: " + errorMsg);
 		}
 
 		private string name;

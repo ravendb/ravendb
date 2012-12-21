@@ -1,17 +1,17 @@
-.session-table  tr td
+.session-table > tbody > tr > td
 {
     border-bottom: 1px dashed orange;
     padding-bottom: 2px;
     padding-top: 2px;
 }
-.session-table  tr th
+.session-table > tbody > tr > th
 {
     border-bottom: 1px dashed orange;
     padding-bottom: 2px;
     padding-top: 2px;
 }
 
-.session-table tr td
+.session-table > tbody > tr > td
 {
     padding-left: 10px;
 }
@@ -32,7 +32,6 @@
 
 .ravendb-profiler-results
 {
-    display: none;
     position: absolute;
     left: 0;
     top: 1em;
@@ -49,18 +48,18 @@
 
 .request-details
 {
+    display: none;
     position: absolute;
     left: 10px;
     top: 100px;
     border: 2px solid black;
     background-color: White;
+    padding: 15px;
+    overflow: auto;
     min-height: 300px;
     min-width: 600px;
     max-height: 600px;
     max-width: 100%;
-    padding: 15px;
-    overflow: auto;
-    
 }
 
 .request-details-table td

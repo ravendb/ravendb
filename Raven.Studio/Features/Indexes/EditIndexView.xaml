@@ -101,12 +101,24 @@
                                Grid.Column="2"
                                Margin="8,0,4,0"
                                VerticalAlignment="Center" />
-                    <TextBox Text="{Binding Analyzer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-							 IsEnabled="{Binding Indexing, Converter={StaticResource TrueWhenAnalyzed}}"
-                             Grid.Row="4"
-                             Grid.Column="3"
-                             MinWidth="160"
-                             VerticalAlignment="Center" />
+					<sdk:AutoCompleteBox Text="{Binding Analyzer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+										 IsEnabled="{Binding Indexing, Converter={StaticResource TrueWhenAnalyzed}}"
+										 Grid.Row="4"
+										 Grid.Column="3"
+										 MinWidth="160"
+										 MinimumPrefixLength="0"
+										 IsTextCompletionEnabled="True"
+										 VerticalAlignment="Center"
+										 Margin="5,5,5,0">
+						<i:Interaction.Behaviors>
+							<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+						</i:Interaction.Behaviors>
+						<i:Interaction.Triggers>
+							<i:EventTrigger EventName="GotFocus">
+								<Behaviors:ShowAutoCompleteDropDown/>
+							</i:EventTrigger>
+						</i:Interaction.Triggers>
+					</sdk:AutoCompleteBox>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -379,7 +391,7 @@
 										<Popup>
 											<ContentControl Style="{StaticResource Style_InfoToolTip}">
 												<RichTextBlock MaxWidth="370" Margin="5">
-													<Paragraph>A Map function generates a set of documents for indexing. It uses C# LINQ query syntax.</Paragraph>
+													<Paragraph>Maps tells how to find the data you are intrested in</Paragraph>
 													<Paragraph>
 														<LineBreak/>
 														Example:
@@ -555,8 +567,8 @@
 														<LineBreak/>Example:
 														<Span FontFamily="Consolas">
 															<LineBreak/>
-															<Span Foreground="Blue">from</Span> result
-															<Span Foreground="Blue">in</Span> results
+															<Span Foreground="Blue">from</Span> order
+															<Span Foreground="Blue">in</Span> orders
 															<LineBreak/>
 															<Span Foreground="Blue">let</Span> region = Database.Load(result.RegionId)
                                                             <LineBreak/><Span Foreground="Blue">select new</Span> {

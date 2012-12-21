@@ -31,8 +31,8 @@ namespace Raven.Studio.Models
 				var apiKeys = new ApiKeysSectionModel();
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
-				Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
+				Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 				return; 
 			}

@@ -4,7 +4,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection.Async;
-using Raven.Database.Bundles.Replication;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
@@ -15,7 +14,7 @@ namespace Raven.Studio.Models
     {
         public ReplicationStatisticsModel()
         {
-			Stats = new List<ReplicationStats>();
+			Stats = new List<DestinationStats>();
             Name = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 
             documentStore = ApplicationModel.Current.Server.Value.DocumentStore;
@@ -39,7 +38,7 @@ namespace Raven.Studio.Models
 						if (task.IsFaulted)
 							throw new InvalidOperationException("Could not get replication info");
 
-						var replicationStats = new JsonSerializer().Deserialize<ReplicationStatistic>(new RavenJTokenReader(task.Result));
+						var replicationStats = new JsonSerializer().Deserialize<ReplicationStatistics>(new RavenJTokenReader(task.Result));
 
 						if (replicationStats == null)
 							throw new Exception("Replication info is not as expected");
@@ -58,6 +57,6 @@ namespace Raven.Studio.Models
 	    public string Name { get; set; }
         private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
         private readonly IDocumentStore documentStore;
-		public List<ReplicationStats> Stats { get; set; } 
+		public List<DestinationStats> Stats { get; set; } 
     }
 }

@@ -22,6 +22,7 @@ namespace Raven.Studio.Models
 
 		private string buildNumber;
 		private bool singleTenant;
+		private Observable<bool> isConnected;
 
 
 		public DocumentConvention Conventions
@@ -246,6 +247,20 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<LicensingStatus> License { get; private set; }
-		public Observable<bool> IsConnected { get; set; }
+		public Observable<bool> IsConnected
+		{
+			get { return isConnected; }
+			set
+			{
+				isConnected = value;
+				OnPropertyChanged(() => IsConnected);
+			}
+		}
+
+		public void SetConnected(bool isConnected)
+		{
+			IsConnected.Value = isConnected;
+			OnPropertyChanged(() => IsConnected);
+		}
 	}
 }

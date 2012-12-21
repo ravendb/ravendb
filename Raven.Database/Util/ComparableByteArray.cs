@@ -49,7 +49,10 @@ namespace Raven.Database.Util
 
 		public int CompareTo(object obj)
 		{
-			return CompareTo((ComparableByteArray)obj);
+			var comparableByteArray = obj as ComparableByteArray;
+			if (comparableByteArray != null)
+				return CompareTo(comparableByteArray);
+			return CompareTo((Guid) obj);
 		}
 
 		public int CompareTo(Guid obj)

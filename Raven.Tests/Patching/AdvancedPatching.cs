@@ -120,6 +120,20 @@ this.Parts = this.Email.split('@');";
 			Assert.NotNull(result["Contact"]);
 		}
 
+		[Fact]
+		public void CanUseLoDash()
+		{
+			const string email = "somebody@somewhere.com";
+			var doc = RavenJObject.Parse("{\"Contact\":null}");
+			const string script = "this.Emails = _(3).times(function(i) { return contact.Email + i; });";
+			var patch = new ScriptedPatchRequest()
+			{
+				Script = script,
+				Values = { { "contact", new { Email = email } } }
+			};
+			var result = new ScriptedJsonPatcher().Apply(doc, patch);
+			Assert.Equal(new [] { "somebody@somewhere.com0", "somebody@somewhere.com1", "somebody@somewhere.com2" }, result.Value<RavenJArray>("Emails").Select(x => x.Value<string>()));
+		}
 
 		[Fact]
 		public void CanPatchUsingRavenJObjectVars()
@@ -184,17 +198,6 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		}
 
 		[Fact]
-		public void CannotUseEval()
-		{
-			var doc = RavenJObject.FromObject(test);
-			Assert.Throws<NotSupportedException>(
-				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-																					{
-																						Script = "eval('this.Value = 2')",
-																					}));
-		}
-
-		[Fact]
 		public void CanHandleNonsensePatching()
 		{
 			var doc = RavenJObject.FromObject(test);
@@ -227,36 +230,16 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		}
 
 		[Fact]
-		public void CannotUseWhile()
+		public void CannotUseInfiniteLoop()
 		{
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 																						{
 																							Script = "while(true) {}"
 																						}));
-		}
 
-		[Fact]
-		public void DefiningFunctionForbidden()
-		{
-			var doc = RavenJObject.FromObject(test);
-			var advancedJsonPatcher = new ScriptedJsonPatcher();
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-			{
-				Script = "function a() { a(); }"
-			}));
-		}
-
-		[Fact]
-		public void LongStringRejected()
-		{
-			var doc = RavenJObject.FromObject(test);
-			var advancedJsonPatcher = new ScriptedJsonPatcher();
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-			{
-				Script = new string('a', 8193)
-			}));
+			Assert.Contains("Too many steps in script", x.Message);
 		}
 
 		[Fact]

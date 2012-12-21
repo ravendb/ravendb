@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
@@ -124,6 +125,7 @@ namespace Raven.Storage.Esent
 			docsForCommit.Add(doc);
 		}
 
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void SaveAllTasks()
 		{
 			foreach (var task in tasks)

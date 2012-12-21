@@ -91,9 +91,8 @@
 
 				<Image Grid.Column="4"
 					   ToolTipService.ToolTip="{Binding Server.Value.SelectedDatabase.Value.Status.Value, StringFormat='Server status: {0}'}"
-					   Source="{Binding StatusImage}"
-					   VerticalAlignment="Center"
-					   />
+					   Source="{Binding Server.Value.SelectedDatabase.Value.StatusImage.Value}"
+					   VerticalAlignment="Center"/>
 
 				<HyperlinkButton Grid.Column="3"
 								 HorizontalAlignment="Left"

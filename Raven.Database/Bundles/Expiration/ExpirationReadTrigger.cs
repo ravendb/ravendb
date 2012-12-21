@@ -13,7 +13,7 @@ using Raven.Json.Linq;
 namespace Raven.Bundles.Expiration
 {
 	[InheritedExport(typeof(AbstractReadTrigger))]
-	[ExportMetadata("Bundle", "Expiration")]
+	[ExportMetadata("Bundle", "documentExpiration")]
 	public class ExpirationReadTrigger : AbstractReadTrigger
 	{
 		public const string RavenExpirationDate = "Raven-Expiration-Date";

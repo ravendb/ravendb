@@ -19,7 +19,7 @@ namespace Raven.Tests.Util
 		readonly DocumentConvention _conventions;
 		readonly string _dataDir;
 
-		public string Url { get; private set;}
+		public string Url { get; private set; }
 
 		public RavenDBDriver(string shardName, DocumentConvention conventions)
 		{
@@ -28,7 +28,7 @@ namespace Raven.Tests.Util
 			_dataDir = GetPath(shardName);
 		}
 
-		public void Start() 
+		public void Start()
 		{
 			IOExtensions.DeleteDirectory(_dataDir);
 
@@ -39,37 +39,7 @@ namespace Raven.Tests.Util
 				throw new Exception("Could not find Raven.server.exe");
 			}
 
-			var configPath = exePath + ".config";
-
-			if (!File.Exists(configPath))
-			{
-				File.WriteAllText(configPath, @"<?xml version=""1.0"" encoding=""utf-8""?>
-<configuration>
-  <appSettings>
-	<add key=""Raven/DataDir"" value=""~/Data"" />
-	<add key=""Raven/AnonymousAccess"" value=""All"" />
-	<add key=""Raven/Port"" value=""8079"">
-  </appSettings>
-  <runtime>
-	<loadFromRemoteSources enabled=""true"" />
-	<assemblyBinding xmlns=""urn:schemas-microsoft-com:asm.v1"">
-	  <probing privatePath=""Analyzers"" />
-	</assemblyBinding>
-  </runtime>
-</configuration>
-");
-			}
-
-			var doc = System.Xml.Linq.XDocument.Load(configPath);
-
-			var configSettings = doc.Root.Element("appSettings").Elements("add");
-			var dataDirSetting = configSettings.Where(e => e.Attribute("key").Value.ToLower() == "raven/datadir").Single();
-
-			dataDirSetting.SetAttributeValue("value", _dataDir);
-
-			doc.Save(configPath);
-
-			StartProcess(exePath);
+			StartProcess(exePath, "--ram --set=Raven/Port==8079 --msgBox");
 
 			Match match = WaitForConsoleOutputMatching(@"^Server Url: (http://.*/)\s*$");
 
@@ -100,20 +70,26 @@ namespace Raven.Tests.Util
 
 		public void Should_finish_without_error()
 		{
-			_process.StandardInput.Write("q\r\n");
+			try
+			{
+				_process.StandardInput.Write("q\r\n");
+			}
+			catch (Exception)
+			{
+			}
 
 			if (!_process.WaitForExit(10000))
 				throw new Exception("RavenDB command-line server did not halt within 10 seconds of pressing enter.");
 
-
 			string errorOutput = _process.StandardError.ReadToEnd();
+			string output = _process.StandardOutput.ReadToEnd();
 
 			if (!String.IsNullOrEmpty(errorOutput))
-				throw new Exception("RavendB command-line server finished with error text: " + errorOutput);
-			
+				throw new Exception("RavendB command-line server finished with error text: " + errorOutput + "\r\n" + output);
+
 			if (_process.ExitCode != 0)
-				throw new Exception("RavenDB command-line server finished with exit code: " + _process.ExitCode);
-			}
+				throw new Exception("RavenDB command-line server finished with exit code: " + _process.ExitCode + " " + output);
+		}
 
 		protected override void Shutdown()
 		{

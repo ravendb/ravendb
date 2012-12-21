@@ -48,6 +48,7 @@ namespace Raven.Storage.Managed.Impl
 
 			MappedResults = Add(new Table("MappedResults")
 			{
+				{"ByView", x=> x.Value<string>("view")},
 				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
 				{"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))},
 				{"ByViewAndEtagDesc", x => Tuple.Create(x.Value<string>("view"), new ReverseComparableByteArrayWhichIgnoresNull(x.Value<byte[]>("etag")))},
@@ -57,6 +58,7 @@ namespace Raven.Storage.Managed.Impl
 
 			ReduceResults = Add(new Table("ReducedResults")
 			{
+				{"ByView", x=> x.Value<string>("view")},
 				{"ByViewReduceKeyAndSourceBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"), x.Value<int>("sourceBucket"))},
 				{"ByViewReduceKeyLevelAndBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"), x.Value<int>("level"), x.Value<int>("bucket"))}
 			});
@@ -95,6 +97,16 @@ namespace Raven.Storage.Managed.Impl
 				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
 				{"ByViewLevelReduceKeyAndBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<int>("level"), x.Value<string>("reduceKey"), x.Value<int>("bucket"))},
 			});
+
+			ReduceKeys = Add(new Table(x => new RavenJObject()
+			{
+				{"view", x.Value<string>("view")},
+				{"reduceKey", x.Value<string>("reduceKey")}                                      
+			}, "ReduceTypesPerKey")
+			{
+				{"ByView", x=> x.Value<string>("view")},
+				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
+			});
 		}
 
 		public Table Lists { get; private set; }
@@ -123,9 +135,6 @@ namespace Raven.Storage.Managed.Impl
 
 		public Table Identity { get; private set; }
 
-		public override void Dispose()
-		{
-			base.Dispose();
-		}
+		public Table ReduceKeys { get; private set; }
 	}
 }

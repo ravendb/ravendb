@@ -25,7 +25,7 @@ namespace Raven.Client
 		public int TotalResults { get; set; }
 
 		/// <summary>
-		/// Gets or sets the skipped results (duplicate documents);
+		/// Gets or sets the skipped results
 		/// </summary>
 		public int SkippedResults { get; set; }
 

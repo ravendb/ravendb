@@ -10,7 +10,6 @@ namespace Raven.Database.Server.Security
 	{
 		private readonly WindowsRequestAuthorizer windowsRequestAuthorizer = new WindowsRequestAuthorizer();
 		private readonly OAuthRequestAuthorizer oAuthRequestAuthorizer = new OAuthRequestAuthorizer();
-		private string authHeader;
 
 		protected override void Initialize()
 		{
@@ -25,7 +24,7 @@ namespace Raven.Database.Server.Security
 			if (NeverSecret.Urls.Contains(requestUrl))
 				return true;
 
-			authHeader = context.Request.Headers["Authorization"];
+			var authHeader = context.Request.Headers["Authorization"];
 			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
 				return oAuthRequestAuthorizer.Authorize(context);
@@ -36,6 +35,7 @@ namespace Raven.Database.Server.Security
 
 		public override List<string> GetApprovedDatabases(IHttpContext context)
 		{
+			var authHeader = context.Request.Headers["Authorization"];
 			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
 				return oAuthRequestAuthorizer.GetApprovedDatabases(context);

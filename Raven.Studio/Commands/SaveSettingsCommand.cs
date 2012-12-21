@@ -33,8 +33,12 @@ namespace Raven.Studio.Commands
 			if(databaseName == Constants.SystemDatabase)
 			{
 				SaveApiKeys();
-				SaveWindowsAuth();
-				ApplicationModel.Current.Notifications.Add(new Notification("Api keys and Windows Authentication saved"));
+				if(SaveWindowsAuth())
+					ApplicationModel.Current.Notifications.Add(new Notification("Api keys and Windows Authentication saved"));
+				else
+				{
+					ApplicationModel.Current.Notifications.Add(new Notification("Only Api keys where saved, something when wrong with Windows Authentication", NotificationLevel.Error));					
+				}
 				return;
 			}
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
@@ -74,7 +78,9 @@ namespace Raven.Studio.Commands
 						}
 						
 						session.Store(document);
-					});
+						session.SaveChangesAsync().Catch();
+					})
+					.Catch();
 			}
 
             var versioningSettings = settingsModel.GetSection<VersioningSettingsSectionModel>();
@@ -153,7 +159,7 @@ namespace Raven.Studio.Commands
 			session.SaveChangesAsync();
 		}
 
-		private void SaveWindowsAuth()
+		private bool SaveWindowsAuth()
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
 
@@ -163,7 +169,18 @@ namespace Raven.Studio.Commands
 				.FirstOrDefault();
 
 			if (windowsAuthModel == null)
-				return;
+				return false;
+
+			if (windowsAuthModel.RequiredGroups.Any(data => data.Name == null) ||
+			    windowsAuthModel.RequiredGroups.Any(data => data.Name.Contains("\\") == false) || 
+				windowsAuthModel.RequiredUsers.Any(data => data.Name == null) ||
+			    windowsAuthModel.RequiredUsers.Any(data => data.Name.Contains("\\") == false))
+			{
+				ApplicationModel.Current.Notifications.Add(
+					new Notification("Windows Authentication not saved!. All names must have \"\\\" in them", NotificationLevel.Error));
+				return false;
+			}
+
 
 			windowsAuthModel.Document.Value.RequiredGroups = windowsAuthModel.RequiredGroups.ToList();
 			windowsAuthModel.Document.Value.RequiredUsers = windowsAuthModel.RequiredUsers.ToList();
@@ -171,6 +188,8 @@ namespace Raven.Studio.Commands
 			session.Store(RavenJObject.FromObject(windowsAuthModel.Document.Value), "Raven/Authorization/WindowsSettings");
 
 			session.SaveChangesAsync();
+
+			return true;
 		}
 
 		private void SaveApiKeys()

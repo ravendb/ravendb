@@ -72,7 +72,7 @@ namespace Raven.Tests.Security.OAuth
 		{
 			using (var server = GetNewServer())
 			{
-				var token = GetAccessToken(server);
+				var token = GetAccessToken(server, databases: "<system>");
 
 				var request = GetNewWebRequest()
 					.WithBearerTokenAuthorization(token);

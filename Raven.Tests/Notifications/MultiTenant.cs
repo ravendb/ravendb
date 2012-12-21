@@ -42,7 +42,7 @@ namespace Raven.Tests.Notifications
 				DocumentChangeNotification documentChangeNotification;
 				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(15)));
 
-				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal("items/1", documentChangeNotification.Id);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 
@@ -74,7 +74,7 @@ namespace Raven.Tests.Notifications
 				DocumentChangeNotification DocumentChangeNotification;
 				Assert.True(list.TryTake(out DocumentChangeNotification, TimeSpan.FromSeconds(15)));
 
-				Assert.Equal("items/1", DocumentChangeNotification.Name);
+				Assert.Equal("items/1", DocumentChangeNotification.Id);
 				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 
@@ -113,7 +113,7 @@ namespace Raven.Tests.Notifications
 				DocumentChangeNotification DocumentChangeNotification;
 				Assert.True(list.TryTake(out DocumentChangeNotification, TimeSpan.FromSeconds(15)));
 
-				Assert.Equal("items/1", DocumentChangeNotification.Name);
+				Assert.Equal("items/1", DocumentChangeNotification.Id);
 				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Put);
 
 				Assert.False(list.TryTake(out DocumentChangeNotification, TimeSpan.FromMilliseconds(250)));

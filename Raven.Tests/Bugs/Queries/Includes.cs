@@ -94,7 +94,7 @@ namespace Raven.Tests.Bugs.Queries
 					s.Store(new User
 					{
 						Name = "Piers",
-						EmergencyPerson = new EmergencyContact { PersonId = "1", Relationship = "Father" }
+						EmergencyPerson = new EmergencyContact { PersonId = 1, Relationship = "Father" }
 					});
 
 					s.SaveChanges();
@@ -106,7 +106,7 @@ namespace Raven.Tests.Bugs.Queries
 					Assert.NotNull(user.EmergencyPerson);
 
 					// Should be loaded from cache
-					var emergencyContact = s.Load<Person>("people/" + user.EmergencyPerson.PersonId);
+					var emergencyContact = s.Load<Person>(user.EmergencyPerson.PersonId);
 					Assert.NotNull(emergencyContact);
 
 					Assert.Equal(1, s.Advanced.NumberOfRequests);
@@ -172,7 +172,7 @@ namespace Raven.Tests.Bugs.Queries
 
 		public class EmergencyContact
 		{
-			public string PersonId { get; set; }
+			public int PersonId { get; set; }
 			public string Relationship { get; set; }
 		}
 

@@ -38,8 +38,10 @@ StyleCop.Cache
 *.dotCover
 RavenDB*.nupkg
 *.orig
+/Raven.Database/Server/WebUI/Raven.Studio.xap
 *.ncrunchsolution
 Raven.Web/Tenants/
 Raven.Web/NLog.config
 *.*crunch*
 Testresults
+/Raven.Client.MvcIntegration/Content/ravendb-profiler.min.js

@@ -36,15 +36,10 @@ namespace Raven.Studio.Models
 
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel> { Value = new ServerModel() };
-			Server.Value.IsConnected.PropertyChanged += delegate
-			{
-				OnPropertyChanged(() => StatusImage);
-			};
 
 			Alerts = new ObservableCollection<Alert>();
 
 			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
-			Server.Value.SelectedDatabase.Value.Status.PropertyChanged += (sender, args) => OnPropertyChanged(() => StatusImage);
 			State = new ApplicationState();
 		}
 
@@ -107,34 +102,39 @@ namespace Raven.Studio.Models
 					if (httpWebResponse != null)
 					{
 						message = httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription;
-						var error = new StreamReader(httpWebResponse.GetResponseStream()).ReadToEnd();
-
-						var objects = new List<object>(details);
-						try
+						var stream = httpWebResponse.GetResponseStream();
+						if (stream != null)
 						{
-							var item = RavenJObject.Parse(error);
-							objects.Insert(0, "Server Error:");
-							objects.Insert(1, "-----------------------------------------");
-							objects.Insert(2, item.Value<string>("Url"));
-							objects.Insert(3, item.Value<string>("Error"));
-							objects.Insert(4, "-----------------------------------------");
-							objects.Insert(5, Environment.NewLine);
-							objects.Insert(6, Environment.NewLine);
-						}
-						catch (Exception)
-						{
-							objects.Insert(0, "Server sent:");
-							objects.Insert(1, error);
-							objects.Insert(2, Environment.NewLine);
-							objects.Insert(3, Environment.NewLine);
-						}
+							var error = new StreamReader(stream).ReadToEnd();
 
-                        if (httpWebResponse.StatusCode == HttpStatusCode.Unauthorized)
-                        {
-                            objects.Insert(0, "Could not get authorization for this command.");
-                            objects.Insert(1, "If you should have access to this operation contact your admin and check the Raven/AnonymousAccess or the Windows Authentication settings in RavenDB ");
-                        }
-						details = objects.ToArray();
+							var objects = new List<object>(details);
+							try
+							{
+								var item = RavenJObject.Parse(error);
+								objects.Insert(0, "Server Error:");
+								objects.Insert(1, "-----------------------------------------");
+								objects.Insert(2, item.Value<string>("Url"));
+								objects.Insert(3, item.Value<string>("Error"));
+								objects.Insert(4, "-----------------------------------------");
+								objects.Insert(5, Environment.NewLine);
+								objects.Insert(6, Environment.NewLine);
+							}
+							catch (Exception)
+							{
+								objects.Insert(0, "Server sent:");
+								objects.Insert(1, error);
+								objects.Insert(2, Environment.NewLine);
+								objects.Insert(3, Environment.NewLine);
+							}
+
+							if (httpWebResponse.StatusCode == HttpStatusCode.Unauthorized)
+							{
+								objects.Insert(0, "Could not get authorization for this command.");
+								objects.Insert(1,
+								               "If you should have access to this operation contact your admin and check the Raven/AnonymousAccess or the Windows Authentication settings in RavenDB ");
+							}
+							details = objects.ToArray();
+						}
 					}
 				}
 				if (message == null)
@@ -162,15 +162,6 @@ namespace Raven.Studio.Models
 			//			Alerts.Add(alert);
 			//		}
 			//	});
-		}
-
-		public BitmapImage StatusImage
-		{
-			get
-			{
-				var url = new Uri("../Assets/Images/" + Server.Value.SelectedDatabase.Value.Status.Value + ".png", UriKind.Relative);
-				return new BitmapImage(url);
-			}
 		}
 
 		public int ErrorCount { get { return Notifications.Count(n => n.Level == NotificationLevel.Error); } }

@@ -177,12 +177,14 @@ namespace Raven.Storage.Managed
 
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
 		{
+			if (configuration.RunInMemory)
+				throw new InvalidOperationException("Backup operation is not supported when running in memory. In order to enable backup operation please make sure that you persistent the data to disk by setting the RunInMemory configuration parameter value to false.");
+
 			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory, databaseDocument);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
-		
 		}
 
-		public void Restore(string backupLocation, string databaseLocation, Action<string> output)
+		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			new RestoreOperation(backupLocation, databaseLocation, output).Execute();
 		}
@@ -190,6 +192,16 @@ namespace Raven.Storage.Managed
 		public long GetDatabaseSizeInBytes()
 		{
 			return PersistenceSource.Read(stream => stream.Length);
+		}
+
+		public long GetDatabaseCacheSizeInBytes()
+		{
+			return -1;
+		}
+
+		public long GetDatabaseTransactionVersionSizeInBytes()
+		{
+			return -1;
 		}
 
 		public string FriendlyName
@@ -222,6 +234,11 @@ namespace Raven.Storage.Managed
 			});
 			Id = newId;
 			return newId;
+		}
+
+		public void ClearCaches()
+		{
+			// don't do anything here
 		}
 
 		private void MaybeOnIdle(object _)

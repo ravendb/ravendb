@@ -23,6 +23,12 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
+	using System;
+	using System.Linq.Expressions;
+
+	using Raven.Database.Indexing;
+	using Raven.Database.Linq;
+
 	public class Index : AbstractRequestResponder
 	{
 		public override string UrlPattern
@@ -72,6 +78,7 @@ namespace Raven.Database.Server.Responders
 				context.Write("Expected json document with 'Map' or 'Maps' property");
 				return;
 			}
+
 			context.SetStatusToCreated("/indexes/" + Uri.EscapeUriString(index));
 			context.WriteJson(new { Index = Database.PutIndex(index, data) });
 		}
@@ -110,6 +117,9 @@ namespace Raven.Database.Server.Responders
 				case "reduce":
 					GetIndexReducedResult(context, index);
 					break;
+				case "keys":
+					GetIndexKeysStats(context, index);
+					break;
 				case "entries":
 					GetIndexEntries(context, index);
 					break;
@@ -124,6 +134,29 @@ namespace Raven.Database.Server.Responders
 					context.SetStatusToBadRequest();
 					break;
 			}
+		}
+
+		private void GetIndexKeysStats(IHttpContext context, string index)
+		{
+			if (Database.IndexDefinitionStorage.GetIndexDefinition(index) == null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+
+			List<ReduceKeyAndCount> keys = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				keys = accessor.MapReduce.GetKeysStats(index,
+						 context.GetStart(), 
+						 context.GetPageSize(Database.Configuration.MaxPageSize))
+					.ToList();
+			});
+			context.WriteJson(new
+			{
+				keys.Count,
+				Results = keys
+			});
 		}
 
 		private void GetIndexStats(IHttpContext context, string index)

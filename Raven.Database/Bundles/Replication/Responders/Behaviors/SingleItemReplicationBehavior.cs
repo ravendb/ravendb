@@ -42,7 +42,7 @@ namespace Raven.Bundles.Replication.Responders
 			// we just got the same version from the same source - request playback again?
 			// at any rate, not an error, moving on
 			if (existingMetadata.Value<string>(Constants.RavenReplicationSource) == metadata.Value<string>(Constants.RavenReplicationSource)
-			    && existingMetadata.Value<int>(Constants.RavenReplicationVersion) == metadata.Value<int>(Constants.RavenReplicationVersion))
+				&& existingMetadata.Value<long>(Constants.RavenReplicationVersion) == metadata.Value<long>(Constants.RavenReplicationVersion))
 			{
 				return;
 			}
@@ -62,7 +62,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 
 			if (existingDocumentIsInConflict == false &&				// if the current document is not in conflict, we can continue without having to keep conflict semantics
-				existingDocumentIsDeleted == true &&
+				existingDocumentIsDeleted &&
 				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))	// this update is direct child of the existing doc, so we are fine with overwriting this
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
@@ -79,7 +79,7 @@ namespace Raven.Bundles.Replication.Responders
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 			                                                                            Database.RaiseNotifications(new DocumentChangeNotification
 			                                                                            {
-			                                                                            	Name = id,
+			                                                                            	Id = id,
 			                                                                            	Type = ReplicationConflict
 			                                                                            }));
 
@@ -170,7 +170,7 @@ namespace Raven.Bundles.Replication.Responders
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 																						Database.RaiseNotifications(new DocumentChangeNotification
 																						{
-																							Name = id,
+																							Id = id,
 																							Type = DocumentChangeTypes.ReplicationConflict
 																						}));
 			var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);

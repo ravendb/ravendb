@@ -84,6 +84,12 @@ namespace Raven.Database.Plugins
 		{
 
 		}
+
+		public virtual void SecondStageInit()
+		{
+
+		}
+
 		public DocumentDatabase Database { get; set; }
 	}
 }
