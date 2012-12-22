@@ -716,6 +716,7 @@
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
+    <Compile Include="Util\PerformanceCountersUtils.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
