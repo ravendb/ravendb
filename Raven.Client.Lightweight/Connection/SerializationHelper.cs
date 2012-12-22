@@ -43,9 +43,7 @@ namespace Raven.Client.Connection
 				doc.Remove("@metadata");
 				var key = Extract(metadata, "@id", string.Empty);
 
-				var lastModified = metadata.ContainsKey(Constants.RavenLastModified) ? 
-					Extract(metadata, Constants.RavenLastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d)) : 
-					Extract(metadata, Constants.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
+				var lastModified = GetLastModified(metadata);
 
 				var etag = Extract(metadata, "@etag", Guid.Empty, (string g) => HttpExtensions.EtagHeaderToGuid(g));
 				var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
@@ -61,6 +59,15 @@ namespace Raven.Client.Connection
 				         });
 			}
 			return list;
+		}
+
+		private static DateTime GetLastModified(RavenJObject metadata)
+		{
+			if (metadata == null)
+				return SystemTime.UtcNow;
+			return metadata.ContainsKey(Constants.RavenLastModified) ? 
+				       Extract(metadata, Constants.RavenLastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d)) : 
+				       Extract(metadata, Constants.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
 		}
 
 		///<summary>
