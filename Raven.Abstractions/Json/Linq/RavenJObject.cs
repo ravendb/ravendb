@@ -20,7 +20,7 @@ namespace Raven.Json.Linq
 		/// This can be used to attach additional state for external clients
 		/// Not used by anything related to JSON
 		/// </summary>
-		public Dictionary<string, object> __ExteranlState
+		public Dictionary<string, object> __ExternalState
 		{
 			get { return externalState ?? (externalState = new Dictionary<string, object>()); }
 		}
