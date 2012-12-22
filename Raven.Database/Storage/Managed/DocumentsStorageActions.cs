@@ -246,6 +246,14 @@ namespace Raven.Storage.Managed
 			return AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, metadata);
 		}
 
+
+		public void TouchDocument(string key)
+		{
+			var documentByKey = DocumentByKey(key, null);
+			AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, documentByKey.Metadata);
+		}
+
+
 		public AddDocumentResult AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			var existingEtag = AssertValidEtag(key, etag, "PUT", null);

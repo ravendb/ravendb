@@ -617,7 +617,11 @@ namespace Raven.Database
 			if (key == null)
 				throw new ArgumentNullException("key");
 			key = key.Trim();
-			TransactionalStorage.Batch(actions => actions.Documents.PutDocumentMetadata(key, metadata));
+			TransactionalStorage.Batch(actions =>
+			{
+				actions.Documents.PutDocumentMetadata(key, metadata);
+				workContext.ShouldNotifyAboutWork(() => "PUT (metadata) " + key);
+			});
 		}
 
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
