@@ -61,7 +61,7 @@ namespace Raven.Studio.Models
 			};
 
 			var urlParser = new UrlParser(UrlUtil.Url);
-			var apiKey = urlParser.GetQueryParam("api-key") ?? "test/5sBm1oDjbX154bvGhuafxI";
+			var apiKey = urlParser.GetQueryParam("api-key");
 			if (string.IsNullOrEmpty(apiKey) == false)
 				documentStore.ApiKey = apiKey;
 
