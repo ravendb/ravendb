@@ -42,6 +42,8 @@ namespace Raven.Client.Document
 		protected SpatialRelation spatialRelation;
 		protected double distanceErrorPct;
 		private readonly LinqPathProvider linqPathProvider;
+		private Action<IndexQuery> beforeQueryExecution;
+
 		protected readonly HashSet<Type> rootTypes = new HashSet<Type>
 		{
 			typeof (T)
@@ -432,6 +434,10 @@ namespace Raven.Client.Document
 		{
 			var query = queryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);
+
+			if(beforeQueryExecution != null)
+				beforeQueryExecution(indexQuery);
+
 			return new QueryOperation(theSession,
 			                          indexName,
 			                          indexQuery,
@@ -597,6 +603,12 @@ namespace Raven.Client.Document
 		public void RandomOrdering(string seed)
 		{
 			AddOrder(Constants.RandomFieldName + ";" + seed, false);
+		}
+
+		public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
+		{
+			beforeQueryExecution += action;
+			return this;
 		}
 
 		public IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer)
