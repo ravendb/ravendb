@@ -32,6 +32,7 @@ namespace Raven.Abstractions.Extensions
 			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
 			"Raven-Authenticated-User",
+			"Raven-Last-Modified",
 
 			// COTS
 			"Access-Control-Allow-Origin",

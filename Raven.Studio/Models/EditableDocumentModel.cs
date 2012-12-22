@@ -417,8 +417,8 @@ namespace Raven.Studio.Models
 				var keysToRemove = new List<string>();
 				foreach (var item in meta)
 				{
-					if (item.Key.StartsWith("Raven-Replication-") || item.Key == "@id" || item.Key == "Last-Modified" ||
-					    item.Key == "@etag" || item.Key == "Non-Authoritative-Information")
+					if (item.Key.StartsWith("Raven-Replication-") || item.Key == "@id" || item.Key == Constants.LastModified
+						|| item.Key == Constants.RavenLastModified || item.Key == "@etag" || item.Key == "Non-Authoritative-Information")
 						keysToRemove.Add(item.Key);
 				}
 				foreach (var key in keysToRemove)
@@ -926,11 +926,20 @@ namespace Raven.Studio.Models
 					.Concat(new[]
 					        {
 						        new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : null),
-						        new KeyValuePair<string, string>("Last-Modified", LastModified.HasValue ? LastModified.Value.ToString("o") : null),
-						        new KeyValuePair<string, string>("Last-Modified", LastModified.HasValue ? LastModified.Value.ToLocalTime().ToString("G") + " (local)" : null),
+						        new KeyValuePair<string, string>("Last-Modified", GetMetadataLastModifiedString()),
 					        })
 					.Where(x => x.Value != null);
 			}
+		}
+
+		private string GetMetadataLastModifiedString()
+		{
+			if (LastModified == null)
+				return null;
+
+
+			return LastModified.Value.ToString("G") + " (UTC)" + Environment.NewLine +
+			       LastModified.Value.ToLocalTime().ToString("G") + " (Local)";
 		}
 
 		private bool IsDocumentValid()

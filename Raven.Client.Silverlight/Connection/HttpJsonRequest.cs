@@ -298,7 +298,8 @@ namespace Raven.Client.Silverlight.Connection
 				if (headerName == "ETag")
 					headerName = "If-None-Match";
 				if (headerName.StartsWith("@") ||
-					headerName == Constants.LastModified)
+					headerName == Constants.LastModified || 
+					headerName == Constants.RavenLastModified)
 					continue;
 				switch (headerName)
 				{

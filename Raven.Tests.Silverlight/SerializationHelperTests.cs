@@ -56,6 +56,7 @@ namespace Raven.Tests.Silverlight
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
 			((RavenJObject)doc["@metadata"])["Last-Modified"] = april_fools.ToString("r");
+			((RavenJObject)doc["@metadata"])["Raven-Last-Modified"] = april_fools.ToString("o");
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 

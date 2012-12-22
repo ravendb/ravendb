@@ -42,7 +42,11 @@ namespace Raven.Client.Connection
 				var metadata = (RavenJObject) doc["@metadata"];
 				doc.Remove("@metadata");
 				var key = Extract(metadata, "@id", string.Empty);
-				var lastModified = Extract(metadata, Constants.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
+
+				var lastModified = metadata.ContainsKey(Constants.RavenLastModified) ? 
+					Extract(metadata, Constants.RavenLastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d)) : 
+					Extract(metadata, Constants.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
+
 				var etag = Extract(metadata, "@etag", Guid.Empty, (string g) => HttpExtensions.EtagHeaderToGuid(g));
 				var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
 				list.Add(new JsonDocument
@@ -77,7 +81,7 @@ namespace Raven.Client.Connection
 
 		private static DateTime ConvertToUtcDate(string date)
 		{
-			return DateTime.SpecifyKind(DateTime.ParseExact(date, new[] { "r", "o" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
+			return DateTime.SpecifyKind(DateTime.ParseExact(date, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
 		}
 
 		private static T Extract<T>(RavenJObject metadata, string key, T defaultValue = default(T))
@@ -132,8 +136,9 @@ namespace Raven.Client.Connection
 			var meta = headers.FilterHeaders();
 
 			var etag = headers["ETag"];
-			var lastModified = headers[Constants.LastModified];
-			var lastModifiedDate = DateTime.SpecifyKind(DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture), DateTimeKind.Utc);
+			var lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
+			var dateTime = DateTime.ParseExact(lastModified, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 
 			return new JsonDocument
 			       {
@@ -168,12 +173,16 @@ namespace Raven.Client.Connection
 			}
 #if !SILVERLIGHT
 			var etag = headers["ETag"];
-			var lastModified = headers[Constants.LastModified];
+			string lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
 #else
 			var etag = headers["ETag"].First();
-			var lastModified = headers[Constants.LastModified].First();
+			IList<string> list;
+			string lastModified = headers.TryGetValue(Constants.RavenLastModified, out list) ? 
+				                      list.First() : 
+				                      headers[Constants.LastModified].First();
 #endif
-			var lastModifiedDate = DateTime.SpecifyKind(DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture), DateTimeKind.Utc);
+			var dateTime = DateTime.ParseExact(lastModified, new[]{"o","r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 
 			return new JsonDocumentMetadata
 			       {
