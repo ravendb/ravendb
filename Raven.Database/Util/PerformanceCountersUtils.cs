@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Raven.Database.Util
 {
+	using System;
 	using System.DirectoryServices.AccountManagement;
 	using System.Security.Principal;
 	using Abstractions.Logging;
@@ -54,12 +55,18 @@ namespace Raven.Database.Util
 				log.Error("Could not find principal for Performance Monitoring Users group");
 				return;
 			}
-
-			if (performanceMonitorUsersGroupPrincipal.Members.Contains(userPrincipal) == false)
+			try
 			{
-				performanceMonitorUsersGroupPrincipal.Members.Add(userPrincipal);
-				performanceMonitorUsersGroupPrincipal.Save();
-				performanceMonitorUsersGroupPrincipal.Dispose();
+				if (performanceMonitorUsersGroupPrincipal.Members.Contains(userPrincipal) == false)
+				{
+					performanceMonitorUsersGroupPrincipal.Members.Add(userPrincipal);
+					performanceMonitorUsersGroupPrincipal.Save();
+					performanceMonitorUsersGroupPrincipal.Dispose();
+				}
+			}
+			catch (UnauthorizedAccessException e)
+			{
+				log.ErrorException("Could not add user " + identity.Name + " Performance Monitoring Users group", e);
 			}
 		}
 	}
