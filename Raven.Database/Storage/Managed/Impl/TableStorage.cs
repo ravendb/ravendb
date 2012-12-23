@@ -108,6 +108,19 @@ namespace Raven.Storage.Managed.Impl
 				{"ByView", x=> x.Value<string>("view")},
 				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
 			});
+
+			DocumentReferences = Add(new Table(x => new RavenJObject()
+			{
+				{"view", x.Value<string>("view")},
+				{"key", x.Value<string>("key")} ,                                  
+				{"ref", x.Value<string>("ref")} ,
+			}, "DocumentReferences")
+			{
+				{"ByKey", x=> x.Value<string>("key")},
+				{"ByView", x=> x.Value<string>("view")},
+				{"ByRef", x=> x.Value<string>("ref")},
+				{"ByViewAndKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("key"))},
+			});
 		}
 
 		public Table Lists { get; private set; }
@@ -137,5 +150,7 @@ namespace Raven.Storage.Managed.Impl
 		public Table Identity { get; private set; }
 
 		public Table ReduceKeys { get; private set; }
+
+		public Table DocumentReferences { get; private set; }
 	}
 }

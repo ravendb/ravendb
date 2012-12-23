@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "4.3";
+		public const string SchemaVersion = "4.4";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -46,6 +46,7 @@ namespace Raven.Storage.Esent
 					CreateIdentityTable(dbid);
 					CreateReduceKeysCountsTable(dbid);
 					CreateReduceKeysStatusTable(dbid);
+					CreateIndexedDocumentsReferencesTable(dbid);
 
 					tx.Commit(CommitTransactionGrbit.None);
 				}
@@ -1133,6 +1134,70 @@ namespace Raven.Storage.Esent
 					szIndexName = "by_view_and_hashed_reduce_key",
 					szKey = "+view\0+hashed_reduce_key\0+reduce_key\0\0",
 					grbit = CreateIndexGrbit.IndexUnique
+				});
+		}
+
+		private void CreateIndexedDocumentsReferencesTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "indexed_documents_references", 1, 80, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+
+			Api.JetAddColumn(session, tableid, "view", new JET_COLUMNDEF
+			{
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			{
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "ref", new JET_COLUMNDEF
+			{
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			CreateIndexes(tableid,
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_key",
+					szKey = "+key\0\0",
+					grbit = CreateIndexGrbit.IndexUnique
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_and_key",
+					szKey = "+view\0+key\0\0",
+					grbit = CreateIndexGrbit.IndexUnique
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_ref",
+					szKey = "+ref\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
 				});
 		}
 

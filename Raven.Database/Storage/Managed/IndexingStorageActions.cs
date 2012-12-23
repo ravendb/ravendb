@@ -134,11 +134,52 @@ namespace Raven.Storage.Managed
 		
 		}
 
+		public void RemoveAllDocumentReferences(string key)
+		{
+			foreach (var source in storage.DocumentReferences["ByKey"].SkipBefore(new RavenJObject {  { "key", key } })
+				.TakeWhile(x => key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase)))
+			{
+				storage.DocumentReferences.Remove(source);
+			}
+
+			foreach (var source in storage.DocumentReferences["ByRef"].SkipBefore(new RavenJObject { { "ref", key } })
+				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase)))
+			{
+				storage.DocumentReferences.Remove(source);
+			}
+		}
+
+
+		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
+		{
+			foreach (var source in storage.DocumentReferences["ByViewAndKey"].SkipBefore(new RavenJObject { { "view", view }, {"key", key} })
+				.TakeWhile(x =>
+					 view.Equals(x.Value<string>("view"), StringComparison.CurrentCultureIgnoreCase) && 
+					 key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase) ))
+			{
+				storage.DocumentReferences.Remove(source);
+			}
+
+			storage.DocumentReferences.UpdateKey(new RavenJObject
+			{
+				{"view", view},
+				{"key", key},
+				{"references", new RavenJArray(references)}
+			});
+		}
+
+		public IEnumerable<string> GetDocumentReferences(string key)
+		{
+			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject{{"ref", key}})
+				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase))
+				.Select(x=>x.Value<string>("key"));
+		}
+
 		public void DeleteIndex(string name)
 		{
 			storage.IndexingStats.Remove(name);
 
-			foreach (var table in new[]{storage.MappedResults, storage.ReduceResults, storage.ScheduleReductions, storage.ReduceKeys})
+			foreach (var table in new[] { storage.MappedResults, storage.ReduceResults, storage.ScheduleReductions, storage.ReduceKeys, storage.DocumentReferences })
 			{
 				foreach (var key in table["ByView"].SkipTo(new RavenJObject { { "view", name } })
 					.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), name)))

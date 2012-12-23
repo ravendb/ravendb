@@ -27,5 +27,9 @@ namespace Raven.Database.Storage
 		void TouchIndexEtag(string index);
 		void UpdateIndexingStats(string index, IndexingWorkStats stats);
 		void UpdateReduceStats(string index, IndexingWorkStats stats);
+
+		void RemoveAllDocumentReferences(string key);
+		void UpdateDocumentReferences(string view, string key, HashSet<string> references);
+		IEnumerable<string> GetDocumentReferences(string key);
 	}
 }

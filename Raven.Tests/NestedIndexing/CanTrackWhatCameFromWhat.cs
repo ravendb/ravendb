@@ -4,37 +4,95 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Indexing;
+using Raven.Client;
+using Raven.Client.Embedded;
 using Xunit;
 
 namespace Raven.Tests.NestedIndexing
 {
 	public class CanTrackWhatCameFromWhat : RavenTest
 	{
-		[Fact]
-		public void SimpleIndex()
-		{
-			using (var store = NewDocumentStore())
-			{
-				store.DatabaseCommands.PutIndex("test", new IndexDefinition
-				{
-					Map = @"
-from i in docs.Items
-select new
-{
-	RefName = LoadDocument(i.Ref).Name,
-	Name = i.Name
-}"
-				});
+//		private EmbeddableDocumentStore store;
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
-					session.Store(new Item { Id = "items/2", Ref = "items/1", Name = "ayende" });
-					session.SaveChanges();
-				}
+//		public CanTrackWhatCameFromWhat()
+//		{
+//			store = NewDocumentStore();
+//			store.DatabaseCommands.PutIndex("test", new IndexDefinition
+//			{
+//				Map = @"
+//from i in docs.Items
+//select new
+//{
+//	RefName = LoadDocument(i.Ref).Name,
+//	Name = i.Name
+//}"
+//			});
 
-				WaitForIndexing(store);
-			}
-		}
+		
+
+//			WaitForIndexing(store);
+//		}
+
+//		public override void Dispose()
+//		{
+//			store.Dispose();
+//			base.Dispose();
+//		}
+
+//		[Fact]
+//		public void CrossRefrencing()
+//		{
+//			using (IDocumentSession session = store.OpenSession())
+//			{
+//				session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+//				session.Store(new Item { Id = "items/2", Ref = "items/1", Name = "ayende" });
+//				session.SaveChanges();
+//			}
+
+//			Assert.False(true, "Assert that we can keep track of this");
+
+//		}
+
+//		[Fact]
+//		public void UpdatingDocument()
+//		{
+//			Assert.False(true);
+//		}
+
+//		[Fact]
+//		public void UpdatingReferenceToAnotherDoc()
+//		{
+//			Assert.False(true);
+//		}
+
+//		[Fact]
+//		public void UpdatingReferenceToNull()
+//		{
+//			Assert.False(true);
+//		}
+
+//		[Fact]
+//		public void AddingReferenceToSamedoc()
+//		{
+//			Assert.False(true);
+//		}
+
+//		[Fact]
+//		public void AddingReferenceToAnotherdoc()
+//		{
+//			Assert.False(true);
+//		}
+
+//		[Fact]
+//		public void DeletingRefDoc()
+//		{
+//			Assert.False(true);
+//		}
+
+//		[Fact]
+//		public void DeletingRootDoc()
+//		{
+//			Assert.False(true);
+//		}
 	}
 }
