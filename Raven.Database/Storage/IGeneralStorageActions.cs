@@ -11,5 +11,6 @@ namespace Raven.Database.Storage
 		void SetIdentityValue(string name, long value);
 
 		void PulseTransaction();
+		void UseLazyCommit();
 	}
 }

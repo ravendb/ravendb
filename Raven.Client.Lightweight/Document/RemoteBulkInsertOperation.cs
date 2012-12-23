@@ -18,10 +18,11 @@ namespace Raven.Client.Document
 		private readonly int batchSize;
 		private readonly HttpJsonRequest httpJsonRequest;
 		private Task nextTask;
-		private BlockingCollection<RavenJObject> items = new BlockingCollection<RavenJObject>();
+		private readonly BlockingCollection<RavenJObject> items;
 
 		public RemoteBulkInsertOperation(ServerClient client, int batchSize = 2048)
 		{
+			items = new BlockingCollection<RavenJObject>();
 			this.batchSize = batchSize;
 			httpJsonRequest = client.CreateRequest("POST", "/bulkInsert", disableRequestCompression: true);
 			nextTask = httpJsonRequest.GetRawRequestStream()

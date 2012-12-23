@@ -26,7 +26,18 @@ namespace Raven.Database.Server.Responders
 		}
 		public override void Respond(IHttpContext context)
 		{
-			var documents = 0;
+			var documents = Database.BulkInsert(YieldBatches(context));
+
+			context.Log(log => log.Debug("\tBulk inserted {0:#,#;;0} documents", documents));
+
+			context.WriteJson(new
+			{
+				Documents = documents
+			});
+		}
+
+		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context)
+		{
 			while (true)
 			{
 				var binaryReader = new BinaryReader(context.Request.InputStream);
@@ -39,15 +50,8 @@ namespace Raven.Database.Server.Responders
 				{
 					break;
 				}
-				documents += Database.BulkInsert(YieldDocumentsInBatch(binaryReader, count));
+				yield return YieldDocumentsInBatch(binaryReader, count);
 			}
-
-			context.Log(log => log.Debug("\tBulk inserted {0:#,#;;0} documents", documents));
-
-			context.WriteJson(new
-			{
-				Documents = documents
-			});
 		}
 
 		private static IEnumerable<JsonDocument> YieldDocumentsInBatch(BinaryReader reader, int count)

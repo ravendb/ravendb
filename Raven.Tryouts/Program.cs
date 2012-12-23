@@ -46,7 +46,7 @@ namespace Raven.Tryouts
 			var sp = Stopwatch.StartNew();
 			using(var remoteBulkInsertOperation = new RemoteBulkInsertOperation((ServerClient) x.DatabaseCommands,1024*8))
 			{
-				for (int i = 0; i < 100*1000; i++)
+				for (int i = 0; i < 250*1000; i++)
 				{
 					remoteBulkInsertOperation.Write(Guid.NewGuid().ToString(), new RavenJObject{{Constants.RavenEntityName, "Tests"}},
 						new RavenJObject{{"Age", i*2}});
