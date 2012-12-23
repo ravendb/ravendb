@@ -60,7 +60,6 @@ namespace Raven.Database.Indexing
 		public override void IndexDocuments(
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
-			WorkContext context,
 			IStorageActionsAccessor actions,
 			DateTime minimumTimestamp)
 		{

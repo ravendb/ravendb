@@ -60,6 +60,7 @@ namespace Raven.Database.Indexing
 
 			public void Dispose()
 			{
+				CurrentIndexingScope.Current.Source = null;
 				inner.Dispose();
 			}
 
@@ -69,13 +70,16 @@ namespace Raven.Database.Indexing
 			    var moveNext = inner.MoveNext();
 				if (moveNext == false)
 					statefulEnumerableWrapper.enumerationCompleted = true;
+				
+				CurrentIndexingScope.Current.Source = inner.Current;
 			    return moveNext;
 			}
 
 			public void Reset()
 			{
 			    statefulEnumerableWrapper.enumerationCompleted = false;
-				statefulEnumerableWrapper.calledMoveNext = false; 
+				statefulEnumerableWrapper.calledMoveNext = false;
+				CurrentIndexingScope.Current.Source = null; 
 				inner.Reset();
 			}
 

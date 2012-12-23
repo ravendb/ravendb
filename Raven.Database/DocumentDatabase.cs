@@ -158,6 +158,7 @@ namespace Raven.Database
 
 				workContext = new WorkContext
 				{
+					Database = this,
 					DatabaseName = Name,
 					IndexUpdateTriggers = IndexUpdateTriggers,
 					ReadTriggers = ReadTriggers,

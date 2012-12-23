@@ -193,6 +193,7 @@
     <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Extensions\AdminFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
+    <Compile Include="Indexing\CurrentIndexingScope.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
