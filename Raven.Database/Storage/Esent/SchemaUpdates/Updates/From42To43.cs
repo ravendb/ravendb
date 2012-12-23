@@ -39,38 +39,30 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 				new {Table = "tasks", Column = "added_at"},
 			};
 
+			int rows = 0;
 			foreach (var tableAndColumn in tableAndColumns)
 			{
-				var tx = new Transaction(session);
-				try
+				using (var table = new Table(session, dbid, tableAndColumn.Table, OpenTableGrbit.None))
 				{
-					int rows = 0;
-					using (var table = new Table(session, dbid, tableAndColumn.Table, OpenTableGrbit.None))
+					Api.MoveBeforeFirst(session, table);
+					while (Api.TryMoveNext(session, table))
 					{
-						Api.MoveBeforeFirst(session, table);
-						while (Api.TryMoveNext(session, table))
+						var columnid = Api.GetTableColumnid(session, table, tableAndColumn.Column);
+						using (var update = new Update(session, table, JET_prep.Replace))
 						{
-							var columnid = Api.GetTableColumnid(session, table, tableAndColumn.Column);
-							using (var update = new Update(session, table, JET_prep.Replace))
-							{
-								var bytes = Api.RetrieveColumn(session, table, columnid);
-								var date = DateTime.FromOADate(BitConverter.ToDouble(bytes, 0));
-								Api.SetColumn(session, table, columnid, date.ToBinary());
-								update.Save();
-							}
-							if (rows ++ <= 1000) 
-								continue;
-							// pulsing transaction
-							tx.Commit(CommitTransactionGrbit.LazyFlush);
-							tx.Dispose();
-							tx = new Transaction(session);
+							var bytes = Api.RetrieveColumn(session, table, columnid);
+							var date = DateTime.FromOADate(BitConverter.ToDouble(bytes, 0));
+							Api.SetColumn(session, table, columnid, date.ToBinary());
+							update.Save();
 						}
+
+						if (rows++ % 10 * 1000 == 0)
+							continue;
+
+						// pulsing transaction
+						Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
+						Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
 					}
-					tx.Commit(CommitTransactionGrbit.LazyFlush);
-				}
-				finally
-				{
-					tx.Dispose();
 				}
 			}
 
