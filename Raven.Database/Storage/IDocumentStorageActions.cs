@@ -24,6 +24,10 @@ namespace Raven.Database.Storage
 		bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata, out Guid? deletedETag);
 		AddDocumentResult AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata);
 		AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata);
+
+		void IncrementDocumentCount(int value);
+		void InsertDocument(string key, RavenJObject data, RavenJObject metadata);
+
 		void TouchDocument(string key);
 		Guid GetBestNextDocumentEtag(Guid etag);
 	}

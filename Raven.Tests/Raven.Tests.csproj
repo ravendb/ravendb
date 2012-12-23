@@ -496,6 +496,7 @@
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
     <Compile Include="IncrementalBackupTest.cs" />
     <Compile Include="Indexes\CastingInIndexDefinition.cs" />
+    <Compile Include="Issues\BulkInsertTests.cs" />
     <Compile Include="Issues\RavenDb_783.cs" />
     <Compile Include="Issues\RaqvenDB651.cs" />
     <Compile Include="Issues\RavenDB349.cs" />

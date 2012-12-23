@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
@@ -12,6 +13,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
@@ -35,12 +37,26 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			var now = SystemTime.UtcNow;
-			var oa = now.ToOADate();
-			var test = DateTime.FromBinary((long)oa);
-			Console.WriteLine(now.ToString("o"));
-			Console.WriteLine(test.ToString("o"));
-				
+			var x = new DocumentStore
+			{
+				Url = "http://localhost:8080",
+				DefaultDatabase = "bulk"
+			}.Initialize();
+
+			var sp = Stopwatch.StartNew();
+			using(var remoteBulkInsertOperation = new RemoteBulkInsertOperation((ServerClient) x.DatabaseCommands,1024*8))
+			{
+				for (int i = 0; i < 100*1000; i++)
+				{
+					remoteBulkInsertOperation.Write(Guid.NewGuid().ToString(), new RavenJObject{{Constants.RavenEntityName, "Tests"}},
+						new RavenJObject{{"Age", i*2}});
+					if(i % 1000 == 0)
+						Console.WriteLine(i);
+				}
+			}
+			Console.WriteLine(sp.Elapsed);
+
+			x.Dispose();
 		}
 	}
 }

@@ -253,6 +253,40 @@ namespace Raven.Storage.Managed
 			AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, documentByKey.Metadata);
 		}
 
+		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata)
+		{
+			var ms = new MemoryStream();
+
+			metadata.WriteTo(ms);
+
+			using (var stream = documentCodecs.Aggregate<Lazy<AbstractDocumentCodec>, Stream>(ms,
+				(dataStream, codec) => codec.Value.Encode(key, data, metadata, dataStream)))
+			{
+				data.WriteTo(stream);
+				stream.Flush();
+			}
+
+			var isUpdate = storage.Documents.Read(new RavenJObject { { "key", key } }) != null;
+
+			if (isUpdate)
+				throw new InvalidOperationException("Cannot insert document " + key + " because it already exists");
+
+			var newEtag = generator.CreateSequentialUuid();
+			var savedAt = SystemTime.UtcNow;
+			storage.Documents.Put(new RavenJObject
+			 {
+				 {"key", key},
+				 {"etag", newEtag.ToByteArray()},
+				 {"modified", savedAt},
+				 {"id", GetNextDocumentId()},
+				 {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
+			 }, ms.ToArray());
+		}
+
+		public void IncrementDocumentCount(int value)
+		{
+			// nothing to do here
+		}
 
 		public AddDocumentResult AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{

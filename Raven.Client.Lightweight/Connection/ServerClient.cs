@@ -151,11 +151,12 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		public HttpJsonRequest CreateRequest(string method, string requestUrl)
+		public HttpJsonRequest CreateRequest(string method, string requestUrl, bool disableRequestCompression = false)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 

@@ -362,6 +362,12 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
+		public void IncrementDocumentCount(int value)
+		{
+			if (Api.TryMoveFirst(session, Details))
+				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], value);
+		}
+
 		public AddDocumentResult AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 2048)
@@ -427,6 +433,31 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
+		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata)
+		{
+			using (var update = new Update(session, Documents, JET_prep.Insert))
+			{
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+				{
+					data.WriteTo(finalStream);
+					finalStream.Flush();
+				}
+				Guid newEtag = uuidGenerator.CreateSequentialUuid();
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+				DateTime savedAt = SystemTime.UtcNow;
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
+
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
+				{
+					metadata.WriteTo(stream);
+					stream.Flush();
+				}
+
+				update.Save();
+			}
+		}
 
 		public Guid AddDocumentInTransaction(string key, Guid? etag, RavenJObject data, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
