@@ -107,12 +107,12 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 			logger.Debug("Document with key '{0}' was found", key);
-			var lastModified = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
+			var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
 			return createResult(new JsonDocumentMetadata()
 			{
 				Etag = existingEtag,
 				NonAuthoritativeInformation = existsInTx,
-				LastModified = DateTime.FromBinary(lastModified),
+				LastModified = DateTime.FromBinary(lastModifiedInt64),
 				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
 				Metadata = ReadDocumentMetadata(key, existingEtag)
 			}, ReadDocumentData);
