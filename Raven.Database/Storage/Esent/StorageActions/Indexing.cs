@@ -102,7 +102,10 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private DateTime GetLastReducedTimestampWithPotentialNull()
 		{
-			return Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ?? DateTime.MinValue;
+			var binary = Api.RetrieveColumnAsInt64(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]);
+			if(binary == null)
+				return DateTime.MinValue;
+			return DateTime.FromBinary(binary.Value);
 		}
 
 		private Guid GetLastReduceIndexWithPotentialNull()
@@ -137,7 +140,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], name, Encoding.Unicode);
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
-				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue);
+				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue.ToBinary());
 				update.Save();
 			}
 		}
@@ -289,7 +292,7 @@ namespace Raven.Storage.Esent.StorageActions
 							  etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStatsReduce,
 							  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
-							  timestamp);
+							  timestamp.ToBinary());
 				update.Save();
 			}
 		}
