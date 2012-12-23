@@ -62,6 +62,8 @@ namespace Raven.Database.Indexing.LuceneIntegration
 
 			private void MoveToCurrentTerm()
 			{
+				if (actualEnum != null)
+					actualEnum.Dispose();
 				SetEnum(reader.Terms(new Term(termsMatchQuery.field, termsMatchQuery.matches[pos])));
 				movedEnum = true;
 			}
