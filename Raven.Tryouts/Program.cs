@@ -25,6 +25,7 @@ using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
 using System.Linq;
 using Raven.Tests.Util;
+using Xunit;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Tryouts
@@ -34,14 +35,11 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
-			{
-				Console.WriteLine(i);
-				using(var x = new RavenDB_551())
-				{
-					x.CanGetErrorOnOptimisticDeleteInTransactionWhenDeletedInTransaction();
-				}
-			}
+			var now = SystemTime.UtcNow;
+			var oa = now.ToOADate();
+			var test = DateTime.FromBinary((long)oa);
+			Console.WriteLine(now.ToString("o"));
+			Console.WriteLine(test.ToString("o"));
 				
 		}
 	}

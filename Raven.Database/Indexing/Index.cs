@@ -393,7 +393,7 @@ namespace Raven.Database.Indexing
 			indexWriter = new IndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
 			using (indexWriter.MergeScheduler) { }
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
-			
+
 			// RavenDB already manages the memory for those, no need for Lucene to do this as well
 			indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
 			indexWriter.SetRAMBufferSizeMB(1024);
@@ -1177,17 +1177,13 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
-			// this is called for the side effect of creating the snapshotter and the writer
-			// we explictly handle the backup outside of the write, to allow concurrent indexing
-			Write((writer, analyzer, stats) => 0);
-
 			try
 			{
 				var existingFiles = new List<string>();
-				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
-				var commit = snapshotter.Snapshot();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
+				
+				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
 				var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
 				System.IO.Directory.CreateDirectory(saveToFolder);
 				if (File.Exists(allFilesPath))
@@ -1198,6 +1194,23 @@ namespace Raven.Database.Indexing
 				using (var allFilesWriter = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath))
 				using (var neededFilesWriter = File.CreateText(Path.Combine(saveToFolder, "index-files.required-for-index-restore")))
 				{
+					// this is called for the side effect of creating the snapshotter and the writer
+					// we explictly handle the backup outside of the write, to allow concurrent indexing
+					Write((writer, analyzer, stats) =>
+					{
+						// however, we copy the current segments.gen & index.version to make 
+						// sure that we get the _at the time_ of the write. 
+						foreach (var fileName in new[] { "segments.gen", "index.version" })
+						{
+							var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+							allFilesWriter.WriteLine(fileName);
+						}
+						return 0;
+					});
+
+					var commit = snapshotter.Snapshot();
+
 					foreach (var fileName in commit.FileNames)
 					{
 						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
@@ -1215,19 +1228,15 @@ namespace Raven.Database.Indexing
 						}
 						neededFilesWriter.WriteLine(fileName);
 					}
-					foreach (var fileName in new[] { "segments.gen", "index.version" })
-					{
-						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
-						File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
-						allFilesWriter.WriteLine(fileName);
-					}
+
 					allFilesWriter.Flush();
 					neededFilesWriter.Flush();
 				}
 			}
 			finally
 			{
-				snapshotter.Release();
+				if (snapshotter != null)
+					snapshotter.Release();
 			}
 		}
 	}
