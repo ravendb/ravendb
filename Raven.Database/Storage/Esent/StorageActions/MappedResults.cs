@@ -53,7 +53,7 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.TransformToValueForEsentSorting());
-				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"], SystemTime.UtcNow);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"], SystemTime.UtcNow.ToBinary());
 
 				update.Save();
 			}
@@ -69,7 +69,7 @@ namespace Raven.Storage.Esent.StorageActions
 				yield break;
 
 			Api.MakeKey(session, ReduceKeysCounts, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.JetSetIndexRange(session, ReduceKeysCounts, SetIndexRangeGrbit.RangeInclusive|SetIndexRangeGrbit.RangeUpperLimit);
+			Api.JetSetIndexRange(session, ReduceKeysCounts, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
 			while (start > 0)
 			{
@@ -83,9 +83,9 @@ namespace Raven.Storage.Esent.StorageActions
 				pageSize--;
 				var count =
 					Api.RetrieveColumnAsInt32(session, ReduceKeysCounts,
-					                          tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
+											  tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
 				var key = Api.RetrieveColumnAsString(session, ReduceKeysCounts,
-				                                     tableColumnsCache.ReduceKeysCountsColumns["reduce_key"], Encoding.Unicode);
+													 tableColumnsCache.ReduceKeysCountsColumns["reduce_key"], Encoding.Unicode);
 
 				yield return new ReduceKeyAndCount
 				{
@@ -119,7 +119,7 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 
 				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["etag"], etag.TransformToValueForEsentSorting());
-				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["timestamp"], SystemTime.UtcNow);
+				Api.SetColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["timestamp"], SystemTime.UtcNow.ToBinary());
 
 				update.Save();
 			}
@@ -144,7 +144,7 @@ namespace Raven.Storage.Esent.StorageActions
 								  uuidGenerator.CreateSequentialUuid());
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"],
-								  SystemTime.UtcNow);
+								  SystemTime.UtcNow.ToBinary());
 
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"],
@@ -167,15 +167,15 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark.Item1, sortedBookmark.Item2);
 					var etagBinary = Api.RetrieveColumn(session, ScheduledReductions,
-					                                    tableColumnsCache.ScheduledReductionColumns["etag"]);
+														tableColumnsCache.ScheduledReductionColumns["etag"]);
 					if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
 					{
 						hasResult = true;
 						var timestamp =
-							Api.RetrieveColumnAsDateTime(session, ScheduledReductions,
-							                             tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
+							Api.RetrieveColumnAsInt64(session, ScheduledReductions,
+														 tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
 						result.Etag = etagBinary.TransfromToGuidWithProperSorting();
-						result.Timestamp = timestamp;
+						result.Timestamp = DateTime.FromBinary(timestamp);
 					}
 
 					Api.JetDelete(session, ScheduledReductions);
@@ -187,7 +187,7 @@ namespace Raven.Storage.Esent.StorageActions
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, int take, bool loadData, List<object> itemsToDelete)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
-			
+
 			foreach (var reduceKey in reduceKeys)
 			{
 				Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -201,7 +201,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 
 				Api.TrySetIndexRange(session, ScheduledReductions,
-				                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+									 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
 				// this isn't used for optimized reading, but to make it easier to delete records later on
 				OptimizedIndexReader reader;
@@ -228,7 +228,7 @@ namespace Raven.Storage.Esent.StorageActions
 					if (levelFromDb != level)
 						continue;
 					if (string.IsNullOrEmpty(reduceKey) == false &&
-					    string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+						string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
 						continue;
 
 					var bucket =
@@ -301,15 +301,14 @@ namespace Raven.Storage.Esent.StorageActions
 					// we might have a hash collision, so we will just skip and try the next one
 					continue;
 				}
+				var timestamp = Api.RetrieveColumnAsInt64(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value;
 				yield return new MappedResultInfo
 				{
 					Bucket = bucket,
 					ReduceKey =
 						keyFromDb,
 					Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
-					Timestamp =
-						Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).
-							Value,
+					Timestamp = DateTime.FromBinary(timestamp),
 					Data = loadData ? LoadMappedResults(keyFromDb) : null,
 					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
 				};
@@ -394,15 +393,14 @@ namespace Raven.Storage.Esent.StorageActions
 				if (string.Equals(key, reduceKey, StringComparison.Ordinal) == false)
 					continue;
 				returnedResults = true;
+				var timestamp = Api.RetrieveColumnAsInt64(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["timestamp"]).Value;
 				yield return new MappedResultInfo
 				{
 					Bucket = bucket,
 					ReduceKey =
 						key,
 					Etag = new Guid(Api.RetrieveColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["etag"])),
-					Timestamp =
-						Api.RetrieveColumnAsDateTime(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["timestamp"]).
-							Value,
+					Timestamp = DateTime.FromBinary(timestamp),
 					Data = loadData ? LoadReducedResults(key) : null,
 					Size = Api.RetrieveColumnSize(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["data"]) ?? 0
 				};
@@ -497,14 +495,13 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex) == indexName)
 			{
 				var key = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+				var timestamp = Api.RetrieveColumnAsInt64(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value;
 				var mappedResultInfo = new MappedResultInfo
 				{
 					ReduceKey =
 						key,
 					Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
-					Timestamp =
-						Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).
-						Value,
+					Timestamp = DateTime.FromBinary(timestamp),
 					Data = loadData
 							? LoadMappedResults(key)
 							: null,
@@ -603,12 +600,12 @@ namespace Raven.Storage.Esent.StorageActions
 
 				var bucket =
 					Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value;
+				var timestamp = Api.RetrieveColumnAsInt64(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value;
 				yield return new MappedResultInfo
 				{
 					ReduceKey = keyFromDb,
 					Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
-					Timestamp =
-						Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value,
+					Timestamp = DateTime.FromBinary(timestamp),
 					Data = LoadMappedResults(keyFromDb),
 					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0,
 					Bucket = bucket,
@@ -661,12 +658,12 @@ namespace Raven.Storage.Esent.StorageActions
 				take -= 1;
 
 
+				var timestamp = Api.RetrieveColumnAsInt64(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["timestamp"]).Value;
 				yield return new MappedResultInfo
 				{
 					ReduceKey = keyFromDb,
 					Etag = new Guid(Api.RetrieveColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["etag"])),
-					Timestamp =
-						Api.RetrieveColumnAsDateTime(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["timestamp"]).Value,
+					Timestamp = DateTime.FromBinary(timestamp),
 					Data = LoadReducedResults(keyFromDb),
 					Size = Api.RetrieveColumnSize(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["data"]) ?? 0,
 					Bucket = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["bucket"]).Value,
@@ -687,14 +684,14 @@ namespace Raven.Storage.Esent.StorageActions
 				yield break;
 			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.TrySetIndexRange(session, ScheduledReductions,
-			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+								 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
 				var indexFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
 															 tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode,
 															 RetrieveColumnGrbit.RetrieveFromIndex);
 
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(indexName,indexFromDb) == false)
+				if (StringComparer.InvariantCultureIgnoreCase.Equals(indexName, indexFromDb) == false)
 					continue;
 
 				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions,
@@ -719,7 +716,7 @@ namespace Raven.Storage.Esent.StorageActions
 				using (var update = new Update(session, ReduceKeysStatus, JET_prep.Replace))
 				{
 					Api.SetColumn(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"],
-					              (int) performedReduceType);
+								  (int)performedReduceType);
 
 					update.Save();
 				}
@@ -727,7 +724,7 @@ namespace Raven.Storage.Esent.StorageActions
 			createIfMissing: true);
 		}
 
-		private void ExecuteOnReduceKey(string view, string reduceKey, 
+		private void ExecuteOnReduceKey(string view, string reduceKey,
 			Table table,
 			IDictionary<string, JET_COLUMNID> columnids,
 			Action action,
@@ -835,15 +832,14 @@ namespace Raven.Storage.Esent.StorageActions
 					{
 						continue;
 					}
+					var timestamp = Api.RetrieveColumnAsInt64(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value;
 					yield return new MappedResultInfo
 					{
 						Bucket = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value,
 						ReduceKey =
 							keyFromDb,
 						Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
-						Timestamp =
-							Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).
-								Value,
+						Timestamp = DateTime.FromBinary(timestamp),
 						Data = loadData ? LoadMappedResults(keyFromDb) : null,
 						Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
 					};
@@ -880,7 +876,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			var removeReducedKeyStatus = false;
 
-			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, 
+			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
 				() =>
 				{
 					var result = Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -1);
@@ -894,7 +890,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (removeReducedKeyStatus)
 			{
 				ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns,
-				                   () => Api.JetDelete(session, ReduceKeysStatus), createIfMissing: false);
+								   () => Api.JetDelete(session, ReduceKeysStatus), createIfMissing: false);
 			}
 		}
 
@@ -905,7 +901,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				numberOfMappedItemsPerReduceKey = Api.RetrieveColumnAsInt32(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
 			}, createIfMissing: false);
-			
+
 			return numberOfMappedItemsPerReduceKey;
 		}
 	}
