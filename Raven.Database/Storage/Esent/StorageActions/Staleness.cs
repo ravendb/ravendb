@@ -34,10 +34,8 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				if (cutOff != null)
 				{
-					var lastIndexedTimestamp =
-						Api.RetrieveColumnAsDateTime(session, IndexesStats,
-													 tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
-							.Value;
+					var indexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
+					var lastIndexedTimestamp = DateTime.FromBinary(indexedTimestamp);
 					if (cutOff.Value >= lastIndexedTimestamp)
 						return true;
 
@@ -124,11 +122,10 @@ namespace Raven.Storage.Esent.StorageActions
 				return Tuple.Create(lastReducedIndex, lastReducedEtag);
 	
 			}
-	    
 
-			var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats,
-																  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
-				.Value;
+
+			var indexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
+			var lastIndexedTimestamp = DateTime.FromBinary(indexedTimestamp);
 			var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
 																	  tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting();
 			return Tuple.Create(lastIndexedTimestamp, lastIndexedEtag);

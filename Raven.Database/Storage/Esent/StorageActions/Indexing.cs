@@ -67,6 +67,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, IndexesEtags, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
 
+			var lastIndexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
 			return new IndexStats
 			{
 				Name = indexName,
@@ -80,9 +81,7 @@ namespace Raven.Storage.Esent.StorageActions
 				LastIndexedEtag =
 					Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).
 						TransfromToGuidWithProperSorting(),
-				LastIndexedTimestamp =
-					Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).
-						Value,
+				LastIndexedTimestamp =  DateTime.FromBinary(lastIndexedTimestamp),
 				ReduceIndexingAttempts =
 					hasReduce == false
 						? null
@@ -120,7 +119,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue);
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue.ToBinary());
 				update.Save();
 			}
 
@@ -219,7 +218,7 @@ namespace Raven.Storage.Esent.StorageActions
 				              etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats,
 							  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"],
-							  timestamp);
+							  timestamp.ToBinary());
 				update.Save();
 			}
 		}
