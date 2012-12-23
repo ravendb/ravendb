@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -192,7 +193,6 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-
 					waitReason = "Flush";
 					indexWriter.Commit();
 				}
@@ -205,13 +205,15 @@ namespace Raven.Database.Indexing
 
 		public void MergeSegments()
 		{
-			if (docCountSinceLastOptimization <= 2048) return;
 			lock (writeLock)
 			{
 				waitReason = "Merge / Optimize";
 				try
 				{
+					logIndexing.Info("Starting merge of {0}", name);
+					var sp = Stopwatch.StartNew();
 					indexWriter.Optimize();
+					logIndexing.Info("Done mergin {0} - took {1}", name, sp.Elapsed);
 				}
 				finally
 				{
@@ -311,7 +313,7 @@ namespace Raven.Database.Indexing
 
 					if (indexWriter == null)
 					{
-						indexWriter = CreateIndexWriter(directory);
+						CreateIndexWriter();
 					}
 
 					var locker = directory.MakeLock("writing-to-index.lock");
@@ -385,19 +387,16 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		private IndexWriter CreateIndexWriter(Directory directory)
+		private void CreateIndexWriter()
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			var indexWriter = new IndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
+			indexWriter = new IndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
 			using (indexWriter.MergeScheduler) { }
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
-
+			
 			// RavenDB already manages the memory for those, no need for Lucene to do this as well
-
-			indexWriter.MergeFactor = 1024;
 			indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
 			indexWriter.SetRAMBufferSizeMB(1024);
-			return indexWriter;
 		}
 
 		private void WriteTempIndexToDiskIfNeeded(WorkContext context)
@@ -417,7 +416,7 @@ namespace Raven.Database.Indexing
 			indexWriter.Analyzer.Close();
 			indexWriter.Dispose(true);
 
-			indexWriter = CreateIndexWriter(directory);
+			CreateIndexWriter();
 		}
 
 		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
@@ -1228,7 +1227,7 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-					snapshotter.Release();
+				snapshotter.Release();
 			}
 		}
 	}

@@ -558,8 +558,6 @@ namespace Raven.Database.Indexing
 					continue;
 
 				value.Flush();
-				// We remove this call because it is very expensive one and the Lucene team recommend avoiding it.
-				//value.MergeSegments(); // noop if previously merged
 			}
 
 			documentDatabase.TransactionalStorage.Batch(accessor =>
@@ -635,6 +633,12 @@ namespace Raven.Database.Indexing
 		{
 			Parallel.ForEach(indexes.Values, index => 
 				index.Backup(directory, path, incrementalTag));
+		}
+
+		public void MergeAllIndexes()
+		{
+			Parallel.ForEach(indexes.Values, index =>
+			                                 index.MergeSegments());
 		}
 	}
 }

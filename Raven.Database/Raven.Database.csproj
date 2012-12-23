@@ -227,6 +227,7 @@
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminGc.cs" />
     <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
+    <Compile Include="Server\Responders\Admin\AdminOptimize.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
     <Compile Include="Server\Responders\Admin\AdminRestore.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
