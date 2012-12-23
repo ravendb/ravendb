@@ -360,7 +360,10 @@ namespace Raven.Studio.Infrastructure
 
             var startIndex = page*_pageSize;
 
-            for (int i = 0; i < results.Count; i++)
+            // guard against rogue collection sources returning too many results
+            var count = Math.Min(results.Count, _pageSize);
+
+            for (int i = 0; i < count; i++)
             {
                 var index = startIndex + i;
                 var virtualItem = _virtualItems[index] ?? (_virtualItems[index] = new VirtualItem<T>(this, index));
@@ -368,8 +371,8 @@ namespace Raven.Studio.Infrastructure
                     virtualItem.SupplyValue(results[i]);
             }
 
-            if (results.Count > 0)
-                OnItemsRealized(new ItemsRealizedEventArgs(startIndex, results.Count));
+            if (count > 0)
+                OnItemsRealized(new ItemsRealizedEventArgs(startIndex, count));
         }
 
         protected void UpdateData()
@@ -512,6 +515,11 @@ namespace Raven.Studio.Infrastructure
         {
             get
             {
+                if (index >= Count)
+                {
+                    throw new ArgumentOutOfRangeException("index");
+                }
+
                 RealizeItemRequested(index);
                 return _virtualItems[index] ?? (_virtualItems[index] = new VirtualItem<T>(this, index));
             }

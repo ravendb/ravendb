@@ -236,32 +236,15 @@
 				</Grid.CacheMode>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="*" />
-					<RowDefinition Height="*" />
 				</Grid.RowDefinitions>
-				<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}"
+			    <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTextureBottom}"
 										BorderThickness="0"
-										Height="400"
-										VerticalAlignment="Top"
+                                        VerticalAlignment="Bottom"
+                                        Height="200"
 										Grid.Row="0">
 					<TiledBG:TiledBGControl.OpacityMask>
-						<LinearGradientBrush StartPoint="0.5,0"
-											 EndPoint="0.5,1">
-							<GradientStop Color="Transparent"
-										  Offset="1" />
-							<GradientStop Color="#AA000000"
-										  Offset="0.75" />
-							<GradientStop Color="#FF000000" />
-						</LinearGradientBrush>
-					</TiledBG:TiledBGControl.OpacityMask>
-				</TiledBG:TiledBGControl>
-				<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTextureBottom}"
-										BorderThickness="0"
-										Height="400"
-										VerticalAlignment="Bottom"
-										Grid.Row="1">
-					<TiledBG:TiledBGControl.OpacityMask>
-						<LinearGradientBrush EndPoint="0.5,1"
-											 StartPoint="0.5,0">
+						<LinearGradientBrush EndPoint="0.5,200"
+											 StartPoint="0.5,0" MappingMode="Absolute">
 							<GradientStop Color="Black"
 										  Offset="1" />
 							<GradientStop Color="#AA000000"
@@ -270,6 +253,20 @@
 						</LinearGradientBrush>
 					</TiledBG:TiledBGControl.OpacityMask>
 				</TiledBG:TiledBGControl>
+			    <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" 
+			                            BorderThickness="0"
+			                            Grid.Row="0">
+			        <TiledBG:TiledBGControl.OpacityMask>
+			            <LinearGradientBrush StartPoint="0.5,200"
+			                                 EndPoint="0.5,0" MappingMode="Absolute">
+			                <GradientStop Color="Transparent"
+			                              Offset="0" />
+			                <GradientStop Color="#AA000000"
+			                              Offset="0.5" />
+			                <GradientStop Color="#FF000000" Offset="1"/>
+			            </LinearGradientBrush>
+			        </TiledBG:TiledBGControl.OpacityMask>
+			    </TiledBG:TiledBGControl>
 			</Grid>
 
 			<sdk:Frame x:Name="ContentFrame"
