@@ -41,10 +41,8 @@ namespace Raven.Storage.Esent.StorageActions
 
 					if (hasReduce)
 					{
-						lastIndexedTimestamp =
-							Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
-							                             tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ??
-							DateTime.MinValue;
+						var lastReduceIndex = Api.RetrieveColumnAsInt64(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]);
+						lastIndexedTimestamp = lastReduceIndex == null ? DateTime.MinValue : DateTime.FromBinary(lastReduceIndex.Value);
 						if (cutOff.Value >= lastIndexedTimestamp)
 							return true;
 					}
