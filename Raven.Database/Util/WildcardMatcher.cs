@@ -4,12 +4,24 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Linq;
 
 namespace Raven.Database.Util
 {
 	public class WildcardMatcher
 	{
-		public static bool Matches(string pattern, string input, int patternPos = 0, int inputPos = 0)
+		private static readonly char[] Separator = new char[] {'|'};
+
+		public static bool Matches(string pattern, string input)
+		{
+			var patterns = pattern.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
+			if (pattern.Length == 0)
+				return false;
+
+			return patterns.Any(p => MatchesImpl(p, input, 0, 0));
+		}
+
+		private static bool MatchesImpl(string pattern, string input, int patternPos, int inputPos)
 		{
 			if (string.IsNullOrEmpty(pattern))
 				return true;
@@ -39,7 +51,7 @@ namespace Raven.Database.Util
 								nextPatternChar == '?')
 							{ // we have a match for the next part, let us see if it is an actual match
 
-								if (Matches(pattern, input, patternPos + 1, i))
+								if (MatchesImpl(pattern, input, patternPos + 1, i))
 									return true;
 							}
 						}
