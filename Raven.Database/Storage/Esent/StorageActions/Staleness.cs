@@ -70,8 +70,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if (cutOff == null)
 				return true;
 			// we are at the first row for this index
-			var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
-			return cutOff.Value >= addedAt;
+			var addedAt = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
+			return cutOff.Value >= DateTime.FromBinary(addedAt);
 		}
 
 		public bool IsReduceStale(string name)
