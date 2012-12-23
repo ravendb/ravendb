@@ -119,7 +119,7 @@
 				</TextBox>
 
 				<TextBlock Grid.Row="4" 
-						   Text="Direct link:"
+						   Text="Direct Link:"
 						   VerticalAlignment="Center"/>
 				<TextBox Grid.Row="4"
 						 Grid.Column="1"
