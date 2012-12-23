@@ -28,6 +28,9 @@ namespace Raven.Database.Indexing
 
 		public dynamic LoadDocument(string key)
 		{
+			if (key == null)
+				return new DynamicNullObject();
+
 			var source = Source;
 			if (source == null)
 				throw new ArgumentException(

@@ -10,12 +10,6 @@ namespace Raven.Tests.NestedIndexing
 {
 	public class CanTrackWhatCameFromWhat : RavenTest
 	{
-		public class Item
-		{
-			public string Id { get; set; }
-			public string Ref { get; set; }
-			public string Name { get; set; }
-		}
 		[Fact]
 		public void SimpleIndex()
 		{
