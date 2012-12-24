@@ -320,24 +320,27 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_view_and_key");
 			Api.MakeKey(session, IndexedDocumentsReferences, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
-			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
-				return;
-			Api.MakeKey(session, IndexedDocumentsReferences, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.JetSetIndexRange(session, IndexedDocumentsReferences, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-			do
+			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ))
 			{
-				var reference = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
-					tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], Encoding.Unicode);
-
-				if (references.Contains(reference))
+				Api.MakeKey(session, IndexedDocumentsReferences, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
+				Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+				                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+				do
 				{
-					references.Remove(reference);
-					continue;
-				}
-				Api.JetDelete(session, IndexedDocumentsReferences);
+					var reference = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+					                                           tableColumnsCache.IndexedDocumentsReferencesColumns["ref"],
+					                                           Encoding.Unicode);
 
-			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+					if (references.Contains(reference))
+					{
+						references.Remove(reference);
+						continue;
+					}
+					Api.JetDelete(session, IndexedDocumentsReferences);
+
+				} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+			}
 
 			foreach (var reference in references)
 			{

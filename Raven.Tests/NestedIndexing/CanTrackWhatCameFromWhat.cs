@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
@@ -12,46 +13,52 @@ namespace Raven.Tests.NestedIndexing
 {
 	public class CanTrackWhatCameFromWhat : RavenTest
 	{
-//		private EmbeddableDocumentStore store;
+		private readonly EmbeddableDocumentStore store;
 
-//		public CanTrackWhatCameFromWhat()
-//		{
-//			store = NewDocumentStore();
-//			store.DatabaseCommands.PutIndex("test", new IndexDefinition
-//			{
-//				Map = @"
-//from i in docs.Items
-//select new
-//{
-//	RefName = LoadDocument(i.Ref).Name,
-//	Name = i.Name
-//}"
-//			});
+		public CanTrackWhatCameFromWhat()
+		{
+			store = NewDocumentStore(requestedStorage: "esent");
+			store.DatabaseCommands.PutIndex("test", new IndexDefinition
+			{
+				Map = @"
+from i in docs.Items
+select new
+{
+	RefName = LoadDocument(i.Ref).Name,
+	Name = i.Name
+}"
+			});
 
-		
+		}
 
-//			WaitForIndexing(store);
-//		}
+		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
+		{
+		}
 
-//		public override void Dispose()
-//		{
-//			store.Dispose();
-//			base.Dispose();
-//		}
+		public override void Dispose()
+		{
+			store.Dispose();
+			base.Dispose();
+		}
 
-//		[Fact]
-//		public void CrossRefrencing()
-//		{
-//			using (IDocumentSession session = store.OpenSession())
-//			{
-//				session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
-//				session.Store(new Item { Id = "items/2", Ref = "items/1", Name = "ayende" });
-//				session.SaveChanges();
-//			}
+		[Fact]
+		public void CrossRefrencing()
+		{
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+				session.Store(new Item { Id = "items/2", Ref = "items/1", Name = "ayende" });
+				session.SaveChanges();
+			}
 
-//			Assert.False(true, "Assert that we can keep track of this");
+			WaitForIndexing(store);
 
-//		}
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			{
+				Assert.Equal("items/2", accessor.Indexing.GetDocumentReferences("items/1").Single());
+				Assert.Equal("items/1", accessor.Indexing.GetDocumentReferences("items/2").Single());
+			});
+		}
 
 //		[Fact]
 //		public void UpdatingDocument()

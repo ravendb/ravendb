@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
 {
 	public class CurrentIndexingScope : IDisposable
 	{
+		private readonly string view;
+		private readonly IStorageActionsAccessor actions;
 		private readonly Func<string, dynamic> loadDocument;
 		[ThreadStatic]
 		private static CurrentIndexingScope current;
@@ -17,8 +20,10 @@ namespace Raven.Database.Indexing
 			set { current = value; }
 		}
 
-		public CurrentIndexingScope(Func<string, dynamic> loadDocument)
+		public CurrentIndexingScope(string view, IStorageActionsAccessor actions, Func<string, dynamic> loadDocument)
 		{
+			this.view = view;
+			this.actions = actions;
 			this.loadDocument = loadDocument;
 		}
 
@@ -51,6 +56,10 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
+			foreach (var referencedDocument in ReferencedDocuments)
+			{
+				actions.Indexing.UpdateDocumentReferences(view, referencedDocument.Key, referencedDocument.Value);
+			}
 			current = null;
 		}
 	}

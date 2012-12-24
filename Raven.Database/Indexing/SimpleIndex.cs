@@ -91,7 +91,7 @@ namespace Raven.Database.Indexing
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
 						                                Field.Index.NOT_ANALYZED_NO_NORMS);
 
-						using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument))
+						using (CurrentIndexingScope.Current = new CurrentIndexingScope(name, actions,LoadDocument))
 						{
 							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
 							{
