@@ -49,7 +49,8 @@ namespace Raven.Client.Document.OAuth
 
 			if (!string.IsNullOrEmpty(serverRSAExponent) && !string.IsNullOrEmpty(serverRSAModulus) && !string.IsNullOrEmpty(challenge))
 			{
-				var parameters = Tuple.Create(OAuthHelper.ParseBytes(serverRSAExponent), OAuthHelper.ParseBytes(serverRSAModulus));
+				var exponent = OAuthHelper.ParseBytes(serverRSAExponent);
+				var modulus = OAuthHelper.ParseBytes(serverRSAModulus);
 
 				var apiKeyParts = apiKey.Split(new[] { '/' }, StringSplitOptions.None);
 
@@ -71,7 +72,7 @@ namespace Raven.Client.Document.OAuth
 					{OAuthHelper.Keys.RSAModulus, serverRSAModulus},
 					{
 						OAuthHelper.Keys.EncryptedData,
-						OAuthHelper.EncryptAssymetric(parameters, OAuthHelper.DictionaryToString(new Dictionary<string, string>
+						OAuthHelper.EncryptAssymetric(exponent, modulus, OAuthHelper.DictionaryToString(new Dictionary<string, string>
 						{
 							{OAuthHelper.Keys.APIKeyName, apiKeyName},
 							{OAuthHelper.Keys.Challenge, challenge},
