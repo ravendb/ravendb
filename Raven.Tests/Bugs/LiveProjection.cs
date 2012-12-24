@@ -133,7 +133,7 @@ namespace Raven.Tests.Bugs
 			public string ProductName { get; set; }
 		}
 
-		private class Shipment
+		public class Shipment
 		{
 			public string Id { get; set; }
 			public string UserId { get; set; }
@@ -156,7 +156,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		private class Product
+		public class Product
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
@@ -176,7 +176,7 @@ namespace Raven.Tests.Bugs
 			public string Country { get; set; }
 		}
 
-		private class ShipmentItem
+		public class ShipmentItem
 		{
 			public string Price { get; set; }
 			public string Name { get; set; }
