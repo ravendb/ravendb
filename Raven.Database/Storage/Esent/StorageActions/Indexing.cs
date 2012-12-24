@@ -299,20 +299,18 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void RemoveAllDocumentReferences(string key)
 		{
-			foreach (var index in new[] { "by_key", "by_ref" })
-			{
-				Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, index);
-				Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
-					return;
-				Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				Api.JetSetIndexRange(session, IndexedDocumentsReferences, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
+				return;
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
-				do
-				{
-					Api.JetDelete(session, IndexedDocumentsReferences);
-				} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
-			}
+			do
+			{
+				Api.JetDelete(session, IndexedDocumentsReferences);
+			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
 		}
 
 		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
@@ -354,19 +352,29 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<string> GetDocumentReferences(string key)
+		public IEnumerable<string> GetDocumentReferencing(string key)
 		{
-			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_ref");
+			return QueryReferneces(key, "by_ref", "key");
+		}
+
+		public IEnumerable<string> GetDocumentReferencesFrom(string key)
+		{
+			return QueryReferneces(key, "by_key", "ref");
+		}
+
+		private IEnumerable<string> QueryReferneces(string key, string index, string col)
+		{
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, index);
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
 				yield break;
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.JetSetIndexRange(session, IndexedDocumentsReferences, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
 				yield return Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
-											   tableColumnsCache.IndexedDocumentsReferencesColumns["key"], Encoding.Unicode);
-
+				                                        tableColumnsCache.IndexedDocumentsReferencesColumns[col], Encoding.Unicode);
 			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
 		}
 	}

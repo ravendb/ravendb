@@ -17,7 +17,7 @@ namespace Raven.Tests.NestedIndexing
 
 		public CanTrackWhatCameFromWhat()
 		{
-			store = NewDocumentStore(requestedStorage: "esent");
+			store = NewDocumentStore();
 			store.DatabaseCommands.PutIndex("test", new IndexDefinition
 			{
 				Map = @"
@@ -55,34 +55,113 @@ select new
 
 			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 			{
-				Assert.Equal("items/2", accessor.Indexing.GetDocumentReferences("items/1").Single());
-				Assert.Equal("items/1", accessor.Indexing.GetDocumentReferences("items/2").Single());
+				Assert.Equal("items/2", accessor.Indexing.GetDocumentReferencing("items/1").Single());
+				Assert.Equal("items/1", accessor.Indexing.GetDocumentReferencing("items/2").Single());
 			});
 		}
 
-//		[Fact]
-//		public void UpdatingDocument()
-//		{
-//			Assert.False(true);
-//		}
+		[Fact]
+		public void UpdatingDocument()
+		{
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+				session.Store(new Item { Id = "items/2", Ref = null, Name = "ayende" });
+				session.SaveChanges();
+			}
 
-//		[Fact]
-//		public void UpdatingReferenceToAnotherDoc()
-//		{
-//			Assert.False(true);
-//		}
+			WaitForIndexing(store);
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor => 
+				Assert.Equal("items/1", accessor.Indexing.GetDocumentReferencing("items/2").Single()));
 
-//		[Fact]
-//		public void UpdatingReferenceToNull()
-//		{
-//			Assert.False(true);
-//		}
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Load<Item>(1).Name = "other";
+				session.SaveChanges();
+			}
 
-//		[Fact]
-//		public void AddingReferenceToSamedoc()
-//		{
-//			Assert.False(true);
-//		}
+			WaitForIndexing(store);
+
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				Assert.Equal("items/1", accessor.Indexing.GetDocumentReferencing("items/2").Single()));
+		}
+
+		[Fact]
+		public void UpdatingReferenceToAnotherDoc()
+		{
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+				session.Store(new Item { Id = "items/2", Ref = null, Name = "ayende" });
+				session.Store(new Item { Id = "items/3", Ref = null, Name = "ayende" });
+				session.SaveChanges();
+			}
+
+			WaitForIndexing(store);
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			{
+				Assert.Equal("items/1", accessor.Indexing.GetDocumentReferencing("items/2").Single());
+				Assert.Empty(accessor.Indexing.GetDocumentReferencing("items/3"));
+			});
+
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Load<Item>(1).Ref = "items/3";
+				session.SaveChanges();
+			}
+
+			WaitForIndexing(store);
+
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+			{
+				Assert.Empty(accessor.Indexing.GetDocumentReferencing("items/2"));
+				Assert.Equal("items/1", accessor.Indexing.GetDocumentReferencing("items/3").Single());
+
+			});
+		}
+
+		[Fact]
+		public void UpdatingReferenceToMissing()
+		{
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+				session.SaveChanges();
+			}
+
+			WaitForIndexing(store);
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				Assert.Equal("items/1", accessor.Indexing.GetDocumentReferencing("items/2").Single()));
+		}
+
+		[Fact]
+		public void UpdatingReferenceToNull()
+		{
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Store(new Item { Id = "items/1", Ref = null, Name = "oren" });
+				session.SaveChanges();
+			}
+
+			WaitForIndexing(store);
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				Assert.Empty(accessor.Indexing.GetDocumentReferencesFrom("items/1")));
+	
+		}
+
+		[Fact]
+		public void AddingReferenceToSamedoc()
+		{
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Store(new Item { Id = "items/1", Ref = "items/1", Name = "oren" });
+				session.SaveChanges();
+			}
+
+			WaitForIndexing(store);
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				Assert.Empty(accessor.Indexing.GetDocumentReferencing("items/1")));
+		}
 
 //		[Fact]
 //		public void AddingReferenceToAnotherdoc()

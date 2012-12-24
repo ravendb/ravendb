@@ -30,6 +30,7 @@ namespace Raven.Database.Storage
 
 		void RemoveAllDocumentReferences(string key);
 		void UpdateDocumentReferences(string view, string key, HashSet<string> references);
-		IEnumerable<string> GetDocumentReferences(string key);
+		IEnumerable<string> GetDocumentReferencing(string key);
+		IEnumerable<string> GetDocumentReferencesFrom(string key);
 	}
 }

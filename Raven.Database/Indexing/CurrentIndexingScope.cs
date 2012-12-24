@@ -47,6 +47,9 @@ namespace Raven.Database.Indexing
 					"LoadDocument can only be called as part of the Map stage of the index, but was called with " + key +
 					" without a document. Current source: " + source);
 
+			if (string.Equals(key, id))
+				return source;
+
 			HashSet<string> set;
 			if(ReferencedDocuments.TryGetValue(id, out set) == false)
 				ReferencedDocuments.Add(id, set = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
