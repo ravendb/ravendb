@@ -86,6 +86,12 @@ namespace Raven.Studio.Models
 
         private void HandleItemsRealized(object sender, ItemsRealizedEventArgs e)
         {
+            if (e.StartingIndex >= Documents.Count)
+            {
+                // the collection must have been reset since the event was raised
+                return;
+            }
+
             var viewableDocument = Documents[e.StartingIndex].Item;
             
             // collection may have been reset (and hence the item cleared) since the event was raised, thus the null check

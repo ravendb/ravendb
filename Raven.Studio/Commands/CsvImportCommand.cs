@@ -65,6 +65,7 @@ namespace Raven.Studio.Commands
 			private readonly Stopwatch sw;
 			private IEnumerator<DataRecord> enumerator;
 			private int totalCount;
+			private bool hadError = false;
 
 			public ImportImpl(StreamReader reader, string file, TaskModel taskModel, Action<string> output, IAsyncDatabaseCommands databaseCommands)
 			{
@@ -81,6 +82,8 @@ namespace Raven.Studio.Commands
 
 			public Task ImportAsync()
 			{
+				if (hadError)
+					return new CompletedTask();
 				var batch = new List<RavenJObject>();
 				var columns = header.Values.Where(x => x.StartsWith("@") == false).ToArray();
 				while (enumerator.MoveNext())
@@ -128,7 +131,21 @@ namespace Raven.Studio.Commands
 					if (batch.Count >= BatchSize)
 					{
 						return FlushBatch(batch)
-							.ContinueWith(t => t.IsCompleted ? ImportAsync() : t)
+							.ContinueWith(t =>
+							{
+								if (t.IsFaulted)
+								{
+									Infrastructure.Execute.OnTheUI(() =>
+									{
+										taskModel.ReportError(t.Exception);
+										taskModel.ReportError("Import not completed");
+										taskModel.TaskStatus = TaskStatus.Ended;
+									});
+
+									return t;
+								}
+								return t.IsCompleted ? ImportAsync() : t;
+							})
 							.Unwrap();
 					}
 				}
@@ -136,7 +153,21 @@ namespace Raven.Studio.Commands
 				if (batch.Count > 0)
 				{
 					return FlushBatch(batch)
-						.ContinueWith(t => t.IsCompleted ? ImportAsync() : t)
+						.ContinueWith(t =>
+						{
+							if (t.IsFaulted)
+							{
+								Infrastructure.Execute.OnTheUI(() =>
+								{
+									taskModel.ReportError(t.Exception);
+									taskModel.ReportError("Import not completed");
+									taskModel.TaskStatus = TaskStatus.Ended;
+								});
+								
+								return t;
+							}
+							return t.IsCompleted ? ImportAsync() : t;
+						})
 						.Unwrap();
 				}
 

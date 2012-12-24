@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net;
 using System.Windows.Input;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -53,7 +55,32 @@ namespace Raven.Studio.Models
 			var aggregate = exception as AggregateException;
 			if (aggregate != null)
 				exception = aggregate.ExtractSingleInnerException();
-			Output.Add("Error: " + exception.Message);
+
+			var objects = new List<object>();
+			var webException = exception as WebException;
+			if (webException != null)
+			{
+				var httpWebResponse = webException.Response as HttpWebResponse;
+				if (httpWebResponse != null)
+				{
+					var stream = httpWebResponse.GetResponseStream();
+					if (stream != null)
+					{
+						objects = ApplicationModel.ExtractError(stream, httpWebResponse);
+					}
+				}
+			}
+
+			if(objects.Count == 0)
+				Output.Add("Error: " + exception.Message);
+			else
+			{
+				foreach (var msg in objects)
+				{
+					if(!string.IsNullOrWhiteSpace(msg.ToString()))
+						Output.Add("Error: " + msg);
+				}
+			}
 		}
 
 		public void ReportError(string errorMsg)
