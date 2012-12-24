@@ -1185,19 +1185,19 @@ namespace Raven.Storage.Esent
 				{
 					szIndexName = "by_key",
 					szKey = "+key\0\0",
-					grbit = CreateIndexGrbit.IndexUnique
+					grbit = CreateIndexGrbit.IndexDisallowNull
 				},
 				new JET_INDEXCREATE
 				{
 					szIndexName = "by_view",
 					szKey = "+key\0\0",
-					grbit = CreateIndexGrbit.IndexUnique
+					grbit = CreateIndexGrbit.IndexDisallowNull
 				},
 				new JET_INDEXCREATE
 				{
 					szIndexName = "by_view_and_key",
 					szKey = "+view\0+key\0\0",
-					grbit = CreateIndexGrbit.IndexUnique
+					grbit = CreateIndexGrbit.IndexDisallowNull
 				},
 				new JET_INDEXCREATE
 				{
