@@ -12,30 +12,17 @@ namespace Raven.Database.Util
 
     public static class PerformanceCountersUtils
     {
-        private static readonly ILog log = LogManager.GetCurrentClassLogger();
-
-        public static void EnsurePerformanceCountersMonitoringAccess(WindowsIdentity identity)
+        public static void EnsurePerformanceCountersMonitoringAccess(string userName)
         {
-            if (identity.User == null)
-                return;
-
-            var identityPrincipal = new WindowsPrincipal(identity);
-
-            if (identityPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
-                return; // administrator already has an access
-
             var performanceMonitorUsersGroupSid = new SecurityIdentifier(WellKnownSidType.BuiltinPerformanceMonitoringUsersSid, null);
-
-            if (identityPrincipal.IsInRole(performanceMonitorUsersGroupSid))
-                return; // it is already added to the group
-
-            var userName = identity.Name;
             var machineCtx = new PrincipalContext(ContextType.Machine);
             Principal userPrincipal;
 
             if (userName.StartsWith("IIS")) // if IIS user then current principal is GroupPrincipal
             {
-                userPrincipal = GroupPrincipal.FindByIdentity(machineCtx, IdentityType.Sid, identity.User.Value);
+                var acc = new NTAccount(userName);
+                var sid = acc.Translate(typeof(SecurityIdentifier));
+                userPrincipal = GroupPrincipal.FindByIdentity(machineCtx, IdentityType.Sid, sid.Value);
             }
             else
             {
@@ -44,16 +31,14 @@ namespace Raven.Database.Util
 
             if (userPrincipal == null)
             {
-                log.Error("Could not find principal for user " + identity.Name + " to grant him an access to Performance Counters");
-                return;
+                throw new InvalidOperationException("Could not find principal for user " + userName + " to grant him an access to Performance Counters");
             }
 
             using (var performanceMonitorUsersGroupPrincipal = GroupPrincipal.FindByIdentity(machineCtx, IdentityType.Sid, performanceMonitorUsersGroupSid.Value))
             {
                 if (performanceMonitorUsersGroupPrincipal == null)
                 {
-                    log.Error("Could not find principal for Performance Monitoring Users group");
-                    return;
+                    throw new InvalidOperationException("Could not find principal for Performance Monitoring Users group");
                 }
                 try
                 {
@@ -65,7 +50,7 @@ namespace Raven.Database.Util
                 }
                 catch (UnauthorizedAccessException e)
                 {
-                    log.ErrorException("Could not add user " + identity.Name + " Performance Monitoring Users group", e);
+                    throw new InvalidOperationException("Could not add user " + userName + " Performance Monitoring Users group", e);
                 }
             }
         }
