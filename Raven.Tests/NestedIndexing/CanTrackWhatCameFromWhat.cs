@@ -163,22 +163,24 @@ select new
 				Assert.Empty(accessor.Indexing.GetDocumentReferencing("items/1")));
 		}
 
-//		[Fact]
-//		public void AddingReferenceToAnotherdoc()
-//		{
-//			Assert.False(true);
-//		}
+		[Fact]
+		public void DeletingRootDoc()
+		{
+			using (IDocumentSession session = store.OpenSession())
+			{
+				session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+				session.Store(new Item { Id = "items/2", Ref = null, Name = "oren" });
+				session.SaveChanges();
+			}
 
-//		[Fact]
-//		public void DeletingRefDoc()
-//		{
-//			Assert.False(true);
-//		}
+			WaitForIndexing(store);
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				Assert.NotEmpty(accessor.Indexing.GetDocumentReferencesFrom("items/1")));
 
-//		[Fact]
-//		public void DeletingRootDoc()
-//		{
-//			Assert.False(true);
-//		}
+			store.DatabaseCommands.Delete("items/1", null);
+			store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				Assert.Empty(accessor.Indexing.GetDocumentReferencesFrom("items/1")));
+
+		}
 	}
 }

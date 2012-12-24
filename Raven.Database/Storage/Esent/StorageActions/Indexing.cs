@@ -297,7 +297,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void RemoveAllDocumentReferences(string key)
+		public void RemoveAllDocumentReferencesFrom(string key)
 		{
 			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);

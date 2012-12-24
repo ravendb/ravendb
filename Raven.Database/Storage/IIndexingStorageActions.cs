@@ -28,7 +28,7 @@ namespace Raven.Database.Storage
 		void UpdateIndexingStats(string index, IndexingWorkStats stats);
 		void UpdateReduceStats(string index, IndexingWorkStats stats);
 
-		void RemoveAllDocumentReferences(string key);
+		void RemoveAllDocumentReferencesFrom(string key);
 		void UpdateDocumentReferences(string view, string key, HashSet<string> references);
 		IEnumerable<string> GetDocumentReferencing(string key);
 		IEnumerable<string> GetDocumentReferencesFrom(string key);

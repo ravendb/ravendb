@@ -134,7 +134,7 @@ namespace Raven.Storage.Managed
 
 		}
 
-		public void RemoveAllDocumentReferences(string key)
+		public void RemoveAllDocumentReferencesFrom(string key)
 		{
 			foreach (var source in storage.DocumentReferences["ByKey"].SkipBefore(new RavenJObject { { "key", key } })
 				.TakeWhile(x => key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase)))
