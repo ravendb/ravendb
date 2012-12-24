@@ -166,14 +166,6 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}
 
-		private object LoadDocument(string key)
-		{
-			var jsonDocument = context.Database.Get(key, null);
-			if (jsonDocument == null)
-				return new DynamicNullObject();
-			return new DynamicJsonObject(jsonDocument.ToJson());
-		}
-
 		private IndexingResult GetIndexingResult(object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
 		{
 			boost = 1;

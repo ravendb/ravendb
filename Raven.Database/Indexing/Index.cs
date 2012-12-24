@@ -1234,5 +1234,13 @@ namespace Raven.Database.Indexing
 					snapshotter.Release();
 			}
 		}
+
+		protected object LoadDocument(string key)
+		{
+			var jsonDocument = context.Database.Get(key, null);
+			if (jsonDocument == null)
+				return new DynamicNullObject();
+			return new DynamicJsonObject(jsonDocument.ToJson());
+		}
 	}
 }

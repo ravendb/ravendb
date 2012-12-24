@@ -78,40 +78,41 @@ namespace Raven.Database.Indexing
 				.Where(x => x is FilteredDocument == false);
 			var items = new List<MapResultItem>();
 			var stats = new IndexingWorkStats();
-			foreach (
-				var mappedResultFromDocument in
-					GroupByDocumentId(context,
-									  RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats)))
+			using (CurrentIndexingScope.Current = new CurrentIndexingScope(name, actions, LoadDocument))
 			{
-				var dynamicResults = mappedResultFromDocument.Select(x => (object)new DynamicJsonObject(RavenJObject.FromObject(x, jsonSerializer))).ToList();
-				foreach (
-					var doc in
-						RobustEnumerationReduceDuringMapPhase(dynamicResults.GetEnumerator(), viewGenerator.ReduceDefinition, actions, context))
+				var mapResults = RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats);
+				foreach (var mappedResultFromDocument in GroupByDocumentId(context, mapResults))
 				{
-					count++;
-
-					var reduceValue = viewGenerator.GroupByExtraction(doc);
-					if (reduceValue == null)
+					var dynamicResults = mappedResultFromDocument.Select(x => (object)new DynamicJsonObject(RavenJObject.FromObject(x, jsonSerializer))).ToList();
+					foreach (
+						var doc in
+							RobustEnumerationReduceDuringMapPhase(dynamicResults.GetEnumerator(), viewGenerator.ReduceDefinition, actions, context))
 					{
-						logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
-										  viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
-						continue;
+						count++;
+
+						var reduceValue = viewGenerator.GroupByExtraction(doc);
+						if (reduceValue == null)
+						{
+							logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
+											  viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
+							continue;
+						}
+						var reduceKey = ReduceKeyToString(reduceValue);
+						var docId = mappedResultFromDocument.Key.ToString();
+
+						var data = GetMappedData(doc);
+
+						logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
+
+						items.Add(new MapResultItem
+						{
+							Data = data,
+							DocId = docId,
+							ReduceKey = reduceKey
+						});
+
+						changed.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), reduceKey));
 					}
-					var reduceKey = ReduceKeyToString(reduceValue);
-					var docId = mappedResultFromDocument.Key.ToString();
-
-					var data = GetMappedData(doc);
-
-					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
-
-					items.Add(new MapResultItem
-					{
-						Data = data,
-						DocId = docId,
-						ReduceKey = reduceKey
-					});
-
-					changed.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), reduceKey));
 				}
 			}
 
