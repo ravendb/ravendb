@@ -105,34 +105,8 @@ namespace Raven.Studio.Models
 						var stream = httpWebResponse.GetResponseStream();
 						if (stream != null)
 						{
-							var error = new StreamReader(stream).ReadToEnd();
+							var objects = ExtractError(stream, httpWebResponse, details);
 
-							var objects = new List<object>(details);
-							try
-							{
-								var item = RavenJObject.Parse(error);
-								objects.Insert(0, "Server Error:");
-								objects.Insert(1, "-----------------------------------------");
-								objects.Insert(2, item.Value<string>("Url"));
-								objects.Insert(3, item.Value<string>("Error"));
-								objects.Insert(4, "-----------------------------------------");
-								objects.Insert(5, Environment.NewLine);
-								objects.Insert(6, Environment.NewLine);
-							}
-							catch (Exception)
-							{
-								objects.Insert(0, "Server sent:");
-								objects.Insert(1, error);
-								objects.Insert(2, Environment.NewLine);
-								objects.Insert(3, Environment.NewLine);
-							}
-
-							if (httpWebResponse.StatusCode == HttpStatusCode.Unauthorized)
-							{
-								objects.Insert(0, "Could not get authorization for this command.");
-								objects.Insert(1,
-								               "If you should have access to this operation contact your admin and check the Raven/AnonymousAccess or the Windows Authentication settings in RavenDB ");
-							}
 							details = objects.ToArray();
 						}
 					}
@@ -142,6 +116,45 @@ namespace Raven.Studio.Models
 			}
 
 			AddNotification(new Notification(message, NotificationLevel.Error, exception, details));
+		}
+
+		public static List<object> ExtractError(Stream stream, HttpWebResponse httpWebResponse)
+		{
+			return ExtractError(stream, httpWebResponse, new List<object>());
+		}
+
+		public static List<object> ExtractError(Stream stream, HttpWebResponse httpWebResponse, IEnumerable<object> details)
+		{
+			var error = new StreamReader(stream).ReadToEnd();
+
+			var objects = new List<object>(details);
+			try
+			{
+				var item = RavenJObject.Parse(error);
+				objects.Insert(0, "Server Error:");
+				objects.Insert(1, "-----------------------------------------");
+				objects.Insert(2, item.Value<string>("Url"));
+				objects.Insert(3, item.Value<string>("Error"));
+				objects.Insert(4, "-----------------------------------------");
+				objects.Insert(5, Environment.NewLine);
+				objects.Insert(6, Environment.NewLine);
+			}
+			catch (Exception)
+			{
+				objects.Insert(0, "Server sent:");
+				objects.Insert(1, error);
+				objects.Insert(2, Environment.NewLine);
+				objects.Insert(3, Environment.NewLine);
+			}
+
+			if (httpWebResponse.StatusCode == HttpStatusCode.Unauthorized)
+			{
+				objects.Insert(0, "Could not get authorization for this command.");
+				objects.Insert(1,
+				               "If you should have access to this operation contact your admin and check the Raven/AnonymousAccess or the Windows Authentication settings in RavenDB ");
+			}
+
+			return objects;
 		}
 
 		public Observable<string> LastNotification { get; set; }
