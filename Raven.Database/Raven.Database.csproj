@@ -75,10 +75,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\AWSSDK.dll</HintPath>
     </Reference>
-    <Reference Include="BouncyCastle.Crypto, Version=1.7.4137.9688, Culture=neutral, PublicKeyToken=a4292a325f69b123, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
-    </Reference>
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
@@ -263,7 +259,6 @@
     <Compile Include="Bundles\Replication\Triggers\VirtualAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
-    <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
     <Compile Include="Extensions\DateTimeExtensions.cs" />
@@ -643,6 +638,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From36To37.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From37To38.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From40To41.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From43To44.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />

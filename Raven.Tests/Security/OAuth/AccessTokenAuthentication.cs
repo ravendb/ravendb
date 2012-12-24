@@ -32,7 +32,6 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			ravenConfiguration.OAuthTokenCertificate = CertGenerator.GenerateNewCertificate("RavenDB.Test");
 		}
 
 		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
@@ -55,7 +54,7 @@ namespace Raven.Tests.Security.OAuth
 			var authorizedDatabases = databases.Split(',').Select(tenantId=> new DatabaseAccess{TenantId = tenantId}).ToList();
 			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = user, AuthorizedDatabases = authorizedDatabases, Issued = issued }).ToString(Formatting.None);
 
-			var signature = valid ? CertHelper.Sign(body, server.Database.Configuration.OAuthTokenCertificate) : "InvalidSignature";
+			var signature = valid ? AccessToken.Sign(body, server.Database.Configuration.OAuthTokenKey) : "InvalidSignature";
 
 			var token = RavenJObject.FromObject(new { Body = body, Signature = signature }).ToString(Formatting.None);
 

@@ -1061,7 +1061,6 @@
     <Compile Include="RavenTest.cs" />
     <Compile Include="RemoteClientTest.cs" />
     <Compile Include="Security\OAuth\AccessTokenAuthentication.cs" />
-    <Compile Include="Security\OAuth\CertHelper.cs" />
     <Compile Include="Security\OAuth\GrantAccessTokenClientCredentialsFlow.cs" />
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
     <Compile Include="Shard\Async\RoundRobinSharding.cs" />
