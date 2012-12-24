@@ -10,10 +10,13 @@ namespace Raven.Database.Util
 {
 	public class WildcardMatcher
 	{
-		private static readonly char[] Separator = new char[] {'|'};
+		private static readonly char[] Separator = new [] {'|'};
 
 		public static bool Matches(string pattern, string input)
 		{
+			if (string.IsNullOrEmpty(pattern))
+				return true;
+
 			var patterns = pattern.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
 			if (pattern.Length == 0)
 				return false;
