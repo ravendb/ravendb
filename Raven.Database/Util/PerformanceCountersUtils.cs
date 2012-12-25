@@ -8,7 +8,6 @@ namespace Raven.Database.Util
 	using System;
 	using System.DirectoryServices.AccountManagement;
 	using System.Security.Principal;
-	using Abstractions.Logging;
 
 	public static class PerformanceCountersUtils
 	{

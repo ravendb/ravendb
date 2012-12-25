@@ -40,7 +40,6 @@ namespace Raven.Database.Indexing
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 		public string DatabaseName { get; set; }
-		public Dictionary<string,string> CountersNames = new Dictionary<string, string>();
 
 		public DateTime LastWorkTime { get; private set; }
 
@@ -249,7 +248,7 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-				if(useCounters == false)
+				if (useCounters == false)
 					return -1;
 				return (int)ConcurrentRequestsCounter.NextValue();
 			}
@@ -302,7 +301,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void SetupPreformanceCounter(string name)
+		private void SetupPerformanceCounter(string name)
 		{
 			const string categoryName = "RavenDB 2.0";
 			var instances = new Dictionary<string, PerformanceCounterType>
@@ -311,25 +310,44 @@ namespace Raven.Database.Indexing
 				{"# docs indexed / sec", PerformanceCounterType.RateOfCountsPerSecond32}, 
 				{"# docs reduced / sec", PerformanceCounterType.RateOfCountsPerSecond32},
 				{"# req / sec", PerformanceCounterType.RateOfCountsPerSecond32}, 
-				{"# of concurrent requests", PerformanceCounterType.RateOfCountsPerSecond32}
-			}; 
+				{"# of concurrent requests", PerformanceCounterType.NumberOfItems32}
+			};
 
-			if (!PerformanceCounterCategory.Exists(categoryName))
+			if (IsValidCategory(categoryName, instances) == false)
 			{
 				var counterCreationDataCollection = new CounterCreationDataCollection();
 				foreach (var instance in instances)
 				{
-					counterCreationDataCollection.Add(new CounterCreationData {CounterName = instance.Key, CounterType = instance.Value});
+					counterCreationDataCollection.Add(new CounterCreationData
+					{
+						CounterName = instance.Key,
+						CounterType = instance.Value
+					});
 				}
 
-				PerformanceCounterCategory.Create(categoryName, "RevenDB category", PerformanceCounterCategoryType.MultiInstance, counterCreationDataCollection);				
+				PerformanceCounterCategory.Create(categoryName, "RavenDB Performance Counters", PerformanceCounterCategoryType.MultiInstance, counterCreationDataCollection);
 			}
 
 			DocsPerSecCounter = new PerformanceCounter(categoryName, "# docs / sec", name, false);
 			IndexedPerSecCounter = new PerformanceCounter(categoryName, "# docs indexed / sec", name, false);
 			ReducedPerSecCounter = new PerformanceCounter(categoryName, "# docs reduced / sec", name, false);
 			RequestsPerSecCounter = new PerformanceCounter(categoryName, "# req / sec", name, false);
-			ConcurrentRequestsCounter =  new PerformanceCounter(categoryName, "# of concurrent requests", name, false);
+			ConcurrentRequestsCounter = new PerformanceCounter(categoryName, "# of concurrent requests", name, false);
+		}
+
+		private bool IsValidCategory(string categoryName, Dictionary<string, PerformanceCounterType> instances)
+		{
+			if (PerformanceCounterCategory.Exists(categoryName) == false)
+				return false;
+			foreach (var performanceCounterType in instances)
+			{
+				if (PerformanceCounterCategory.CounterExists(performanceCounterType.Key, categoryName) == false)
+				{
+					PerformanceCounterCategory.Delete(categoryName);
+					return false;
+				}
+			}
+			return true;
 		}
 
 		public void Init(string name)
@@ -343,8 +361,7 @@ namespace Raven.Database.Indexing
 			name = name ?? Constants.SystemDatabase;
 			try
 			{
-				SetupPreformanceCounterName(name);
-				SetupPreformanceCounter(CountersNames[name]);
+				SetupPerformanceCounter(GetPreformanceCounterName(name));
 			}
 			catch (UnauthorizedAccessException e)
 			{
@@ -360,26 +377,10 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void SetupPreformanceCounterName(string name)
+		private string GetPreformanceCounterName(string name)
 		{
-			//For databases that has a long name
-			if (CountersNames.ContainsKey(name))
-				return;
-
-			string result = name;
 			//dealing with names who are very long (there is a limit of 80 chars for counter name)
-			if (result.Length > 60)
-			{
-				result = name.Remove(59);
-				int counter = 1;
-				while (PerformanceCounterCategory.Exists("RavenDB 2.0: " + result + counter))
-				{
-					counter++;
-				}
-				result = result + counter;
-			}
-
-			CountersNames.Add(name,result);
+			return name.Length > 70 ? name.Remove(70) : name;
 		}
 
 		public void ReportIndexingActualBatchSize(int size)
