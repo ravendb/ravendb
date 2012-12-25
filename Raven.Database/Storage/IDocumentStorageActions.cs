@@ -13,7 +13,7 @@ namespace Raven.Database.Storage
 	public interface IDocumentStorageActions 
 	{
 		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
-		IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null);
+		IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null, Guid? untilEtag = null);
 		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take);
 
 		long GetDocumentsCount();

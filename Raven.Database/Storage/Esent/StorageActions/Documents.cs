@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -255,7 +256,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null, Guid? untilEtag = null)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -265,6 +266,12 @@ namespace Raven.Storage.Esent.StorageActions
 			int count = 0;
 			do
 			{
+				if (untilEtag != null)
+				{
+					var docEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
+					if (Etag.IsGreaterThanOrEqual(docEtag, untilEtag.Value))
+						yield break;
+				}
 				var readCurrentDocument = ReadCurrentDocument(checkTransactionStatus: false);
 				totalSize += readCurrentDocument.SerializedSizeOnDisk;
 				if (maxSize != null && totalSize > maxSize.Value)

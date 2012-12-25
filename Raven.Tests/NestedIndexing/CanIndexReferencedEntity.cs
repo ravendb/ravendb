@@ -85,6 +85,48 @@ namespace Raven.Tests.NestedIndexing
 		}
 
 		[Fact]
+		public void WhenReferencedItemChangesInBatch()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				{
+					Map = @"
+						from i in docs.Items
+						select new
+						{
+							RefName = LoadDocument(i.Ref).Name,
+						}"
+				});
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+					session.Store(new Item { Id = "items/2", Ref = null, Name = "ayende" });
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Load<Item>(2).Name = "Arava";
+					session.Store(new Item { Id = "items/3", Ref = null, Name = "ayende" });
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var item = session.Advanced.LuceneQuery<Item>("test")
+									  .WaitForNonStaleResults()
+									  .WhereEquals("RefName", "arava")
+									  .Single();
+					Assert.Equal("items/1", item.Id);
+				}
+			}
+		}
+
+		[Fact]
 		public void WhenReferencedItemDeleted()
 		{
 			using (var store = NewDocumentStore())

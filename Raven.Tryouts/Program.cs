@@ -38,14 +38,7 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
-			{
-				Console.WriteLine(i);
-				using(var x = new ReplicationWithReferencedIndexes())
-				{
-					x.WillReindexReferencesBecauseOfReplication();
-				}
-			}
+			Console.WriteLine(new int[0].Min());
 		}
 	}
 }

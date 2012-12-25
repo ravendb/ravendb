@@ -4,9 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Util
 {
+	public class ByteArrayComparer : IComparer<Guid>
+	{
+		public static readonly ByteArrayComparer Instance = new ByteArrayComparer();
+
+		public int Compare(Guid x, Guid y)
+		{
+			return ComparableByteArray.CompareTo(x.ToByteArray(), y.ToByteArray());
+		}
+	}
+
 	public class ComparableByteArray : IComparable<ComparableByteArray>, IComparable
 	{
 		private readonly byte[] inner;
