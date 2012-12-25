@@ -60,7 +60,7 @@ namespace Raven.Tests.Bugs
 					using(var session = store.OpenSession())
 					{
 						session.Advanced.AllowNonAuthoritativeInformation = false;
-						session.Load<TestDocument>(id);
+						Assert.NotNull(session.Load<TestDocument>(id));
 					}
 				}
 				using (var session = store.OpenSession())
@@ -77,7 +77,7 @@ namespace Raven.Tests.Bugs
 							missing.Add(i);
 					}
 
-
+					WaitForUserToContinueTheTest(store);
 					Assert.Equal(expectedCount, items.Count);
 				}
 			}
