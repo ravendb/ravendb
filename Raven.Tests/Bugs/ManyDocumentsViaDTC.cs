@@ -37,7 +37,7 @@ namespace Raven.Tests.Bugs
 						{
 							// Promote the transaction
 
-							System.Transactions.Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id, new DummyEnlistmentNotification(), EnlistmentOptions.None);
+							Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id, new DummyEnlistmentNotification(), EnlistmentOptions.None);
 
 							using (var session = store.OpenSession())
 							{

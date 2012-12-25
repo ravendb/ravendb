@@ -11,7 +11,6 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
 using Xunit;
-using Transaction = System.Transactions.Transaction;
 
 namespace Raven.Tests.MailingList
 {

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Xunit;
@@ -87,6 +88,33 @@ namespace Raven.Tests.Bugs
 				var array = accounts.ToArray();
 				Assert.Equal(1, array.Count());
 			}
+		}
+
+		public class Account
+		{
+			public Account()
+			{
+				Transactions = new List<Transaction>();
+			}
+
+			public IList<Transaction> Transactions { get; private set; }
+		}
+
+		public class Transaction
+		{
+			public Transaction(int amount, DateTime date)
+			{
+				Amount = amount;
+				Date = date;
+			}
+
+			public Transaction()
+			{
+
+			}
+
+			public int Amount { get; private set; }
+			public DateTime Date { get; private set; }
 		}
 	}
 }
