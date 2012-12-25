@@ -855,7 +855,8 @@ namespace Raven.Database
 								});
 								task.Keys.Add(key);
 							}
-							indexingExecuter.AfterDelete(key, deletedETag);
+						    if (deletedETag != null)
+						        indexingExecuter.AfterDelete(key, deletedETag.Value);
 							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 						}
 
