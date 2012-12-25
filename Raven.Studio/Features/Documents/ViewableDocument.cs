@@ -24,8 +24,8 @@ namespace Raven.Studio.Features.Documents
 
 	public class ViewableDocument : ViewModel
 	{
-	    private const double CharacterWidth = 7;
-	    private const double LineHeight = 5;
+		private const double CharacterWidth = 7;
+		private const double LineHeight = 5;
 		private readonly JsonDocument inner;
 		private string id;
 		private string clrType;
@@ -38,14 +38,11 @@ namespace Raven.Studio.Features.Documents
 			Id = inner.Metadata.IfPresent<string>("@id");
 			LastModified = inner.LastModified ?? DateTime.MinValue;
 
-			if (LastModified.Kind == DateTimeKind.Utc)
-				LastModified = LastModified.ToLocalTime();
-
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
 		}
 
-		Brush fill;
+		private Brush fill;
 		public Brush Fill
 		{
 			get { return fill ?? (fill = TemplateColorProvider.Instance.ColorFrom(CollectionType)); }
@@ -59,8 +56,12 @@ namespace Raven.Studio.Features.Documents
 		private string toolTipText;
 		public string ToolTipText
 		{
-            get { return DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly ? null : 
-                    toolTipText ?? (toolTipText = ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, 60, 70)); }
+			get
+			{
+				return DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly
+					       ? null
+					       : toolTipText ?? (toolTipText = ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, 60, 70));
+			}
 		}
 
 		private string trimmedDocumentView;
@@ -68,13 +69,13 @@ namespace Raven.Studio.Features.Documents
 		{
 			get
 			{
-                if (trimmedDocumentViewNeedsRecalculation)
-                {
-                    trimmedDocumentViewNeedsRecalculation = false;
-                    ProduceTrimmedDocumentView();
-                }
+				if (trimmedDocumentViewNeedsRecalculation)
+				{
+					trimmedDocumentViewNeedsRecalculation = false;
+					ProduceTrimmedDocumentView();
+				}
 
-			    return DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly ? null : trimmedDocumentView;
+				return DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly ? null : trimmedDocumentView;
 			}
 			private set
 			{
@@ -83,18 +84,17 @@ namespace Raven.Studio.Features.Documents
 			}
 		}
 
-	    private void ProduceTrimmedDocumentView()
-	    {
-            if (DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly)
-                return;
-	        
-            var widthInCharacters = (int)(DocumentSize.Current.Width/CharacterWidth);
-	        var heightInLines = (int)(DocumentSize.Current.Height/LineHeight);
+		private void ProduceTrimmedDocumentView()
+		{
+			if (DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly)
+				return;
 
-	        Task.Factory.StartNew(
-	            () => ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, widthInCharacters, heightInLines))
-	            .ContinueOnSuccessInTheUIThread(v => TrimmedDocumentView = v);
-	    }
+			var widthInCharacters = (int) (DocumentSize.Current.Width / CharacterWidth);
+			var heightInLines = (int) (DocumentSize.Current.Height / LineHeight);
+
+			Task.Factory.StartNew(() => ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, widthInCharacters, heightInLines))
+			    .ContinueOnSuccessInTheUIThread(v => TrimmedDocumentView = v);
+		}
 
 		public string DisplayId
 		{
@@ -111,15 +111,15 @@ namespace Raven.Studio.Features.Documents
 				Guid guid;
 				if (Guid.TryParse(display, out guid))
 					display = display.Substring(0, 8);
-				
-                return display;
+
+				return display;
 			}
 		}
 
 		private string GetMeaningfulDisplayIdForProjection()
 		{
 			var selectedProperty = new KeyValuePair<string, RavenJToken>();
-			var propertyNames = new[] {"Id", "Name"};
+			var propertyNames = new[] { "Id", "Name" };
 			foreach (var propertyName in propertyNames)
 			{
 				selectedProperty = inner.DataAsJson.FirstOrDefault(x => x.Key.EndsWith(propertyName, StringComparison.InvariantCultureIgnoreCase));
@@ -132,15 +132,15 @@ namespace Raven.Studio.Features.Documents
 
 			if (selectedProperty.Key == null) // there aren't any properties 
 				return "{}";
-			
-            var value = selectedProperty.Value.Type==JTokenType.String ? 
-				selectedProperty.Value.Value<string>() : 
-				selectedProperty.Value.ToString(Formatting.None);
-			
-            if (value.Length > 30)
+
+			var value = selectedProperty.Value.Type == JTokenType.String
+				            ? selectedProperty.Value.Value<string>()
+				            : selectedProperty.Value.ToString(Formatting.None);
+
+			if (value.Length > 30)
 				value = value.Substring(0, 27) + "...";
-			
-            return value;
+
+			return value;
 		}
 
 		private string GetIdWithoutPrefixes()
@@ -148,11 +148,11 @@ namespace Raven.Studio.Features.Documents
 			var display = Id;
 
 			var prefixToRemoves = new[]
-			{
-				"Raven/",
-				CollectionType + "/",
-				CollectionType + "-"
-			};
+			                      {
+				                      "Raven/",
+				                      CollectionType + "/",
+				                      CollectionType + "-"
+			                      };
 
 			foreach (var prefixToRemove in prefixToRemoves)
 			{
@@ -164,41 +164,45 @@ namespace Raven.Studio.Features.Documents
 
 		public string CollectionType
 		{
-			get
-			{
-				return collectionType;
-			}
+			get { return collectionType; }
 			set
 			{
-				collectionType = value; OnPropertyChanged(() => CollectionType);
+				collectionType = value;
+				OnPropertyChanged(() => CollectionType);
 			}
 		}
 
 		public string ClrType
 		{
-			get
-			{
-				return clrType;
-			}
+			get { return clrType; }
 			set
 			{
-				clrType = value; OnPropertyChanged(() => ClrType);
+				clrType = value;
+				OnPropertyChanged(() => ClrType);
 			}
 		}
 
 		private DateTime lastModified;
-	    private bool trimmedDocumentViewNeedsRecalculation;
+		private bool trimmedDocumentViewNeedsRecalculation;
 
-	    public DateTime LastModified
+		public DateTime LastModified
 		{
 			get { return lastModified; }
-			set { lastModified = value; OnPropertyChanged(() => LastModified); }
+			set
+			{
+				lastModified = value;
+				OnPropertyChanged(() => LastModified);
+			}
 		}
 
 		public string Id
 		{
 			get { return id; }
-			set { id = value; OnPropertyChanged(() => Id); }
+			set
+			{
+				id = value;
+				OnPropertyChanged(() => Id);
+			}
 		}
 
 		public JsonDocument Document
@@ -206,10 +210,10 @@ namespace Raven.Studio.Features.Documents
 			get { return inner; }
 		}
 
-	    public bool MetadataOnly
-	    {
-	        get { return Document.DataAsJson.Count == 0; }
-	    }
+		public bool MetadataOnly
+		{
+			get { return Document.DataAsJson.Count == 0; }
+		}
 
 		public override string ToString()
 		{
@@ -230,21 +234,21 @@ namespace Raven.Studio.Features.Documents
 			return entity ?? "Doc";
 		}
 
-        protected override void OnViewLoaded()
-        {
-            Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
-                .Throttle(TimeSpan.FromSeconds(0.5))
-                .TakeUntil(Unloaded)
-                .ObserveOnDispatcher()
-                .Subscribe(_ => InvalidateData());
+		protected override void OnViewLoaded()
+		{
+			Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
+			          .Throttle(TimeSpan.FromSeconds(0.5))
+			          .TakeUntil(Unloaded)
+			          .ObserveOnDispatcher()
+			          .Subscribe(_ => InvalidateData());
 
-            InvalidateData();
-        }
+			InvalidateData();
+		}
 
-	    private void InvalidateData()
-	    {
-	        trimmedDocumentViewNeedsRecalculation  = true;
-            OnPropertyChanged(() => TrimmedDocumentView);
-	    }
+		private void InvalidateData()
+		{
+			trimmedDocumentViewNeedsRecalculation = true;
+			OnPropertyChanged(() => TrimmedDocumentView);
+		}
 	}
 }

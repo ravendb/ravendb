@@ -19,6 +19,9 @@ namespace Raven.Tests.Util
 		[InlineValue("rav*b", "raven", false)]
 		[InlineValue("*orders*", "customers/1/orders/123", true)]
 		[InlineValue("*orders", "customers/1/orders", true)]
+		[InlineValue("*orders|*invoices", "customers/1/orders", true)]
+		[InlineValue("*orders|*invoices", "customers/1/invoices", true)]
+		[InlineValue("*orders||*invoices", "customers/1/invoices", true)]
 		public void CanMatch(string pattern, string input, bool expected)
 		{
 			Assert.Equal(expected, WildcardMatcher.Matches(pattern, input));

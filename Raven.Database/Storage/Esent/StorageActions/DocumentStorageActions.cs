@@ -127,7 +127,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGE) == false)
 				return Enumerable.Empty<AttachmentInformation>();
 
-			var optimizer = new OptimizedIndexReader(Session, Files, pageSize);
+			var optimizer = new OptimizedIndexReader(pageSize);
 			do
 			{
 				Api.MakeKey(session, Files, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
@@ -141,11 +141,11 @@ namespace Raven.Storage.Esent.StorageActions
 					start--;
 				}
 
-				optimizer.Add();
+				optimizer.Add(Session, Files);
 
 			} while (Api.TryMoveNext(session, Files) && optimizer.Count < pageSize);
 
-			return optimizer.Select(ReadCurrentAttachmentInformation);
+			return optimizer.Select(Session, Files, ReadCurrentAttachmentInformation);
 		
 		}
 
@@ -156,17 +156,17 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
 				return Enumerable.Empty<AttachmentInformation>();
 
-			var optimizer = new OptimizedIndexReader(Session, Files, take);
+			var optimizer = new OptimizedIndexReader(take);
 			do
 			{
-				optimizer.Add();
+				optimizer.Add(Session, Files);
 			} while (Api.TryMoveNext(session, Files) && optimizer.Count < take);
 
 			long totalSize = 0;
 
 			return optimizer
 				.Where(_ => totalSize <= maxTotalSize)
-				.Select(o => ReadCurrentAttachmentInformation())
+				.Select(Session, Files, o => ReadCurrentAttachmentInformation())
 				.Select(x=>
 				{
 					totalSize += x.Size;

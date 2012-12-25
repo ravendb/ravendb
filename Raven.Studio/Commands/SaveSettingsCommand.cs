@@ -150,8 +150,6 @@ namespace Raven.Studio.Commands
 
             settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
 			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
-			settingsModel.DatabaseDocument.Settings[Constants.ActiveBundles] =
-				"PeriodicBackups" + ";" + settingsModel.DatabaseDocument.Settings[Constants.ActiveBundles];
 
 			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 

@@ -13,7 +13,7 @@ namespace Raven.Database.Indexing
 
 		private volatile IndexSearcherHoldingState current;
 
-		public ManualResetEvent SetIndexSearcher(IndexSearcher searcher)
+		public ManualResetEvent SetIndexSearcher(IndexSearcher searcher, bool wait)
 		{
 			var old = current;
 			current = new IndexSearcherHoldingState(searcher);
@@ -24,7 +24,10 @@ namespace Raven.Database.Indexing
 			Interlocked.Increment(ref old.Usage);
 			using (old)
 			{
-				return old.MarkForDisposalWithWait();
+				if(wait)
+					return old.MarkForDisposalWithWait();
+				old.MarkForDisposal();
+				return null;
 			}
 		}
 
@@ -84,7 +87,7 @@ namespace Raven.Database.Indexing
 			public volatile bool ShouldDispose;
 			public int Usage;
 			private RavenJObject[] readEntriesFromIndex;
-			private Lazy<ManualResetEvent> disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
+			private readonly Lazy<ManualResetEvent> disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
 
 			public IndexSearcherHoldingState(IndexSearcher indexSearcher)
 			{

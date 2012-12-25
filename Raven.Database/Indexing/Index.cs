@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -53,8 +54,6 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		private DateTime? lastQueryTime;
 
-		private int docCountSinceLastOptimization;
-
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
 			new ConcurrentDictionary<string, IIndexExtension>();
 
@@ -68,7 +67,7 @@ namespace Raven.Database.Indexing
 		private SnapshotDeletionPolicy snapshotter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
-		private ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
+		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
@@ -134,7 +133,7 @@ namespace Raven.Database.Indexing
 				}
 				if (currentIndexSearcherHolder != null)
 				{
-					var item = currentIndexSearcherHolder.SetIndexSearcher(null);
+					var item = currentIndexSearcherHolder.SetIndexSearcher(null, wait: true);
 					if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
 					{
 						logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
@@ -192,7 +191,6 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-
 					waitReason = "Flush";
 					indexWriter.Commit();
 				}
@@ -205,24 +203,24 @@ namespace Raven.Database.Indexing
 
 		public void MergeSegments()
 		{
-			if (docCountSinceLastOptimization <= 2048) return;
 			lock (writeLock)
 			{
 				waitReason = "Merge / Optimize";
 				try
 				{
+					logIndexing.Info("Starting merge of {0}", name);
+					var sp = Stopwatch.StartNew();
 					indexWriter.Optimize();
+					logIndexing.Info("Done mergin {0} - took {1}", name, sp.Elapsed);
 				}
 				finally
 				{
 					waitReason = null;
 				}
-				docCountSinceLastOptimization = 0;
 			}
 		}
 
-		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch,
-											WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
+		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
@@ -311,7 +309,7 @@ namespace Raven.Database.Indexing
 
 					if (indexWriter == null)
 					{
-						indexWriter = CreateIndexWriter(directory);
+						CreateIndexWriter();
 					}
 
 					var locker = directory.MakeLock("writing-to-index.lock");
@@ -322,7 +320,6 @@ namespace Raven.Database.Indexing
 						try
 						{
 							changedDocs = action(indexWriter, searchAnalyzer, stats);
-							docCountSinceLastOptimization += changedDocs;
 							shouldRecreateSearcher = changedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
@@ -385,19 +382,16 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		private IndexWriter CreateIndexWriter(Directory directory)
+		private void CreateIndexWriter()
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			var indexWriter = new IndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
+			indexWriter = new IndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
 			using (indexWriter.MergeScheduler) { }
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 
 			// RavenDB already manages the memory for those, no need for Lucene to do this as well
-
-			indexWriter.MergeFactor = 1024;
 			indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
 			indexWriter.SetRAMBufferSizeMB(1024);
-			return indexWriter;
 		}
 
 		private void WriteTempIndexToDiskIfNeeded(WorkContext context)
@@ -417,7 +411,7 @@ namespace Raven.Database.Indexing
 			indexWriter.Analyzer.Close();
 			indexWriter.Dispose(true);
 
-			indexWriter = CreateIndexWriter(directory);
+			CreateIndexWriter();
 		}
 
 		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
@@ -573,12 +567,12 @@ namespace Raven.Database.Indexing
 		{
 			if (indexWriter == null)
 			{
-				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), wait: false);
 			}
 			else
 			{
 				var indexReader = indexWriter.GetReader();
-				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader));
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), wait: false);
 			}
 		}
 
@@ -1178,17 +1172,13 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
-			// this is called for the side effect of creating the snapshotter and the writer
-			// we explictly handle the backup outside of the write, to allow concurrent indexing
-			Write((writer, analyzer, stats) => 0);
-
 			try
 			{
 				var existingFiles = new List<string>();
-				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
-				var commit = snapshotter.Snapshot();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
+				
+				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
 				var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
 				System.IO.Directory.CreateDirectory(saveToFolder);
 				if (File.Exists(allFilesPath))
@@ -1199,6 +1189,23 @@ namespace Raven.Database.Indexing
 				using (var allFilesWriter = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath))
 				using (var neededFilesWriter = File.CreateText(Path.Combine(saveToFolder, "index-files.required-for-index-restore")))
 				{
+					// this is called for the side effect of creating the snapshotter and the writer
+					// we explictly handle the backup outside of the write, to allow concurrent indexing
+					Write((writer, analyzer, stats) =>
+					{
+						// however, we copy the current segments.gen & index.version to make 
+						// sure that we get the _at the time_ of the write. 
+						foreach (var fileName in new[] { "segments.gen", "index.version" })
+						{
+							var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+							allFilesWriter.WriteLine(fileName);
+						}
+						return 0;
+					});
+
+					var commit = snapshotter.Snapshot();
+
 					foreach (var fileName in commit.FileNames)
 					{
 						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
@@ -1216,20 +1223,24 @@ namespace Raven.Database.Indexing
 						}
 						neededFilesWriter.WriteLine(fileName);
 					}
-					foreach (var fileName in new[] { "segments.gen", "index.version" })
-					{
-						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
-						File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
-						allFilesWriter.WriteLine(fileName);
-					}
+
 					allFilesWriter.Flush();
 					neededFilesWriter.Flush();
 				}
 			}
 			finally
 			{
+				if (snapshotter != null)
 					snapshotter.Release();
 			}
+		}
+
+		protected object LoadDocument(string key)
+		{
+			var jsonDocument = context.Database.Get(key, null);
+			if (jsonDocument == null)
+				return new DynamicNullObject();
+			return new DynamicJsonObject(jsonDocument.ToJson());
 		}
 	}
 }

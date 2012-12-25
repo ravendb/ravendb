@@ -8,7 +8,7 @@ namespace Raven.Client.Document.OAuth
 	{
 		protected string CurrentOauthToken;
 
-		public void ConfigureRequest(object sender, WebRequestEventArgs e)
+		public virtual void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
 			if (string.IsNullOrEmpty(CurrentOauthToken))
 				return;

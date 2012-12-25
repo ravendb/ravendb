@@ -112,9 +112,19 @@ namespace Raven.Client.Document
 				aggregationOp = aggregationOp,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
-				rootTypes = {typeof(T)}
+				rootTypes = {typeof(T)},
+				beforeQueryExecutionAction = beforeQueryExecutionAction,
+				afterQueryExecutedCallback = afterQueryExecutedCallback,
+				defaultField = defaultField,
+				distanceErrorPct = distanceErrorPct,
+				isSpatialQuery = isSpatialQuery,
+				negate = negate,
+				queryShape = queryShape,
+				spatialFieldName = spatialFieldName,
+				spatialRelation = spatialRelation,
+				databaseCommands = databaseCommands,
+				indexQuery = indexQuery,
 			};
-			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
 		}
 

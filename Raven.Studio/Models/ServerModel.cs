@@ -21,7 +21,6 @@ namespace Raven.Studio.Models
 		private string[] defaultDatabase;
 
 		private string buildNumber;
-		private bool singleTenant;
 		private Observable<bool> isConnected;
 
 
@@ -94,12 +93,6 @@ namespace Raven.Studio.Models
 		private static bool firstTick = true;
 		public override Task TimerTickedAsync()
 		{
-			if (singleTenant)
-				return null;
-
-            //if (SelectedDatabase.Value.HasReplication)
-            //    SelectedDatabase.Value.UpdateReplicationOnlineStatus();
-
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>
 				                   	{
@@ -145,11 +138,6 @@ namespace Raven.Studio.Models
 				.Catch();
 		}
 
-		public bool SingleTenant
-		{
-			get { return singleTenant; }
-		}
-
 	    public IDocumentStore DocumentStore
 	    {
 	        get { return documentStore; }
@@ -169,7 +157,7 @@ namespace Raven.Studio.Models
 				return string.Empty;
 
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
-				return "http://localhost:8080";
+				return "http://localhost/Raven.Web";
 			
             var localPath = HtmlPage.Document.DocumentUri.LocalPath;
 			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);
@@ -190,8 +178,6 @@ namespace Raven.Studio.Models
             if (SelectedDatabase.Value != null 
 				&& (SelectedDatabase.Value.Name == databaseName || (SelectedDatabase.Value.Name == Constants.SystemDatabase && databaseName == null)))
                 return;
-
-            singleTenant = urlParser.GetQueryParam("api-key") != null;
 
             if (SelectedDatabase.Value != null)
                 SelectedDatabase.Value.Dispose();

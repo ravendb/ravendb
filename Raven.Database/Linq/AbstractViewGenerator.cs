@@ -15,6 +15,7 @@ using Lucene.Net.Spatial.Prefix.Tree;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Abstractions.Linq;
 using Raven.Database.Indexing;
 using Spatial4n.Core.Shapes;
 
@@ -106,6 +107,14 @@ namespace Raven.Database.Linq
 		{
 			return new AnonymousObjectToLuceneDocumentConverter(indexDefinition)
 				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
+		}
+
+		protected dynamic LoadDocument(string key)
+		{
+			if (CurrentIndexingScope.Current == null)
+				throw new InvalidOperationException("LoadDocument may only be called from the map portion of the index. Was called with: " + key);
+
+			return CurrentIndexingScope.Current.LoadDocument(key);
 		}
 
 		public void AddQueryParameterForMap(string field)

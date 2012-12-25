@@ -774,6 +774,9 @@
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\Log4NetLogManager.cs">
       <Link>Imports\Logging\LogProviders\Log4NetLogManager.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\LogManagerBase.cs">
+      <Link>Imports\Logging\LogProviders\LogManagerBase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
       <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
     </Compile>

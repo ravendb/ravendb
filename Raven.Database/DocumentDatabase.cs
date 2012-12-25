@@ -136,84 +136,81 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
-			if (configuration.IsTenantDatabase == false)
+			using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
 			{
-				validateLicense = new ValidateLicense();
-				validateLicense.Execute(configuration);
-			}
-			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
-			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
+				if (configuration.IsTenantDatabase == false)
+				{
+					validateLicense = new ValidateLicense();
+					validateLicense.Execute(configuration);
+				}
+				AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
+				AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
-			Name = configuration.DatabaseName;
-			if (configuration.CustomTaskScheduler != null)
-			{
-				backgroundTaskScheduler = configuration.CustomTaskScheduler;
-			}
-			else
-			{
-				backgroundTaskScheduler = TaskScheduler.Current;
-			}
+				Name = configuration.DatabaseName;
+				backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Current;
 
-			ExtensionsState = new AtomicDictionary<object>();
-			Configuration = configuration;
+				ExtensionsState = new AtomicDictionary<object>();
+				Configuration = configuration;
 
-			ExecuteAlterConfiguration();
+				ExecuteAlterConfiguration();
 
-			configuration.Container.SatisfyImportsOnce(this);
+				configuration.Container.SatisfyImportsOnce(this);
 
-			workContext = new WorkContext
-			{
-				DatabaseName = Name,
-				IndexUpdateTriggers = IndexUpdateTriggers,
-				ReadTriggers = ReadTriggers,
-				RaiseIndexChangeNotification = RaiseNotifications,
-				TaskScheduler = backgroundTaskScheduler,
-				Configuration = configuration
-			};
+				workContext = new WorkContext
+				{
+					Database = this,
+					DatabaseName = Name,
+					IndexUpdateTriggers = IndexUpdateTriggers,
+					ReadTriggers = ReadTriggers,
+					RaiseIndexChangeNotification = RaiseNotifications,
+					TaskScheduler = backgroundTaskScheduler,
+					Configuration = configuration
+				};
 
-			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
+				TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
 
-			try
-			{
-				TransactionalStorage.Initialize(this, DocumentCodecs);
-			}
-			catch (Exception)
-			{
-				TransactionalStorage.Dispose();
-				throw;
-			}
+				try
+				{
+					TransactionalStorage.Initialize(this, DocumentCodecs);
+				}
+				catch (Exception)
+				{
+					TransactionalStorage.Dispose();
+					throw;
+				}
 
-			try
-			{
+				try
+				{
 
-				TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
+					TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
-				TransportState = new TransportState();
+					TransportState = new TransportState();
 
-				// Index codecs must be initialized before we try to read an index
-				InitializeIndexCodecTriggers();
+					// Index codecs must be initialized before we try to read an index
+					InitializeIndexCodecTriggers();
 
-				IndexDefinitionStorage = new IndexDefinitionStorage(
-					configuration,
-					TransactionalStorage,
-					configuration.DataDirectory,
-					configuration.Container.GetExportedValues<AbstractViewGenerator>(),
-					Extensions);
-				IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
+					IndexDefinitionStorage = new IndexDefinitionStorage(
+						configuration,
+						TransactionalStorage,
+						configuration.DataDirectory,
+						configuration.Container.GetExportedValues<AbstractViewGenerator>(),
+						Extensions);
+					IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
 
-				CompleteWorkContextSetup();
+					CompleteWorkContextSetup();
 
-				indexingExecuter = new IndexingExecuter(workContext);
+					indexingExecuter = new IndexingExecuter(workContext);
 
-				InitializeTriggersExceptIndexCodecs();
-				SecondStageInitialization();
+					InitializeTriggersExceptIndexCodecs();
+					SecondStageInitialization();
 
-				ExecuteStartupTasks();
-			}
-			catch (Exception)
-			{
-				Dispose();
-				throw;
+					ExecuteStartupTasks();
+				}
+				catch (Exception)
+				{
+					Dispose();
+					throw;
+				}
 			}
 		}
 
@@ -301,6 +298,7 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
+			using(LogManager.OpenMappedContext("datbase", Name ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
 				LogContext.DatabaseName.Value = Name;
@@ -620,7 +618,11 @@ namespace Raven.Database
 			if (key == null)
 				throw new ArgumentNullException("key");
 			key = key.Trim();
-			TransactionalStorage.Batch(actions => actions.Documents.PutDocumentMetadata(key, metadata));
+			TransactionalStorage.Batch(actions =>
+			{
+				actions.Documents.PutDocumentMetadata(key, metadata);
+				workContext.ShouldNotifyAboutWork(() => "PUT (metadata) " + key);
+			});
 		}
 
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
@@ -645,6 +647,11 @@ namespace Raven.Database
 
 						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
 						newEtag = addDocumentResult.Etag;
+
+						foreach (var referencing in actions.Indexing.GetDocumentReferencing(key))
+						{
+							actions.Documents.TouchDocument(referencing);
+						}
 
 						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
@@ -818,7 +825,14 @@ namespace Raven.Database
 						if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
 						{
 							deleted = true;
+							actions.Indexing.RemoveAllDocumentReferencesFrom(key);
 							WorkContext.MarkDeleted(key);
+
+							foreach (var referencing in actions.Indexing.GetDocumentReferencing(key))
+							{
+								actions.Documents.TouchDocument(referencing);
+							}
+
 							foreach (var indexName in IndexDefinitionStorage.IndexNames)
 							{
 								AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
@@ -1812,7 +1826,17 @@ namespace Raven.Database
 			if (Configuration.RunInMemory)
 				return 0;
 			var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
-			var totalIndexSize = indexes.Sum(file => new FileInfo(file).Length);
+			var totalIndexSize = indexes.Sum(file =>
+			{
+				try
+				{
+					return new FileInfo(file).Length;
+				}
+				catch (FileNotFoundException)
+				{
+					return 0;
+				}
+			});
 
 			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
 		}

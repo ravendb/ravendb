@@ -1595,7 +1595,7 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.NewArrayInit:
 					Out("new ");
-					if (!CheckIfAnonymousType(node.Type.GetElementType()))
+					if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
 					{
 						Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
 					}

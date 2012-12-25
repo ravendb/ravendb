@@ -14,7 +14,7 @@ properties {
 	$global:configuration = "Release"
 	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), "Jint.Raven.???",
-				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", "BouncyCastle.Crypto.???", 
+				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", 
 				"ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???" ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -24,7 +24,7 @@ properties {
 	$web_files = @("..\DefaultConfigs\web.config" )
 	
 	$server_files = @( "Raven.Server.???", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
-					 "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",  "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", 
+					 "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",  "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", 
 					"Esent.Interop.???", "Jint.Raven.???","Raven.Abstractions.???", "Raven.Database.???" ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -440,7 +440,7 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
 	New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
-	@("BouncyCastle.Crypto.???", "Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
+	@("Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 		"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",	"NewtonSoft.Json.???", "NLog.???", "Jint.Raven.???",
 		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server\tools }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config

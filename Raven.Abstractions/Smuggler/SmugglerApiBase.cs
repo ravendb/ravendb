@@ -168,7 +168,8 @@ namespace Raven.Abstractions.Smuggler
 				if (documents.Length == 0)
 				{
 					var databaseStatistics = GetStats();
-					if(lastEtag.CompareTo(databaseStatistics.LastDocEtag) < 0)
+					var lastEtagComparable = new ComparableByteArray(lastEtag);
+					if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 					{
 						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}",lastEtag);

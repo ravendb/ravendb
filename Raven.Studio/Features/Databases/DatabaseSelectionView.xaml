@@ -8,7 +8,6 @@
 		<Models:DatabaseSelectionModel/>
 	</Infrastructure:View.DataContext>
   <ContentControl FontSize="12"
-					Visibility="{Binding Path=SingleTenant, Converter={StaticResource BooleanToOppositeVisibility}}"
 					FontFamily="Tahoma">
 		<StackPanel Orientation="Horizontal">
 			<HyperlinkButton Content="Databases"

@@ -535,8 +535,10 @@
     <Compile Include="Issues\RavenDB_726.cs" />
     <Compile Include="Issues\RavenDB_772.cs" />
     <Compile Include="Issues\RavenDB_766.cs" />
+    <Compile Include="Issues\RavenDB_784.cs" />
     <Compile Include="Issues\RDoc_56.cs" />
     <Compile Include="Issues\RDoc_60.cs" />
+    <Compile Include="Issues\RDoc_76.cs" />
     <Compile Include="Linq\Contains.cs" />
     <Compile Include="Linq\FirstOrDefault.cs" />
     <Compile Include="Linq\CanCallLastOnArray.cs" />
@@ -547,6 +549,8 @@
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
+    <Compile Include="MailingList\Chirea.cs" />
+    <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
@@ -576,6 +580,7 @@
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
     <Compile Include="MailingList\Pfeffer.cs" />
+    <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
@@ -584,12 +589,18 @@
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
+    <Compile Include="MailingList\ThorTimeRange\Repro.cs" />
     <Compile Include="MailingList\TriggerCanAccessFullMetadataInQueryProjection.cs" />
     <Compile Include="MailingList\Troy2.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
+    <Compile Include="MailingList\Vitaliy.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />
     <Compile Include="MailingList\Zeitler.cs" />
+    <Compile Include="NestedIndexing\CanIndexReferencedEntity.cs" />
+    <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
+    <Compile Include="NestedIndexing\Item.cs" />
+    <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
@@ -1050,7 +1061,6 @@
     <Compile Include="RavenTest.cs" />
     <Compile Include="RemoteClientTest.cs" />
     <Compile Include="Security\OAuth\AccessTokenAuthentication.cs" />
-    <Compile Include="Security\OAuth\CertHelper.cs" />
     <Compile Include="Security\OAuth\GrantAccessTokenClientCredentialsFlow.cs" />
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
     <Compile Include="Shard\Async\RoundRobinSharding.cs" />

@@ -101,8 +101,9 @@ namespace Raven.Client.Document
 				distanceErrorPct = distanceErrorPct,
 				rootTypes = {typeof(T)},
 				defaultField = defaultField,
+				beforeQueryExecutionAction = beforeQueryExecutionAction,
+				afterQueryExecutedCallback = afterQueryExecutedCallback,
 			};
-			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
 		}
 
@@ -840,6 +841,16 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults()
 		{
 			WaitForNonStaleResults();
+			return this;
+		}
+
+
+		/// <summary>
+		/// Allows you to modify the index query before it is sent to the server
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution)
+		{
+			BeforeQueryExecution(beforeQueryExecution);
 			return this;
 		}
 

@@ -135,7 +135,10 @@ namespace Raven.Client.Silverlight.Connection
 				return task;
 
 			var webResponse = exception.Response as HttpWebResponse;
-			if (webResponse == null || (webResponse.StatusCode != HttpStatusCode.Unauthorized && webResponse.StatusCode != HttpStatusCode.Forbidden))
+			if (webResponse == null || 
+				(webResponse.StatusCode != HttpStatusCode.Unauthorized && 
+				 webResponse.StatusCode != HttpStatusCode.Forbidden && 
+				 webResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 				task.AssertNotFailed();
 
 			if(webResponse.StatusCode == HttpStatusCode.Forbidden)
@@ -295,7 +298,8 @@ namespace Raven.Client.Silverlight.Connection
 				if (headerName == "ETag")
 					headerName = "If-None-Match";
 				if (headerName.StartsWith("@") ||
-					headerName == Constants.LastModified)
+					headerName == Constants.LastModified || 
+					headerName == Constants.RavenLastModified)
 					continue;
 				switch (headerName)
 				{
@@ -408,7 +412,10 @@ namespace Raven.Client.Silverlight.Connection
 						   return task;// effectively throw
 
 					   var httpWebResponse = webException.Response as HttpWebResponse;
-					   if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+					   if (httpWebResponse == null || 
+							(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && 
+							 httpWebResponse.StatusCode != HttpStatusCode.Forbidden && 
+							 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 						   return task; // effectively throw
 
 					   if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)

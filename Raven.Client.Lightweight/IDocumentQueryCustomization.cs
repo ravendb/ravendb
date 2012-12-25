@@ -145,6 +145,11 @@ namespace Raven.Client
 		IDocumentQueryCustomization RandomOrdering(string seed);
 
 		/// <summary>
+		/// Allow you to modify the index query before it is executed
+		/// </summary>
+		IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action);
+
+		/// <summary>
 		/// Execute the transfromation function on the results of this query.
 		/// </summary>
 		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);

@@ -35,10 +35,10 @@ namespace Raven.Storage.Managed
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
 			return from key in storage.IndexingStats.Keys
-			       select storage.IndexingStats.Read(key)
-			       into readResult
-			       where readResult != null
-			       select GetIndexStats(readResult);
+				   select storage.IndexingStats.Read(key)
+					   into readResult
+					   where readResult != null
+					   select GetIndexStats(readResult);
 		}
 
 		public IndexStats GetIndexStats(string index)
@@ -55,7 +55,7 @@ namespace Raven.Storage.Managed
 			{
 				locker.ExitReadLock();
 			}
-			
+
 		}
 
 		private static IndexStats GetIndexStats(Table.ReadResult readResult)
@@ -74,7 +74,7 @@ namespace Raven.Storage.Managed
 				LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
 				LastReducedEtag =
 					readResult.Key.Value<byte[]>("lastReducedEtag") != null
-						? (Guid?) new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
+						? (Guid?)new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
 						: null,
 				LastReducedTimestamp = readResult.Key.Value<DateTime?>("lastReducedTimestamp")
 			};
@@ -83,7 +83,7 @@ namespace Raven.Storage.Managed
 		public void AddIndex(string name, bool createMapReduce)
 		{
 			var readResult = storage.IndexingStats.Read(name);
-			if(readResult != null)
+			if (readResult != null)
 				throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", name));
 
 			storage.IndexingStats.UpdateKey(new RavenJObject
@@ -121,7 +121,7 @@ namespace Raven.Storage.Managed
 			indexStats["successes"] = indexStats.Value<int>("successes") + stats.IndexingSuccesses;
 			indexStats["failures"] = indexStats.Value<int>("failures") + stats.IndexingErrors;
 			storage.IndexingStats.UpdateKey(indexStats);
-		
+
 		}
 
 		public void UpdateReduceStats(string index, IndexingWorkStats stats)
@@ -131,29 +131,65 @@ namespace Raven.Storage.Managed
 			indexStats["reduce_successes"] = indexStats.Value<int>("reduce_successes") + stats.ReduceSuccesses;
 			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceSuccesses;
 			storage.IndexingStats.UpdateKey(indexStats);
-		
+
+		}
+
+		public void RemoveAllDocumentReferencesFrom(string key)
+		{
+			foreach (var source in storage.DocumentReferences["ByKey"].SkipBefore(new RavenJObject { { "key", key } })
+				.TakeWhile(x => key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase)))
+			{
+				storage.DocumentReferences.Remove(source);
+			}
+		}
+
+
+		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
+		{
+			foreach (var source in storage.DocumentReferences["ByViewAndKey"].SkipBefore(new RavenJObject { { "view", view }, { "key", key } })
+				.TakeWhile(x =>
+					 view.Equals(x.Value<string>("view"), StringComparison.CurrentCultureIgnoreCase) &&
+					 key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase)))
+			{
+				storage.DocumentReferences.Remove(source);
+			}
+
+			foreach (var reference in references)
+			{
+				storage.DocumentReferences.UpdateKey(new RavenJObject
+				{
+					{"view", view},
+					{"key", key},
+					{"ref", reference}
+				});
+			}
+		}
+
+		public IEnumerable<string> GetDocumentReferencing(string key)
+		{
+			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject { { "ref", key } })
+				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase))
+				.Select(x => x.Value<string>("key"));
+		}
+
+		public IEnumerable<string> GetDocumentReferencesFrom(string key)
+		{
+			return storage.DocumentReferences["ByKey"].SkipTo(new RavenJObject { { "ref", key } })
+			.TakeWhile(x => key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase))
+			.Select(x => x.Value<string>("ref"));
 		}
 
 		public void DeleteIndex(string name)
 		{
 			storage.IndexingStats.Remove(name);
 
-			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject { { "view", name } })
-			.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), name)))
+			foreach (var table in new[] { storage.MappedResults, storage.ReduceResults, storage.ScheduleReductions, storage.ReduceKeys, storage.DocumentReferences })
 			{
-				storage.MappedResults.Remove(key);
-			}
-
-			foreach (var key in storage.ReduceResults["ByViewReduceKeyAndSourceBucket"].SkipTo(new RavenJObject { { "view", name } })
-				.TakeWhile(x => string.Equals(name, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase)))
-			{
-				storage.ReduceResults.Remove(key);
-			}
-
-			foreach (var key in storage.ScheduleReductions["ByView"].SkipTo(new RavenJObject { { "view", name } })
-				.TakeWhile(x => string.Equals(name, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase)))
-			{
-				storage.ScheduleReductions.Remove(key);
+				foreach (var key in table["ByView"].SkipTo(new RavenJObject { { "view", name } })
+					.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), name)))
+				{
+					table.Remove(key);
+				}
 			}
 		}
 

@@ -20,17 +20,17 @@ namespace Raven.Storage.Esent.StorageActions
 	public partial class DocumentStorageActions : IIndexingStorageActions
 	{
 		private bool SetCurrentIndexStatsToImpl(string index)
-	    {
-	        Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-	        Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-	        if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-	            throw new IndexDoesNotExistsException("There is no index named: " + index);
+		{
+			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+				throw new IndexDoesNotExistsException("There is no index named: " + index);
 
-	        // this is optional
-	        Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-	        Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-	        return Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
-	    }
+			// this is optional
+			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+			Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			return Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
+		}
 
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
@@ -52,7 +52,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
 
 			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if(Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 				return null;
 
 			return GetIndexStats();
@@ -67,6 +67,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, IndexesEtags, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
 
+			var lastIndexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
 			return new IndexStats
 			{
 				Name = indexName,
@@ -80,36 +81,37 @@ namespace Raven.Storage.Esent.StorageActions
 				LastIndexedEtag =
 					Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).
 						TransfromToGuidWithProperSorting(),
-				LastIndexedTimestamp =
-					Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).
-						Value,
+				LastIndexedTimestamp = DateTime.FromBinary(lastIndexedTimestamp),
 				ReduceIndexingAttempts =
 					hasReduce == false
 						? null
 						: Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
-						                            tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
+													tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
 				ReduceIndexingSuccesses = hasReduce == false
-					                          ? null
-					                          : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
-					                                                      tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
+											  ? null
+											  : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
+																		  tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
 				ReduceIndexingErrors = hasReduce == false
-					                       ? null
-					                       : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
-					                                                   tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
-				LastReducedEtag = hasReduce == false ? (Guid?) null : GetLastReduceIndexWithPotentialNull(),
-				LastReducedTimestamp = hasReduce == false ? (DateTime?) null : GetLastReducedTimestampWithPotentialNull(),
+										   ? null
+										   : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
+																	   tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
+				LastReducedEtag = hasReduce == false ? (Guid?)null : GetLastReduceIndexWithPotentialNull(),
+				LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
 			};
 		}
 
 		private DateTime GetLastReducedTimestampWithPotentialNull()
 		{
-			return Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ?? DateTime.MinValue;
+			var binary = Api.RetrieveColumnAsInt64(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]);
+			if (binary == null)
+				return DateTime.MinValue;
+			return DateTime.FromBinary(binary.Value);
 		}
 
 		private Guid GetLastReduceIndexWithPotentialNull()
 		{
 			var bytes = Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
-			if(bytes == null)
+			if (bytes == null)
 				return Guid.Empty;
 			return bytes.TransfromToGuidWithProperSorting();
 		}
@@ -120,7 +122,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue);
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue.ToBinary());
 				update.Save();
 			}
 
@@ -138,7 +140,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], name, Encoding.Unicode);
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
-				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue);
+				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue.ToBinary());
 				update.Save();
 			}
 		}
@@ -166,7 +168,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetDelete(session, IndexesStatsReduce);
 			}
 
-			foreach (var table in new[]{MappedResults, ReducedResults, ScheduledReductions})
+			foreach (var table in new[] { MappedResults, ReducedResults, ScheduledReductions, ReduceKeysCounts, ReduceKeysStatus, IndexedDocumentsReferences })
 			{
 				Api.JetSetCurrentIndex(session, table, "by_view");
 				Api.MakeKey(session, table, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -178,12 +180,12 @@ namespace Raven.Storage.Esent.StorageActions
 				var count = 0;
 				do
 				{
-					if(count++ > 1000)
+					if (count++ > 1000)
 					{
 						PulseTransaction();
 						count = 0;
 					}
-						
+
 					Api.JetDelete(session, table);
 				} while (Api.TryMoveNext(session, table));
 			}
@@ -199,7 +201,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Attempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
 				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
 				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
-				ReduceAttempts = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]): null,
+				ReduceAttempts = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]) : null,
 				ReduceErrors = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]) : null,
 				ReduceSuccesses = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]) : null
 			};
@@ -212,14 +214,14 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 				throw new IndexDoesNotExistsException("There is no index named: " + index);
 
-			using(var update = new Update(session, IndexesStats, JET_prep.Replace))
+			using (var update = new Update(session, IndexesStats, JET_prep.Replace))
 			{
 				Api.SetColumn(session, IndexesStats,
-				              tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],
-				              etag.TransformToValueForEsentSorting());
+							  tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],
+							  etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats,
 							  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"],
-							  timestamp);
+							  timestamp.ToBinary());
 				update.Save();
 			}
 		}
@@ -227,18 +229,18 @@ namespace Raven.Storage.Esent.StorageActions
 		public void UpdateIndexingStats(string index, IndexingWorkStats stats)
 		{
 			SetCurrentIndexStatsToImpl(index);
-			using(var update = new Update(session, IndexesStats, JET_prep.Replace))
+			using (var update = new Update(session, IndexesStats, JET_prep.Replace))
 			{
 				var oldAttempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]) ?? 0;
-				Api.SetColumn(session,IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"], 
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"],
 					oldAttempts + stats.IndexingAttempts);
 
 				var oldErrors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]) ?? 0;
-				Api.SetColumn(session,IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"], 
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"],
 					oldErrors + stats.IndexingErrors);
 
 				var olsSuccesses = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]) ?? 0;
-				Api.SetColumn(session,IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"], 
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"],
 					olsSuccesses + stats.IndexingSuccesses);
 
 				update.Save();
@@ -290,11 +292,90 @@ namespace Raven.Storage.Esent.StorageActions
 							  etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStatsReduce,
 							  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
-							  timestamp);
+							  timestamp.ToBinary());
 				update.Save();
 			}
 		}
 
+		public void RemoveAllDocumentReferencesFrom(string key)
+		{
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
+				return;
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
+			do
+			{
+				Api.JetDelete(session, IndexedDocumentsReferences);
+			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+		}
+
+		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
+		{
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_view_and_key");
+			Api.MakeKey(session, IndexedDocumentsReferences, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
+			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ))
+			{
+				Api.MakeKey(session, IndexedDocumentsReferences, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
+				Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+				                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+				do
+				{
+					var reference = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+					                                           tableColumnsCache.IndexedDocumentsReferencesColumns["ref"],
+					                                           Encoding.Unicode);
+
+					if (references.Contains(reference))
+					{
+						references.Remove(reference);
+						continue;
+					}
+					Api.JetDelete(session, IndexedDocumentsReferences);
+
+				} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+			}
+
+			foreach (var reference in references)
+			{
+				using (var update = new Update(session, IndexedDocumentsReferences, JET_prep.Insert))
+				{
+					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["key"], key, Encoding.Unicode);
+					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["view"], view, Encoding.Unicode);
+					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], reference, Encoding.Unicode);
+					update.Save();
+				}
+			}
+		}
+
+		public IEnumerable<string> GetDocumentReferencing(string key)
+		{
+			return QueryReferneces(key, "by_ref", "key");
+		}
+
+		public IEnumerable<string> GetDocumentReferencesFrom(string key)
+		{
+			return QueryReferneces(key, "by_key", "ref");
+		}
+
+		private IEnumerable<string> QueryReferneces(string key, string index, string col)
+		{
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, index);
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
+				yield break;
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+			do
+			{
+				yield return Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+				                                        tableColumnsCache.IndexedDocumentsReferencesColumns[col], Encoding.Unicode);
+			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+		}
 	}
 }

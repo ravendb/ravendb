@@ -79,7 +79,8 @@ namespace Raven.Storage.Esent.StorageActions
 			byte[] docTxId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
 			if (new Guid(docTxId) != txId)
 			{
-				var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
+				var retrieveColumnAsInt64 = Api.RetrieveColumnAsInt64(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
+				var timeout = DateTime.FromBinary(retrieveColumnAsInt64.Value);
 				if (SystemTime.UtcNow > timeout)// the timeout for the transaction has passed
 				{
 					RollbackTransaction(new Guid(docTxId));
@@ -104,8 +105,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if(Api.TrySeek(session, Transactions, SeekGrbit.SeekEQ) == false)
 				return false;
 			
-			var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
-			return SystemTime.UtcNow < timeout;
+			var timeout = Api.RetrieveColumnAsInt64(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
+			return SystemTime.UtcNow < DateTime.FromBinary(timeout.Value);
 		}
 
 		private void EnsureTransactionExists(TransactionInformation transactionInformation)
@@ -117,7 +118,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["tx_id"], transactionInformation.Id.ToByteArray());
 				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"],
-							  SystemTime.UtcNow + transactionInformation.Timeout);
+							  (SystemTime.UtcNow + transactionInformation.Timeout).ToBinary());
 				try
 				{
 					update.Save();
@@ -151,8 +152,8 @@ namespace Raven.Storage.Esent.StorageActions
 				ResetTransactionOnCurrentDocument();
 				return;
 			}
-			var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
-			if (SystemTime.UtcNow > timeout)// the timeout for the transaction has passed
+			var timeout = Api.RetrieveColumnAsInt64(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
+			if (SystemTime.UtcNow > DateTime.FromBinary(timeout.Value))// the timeout for the transaction has passed
 			{
 				RollbackTransaction(guid);
 				return;

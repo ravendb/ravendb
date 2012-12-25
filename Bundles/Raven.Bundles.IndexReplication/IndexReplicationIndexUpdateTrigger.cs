@@ -3,13 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Concurrent;
 using System.Configuration;
 using System.Data;
 using System.Data.Common;
-using System.Data.SqlClient;
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
@@ -17,7 +18,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.IndexReplication.Data;
-using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Document = Lucene.Net.Documents.Document;
 
@@ -50,23 +50,23 @@ namespace Raven.Bundles.IndexReplication
 		public class ReplicateToSqlIndexUpdateBatcher : AbstractIndexUpdateTriggerBatcher
 		{
 			private readonly DbProviderFactory _providerFactory;
+			private readonly DbCommandBuilder _commandBuilder;
 			private readonly string _connectionString;
 			private readonly IndexReplicationDestination destination;
 			private static readonly Regex datePattern = new Regex(@"\d{17}", RegexOptions.Compiled);
 
 			private readonly ConcurrentQueue<IDbCommand> commands = new ConcurrentQueue<IDbCommand>();
 
-
 			public ReplicateToSqlIndexUpdateBatcher(
-				DbProviderFactory providerFactory, 
-				string connectionString, 
+				DbProviderFactory providerFactory,
+				string connectionString,
 				IndexReplicationDestination destination)
 			{
 				_providerFactory = providerFactory;
+				_commandBuilder = providerFactory.CreateCommandBuilder();
 				_connectionString = connectionString;
 				this.destination = destination;
 			}
-
 
 			public override void OnIndexEntryCreated(string entryKey, Document document)
 			{
@@ -77,9 +77,9 @@ namespace Raven.Bundles.IndexReplication
 				cmd.Parameters.Add(pkParam);
 
 				var sb = new StringBuilder("INSERT INTO ")
-					.Append(destination.TableName)
+					.Append(_commandBuilder.QuoteIdentifier(destination.TableName))
 					.Append(" (")
-					.Append(destination.PrimaryKeyColumnName)
+					.Append(_commandBuilder.QuoteIdentifier(destination.PrimaryKeyColumnName))
 					.Append(", ");
 
 				foreach (var mapping in destination.ColumnsMapping)
@@ -89,8 +89,8 @@ namespace Raven.Bundles.IndexReplication
 				sb.Length = sb.Length - 2;
 
 				sb.Append(") \r\nVALUES (")
-					.Append(pkParam.ParameterName)
-					.Append(", ");
+				  .Append(pkParam.ParameterName)
+				  .Append(", ");
 
 				foreach (var mapping in destination.ColumnsMapping)
 				{
@@ -165,25 +165,48 @@ namespace Raven.Bundles.IndexReplication
 				parameter.ParameterName = GetParameterName("entryKey");
 				parameter.Value = entryKey;
 				cmd.Parameters.Add(parameter);
-				cmd.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}", destination.TableName,
-				                                destination.PrimaryKeyColumnName, parameter.ParameterName);
+				cmd.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}",
+				                                _commandBuilder.QuoteIdentifier(destination.TableName),
+				                                _commandBuilder.QuoteIdentifier(destination.PrimaryKeyColumnName),
+				                                parameter.ParameterName);
 
 				commands.Enqueue(cmd);
 			}
 
+			private static readonly Func<DbCommandBuilder, string, string> GetParameterNameFromBuilder =
+				(Func<DbCommandBuilder, string, string>)
+				Delegate.CreateDelegate(typeof(Func<DbCommandBuilder, string, string>),
+				                        typeof(DbCommandBuilder).GetMethod("GetParameterName",
+				                                                           BindingFlags.Instance | BindingFlags.NonPublic, Type.DefaultBinder,
+				                                                           new[] { typeof(string) }, null));
+
 			private string GetParameterName(string paramName)
 			{
-				if (_providerFactory is SqlClientFactory)
-					return "@" + paramName;
-				return ":" + paramName;
+				switch (_providerFactory.GetType().Name)
+				{
+					case "SqlClientFactory":
+					case "MySqlClientFactory":
+						return "@" + paramName;
+
+					case "OracleClientFactory":
+					case "NpgsqlFactory":
+						return ":" + paramName;
+
+					default:
+						// If we don't know, try to get it from the CommandBuilder.
+						return GetParameterNameFromBuilder(_commandBuilder, paramName);
+				}
 			}
 
 			public override void Dispose()
 			{
+				if (_commandBuilder != null)
+					_commandBuilder.Dispose();
+
 				if (commands.Count == 0)
 					return;
 
-				using(var con = _providerFactory.CreateConnection())
+				using (var con = _providerFactory.CreateConnection())
 				{
 					con.ConnectionString = _connectionString;
 					con.Open();

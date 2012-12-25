@@ -34,19 +34,15 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				if (cutOff != null)
 				{
-					var lastIndexedTimestamp =
-						Api.RetrieveColumnAsDateTime(session, IndexesStats,
-													 tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
-							.Value;
+					var indexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
+					var lastIndexedTimestamp = DateTime.FromBinary(indexedTimestamp);
 					if (cutOff.Value >= lastIndexedTimestamp)
 						return true;
 
 					if (hasReduce)
 					{
-						lastIndexedTimestamp =
-							Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
-							                             tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ??
-							DateTime.MinValue;
+						var lastReduceIndex = Api.RetrieveColumnAsInt64(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]);
+						lastIndexedTimestamp = lastReduceIndex == null ? DateTime.MinValue : DateTime.FromBinary(lastReduceIndex.Value);
 						if (cutOff.Value >= lastIndexedTimestamp)
 							return true;
 					}
@@ -74,8 +70,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if (cutOff == null)
 				return true;
 			// we are at the first row for this index
-			var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
-			return cutOff.Value >= addedAt;
+			var addedAt = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
+			return cutOff.Value >= DateTime.FromBinary(addedAt);
 		}
 
 		public bool IsReduceStale(string name)
@@ -117,18 +113,17 @@ namespace Raven.Storage.Esent.StorageActions
 			if(Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ)) 
 			{// for map-reduce indexes, we use the reduce stats
 
-				var retrieveColumnAsDateTime = Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ?? DateTime.MinValue;
-				var lastReducedIndex = retrieveColumnAsDateTime;
+				var binary = Api.RetrieveColumnAsInt64(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]);
+				var lastReducedIndex = binary == null ? DateTime.MinValue : DateTime.FromBinary(binary.Value);
 				var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
 																		  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting();
 				return Tuple.Create(lastReducedIndex, lastReducedEtag);
 	
 			}
-	    
 
-			var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats,
-																  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
-				.Value;
+
+			var indexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
+			var lastIndexedTimestamp = DateTime.FromBinary(indexedTimestamp);
 			var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
 																	  tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting();
 			return Tuple.Create(lastIndexedTimestamp, lastIndexedEtag);

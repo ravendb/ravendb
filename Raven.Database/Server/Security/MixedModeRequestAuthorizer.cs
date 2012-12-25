@@ -18,16 +18,17 @@ namespace Raven.Database.Server.Security
 			base.Initialize();
 		}
 
-		public override bool Authorize(IHttpContext context)
+		public bool Authorize(IHttpContext context)
 		{
 			var requestUrl = context.GetRequestUrl();
 			if (NeverSecret.Urls.Contains(requestUrl))
 				return true;
 
+			var hasApiKey = "true".Equals(context.Request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
 			var authHeader = context.Request.Headers["Authorization"];
-			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+			if (hasApiKey || string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
-				return oAuthRequestAuthorizer.Authorize(context);
+				return oAuthRequestAuthorizer.Authorize(context, hasApiKey);
 			}
 
 			return windowsRequestAuthorizer.Authorize(context);
