@@ -16,7 +16,7 @@ namespace Raven.StressTests.Races
 	public class RaceConditions : StressTest
 	{
 		[Fact]
-		public void  SupportLazyOperations_LazyOperationsAreBatched()
+		public void SupportLazyOperations_LazyOperationsAreBatched()
 		{
 			Run<SupportLazyOperations>(x => x.LazyOperationsAreBatched(), 10);
 		}
