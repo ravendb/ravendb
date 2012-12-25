@@ -8,7 +8,7 @@ namespace Raven.StressTests.Races
         [Fact]
         public void AfterDeletingAndStoringTheDocumentIsIndexed()
         {
-            Run<IndexingBehavior>(x => x.AfterDeletingAndStoringTheDocumentIsIndexed(), 50);
+            Run<IndexingBehavior>(x => x.AfterDeletingAndStoringTheDocumentIsIndexed(), 20);
         }
     }
 }
