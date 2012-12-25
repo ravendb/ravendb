@@ -15,7 +15,7 @@ namespace Raven.Studio.Infrastructure.Converters
 				if (apiKey == null)
 					return "";
 				if (string.IsNullOrWhiteSpace(apiKey.Name) || string.IsNullOrWhiteSpace(apiKey.Secret))
-					return "Must set both name and secret to get the connection string";
+					return "Must set both name and secret to get a direct link";
 
 				return string.Format(@"{0}/raven/studio.html#/databases?api-Key={1}/{2}",
 													 ApplicationModel.Current.Server.Value.Url, apiKey.Name, apiKey.Secret);
