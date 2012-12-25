@@ -696,6 +696,7 @@
     <Compile Include="Util\Etag.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
+    <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
   </ItemGroup>
   <ItemGroup>

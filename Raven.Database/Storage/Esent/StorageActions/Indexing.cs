@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
@@ -352,12 +353,12 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<string> GetDocumentReferencing(string key)
+		public IEnumerable<string> GetDocumentsReferencing(string key)
 		{
 			return QueryReferneces(key, "by_ref", "key");
 		}
 
-		public IEnumerable<string> GetDocumentReferencesFrom(string key)
+		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
 			return QueryReferneces(key, "by_key", "ref");
 		}
@@ -367,15 +368,19 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, index);
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
-				yield break;
+				return Enumerable.Empty<string>();
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
 			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+			var results = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			do
 			{
-				yield return Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+				var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
 				                                        tableColumnsCache.IndexedDocumentsReferencesColumns[col], Encoding.Unicode);
+				results.Add(item);
 			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+			return results;
 		}
 	}
 }

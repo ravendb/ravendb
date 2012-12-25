@@ -313,15 +313,21 @@ namespace Raven.Storage.Esent.StorageActions
 			return optimizer.Select(Session, Documents, ReadCurrentDocument);
 		}
 
-		public void TouchDocument(string key)
+		public void TouchDocument(string key, out Guid? preTouchEtag, out Guid? afterTouchEtag)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
 			if (isUpdate == false)
+			{
+				preTouchEtag = null;
+				afterTouchEtag = null;
 				return;
+			}
 
+			preTouchEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 			Guid newEtag = uuidGenerator.CreateSequentialUuid();
+			afterTouchEtag = newEtag;
 			using (var update = new Update(session, Documents, JET_prep.Replace))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());

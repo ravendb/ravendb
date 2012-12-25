@@ -246,11 +246,18 @@ namespace Raven.Storage.Managed
 			return AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, metadata);
 		}
 
-
-		public void TouchDocument(string key)
+		public void TouchDocument(string key, out Guid? preTouchEtag, out Guid? afterTouchEtag)
 		{
 			var documentByKey = DocumentByKey(key, null);
-			AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, documentByKey.Metadata);
+			if(documentByKey == null)
+			{
+				preTouchEtag = null;
+				afterTouchEtag = null;
+				return;
+			}
+			var addDocumentResult = AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, documentByKey.Metadata);
+			preTouchEtag = documentByKey.Etag;
+			afterTouchEtag = addDocumentResult.Etag;
 		}
 
 		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata)

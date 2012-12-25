@@ -28,7 +28,7 @@ namespace Raven.Database.Storage
 		void IncrementDocumentCount(int value);
 		void InsertDocument(string key, RavenJObject data, RavenJObject metadata);
 
-		void TouchDocument(string key);
+		void TouchDocument(string key, out Guid? preTouchEtag, out Guid? afterTouchEtag);
 		Guid GetBestNextDocumentEtag(Guid etag);
 	}
 

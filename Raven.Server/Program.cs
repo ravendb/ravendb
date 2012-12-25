@@ -34,10 +34,10 @@ namespace Raven.Server
 {
 	public static class Program
 	{
-        static string[] cmdLineArgs;
+		static string[] cmdLineArgs;
 		private static void Main(string[] args)
 		{
-            cmdLineArgs = args;
+			cmdLineArgs = args;
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 			if (RunningInInteractiveMode(args))
 			{
@@ -115,7 +115,7 @@ namespace Raven.Server
 			string backupLocation = null;
 			string restoreLocation = null;
 			bool defrag = false;
-            string theUser = null;
+			string theUser = null;
 			Action actionToTake = null;
 			bool launchBrowser = false;
 			var ravenConfiguration = new RavenConfiguration();
@@ -130,8 +130,8 @@ namespace Raven.Server
 				}},
 				{"config=", "The config {0:file} to use", path => ravenConfiguration.LoadFrom(path)},
 				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart)},
-                {"user=", "Which user will be used", user=> theUser = user},
-                {"setup-perf-counters", "Setup the performance counters and the related permissions", key => actionToTake = ()=> AdminRequired(()=>SetupPerfCounters(theUser))},
+				{"user=", "Which user will be used", user=> theUser = user},
+				{"setup-perf-counters", "Setup the performance counters and the related permissions", key => actionToTake = ()=> AdminRequired(()=>SetupPerfCounters(theUser))},
 				{"service-name=", "The {0:service name} to use when installing or uninstalling the service, default to RavenDB", name => ProjectInstaller.SERVICE_NAME = name},
 				{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall)},
 				{"start", "Starts the RavenDB service", key => actionToTake= () => AdminRequired(StartService)},
@@ -173,19 +173,19 @@ namespace Raven.Server
 				{"encrypt-self-config", "Encrypt the RavenDB configuration file", file =>
 						{
 							actionToTake = () => ProtectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
-				        }},
+						}},
 				{"encrypt-config=", "Encrypt the specified {0:configuration file}", file =>
 						{
 							actionToTake = () => ProtectConfiguration(file);
-				        }},
+						}},
 				{"decrypt-self-config", "Decrypt the RavenDB configuration file", file =>
 						{
 							actionToTake = () => UnprotectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
-				        }},
+						}},
 				{"decrypt-config=", "Decrypt the specified {0:configuration file}", file =>
 						{
 							actionToTake = () => UnprotectConfiguration(file);
-				        }}
+						}}
 			};
 
 
@@ -210,11 +210,11 @@ namespace Raven.Server
 
 		}
 
-        private static void SetupPerfCounters(string user)
-        {
-            user = user ?? WindowsIdentity.GetCurrent().Name;
-            PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(user);
-        }
+		private static void SetupPerfCounters(string user)
+		{
+			user = user ?? WindowsIdentity.GetCurrent().Name;
+			PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(user);
+		}
 
 		private static void ProtectConfiguration(string file)
 		{
@@ -405,7 +405,7 @@ Configuration options:
 						AdminGc.CollectGarbage(server.Database);
 						var after = Process.GetCurrentProcess().WorkingSet64;
 						Console.WriteLine("Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB", after / 1024d / 1024d,
-										  (before - after) / 1024d / 1024d);
+											(before - after) / 1024d / 1024d);
 					}
 					},
 				{

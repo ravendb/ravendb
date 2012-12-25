@@ -29,20 +29,25 @@ namespace Raven.Abstractions.Util
 
 		public int CompareTo(byte[] otherBuffer)
 		{
-			if (inner == null && otherBuffer == null)
+			return CompareTo(inner, otherBuffer);
+		}
+
+		public static int CompareTo(byte[] firstBuffer, byte[] otherBuffer)
+		{
+			if (firstBuffer == null && otherBuffer == null)
 				return 0;
-			if (inner == null)
+			if (firstBuffer == null)
 				return 1;
 			if (otherBuffer == null)
 				return -1;
 
 
-			if (inner.Length != otherBuffer.Length)
-				return inner.Length - otherBuffer.Length;
-			for (int i = 0; i < inner.Length; i++)
+			if (firstBuffer.Length != otherBuffer.Length)
+				return firstBuffer.Length - otherBuffer.Length;
+			for (int i = 0; i < firstBuffer.Length; i++)
 			{
-				if (inner[i] != otherBuffer[i])
-					return inner[i] - otherBuffer[i];
+				if (firstBuffer[i] != otherBuffer[i])
+					return firstBuffer[i] - otherBuffer[i];
 			}
 			return 0;
 		}

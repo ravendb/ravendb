@@ -22,6 +22,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Bundles.Replication.Issues;
 using Raven.Tests.Document;
 using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
@@ -37,26 +38,14 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			var x = new DocumentStore
+			for (int i = 0; i < 100; i++)
 			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "bulk"
-			}.Initialize();
-
-			var sp = Stopwatch.StartNew();
-			using(var remoteBulkInsertOperation = new RemoteBulkInsertOperation((ServerClient) x.DatabaseCommands,1024*8))
-			{
-				for (int i = 0; i < 250*1000; i++)
+				Console.WriteLine(i);
+				using(var x = new ReplicationWithReferencedIndexes())
 				{
-					remoteBulkInsertOperation.Write(Guid.NewGuid().ToString(), new RavenJObject{{Constants.RavenEntityName, "Tests"}},
-						new RavenJObject{{"Age", i*2}});
-					if(i % 1000 == 0)
-						Console.WriteLine(i);
+					x.WillReindexReferencesBecauseOfReplication();
 				}
 			}
-			Console.WriteLine(sp.Elapsed);
-
-			x.Dispose();
 		}
 	}
 }
