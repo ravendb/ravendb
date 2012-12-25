@@ -1,35 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using Lucene.Net.Analysis.Standard;
-using Lucene.Net.Analysis.Tokenattributes;
-using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.MEF;
-using Raven.Client.Connection;
-using Raven.Client.Document;
-using Raven.Database;
-using Raven.Database.Config;
-using Raven.Database.Impl;
-using Raven.Database.Plugins;
-using Raven.Database.Storage;
-using Raven.Json.Linq;
-using Raven.Tests.Bugs;
-using Raven.Tests.Bundles.Replication.Issues;
-using Raven.Tests.Document;
-using Raven.Tests.Faceted;
-using Raven.Tests.Issues;
 using System.Linq;
-using Raven.Tests.Util;
-using Xunit;
-using Version = Lucene.Net.Util.Version;
+using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
 {
@@ -38,13 +10,13 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			var names = PerformanceCounterCategory.GetCategories().Select(category => category.CategoryName)
-						  .Where(s => s.StartsWith("RavenDB"));
-
-			foreach (var name in names)
+			for (int i = 0; i < 100; i++)
 			{
-				PerformanceCounterCategory.Delete(name);
-
+				Console.WriteLine(i);
+				using (var x = new ManyDocumentsViaDTC())
+				{
+					x.WouldBeIndexedProperly();
+				}
 			}
 		}
 	}
