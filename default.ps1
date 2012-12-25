@@ -131,22 +131,23 @@ task Test -depends Compile {
 	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
-	Write-Host "xUnit location: $xUnit\tools\xunit.console.clr4.exe"
+	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
+	Write-Host "xUnit location: $xUnit"
 	
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test ) {
 			$env:raventest_storage_engine = 'munin';
 			Write-Host "Testing $build_dir\$_ (munin)"
-			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
+			exec { &"$xUnit" "$build_dir\$_" }
 			
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
+			exec { &"$xUnit" "$build_dir\$_" }
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
+			exec { &"$xUnit" "$build_dir\$_" }
 		}
 	}
 }
