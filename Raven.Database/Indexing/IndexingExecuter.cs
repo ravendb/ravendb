@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -114,7 +115,7 @@ namespace Raven.Database.Indexing
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-							  jsonDocs.Results.Length, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Results.Select(x => x.Key)));
+					          jsonDocs.Results.Length, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Results.Select(x => x.Key)));
 				}
 
 				context.ReportIndexingActualBatchSize(jsonDocs.Results.Length);
@@ -152,10 +153,10 @@ namespace Raven.Database.Indexing
 
 					if (Log.IsDebugEnabled)
 					{
-						Log.Debug("Aftering indexing {0} documents, the new last etag for is: {1} for {2}",
-								  jsonDocs.Results.Length,
-								  lastEtag,
-								  string.Join(", ", indexesToWorkOn.Select(x => x.IndexName))
+						Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
+						          jsonDocs.Results.Length,
+						          lastEtag,
+						          string.Join(", ", indexesToWorkOn.Select(x => x.IndexName))
 							);
 					}
 
@@ -191,7 +192,7 @@ namespace Raven.Database.Indexing
 					var jsonResults = x.Task.Result;
 					return jsonResults.LoadedFromDisk ? jsonResults.Results.Length : 0;
 				}
-				return autoTuner.NumberOfItemsToIndexInSingleBatch / 15;
+				return autoTuner.NumberOfItemsToIndexInSingleBatch/15;
 			});
 
 			var futureSize = futureIndexBatches.Sum(x =>
@@ -201,7 +202,7 @@ namespace Raven.Database.Indexing
 					var jsonResults = x.Task.Result;
 					return jsonResults.LoadedFromDisk ? jsonResults.Results.Sum(s => s.SerializedSizeOnDisk) : 0;
 				}
-				return autoTuner.NumberOfItemsToIndexInSingleBatch * 256;
+				return autoTuner.NumberOfItemsToIndexInSingleBatch*256;
 
 			});
 			autoTuner.AutoThrottleBatchSize(jsonDocs.Length + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
@@ -293,7 +294,7 @@ namespace Raven.Database.Indexing
 		{
 			Guid nextDocEtag = highestEtag;
 			context.TransactionaStorage.Batch(
-				accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(highestEtag); });
+			                                  accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(highestEtag); });
 			return nextDocEtag;
 		}
 
@@ -320,8 +321,8 @@ namespace Raven.Database.Indexing
 			}
 
 			// ensure we don't do TOO much future cachings
-			if (MemoryStatistics.AvailableMemory < 
-				context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			if (MemoryStatistics.AvailableMemory <
+			    context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				return;
 
 			// we loaded the maximum amount, there are probably more items to read now.
@@ -362,7 +363,7 @@ namespace Raven.Database.Indexing
 					}
 					futureBatchStat.Duration = sp.Elapsed;
 					futureBatchStat.Size = jsonDocuments == null ? 0 : jsonDocuments.Results.Length;
-					if(jsonDocuments != null)
+					if (jsonDocuments != null)
 					{
 						MaybeAddFutureBatch(jsonDocuments, indexingAge);
 					}
@@ -374,7 +375,7 @@ namespace Raven.Database.Indexing
 		private static Guid GetNextHighestEtag(JsonDocument[] past)
 		{
 			JsonDocument jsonDocument = GetHighestEtag(past);
-			if(jsonDocument == null)
+			if (jsonDocument == null)
 				return Guid.Empty;
 			return jsonDocument.Etag ?? Guid.Empty;
 		}
@@ -401,7 +402,14 @@ namespace Raven.Database.Indexing
 		{
 			var highest = new ComparableByteArray(lastIndexedEtag);
 
-			documentsToRemove.RemoveWhere(x => x.Etag == null || highest.CompareTo(x.Etag.Value) >= 0);
+			foreach (var docToRemove in documentsToRemove)
+			{
+				if (docToRemove.Value.All(etag => highest.CompareTo(etag) > 0) == false)
+					continue;
+
+				HashSet<Guid> _;
+				documentsToRemove.TryRemove(docToRemove.Key, out _);
+			}
 		}
 
 		private static System.Threading.Tasks.Task ObserveDiscardedTask(FutureIndexBatch source)
@@ -438,18 +446,17 @@ namespace Raven.Database.Indexing
 				if (nextFutureBatch != null)
 					untilEtag = nextFutureBatch.StartingEtag;
 				jsonDocs = actions.Documents
-					.GetDocumentsAfter(
-						lastIndexed,
-						autoTuner.NumberOfItemsToIndexInSingleBatch,
-						autoTuner.MaximumSizeAllowedToFetchFromStorage,
-						untilEtag: untilEtag)
-					.Where(x => x != null)
-					.Select(doc =>
-					{
-						DocumentRetriever.EnsureIdInMetadata(doc);
-						return doc;
-					})
-					.ToArray();
+				                  .GetDocumentsAfter(
+				                                     lastIndexed,
+				                                     autoTuner.NumberOfItemsToIndexInSingleBatch,
+				                                     autoTuner.MaximumSizeAllowedToFetchFromStorage)
+				                  .Where(x => x != null)
+				                  .Select(doc =>
+				                  {
+					                  DocumentRetriever.EnsureIdInMetadata(doc);
+					                  return doc;
+				                  })
+				                  .ToArray();
 			});
 			return new JsonResults
 			{
@@ -479,7 +486,7 @@ namespace Raven.Database.Indexing
 					return filteredDoc == null ? new
 					{
 						Doc = doc,
-						Json = (object)new FilteredDocument(doc)
+						Json = (object) new FilteredDocument(doc)
 					} : new
 					{
 						Doc = filteredDoc,
@@ -521,25 +528,28 @@ namespace Raven.Database.Indexing
 
 					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
-						viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
+					    viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
 					{
 						continue;
 					}
 
-					batch.Add(item.Doc, item.Json);
+					bool skipDeleteFromIndex = documentsToRemove.ContainsKey(item.Doc.Key) == false &&
+					                           item.Doc.SkipDeleteFromIndex;
+
+					batch.Add(item.Doc, item.Json, skipDeleteFromIndex);
 
 					if (batch.DateTime == null)
 						batch.DateTime = item.Doc.LastModified;
 					else
 						batch.DateTime = batch.DateTime > item.Doc.LastModified
-											? item.Doc.LastModified
-											: batch.DateTime;
+							                 ? item.Doc.LastModified
+							                 : batch.DateTime;
 				}
 
 				if (batch.Docs.Count == 0)
 				{
 					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
-						lastEtag, lastModified);
+					          lastEtag, lastModified);
 					// we use it this way to batch all the updates together
 					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
 					return;
@@ -599,9 +609,7 @@ namespace Raven.Database.Indexing
 			{
 				if (actions.IsWriteConflict(e))
 					return;
-				Log.WarnException(
-					string.Format("Failed to index documents for index: {0}", index),
-					e);
+				Log.WarnException(string.Format("Failed to index documents for index: {0}", index), e);
 			}
 		}
 
@@ -611,15 +619,15 @@ namespace Raven.Database.Indexing
 				return;
 
 			if (futureIndexBatches.Count > 512 || // this is optimization, and we need to make sure we don't overuse memory
-				docs.Length == 0)
+			    docs.Length == 0)
 				return;
-			
+
 			foreach (var doc in docs)
 			{
 				DocumentRetriever.EnsureIdInMetadata(doc);
 			}
 
-			
+
 			futureIndexBatches.Add(new FutureIndexBatch
 			{
 				StartingEtag = GetLowestEtag(docs),
@@ -647,56 +655,19 @@ namespace Raven.Database.Indexing
 			return lowest.ToGuid();
 		}
 
-		private readonly ConcurrentSet<DocumentToRemove> documentsToRemove = new ConcurrentSet<DocumentToRemove>();
+		private readonly ConcurrentDictionary<string, HashSet<Guid>> documentsToRemove =
+			new ConcurrentDictionary<string, HashSet<Guid>>(StringComparer.InvariantCultureIgnoreCase);
 
 		private bool FilterDocuments(JsonDocument document)
 		{
-			var documentToRemove = new DocumentToRemove(document.Key, document.Etag);
-
-			return documentsToRemove.TryRemove(documentToRemove);
+			HashSet<Guid> etags;
+			return documentsToRemove.TryGetValue(document.Key, out etags) && etags.Contains(document.Etag.Value);
 		}
 
-		internal class DocumentToRemove
+		public void AfterDelete(string key, Guid lastDocumentEtag)
 		{
-			public DocumentToRemove(string key, Guid? etag)
-			{
-				Key = key;
-				Etag = etag;
-			}
-
-			public string Key { get; set; }
-
-			public Guid? Etag { get; set; }
-
-
-			protected bool Equals(DocumentToRemove other)
-			{
-				return string.Equals(Key, other.Key) && Etag.Equals(other.Etag);
-			}
-
-			public override bool Equals(object obj)
-			{
-				if (ReferenceEquals(null, obj)) return false;
-				if (ReferenceEquals(this, obj)) return true;
-				return Equals((DocumentToRemove) obj);
-			}
-
-			public override int GetHashCode()
-			{
-				unchecked
-				{
-					int hashCode = (Key != null ? Key.GetHashCode() : 0);
-					hashCode = (hashCode*397) ^ Etag.GetHashCode();
-					return hashCode;
-				}
-			}
-		}
-
-		
-
-		public void AfterDelete(string key, Guid? lastDocumentEtag)
-		{
-			documentsToRemove.Add(new DocumentToRemove(key, lastDocumentEtag));
+			documentsToRemove.AddOrUpdate(key, s => new HashSet<Guid> {lastDocumentEtag},
+			                              (s, set) => new HashSet<Guid>(set) {lastDocumentEtag});
 		}
 	}
 }

@@ -9,15 +9,15 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanQueryDtcForUncommittedItem()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
-				using(var tx = new TransactionScope())
+				using (var tx = new TransactionScope())
 				{
-					System.Transactions.Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-					                                                      new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-					                                                      EnlistmentOptions.None);
+					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					                                  EnlistmentOptions.None);
 
-					using(var session = store.OpenSession())
+					using (var session = store.OpenSession())
 					{
 						session.Store(new User());
 						session.SaveChanges();
@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
-		
+
 	}
 
 	public class DtcBluesRemote : RemoteClientTest
@@ -43,16 +43,16 @@ namespace Raven.Tests.Bugs
 		public void CanQueryDtcForUncommittedItem()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
 				for (int i = 0; i < 150; i++)
 				{
 					string id;
 					using (var tx = new TransactionScope())
 					{
-						System.Transactions.Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-																			  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-																			  EnlistmentOptions.None);
+						Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+						                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+						                                  EnlistmentOptions.None);
 
 						using (var session = store.OpenSession())
 						{
@@ -87,17 +87,17 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanQueryDtcForUncommittedItem()
 		{
-			using(GetNewServer())
-			using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
+			using (GetNewServer())
+			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
 				for (int i = 0; i < 150; i++)
 				{
 					string id;
 					using (var tx = new TransactionScope())
 					{
-						System.Transactions.Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-																			  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-																			  EnlistmentOptions.None);
+						Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+						                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+						                                  EnlistmentOptions.None);
 
 						using (var session = store.OpenSession())
 						{
