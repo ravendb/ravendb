@@ -54,8 +54,6 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		private DateTime? lastQueryTime;
 
-		private int docCountSinceLastOptimization;
-
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
 			new ConcurrentDictionary<string, IIndexExtension>();
 
@@ -69,7 +67,7 @@ namespace Raven.Database.Indexing
 		private SnapshotDeletionPolicy snapshotter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
-		private ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
+		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
@@ -219,12 +217,10 @@ namespace Raven.Database.Indexing
 				{
 					waitReason = null;
 				}
-				docCountSinceLastOptimization = 0;
 			}
 		}
 
-		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch,
-											WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
+		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
@@ -324,7 +320,6 @@ namespace Raven.Database.Indexing
 						try
 						{
 							changedDocs = action(indexWriter, searchAnalyzer, stats);
-							docCountSinceLastOptimization += changedDocs;
 							shouldRecreateSearcher = changedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
@@ -1238,6 +1233,14 @@ namespace Raven.Database.Indexing
 				if (snapshotter != null)
 					snapshotter.Release();
 			}
+		}
+
+		protected object LoadDocument(string key)
+		{
+			var jsonDocument = context.Database.Get(key, null);
+			if (jsonDocument == null)
+				return new DynamicNullObject();
+			return new DynamicJsonObject(jsonDocument.ToJson());
 		}
 	}
 }

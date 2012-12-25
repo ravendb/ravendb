@@ -488,7 +488,7 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
-				value.IndexDocuments(viewGenerator, batch, context, actions, minimumTimestamp);
+				value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,

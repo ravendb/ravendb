@@ -56,7 +56,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 							update.Save();
 						}
 
-						if (rows++ % 10 * 1000 == 0)
+						if (rows++ % 10000 == 0)
 							continue;
 
 						// pulsing transaction

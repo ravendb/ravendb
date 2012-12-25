@@ -76,8 +76,6 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-
-
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
@@ -89,6 +87,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 			if (reduceKeysStatus != null)
 				reduceKeysStatus.Dispose();
+
+			if (indexedDocumentsReferences != null)
+				indexedDocumentsReferences.Dispose();
 
 			if (reducedResults != null)
 				reducedResults.Dispose();
@@ -155,7 +156,7 @@ namespace Raven.Storage.Esent.StorageActions
 		public Action Commit(CommitTransactionGrbit txMode)
 		{
 			transaction.Commit(txMode);
-			
+
 			return OnCommit;
 		}
 

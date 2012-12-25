@@ -437,6 +437,11 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf WaitForNonStaleResults();
 
 		/// <summary>
+		/// Allows you to modify the index query before it is sent to the server
+		/// </summary>
+		TSelf BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution);
+
+		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
 		///   This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>

@@ -36,7 +36,7 @@ namespace Raven.Database.Indexing
 			get { return false; }
 		}
 
-		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
+		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
 			var sourceCount = 0;
@@ -91,41 +91,45 @@ namespace Raven.Database.Indexing
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
 						                                Field.Index.NOT_ANALYZED_NO_NORMS);
 
-						foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
+						using (CurrentIndexingScope.Current = new CurrentIndexingScope(name, actions,LoadDocument))
 						{
-							float boost;
-							var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
-
-							if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
+							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
 							{
-								Interlocked.Increment(ref count);
-								luceneDoc.GetFields().Clear();
-								luceneDoc.Boost = boost;
-								documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
-								luceneDoc.Add(documentIdField);
-								foreach (var field in indexingResult.Fields)
-								{
-									luceneDoc.Add(field);
-								}
-								batchers.ApplyAndIgnoreAllErrors(
-									exception =>
-									{
-										logIndexing.WarnException(
-											string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-											              name, indexingResult.NewDocId),
-											exception);
-										context.AddError(name,
-										                 indexingResult.NewDocId,
-										                 exception.Message
-											);
-									},
-									trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
-								LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
-								AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
-							}
+								float boost;
+								var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
 
-							Interlocked.Increment(ref stats.IndexingSuccesses);
+								if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
+								{
+									Interlocked.Increment(ref count);
+									luceneDoc.GetFields().Clear();
+									luceneDoc.Boost = boost;
+									documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
+									luceneDoc.Add(documentIdField);
+									foreach (var field in indexingResult.Fields)
+									{
+										luceneDoc.Add(field);
+									}
+									batchers.ApplyAndIgnoreAllErrors(
+										exception =>
+										{
+											logIndexing.WarnException(
+												string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+															  name, indexingResult.NewDocId),
+												exception);
+											context.AddError(name,
+															 indexingResult.NewDocId,
+															 exception.Message
+												);
+										},
+										trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
+									LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
+									AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+								}
+
+								Interlocked.Increment(ref stats.IndexingSuccesses);
+							}
 						}
+						
 					});
 				}
 				catch(Exception e)

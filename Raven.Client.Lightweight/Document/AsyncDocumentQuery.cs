@@ -616,6 +616,15 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Allows you to modify the index query before it is sent to the server
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution)
+		{
+			BeforeQueryExecution(beforeQueryExecutionAction);
+			return this;
+		}
+
+		/// <summary>
 		/// EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
 		/// This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>

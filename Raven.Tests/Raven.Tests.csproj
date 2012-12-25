@@ -551,6 +551,7 @@
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\Chirea.cs" />
+    <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
@@ -597,6 +598,10 @@
     <Compile Include="MailingList\Vitaliy.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />
     <Compile Include="MailingList\Zeitler.cs" />
+    <Compile Include="NestedIndexing\CanIndexReferencedEntity.cs" />
+    <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
+    <Compile Include="NestedIndexing\Item.cs" />
+    <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
@@ -1057,7 +1062,6 @@
     <Compile Include="RavenTest.cs" />
     <Compile Include="RemoteClientTest.cs" />
     <Compile Include="Security\OAuth\AccessTokenAuthentication.cs" />
-    <Compile Include="Security\OAuth\CertHelper.cs" />
     <Compile Include="Security\OAuth\GrantAccessTokenClientCredentialsFlow.cs" />
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
     <Compile Include="Shard\Async\RoundRobinSharding.cs" />

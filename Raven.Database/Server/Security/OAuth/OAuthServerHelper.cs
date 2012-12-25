@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Security.OAuth
 {
 	internal static class OAuthServerHelper
 	{
-		private const int rsaKeySize = 2048;
+		private const int RsaKeySize = 2048;
 
 		private static readonly ThreadLocal<RNGCryptoServiceProvider> rng = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
 		private static readonly ThreadLocal<RSACryptoServiceProvider> rsa;
@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			RSAParameters privateRsaParameters;
 			RSAParameters publicRsaParameters;
-			using (var rsaKeyGen = new RSACryptoServiceProvider(rsaKeySize))
+			using (var rsaKeyGen = new RSACryptoServiceProvider(RsaKeySize))
 			{
 				privateRsaParameters = rsaKeyGen.ExportParameters(true);
 				publicRsaParameters = rsaKeyGen.ExportParameters(false);

@@ -204,6 +204,14 @@ namespace Raven.Client.Indexes
 #endif
 
 		/// <summary>
+		/// Loads the specifed document during the indexing process
+		/// </summary>
+		public T LoadDocument<T>(string key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
 		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IList<TResult>> func)

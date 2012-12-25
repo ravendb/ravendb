@@ -475,6 +475,8 @@ namespace Raven.Database.Indexing
 			get { return lastActualIndexingBatchSize; }
 		}
 
+		public DocumentDatabase Database { get; set; }
+
 		public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{
 			futureBatchStats.Add(futureBatchStat);
