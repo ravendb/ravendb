@@ -38,7 +38,14 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			Console.WriteLine(new int[0].Min());
+			var names = PerformanceCounterCategory.GetCategories().Select(category => category.CategoryName)
+						  .Where(s => s.StartsWith("RavenDB"));
+
+			foreach (var name in names)
+			{
+				PerformanceCounterCategory.Delete(name);
+
+			}
 		}
 	}
 }
