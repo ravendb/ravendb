@@ -283,7 +283,7 @@ namespace Raven.Database.Indexing
 			{
 				Results = items.SelectMany(x => x.Results)
 					.GroupBy(x => x.Key)
-					.Select(g => g.OrderBy(x => x.Etag).First())
+					.Select(g => g.OrderBy(x => x.Etag, ByteArrayComparer.Instance).First())
 					.ToArray(),
 				LoadedFromDisk = items.Aggregate(false, (prev, r) => prev | r.LoadedFromDisk)
 			};
@@ -325,7 +325,11 @@ namespace Raven.Database.Indexing
 				return;
 
 			// we loaded the maximum amount, there are probably more items to read now.
-			var nextEtag = GetNextDocEtag(GetNextHighestEtag(past.Results));
+			var highestLoadedEtag = GetNextHighestEtag(past.Results);
+			var nextEtag = GetNextDocEtag(highestLoadedEtag);
+
+			if (nextEtag == highestLoadedEtag)
+				return;// there is nothing newer to do 
 
 			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextEtag);
 

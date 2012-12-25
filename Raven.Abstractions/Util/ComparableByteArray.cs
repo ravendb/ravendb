@@ -8,13 +8,24 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Util
 {
-	public class ByteArrayComparer : IComparer<Guid>
+	public class ByteArrayComparer : IComparer<Guid>, IComparer<Guid?>
 	{
 		public static readonly ByteArrayComparer Instance = new ByteArrayComparer();
 
 		public int Compare(Guid x, Guid y)
 		{
 			return ComparableByteArray.CompareTo(x.ToByteArray(), y.ToByteArray());
+		}
+
+		public int Compare(Guid? x, Guid? y)
+		{
+			if (x == null && y == null)
+				return 0;
+			if (x == null)
+				return -1;
+			if (y == null)
+				return 1;
+			return ComparableByteArray.CompareTo(x.Value.ToByteArray(), y.Value.ToByteArray());
 		}
 	}
 
