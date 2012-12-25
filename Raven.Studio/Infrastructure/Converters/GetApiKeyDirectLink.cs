@@ -11,14 +11,14 @@ namespace Raven.Studio.Infrastructure.Converters
 	{
 			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 			{
-				var apiKey = value as ApiKeyDefinition;
-				if (apiKey == null)
+				var fullApiKey = value as string;
+				if (fullApiKey == null)
 					return "";
-				if (string.IsNullOrWhiteSpace(apiKey.Name) || string.IsNullOrWhiteSpace(apiKey.Secret))
+				if (fullApiKey.Contains("/") == false)
 					return "Must set both name and secret to get a direct link";
 
-				return string.Format(@"{0}/raven/studio.html#/databases?api-Key={1}/{2}",
-													 ApplicationModel.Current.Server.Value.Url, apiKey.Name, apiKey.Secret);
+				return string.Format(@"{0}/raven/studio.html#/databases?api-Key={1}",
+													 ApplicationModel.Current.Server.Value.Url, fullApiKey);
 			}
 
 			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
