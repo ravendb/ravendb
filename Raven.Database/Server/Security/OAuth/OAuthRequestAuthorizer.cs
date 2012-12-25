@@ -33,7 +33,7 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 
 			AccessTokenBody tokenBody;
-			if (!AccessToken.TryParseBody(Settings.OAuthTokenCertificate, token, out tokenBody))
+			if (!AccessToken.TryParseBody(Settings.OAuthTokenKey, token, out tokenBody))
 			{
 				if (allowUnauthenticatedUsers)
 					return true;

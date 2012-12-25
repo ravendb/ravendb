@@ -42,7 +42,7 @@ namespace Raven.Client.Document
 		protected SpatialRelation spatialRelation;
 		protected double distanceErrorPct;
 		private readonly LinqPathProvider linqPathProvider;
-		private Action<IndexQuery> beforeQueryExecution;
+		protected Action<IndexQuery> beforeQueryExecutionAction;
 
 		protected readonly HashSet<Type> rootTypes = new HashSet<Type>
 		{
@@ -435,8 +435,8 @@ namespace Raven.Client.Document
 			var query = queryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);
 
-			if(beforeQueryExecution != null)
-				beforeQueryExecution(indexQuery);
+			if(beforeQueryExecutionAction != null)
+				beforeQueryExecutionAction(indexQuery);
 
 			return new QueryOperation(theSession,
 			                          indexName,
@@ -607,7 +607,7 @@ namespace Raven.Client.Document
 
 		public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
 		{
-			beforeQueryExecution += action;
+			beforeQueryExecutionAction += action;
 			return this;
 		}
 

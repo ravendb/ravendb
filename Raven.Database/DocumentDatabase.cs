@@ -158,6 +158,7 @@ namespace Raven.Database
 
 				workContext = new WorkContext
 				{
+					Database = this,
 					DatabaseName = Name,
 					IndexUpdateTriggers = IndexUpdateTriggers,
 					ReadTriggers = ReadTriggers,
@@ -647,6 +648,11 @@ namespace Raven.Database
 						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
 						newEtag = addDocumentResult.Etag;
 
+						foreach (var referencing in actions.Indexing.GetDocumentReferencing(key))
+						{
+							actions.Documents.TouchDocument(referencing);
+						}
+
 						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
@@ -819,7 +825,14 @@ namespace Raven.Database
 						if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
 						{
 							deleted = true;
+							actions.Indexing.RemoveAllDocumentReferencesFrom(key);
 							WorkContext.MarkDeleted(key);
+
+							foreach (var referencing in actions.Indexing.GetDocumentReferencing(key))
+							{
+								actions.Documents.TouchDocument(referencing);
+							}
+
 							foreach (var indexName in IndexDefinitionStorage.IndexNames)
 							{
 								AbstractViewGenerator abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);

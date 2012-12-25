@@ -23,7 +23,6 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IDocumentStorageActions, ITransactionStorageActions
 	{
-
 		public long GetDocumentsCount()
 		{
 			if (Api.TryMoveFirst(session, Details))
