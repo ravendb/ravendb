@@ -419,7 +419,7 @@ namespace Raven.Database.Config
 		public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
 		/// <summary>
-		/// The number that controls the if the reduce optimization is performed.
+		/// The number that controls the if single step reduce optimization is performed.
 		/// If the count of mapped results if less than this value then the reduce is executed in single step.
 		/// Default: 1024
 		/// </summary>
