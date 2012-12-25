@@ -27,14 +27,17 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Responders.Admin;
+using Raven.Database.Util;
 using Raven.Smuggler;
 
 namespace Raven.Server
 {
 	public static class Program
 	{
+		static string[] cmdLineArgs;
 		private static void Main(string[] args)
 		{
+			cmdLineArgs = args;
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 			if (RunningInInteractiveMode(args))
 			{
@@ -112,6 +115,7 @@ namespace Raven.Server
 			string backupLocation = null;
 			string restoreLocation = null;
 			bool defrag = false;
+			string theUser = null;
 			Action actionToTake = null;
 			bool launchBrowser = false;
 			var ravenConfiguration = new RavenConfiguration();
@@ -125,12 +129,14 @@ namespace Raven.Server
 					ravenConfiguration.Initialize();
 				}},
 				{"config=", "The config {0:file} to use", path => ravenConfiguration.LoadFrom(path)},
-				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart, key)},
+				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart)},
+				{"user=", "Which user will be used", user=> theUser = user},
+				{"setup-perf-counters", "Setup the performance counters and the related permissions", key => actionToTake = ()=> AdminRequired(()=>SetupPerfCounters(theUser))},
 				{"service-name=", "The {0:service name} to use when installing or uninstalling the service, default to RavenDB", name => ProjectInstaller.SERVICE_NAME = name},
-				{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall, key)},
-				{"start", "Starts the RavenDB service", key => actionToTake= () => AdminRequired(StartService, key)},
-				{"restart", "Restarts the RavenDB service", key => actionToTake= () => AdminRequired(RestartService, key)},
-				{"stop", "Stops the RavenDB service", key => actionToTake= () => AdminRequired(StopService, key)},
+				{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall)},
+				{"start", "Starts the RavenDB service", key => actionToTake= () => AdminRequired(StartService)},
+				{"restart", "Restarts the RavenDB service", key => actionToTake= () => AdminRequired(RestartService)},
+				{"stop", "Stops the RavenDB service", key => actionToTake= () => AdminRequired(StopService)},
 				{"ram", "Run RavenDB in RAM only", key =>
 				{
 					ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
@@ -167,19 +173,19 @@ namespace Raven.Server
 				{"encrypt-self-config", "Encrypt the RavenDB configuration file", file =>
 						{
 							actionToTake = () => ProtectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
-				        }},
+						}},
 				{"encrypt-config=", "Encrypt the specified {0:configuration file}", file =>
 						{
 							actionToTake = () => ProtectConfiguration(file);
-				        }},
+						}},
 				{"decrypt-self-config", "Decrypt the RavenDB configuration file", file =>
 						{
 							actionToTake = () => UnprotectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
-				        }},
+						}},
 				{"decrypt-config=", "Decrypt the specified {0:configuration file}", file =>
 						{
 							actionToTake = () => UnprotectConfiguration(file);
-				        }}
+						}}
 			};
 
 
@@ -202,6 +208,12 @@ namespace Raven.Server
 
 			actionToTake();
 
+		}
+
+		private static void SetupPerfCounters(string user)
+		{
+			user = user ?? WindowsIdentity.GetCurrent().Name;
+			PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(user);
 		}
 
 		private static void ProtectConfiguration(string file)
@@ -280,24 +292,24 @@ Configuration options:
 			}
 		}
 
-		private static void AdminRequired(Action actionThatMayRequiresAdminPrivileges, string cmdLine)
+		private static void AdminRequired(Action actionThatMayRequiresAdminPrivileges)
 		{
 			var principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
 			if (principal.IsInRole(WindowsBuiltInRole.Administrator) == false)
 			{
-				if (RunAgainAsAdmin(cmdLine))
+				if (RunAgainAsAdmin())
 					return;
 			}
 			actionThatMayRequiresAdminPrivileges();
 		}
 
-		private static bool RunAgainAsAdmin(string cmdLine)
+		private static bool RunAgainAsAdmin()
 		{
 			try
 			{
 				var process = Process.Start(new ProcessStartInfo
 				{
-					Arguments = "--" + cmdLine,
+					Arguments = string.Join(" ", cmdLineArgs),
 					FileName = Assembly.GetExecutingAssembly().Location,
 					Verb = "runas",
 				});
@@ -393,7 +405,7 @@ Configuration options:
 						AdminGc.CollectGarbage(server.Database);
 						var after = Process.GetCurrentProcess().WorkingSet64;
 						Console.WriteLine("Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB", after / 1024d / 1024d,
-										  (before - after) / 1024d / 1024d);
+											(before - after) / 1024d / 1024d);
 					}
 					},
 				{

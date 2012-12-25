@@ -86,6 +86,7 @@ namespace Raven.Storage.Managed
 			private set;
 		}
 
+		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call

@@ -42,5 +42,10 @@ namespace Raven.Storage.Managed
 		{
 			
 		}
+
+		public void UseLazyCommit()
+		{
+			
+		}
 	}
 }

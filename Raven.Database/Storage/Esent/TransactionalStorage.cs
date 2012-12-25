@@ -519,6 +519,11 @@ namespace Raven.Storage.Esent
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
+				
+				if(pht.UsingLazyCommit)
+				{
+					txMode = CommitTransactionGrbit.WaitLastLevel0Commit;
+				}
 				return pht.Commit(txMode);
 			}
 		}

@@ -93,7 +93,6 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="a.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>

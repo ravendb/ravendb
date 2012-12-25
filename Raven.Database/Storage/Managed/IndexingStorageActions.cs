@@ -165,18 +165,20 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<string> GetDocumentReferencing(string key)
+		public IEnumerable<string> GetDocumentsReferencing(string key)
 		{
 			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject { { "ref", key } })
 				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase))
-				.Select(x => x.Value<string>("key"));
+				.Select(x => x.Value<string>("key"))
+				.Distinct(StringComparer.InvariantCultureIgnoreCase);
 		}
 
-		public IEnumerable<string> GetDocumentReferencesFrom(string key)
+		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
 			return storage.DocumentReferences["ByKey"].SkipTo(new RavenJObject { { "ref", key } })
-			.TakeWhile(x => key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase))
-			.Select(x => x.Value<string>("ref"));
+				.TakeWhile(x => key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase))
+				.Select(x => x.Value<string>("ref"))
+				.Distinct(StringComparer.InvariantCultureIgnoreCase);
 		}
 
 		public void DeleteIndex(string name)

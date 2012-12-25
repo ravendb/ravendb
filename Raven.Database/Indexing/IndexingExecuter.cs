@@ -213,7 +213,10 @@ namespace Raven.Database.Indexing
 			var futureResults = GetFutureJsonDocuments(lastIndexedGuidForAllIndexes);
 			if (futureResults != null)
 				return futureResults;
-			return GetJsonDocsFromDisk(lastIndexedGuidForAllIndexes);
+			var results = GetJsonDocsFromDisk(lastIndexedGuidForAllIndexes);
+			return results.Results.Length > 0 ? 
+				MergeWithOtherFutureResults(results) : 
+				results;
 		}
 
 		private JsonResults GetFutureJsonDocuments(Guid lastIndexedGuidForAllIndexes)
@@ -235,49 +238,56 @@ namespace Raven.Database.Indexing
 					if (nextBatch.Task.Wait(Timeout.Infinite) == false)
 						return null;
 				}
-				var timeToWait = 500;
-
-				var items = new List<JsonResults>
-				{
-					nextBatch.Task.Result
-				};
-				while (true)
-				{
-					nextDocEtag = GetNextDocEtag(GetNextHighestEtag(nextBatch.Task.Result.Results));
-					nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextDocEtag);
-					if (nextBatch == null)
-					{
-						break;
-					}
-					futureIndexBatches.TryRemove(nextBatch);
-					timeToWait /= 2;
-					if (nextBatch.Task.Wait(timeToWait) == false)
-						break;
-
-					items.Add(nextBatch.Task.Result);
-				}
-
-				if (items.Count == 1)
-					return items[0];
-
-				// a single doc may appear multiple times, if it was updated
-				// while we were fetching things, so we have several versions
-				// of the same doc loaded, this will make sure that we will only 
-				// take one of them.
-				return new JsonResults
-				{
-					Results = items.SelectMany(x => x.Results)
-					               .GroupBy(x => x.Key)
-					               .Select(g => g.OrderBy(x => x.Etag).First())
-					               .ToArray(),
-					LoadedFromDisk = items.Aggregate(false, (prev, results) => prev | results.LoadedFromDisk)
-				};
+				return MergeWithOtherFutureResults(nextBatch.Task.Result, timeToWait: 500);
 			}
 			catch (Exception e)
 			{
 				Log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
 				return null;
 			}
+		}
+
+		private JsonResults MergeWithOtherFutureResults(JsonResults results, int timeToWait = 0)
+		{
+			var items = new List<JsonResults>
+			{
+				results
+			};
+			while (true)
+			{
+				var nextDocEtag = GetNextDocEtag(GetNextHighestEtag(results.Results));
+				var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextDocEtag);
+				if (nextBatch == null)
+				{
+					break;
+				}
+				if(nextBatch.Task.IsCompleted == false)
+				{
+					if (nextBatch.Task.Wait(timeToWait) == false)
+						break;
+					timeToWait /= 2;
+				}
+				
+				futureIndexBatches.TryRemove(nextBatch);
+
+				items.Add(nextBatch.Task.Result);
+			}
+
+			if (items.Count == 1)
+				return items[0];
+
+			// a single doc may appear multiple times, if it was updated
+			// while we were fetching things, so we have several versions
+			// of the same doc loaded, this will make sure that we will only 
+			// take one of them.
+			return new JsonResults
+			{
+				Results = items.SelectMany(x => x.Results)
+					.GroupBy(x => x.Key)
+					.Select(g => g.OrderBy(x => x.Etag, ByteArrayComparer.Instance).First())
+					.ToArray(),
+				LoadedFromDisk = items.Aggregate(false, (prev, r) => prev | r.LoadedFromDisk)
+			};
 		}
 
 		private Guid GetNextDocEtag(Guid highestEtag)
@@ -316,7 +326,11 @@ namespace Raven.Database.Indexing
 				return;
 
 			// we loaded the maximum amount, there are probably more items to read now.
-			var nextEtag = GetNextDocEtag(GetNextHighestEtag(past.Results));
+			var highestLoadedEtag = GetNextHighestEtag(past.Results);
+			var nextEtag = GetNextDocEtag(highestLoadedEtag);
+
+			if (nextEtag == highestLoadedEtag)
+				return;// there is nothing newer to do 
 
 			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextEtag);
 
@@ -424,6 +438,13 @@ namespace Raven.Database.Indexing
 			JsonDocument[] jsonDocs = null;
 			transactionalStorage.Batch(actions =>
 			{
+				Guid? untilEtag = null;
+				var nextFutureBatch = futureIndexBatches
+					.Where(x => Etag.IsGreaterThan(x.StartingEtag, lastIndexed))
+					.OrderBy(x => x.StartingEtag, ByteArrayComparer.Instance)
+					.FirstOrDefault();
+				if (nextFutureBatch != null)
+					untilEtag = nextFutureBatch.StartingEtag;
 				jsonDocs = actions.Documents
 				                  .GetDocumentsAfter(
 				                                     lastIndexed,

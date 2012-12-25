@@ -92,6 +92,7 @@ namespace Raven.Storage.Managed
 			docsForCommit.Add(doc);
 		}
 
+		[DebuggerNonUserCode]
 		public void SaveAllTasks()
 		{
 			foreach (var task in tasks)

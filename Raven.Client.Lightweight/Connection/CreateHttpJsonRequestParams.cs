@@ -133,5 +133,6 @@ namespace Raven.Client.Connection
 		public RavenJObject Metadata { get; set; }
 		public ICredentials Credentials { get; set; }
 		public DocumentConvention Convention { get; set; }
+		public bool DisableRequestCompression { get; set; }
 	}
 }

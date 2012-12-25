@@ -134,6 +134,9 @@ namespace Raven.Database
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private long currentEtagBase;
 
+		private SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches =
+			new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.InvariantCultureIgnoreCase);
+
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
 			using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
@@ -648,10 +651,7 @@ namespace Raven.Database
 						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
 						newEtag = addDocumentResult.Etag;
 
-						foreach (var referencing in actions.Indexing.GetDocumentReferencing(key))
-						{
-							actions.Documents.TouchDocument(referencing);
-						}
+						CheckReferenceBecauseOfDocumentUpdate(key, actions);
 
 						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
@@ -666,7 +666,7 @@ namespace Raven.Database
 							Etag = newEtag,
 							LastModified = addDocumentResult.SavedAt,
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
-						}, indexingExecuter.AfterCommit);
+						}, SplitNonConsecutiveDocs);
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 							{
@@ -695,6 +695,49 @@ namespace Raven.Database
 				ETag = newEtag
 			};
 		}
+
+		private void SplitNonConsecutiveDocs(JsonDocument[] docs)
+		{
+			if(docs.Length ==0)
+				return;
+			var etag = docs[0].Etag.Value;
+			var items = new List<JsonDocument>(docs.Length)
+			{
+				docs[0]
+			};
+			foreach (var doc in docs.Skip(1))
+			{
+				if (Etag.GetDiffrence(doc.Etag.Value, etag) != 1)
+				{
+					indexingExecuter.AfterCommit(items.ToArray());
+					items.Clear();
+				}
+				items.Add(doc);
+				etag = doc.Etag.Value;
+			}
+			if (items.Count == 0)
+				return;
+			indexingExecuter.AfterCommit(items.ToArray());
+		}
+
+		internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
+		{
+			foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
+			{
+				Guid? preTouchEtag;
+				Guid? afterTouchEtag;
+				actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+				if(preTouchEtag == null || afterTouchEtag == null)
+					continue;
+
+				recentTouches.Set(key, new TouchedDocumentInfo
+				{
+					PreTouchEtag = preTouchEtag.Value,
+					TouchedEtag = afterTouchEtag.Value
+				});
+			}
+		}
+
 		public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,
 			IStorageActionsAccessor actions,
 			TransactionInformation transactionInformation)
@@ -828,10 +871,7 @@ namespace Raven.Database
 							actions.Indexing.RemoveAllDocumentReferencesFrom(key);
 							WorkContext.MarkDeleted(key);
 
-							foreach (var referencing in actions.Indexing.GetDocumentReferencing(key))
-							{
-								actions.Documents.TouchDocument(referencing);
-							}
+							CheckReferenceBecauseOfDocumentUpdate(key, actions);
 
 							foreach (var indexName in IndexDefinitionStorage.IndexNames)
 							{
@@ -1898,5 +1938,39 @@ namespace Raven.Database
 
 			alertsDocument.Alerts.Add(alert);
 		}
+
+		public int BulkInsert(IEnumerable<IEnumerable<JsonDocument>> docBatches)
+		{
+			var documents = 0;
+			lock (putSerialLock)
+			{
+				TransactionalStorage.Batch(accessor =>
+				{
+					accessor.General.UseLazyCommit();
+					foreach (var docs in docBatches)
+					{
+						foreach (var tuple in docs)
+						{
+							documents++;
+							accessor.Documents.InsertDocument(tuple.Key, tuple.DataAsJson, tuple.Metadata);
+						}
+						accessor.General.PulseTransaction();
+					}
+					if (documents == 0)
+						return;
+					accessor.Documents.IncrementDocumentCount(documents);
+					workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
+				});
+			}
+			return documents;
+		}
+
+		public TouchedDocumentInfo GetRecentTouchesFor(string key)
+		{
+			TouchedDocumentInfo info;
+			recentTouches.TryGetValue(key, out info);
+			return info;
+		}
 	}
+
 }

@@ -20,6 +20,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Bundles.Replication;
@@ -631,8 +632,19 @@ namespace Raven.Bundles.Replication.Tasks
 							.ToList();
 
 						filteredDocsToReplicate =
-							docsToReplicate.Where(document => destination.FilterDocuments(destinationId, document.Key, document.Metadata)).
-								ToList();
+							docsToReplicate
+								.Where(document =>
+								{
+									var info = docDb.GetRecentTouchesFor(document.Key);
+									if(info != null)
+									{
+										if (Etag.IsGreaterThan(info.PreTouchEtag, result.LastEtag) == false)
+											return false;
+									}
+	
+									return destination.FilterDocuments(destinationId, document.Key, document.Metadata);
+								})
+								.ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
 						result.CountOfFilteredDocumentsWhichAreSystemDocuments += docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));

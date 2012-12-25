@@ -490,12 +490,14 @@
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
+    <Compile Include="Bundles\Replication\Issues\ReplicationWithReferencedIndexes.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
     <Compile Include="IncrementalBackupTest.cs" />
     <Compile Include="Indexes\CastingInIndexDefinition.cs" />
+    <Compile Include="Issues\BulkInsertTests.cs" />
     <Compile Include="Issues\RavenDb_783.cs" />
     <Compile Include="Issues\RaqvenDB651.cs" />
     <Compile Include="Issues\RavenDB349.cs" />
