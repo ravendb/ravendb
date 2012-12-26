@@ -103,7 +103,7 @@
     <Compile Include="Document\OAuth\AbstractAuthenticator.cs" />
     <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
     <Compile Include="Document\OAuth\SecuredAuthenticator.cs" />
-    <Compile Include="Document\ServerBulkInsert.cs" />
+    <Compile Include="Document\BulkInsertOperation.cs" />
     <Compile Include="Exceptions\ServerRequestError.cs" />
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
@@ -159,7 +159,6 @@
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
     <Compile Include="IAsyncDocumentQuery.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
-    <Compile Include="IBulkInsertOperation.cs" />
     <Compile Include="IDisposalNotification.cs" />
     <Compile Include="IDocumentSessionImpl.cs" />
     <Compile Include="Indexes\AbstractGenericIndexCreationTask.cs" />

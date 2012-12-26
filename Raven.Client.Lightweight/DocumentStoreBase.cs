@@ -139,9 +139,9 @@ namespace Raven.Client
 		}
 
 #if !SILVERLIGHT
-		public IBulkInsertOperation StartBulkInsert(string database = null, int batchSize = 2048)
+		public BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-			return new ServerBulkInsert(database, this, batchSize, listeners);
+			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions());
 		}
 #endif
 

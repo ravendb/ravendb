@@ -9,9 +9,28 @@ namespace Raven.Tests.Issues
 		{
 			using(var store = NewRemoteDocumentStore())
 			{
-				using(var bulkInsert = store.StartBulkInsert())
+				using(var bulkInsert = store.BulkInsert())
 				{
 					bulkInsert.Store(new User {Name = "Fitzchak"});
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var user = session.Load<User>("users/1");
+					Assert.NotNull(user);
+					Assert.Equal("Fitzchak", user.Name);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanCreateAndDisposeUsingBulk_Embedded()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var bulkInsert = store.BulkInsert())
+				{
+					bulkInsert.Store(new User { Name = "Fitzchak" });
 				}
 
 				using (var session = store.OpenSession())

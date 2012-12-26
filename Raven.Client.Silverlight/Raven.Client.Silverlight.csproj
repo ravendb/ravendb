@@ -969,9 +969,6 @@
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentSessionImpl.cs">
       <Link>Imports\IAsyncDocumentSessionImpl.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IBulkInsertOperation.cs">
-      <Link>Imports\IBulkInsertOperation.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDisposalNotification.cs">
       <Link>Imports\IDisposalNotification.cs</Link>
     </Compile>

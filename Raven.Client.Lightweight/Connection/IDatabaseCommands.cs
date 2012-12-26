@@ -13,6 +13,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -402,6 +403,11 @@ namespace Raven.Client.Connection
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		void ForceReadFromMaster();
+
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
 	}
 }
 #endif

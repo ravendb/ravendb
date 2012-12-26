@@ -1202,6 +1202,14 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		{
+			return new RemoteBulkInsertOperation(options, this);
+		}
+
+		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		public void ForceReadFromMaster()

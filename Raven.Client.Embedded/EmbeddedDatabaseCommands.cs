@@ -553,6 +553,14 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		{
+			return new EmbeddedBulkInsertOperation(database, options);
+		}
+
+		/// <summary>
 		/// It seems that we can't promote a transaction inside the same process
 		/// </summary>
 		public bool SupportsPromotableTransactions

@@ -148,7 +148,7 @@ namespace Raven.Client
 		Guid? GetLastWrittenEtag();
 
 #if !SILVERLIGHT
-		IBulkInsertOperation StartBulkInsert(string database = null, int batchSize = 2048);
+		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 	}
 }

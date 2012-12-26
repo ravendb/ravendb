@@ -12,7 +12,12 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Document
 {
-	public class RemoteBulkInsertOperation : IDisposable
+	public interface ILowLevelBulkInsertOperation : IDisposable
+	{
+		void Write(string id, RavenJObject metadata, RavenJObject data);
+	}
+
+	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
 		private readonly HttpJsonRequest httpJsonRequest;
 		private readonly Task nextTask;

@@ -1,18 +1,19 @@
-﻿using Raven.Abstractions.Data;
+﻿using System;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-	public class ServerBulkInsert : IBulkInsertOperation
+	public class BulkInsertOperation : IDisposable
 	{
 		private readonly IDocumentStore documentStore;
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-		private readonly RemoteBulkInsertOperation operation;
+		private readonly ILowLevelBulkInsertOperation operation;
 		private readonly IDatabaseCommands databaseCommands;
 		public EntityToJson EntityToJson { get; private set; }
 
-		public ServerBulkInsert(string database, IDocumentStore documentStore, int batchSize, DocumentSessionListeners listeners)
+		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options)
 		{
 			this.documentStore = documentStore;
 			databaseCommands = database == null
@@ -20,7 +21,7 @@ namespace Raven.Client.Document
 				                   : documentStore.DatabaseCommands.ForDatabase(database);
 
 			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(databaseCommands, entity));
-			operation = new RemoteBulkInsertOperation(new BulkInsertOptions(),  (ServerClient) databaseCommands);
+			operation = databaseCommands.GetBulkInsertOperation(options);
 			EntityToJson = new EntityToJson(documentStore, listeners);
 		}
 
@@ -31,8 +32,11 @@ namespace Raven.Client.Document
 
 		public void Store(object entity)
 		{
-			string id = GetId(entity);
+			Store(entity, GetId(entity));
+		}
 
+		public void Store(object entity, string id)
+		{
 			var metadata = new RavenJObject();
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
