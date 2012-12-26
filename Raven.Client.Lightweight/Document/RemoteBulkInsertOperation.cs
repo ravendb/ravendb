@@ -21,7 +21,7 @@ namespace Raven.Client.Document
 
 		public event Action<string> Report;
 
-		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, int batchSize = 2048)
+		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, int batchSize = 512)
 		{
 			items = new BlockingCollection<RavenJObject>(batchSize * 8);
 			var requestUrl = "/bulkInsert?";

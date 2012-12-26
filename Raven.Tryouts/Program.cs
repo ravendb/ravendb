@@ -23,7 +23,7 @@ namespace Raven.Tryouts
 			{
 				var sp = Stopwatch.StartNew();
 				using(var op = new RemoteBulkInsertOperation(new BulkInsertOptions(), (ServerClient)store.DatabaseCommands,
-					batchSize: 128))
+					batchSize: 512))
 				{
 					op.Report += Console.WriteLine;
 					for (int i = 0; i < 1000 * 1000; i++)
