@@ -51,8 +51,6 @@ namespace Raven.Storage.Esent.StorageActions
 			Guid existingEtag;
 			if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ))
 			{
-				if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]) == true)
-					return; // we ignore etags on deleted documents
 				existingEtag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
 			}
 			else
