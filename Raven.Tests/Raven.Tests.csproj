@@ -604,6 +604,7 @@
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="Patching\BigDoc.cs" />
+    <Compile Include="PreFetching.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
     <Compile Include="Spatial\SimonBartlett.cs" />
