@@ -146,5 +146,9 @@ namespace Raven.Client
 		/// document store
 		///</summary>
 		Guid? GetLastWrittenEtag();
+
+#if !SILVERLIGHT
+		IBulkInsertOperation StartBulkInsert(string database = null, int batchSize = 2048);
+#endif
 	}
 }

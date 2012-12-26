@@ -138,6 +138,13 @@ namespace Raven.Client
 			return LastEtagHolder.GetLastWrittenEtag();
 		}
 
+#if !SILVERLIGHT
+		public IBulkInsertOperation StartBulkInsert(string database = null, int batchSize = 2048)
+		{
+			return new ServerBulkInsert(database, this, batchSize, listeners);
+		}
+#endif
+
 		protected void EnsureNotClosed()
 		{
 			if (WasDisposed)
@@ -153,7 +160,7 @@ namespace Raven.Client
 		protected readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
-		/// Registers the convertion listener.
+		/// Registers the conversion listener.
 		/// </summary>
 		public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
 		{

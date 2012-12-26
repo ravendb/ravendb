@@ -906,8 +906,14 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
       <Link>Imports\Document\DocumentSessionListeners.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\EntityToJson.cs">
+      <Link>Imports\Document\EntityToJson.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
       <Link>Imports\Document\FailoverBehavior.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\GenerateEntityIdOnTheClient.cs">
+      <Link>Imports\Document\GenerateEntityIdOnTheClient.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGeneratorBase.cs">
       <Link>Imports\Document\HiLoKeyGeneratorBase.cs</Link>
@@ -962,6 +968,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentSessionImpl.cs">
       <Link>Imports\IAsyncDocumentSessionImpl.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\IBulkInsertOperation.cs">
+      <Link>Imports\IBulkInsertOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDisposalNotification.cs">
       <Link>Imports\IDisposalNotification.cs</Link>

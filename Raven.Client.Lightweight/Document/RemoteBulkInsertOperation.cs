@@ -21,9 +21,9 @@ namespace Raven.Client.Document
 
 		public event Action<string> Report;
 
-		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, int batchSize = 512)
+		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client)
 		{
-			items = new BlockingCollection<RavenJObject>(batchSize * 8);
+			items = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
 			var requestUrl = "/bulkInsert?";
 			if (options.CheckForUpdates)
 				requestUrl += "checkForUpdates=true";
@@ -47,7 +47,7 @@ namespace Raven.Client.Document
 								return;
 							}
 							batch.Add(item);
-							if (batch.Count >= batchSize)
+							if (batch.Count >= options.BatchSize)
 								break;
 						}
 						FlushBatch(requestStream, batch);
