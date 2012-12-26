@@ -572,7 +572,7 @@ namespace Raven.Database.Indexing
 					accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
 					{
 						{"LastQueryTime", lastQueryTime}
-					});
+					}, UuidType.Indexing);
 
 					if (lastQueryTime > maxDate)
 						maxDate = lastQueryTime;

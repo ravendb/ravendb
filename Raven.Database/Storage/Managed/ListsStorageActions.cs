@@ -23,7 +23,7 @@ namespace Raven.Storage.Managed
 			this.generator = generator;
 		}
 
-		public void Set(string name, string key, RavenJObject data)
+		public void Set(string name, string key, RavenJObject data, UuidType type)
 		{
 			var memoryStream = new MemoryStream();
 			data.WriteTo(memoryStream);
@@ -32,7 +32,7 @@ namespace Raven.Storage.Managed
 			{
 				{"name", name},
 				{"key", key},
-				{"etag", generator.CreateSequentialUuid().ToByteArray()}
+				{"etag", generator.CreateSequentialUuid(type).ToByteArray()}
 			}, memoryStream.ToArray());
 		}
 

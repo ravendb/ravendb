@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
+using Raven.Database.Impl;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -49,7 +50,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], 1);
 			}
 
-			Guid newETag = uuidGenerator.CreateSequentialUuid();
+			Guid newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);

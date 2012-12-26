@@ -14,6 +14,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -33,7 +34,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data)
 		{
-			Guid etag = uuidGenerator.CreateSequentialUuid();
+			Guid etag = uuidGenerator.CreateSequentialUuid(UuidType.MappedResults);
 			using (var update = new Update(session, MappedResults, JET_prep.Insert))
 			{
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view, Encoding.Unicode);
@@ -98,7 +99,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void PutReducedResult(string view, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data)
 		{
-			Guid etag = uuidGenerator.CreateSequentialUuid();
+			Guid etag = uuidGenerator.CreateSequentialUuid(UuidType.ReduceResults);
 
 			using (var update = new Update(session, ReducedResults, JET_prep.Insert))
 			{
@@ -141,7 +142,7 @@ namespace Raven.Storage.Esent.StorageActions
 												  HashReduceKey(reduceKeysAndBukcet.ReduceKey));
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"],
-								  uuidGenerator.CreateSequentialUuid());
+								  uuidGenerator.CreateSequentialUuid(UuidType.ScheduledReductions));
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"],
 								  SystemTime.UtcNow.ToBinary());

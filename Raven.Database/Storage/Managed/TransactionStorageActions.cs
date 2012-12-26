@@ -69,7 +69,7 @@ namespace Raven.Storage.Managed
 				data.WriteTo(stream);
 				stream.Flush();
 			}
-			var newEtag = generator.CreateSequentialUuid();
+			var newEtag = generator.CreateSequentialUuid(UuidType.DocumentTransactions);
 			storage.DocumentsModifiedByTransactions.Put(new RavenJObject
 			                                            	{
 			                                            		{"key", key},
@@ -139,7 +139,7 @@ namespace Raven.Storage.Managed
 					{"timeout", SystemTime.UtcNow.Add(transactionInformation.Timeout)}
 				});
 
-			var newEtag = generator.CreateSequentialUuid();
+			var newEtag = generator.CreateSequentialUuid(UuidType.DocumentTransactions);
 			storage.DocumentsModifiedByTransactions.UpdateKey(new RavenJObject
 				{
 					{"key", key},

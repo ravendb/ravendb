@@ -17,6 +17,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -333,7 +334,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			preTouchEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
-			Guid newEtag = uuidGenerator.CreateSequentialUuid();
+			Guid newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			afterTouchEtag = newEtag;
 			using (var update = new Update(session, Documents, JET_prep.Replace))
 			{
@@ -351,7 +352,7 @@ namespace Raven.Storage.Esent.StorageActions
 				throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
 													" does not exists");
 
-			Guid newEtag = uuidGenerator.CreateSequentialUuid();
+			Guid newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			DateTime savedAt = SystemTime.UtcNow;
 			using (var update = new Update(session, Documents, JET_prep.Replace))
 			{
@@ -406,7 +407,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
 			}
-			Guid newEtag = uuidGenerator.CreateSequentialUuid();
+			Guid newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 
 
 			DateTime savedAt;
@@ -456,7 +457,7 @@ namespace Raven.Storage.Esent.StorageActions
 					data.WriteTo(finalStream);
 					finalStream.Flush();
 				}
-				Guid newEtag = uuidGenerator.CreateSequentialUuid();
+				Guid newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
 				DateTime savedAt = SystemTime.UtcNow;
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
@@ -491,7 +492,7 @@ namespace Raven.Storage.Esent.StorageActions
 				EnsureDocumentIsNotCreatedInAnotherTransaction(key, transactionInformation.Id);
 			}
 			EnsureTransactionExists(transactionInformation);
-			Guid newEtag = uuidGenerator.CreateSequentialUuid();
+			Guid newEtag = uuidGenerator.CreateSequentialUuid(UuidType.DocumentTransactions);
 
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -588,7 +589,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			EnsureTransactionExists(transactionInformation);
 
-			Guid newEtag = uuidGenerator.CreateSequentialUuid();
+			Guid newEtag = uuidGenerator.CreateSequentialUuid(UuidType.DocumentTransactions);
 
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);

@@ -286,7 +286,7 @@ namespace Raven.Storage.Managed
 			if (isUpdate)
 				throw new InvalidOperationException("Cannot insert document " + key + " because it already exists");
 
-			var newEtag = generator.CreateSequentialUuid();
+			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);
 			var savedAt = SystemTime.UtcNow;
 			storage.Documents.Put(new RavenJObject
 			 {
@@ -320,7 +320,7 @@ namespace Raven.Storage.Managed
 
 			var isUpdate = storage.Documents.Read(new RavenJObject { { "key", key } }) != null;
 
-			var newEtag = generator.CreateSequentialUuid();
+			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);
 			var savedAt = SystemTime.UtcNow;
 			storage.Documents.Put(new RavenJObject
 			 {

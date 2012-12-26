@@ -330,7 +330,8 @@ namespace Raven.Database.Indexing
 			int indexingAge = Interlocked.Increment(ref currentIndexingAge);
 
 			// make sure that we don't have too much "future cache" items
-			foreach (FutureIndexBatch source in futureIndexBatches.Values.Where(x => (indexingAge - x.Age) > 64).ToList())
+			const int numberOfIndexingGenerationsAllowed = 64;
+			foreach (FutureIndexBatch source in futureIndexBatches.Values.Where(x => (indexingAge - x.Age) > numberOfIndexingGenerationsAllowed).ToList())
 			{
 				ObserveDiscardedTask(source);
 				FutureIndexBatch _;
@@ -338,7 +339,7 @@ namespace Raven.Database.Indexing
 			}
 
 			// make sure that we don't have too much "in memory cache" items
-			foreach (InMemoryIndexBatch source in inMemoryIndexBatches.Values.Where(x => (indexingAge - x.Age) > 64).ToList())
+			foreach (InMemoryIndexBatch source in inMemoryIndexBatches.Values.Where(x => (indexingAge - x.Age) > numberOfIndexingGenerationsAllowed).ToList())
 			{
 				InMemoryIndexBatch _;
 				inMemoryIndexBatches.TryRemove(source.StartingEtag, out _);
