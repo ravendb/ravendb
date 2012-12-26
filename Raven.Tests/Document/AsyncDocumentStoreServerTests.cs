@@ -153,11 +153,11 @@ namespace Raven.Tests.Document
                 Assert.Equal(0, session.Advanced.NumberOfRequests);
 
                 session.SaveChangesAsync().Wait();
-                //Assert.Equal(1, session.Advanced.NumberOfRequests); // This returns 0 for some reason in async mode
+                Assert.Equal(1, session.Advanced.NumberOfRequests); // This returns 0 for some reason in async mode
 
                 // Make sure that session is empty
-                //session.SaveChangesAsync().Wait();
-                //Assert.Equal(1, session.Advanced.NumberOfRequests);
+                session.SaveChangesAsync().Wait();
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
 
             Assert.Null(DocumentStore.DatabaseCommands.Get("rhino2"));
@@ -251,22 +251,22 @@ namespace Raven.Tests.Document
 
             using (var for_loading = DocumentStore.OpenAsyncSession())
             {
-                for_loading.LoadAsync<Company>(entity.Id).ContinueWith(task => Assert.NotNull(task.Result)).Wait();
+	            var company = for_loading.LoadAsync<Company>(entity.Id).Result;
+	            Assert.NotNull(company);
             }
 
-            using (var for_deleting = DocumentStore.OpenAsyncSession())
+	        using (var for_deleting = DocumentStore.OpenAsyncSession())
             {
-                for_deleting.LoadAsync<Company>(entity.Id).ContinueWith(task =>
-                {
-                    for_deleting.Delete(task.Result);
-                    for_deleting.SaveChangesAsync().Wait();
-                }).Wait();
+				var e = for_deleting.LoadAsync<Company>(entity.Id).Result;
+                for_deleting.Delete(e);
+                for_deleting.SaveChangesAsync().Wait();
             }
 
             using (var for_verifying = DocumentStore.OpenAsyncSession())
             {
-                for_verifying.LoadAsync<Company>(entity.Id).ContinueWith(task => Assert.Null(task.Result)).Wait();
-            }
+				var company = for_verifying.LoadAsync<Company>(entity.Id).Result;
+				Assert.Null(company);
+			}
         }
     }
 }

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Extensions;
@@ -261,6 +262,7 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task SaveChangesAsync()
 		{
+
 			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
 			                                 .ContinueWith(keysTask =>
 			                                 {
@@ -270,6 +272,11 @@ namespace Raven.Client.Document.Async
 				                                 try
 				                                 {
 					                                 var data = PrepareForSaveChanges();
+													 if (data.Commands.Count == 0)
+														 return new CompletedTask();
+
+													 IncrementRequestCount();
+
 					                                 return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
 					                                                             .ContinueWith(task =>
 					                                                             {
