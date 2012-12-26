@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Embedded;
@@ -36,7 +37,8 @@ namespace Raven.Tests
 				{
 					new JsonDocument
 					{
-						Etag = last
+						Etag = last,
+						Key = i.ToString(CultureInfo.InvariantCulture)
 					},
 				});
 			}
@@ -55,7 +57,8 @@ namespace Raven.Tests
 				{
 					new JsonDocument
 					{
-						Etag = last
+						Etag = last,
+						Key = i.ToString(CultureInfo.InvariantCulture)
 					},
 				});
 			}
@@ -67,7 +70,8 @@ namespace Raven.Tests
 				{
 					new JsonDocument
 					{
-						Etag = last
+						Etag = last,
+						Key = i.ToString(CultureInfo.InvariantCulture)
 					},
 				});
 			}
