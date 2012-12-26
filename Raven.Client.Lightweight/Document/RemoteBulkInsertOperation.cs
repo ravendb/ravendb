@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
@@ -15,16 +14,21 @@ namespace Raven.Client.Document
 {
 	public class RemoteBulkInsertOperation : IDisposable
 	{
-		private readonly int batchSize;
 		private readonly HttpJsonRequest httpJsonRequest;
-		private Task nextTask;
+		private readonly Task nextTask;
 		private readonly BlockingCollection<RavenJObject> items;
+		private readonly MemoryStream bufferedStream = new MemoryStream();
 
-		public RemoteBulkInsertOperation(ServerClient client, int batchSize = 2048)
+		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, int batchSize = 2048)
 		{
 			items = new BlockingCollection<RavenJObject>(batchSize * 8);
-			this.batchSize = batchSize;
-			httpJsonRequest = client.CreateRequest("POST", "/bulkInsert", disableRequestCompression: true);
+			var requestUrl = "/bulkInsert?";
+			if (options.CheckForUpdates)
+				requestUrl += "checkForUpdates=true";
+			if (options.CheckReferencesInIndexes)
+				requestUrl += "&checkReferencesInIndexes=true";
+
+			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
 			nextTask = httpJsonRequest.GetRawRequestStream()
 				.ContinueWith(task =>
 				{
@@ -60,16 +64,30 @@ namespace Raven.Client.Document
 		{
 			if (localBatch.Count == 0)
 				return;
+			bufferedStream.SetLength(0);
+			WriteToBuffer(localBatch);
 
-			var binaryWriter = new BinaryWriter(requestStream);
-			binaryWriter.Write(localBatch.Count);
-			var bsonWriter = new BsonWriter(binaryWriter);
-			foreach (var doc in localBatch)
+			var requestBinaryWriter = new BinaryWriter(requestStream);
+			requestBinaryWriter.Write((int)bufferedStream.Position);
+			bufferedStream.WriteTo(requestStream);
+			requestStream.Flush();
+		}
+
+		private void WriteToBuffer(List<RavenJObject> localBatch)
+		{
+			using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
 			{
-				doc.WriteTo(bsonWriter);
+				var binaryWriter = new BinaryWriter(gzip);
+				binaryWriter.Write(localBatch.Count);
+				var bsonWriter = new BsonWriter(binaryWriter);
+				foreach (var doc in localBatch)
+				{
+					doc.WriteTo(bsonWriter);
+				}
+				bsonWriter.Flush();
+				binaryWriter.Flush();
+				gzip.Flush();
 			}
-			bsonWriter.Flush();
-			binaryWriter.Flush();
 		}
 
 		public void Dispose()
