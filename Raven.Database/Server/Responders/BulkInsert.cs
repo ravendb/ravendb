@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using NetTopologySuite.IO;
@@ -7,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Database.Extensions;
@@ -26,9 +28,17 @@ namespace Raven.Database.Server.Responders
 		}
 		public override void Respond(IHttpContext context)
 		{
-			var documents = Database.BulkInsert(YieldBatches(context));
+			var options = new BulkInsertOptions
+			{
+				CheckForUpdates = context.GetCheckForUpdates(),
+				CheckReferencesInIndexes = context.GetCheckReferencesInIndexes()
+			};
 
-			context.Log(log => log.Debug("\tBulk inserted {0:#,#;;0} documents", documents));
+			var sp = Stopwatch.StartNew();
+
+			var documents = Database.BulkInsert(options, YieldBatches(context));
+
+			context.Log(log => log.Debug("\tBulk inserted {0:#,#;;0} documents in {1}", documents, sp.Elapsed));
 
 			context.WriteJson(new
 			{
@@ -38,45 +48,56 @@ namespace Raven.Database.Server.Responders
 
 		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context)
 		{
-			while (true)
+			using (var inputStream = context.Request.GetBufferLessInputStream())
 			{
-				var binaryReader = new BinaryReader(context.Request.InputStream);
-				int count;
-				try
+				var binaryReader = new BinaryReader(inputStream);
+				while (true)
 				{
-					count = binaryReader.ReadInt32();
+					int size;
+					try
+					{
+						size = binaryReader.ReadInt32();
+					}
+					catch (EndOfStreamException)
+					{
+						break;
+					}
+					using (var stream = new PartialStream(inputStream, size))
+					{
+						yield return YieldDocumentsInBatch(stream);
+					}
 				}
-				catch (EndOfStreamException)
-				{
-					break;
-				}
-				yield return YieldDocumentsInBatch(binaryReader, count);
 			}
 		}
 
-		private static IEnumerable<JsonDocument> YieldDocumentsInBatch(BinaryReader reader, int count)
+		private static IEnumerable<JsonDocument> YieldDocumentsInBatch(Stream partialStream)
 		{
-			for (int i = 0; i < count; i++)
+			using(var stream = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen:true))
 			{
-				var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader));
-
-				var metadata = doc.Value<RavenJObject>("@metadata");
-
-				if (metadata == null)
-					throw new InvalidOperationException("Could not find metadata for document");
-
-				var id = metadata.Value<string>("@id");
-				if (string.IsNullOrEmpty(id))
-					throw new InvalidOperationException("Could not get id from metadata");
-
-				doc.Remove("@metadata");
-
-				yield return new JsonDocument
+				var reader = new BinaryReader(stream);
+				var count = reader.ReadInt32();
+				for (int i = 0; i < count; i++)
 				{
-					Key = id,
-					DataAsJson = doc,
-					Metadata = metadata
-				};
+					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader));
+
+					var metadata = doc.Value<RavenJObject>("@metadata");
+
+					if (metadata == null)
+						throw new InvalidOperationException("Could not find metadata for document");
+
+					var id = metadata.Value<string>("@id");
+					if (string.IsNullOrEmpty(id))
+						throw new InvalidOperationException("Could not get id from metadata");
+
+					doc.Remove("@metadata");
+
+					yield return new JsonDocument
+					{
+						Key = id,
+						DataAsJson = doc,
+						Metadata = metadata
+					};
+				}
 			}
 		}
 	}

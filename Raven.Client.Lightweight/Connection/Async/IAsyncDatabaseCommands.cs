@@ -24,7 +24,7 @@ namespace Raven.Client.Connection.Async
 	public interface IAsyncDatabaseCommands : IDisposable, IHoldProfilingInformation
 	{
 		/// <summary>
-		/// Gets or sets the operations headers.
+		/// Gets the operations headers.
 		/// </summary>
 		/// <value>The operations headers.</value>
 		IDictionary<string, string> OperationsHeaders { get; }

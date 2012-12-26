@@ -26,14 +26,5 @@ namespace Raven.Studio.Features.Settings
 				Command.ExecuteCommand(model.Value.Search);
 			}
 		}
-
-		//a walkaround the view update issue 
-		private void NameChanged(object sender, RoutedEventArgs routedEventArgs)
-		{
-			var apiModel = DataContext as ApiKeysSectionModel;
-			if (apiModel == null)
-				return;
-			apiModel.Update();
-		}
 	}
 }

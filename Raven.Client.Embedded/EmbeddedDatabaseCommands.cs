@@ -9,6 +9,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Json;
 using Raven.Database.Data;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -25,6 +26,7 @@ using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
@@ -277,6 +279,20 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Gets the indexes from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public IndexDefinition[] GetIndexes(int start, int pageSize)
+		{
+			//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+			return database
+				.GetIndexes(start, pageSize)
+				.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+				.ToArray();
+		}
+
+		/// <summary>
 		/// Resets the specified index
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -443,6 +459,26 @@ namespace Raven.Client.Embedded
 			}
 
 			return multiLoadResult;
+		}
+
+		/// <summary>
+		/// Begins an async get operation for documents
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
+		{
+			// As this is embedded we don't care for the metadata only value
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database
+				.GetDocuments(start, pageSize, null)
+				.Cast<RavenJObject>()
+				.ToJsonDocuments()
+				.ToArray();
 		}
 
 		/// <summary>

@@ -51,6 +51,17 @@ namespace Raven.Client.Connection
 		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
+		/// Get documents from server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false);
+
+		/// <summary>
 		/// Puts the document in the database with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -124,6 +135,13 @@ namespace Raven.Client.Connection
 		/// <param name="pageSize">Size of the page.</param>
 		/// <returns></returns>
 		string[] GetIndexNames(int start, int pageSize);
+
+		/// <summary>
+		/// Gets the indexes from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		IndexDefinition[] GetIndexes(int start, int pageSize);
 
 		/// <summary>
 		/// Resets the specified index

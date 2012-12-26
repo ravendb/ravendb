@@ -100,7 +100,7 @@ namespace Raven.Client.Document
 
 #endif
 
-		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
+		protected Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>

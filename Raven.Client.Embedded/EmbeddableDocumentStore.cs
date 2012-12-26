@@ -4,21 +4,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded.Changes;
-using Raven.Client.Util;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
-using Raven.Database.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
@@ -29,7 +23,7 @@ namespace Raven.Client.Embedded
 	/// </summary>
 	public class EmbeddableDocumentStore : DocumentStore
 	{
-		ILog log = Raven.Abstractions.Logging.LogManager.GetCurrentClassLogger();
+		ILog log = LogManager.GetCurrentClassLogger();
 
 		static EmbeddableDocumentStore()
 		{
@@ -230,6 +224,7 @@ namespace Raven.Client.Embedded
 					},null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 				}
 				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
+				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DatabaseCommands);
 			}
 			else
 			{

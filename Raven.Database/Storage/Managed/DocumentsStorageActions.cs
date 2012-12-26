@@ -283,7 +283,7 @@ namespace Raven.Storage.Managed
 
 			var isUpdate = storage.Documents.Read(new RavenJObject { { "key", key } }) != null;
 
-			if (isUpdate)
+			if (isUpdate && checkForUpdates == false)
 				throw new InvalidOperationException("Cannot insert document " + key + " because it already exists");
 
 			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);

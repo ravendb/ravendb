@@ -802,6 +802,7 @@ namespace Raven.Client.Connection
 
 		public Task<Stream> GetRawRequestStream()
 		{
+			webRequest.SendChunked = true;
 			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 

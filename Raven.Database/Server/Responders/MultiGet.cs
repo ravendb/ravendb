@@ -234,6 +234,10 @@ namespace Raven.Database.Server.Responders
 				get;
 				set;
 			}
+			public Stream GetBufferLessInputStream()
+			{
+				return InputStream;
+			}
 		}
 
 		public void Dispose()

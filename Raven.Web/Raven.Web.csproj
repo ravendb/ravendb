@@ -14,7 +14,7 @@
     <RootNamespace>Raven.Web</RootNamespace>
     <AssemblyName>Raven.Web</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <UseIISExpress>false</UseIISExpress>
+    <UseIISExpress>true</UseIISExpress>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <UpgradeBackupLocation>
@@ -112,7 +112,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>16977</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost/Raven.Web</IISUrl>
+          <IISUrl>http://localhost:16977/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>http://localhost:9090/</CustomServerUrl>

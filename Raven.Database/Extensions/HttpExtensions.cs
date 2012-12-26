@@ -359,6 +359,20 @@ namespace Raven.Database.Extensions
 			return result;
 		}
 
+		public static bool GetCheckForUpdates(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["checkForUpdates"], out result);
+			return result;
+		}
+
+		public static bool GetCheckReferencesInIndexes(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["checkReferencesInIndexes"], out result);
+			return result;
+		}
+
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{
 			int pageSize;

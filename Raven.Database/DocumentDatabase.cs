@@ -1916,23 +1916,28 @@ namespace Raven.Database
 					accessor.General.UseLazyCommit();
 					foreach (var docs in docBatches)
 					{
-						foreach (var tuple in docs)
+						var batchDocs = 0;
+						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+						foreach (var doc in docs)
 						{
+							if (options.CheckReferencesInIndexes)
+								keys.Add(doc.Key);
 							documents++;
-							accessor.Documents.InsertDocument(tuple.Key, tuple.DataAsJson, tuple.Metadata, options.CheckForUpdates);
+							batchDocs++;
+							accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
 						}
 						if(options.CheckReferencesInIndexes)
 						{
-							foreach (var doc in docs)
+							foreach (var key in keys)
 							{
-								CheckReferenceBecauseOfDocumentUpdate(doc.Key, accessor);
+								CheckReferenceBecauseOfDocumentUpdate(key, accessor);
 							}
 						}
+						accessor.Documents.IncrementDocumentCount(batchDocs);
 						accessor.General.PulseTransaction();
 					}
 					if (documents == 0)
 						return;
-					accessor.Documents.IncrementDocumentCount(documents);
 					workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
 				});
 			}
