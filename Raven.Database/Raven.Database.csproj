@@ -699,7 +699,6 @@
     <Compile Include="Storage\Managed\Munin\RemoteManagedStorageState.cs" />
     <Compile Include="Storage\Managed\Munin\ReverseComparableByteArrayWhichIgnoresNull.cs" />
     <Compile Include="Storage\Managed\Munin\SecondaryIndex.cs" />
-    <Compile Include="Storage\Managed\Munin\StreamsPool.cs" />
     <Compile Include="Storage\Managed\Munin\Table.cs" />
     <Compile Include="Storage\Managed\Munin\Tree\AVLTree.cs" />
     <Compile Include="Storage\Managed\Munin\Tree\EmptyAVLTree.cs" />

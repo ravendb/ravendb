@@ -12,11 +12,13 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			for (int i = 0; i < 16; i++)
+			for (int i = 0; i < 100; i++)
 			{
-				var bytes = new byte[16];
-				bytes[i] = 1;
-				Console.WriteLine(i + " " + new Guid(bytes));
+				Console.WriteLine(i);
+				using(var x = new AsyncCommit())
+				{
+					x.DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalseWhenQuerying();
+				}
 			}
 		}
 	}
