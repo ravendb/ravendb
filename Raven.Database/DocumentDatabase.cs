@@ -833,12 +833,17 @@ namespace Raven.Database
 		private static void RemoveReservedProperties(RavenJObject document)
 		{
 			document.Remove(string.Empty);
-			var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@")).ToList();
+			var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@") || headersToIgnoreServer.Contains(propertyName)).ToList();
 			foreach (var propertyName in toRemove)
 			{
 				document.Remove(propertyName);
 			}
 		}
+
+		private static readonly HashSet<string> headersToIgnoreServer = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			Constants.RavenLastModified,
+		};
 
 		public bool Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
