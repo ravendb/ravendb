@@ -83,13 +83,13 @@ namespace Raven.Tests.Storage
 					accessor.Indexing.AddIndex("c", true);
 
 					accessor.MapReduce.PutMappedResult("a", "a/1", "a", new RavenJObject());
-					a = dummyUuidGenerator.CreateSequentialUuid();
+					a = dummyUuidGenerator.CreateSequentialUuid(UuidType.MappedResults);
 					accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("b", "a/1", "a", new RavenJObject());
-					b = dummyUuidGenerator.CreateSequentialUuid();
+					b = dummyUuidGenerator.CreateSequentialUuid(UuidType.MappedResults);
 					accessor.MapReduce.PutMappedResult("b", "a/1", "a", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("c", "a/1", "a", new RavenJObject());
-					c = dummyUuidGenerator.CreateSequentialUuid();
+					c = dummyUuidGenerator.CreateSequentialUuid(UuidType.MappedResults);
 					accessor.MapReduce.PutMappedResult("c", "a/1", "a", new RavenJObject());
 				});
 

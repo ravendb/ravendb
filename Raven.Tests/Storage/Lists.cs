@@ -9,6 +9,7 @@ using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Impl;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace Raven.Tests.Storage
 			db.TransactionalStorage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
 			{
 				{"test", "data"}
-			}));
+			},UuidType.Indexing));
 
 			db.TransactionalStorage.Batch(actions =>
 			{
@@ -54,7 +55,7 @@ namespace Raven.Tests.Storage
 			db.TransactionalStorage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
 			{
 				{"test", "data"}
-			}));
+			}, UuidType.Indexing));
 
 			db.TransactionalStorage.Batch(actions =>
 			{
@@ -77,7 +78,7 @@ namespace Raven.Tests.Storage
 					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
-					}));
+					}, UuidType.Indexing));
 			}
 
 
@@ -101,7 +102,7 @@ namespace Raven.Tests.Storage
 					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
-					}));
+					}, UuidType.Indexing));
 			}
 
 
@@ -132,13 +133,13 @@ namespace Raven.Tests.Storage
 					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
-					}));
+					}, UuidType.Indexing));
 
 				db.TransactionalStorage.Batch(
 					actions => actions.Lists.Set("another", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i*2}
-					}));
+					}, UuidType.Indexing));
 			}
 
 			db.TransactionalStorage.Batch(actions =>

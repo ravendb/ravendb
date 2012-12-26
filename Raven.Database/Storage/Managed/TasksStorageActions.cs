@@ -31,7 +31,7 @@ namespace Raven.Storage.Managed
 			storage.Tasks.Put(new RavenJObject
 			{
 				{"index", task.Index},
-				{"id", generator.CreateSequentialUuid().ToByteArray()},
+				{"id", generator.CreateSequentialUuid(UuidType.Tasks).ToByteArray()},
 				{"time", addedAt},
 				{"type", task.GetType().FullName},
 			}, task.AsBytes());

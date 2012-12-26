@@ -45,7 +45,7 @@ namespace Raven.Storage.Managed
 			{
 				data.WriteTo(stream);
 			}
-			var byteArray = generator.CreateSequentialUuid().ToByteArray();
+			var byteArray = generator.CreateSequentialUuid(UuidType.MappedResults).ToByteArray();
 			var key = new RavenJObject
 			{
 				{"view", view},
@@ -144,7 +144,7 @@ namespace Raven.Storage.Managed
 		{
 			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)
 			{
-				var etag = generator.CreateSequentialUuid().ToByteArray();
+				var etag = generator.CreateSequentialUuid(UuidType.ScheduledReductions).ToByteArray();
 				storage.ScheduleReductions.UpdateKey(new RavenJObject
 					{
 						{"view", view},
@@ -339,7 +339,7 @@ namespace Raven.Storage.Managed
 				data.WriteTo(stream);
 			}
 
-			var etag = generator.CreateSequentialUuid().ToByteArray();
+			var etag = generator.CreateSequentialUuid(UuidType.ReduceResults).ToByteArray();
 
 			storage.ReduceResults.Put(new RavenJObject
 			{

@@ -47,7 +47,7 @@ namespace Raven.Storage.Managed
 			var ms = new MemoryStream();
 			headers.WriteTo(ms);
 			data.CopyTo(ms);
-			var newEtag = generator.CreateSequentialUuid();
+			var newEtag = generator.CreateSequentialUuid(UuidType.Attachments);
 			var result = storage.Attachments.Put(new RavenJObject
 			{
 				{"key", key},

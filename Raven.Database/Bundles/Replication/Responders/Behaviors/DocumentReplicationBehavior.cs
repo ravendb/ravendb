@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
+using Raven.Database.Impl;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
@@ -23,7 +24,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
 		{
-			Actions.Lists.Set(Constants.RavenReplicationDocsTombstones, id, metadata);
+			Actions.Lists.Set(Constants.RavenReplicationDocsTombstones, id, metadata,UuidType.Documents);
 		}
 
 		protected override void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, RavenJObject incoming)

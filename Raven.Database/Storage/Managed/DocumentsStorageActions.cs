@@ -57,6 +57,7 @@ namespace Raven.Storage.Managed
 				.Select(result => DocumentByKey(result.Value<string>("key"), null))
 				.Take(take);
 			long totalSize = 0;
+			int count = 0;
 			foreach (var doc in docs)
 			{
 				totalSize += doc.SerializedSizeOnDisk;
@@ -65,19 +66,20 @@ namespace Raven.Storage.Managed
 					yield return doc;
 					yield break;
 				}
-				if(untilEtag != null)
+				if (untilEtag != null && count > 0)
 				{
 					if (Etag.IsGreaterThanOrEqual(doc.Etag.Value, untilEtag.Value))
 						yield break;
 				}
+				count++;
 				yield return doc;
 			}
 		}
 
 		public Guid GetBestNextDocumentEtag(Guid etag)
 		{
-			var match = storage.Documents["ByEtag"].SkipAfter(new RavenJObject {{"etag", etag.ToByteArray()}})
-			                                      .FirstOrDefault();
+			var match = storage.Documents["ByEtag"].SkipAfter(new RavenJObject { { "etag", etag.ToByteArray() } })
+												  .FirstOrDefault();
 			if (match == null)
 				return etag;
 			return new Guid(match.Value<byte[]>("etag"));
@@ -255,7 +257,7 @@ namespace Raven.Storage.Managed
 		public void TouchDocument(string key, out Guid? preTouchEtag, out Guid? afterTouchEtag)
 		{
 			var documentByKey = DocumentByKey(key, null);
-			if(documentByKey == null)
+			if (documentByKey == null)
 			{
 				preTouchEtag = null;
 				afterTouchEtag = null;
@@ -284,7 +286,7 @@ namespace Raven.Storage.Managed
 			if (isUpdate)
 				throw new InvalidOperationException("Cannot insert document " + key + " because it already exists");
 
-			var newEtag = generator.CreateSequentialUuid();
+			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);
 			var savedAt = SystemTime.UtcNow;
 			storage.Documents.Put(new RavenJObject
 			 {
@@ -318,7 +320,7 @@ namespace Raven.Storage.Managed
 
 			var isUpdate = storage.Documents.Read(new RavenJObject { { "key", key } }) != null;
 
-			var newEtag = generator.CreateSequentialUuid();
+			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);
 			var savedAt = SystemTime.UtcNow;
 			storage.Documents.Put(new RavenJObject
 			 {

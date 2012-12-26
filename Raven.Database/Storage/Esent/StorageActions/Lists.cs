@@ -9,6 +9,7 @@ using System.IO;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -17,7 +18,7 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IListsStorageActions
 	{
-		public void Set(string name, string key, RavenJObject data)
+		public void Set(string name, string key, RavenJObject data, UuidType uuidType)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_key");
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -30,7 +31,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["name"], name, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["key"], key, Encoding.Unicode);
-				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["etag"], uuidGenerator.CreateSequentialUuid().TransformToValueForEsentSorting());
+				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["etag"], uuidGenerator.CreateSequentialUuid(uuidType).TransformToValueForEsentSorting());
 				using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
 				{
 					data.WriteTo(stream);
