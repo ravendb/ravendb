@@ -30,11 +30,11 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
-		public AsyncDocumentSession(DocumentStore documentStore,
+		public AsyncDocumentSession(string dbName, DocumentStore documentStore,
 		                            IAsyncDatabaseCommands asyncDatabaseCommands,
 		                            DocumentSessionListeners listeners,
 		                            Guid id)
-			: base(documentStore, listeners, id)
+			: base(dbName, documentStore, listeners, id)
 		{
 			AsyncDatabaseCommands = asyncDatabaseCommands;
 			GenerateDocumentKeysOnStore = false;
@@ -405,7 +405,7 @@ namespace Raven.Client.Document.Async
 
 		protected override Task<string> GenerateKeyAsync(object entity)
 		{
-			return Conventions.GenerateDocumentKeyAsync(AsyncDatabaseCommands, entity);
+			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
 	}
 }

@@ -87,6 +87,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 
+		protected readonly string dbName;
 		private readonly DocumentStoreBase documentStore;
 
 		/// <summary>
@@ -113,11 +114,13 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
+			string dbName,
 			DocumentStoreBase documentStore,
 			DocumentSessionListeners listeners,
 			Guid id)
 		{
 			Id = id;
+			this.dbName = dbName;
 			this.documentStore = documentStore;
 			this.listeners = listeners;
 			ResourceManagerId = documentStore.ResourceManagerId;

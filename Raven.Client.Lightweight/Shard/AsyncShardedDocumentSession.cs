@@ -26,9 +26,9 @@ namespace Raven.Client.Shard
 	{
 		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
-		public AsyncShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+		public AsyncShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 		                                   ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
-			: base(documentStore, listeners, id, shardStrategy, shardDbCommands)
+			: base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands)
 		{
 			GenerateDocumentKeysOnStore = false;
 			asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, ModifyObjectId);
@@ -346,7 +346,7 @@ namespace Raven.Client.Shard
 			IAsyncDatabaseCommands value;
 			if (shardDbCommands.TryGetValue(shardId, out value) == false)
 				throw new InvalidOperationException("Could not find shard: " + shardId);
-			return Conventions.GenerateDocumentKeyAsync(value, entity);
+			return Conventions.GenerateDocumentKeyAsync(dbName, value, entity);
 		}
 	}
 }

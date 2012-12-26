@@ -18,7 +18,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class AsyncMultiTypeHiLoKeyGenerator
 	{
-		private readonly IDocumentStore documentStore;
 		private readonly int capacity;
 		private readonly object generatorLock = new object();
 		private readonly ConcurrentDictionary<string, AsyncHiLoKeyGenerator> keyGeneratorsByTag = new ConcurrentDictionary<string, AsyncHiLoKeyGenerator>();
@@ -29,11 +28,6 @@ namespace Raven.Client.Document
 			this.capacity = capacity;
 		}
 
-		public AsyncMultiTypeHiLoKeyGenerator(IDocumentStore documentStore, int capacity)
-		{
-			this.documentStore = documentStore;
-			this.capacity = capacity;
-		}
 		
 		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
 		{

@@ -20,7 +20,7 @@ namespace Raven.Client.Document
 				                   ? documentStore.DatabaseCommands.ForDefaultDatabase()
 				                   : documentStore.DatabaseCommands.ForDatabase(database);
 
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(databaseCommands, entity));
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, databaseCommands, entity));
 			operation = databaseCommands.GetBulkInsertOperation(options);
 			EntityToJson = new EntityToJson(documentStore, listeners);
 		}

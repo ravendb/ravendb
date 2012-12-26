@@ -92,6 +92,7 @@
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />
     <Compile Include="Converters\ITypeConverter.cs" />
+    <Compile Include="Document\AsyncMultiDatabaseHiLoKeyGenerator.cs" />
     <Compile Include="Document\AsyncShardedDocumentQuery.cs" />
     <Compile Include="Document\AsyncMultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\AsyncHiLoKeyGenerator.cs" />
@@ -99,6 +100,7 @@
     <Compile Include="Document\Batches\LazyStartsWithOperation.cs" />
     <Compile Include="Document\GenerateEntityIdOnTheClient.cs" />
     <Compile Include="Document\EntityToJson.cs" />
+    <Compile Include="Document\MultiDatabaseHiLoGenerator.cs" />
     <Compile Include="Document\RemoteBulkInsertOperation.cs" />
     <Compile Include="Document\OAuth\AbstractAuthenticator.cs" />
     <Compile Include="Document\OAuth\BasicAuthenticator.cs" />

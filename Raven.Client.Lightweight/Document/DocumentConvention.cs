@@ -41,11 +41,11 @@ namespace Raven.Client.Document
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
 #if !SILVERLIGHT
-		private readonly IList<Tuple<Type, Func<IDatabaseCommands, object, string>>> listOfRegisteredIdConventions =
-			new List<Tuple<Type, Func<IDatabaseCommands, object, string>>>();
+		private readonly IList<Tuple<Type, Func<string, IDatabaseCommands, object, string>>> listOfRegisteredIdConventions =
+			new List<Tuple<Type, Func<string, IDatabaseCommands, object, string>>>();
 #endif
-		private readonly IList<Tuple<Type, Func<IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
-			new List<Tuple<Type, Func<IAsyncDatabaseCommands, object, Task<string>>>>();
+		private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
+			new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
@@ -269,27 +269,27 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-		public string GenerateDocumentKey(IDatabaseCommands databaseCommands, object entity)
+		public string GenerateDocumentKey(string dbName, IDatabaseCommands databaseCommands, object entity)
 		{
 			var type = entity.GetType();
 			foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventions
 				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
 			{
-				return typeToRegisteredIdConvention.Item2(databaseCommands, entity);
+				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
-			return DocumentKeyGenerator(databaseCommands, entity);
+			return DocumentKeyGenerator(dbName, databaseCommands, entity);
 		}
 #endif
 
-		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, object entity)
+		public Task<string> GenerateDocumentKeyAsync(string dbName, IAsyncDatabaseCommands databaseCommands, object entity)
 		{
 			var type = entity.GetType();
 			foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventionsAsync
 				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
 			{
-				return typeToRegisteredIdConvention.Item2(databaseCommands, entity);
+				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
-			return AsyncDocumentKeyGenerator(databaseCommands, entity);
+			return AsyncDocumentKeyGenerator(dbName, databaseCommands, entity);
 		}
 
 		/// <summary>
@@ -396,14 +396,14 @@ namespace Raven.Client.Document
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
-		public Func<IDatabaseCommands, object, string> DocumentKeyGenerator { get; set; }
+		public Func<string, IDatabaseCommands, object, string> DocumentKeyGenerator { get; set; }
 #endif
 
 		/// <summary>
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
-		public Func<IAsyncDatabaseCommands, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
+		public Func<string, IAsyncDatabaseCommands, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
 
 		/// <summary>
 		/// Instruct RavenDB to parallel Multi Get processing 
@@ -415,7 +415,7 @@ namespace Raven.Client.Document
 		/// Register an id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
 		/// </summary>
-		public DocumentConvention RegisterIdConvention<TEntity>(Func<IDatabaseCommands, TEntity, string> func)
+		public DocumentConvention RegisterIdConvention<TEntity>(Func<string, IDatabaseCommands, TEntity, string> func)
 		{
 			int index;
 			for (index = 0; index < listOfRegisteredIdConventions.Count; index++)
@@ -427,7 +427,7 @@ namespace Raven.Client.Document
 				}
 			}
 
-			var item = new Tuple<Type, Func<IDatabaseCommands, object, string>>(typeof(TEntity), (commands, o) => func(commands, (TEntity)o));
+			var item = new Tuple<Type, Func<string, IDatabaseCommands, object, string>>(typeof(TEntity), (dbName, commands, o) => func(dbName, commands, (TEntity)o));
 			listOfRegisteredIdConventions.Insert(index, item);
 
 			return this;
@@ -438,7 +438,7 @@ namespace Raven.Client.Document
 		/// Register an async id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
 		/// </summary>
-		public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<IAsyncDatabaseCommands, TEntity, Task<string>> func)
+		public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<string, IAsyncDatabaseCommands, TEntity, Task<string>> func)
 		{
 			int index;
 			for (index = 0; index < listOfRegisteredIdConventionsAsync.Count; index++)
@@ -450,7 +450,7 @@ namespace Raven.Client.Document
 				}
 			}
 
-			var item = new Tuple<Type, Func<IAsyncDatabaseCommands, object, Task<string>>>(typeof(TEntity), (commands, o) => func(commands, (TEntity)o));
+			var item = new Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>(typeof(TEntity), (dbName, commands, o) => func(dbName, commands, (TEntity)o));
 			listOfRegisteredIdConventionsAsync.Insert(index, item);
 
 			return this;

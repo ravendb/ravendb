@@ -55,11 +55,11 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
 		/// </summary>
-		public DocumentSession(DocumentStore documentStore,
+		public DocumentSession(string dbName, DocumentStore documentStore,
 		                       DocumentSessionListeners listeners,
 		                       Guid id,
 		                       IDatabaseCommands databaseCommands)
-			: base(documentStore, listeners, id)
+			: base(dbName, documentStore, listeners, id)
 		{
 			DatabaseCommands = databaseCommands;
 		}
@@ -421,7 +421,7 @@ namespace Raven.Client.Document
 
 		protected override string GenerateKey(object entity)
 		{
-			return Conventions.GenerateDocumentKey(DatabaseCommands, entity);
+			return Conventions.GenerateDocumentKey(dbName, DatabaseCommands, entity);
 		}
 
 		protected override Task<string> GenerateKeyAsync(object entity)

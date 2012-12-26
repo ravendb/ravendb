@@ -39,9 +39,9 @@ namespace Raven.Client.Shard
 		/// <param name="id"></param>
 		/// <param name="documentStore"></param>
 		/// <param name="listeners"></param>
-		public ShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+		public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 		                              ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
-			: base(documentStore, listeners, id, shardStrategy, shardDbCommands) { }
+			: base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands) { }
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
@@ -69,7 +69,7 @@ namespace Raven.Client.Shard
 			IDatabaseCommands value;
 			if (shardDbCommands.TryGetValue(shardId, out value) == false)
 				throw new InvalidOperationException("Could not find shard: " + shardId);
-			return Conventions.GenerateDocumentKey(value, entity);
+			return Conventions.GenerateDocumentKey(dbName,value, entity);
 		}
 
 		protected override Task<string> GenerateKeyAsync(object entity)

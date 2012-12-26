@@ -320,7 +320,7 @@ namespace Raven.Client.Document
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new DocumentSession(this, listeners, sessionId,
+				var session = new DocumentSession(options.Database, this, listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
 					{
 						DatabaseName = options.Database ?? DefaultDatabase
@@ -382,18 +382,18 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
-					var generator = new MultiTypeHiLoKeyGenerator(32);
-					Conventions.DocumentKeyGenerator = (databaseCommands, entity) => generator.GenerateDocumentKey(databaseCommands, Conventions, entity);
+					var generator = new MultiDatabaseHiLoGenerator(32);
+					Conventions.DocumentKeyGenerator = (dbName, databaseCommands, entity) => generator.GenerateDocumentKey(dbName, databaseCommands, Conventions, entity);
 				}
 #endif
 
 				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
 				{
 #if !SILVERLIGHT
-					var generator = new AsyncMultiTypeHiLoKeyGenerator(32);
-					Conventions.AsyncDocumentKeyGenerator = (commands, entity) => generator.GenerateDocumentKeyAsync(commands, Conventions, entity);
+					var generator = new AsyncMultiDatabaseHiLoKeyGenerator(32);
+					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(dbName, commands, Conventions, entity);
 #else
-					Conventions.AsyncDocumentKeyGenerator = (commands, entity) =>
+					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) =>
 					{
 						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
 						if (typeTagName == null)
@@ -711,7 +711,7 @@ namespace Raven.Client.Document
 #endif
 		}
 
-		private IAsyncDocumentSession OpenAsyncSessionInternal(IAsyncDatabaseCommands asyncDatabaseCommands)
+		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			AssertInitialized();
 			EnsureNotClosed();
@@ -723,7 +723,7 @@ namespace Raven.Client.Document
 				if (AsyncDatabaseCommands == null)
 					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-				var session = new AsyncDocumentSession(this, asyncDatabaseCommands, listeners, sessionId);
+				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId);
 				AfterSessionCreated(session);
 				return session;
 			}
@@ -756,7 +756,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-			return OpenAsyncSessionInternal(SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+			return OpenAsyncSessionInternal(options.Database,SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>

@@ -17,7 +17,7 @@ namespace Raven.Tests.Issues
 		{
 			using(var store = NewDocumentStore())
 			{
-				store.Conventions.RegisterIdConvention<User>((cmds, user) => "users/" + user.Name);
+				store.Conventions.RegisterIdConvention<User>((dbName, cmds, user) => "users/" + user.Name);
 
 				using(var session = store.OpenSession())
 				{
@@ -35,7 +35,7 @@ namespace Raven.Tests.Issues
 			using(GetNewServer())
 			using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
-				store.Conventions.RegisterAsyncIdConvention<User>((cmds, user) => new CompletedTask<string>("users/" + user.Name));
+				store.Conventions.RegisterAsyncIdConvention<User>((dbName, cmds, user) => new CompletedTask<string>("users/" + user.Name));
 
 				using (var session = store.OpenAsyncSession())
 				{

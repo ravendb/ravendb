@@ -37,11 +37,11 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Conventions.RegisterIdConvention<Bedroom>((cmds, r) => "b/" + r.Sth);
-				store.Conventions.RegisterIdConvention<Guestroom>((cmds, r) => "gr/" + r.Sth);
-				store.Conventions.RegisterIdConvention<Room>((cmds, r) => "r/" + r.Sth);
-				store.Conventions.RegisterIdConvention<Kitchen>((cmds, r) => "k/" + r.Sth);
-				store.Conventions.RegisterIdConvention<MasterBedroom>((cmds, r) => "mb/" + r.Sth);
+				store.Conventions.RegisterIdConvention<Bedroom>((dbName, cmds, r) => "b/" + r.Sth);
+				store.Conventions.RegisterIdConvention<Guestroom>((dbName, cmds, r) => "gr/" + r.Sth);
+				store.Conventions.RegisterIdConvention<Room>((dbName, cmds, r) => "r/" + r.Sth);
+				store.Conventions.RegisterIdConvention<Kitchen>((dbName, cmds, r) => "k/" + r.Sth);
+				store.Conventions.RegisterIdConvention<MasterBedroom>((dbName, cmds, r) => "mb/" + r.Sth);
 
 				using (var session = store.OpenSession())
 				{
@@ -81,11 +81,11 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				store.Conventions.RegisterAsyncIdConvention<Bedroom>((cmds, r) => new CompletedTask<string>("b/" + r.Sth));
-				store.Conventions.RegisterAsyncIdConvention<Guestroom>((cmds, r) => new CompletedTask<string>("gr/" + r.Sth));
-				store.Conventions.RegisterAsyncIdConvention<Room>((cmds, r) => new CompletedTask<string>("r/" + r.Sth));
-				store.Conventions.RegisterAsyncIdConvention<Kitchen>((cmds, r) => new CompletedTask<string>("k/" + r.Sth));
-				store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((cmds, r) => new CompletedTask<string>("mb/" + r.Sth));
+				store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, cmds, r) => new CompletedTask<string>("b/" + r.Sth));
+				store.Conventions.RegisterAsyncIdConvention<Guestroom>((dbName, cmds, r) => new CompletedTask<string>("gr/" + r.Sth));
+				store.Conventions.RegisterAsyncIdConvention<Room>((dbName, cmds, r) => new CompletedTask<string>("r/" + r.Sth));
+				store.Conventions.RegisterAsyncIdConvention<Kitchen>((dbName, cmds, r) => new CompletedTask<string>("k/" + r.Sth));
+				store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, cmds, r) => new CompletedTask<string>("mb/" + r.Sth));
 
 				using (var session = store.OpenAsyncSession())
 				{
