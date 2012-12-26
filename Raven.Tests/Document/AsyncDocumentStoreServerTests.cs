@@ -44,7 +44,7 @@ namespace Raven.Tests.Document
         {
             ravenTest = new RemoteClientTest();
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-            DocumentStore = ravenTest.NewRemoteDocumentStore(true).Initialize();
+            DocumentStore = ravenTest.NewRemoteDocumentStore().Initialize();
         }
 
         public override void Dispose()
