@@ -25,7 +25,6 @@ namespace Raven.Client.Document
 		{
 			this.documentStore = documentStore;
 			Listeners = listeners;
-			CachedJsonDocs = new Dictionary<object, RavenJObject>(ObjectReferenceEqualityComparerer<object>.Default);
 		}
 
 		public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
