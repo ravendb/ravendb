@@ -41,7 +41,7 @@ namespace Raven.Tests
 				});
 			}
 
-			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Guid.Empty).Length);
+			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Guid.Empty).Count);
 		}
 
 		[Fact]
@@ -72,8 +72,8 @@ namespace Raven.Tests
 				});
 			}
 
-			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Guid.Empty).Length);
-			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Increment(Guid.Empty, 15)).Length);
+			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Guid.Empty).Count);
+			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Increment(Guid.Empty, 15)).Count);
 		}
 	}
 }

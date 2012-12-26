@@ -66,7 +66,7 @@ namespace Raven.Database.Indexing
 
 			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
-			JsonDocument[] jsonDocs = null;
+			List<JsonDocument> jsonDocs = null;
 			try
 			{
 				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedGuidForAllIndexes);
@@ -74,15 +74,15 @@ namespace Raven.Database.Indexing
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-					          jsonDocs.Length, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
+					          jsonDocs.Count, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
 				}
 
-				context.ReportIndexingActualBatchSize(jsonDocs.Length);
+				context.ReportIndexingActualBatchSize(jsonDocs.Count);
 				context.CancellationToken.ThrowIfCancellationRequested();
 
-				if (jsonDocs.Length > 0)
+				if (jsonDocs.Count > 0)
 				{
-					context.IndexedPerSecIncreaseBy(jsonDocs.Length);
+					context.IndexedPerSecIncreaseBy(jsonDocs.Count);
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
 					var sw = Stopwatch.StartNew();
@@ -102,7 +102,7 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				if (operationCancelled == false && jsonDocs != null && jsonDocs.Length > 0)
+				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 				{
 					var lastByEtag = PrefetchingBehavior.GetHighestEtag(jsonDocs);
 					var lastModified = lastByEtag.LastModified.Value;
@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
 					if (Log.IsDebugEnabled)
 					{
 						Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
-						          jsonDocs.Length,
+						          jsonDocs.Count,
 						          lastEtag,
 						          string.Join(", ", indexesToWorkOn.Select(x => x.IndexName))
 							);
@@ -135,16 +135,16 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void UpdateAutoThrottler(JsonDocument[] jsonDocs, TimeSpan indexingDuration)
+		private void UpdateAutoThrottler(List<JsonDocument> jsonDocs, TimeSpan indexingDuration)
 		{
 			int futureLen;
 			int futureSize;
 			prefetchingBehavior.GetFutureStats(autoTuner.NumberOfItemsToIndexInSingleBatch ,out futureLen, out futureSize);
-			autoTuner.AutoThrottleBatchSize(jsonDocs.Length + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
+			autoTuner.AutoThrottleBatchSize(jsonDocs.Count + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 		}
 
-	
-		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
+
+		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
 		{
 			var last = jsonDocs.Last();
 
