@@ -1227,6 +1227,20 @@ namespace Raven.Client.Indexes
 		{
 			Out(assignment.Member.Name);
 			Out(" = ");
+			var constantExpression = assignment.Expression as ConstantExpression;
+			if (constantExpression != null && constantExpression.Value == null)
+			{
+				var memberType = GetMemberType(assignment.Member);
+				if (ShouldConvert(memberType))
+				{
+					Visit(Expression.Convert(assignment.Expression, memberType));
+				}
+				else
+				{
+					Out("(object)null");
+				}
+				return assignment;
+			}
 			Visit(assignment.Expression);
 			return assignment;
 		}
@@ -1598,6 +1612,10 @@ namespace Raven.Client.Indexes
 					if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
 					{
 						Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
+					}
+					else if (node.Expressions.Count == 0)
+					{
+						Out("object");
 					}
 					Out("[]");
 					VisitExpressions('{', node.Expressions, '}');
