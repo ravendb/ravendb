@@ -278,7 +278,10 @@ namespace Raven.Client.Shard
 				                                 {
 					                                 var data = PrepareForSaveChanges();
 					                                 if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
+					                                 {
+						                                 cachingScope.Dispose();
 						                                 return new CompletedTask(); // nothing to do here
+					                                 }
 
 					                                 IncrementRequestCount();
 					                                 LogBatch(data);

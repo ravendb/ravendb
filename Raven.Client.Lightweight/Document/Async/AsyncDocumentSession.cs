@@ -273,7 +273,10 @@ namespace Raven.Client.Document.Async
 				                                 {
 					                                 var data = PrepareForSaveChanges();
 													 if (data.Commands.Count == 0)
+													 {
+														 cachingScope.Dispose();
 														 return new CompletedTask();
+													 }
 
 													 IncrementRequestCount();
 
