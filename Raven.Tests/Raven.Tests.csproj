@@ -243,6 +243,7 @@
     <Compile Include="Bugs\MoreLikeThisTrack.cs" />
     <Compile Include="Bugs\MultiMapSearch\AccountSearch.cs" />
     <Compile Include="Bugs\MultiMapSearch\MultiMapWildCardSearch.cs" />
+    <Compile Include="Bugs\MultiMap\MultiMapCrudeJoin.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapWithoutReduce.cs" />
     <Compile Include="Bugs\MultiMap\Errors.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapReduce.cs" />
