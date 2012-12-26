@@ -1901,7 +1901,7 @@ namespace Raven.Database
 			alertsDocument.Alerts.Add(alert);
 		}
 
-		public int BulkInsert(IEnumerable<IEnumerable<JsonDocument>> docBatches)
+		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
 		{
 			var documents = 0;
 			lock (putSerialLock)
@@ -1914,7 +1914,14 @@ namespace Raven.Database
 						foreach (var tuple in docs)
 						{
 							documents++;
-							accessor.Documents.InsertDocument(tuple.Key, tuple.DataAsJson, tuple.Metadata);
+							accessor.Documents.InsertDocument(tuple.Key, tuple.DataAsJson, tuple.Metadata, options.CheckForUpdates);
+						}
+						if(options.CheckReferencesInIndexes)
+						{
+							foreach (var doc in docs)
+							{
+								CheckReferenceBecauseOfDocumentUpdate(doc.Key, accessor);
+							}
 						}
 						accessor.General.PulseTransaction();
 					}
