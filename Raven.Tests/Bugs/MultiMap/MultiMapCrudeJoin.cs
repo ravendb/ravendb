@@ -68,7 +68,7 @@ namespace Raven.Tests.Bugs.MultiMap
                                         select new CrudeJoinResult()
                                         {
                                             RootId = g.Key,
-                                            TheRoot = g.Select(it => it.TheRoot).FirstOrDefault(),
+                                            TheRoot = g.Select(it => it.TheRoot).FirstOrDefault(it => it != null),
                                             Others = g.SelectMany(it => it.Others).ToArray()
                                         };
             }
