@@ -79,7 +79,7 @@ namespace Raven.Database.Indexing
 			}
 			catch (Exception e)
 			{
-				Log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
+				Log.WarnException("Error when getting next batch value asynchronously, will try in sync manner", e);
 				return null;
 			}
 		}
@@ -177,7 +177,7 @@ namespace Raven.Database.Indexing
 					return;
 			}
 
-			// ensure we don't do TOO much future cachings
+			// ensure we don't do TOO much future caching
 			if (MemoryStatistics.AvailableMemory <
 				context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				return;
