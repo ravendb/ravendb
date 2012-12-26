@@ -57,6 +57,10 @@ namespace Raven.Client.Document
 
 		public void Write(string id, RavenJObject metadata, RavenJObject data)
 		{
+			if (id == null) throw new ArgumentNullException("id");
+			if (metadata == null) throw new ArgumentNullException("metadata");
+			if (data == null) throw new ArgumentNullException("data");
+
 			metadata["@id"] = id;
 			data[Constants.Metadata] = metadata;
 			items.Add(data);

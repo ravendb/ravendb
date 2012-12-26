@@ -101,10 +101,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Tries to set the identity property
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id.</param>
-		protected internal void TrySetIdentity<T>(T entity, string id)
+		protected internal void TrySetIdentity(object entity, string id)
 		{
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
