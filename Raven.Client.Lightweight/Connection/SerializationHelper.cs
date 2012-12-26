@@ -48,15 +48,15 @@ namespace Raven.Client.Connection
 				var etag = Extract(metadata, "@etag", Guid.Empty, (string g) => HttpExtensions.EtagHeaderToGuid(g));
 				var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
 				list.Add(new JsonDocument
-				         {
-					         Key = key,
-					         LastModified = lastModified,
-					         Etag = etag,
-					         TempIndexScore = metadata == null ? null : metadata.Value<float?>("Temp-Index-Score"),
-					         NonAuthoritativeInformation = nai,
-					         Metadata = metadata.FilterHeaders(),
-					         DataAsJson = doc,
-				         });
+				{
+					Key = key,
+					LastModified = lastModified,
+					Etag = etag,
+					TempIndexScore = metadata == null ? null : metadata.Value<float?>("Temp-Index-Score"),
+					NonAuthoritativeInformation = nai,
+					Metadata = metadata.FilterHeaders(),
+					DataAsJson = doc,
+				});
 			}
 			return list;
 		}
@@ -65,8 +65,8 @@ namespace Raven.Client.Connection
 		{
 			if (metadata == null)
 				return SystemTime.UtcNow;
-			return metadata.ContainsKey(Constants.RavenLastModified) ? 
-				       Extract(metadata, Constants.RavenLastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d)) : 
+			return metadata.ContainsKey(Constants.RavenLastModified) ?
+				       Extract(metadata, Constants.RavenLastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d)) :
 				       Extract(metadata, Constants.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
 		}
 
@@ -83,12 +83,12 @@ namespace Raven.Client.Connection
 		///</summary>
 		public static JsonDocument ToJsonDocument(this RavenJObject response)
 		{
-			return RavenJObjectsToJsonDocuments(new[] { response }).First();
+			return RavenJObjectsToJsonDocuments(new[] {response}).First();
 		}
 
 		private static DateTime ConvertToUtcDate(string date)
 		{
-			return DateTime.SpecifyKind(DateTime.ParseExact(date, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
+			return DateTime.SpecifyKind(DateTime.ParseExact(date, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
 		}
 
 		private static T Extract<T>(RavenJObject metadata, string key, T defaultValue = default(T))
@@ -115,16 +115,16 @@ namespace Raven.Client.Connection
 		public static QueryResult ToQueryResult(RavenJObject json, Guid etag)
 		{
 			var result = new QueryResult
-			             {
-				             IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-				             IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-				             IndexEtag = etag,
-				             Results = ((RavenJArray) json["Results"]).Cast<RavenJObject>().ToList(),
-				             Includes = ((RavenJArray) json["Includes"]).Cast<RavenJObject>().ToList(),
-				             TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-				             IndexName = json.Value<string>("IndexName"),
-				             SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-			             };
+			{
+				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+				IndexEtag = etag,
+				Results = ((RavenJArray) json["Results"]).Cast<RavenJObject>().ToList(),
+				Includes = ((RavenJArray) json["Includes"]).Cast<RavenJObject>().ToList(),
+				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+				IndexName = json.Value<string>("IndexName"),
+				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+			};
 
 			if (json.ContainsKey("NonAuthoritativeInformation"))
 				result.NonAuthoritativeInformation = Convert.ToBoolean(json["NonAuthoritativeInformation"].ToString());
@@ -148,14 +148,14 @@ namespace Raven.Client.Connection
 			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 
 			return new JsonDocument
-			       {
-				       DataAsJson = jsonData,
-				       NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
-				       Key = key,
-				       Etag = HttpExtensions.EtagHeaderToGuid(etag),
-				       LastModified = lastModifiedDate,
-				       Metadata = meta
-			       };
+			{
+				DataAsJson = jsonData,
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				Key = key,
+				Etag = HttpExtensions.EtagHeaderToGuid(etag),
+				LastModified = lastModifiedDate,
+				Metadata = meta
+			};
 		}
 
 		/// <summary>
@@ -188,17 +188,17 @@ namespace Raven.Client.Connection
 				                      list.First() : 
 				                      headers[Constants.LastModified].First();
 #endif
-			var dateTime = DateTime.ParseExact(lastModified, new[]{"o","r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			var dateTime = DateTime.ParseExact(lastModified, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 
 			return new JsonDocumentMetadata
-			       {
-				       NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
-				       Key = key,
-				       Etag = HttpExtensions.EtagHeaderToGuid(etag),
-					   LastModified = lastModifiedDate,
-				       Metadata = meta
-			       };
+			{
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				Key = key,
+				Etag = HttpExtensions.EtagHeaderToGuid(etag),
+				LastModified = lastModifiedDate,
+				Metadata = meta
+			};
 		}
 	}
 }
