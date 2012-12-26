@@ -16,15 +16,13 @@ using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Database.Extensions;
 using Raven.Tests.Indexes;
 using Xunit;
 using System.Linq;
-using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Document
 {
-	public class DocumentStoreEmbeddedTests : RemoteClientTest, IDisposable
+	public class DocumentStoreEmbeddedTests : RemoteClientTest
 	{
 		private readonly EmbeddableDocumentStore documentStore;
 
@@ -234,6 +232,18 @@ namespace Raven.Tests.Document
 			Assert.Equal(FieldIndexing.NotAnalyzed, indexDefinition.Indexes["Name"]);
 		}
 
+		[Fact]
+		public void CanGetIndexes()
+		{
+			documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
+			{
+				Map = companies => from c in companies
+								   select new { c.Name },
+				Indexes = { { x => x.Name, FieldIndexing.NotAnalyzed } }
+			});
+			var indexDefinitions = documentStore.DatabaseCommands.GetIndexes(0, 10);
+			Assert.NotNull(indexDefinitions.SingleOrDefault(d => d.Name == "Companies/Name"));
+		}
 
 		[Fact]
 		public void WillTrackEntitiesFromQuery()
@@ -442,6 +452,19 @@ namespace Raven.Tests.Document
 
 			Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
 			Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
+		}
+
+		[Fact]
+		public void CanGetDocumemts()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new Company { Name = "Company A", Id = "1" });
+				session.Store(new Company { Name = "Company B", Id = "2" });
+				session.SaveChanges();
+			}
+			JsonDocument[] jsonDocuments = documentStore.DatabaseCommands.GetDocuments(0, 10, true);
+			Assert.Equal(2, jsonDocuments.Length);
 		}
 
 		[Fact]
