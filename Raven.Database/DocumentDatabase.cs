@@ -666,7 +666,7 @@ namespace Raven.Database
 							Etag = newEtag,
 							LastModified = addDocumentResult.SavedAt,
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
-						}, SplitNonConsecutiveDocs);
+						}, indexingExecuter.AfterCommit);
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 							{
@@ -694,30 +694,6 @@ namespace Raven.Database
 				Key = key,
 				ETag = newEtag
 			};
-		}
-
-		private void SplitNonConsecutiveDocs(JsonDocument[] docs)
-		{
-			if(docs.Length ==0)
-				return;
-			var etag = docs[0].Etag.Value;
-			var items = new List<JsonDocument>(docs.Length)
-			{
-				docs[0]
-			};
-			foreach (var doc in docs.Skip(1))
-			{
-				if (Etag.GetDiffrence(doc.Etag.Value, etag) != 1)
-				{
-					indexingExecuter.AfterCommit(items.ToArray());
-					items.Clear();
-				}
-				items.Add(doc);
-				etag = doc.Etag.Value;
-			}
-			if (items.Count == 0)
-				return;
-			indexingExecuter.AfterCommit(items.ToArray());
 		}
 
 		internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
