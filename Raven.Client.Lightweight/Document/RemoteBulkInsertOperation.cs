@@ -19,6 +19,8 @@ namespace Raven.Client.Document
 		private readonly BlockingCollection<RavenJObject> items;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 
+		public event Action<string> Report;
+
 		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, int batchSize = 2048)
 		{
 			items = new BlockingCollection<RavenJObject>(batchSize * 8);
@@ -71,6 +73,14 @@ namespace Raven.Client.Document
 			requestBinaryWriter.Write((int)bufferedStream.Position);
 			bufferedStream.WriteTo(requestStream);
 			requestStream.Flush();
+
+			var report = Report;
+			if(report!=null)
+			{
+				report(string.Format("Wrote {0:#,#} documents to server gzipped to {1:#,#.##} kb", 
+					localBatch.Count,
+					bufferedStream.Position / 1024));
+			}
 		}
 
 		private void WriteToBuffer(List<RavenJObject> localBatch)
@@ -96,7 +106,16 @@ namespace Raven.Client.Document
 			nextTask.ContinueWith(task =>
 			{
 				task.AssertNotFailed();
+				var report = Report;
+				if (report != null)
+				{
+					report("Finished writing all results to server");
+				}
 				httpJsonRequest.RawExecuteRequest();
+				if (report != null)
+				{
+					report("Done writing to server");
+				}
 			}).Wait();
 		}
 	}

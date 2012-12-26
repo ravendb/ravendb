@@ -1909,14 +1909,17 @@ namespace Raven.Database
 				TransactionalStorage.Batch(accessor =>
 				{
 					accessor.General.UseLazyCommit();
+					var sp = Stopwatch.StartNew();
 					foreach (var docs in docBatches)
 					{
+						var batchDocs = 0;
 						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 						foreach (var doc in docs)
 						{
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
 							documents++;
+							batchDocs++;
 							accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
 						}
 						if(options.CheckReferencesInIndexes)
@@ -1926,12 +1929,13 @@ namespace Raven.Database
 								CheckReferenceBecauseOfDocumentUpdate(key, accessor);
 							}
 						}
+						accessor.Documents.IncrementDocumentCount(batchDocs);
 						accessor.General.PulseTransaction();
 					}
 					if (documents == 0)
 						return;
-					accessor.Documents.IncrementDocumentCount(documents);
-					workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
+					sp.Stop();
+					workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs completed in " + sp.Elapsed);
 				});
 			}
 			return documents;

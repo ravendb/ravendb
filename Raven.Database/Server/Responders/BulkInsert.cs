@@ -44,21 +44,24 @@ namespace Raven.Database.Server.Responders
 
 		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context)
 		{
-			var binaryReader = new BinaryReader(context.Request.InputStream);
-			while (true)
+			using (var inputStream = context.Request.GetBufferLessInputStream())
 			{
-				int size;
-				try
+				var binaryReader = new BinaryReader(inputStream);
+				while (true)
 				{
-					size = binaryReader.ReadInt32();
-				}
-				catch (EndOfStreamException)
-				{
-					break;
-				}
-				using (var stream = new PartialStream(context.Request.InputStream, size))
-				{
-					yield return YieldDocumentsInBatch(stream);
+					int size;
+					try
+					{
+						size = binaryReader.ReadInt32();
+					}
+					catch (EndOfStreamException)
+					{
+						break;
+					}
+					using (var stream = new PartialStream(inputStream, size))
+					{
+						yield return YieldDocumentsInBatch(stream);
+					}
 				}
 			}
 		}
