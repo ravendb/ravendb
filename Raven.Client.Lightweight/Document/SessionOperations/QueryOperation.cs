@@ -180,14 +180,14 @@ namespace Raven.Client.Document.SessionOperations
 
 			if (string.IsNullOrEmpty(documentId) == false)
 			{
-				// we need to make an addtional check, since it is possible that a value was explicitly stated
+				// we need to make an additional check, since it is possible that a value was explicitly stated
 				// for the identity property, in which case we don't want to override it.
 				var identityProperty = sessionOperations.Conventions.GetIdentityProperty(typeof(T));
 				if (identityProperty == null ||
 				    (result[identityProperty.Name] == null ||
 				     result[identityProperty.Name].Type == JTokenType.Null))
 				{
-					sessionOperations.TrySetIdentity(deserializedResult, documentId);
+					sessionOperations.GenerateEntityIdOnTheClient.TrySetIdentity(deserializedResult, documentId);
 				}
 			}
 

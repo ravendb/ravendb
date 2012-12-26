@@ -273,7 +273,7 @@ namespace Raven.Client.Shard
 			                                 {
 				                                 keysTask.AssertNotFailed();
 
-				                                 var cachingScope = EntitiesToJsonCachingScope();
+				                                 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
 				                                 try
 				                                 {
 					                                 var data = PrepareForSaveChanges();

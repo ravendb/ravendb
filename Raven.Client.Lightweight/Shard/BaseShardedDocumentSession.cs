@@ -182,7 +182,7 @@ namespace Raven.Client.Shard
 			metadata[Constants.RavenShardId] = shardId;
 			var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
 			if (modifyDocumentId != id)
-				TrySetIdentity(entity, modifyDocumentId);
+				GenerateEntityIdOnTheClient.TrySetIdentity(entity, modifyDocumentId);
 
 			return modifyDocumentId;
 		}

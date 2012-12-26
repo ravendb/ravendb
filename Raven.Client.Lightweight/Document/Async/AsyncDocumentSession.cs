@@ -268,7 +268,7 @@ namespace Raven.Client.Document.Async
 			                                 {
 				                                 keysTask.AssertNotFailed();
 
-				                                 var cachingScope = EntitiesToJsonCachingScope();
+												 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
 				                                 try
 				                                 {
 					                                 var data = PrepareForSaveChanges();

@@ -526,7 +526,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		void IDocumentSession.SaveChanges()
 		{
-			using (EntitiesToJsonCachingScope())
+			using (EntityToJson.EntitiesToJsonCachingScope())
 			{
 				var data = PrepareForSaveChanges();
 				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)

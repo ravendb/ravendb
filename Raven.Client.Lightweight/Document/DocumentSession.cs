@@ -478,7 +478,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public void SaveChanges()
 		{
-			using (EntitiesToJsonCachingScope())
+			using (EntityToJson.EntitiesToJsonCachingScope())
 			{
 				var data = PrepareForSaveChanges();
 
