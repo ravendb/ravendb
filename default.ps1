@@ -134,7 +134,7 @@ task Test -depends Compile {
 	Write-Host "xUnit location: $xUnit"
 	
 	$test_prjs | ForEach-Object { 
-		if($global:full_storage_test ) {
+		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
 			exec { &"$xUnit" "$build_dir\$_" }
@@ -155,10 +155,25 @@ task StressTest -depends Compile {
 	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
+	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
 	
 	@("Raven.StressTests.dll") | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
-		exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
+		
+		if($global:full_storage_test) {
+			$env:raventest_storage_engine = 'esent';
+			Write-Host "Testing $build_dir\$_ (esent)"
+			exec { &"$xUnit" "$build_dir\$_" }
+			
+			$env:raventest_storage_engine = 'munin';
+			Write-Host "Testing $build_dir\$_ (munin)"
+			exec { &"$xUnit" "$build_dir\$_" }
+		}
+		else {
+			$env:raventest_storage_engine = $null;
+			Write-Host "Testing $build_dir\$_ (default)"
+			exec { &"$xUnit" "$build_dir\$_" }
+		}
 	}
 }
 
