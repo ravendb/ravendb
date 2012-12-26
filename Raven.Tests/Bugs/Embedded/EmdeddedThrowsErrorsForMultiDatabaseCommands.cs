@@ -16,7 +16,7 @@ namespace Raven.Tests.Bugs.Embedded
 			}.Initialize())
 			{
 				var exeption = Assert.Throws<InvalidOperationException>(() => embeddableDocumentStore.DatabaseCommands.EnsureDatabaseExists("test"));
-				Assert.Equal(exeption.Message, "Multiple databases are not supported in the embedded API");
+				Assert.Equal(exeption.Message, "Multiple databases are not supported in the embedded API currently");
 			}
 		}
 	}
