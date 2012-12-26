@@ -266,7 +266,7 @@ namespace Raven.Storage.Esent.StorageActions
 			int count = 0;
 			do
 			{
-				if (untilEtag != null)
+				if (untilEtag != null && count > 0)
 				{
 					var docEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 					if (Etag.IsGreaterThanOrEqual(docEtag, untilEtag.Value))
