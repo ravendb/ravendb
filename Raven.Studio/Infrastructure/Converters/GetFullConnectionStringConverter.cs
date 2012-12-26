@@ -11,16 +11,11 @@ namespace Raven.Studio.Infrastructure.Converters
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			var apiKey = value as ApiKeyDefinition;
+			var apiKey = value as string;
 			if (apiKey == null)
-				return "";
-			if (string.IsNullOrWhiteSpace(apiKey.Name) || string.IsNullOrWhiteSpace(apiKey.Secret))
 				return "Must set both name and secret to get the connection string";
-			var access = apiKey.Databases.FirstOrDefault();
-			string dbName = access == null ? "DbName" : access.TenantId;
 
-			return string.Format(@"Url = {0}; ApiKey = {1}/{2}; Database = {3}",
-			                                     ApplicationModel.Current.Server.Value.Url, apiKey.Name, apiKey.Secret, dbName);
+			return string.Format(@"Url = {0}; {1}", ApplicationModel.Current.Server.Value.Url, apiKey);
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

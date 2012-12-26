@@ -42,7 +42,7 @@ namespace Raven.Tests
 			
 		}
 
-		protected string GetPath(string subFolderName)
+		public string GetPath(string subFolderName)
 		{
 			string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			return Path.Combine(retPath, subFolderName).Substring(6); // remove leading file://

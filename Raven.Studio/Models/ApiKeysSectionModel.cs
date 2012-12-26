@@ -23,7 +23,7 @@ namespace Raven.Studio.Models
 			ApiKeys = new ObservableCollection<ApiKeyDefinition>();
 
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
-			session.Advanced.LoadStartingWithAsync<ApiKeyDefinition>("Raven/ApiKeys/").ContinueOnSuccessInTheUIThread(
+			session.Advanced.LoadStartingWithAsync<ApiKeyDefinition>("Raven/ApiKeys/", pageSize:256).ContinueOnSuccessInTheUIThread(
 				apiKeys =>
 				{
 					OriginalApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeys);
@@ -103,7 +103,6 @@ namespace Raven.Studio.Models
 			if(key == null)
 				return;
 			key.Secret = Base62Util.ToBase62(Guid.NewGuid()).Replace("-", "");
-			Update();
 		}
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)

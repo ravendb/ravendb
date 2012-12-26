@@ -52,7 +52,6 @@
 						 Grid.Column="1"
                          Grid.ColumnSpan="2"
 						 Text="{Binding Name, Mode=TwoWay}"
-						 LostFocus="NameChanged"
                          Margin="5"/>
 
 				<TextBlock Grid.Row="1" 
@@ -79,7 +78,7 @@
 						 Grid.Column="1"
                          Grid.ColumnSpan="2"
 						 IsReadOnly="True"
-						 Text="{Binding Converter={StaticResource GetFullApiKeyConverter}}" 
+						 Text="{Binding FullApiKey, Mode=OneWay}" 
                          Margin="5"
 						 x:Name="FullApiKey">
 					<ContextMenu:ContextMenuService.ContextMenu>
@@ -102,7 +101,7 @@
 						 Grid.Column="1"
                          Grid.ColumnSpan="2"
 						 IsReadOnly="True"
-						 Text="{Binding Converter={StaticResource GetFullConnectionStringConverter}}" 
+						 Text="{Binding ConnectionString, Converter={StaticResource GetFullConnectionStringConverter}}" 
                          Margin="5"
 						 x:Name="ConnectionString">
 					<ContextMenu:ContextMenuService.ContextMenu>
@@ -125,8 +124,8 @@
 						 Grid.Column="1"
                          Grid.ColumnSpan="2"
 						 IsReadOnly="True"
-						 Text="{Binding Converter={StaticResource GetApiKeyDirectLink}}" 
-                         Margin="5"
+				         Margin="5"
+						 Text="{Binding FullApiKey, Converter={StaticResource GetApiKeyDirectLink}, Mode=TwoWay}" 
 						 x:Name="DirectLink">
 					<ContextMenu:ContextMenuService.ContextMenu>
 						<ContextMenu:ContextMenu>
