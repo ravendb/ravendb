@@ -29,7 +29,7 @@ namespace Raven.Client.Document
 			operation.Dispose();
 		}
 
-		public void Add(object entity)
+		public void Store(object entity)
 		{
 			string id = GetId(entity);
 

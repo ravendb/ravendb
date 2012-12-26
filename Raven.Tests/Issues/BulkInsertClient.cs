@@ -11,7 +11,7 @@ namespace Raven.Tests.Issues
 			{
 				using(var bulkInsert = store.StartBulkInsert())
 				{
-					bulkInsert.Add(new User {Name = "Fitzchak"});
+					bulkInsert.Store(new User {Name = "Fitzchak"});
 				}
 
 				using (var session = store.OpenSession())
