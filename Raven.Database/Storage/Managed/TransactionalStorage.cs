@@ -127,6 +127,7 @@ namespace Raven.Storage.Managed
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
+				storageActionsAccessor.InvokePreCommit();
 				tableStroage.Commit();
 				storageActionsAccessor.InvokeOnCommit();
 			}

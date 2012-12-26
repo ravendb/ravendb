@@ -2,12 +2,15 @@
 using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Database.Impl;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -21,22 +24,9 @@ namespace Raven.Tryouts
 				Url = "http://localhost:8080"
 			}.Initialize())
 			{
-				var sp = Stopwatch.StartNew();
-				using(var op = new RemoteBulkInsertOperation(new BulkInsertOptions{BatchSize = 512}, (ServerClient)store.DatabaseCommands))
-				{
-					op.Report += Console.WriteLine;
-					for (int i = 0; i < 1000 * 1000; i++)
-					{
-						op.Write("items/"+(i+1), new RavenJObject
-						{
-							{"Raven-Entity-Name", "Users"}
-						}, new RavenJObject
-						{
-							{"Name", "Users#"+i}
-						} );
-					}
-				}
-				Console.WriteLine(sp.Elapsed);
+				new SlowIndex.Orders_TotalByCustomerFor30Days().Execute(store);
+				SlowIndex.GenerateRandomOrders(store, 100, DateTime.Today.AddMonths(-3), DateTime.Today);
+				
 			}
 		}
 	}

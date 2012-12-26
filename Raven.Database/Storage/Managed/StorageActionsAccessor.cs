@@ -31,7 +31,8 @@ namespace Raven.Storage.Managed
 			Transactions = new TransactionStorageActions(storage, generator, documentCodecs);
 			Documents = new DocumentsStorageActions(storage, Transactions, generator, documentCodecs, documentCacher);
 			Indexing = new IndexingStorageActions(storage);
-			MapReduce = new MappedResultsStorageAction(storage, generator, documentCodecs);
+			mappedResultsStorageAction = new MappedResultsStorageAction(storage, generator, documentCodecs);
+			MapReduce = mappedResultsStorageAction;
 			Queue = new QueueStorageActions(storage, generator);
 			Tasks = new TasksStorageActions(storage, generator);
 			Staleness = new StalenessStorageActions(storage);
@@ -81,6 +82,8 @@ namespace Raven.Storage.Managed
 
 		private Action<JsonDocument[]> afterCommitAction;
 		private List<JsonDocument> docsForCommit;
+		private MappedResultsStorageAction mappedResultsStorageAction;
+
 		public void AfterCommit(JsonDocument doc, Action<JsonDocument[]> afterCommit)
 		{
 			afterCommitAction = afterCommit;
@@ -112,6 +115,11 @@ namespace Raven.Storage.Managed
 		public void Dispose()
 		{
 			Indexing.Dispose();
+		}
+
+		public void InvokePreCommit()
+		{
+			mappedResultsStorageAction.PreCommit();
 		}
 	}
 }
