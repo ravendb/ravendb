@@ -50,5 +50,10 @@ namespace Raven.Database.Util
 		{
 			return dic.ContainsKey(item);
 		}
+
+		public T[] ToArray()
+		{
+			return queue.ToArray();
+		}
 	}
 }

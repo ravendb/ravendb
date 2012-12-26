@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
 
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentQueue<ActualIndexingBatchSize> lastActualIndexingBatchSize = new ConcurrentQueue<ActualIndexingBatchSize>();
+		private readonly SizeLimitedConcurrentSet<ActualIndexingBatchSize> lastActualIndexingBatchSize = new SizeLimitedConcurrentSet<ActualIndexingBatchSize>(25);
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
@@ -385,16 +385,11 @@ namespace Raven.Database.Indexing
 
 		public void ReportIndexingActualBatchSize(int size)
 		{
-			lastActualIndexingBatchSize.Enqueue(new ActualIndexingBatchSize
+			lastActualIndexingBatchSize.Add(new ActualIndexingBatchSize
 			{
 				Size = size,
 				Timestamp = SystemTime.UtcNow
 			});
-			if (lastActualIndexingBatchSize.Count > 25)
-			{
-				ActualIndexingBatchSize tuple;
-				lastActualIndexingBatchSize.TryDequeue(out tuple);
-			}
 		}
 
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats
@@ -402,7 +397,7 @@ namespace Raven.Database.Indexing
 			get { return futureBatchStats; }
 		}
 
-		public ConcurrentQueue<ActualIndexingBatchSize> LastActualIndexingBatchSize
+		public SizeLimitedConcurrentSet<ActualIndexingBatchSize> LastActualIndexingBatchSize
 		{
 			get { return lastActualIndexingBatchSize; }
 		}
