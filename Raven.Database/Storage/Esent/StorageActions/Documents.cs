@@ -446,9 +446,19 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
-		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata)
+		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
 		{
-			using (var update = new Update(session, Documents, JET_prep.Insert))
+			var prep = JET_prep.Insert;
+			if(checkForUpdates)
+			{
+				Api.JetSetCurrentIndex(session, Documents, "by_key");
+				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				if(Api.TrySeek(session, Documents, SeekGrbit.SeekEQ))
+				{
+					prep = JET_prep.Replace;
+				}
+			}
+			using (var update = new Update(session, Documents, prep))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
 				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))

@@ -268,7 +268,7 @@ namespace Raven.Storage.Managed
 			afterTouchEtag = addDocumentResult.Etag;
 		}
 
-		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata)
+		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
 		{
 			var ms = new MemoryStream();
 
