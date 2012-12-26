@@ -385,6 +385,9 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public override IndexDefinition CreateIndexDefinition()
 		{
+			if(Conventions == null)
+				Conventions = new DocumentConvention();
+
 			return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
