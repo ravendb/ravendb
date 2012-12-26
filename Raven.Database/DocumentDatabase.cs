@@ -1909,14 +1909,14 @@ namespace Raven.Database
 		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
 		{
 			var documents = 0;
-			lock (putSerialLock)
+			TransactionalStorage.Batch(accessor =>
 			{
-				TransactionalStorage.Batch(accessor =>
+				accessor.General.UseLazyCommit();
+				foreach (var docs in docBatches)
 				{
-					accessor.General.UseLazyCommit();
-					foreach (var docs in docBatches)
+					var batchDocs = 0;
+					lock (putSerialLock)
 					{
-						var batchDocs = 0;
 						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 						foreach (var doc in docs)
 						{
@@ -1926,7 +1926,7 @@ namespace Raven.Database
 							batchDocs++;
 							accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
 						}
-						if(options.CheckReferencesInIndexes)
+						if (options.CheckReferencesInIndexes)
 						{
 							foreach (var key in keys)
 							{
@@ -1936,11 +1936,11 @@ namespace Raven.Database
 						accessor.Documents.IncrementDocumentCount(batchDocs);
 						accessor.General.PulseTransaction();
 					}
-					if (documents == 0)
-						return;
-					workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
-				});
-			}
+				}
+				if (documents == 0)
+					return;
+				workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
+			});
 			return documents;
 		}
 
