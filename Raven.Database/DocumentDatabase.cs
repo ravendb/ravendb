@@ -1909,7 +1909,6 @@ namespace Raven.Database
 				TransactionalStorage.Batch(accessor =>
 				{
 					accessor.General.UseLazyCommit();
-					var sp = Stopwatch.StartNew();
 					foreach (var docs in docBatches)
 					{
 						var batchDocs = 0;
@@ -1934,8 +1933,7 @@ namespace Raven.Database
 					}
 					if (documents == 0)
 						return;
-					sp.Stop();
-					workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs completed in " + sp.Elapsed);
+					workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
 				});
 			}
 			return documents;

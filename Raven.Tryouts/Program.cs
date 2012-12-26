@@ -22,11 +22,11 @@ namespace Raven.Tryouts
 			}.Initialize())
 			{
 				var sp = Stopwatch.StartNew();
-				using(var op = new RemoteBulkInsertOperation(new BulkInsertOptions(), (ServerClient)store.DatabaseCommands, 
-					batchSize: 2048))
+				using(var op = new RemoteBulkInsertOperation(new BulkInsertOptions(), (ServerClient)store.DatabaseCommands,
+					batchSize: 128))
 				{
 					op.Report += Console.WriteLine;
-					for (int i = 0; i < 250 * 1000; i++)
+					for (int i = 0; i < 1000 * 1000; i++)
 					{
 						op.Write("items/"+(i+1), new RavenJObject
 						{

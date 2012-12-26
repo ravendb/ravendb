@@ -62,6 +62,7 @@ namespace Raven.Client.Document
 			items.Add(data);
 		}
 
+		private int total = 0;
 		private void FlushBatch(Stream requestStream, List<RavenJObject> localBatch)
 		{
 			if (localBatch.Count == 0)
@@ -74,12 +75,14 @@ namespace Raven.Client.Document
 			bufferedStream.WriteTo(requestStream);
 			requestStream.Flush();
 
+			total += localBatch.Count;
 			var report = Report;
 			if(report!=null)
 			{
-				report(string.Format("Wrote {0:#,#} documents to server gzipped to {1:#,#.##} kb", 
+				report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb", 
 					localBatch.Count,
-					bufferedStream.Position / 1024));
+					bufferedStream.Position / 1024,
+					total));
 			}
 		}
 

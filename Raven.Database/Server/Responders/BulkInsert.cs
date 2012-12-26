@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using NetTopologySuite.IO;
@@ -32,9 +33,12 @@ namespace Raven.Database.Server.Responders
 				CheckForUpdates = context.GetCheckForUpdates(),
 				CheckReferencesInIndexes = context.GetCheckReferencesInIndexes()
 			};
+
+			var sp = Stopwatch.StartNew();
+
 			var documents = Database.BulkInsert(options, YieldBatches(context));
 
-			context.Log(log => log.Debug("\tBulk inserted {0:#,#;;0} documents", documents));
+			context.Log(log => log.Debug("\tBulk inserted {0:#,#;;0} documents in {1}", documents, sp.Elapsed));
 
 			context.WriteJson(new
 			{
