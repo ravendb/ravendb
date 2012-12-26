@@ -50,6 +50,11 @@ namespace Raven.Client.Document
 			{
 				id = generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
 			}
+			else
+			{
+				id = generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
+				generateEntityIdOnTheClient.TrySetIdentity(entity, id);
+			}
 			return id;
 		}
 	}
