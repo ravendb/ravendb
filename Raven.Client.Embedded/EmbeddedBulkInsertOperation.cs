@@ -42,6 +42,7 @@ namespace Raven.Client.Embedded
 				{
 					if (list.Count != 0)
 					{
+						ReportProgress(list);
 						yield return list;
 						list.Clear();
 					}
@@ -49,6 +50,7 @@ namespace Raven.Client.Embedded
 				}
 				if (item == null) //marker
 				{
+					ReportProgress(list); 
 					yield return list; 
 					yield break;
 				}
@@ -56,10 +58,18 @@ namespace Raven.Client.Embedded
 				list.Add(item);
 				if (list.Count >= options.BatchSize)
 				{
+					ReportProgress(list); 
 					yield return list;
 					list.Clear();
 				}
 			}
+		}
+
+		private void ReportProgress(List<JsonDocument> list)
+		{
+			var onReport = Report;
+			if (onReport != null)
+				onReport("Writing " + list.Count + " items");
 		}
 
 		/// <summary>
@@ -69,6 +79,9 @@ namespace Raven.Client.Embedded
 		{
 			queue.Add(null);
 			doBulkInsert.Wait();
+			var onReport = Report;
+			if (onReport != null)
+				onReport("Done with bulk insert");
 		}
 
 		/// <summary>
@@ -87,5 +100,10 @@ namespace Raven.Client.Embedded
 				Metadata = metadata
 			});
 		}
+
+		/// <summary>
+		/// Report on the progress of the operation
+		/// </summary>
+		public event Action<string> Report;
 	}
 }

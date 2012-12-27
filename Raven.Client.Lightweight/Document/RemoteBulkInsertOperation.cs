@@ -15,6 +15,11 @@ namespace Raven.Client.Document
 	public interface ILowLevelBulkInsertOperation : IDisposable
 	{
 		void Write(string id, RavenJObject metadata, RavenJObject data);
+
+		/// <summary>
+		/// Report on the progress of the operation
+		/// </summary>
+		event Action<string> Report;
 	}
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation

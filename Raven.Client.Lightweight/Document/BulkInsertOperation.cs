@@ -11,7 +11,13 @@ namespace Raven.Client.Document
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly ILowLevelBulkInsertOperation operation;
 		private readonly IDatabaseCommands databaseCommands;
-		private EntityToJson entityToJson;
+		private readonly EntityToJson entityToJson;
+
+		public event Action<string>  Report
+		{
+			add { operation.Report += value; }
+			remove { operation.Report -= value; }
+		}
 
 		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options)
 		{
