@@ -772,5 +772,11 @@ namespace Raven.Client.Document
 #endif
 
 
+#if !SILVERLIGHT
+		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
+		{
+			return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions());
+		}
+#endif
 	}
 }

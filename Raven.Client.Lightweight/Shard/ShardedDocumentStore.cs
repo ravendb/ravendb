@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 #endif
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
@@ -256,6 +257,13 @@ namespace Raven.Client.Shard
 		{
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
+
+#if !SILVERLIGHT
+		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
+		{
+			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions());
+		}
+#endif
 
 		/// <summary>
 		/// Initializes this instance.

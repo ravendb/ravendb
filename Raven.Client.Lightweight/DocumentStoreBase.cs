@@ -139,12 +139,8 @@ namespace Raven.Client
 		}
 
 #if !SILVERLIGHT
-		public BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
-		{
-			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions());
-		}
+		public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
-
 		protected void EnsureNotClosed()
 		{
 			if (WasDisposed)
