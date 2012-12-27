@@ -1913,6 +1913,10 @@ namespace Raven.Database
 			var inserts = 0;
 			TransactionalStorage.Batch(accessor =>
 			{
+				RaiseNotifications(new DocumentChangeNotification
+				{
+					Type = DocumentChangeTypes.BulkInsertStarted
+				});
 				accessor.General.UseLazyCommit();
 				foreach (var docs in docBatches)
 				{
@@ -1948,6 +1952,10 @@ namespace Raven.Database
 						accessor.General.PulseTransaction();
 					}
 				}
+				RaiseNotifications(new DocumentChangeNotification
+				{
+					Type = DocumentChangeTypes.BulkInsertEnded
+				});
 				if (documents == 0)
 					return;
 				workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");

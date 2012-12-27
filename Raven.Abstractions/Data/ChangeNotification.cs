@@ -28,6 +28,8 @@ namespace Raven.Abstractions.Data
 		Delete = 2,
 		ReplicationConflict = 4,
 		AttachmentReplicationConflict = 8,
+		BulkInsertStarted = 16,
+		BulkInsertEnded = 32,
 
 		Common = Put | Delete
 	}
