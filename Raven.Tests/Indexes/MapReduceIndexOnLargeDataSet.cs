@@ -7,6 +7,7 @@ namespace Raven.Tests.Indexes
 {
 	public class MapReduceIndexOnLargeDataSet : RavenTest
 	{
+		[Fact]
 		public void WillNotProduceAnyErrors()
 		{
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
