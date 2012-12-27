@@ -110,7 +110,6 @@ namespace Raven.Tests.Helpers
 			{
 				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
 			};
-
 			store.AfterDispose += (sender, args) =>
 			{
 				ravenDbServer.Dispose();

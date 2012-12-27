@@ -40,6 +40,11 @@ namespace Raven.Client.Document
 			if (options.CheckReferencesInIndexes)
 				requestUrl += "&checkReferencesInIndexes=true";
 
+			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
+			var req = client.CreateRequest("POST", requestUrl + "&no-op=for-auth-only", disableRequestCompression: true);
+			req.ExecuteRequest();
+
+
 			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
 			nextTask = httpJsonRequest.GetRawRequestStream()
 				.ContinueWith(task =>

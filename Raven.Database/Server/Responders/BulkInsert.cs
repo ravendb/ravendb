@@ -28,6 +28,13 @@ namespace Raven.Database.Server.Responders
 		}
 		public override void Respond(IHttpContext context)
 		{
+			if (string.IsNullOrEmpty(context.Request.QueryString["no-op"]) == false)
+			{
+				// this is a no-op request which is there just to force the client HTTP layer
+				// to handle the authentication
+				return; 
+			}
+
 			var options = new BulkInsertOptions
 			{
 				CheckForUpdates = context.GetCheckForUpdates(),
