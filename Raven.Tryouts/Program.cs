@@ -24,10 +24,19 @@ namespace Raven.Tryouts
 				Url = "http://localhost:8080"
 			}.Initialize())
 			{
-				new SlowIndex.Orders_TotalByCustomerFor30Days().Execute(store);
-				SlowIndex.GenerateRandomOrders(store, 100, DateTime.Today.AddMonths(-3), DateTime.Today);
-				
+				using (var bulkInsert = store.BulkInsert())
+				{
+					for (int i = 0; i < 1000*1000; i++)
+					{
+						bulkInsert.Store(new User {Name = "Users #" + i});
+					}
+				}
 			}
+		}
+		public class User
+		{
+			public string Name { get; set; }
+			public string Id { get; set; }
 		}
 	}
 }

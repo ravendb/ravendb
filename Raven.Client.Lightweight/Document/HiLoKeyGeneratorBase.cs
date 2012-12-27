@@ -13,15 +13,17 @@ namespace Raven.Client.Document
 
 		protected readonly string tag;
 		protected long capacity;
+		protected long baseCapacity;
 		private volatile RangeValue range;
-		
+
 		protected string lastServerPrefix;
-		protected DateTime lastRequestedUtc;
+		protected DateTime lastRequestedUtc1, lastRequestedUtc2;
 
 		protected HiLoKeyGeneratorBase(string tag, long capacity)
 		{
 			this.tag = tag;
 			this.capacity = capacity;
+			baseCapacity = capacity;
 			this.range = new RangeValue(1, 0);
 		}
 
@@ -53,15 +55,24 @@ namespace Raven.Client.Document
 			get { return RavenKeyGeneratorsHilo + tag; }
 		}
 
-		protected void IncreaseCapacityIfRequired()
+		protected void ModifyCapacityIfRequired()
 		{
-			var span = SystemTime.UtcNow - lastRequestedUtc;
-			if (span.TotalSeconds < 1)
+			var span = SystemTime.UtcNow - lastRequestedUtc1;
+			if (span.TotalSeconds < 5)
 			{
-				capacity *= 2;
+				span = SystemTime.UtcNow - lastRequestedUtc2;
+				if (span.TotalSeconds < 3)
+					capacity *= 4;
+				else
+					capacity *= 2;
+			}
+			else if (span.TotalMinutes > 1)
+			{
+				capacity = Math.Max(baseCapacity, capacity / 2);
 			}
 
-			lastRequestedUtc = SystemTime.UtcNow;
+			lastRequestedUtc2 = lastRequestedUtc1;
+			lastRequestedUtc1 = SystemTime.UtcNow;
 		}
 
 		protected JsonDocument HandleGetDocumentResult(MultiLoadResult documents)
