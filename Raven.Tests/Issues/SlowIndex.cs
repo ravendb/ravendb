@@ -11,7 +11,6 @@ using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -44,17 +43,18 @@ namespace Raven.Tests.Issues
 				stopwatch.Stop();
 				Debug.WriteLine("Took {0} ms to finish indexing", stopwatch.ElapsedMilliseconds);
 
-				using (var session = documentStore.OpenSession())
-				{
-					// query the index as of today to get the top customers over the last 30 days.
-					var topCustomersDuringLast30Days = session.Query<OrderTotal, Orders_TotalByCustomerFor30Days>()
-															  .OrderByDescending(x => x.Total)
-															  .Where(x => x.Date == DateTime.Today)
-															  .Take(10)
-															  .ToList();
-				}
-
-				//WaitForUserToContinueTheTest(documentStore);
+				// It should be less, but at 20 seconds, there's definately something wrong
+				Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 20000);
+				
+				//using (var session = documentStore.OpenSession())
+				//{
+				//	// example of how to query the index as of today to get the top customers over the last 30 days.
+				//	var topCustomersDuringLast30Days = session.Query<OrderTotal, Orders_TotalByCustomerFor30Days>()
+				//											  .OrderByDescending(x => x.Total)
+				//											  .Where(x => x.Date == DateTime.Today)
+				//											  .Take(10)
+				//											  .ToList();
+				//}
 			}
 		}
 
@@ -115,20 +115,15 @@ namespace Raven.Tests.Issues
 		public class Orders_TotalByCustomerFor30Days : AbstractIndexCreationTask<Order, OrderTotal>
 		{
 			// For the 30 days following the order, the order will be included in that day's totals
-			// We have to use an object[] instead of an int[] or Enumerable.Range in order to get Raven to cooperate.
-			// See http://issues.hibernatingrhinos.com/issue/RavenDB-757
-
-			// ALSO - This is really slow for some reason.  It took over 36 seconds to index just 100 orders.
-			// True, it is mapping 3000 entries, but that still shouldn't take that long.
-
+			
 			public Orders_TotalByCustomerFor30Days()
 			{
 				Map = orders => from order in orders
-								from day in Enumerable.Range(1, 30)
+								from day in Enumerable.Range(0, 30)
 								select new
 								{
 									order.CustomerId,
-									Date = order.Placed.Date.AddDays(day - 1),
+									Date = order.Placed.Date.AddDays(day),
 									Total = order.Amount,
 								};
 
