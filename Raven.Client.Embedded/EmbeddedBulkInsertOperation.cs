@@ -92,6 +92,8 @@ namespace Raven.Client.Embedded
 			if (id == null) throw new ArgumentNullException("id");
 			if (metadata == null) throw new ArgumentNullException("metadata");
 			if (data == null) throw new ArgumentNullException("data");
+			if (doBulkInsert.IsCanceled || doBulkInsert.IsFaulted)
+				doBulkInsert.Wait(); // error early
 
 			queue.Add(new JsonDocument
 			{

@@ -446,14 +446,16 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
-		public Guid InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
 		{
 			var prep = JET_prep.Insert;
-			if(checkForUpdates)
+			bool isUpdate = false;
+			if (checkForUpdates)
 			{
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if(Api.TrySeek(session, Documents, SeekGrbit.SeekEQ))
+				isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+				if(isUpdate)
 				{
 					prep = JET_prep.Replace;
 				}
@@ -480,7 +482,12 @@ namespace Raven.Storage.Esent.StorageActions
 
 				update.Save();
 
-				return newEtag;
+				return new AddDocumentResult
+				{
+					Etag = newEtag,
+					SavedAt = savedAt,
+					Updated = isUpdate
+				};
 			}
 		}
 
