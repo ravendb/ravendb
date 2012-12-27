@@ -268,7 +268,7 @@ namespace Raven.Storage.Managed
 			afterTouchEtag = addDocumentResult.Etag;
 		}
 
-		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+		public Guid InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
 		{
 			var ms = new MemoryStream();
 
@@ -296,6 +296,7 @@ namespace Raven.Storage.Managed
 				 {"id", GetNextDocumentId()},
 				 {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
 			 }, ms.ToArray());
+			return newEtag;
 		}
 
 		public void IncrementDocumentCount(int value)

@@ -11,7 +11,7 @@ namespace Raven.Client.Document
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly ILowLevelBulkInsertOperation operation;
 		private readonly IDatabaseCommands databaseCommands;
-		public EntityToJson EntityToJson { get; private set; }
+		private EntityToJson entityToJson;
 
 		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options)
 		{
@@ -22,7 +22,7 @@ namespace Raven.Client.Document
 
 			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, databaseCommands, entity));
 			operation = databaseCommands.GetBulkInsertOperation(options);
-			EntityToJson = new EntityToJson(documentStore, listeners);
+			entityToJson = new EntityToJson(documentStore, listeners);
 		}
 
 		public void Dispose()
@@ -43,7 +43,7 @@ namespace Raven.Client.Document
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 
-			var data = EntityToJson.ConvertEntityToJson(id, entity, metadata);
+			var data = entityToJson.ConvertEntityToJson(id, entity, metadata);
 			operation.Write(id, metadata, data);
 		}
 

@@ -446,7 +446,7 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
-		public void InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+		public Guid InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
 		{
 			var prep = JET_prep.Insert;
 			if(checkForUpdates)
@@ -479,6 +479,8 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 
 				update.Save();
+
+				return newEtag;
 			}
 		}
 

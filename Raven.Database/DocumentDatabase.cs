@@ -652,6 +652,7 @@ namespace Raven.Database
 							LastModified = addDocumentResult.SavedAt,
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
 						}, indexingExecuter.AfterCommit);
+
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 							{
@@ -1924,7 +1925,16 @@ namespace Raven.Database
 								keys.Add(doc.Key);
 							documents++;
 							batchDocs++;
-							accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
+							AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
+							foreach (var trigger in PutTriggers)
+							{
+								trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
+							}
+							var etag = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
+							foreach (var trigger in PutTriggers)
+							{
+								trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, etag, null);
+							}
 						}
 						if (options.CheckReferencesInIndexes)
 						{
