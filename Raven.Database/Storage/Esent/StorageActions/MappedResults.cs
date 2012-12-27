@@ -525,7 +525,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (take <= 0)
 				yield break;
 
-			Api.JetSetCurrentIndex(session, MappedResults, "by_view_reduce_key_and_bucket");
+			Api.JetSetCurrentIndex(session, MappedResults, "by_view_bucket_and_hashed_reduce_key");
 			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
 				yield break;

@@ -28,6 +28,8 @@ namespace Raven.StressTests
 
 		protected void Run<T>(Action<T> action, int iterations = 1000) where T : new()
 		{
+			var sw = new Stopwatch();
+			sw.Start();
 			var i = 0;
 			try
 			{
@@ -38,9 +40,18 @@ namespace Raven.StressTests
 			}
 			catch
 			{
+				sw.Stop();
 				Console.WriteLine("Test failed on run #" + i);
+				Console.WriteLine("Time took until the test failed: " + GetFriendlyTime(sw.Elapsed));
 				throw;
 			}
+			sw.Stop();
+			Console.WriteLine("Time took to finish the test: " + GetFriendlyTime(sw.Elapsed));
+		}
+
+		private static string GetFriendlyTime(TimeSpan elapsed)
+		{
+			return Math.Floor(elapsed.TotalMinutes) + ":" + elapsed.ToString("ss\\.ff");
 		}
 
 		protected void RunWithLog<T>(Action<T> action, int iterations = 1000) where T : new()

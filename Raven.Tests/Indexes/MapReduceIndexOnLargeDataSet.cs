@@ -7,7 +7,7 @@ namespace Raven.Tests.Indexes
 {
 	public class MapReduceIndexOnLargeDataSet : RavenTest
 	{
-		[Fact(Skip = "Fail sometime due to race condition in munin")]
+		[Fact]
 		public void WillNotProduceAnyErrors()
 		{
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
@@ -33,11 +33,29 @@ namespace Raven.Tests.Indexes
 				using (var s = store.OpenSession())
 				{
 					var ret = s.Query<dynamic>("test")
-						.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
-						.ToArray();
+					           .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
+					           .ToArray();
 					Assert.Equal(25, ret.Length);
 					foreach (var x in ret)
-						Assert.Equal("200", x.Count);
+					{
+						try
+						{
+							Assert.Equal("200", x.Count);
+						}
+						catch (Exception)
+						{
+							PrintServerErrors(store.DocumentDatabase.Statistics.Errors);
+
+							var missed = ret.Where(item => item.Count != "200")
+							                .Select(item => "Name: " + item.Name + ". Count: " + item.Count)
+							                .Cast<string>()
+							                .ToList();
+							Console.WriteLine("Missed documents: ");
+							Console.WriteLine(string.Join(", ", missed));
+
+							throw;
+						}
+					}
 				}
 
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);

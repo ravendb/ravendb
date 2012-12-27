@@ -325,5 +325,19 @@ namespace Raven.Tests.Helpers
 			GC.WaitForPendingFinalizers();
 			ClearDatabaseDirectory();
 		}
+
+		protected static void PrintServerErrors(ServerError[] serverErrors)
+		{
+			if (serverErrors.Any())
+			{
+				Console.WriteLine("Server errors count: " + serverErrors.Count());
+				foreach (var serverError in serverErrors)
+				{
+					Console.WriteLine("Server error: " + serverError.ToString());
+				}
+			}
+			else
+				Console.WriteLine("No server errors");
+		}
 	}
 }

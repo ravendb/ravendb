@@ -36,20 +36,25 @@ namespace Raven.Tests.Bugs
 					}
 					catch (Exception)
 					{
-						var missed = new List<int>();
-						for (int i = 0; i < 15000; i++)
-						{
-							if (users.Any(user => user.Id == i + 1) == false)
-							{
-								missed.Add(i + 1);
-							}
-						}
-						Console.WriteLine("Missed documents: ");
-						Console.WriteLine(string.Join(", ", missed));
+						PrintMissedDocuments(users);
 						throw;
 					}
 				}
 			}
+		}
+
+		private static void PrintMissedDocuments(User[] users)
+		{
+			var missed = new List<int>();
+			for (int i = 0; i < 15000; i++)
+			{
+				if (users.Any(user => user.Id == i + 1) == false)
+				{
+					missed.Add(i + 1);
+				}
+			}
+			Console.WriteLine("Missed documents: ");
+			Console.WriteLine(string.Join(", ", missed));
 		}
 
 		private class User
