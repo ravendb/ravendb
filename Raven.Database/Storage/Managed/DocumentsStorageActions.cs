@@ -296,6 +296,8 @@ namespace Raven.Storage.Managed
 				 {"id", GetNextDocumentId()},
 				 {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
 			 }, ms.ToArray());
+
+			 IncrementDocumentCount(1);
 			return newEtag;
 		}
 
