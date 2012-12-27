@@ -133,10 +133,14 @@ namespace Raven.Database.Indexing
 		private Guid? GetNextEtagInMemory(Guid etag)
 		{
 			var current = new ComparableByteArray(etag);
-			return inMemoryIndexBatches.Keys.Concat(futureIndexBatches.Keys)
+			var guid = inMemoryIndexBatches.Keys.Concat(futureIndexBatches.Keys)
 				.Where(x => current.CompareTo(x) < 0)
 				.OrderBy(x => x, ByteArrayComparer.Instance)
 				.FirstOrDefault();
+
+			if (guid == Guid.Empty)
+				return null;
+			return guid;
 		}
 
 		private List<JsonDocument> MergeWithOtherFutureResults(List<JsonDocument> results, int timeToWait = 0)
