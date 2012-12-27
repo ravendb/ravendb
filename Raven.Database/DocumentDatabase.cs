@@ -1910,12 +1910,12 @@ namespace Raven.Database
 		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
 		{
 			var documents = 0;
+			var inserts = 0;
 			TransactionalStorage.Batch(accessor =>
 			{
 				accessor.General.UseLazyCommit();
 				foreach (var docs in docBatches)
 				{
-					var batchDocs = 0;
 					lock (putSerialLock)
 					{
 						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -1924,16 +1924,17 @@ namespace Raven.Database
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
 							documents++;
-							batchDocs++;
 							AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
 							foreach (var trigger in PutTriggers)
 							{
 								trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
 							}
-							var etag = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
+							var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
+							if (result.Updated == false)
+								inserts++;
 							foreach (var trigger in PutTriggers)
 							{
-								trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, etag, null);
+								trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
 							}
 						}
 						if (options.CheckReferencesInIndexes)
@@ -1943,7 +1944,7 @@ namespace Raven.Database
 								CheckReferenceBecauseOfDocumentUpdate(key, accessor);
 							}
 						}
-						accessor.Documents.IncrementDocumentCount(batchDocs);
+						accessor.Documents.IncrementDocumentCount(inserts);
 						accessor.General.PulseTransaction();
 					}
 				}
