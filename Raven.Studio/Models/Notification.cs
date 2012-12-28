@@ -35,6 +35,8 @@ namespace Raven.Studio.Messages
                 {
                     foreach (var detail in details)
                     {
+	                    if (detail == null)
+		                    continue;
                         sb.AppendLine(detail.ToString());
                     }    
                 }
@@ -45,7 +47,7 @@ namespace Raven.Studio.Messages
 				if (exception != null)
 				{
 					sb.AppendLine("Client side exception:");
-					sb.Append(exception.ToString());
+					sb.Append(exception);
 				}
 
 	            return sb.ToString();
