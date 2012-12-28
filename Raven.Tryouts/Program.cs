@@ -10,6 +10,7 @@ using Raven.Database.Impl;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
@@ -19,17 +20,13 @@ namespace Raven.Tryouts
 		[STAThread]
 		private static void Main()
 		{
-			using(var store = new DocumentStore
+			for (int i = 0; i < 100; i++)
 			{
-				Url = "http://localhost:8080"
-			}.Initialize())
-			{
-				using (var bulkInsert = store.BulkInsert())
+				Console.Clear();
+				Console.WriteLine(i);
+				using (var x = new MapReduceIndexOnLargeDataSet())
 				{
-					for (int i = 0; i < 1000*1000; i++)
-					{
-						bulkInsert.Store(new User {Name = "Users #" + i});
-					}
+					x.WillNotProduceAnyErrors();
 				}
 			}
 		}

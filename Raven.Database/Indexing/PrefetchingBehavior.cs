@@ -73,11 +73,15 @@ namespace Raven.Database.Indexing
 			JsonDocument result;
 			bool hasDocs = false;
 			while (inMemoryDocs.TryPeek(out result)  &&
-				result.Etag == nextDocEtag)
+				ComparableByteArray.CompareTo(nextDocEtag.ToByteArray(),result.Etag.Value.ToByteArray()) >= 0)
 			{
 				// safe to do peek then dequeue because we are the only one doing the dequeues
 				// and here we are single threaded
 				inMemoryDocs.TryDequeue(out result);
+
+				if (result.Etag.Value != nextDocEtag)
+					continue;
+
 				items.Add(result);
 				hasDocs = true;
 				nextDocEtag = Etag.Increment(nextDocEtag, 1);
@@ -385,7 +389,7 @@ namespace Raven.Database.Indexing
 			}
 
 			JsonDocument result;
-			while (inMemoryDocs.TryPeek(out result) && highest.CompareTo(result.Etag.Value) <= 0)
+			while (inMemoryDocs.TryPeek(out result) && highest.CompareTo(result.Etag.Value) >= 0)
 			{
 				inMemoryDocs.TryDequeue(out result);
 			}
