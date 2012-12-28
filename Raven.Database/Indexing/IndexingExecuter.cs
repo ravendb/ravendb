@@ -104,7 +104,7 @@ namespace Raven.Database.Indexing
 			{
 				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 				{
-					var lastByEtag = PrefetchingBehavior.GetHighestEtag(jsonDocs);
+					var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(jsonDocs);
 					var lastModified = lastByEtag.LastModified.Value;
 					var lastEtag = lastByEtag.Etag.Value;
 
