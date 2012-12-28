@@ -92,8 +92,18 @@ namespace Raven.Storage.Esent
 			const int JET_paramVerPageSize = 128;
 			int versionPageSize = 0;
 			string paramString;
-			Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param)JET_paramVerPageSize, ref versionPageSize,
-									  out paramString, 0);
+			try
+			{
+				Api.JetGetSystemParameter(JET_INSTANCE.Nil, JET_SESID.Nil, (JET_param)JET_paramVerPageSize, ref versionPageSize,
+				                          out paramString, 0);
+			}
+			catch (EsentErrorException e)
+			{
+				if (e.Error == JET_err.InvalidParameter) // Win 2003 error
+					versionPageSize = 16*1024; // default size
+				else
+					throw;
+			}
 
 			versionPageSize = Math.Max(versionPageSize, SystemParameters.DatabasePageSize * 2);
 

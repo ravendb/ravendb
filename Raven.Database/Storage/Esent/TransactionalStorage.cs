@@ -168,7 +168,7 @@ namespace Raven.Storage.Esent
 
 		public long GetDatabaseCacheSizeInBytes()
 		{
-			return SystemParameters.CacheSize*SystemParameters.DatabasePageSize;
+			return SystemParameters.CacheSize * SystemParameters.DatabasePageSize;
 		}
 
 		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
@@ -192,7 +192,7 @@ namespace Raven.Storage.Esent
 				using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
 				{
 					var value = counter.NextValue();
-					return (long) (value*TransactionalStorageConfigurator.GetVersionPageSize());
+					return (long)(value * TransactionalStorageConfigurator.GetVersionPageSize());
 				}
 			}
 			catch (Exception e)
@@ -326,7 +326,7 @@ namespace Raven.Storage.Esent
   MaxVerPages      = {0}
   CacheSizeMax     = {1}
   DatabasePageSize = {2}", instanceParameters.MaxVerPages, SystemParameters.CacheSizeMax,
-				         SystemParameters.DatabasePageSize);
+						 SystemParameters.DatabasePageSize);
 
 				Api.JetInit(ref instance);
 
@@ -519,8 +519,8 @@ namespace Raven.Storage.Esent
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
-				
-				if(pht.UsingLazyCommit)
+
+				if (pht.UsingLazyCommit)
 				{
 					txMode = CommitTransactionGrbit.WaitLastLevel0Commit;
 				}
