@@ -325,6 +325,7 @@ namespace Raven.Database
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
+					InMemoryIndexingQueueSize = indexingExecuter.GetInMemoryIndexingQueueSize(),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),

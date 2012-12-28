@@ -298,5 +298,10 @@ namespace Raven.Database.Indexing
 		{
 			prefetchingBehavior.AfterDelete(key, etag);
 		}
+
+		public int GetInMemoryIndexingQueueSize()
+		{
+			return prefetchingBehavior.InMemoryIndexingQueueSize;
+		}
 	}
 }

@@ -41,6 +41,11 @@ namespace Raven.Database.Indexing
 			this.autoTuner = autoTuner;
 		}
 
+		public int InMemoryIndexingQueueSize
+		{
+			get { return inMemoryDocs.Count; }
+		}
+
 		#region IDisposable Members
 
 		public void Dispose()
