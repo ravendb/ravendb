@@ -405,7 +405,16 @@ namespace Raven.Storage.Managed
 			var readResult = storage.ReduceKeys.Read(new RavenJObject { { "view", indexName }, { "reduceKey", reduceKey } });
 
 			if (readResult == null)
-				throw new ArgumentException(string.Format("There is no reduce key '{0}' for index '{1}'", reduceKey, indexName));
+			{
+				storage.ReduceKeys.Put(new RavenJObject
+				{
+					                       {"view", indexName},
+					                       {"reduceKey", reduceKey},
+					                       {"reduceType", (int) reduceType},
+					                       {"mappedItemsCount", 0}
+				                       }, null);
+				return;
+			}
 
 			var key = (RavenJObject)readResult.Key.CloneToken();
 			key["reduceType"] = (int)reduceType;
