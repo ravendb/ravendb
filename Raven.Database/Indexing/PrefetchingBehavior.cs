@@ -54,21 +54,21 @@ namespace Raven.Database.Indexing
 		public List<JsonDocument> GetDocumentsBatchFrom(Guid etag)
 		{
 			var inMemResults = new List<JsonDocument>();
-			if (TryGetInMemoryJsonDocuments(etag, inMemResults))
+			var nextDocEtag = GetNextDocEtag(etag);
+			if (TryGetInMemoryJsonDocuments(nextDocEtag, inMemResults))
 				return inMemResults;
 
 			var results =
-				GetFutureJsonDocuments(etag) ??
-				GetJsonDocsFromDisk(etag);
+				GetFutureJsonDocuments(nextDocEtag) ??
+				GetJsonDocsFromDisk(etag); // here we _intentionally_ using the current etag, not the next one
 
 			return MergeWithOtherFutureResults(results);
 		}
 
-		private bool TryGetInMemoryJsonDocuments(Guid etag, List<JsonDocument> items)
+		private bool TryGetInMemoryJsonDocuments(Guid nextDocEtag, List<JsonDocument> items)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
 				return false;
-			var nextDocEtag = GetNextDocEtag(etag);
 
 			JsonDocument result;
 			bool hasDocs = false;
@@ -89,13 +89,12 @@ namespace Raven.Database.Indexing
 			return hasDocs;
 		}
 
-		private List<JsonDocument> GetFutureJsonDocuments(Guid etag)
+		private List<JsonDocument> GetFutureJsonDocuments(Guid nextDocEtag)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
 				return null;
 			try
 			{
-				Guid nextDocEtag = GetNextDocEtag(etag);
 				FutureIndexBatch nextBatch;
 				if (futureIndexBatches.TryRemove(nextDocEtag, out nextBatch) == false)
 					return null;
@@ -115,6 +114,7 @@ namespace Raven.Database.Indexing
 		private List<JsonDocument> GetJsonDocsFromDisk(Guid etag)
 		{
 			List<JsonDocument> jsonDocs = null;
+			var untilEtag = GetNextEtagInMemory();
 			context.TransactionaStorage.Batch(actions =>
 			{
 				jsonDocs = actions.Documents
@@ -122,7 +122,7 @@ namespace Raven.Database.Indexing
 						etag,
 						autoTuner.NumberOfItemsToIndexInSingleBatch,
 						autoTuner.MaximumSizeAllowedToFetchFromStorage,
-						untilEtag: GetNextEtagInMemory())
+						untilEtag: untilEtag)
 					.Where(x => x != null)
 					.Select(doc =>
 					{
@@ -131,7 +131,7 @@ namespace Raven.Database.Indexing
 					})
 					.ToList();
 			});
-			if (GetNextEtagInMemory() == null)
+			if (untilEtag == null)
 			{
 				MaybeAddFutureBatch(jsonDocs);
 			}
