@@ -37,6 +37,8 @@ namespace Raven.Client.UniqueConstraints
 			if (constraintDoc == null)
 				return default(T);
 
+			session.Advanced.MarkReadOnly(constraintDoc);
+
 			var id = constraintDoc.RelatedId;
 			return string.IsNullOrEmpty(id) ? default(T) : session.Load<T>(id);
 		}
