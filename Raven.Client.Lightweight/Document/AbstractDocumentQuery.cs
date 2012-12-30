@@ -1491,16 +1491,16 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private static Task TaskDelay(int dueTimeMilliseconds)
 		{
-			var taskComplectionSource = new TaskCompletionSource<object>();
+			var taskCompletionSource = new TaskCompletionSource<object>();
 			var cancellationTokenRegistration = new CancellationTokenRegistration();
 			var timer = new Timer(o =>
 			{
 				cancellationTokenRegistration.Dispose();
 				((Timer)o).Dispose();
-				taskComplectionSource.TrySetResult(null);
+				taskCompletionSource.TrySetResult(null);
 			});
 			timer.Change(dueTimeMilliseconds, -1);
-			return taskComplectionSource.Task;
+			return taskCompletionSource.Task;
 		}
 
 		/// <summary>
@@ -1774,7 +1774,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 		public void Intersect()
 		{
-			queryText.Append(Constants.IntersectSeperator);
+			queryText.Append(Constants.IntersectSeparator);
 		}
 
 		public void AddRootType(Type type)

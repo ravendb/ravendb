@@ -157,7 +157,7 @@ namespace Raven.Client.Document
 				}
 			catch (Exception e)
 			{
-				logger.ErrorException("Could not mark distriubted transaction as in doubt", e);
+				logger.ErrorException("Could not mark distributed transaction as in doubt", e);
 			}
 			enlistment.Done(); // what else can we do?
 		}

@@ -142,14 +142,14 @@ namespace Raven.Storage.Managed
 
 		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
 		{
-			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)
+			foreach (var reduceKeysAndBucket in reduceKeysAndBuckets)
 			{
 				var etag = generator.CreateSequentialUuid(UuidType.ScheduledReductions).ToByteArray();
 				storage.ScheduleReductions.UpdateKey(new RavenJObject
 					{
 						{"view", view},
-						{"reduceKey", reduceKeysAndBukcet.ReduceKey},
-						{"bucket", reduceKeysAndBukcet.Bucket},
+						{"reduceKey", reduceKeysAndBucket.ReduceKey},
+						{"bucket", reduceKeysAndBucket.Bucket},
 						{"level", level},
 						{"etag", etag},
 						{"timestamp", SystemTime.UtcNow}

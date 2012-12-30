@@ -55,7 +55,7 @@ namespace Raven.Studio.Features.Input
 
 		public static Task<string> QuestionWithSuggestionAsync(string title, string question, Func<string, Task<IList<object>>> provideSuggestions)
 		{
-			var dataContext = new InputModelWithSuggetion(provideSuggestions)
+			var dataContext = new InputModelWithSuggestion(provideSuggestions)
 			{
 				Title = title,
 				Question = question

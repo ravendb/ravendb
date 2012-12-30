@@ -87,7 +87,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void NewAPIThrowsExceptionsForInvalidExpressions()
 		{
-			//Create an invalid lamba and check it throws an exception!!
+			//Create an invalid lambda and check it throws an exception!!
 			Assert.Throws<InvalidOperationException>(() => 
 				TriggerConversion(new Facet<Test>
 				{

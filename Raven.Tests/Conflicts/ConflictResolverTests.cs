@@ -3,7 +3,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Xunit;
 
-namespace Raven.Tests.Confclits
+namespace Raven.Tests.Conflicts
 {
 	public class ConflictResolverTests
 	{

@@ -69,7 +69,7 @@ namespace Raven.Studio.Models
 		        .SampleResponsive(TimeSpan.FromSeconds(2))
 		        .Subscribe(_ => RefreshStatistics());
 
-			databaseChanges.ConnectionStatusCahnged += (sender, args) =>
+			databaseChanges.ConnectionStatusChanged += (sender, args) =>
 			{
 				ApplicationModel.Current.Server.Value.SetConnected(((IDatabaseChanges)sender).Connected);
 				UpdateStatus();

@@ -137,7 +137,7 @@ namespace Raven.Database.Indexing
 		{
 			List<JsonDocument> jsonDocs = null;
 			var untilEtag = GetNextEtagInMemory();
-			context.TransactionaStorage.Batch(actions =>
+			context.TransactionalStorage.Batch(actions =>
 			{
 				jsonDocs = actions.Documents
 					.GetDocumentsAfter(
@@ -289,7 +289,7 @@ namespace Raven.Database.Indexing
 				futureIndexBatches.ContainsKey(oneUpEtag))
 				return oneUpEtag;
 
-			context.TransactionaStorage.Batch(
+			context.TransactionalStorage.Batch(
 				accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(highestEtag); });
 			return nextDocEtag;
 		}

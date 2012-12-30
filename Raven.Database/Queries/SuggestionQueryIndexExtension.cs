@@ -122,7 +122,7 @@ namespace Raven.Database.Queries
 		public void Dispose()
 		{
 			spellChecker.Close();
-			GC.SuppressFinalize(spellChecker);//stupid! but it doens't do it on its own
+			GC.SuppressFinalize(spellChecker);//stupid! but it doesn't do it on its own
 		}
 	}
 }

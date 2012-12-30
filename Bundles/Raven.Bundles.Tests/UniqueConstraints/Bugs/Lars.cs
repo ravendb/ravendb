@@ -39,7 +39,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
 			}
 
 			/* Notes by Felipe:
-			 * DocsCount is returing 1 as expected. Why is this test a Bug?
+			 * DocsCount is returning 1 as expected. Why is this test a Bug?
 			 */
 			var docsCount = 0;
 			using (var s = DocumentStore.OpenSession())

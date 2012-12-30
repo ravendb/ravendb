@@ -180,8 +180,8 @@ namespace Raven.Database.Indexing
 
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
-				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
-				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)
+				var indexLastIndexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
+				if (indexLastIndexEtag.CompareTo(lastIndexedEtag) >= 0)
 					return;
 
 				var indexName = indexToWorkOn.IndexName;
@@ -201,7 +201,7 @@ namespace Raven.Database.Indexing
 					if (etag == null)
 						continue;
 
-					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
+					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
 						continue;
 
 

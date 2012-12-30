@@ -29,7 +29,7 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var dateTimeOffset = new DateTimeOffset(new DateTime(2011, 11, 11, 13, 0, 0), notTheCurrentTimeZone.Add(TimeSpan.FromHours(2)));
-					Assert.NotEmpty(session.Query<Item>()		// exact match, differnt timezone
+					Assert.NotEmpty(session.Query<Item>()		// exact match, different timezone
 						.Where(x => x.At == dateTimeOffset));
 
 					Assert.NotEmpty(session.Query<Item>()		// greater than equal match, same timezone

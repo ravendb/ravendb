@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
 					return 1;
 				});
 			}
-			var expectedUrls = GetExepctedUrlForFailure().Take(urlsTried.Count).ToList();
+			var expectedUrls = GetExpectedUrlForFailure().Take(urlsTried.Count).ToList();
 
 			Assert.Equal(expectedUrls, urlsTried);
 		}
@@ -82,12 +82,12 @@ namespace Raven.Tests.Issues
 					return 1;
 				});
 			}
-			var expectedUrls = GetExepctedUrlForReadStriping().Take(urlsTried.Count).ToList();
+			var expectedUrls = GetExpectedUrlForReadStriping().Take(urlsTried.Count).ToList();
 
 			Assert.Equal(expectedUrls, urlsTried);
 		}
 
-		private IEnumerable<Tuple<int, string>> GetExepctedUrlForReadStriping()
+		private IEnumerable<Tuple<int, string>> GetExpectedUrlForReadStriping()
 		{
 			int reqCount = 0;
 			var urls = new[]
@@ -108,7 +108,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		private IEnumerable<Tuple<int, string>> GetExepctedUrlForFailure()
+		private IEnumerable<Tuple<int, string>> GetExpectedUrlForFailure()
 		{
 			int reqCount = 1;
 			var failCount = 0;

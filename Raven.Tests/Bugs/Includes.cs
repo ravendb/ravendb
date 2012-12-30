@@ -130,7 +130,7 @@ namespace Raven.Tests.Bugs
 			{
 				var views = session
 					.Query<Answer, Answers_ByAnswerEntity>()
-					.Customize(x => x.Include("Fppbar").WaitForNonStaleResults())
+					.Customize(x => x.Include("Foobar").WaitForNonStaleResults())
 					.Where(x => x.Id == answerId && x.UserId == "foo")
 					.ToArray();
 			}

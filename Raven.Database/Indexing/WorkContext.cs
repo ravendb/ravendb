@@ -64,7 +64,7 @@ namespace Raven.Database.Indexing
 		public TaskScheduler TaskScheduler { get; set; }
 		public IndexDefinitionStorage IndexDefinitionStorage { get; set; }
 
-		public ITransactionalStorage TransactionaStorage { get; set; }
+		public ITransactionalStorage TransactionalStorage { get; set; }
 
 		public ServerError[] Errors
 		{
@@ -362,7 +362,7 @@ namespace Raven.Database.Indexing
 			name = name ?? Constants.SystemDatabase;
 			try
 			{
-				SetupPerformanceCounter(GetPreformanceCounterName(name));
+				SetupPerformanceCounter(GetPerformanceCounterName(name));
 			}
 			catch (UnauthorizedAccessException e)
 			{
@@ -378,7 +378,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private string GetPreformanceCounterName(string name)
+		private string GetPerformanceCounterName(string name)
 		{
 			//dealing with names who are very long (there is a limit of 80 chars for counter name)
 			return name.Length > 70 ? name.Remove(70) : name;

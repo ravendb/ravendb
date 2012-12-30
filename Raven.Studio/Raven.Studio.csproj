@@ -214,7 +214,7 @@
     <Compile Include="Commands\CsvImportCommand.cs" />
     <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
-    <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
+    <Compile Include="Commands\DeleteAllIndexesCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
     <Compile Include="Commands\ExportDocumentDetailsCommand.cs" />
     <Compile Include="Commands\RestoreCommand.cs" />
@@ -289,7 +289,7 @@
     <Compile Include="Features\Alerts\AlertsView.xaml.cs">
       <DependentUpon>AlertsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Input\InputModelWithSuggetion.cs" />
+    <Compile Include="Features\Input\InputModelWithSuggestion.cs" />
     <Compile Include="Features\Input\InputWindowWithSuggestion.xaml.cs">
       <DependentUpon>InputWindowWithSuggestion.xaml</DependentUpon>
     </Compile>
@@ -339,7 +339,7 @@
     <Compile Include="Features\Documents\DocumentHelpers.cs" />
     <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
     <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
-    <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
+    <Compile Include="Features\Documents\EditNeighboringDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsView.xaml.cs">
       <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>

@@ -33,8 +33,8 @@ namespace Raven.Database.Indexing
 				return indexes;
 
 			var indexesByIndexedEtag = indexes
-				.GroupBy(x => x.LastIndexedEtag, new RoughGuidEqualityAndComparision())
-				.OrderBy(x => x.Key, new RoughGuidEqualityAndComparision())
+				.GroupBy(x => x.LastIndexedEtag, new RoughGuidEqualityAndComparison())
+				.OrderBy(x => x.Key, new RoughGuidEqualityAndComparison())
 				.ToList();
 
 			if (indexesByIndexedEtag.Count == 1)
@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
 
 			// we have indexes that haven't all caught up with up yet, so we need to start cycling through the 
 			// different levels, starting with the earliest ones, we are biased toward the first ones
-			// let us assume that we have 2 levels, which is likely to be the most comomn scenario
+			// let us assume that we have 2 levels, which is likely to be the most common scenario
 			// this would mean that the earliest one would be run twice for every later one run
 			if (currentRepeated >= (indexesByIndexedEtag.Count - current))
 			{
@@ -123,7 +123,7 @@ namespace Raven.Database.Indexing
 		// here we compare, but only up to the last 116 bits, not the full 128 bits
 		// this means that we can gather documents that are within 4K docs from one another, because
 		// at that point, it doesn't matter much, it would be gone within one or two indexing cycles
-		public class RoughGuidEqualityAndComparision : IEqualityComparer<Guid>, IComparer<Guid>
+		public class RoughGuidEqualityAndComparison : IEqualityComparer<Guid>, IComparer<Guid>
 		{
 			public bool Equals(Guid x, Guid y)
 			{

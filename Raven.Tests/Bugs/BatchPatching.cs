@@ -8,7 +8,7 @@ namespace Raven.Tests.Bugs
 	public class BatchPatching : RavenTest
 	{
 		[Fact]
-		public void CanSuccessulyPatchInBatches()
+		public void CanSuccessfullyPatchInBatches()
 		{
 			using(var store = NewDocumentStore())
 			{

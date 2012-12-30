@@ -1035,6 +1035,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\LastEtagHolder.cs">
       <Link>Imports\Util\LastEtagHolder.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\ObjectReferenceEqualityComparer.cs">
+      <Link>Imports\Util\ObjectReferenceEqualityComparer.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\SimpleCache.cs">
       <Link>Connection\SimpleCache.cs</Link>
     </Compile>
@@ -1413,9 +1416,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Inflector.cs">
       <Link>Imports\Util\Inflector.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Util\ObjectReferenceEqualityComparerer.cs">
-      <Link>Imports\Util\ObjectReferenceEqualityComparerer.cs</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup>

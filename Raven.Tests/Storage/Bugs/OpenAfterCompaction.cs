@@ -19,7 +19,7 @@ namespace Raven.Tests.Storage.Bugs
 		{
 			var memoryPersistentSource = new MemoryPersistentSource();
 			var tableStorage = new TableStorage(memoryPersistentSource);
-			tableStorage.Initialze();
+			tableStorage.Initialize();
 			tableStorage.BeginTransaction();
 			tableStorage.Documents.Put(new RavenJObject
 			{
@@ -48,7 +48,7 @@ namespace Raven.Tests.Storage.Bugs
 
 
 			var remoteManagedStorageState = memoryPersistentSource.CreateRemoteAppDomainState();
-			new TableStorage(new MemoryPersistentSource(remoteManagedStorageState.Log)).Initialze();
+			new TableStorage(new MemoryPersistentSource(remoteManagedStorageState.Log)).Initialize();
 		}
 	}
 }

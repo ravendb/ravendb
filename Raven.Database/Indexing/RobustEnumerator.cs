@@ -68,7 +68,7 @@ namespace Raven.Database.Indexing
 							}
 							else
 							{
-								// we explictly do not dispose the enumerator, since that would not allow us 
+								// we explicitly do not dispose the enumerator, since that would not allow us 
 								// to continue on with the next item in the list.
 								// Not actually a problem, because we are iterating only over in memory data
 								// en.Dispose();

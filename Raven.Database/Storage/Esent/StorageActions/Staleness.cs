@@ -177,7 +177,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TryMovePrevious(session, MappedResults) == false) // move one step back, now we are at the highest etag for this view, maybe
 				return null;
 
-			//could't find the name in the table 
+			// couldn't find the name in the table 
 			if(Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"],Encoding.Unicode) != name)
 				return null;
 

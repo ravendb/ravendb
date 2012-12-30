@@ -355,15 +355,15 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<string> GetDocumentsReferencing(string key)
 		{
-			return QueryReferneces(key, "by_ref", "key");
+			return QueryReferences(key, "by_ref", "key");
 		}
 
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
-			return QueryReferneces(key, "by_key", "ref");
+			return QueryReferences(key, "by_key", "ref");
 		}
 
-		private IEnumerable<string> QueryReferneces(string key, string index, string col)
+		private IEnumerable<string> QueryReferences(string key, string index, string col)
 		{
 			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, index);
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);

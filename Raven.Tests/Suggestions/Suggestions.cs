@@ -128,7 +128,7 @@ namespace Raven.Tests.Suggestions
 				                                                                new SuggestionQuery
 				                                                                	{
 				                                                                		Field = "Name",
-				                                                                		Term = "Oern",
+				                                                                		Term = "Oern", // intentional typo
 				                                                                		MaxSuggestions = 10,
 				                                                                		Accuracy = 0.2f,
 				                                                                		Distance = StringDistanceTypes.Levenshtein

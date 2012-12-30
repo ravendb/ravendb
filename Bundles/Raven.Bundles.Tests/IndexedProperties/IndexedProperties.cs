@@ -146,13 +146,13 @@ namespace Raven.Bundles.Tests.IndexedProperties
 			using (var session = store.OpenSession())
 			{
 				RavenQueryStatistics stats;
-				var customerByTotalOrderCose = session.Query<Customer>()
+				var customerByTotalOrderCost = session.Query<Customer>()
 					.OrderBy(x => x.AverageOrderCost)
 					.Customize(x => x.WaitForNonStaleResults())
 					.Statistics(out stats)
 					.ToList();
 				var previous = Decimal.MinValue;
-				foreach (var customer in customerByTotalOrderCose)
+				foreach (var customer in customerByTotalOrderCost)
 				{
 					Assert.True(customer.AverageOrderCost > previous);
 					previous = customer.AverageOrderCost;

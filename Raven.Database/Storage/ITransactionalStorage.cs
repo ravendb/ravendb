@@ -19,7 +19,7 @@ namespace Raven.Database.Storage
 		/// </summary>
 		Guid Id { get; }
 		void Batch(Action<IStorageActionsAccessor> action);
-		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
+		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
 		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
 		void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag);

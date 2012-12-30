@@ -13,8 +13,8 @@ namespace Raven.Bundles.Encryption.Streams
 	/// Header:
 	///		- Magic: A UInt64 magic number to recognize that this is indeed an encrypted stream.
 	///		- IV: An Int32 for IV size in bytes
-	///		- BlockSize: An Int32 for unecnrypted block size in bytes.
-	///		- EncryptedBlockSize: An Int32 for ecnrypted block size in bytes.
+	///		- BlockSize: An Int32 for unencrypted block size in bytes.
+	///		- EncryptedBlockSize: An Int32 for encrypted block size in bytes.
 	///	Block:
 	///		- BlockIV: byte[], Length == Header.IV
 	///		- Data: byte[], Length == Header.BlockSize

@@ -23,8 +23,8 @@ namespace Raven.Studio.Models
 			Statistics = new Dictionary<string, StatInfo>();
 			StatisticsToView = new Dictionary<string, StatInfo>();
 			ViewOptions = new List<string>();
-			SeletedViewOption = new Observable<string> { Value = "All" };
-			SeletedViewOption.PropertyChanged += (sender, args) => UpdateView();
+			SelectedViewOption = new Observable<string> { Value = "All" };
+			SelectedViewOption.PropertyChanged += (sender, args) => UpdateView();
 			UpdateStatistics();
 			ApplicationModel.Database.Value.Statistics.PropertyChanged +=
 				(sender, args) => UpdateStatistics();
@@ -36,7 +36,7 @@ namespace Raven.Studio.Models
 			var indexToShow = new UrlParser(UrlUtil.Url).GetQueryParam("index");
             if (indexToShow != null)
             {
-                SeletedViewOption.Value = indexToShow;
+                SelectedViewOption.Value = indexToShow;
                 Breadcrumb = "Indexes";
                 OnPropertyChanged(() => Breadcrumb);
             }
@@ -47,7 +47,7 @@ namespace Raven.Studio.Models
 		private void UpdateView()
 		{
 			StatisticsToView = new Dictionary<string, StatInfo>();
-			switch (SeletedViewOption.Value)
+			switch (SelectedViewOption.Value)
 			{
 				case "All":
 					foreach (var statistic in Statistics)
@@ -66,7 +66,7 @@ namespace Raven.Studio.Models
 					break;
 				default:
 					{
-						var items = Statistics.Where(pair => pair.Key == SeletedViewOption.Value).ToList();
+						var items = Statistics.Where(pair => pair.Key == SelectedViewOption.Value).ToList();
 						foreach (var item in items)
 						{
 							StatisticsToView.Add(item.Key, item.Value);
@@ -74,8 +74,8 @@ namespace Raven.Studio.Models
 
 						if (StatisticsToView.Count == 0)
 						{
-							var indexs = Statistics.FirstOrDefault(pair => pair.Key == "Indexes");
-							var index = indexs.Value.ListItems.FirstOrDefault(item => item.Title == SeletedViewOption.Value);
+							var indexes = Statistics.FirstOrDefault(pair => pair.Key == "Indexes");
+							var index = indexes.Value.ListItems.FirstOrDefault(item => item.Title == SelectedViewOption.Value);
 
 							if (index == null)
 								break;
@@ -195,7 +195,7 @@ namespace Raven.Studio.Models
 
 					var performanceMessage = "";
 
-					foreach (var indexingPerformanceStatse in performance)
+					foreach (var indexingPerformanceStats in performance)
 					{
 						performanceMessage += string.Format(@"
 Operation:         {0}
@@ -203,11 +203,11 @@ Input:              {1:#,#}
 Output:              {2:#,#}
 Duration:          {3}
 Duration in ms: {4:#,#}
-", indexingPerformanceStatse.Operation,
-						                                    indexingPerformanceStatse.InputCount,
-						                                    indexingPerformanceStatse.OutputCount,
-						                                    indexingPerformanceStatse.Duration,
-						                                    indexingPerformanceStatse.DurationMilliseconds);
+", indexingPerformanceStats.Operation,
+						                                    indexingPerformanceStats.InputCount,
+						                                    indexingPerformanceStats.OutputCount,
+						                                    indexingPerformanceStats.Duration,
+						                                    indexingPerformanceStats.DurationMilliseconds);
 					}
 
 					statInfoItem.ItemData.Add("Performance", performanceMessage);
@@ -231,7 +231,7 @@ Duration in ms: {4:#,#}
 		public Dictionary<string, StatInfo> Statistics { get; set; }
 		public Dictionary<string, StatInfo> StatisticsToView { get; set; }
 		public List<string> ViewOptions { get; set; }
-		public Observable<string> SeletedViewOption { get; set; }
+		public Observable<string> SelectedViewOption { get; set; }
         public string Breadcrumb { get; set; }
 	}
 

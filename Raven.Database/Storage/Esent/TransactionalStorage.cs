@@ -57,7 +57,7 @@ namespace Raven.Storage.Esent
 			}
 			catch (EsentErrorException e)
 			{
-				// this is expected if we had done something like recycyling the app domain
+				// this is expected if we had done something like recycling the app domain
 				// because the engine state is actually at the process level (unmanaged)
 				// so we ignore this error
 				if (e.Error == JET_err.AlreadyInitialized)
@@ -82,8 +82,8 @@ namespace Raven.Storage.Esent
 
 			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
-			uniqueRrefix = Interlocked.Increment(ref instanceCounter) + "-" + Base62Util.Base62Random();
-			Api.JetCreateInstance(out instance, uniqueRrefix + "-" + database);
+			uniquePrefix = Interlocked.Increment(ref instanceCounter) + "-" + Base62Util.Base62Random();
+			Api.JetCreateInstance(out instance, uniquePrefix + "-" + database);
 		}
 
 		public TableColumnsCache TableColumnsCache
@@ -172,7 +172,7 @@ namespace Raven.Storage.Esent
 		}
 
 		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
-		private string uniqueRrefix;
+		private string uniquePrefix;
 
 		public long GetDatabaseTransactionVersionSizeInBytes()
 		{
@@ -183,7 +183,7 @@ namespace Raven.Storage.Esent
 					return -1;
 				var category = new PerformanceCounterCategory(categoryName);
 				var instances = category.GetInstanceNames();
-				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith(uniqueRrefix));
+				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith(uniquePrefix));
 				const string counterName = "Version Buckets Allocated";
 				if (ravenInstance == null || !category.CounterExists(counterName))
 				{
@@ -216,7 +216,7 @@ namespace Raven.Storage.Esent
 			var e = exception as EsentErrorException;
 			if (e == null)
 				return false;
-			// we need to protect ourselve from rollbacks happening in an async manner
+			// we need to protect ourself from rollbacks happening in an async manner
 			// after the database was already shut down.
 			return e.Error == JET_err.InvalidInstance;
 		}
@@ -341,8 +341,8 @@ namespace Raven.Storage.Esent
 			catch (Exception e)
 			{
 				Dispose();
-				var fileAccessExeption = e as EsentFileAccessDeniedException;
-				if (fileAccessExeption == null)
+				var fileAccessException = e as EsentFileAccessDeniedException;
+				if (fileAccessException == null)
 					throw new InvalidOperationException("Could not open transactional storage: " + database, e);
 				throw new InvalidOperationException("Could not write to location: " + path + ". Make sure you have read/write permissions for this path.", e);
 			}
@@ -528,7 +528,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)
+		public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
 		{
 			if (current.Value == null)
 			{

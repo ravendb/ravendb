@@ -235,7 +235,7 @@ namespace Raven.Database
 		private void CompleteWorkContextSetup()
 		{
 			workContext.IndexStorage = IndexStorage;
-			workContext.TransactionaStorage = TransactionalStorage;
+			workContext.TransactionalStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
 			workContext.Init(Name);
@@ -302,7 +302,7 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			using(LogManager.OpenMappedContext("datbase", Name ?? Constants.SystemDatabase))
+			using(LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
 				LogContext.DatabaseName.Value = Name;
@@ -328,7 +328,7 @@ namespace Raven.Database
 					InMemoryIndexingQueueSize = indexingExecuter.PrefetchingBehavior.InMemoryIndexingQueueSize,
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
-					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
+					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
@@ -655,7 +655,7 @@ namespace Raven.Database
 						}, indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications);
 
 						TransactionalStorage
-							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+							.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 							{
 								PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
 								RaiseNotifications(new DocumentChangeNotification
@@ -869,7 +869,7 @@ namespace Raven.Database
 						}
 
 						TransactionalStorage
-							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+							.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 							{
 								DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
 								RaiseNotifications(new DocumentChangeNotification
@@ -1027,7 +1027,7 @@ namespace Raven.Database
 
 			workContext.ClearErrorsFor(name);
 
-			TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() => RaiseNotifications(new IndexChangeNotification
+			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
 			{
 				Name = name,
 				Type = IndexChangeTypes.IndexAdded,
@@ -1177,7 +1177,7 @@ namespace Raven.Database
 							workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
 						});
 
-						TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() => RaiseNotifications(new IndexChangeNotification
+						TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
 						{
 							Name = name,
 							Type = IndexChangeTypes.IndexRemoved,
@@ -1367,7 +1367,7 @@ namespace Raven.Database
 				});
 
 				TransactionalStorage
-					.ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
+					.ExecuteImmediatelyOrRegisterForSynchronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
 				return newEtag;
 			}
 			finally
@@ -1396,7 +1396,7 @@ namespace Raven.Database
 			});
 
 			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(
+				.ExecuteImmediatelyOrRegisterForSynchronization(
 					() => AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name)));
 
 		}

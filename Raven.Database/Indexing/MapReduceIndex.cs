@@ -265,7 +265,7 @@ namespace Raven.Database.Indexing
 
 		public override void Remove(string[] keys, WorkContext context)
 		{
-			context.TransactionaStorage.Batch(actions =>
+			context.TransactionalStorage.Batch(actions =>
 			{
 				var reduceKeyAndBuckets = new HashSet<ReduceKeyAndBucket>();
 				foreach (var key in keys)
@@ -436,7 +436,7 @@ namespace Raven.Database.Indexing
 										WriteDocumentToIndex(doc, indexWriter, analyzer);
 										break;
 									default:
-										throw new InvalidOperationException("Uknown level: " + Level);
+										throw new InvalidOperationException("Unknown level: " + Level);
 								}
 								stats.ReduceSuccesses++;
 							}

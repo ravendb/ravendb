@@ -211,7 +211,7 @@ namespace Raven.Database.Indexing
 					logIndexing.Info("Starting merge of {0}", name);
 					var sp = Stopwatch.StartNew();
 					indexWriter.Optimize();
-					logIndexing.Info("Done mergin {0} - took {1}", name, sp.Elapsed);
+					logIndexing.Info("Done merging {0} - took {1}", name, sp.Elapsed);
 				}
 				finally
 				{
@@ -364,7 +364,7 @@ namespace Raven.Database.Indexing
 
 		protected void UpdateIndexingStats(WorkContext context, IndexingWorkStats stats)
 		{
-			context.TransactionaStorage.Batch(accessor =>
+			context.TransactionalStorage.Batch(accessor =>
 			{
 				switch (stats.Operation)
 				{
@@ -846,9 +846,9 @@ namespace Raven.Database.Indexing
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
-						var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeperator }, StringSplitOptions.RemoveEmptyEntries);
+						var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeparator }, StringSplitOptions.RemoveEmptyEntries);
 						if (subQueries.Length <= 1)
-							throw new InvalidOperationException("Invalid INTRESECT query, must have multiple intersect clauses.");
+							throw new InvalidOperationException("Invalid INTERSECT query, must have multiple intersect clauses.");
 
 						//Not sure how to select the page size here??? The problem is that only docs in this search can be part 
 						//of the final result because we're doing an intersection query (but we might exclude some of them)
@@ -1026,7 +1026,7 @@ namespace Raven.Database.Indexing
 						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
 						searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
 						{
-							Analyzer newAnalyzer = generator.GenerateAnalzyerForQuerying(parent.name, indexQuery.Query, currentAnalyzer);
+							Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.name, indexQuery.Query, currentAnalyzer);
 							if (newAnalyzer != currentAnalyzer)
 							{
 								DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
@@ -1190,7 +1190,7 @@ namespace Raven.Database.Indexing
 				using (var neededFilesWriter = File.CreateText(Path.Combine(saveToFolder, "index-files.required-for-index-restore")))
 				{
 					// this is called for the side effect of creating the snapshotter and the writer
-					// we explictly handle the backup outside of the write, to allow concurrent indexing
+					// we explicitly handle the backup outside of the write, to allow concurrent indexing
 					Write((writer, analyzer, stats) =>
 					{
 						// however, we copy the current segments.gen & index.version to make 

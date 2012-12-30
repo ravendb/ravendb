@@ -43,7 +43,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void EnumerableMethodsShouldBeExtenalStaticCalls()
+		public void EnumerableMethodsShouldBeExternalStaticCalls()
 		{
 			using (var s = NewDocumentStore())
 			{

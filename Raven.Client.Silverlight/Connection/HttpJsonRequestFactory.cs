@@ -17,9 +17,9 @@ namespace Raven.Client.Silverlight.Connection
 		/// 
 		/// Enable using basic authentication using http
 		/// By default, RavenDB only allows basic authentication over HTTPS, setting this property to true
-		/// will instruct RavenDB to make unsecure calls (usually only good for testing / internal networks).
+		/// will instruct RavenDB to make unsecured calls (usually only good for testing / internal networks).
 		/// </summary>
-		public bool EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
+		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
 
 		/// <summary>
 		/// Occurs when a json request is created
@@ -34,11 +34,11 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Invoke the LogRequest event
 		/// </summary>
-		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequentResult)
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequestResult)
 		{
 			var handler = LogRequest;
 			if (handler != null)
-				handler(sender, generateRequentResult.Invoke());
+				handler(sender, generateRequestResult.Invoke());
 		}
 
 		/// <summary>

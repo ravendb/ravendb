@@ -332,7 +332,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="fieldName">The name of the field containing the shape to use for filtering</param>
 		/// <param name="shapeWKT">The query shape</param>
 		/// <param name="rel">Spatial relation to check</param>
-		/// <param name="distanceErrorPct">The allowed error precentage</param>
+		/// <param name="distanceErrorPct">The allowed error percentage</param>
 		/// <returns></returns>
 		TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025);
 

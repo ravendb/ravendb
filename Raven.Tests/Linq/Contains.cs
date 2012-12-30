@@ -41,7 +41,7 @@ namespace Raven.Tests.Linq
 			{
 				using (var session = store.OpenSession())
 				{
-					var doc = new TestDoc {SomeProperty = "Ensure that Contains on IEumerable<Char> is not supported."};
+					var doc = new TestDoc {SomeProperty = "Ensure that Contains on IEnumerable<Char> is not supported."};
 					session.Store(doc);
 					session.SaveChanges();
 				}

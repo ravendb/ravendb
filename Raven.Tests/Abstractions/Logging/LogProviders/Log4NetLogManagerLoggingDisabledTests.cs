@@ -16,7 +16,7 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
 		public Log4NetLogManagerLoggingDisabledTests()
 		{
-			Log4NetLogManager.ProviderIsAvailabileOverride = true;
+			Log4NetLogManager.ProviderIsAvailableOverride = true;
 			memoryAppender = new MemoryAppender();
 			memoryAppender.AddFilter(new DenyAllFilter());
 			BasicConfigurator.Configure(memoryAppender);

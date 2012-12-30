@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="MapRduce.cs" company="Hibernating Rhinos LTD">
+// <copyright file="MappedResults.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -128,18 +128,18 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
 		{
-			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)
+			foreach (var reduceKeysAndBucket in reduceKeysAndBuckets)
 			{
-				var bucket = reduceKeysAndBukcet.Bucket;
+				var bucket = reduceKeysAndBucket.Bucket;
 
 				using (var map = new Update(session, ScheduledReductions, JET_prep.Insert))
 				{
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"],
 								  view, Encoding.Unicode);
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"],
-								  reduceKeysAndBukcet.ReduceKey, Encoding.Unicode);
+								  reduceKeysAndBucket.ReduceKey, Encoding.Unicode);
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["hashed_reduce_key"],
-												  HashReduceKey(reduceKeysAndBukcet.ReduceKey));
+												  HashReduceKey(reduceKeysAndBucket.ReduceKey));
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"],
 								  uuidGenerator.CreateSequentialUuid(UuidType.ScheduledReductions));
@@ -551,10 +551,10 @@ namespace Raven.Storage.Esent.StorageActions
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
 														   tableColumnsCache.MappedResultsColumns["reduce_key"]);
-				var comparision = String.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
-				if (comparision < 0)
+				var comparison = String.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
+				if (comparison < 0)
 					continue; // skip to the next item
-				if (comparision > 0) // after the current item
+				if (comparison > 0) // after the current item
 					break;
 
 				if (results.Add(keyFromDb))

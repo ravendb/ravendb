@@ -34,7 +34,7 @@ namespace Raven.Abstractions.Util
 			return ComparableByteArray.CompareTo(x.ToByteArray(), y.ToByteArray()) >= 0;
 		}
 
-		public static int GetDiffrence(Guid x, Guid y)
+		public static int GetDifference(Guid x, Guid y)
 		{
 			return ComparableByteArray.CompareTo(x.ToByteArray(), y.ToByteArray());
 		}

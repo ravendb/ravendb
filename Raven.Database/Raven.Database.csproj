@@ -236,12 +236,12 @@
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
     <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountDocumentDeleteTrigger.cs" />
-    <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountQoutaForDocumentsPutTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountQuotaForDocumentsPutTrigger.cs" />
     <Compile Include="Bundles\Quotas\Size\SizeQuotaConfiguration.cs" />
     <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeDocumentDeleteTrigger.cs" />
-    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQoutaForAttachmentsPutTrigger.cs" />
-    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQoutaForDocumentsPutTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQuotaForAttachmentsPutTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQuotaForDocumentsPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Data\DestinationFailureInformation.cs" />
     <Compile Include="Bundles\Replication\Data\SourceReplicationInformation.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationHiLo.cs" />
@@ -249,7 +249,7 @@
     <Compile Include="Bundles\Replication\Plugins\AbstractDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Responders\AttachmentReplicationResponder.cs" />
     <Compile Include="Bundles\Replication\Responders\DocumentReplicationResponder.cs" />
-    <Compile Include="Bundles\Replication\Responders\ReplicationLastEtagResponser.cs" />
+    <Compile Include="Bundles\Replication\Responders\ReplicationLastEtagResponder.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationTask.cs" />
     <Compile Include="Bundles\Replication\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\AttachmentAncestryPutTrigger.cs" />
@@ -304,7 +304,7 @@
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryHost.cs" />
-    <Compile Include="Rhino.Licensing\FloatingLicenseNotAvialableException.cs" />
+    <Compile Include="Rhino.Licensing\FloatingLicenseNotAvailableException.cs" />
     <Compile Include="Rhino.Licensing\ILicensingService.cs" />
     <Compile Include="Rhino.Licensing\InvalidationType.cs" />
     <Compile Include="Rhino.Licensing\ISubscriptionLicensingService.cs" />
@@ -384,7 +384,7 @@
     <Compile Include="Indexing\ReducingExecuter.cs" />
     <Compile Include="Linq\Ast\CaptureQueryParameterNamesVisitor.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCalls.cs" />
-    <Compile Include="Linq\Ast\TransformNullCoalasingOperatorTransformer.cs" />
+    <Compile Include="Linq\Ast\TransformNullCoalescingOperatorTransformer.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Plugins\Builtins\CreateSilverlightIndexes.cs" />
     <Compile Include="Plugins\Builtins\Tenants\RemoveTenantDatabase.cs" />

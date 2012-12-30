@@ -8,7 +8,7 @@
 	<Commands:NavigateToCommand x:Name="NavigateToCommand" />
 	<Commands:NavigateToCommand x:Name="NavigateToCommandEnsureRefresh" ForceRefresh="True"/>
 	<Commands:NavigateToCommand x:Name="NavigateToCommandSameWindow" EnsureSameWindow="True"/>
-	<Documents:EditNeighbouringDocumentCommand x:Name="EditNeighbouringDocumentCommand" />
+	<Documents:EditNeighboringDocumentCommand x:Name="EditNeighboringDocumentCommand" />
 	<Commands:ChangeDatabaseCommand x:Name="ChangeDatabaseCommand" />
 	<Commands:NavigateToExternalUrlCommand x:Name="NavigateToExternalUrlCommand" />
 	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />

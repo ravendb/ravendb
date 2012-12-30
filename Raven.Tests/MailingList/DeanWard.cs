@@ -32,9 +32,9 @@ namespace Raven.Tests.MailingList
 			{
 				new Users_Search().Execute(store);
 
-				using (var sess = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					sess.Query<User, Users_Search>().Where(x => x.Name.StartsWith("A")).ToList();
+					session.Query<User, Users_Search>().Where(x => x.Name.StartsWith("A")).ToList();
 				}
 			}
 		}
@@ -44,18 +44,18 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore())
 			{
-				using (var sess = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					for (int i = 0; i < 10; i++)
 					{
-						sess.Store(new User());
+						session.Store(new User());
 					}
-					sess.SaveChanges();
+					session.SaveChanges();
 				}
 
-				using (var sess = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					var user = sess.Query<User>()
+					var user = session.Query<User>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.FirstOrDefault();
 

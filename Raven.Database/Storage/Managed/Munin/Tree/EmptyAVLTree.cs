@@ -110,7 +110,7 @@ namespace Raven.Munin.Tree
 
 		public IBinarySearchTree<TKey, TValue> AddOrUpdate(TKey key, TValue value, Func<TKey, TValue, TValue> updateValueFactory)
 		{
-			// we don't udpate, so we don't care about the update value factory
+			// we don't update, so we don't care about the update value factory
 			return new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, key, value, this, this);
 		}
 

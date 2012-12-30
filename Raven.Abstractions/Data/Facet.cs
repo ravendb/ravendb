@@ -142,7 +142,7 @@ namespace Raven.Abstractions.Data
 					var property = right.Member as PropertyInfo;
 					if (property != null && right.Member != null)
 					{
-						//This chokes on annonomyous types!?													
+						//This chokes on anonymous types!?													
 						var value = property.GetValue(property, null);
 						return value;						
 					}
@@ -185,7 +185,7 @@ namespace Raven.Abstractions.Data
 		{
 			switch (value.GetType().FullName)
 			{
-				//The nullable stuff here it a bit wierd, but it helps with trying to cast Value types
+				//The nullable stuff here it a bit weird, but it helps with trying to cast Value types
 				case "System.DateTime":
 					return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite));
 				case "System.Int32":
