@@ -206,13 +206,13 @@ namespace Raven.Database.Commercial
 				if(bool.Parse(claster) == false)
 				{
 					if (clasterInspector.IsRavenRunningAsClusterGenericService())
-						throw new InvalidOperationException("Your license does not allow clastering, but RavenDB is running in clustered mode");
+						throw new InvalidOperationException("Your license does not allow clustering, but RavenDB is running in clustered mode");
 				}
 			}
 			else
 			{
 				if (clasterInspector.IsRavenRunningAsClusterGenericService())
-					throw new InvalidOperationException("Your license does not allow clastering, but RavenDB is running in clustered mode");
+					throw new InvalidOperationException("Your license does not allow clustering, but RavenDB is running in clustered mode");
 			}
 		}
 
