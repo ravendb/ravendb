@@ -138,10 +138,6 @@ task Test -depends Compile {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
 			exec { &"$xUnit" "$build_dir\$_" }
-			
-			$env:raventest_storage_engine = 'munin';
-			Write-Host "Testing $build_dir\$_ (munin)"
-			exec { &"$xUnit" "$build_dir\$_" }
 		}
 		else {
 			$env:raventest_storage_engine = $null;
@@ -163,10 +159,6 @@ task StressTest -depends Compile {
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit" "$build_dir\$_" }
-			
-			$env:raventest_storage_engine = 'munin';
-			Write-Host "Testing $build_dir\$_ (munin)"
 			exec { &"$xUnit" "$build_dir\$_" }
 		}
 		else {
