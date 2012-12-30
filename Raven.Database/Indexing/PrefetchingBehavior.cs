@@ -77,6 +77,7 @@ namespace Raven.Database.Indexing
 
 			JsonDocument result;
 			bool hasDocs = false;
+			var snapshot = inMemoryDocs.ToArray();
 			while (inMemoryDocs.TryPeek(out result)  &&
 				ComparableByteArray.CompareTo(nextDocEtag.ToByteArray(),result.Etag.Value.ToByteArray()) >= 0)
 			{
@@ -90,10 +91,6 @@ namespace Raven.Database.Indexing
 				items.Add(result);
 				hasDocs = true;
 				nextDocEtag = Etag.Increment(nextDocEtag, 1);
-			}
-			if (nextDocEtag != Guid.Empty && hasDocs == false)
-			{
-				
 			}
 			return hasDocs;
 		}
@@ -374,8 +371,6 @@ namespace Raven.Database.Indexing
 				context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 				return;
 
-		
-			Console.WriteLine(string.Join(",", docs.Select(x=>x.Key)));
 			foreach (var jsonDocument in docs)
 			{
 				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
