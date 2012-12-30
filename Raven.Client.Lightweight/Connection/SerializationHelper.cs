@@ -145,9 +145,6 @@ namespace Raven.Client.Connection
 			var meta = headers.FilterHeaders();
 
 			var etag = headers["ETag"];
-			var lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
-			var dateTime = DateTime.ParseExact(lastModified, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 
 			return new JsonDocument
 			{
@@ -155,9 +152,30 @@ namespace Raven.Client.Connection
 				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = HttpExtensions.EtagHeaderToGuid(etag),
-				LastModified = lastModifiedDate,
+				LastModified = GetLastModifiedDate(headers),
 				Metadata = meta
 			};
+		}
+
+		private static DateTime? GetLastModifiedDate(NameValueCollection headers)
+		{
+			var lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
+			DateTime dateTime;
+			try
+			{
+				dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			}
+			catch (Exception)
+			{
+				// Try parsing the following format: "[\"2012-12-23T07:36:31.281+02:00\",\"2012-12-25T20:13:54.1534138Z\"],2012-12-26T06:34:57.8189446Z"
+				int start = lastModified.LastIndexOf(',');
+				if (start == -1)
+					throw;
+
+				lastModified = lastModified.Substring(start + 1);
+				dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			}
+			return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 		}
 
 		/// <summary>
