@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Xunit;
@@ -41,7 +42,7 @@ namespace Raven.Tests.Indexes
 		
 		public void with_index_and_some_entities(Action<IDocumentSession> action)
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				var indexDefinition = new IndexDefinitionBuilder<Entity, EntityCount>()
 				{
@@ -130,7 +131,7 @@ namespace Raven.Tests.Indexes
 			{
 				session.Advanced.LuceneQuery<object>(indexName)
 					.Where("NOT \"*\"")
-					.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
+					.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMinutes(5))
 					.ToArray();
 			}
 		}
