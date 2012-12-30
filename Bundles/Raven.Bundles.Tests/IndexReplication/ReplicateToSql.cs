@@ -16,6 +16,7 @@ using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Server;
 using Xunit;
 
@@ -24,8 +25,6 @@ namespace Raven.Bundles.Tests.IndexReplication
 	public class CanReplicateToSql : IDisposable
 	{
 		private readonly IDocumentStore documentStore;
-		private readonly string path;
-		private readonly RavenDbServer ravenDbServer;
 
 		private ConnectionStringSettings ConnectionString
 		{
@@ -34,25 +33,23 @@ namespace Raven.Bundles.Tests.IndexReplication
 
 		public CanReplicateToSql()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(CanReplicateToSql)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
+			documentStore = new EmbeddableDocumentStore
+			{
+				RunInMemory = true,
+				Configuration =
 				{
-					Port = 8079,
-					DataDirectory = path,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					Catalog =
-						{
-							Catalogs =
-								{
-									new AssemblyCatalog(typeof (IndexReplicationIndexUpdateTrigger).Assembly)
-								}
-						},
-				});
+					{
+						Catalogs =
+										{
+											new AssemblyCatalog(typeof (IndexReplicationIndexUpdateTrigger).Assembly)
+										}
+
+					}
+				}
+			};
+			documentStore.Initialize();
 			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
-			documentStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize();
 
 			documentStore.DatabaseCommands.PutIndex(
 				"Questions/Votes",
@@ -113,8 +110,6 @@ CREATE TABLE [dbo].[QuestionSummaries]
 		public void Dispose()
 		{
 			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
 
 		[FactIfSqlServerIsAvailable]

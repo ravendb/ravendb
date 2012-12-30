@@ -199,8 +199,8 @@ namespace Raven.Database.Linq
 		{
 			query = query.Replace("new() {", "new {").Replace("new () {", "new {"); ;
 			if (query.EndsWith(";"))
-				return "var q = " + query;
-			return "var q = " + query + ";";
+				return "var qD1266A5B_A4BE_4108_BA29_79920DBC1308 = " + query;
+			return "var qD1266A5B_A4BE_4108_BA29_79920DBC1308 = " + query + ";";
 		}
 
 		public static INode GetAnonymousCreateExpression(INode expression)
