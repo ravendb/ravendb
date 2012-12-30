@@ -82,7 +82,7 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-        /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
 		/// </summary>
 		/// <param name="fieldName">The field name, will be used for querying</param>
 		/// <param name="lat">Latitude</param>
@@ -96,7 +96,7 @@ namespace Raven.Client.Indexes
 		protected class SpatialIndex
 		{
 			/// <summary>
-            /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
+			/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
 			/// </summary>
 			/// <param name="fieldName">The field name, will be used for querying</param>
 			/// <param name="lat">Latitude</param>
@@ -107,7 +107,7 @@ namespace Raven.Client.Indexes
 			}
 
 			/// <summary>
-            /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
+			/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
 			/// </summary>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
@@ -118,7 +118,7 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-        /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
 		/// </summary>
 		/// <param name="fieldName">The field name, will be used for querying</param>
 		/// <param name="shapeWKT">The shape representation in the WKT format</param>
@@ -129,7 +129,7 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-        /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
 		/// </summary>
 		/// <param name="fieldName">The field name, will be used for querying</param>
 		/// <param name="shapeWKT">The shape representation in the WKT format</param>
@@ -141,7 +141,7 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-        /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
 		/// </summary>
 		/// <param name="fieldName">The field name, will be used for querying</param>
 		/// <param name="shapeWKT">The shape representation in the WKT format</param>
@@ -385,7 +385,7 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public override IndexDefinition CreateIndexDefinition()
 		{
-			if(Conventions == null)
+			if (Conventions == null)
 				Conventions = new DocumentConvention();
 
 			return new IndexDefinitionBuilder<TDocument, TReduceResult>
