@@ -1911,9 +1911,9 @@ namespace Raven.Database
 		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
 		{
 			var documents = 0;
-			var inserts = 0;
 			TransactionalStorage.Batch(accessor =>
 			{
+
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertStarted
@@ -1923,6 +1923,7 @@ namespace Raven.Database
 				{
 					lock (putSerialLock)
 					{
+                        var inserts = 0;
 						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 						foreach (var doc in docs)
 						{
