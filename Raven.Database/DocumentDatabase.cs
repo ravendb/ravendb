@@ -1924,12 +1924,14 @@ namespace Raven.Database
 					lock (putSerialLock)
 					{
                         var inserts = 0;
+					    var batch = 0;
 						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 						foreach (var doc in docs)
 						{
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
 							documents++;
+						    batch++;
 							AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
 							foreach (var trigger in PutTriggers)
 							{
@@ -1952,6 +1954,8 @@ namespace Raven.Database
 						}
 						accessor.Documents.IncrementDocumentCount(inserts);
 						accessor.General.PulseTransaction();
+                        workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
+                        workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
 					}
 				}
 				RaiseNotifications(new DocumentChangeNotification
