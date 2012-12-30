@@ -37,6 +37,7 @@ namespace Raven.Tests.MailingList
 				using (var docSession = store.OpenSession())
 				{
 					var products = docSession.Advanced.LuceneQuery<Product, Product_AvailableForSale>().Where("Name: MyName").ToList();
+					WaitForUserToContinueTheTest(store);
 					Assert.Empty(products);
 					//Worth noting that I also tried the regular query syntax and it failed as well.
 					//docSession.Query<Product>("Product/AvailableForSale").Count(p => p.Name == "MyName").Should().Be(0);

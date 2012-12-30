@@ -58,6 +58,23 @@ namespace Raven.Database.Indexing
 
 		public List<JsonDocument> GetDocumentsBatchFrom(Guid etag)
 		{
+			var results = GetDocsFromBatchWithPossibleDuplicates(etag);
+			// a single doc may appear multiple times, if it was updated while we were fetching things, 
+			// so we have several versions of the same doc loaded, this will make sure that we will only  
+			// take one of them.
+			var ids = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			for (int i = results.Count - 1; i >= 0; i--)
+			{
+				if(ids.Add(results[i].Key) == false)
+				{
+					results.RemoveAt(i);
+				}
+			}
+			return results;
+		}
+
+		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Guid etag)
+		{
 			var inMemResults = new List<JsonDocument>();
 			var nextDocEtag = GetNextDocEtag(etag);
 			if (TryGetInMemoryJsonDocuments(nextDocEtag, inMemResults))
@@ -77,7 +94,6 @@ namespace Raven.Database.Indexing
 
 			JsonDocument result;
 			bool hasDocs = false;
-			var snapshot = inMemoryDocs.ToArray();
 			while (inMemoryDocs.TryPeek(out result)  &&
 				ComparableByteArray.CompareTo(nextDocEtag.ToByteArray(),result.Etag.Value.ToByteArray()) >= 0)
 			{
@@ -185,15 +201,7 @@ namespace Raven.Database.Indexing
 				results.AddRange(nextBatch.Task.Result);
 				nextDocEtag = GetNextDocEtag(nextBatch.Task.Result.Last().Etag.Value);
 			}
-
-			// a single doc may appear multiple times, if it was updated
-			// while we were fetching things, so we have several versions
-			// of the same doc loaded, this will make sure that we will only 
-			// take one of them.
-			return results
-				.GroupBy(x => x.Key)
-				.Select(g => g.OrderBy(x => x.Etag, ByteArrayComparer.Instance).First())
-				.ToList();
+			return results;
 		}
 
 		private void MaybeAddFutureBatch(List<JsonDocument> past)
