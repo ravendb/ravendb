@@ -90,7 +90,10 @@ namespace Raven.Storage.Managed
 			if (docsForCommit == null)
 			{
 				docsForCommit = new List<JsonDocument>();
-				OnCommit += () => afterCommitAction(docsForCommit.ToArray());
+				var oldOnCommit = OnCommit;
+				OnCommit = () => afterCommitAction(docsForCommit.ToArray());
+				if (oldOnCommit != null)
+					OnCommit += oldOnCommit;
 			}
 			docsForCommit.Add(doc);
 		}

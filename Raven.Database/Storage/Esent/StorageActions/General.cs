@@ -328,6 +328,13 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
+		public void InsertFirstOnCommit(Action newOnCommit)
+		{
+			var oldOnCommit = OnCommit;
+			OnCommit = newOnCommit;
+			if (oldOnCommit != null)
+				OnCommit += oldOnCommit;
+		}
 	}
 
 

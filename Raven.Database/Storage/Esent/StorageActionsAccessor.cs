@@ -120,7 +120,7 @@ namespace Raven.Storage.Esent
 			if(docsForCommit == null)
 			{
 				docsForCommit = new List<JsonDocument>();
-				inner.OnCommit += () => afterCommitAction(docsForCommit.ToArray());
+				inner.InsertFirstOnCommit(() => afterCommitAction(docsForCommit.ToArray()));
 			}
 			docsForCommit.Add(doc);
 		}
