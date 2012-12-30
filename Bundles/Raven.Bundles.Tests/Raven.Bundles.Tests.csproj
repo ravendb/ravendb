@@ -86,6 +86,7 @@
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Replication\ReplicationDestinationDisabled.cs" />
     <Compile Include="Replication\ReplicationWithOAuth.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Concurrency.cs" />
     <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy.cs" />

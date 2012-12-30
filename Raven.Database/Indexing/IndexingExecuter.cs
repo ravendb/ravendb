@@ -289,19 +289,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AfterCommit(JsonDocument[] docs)
+		public PrefetchingBehavior PrefetchingBehavior
 		{
-			prefetchingBehavior.AfterCommit(docs);
-		}
-
-		public void AfterDelete(string key, Guid etag)
-		{
-			prefetchingBehavior.AfterDelete(key, etag);
-		}
-
-		public int GetInMemoryIndexingQueueSize()
-		{
-			return prefetchingBehavior.InMemoryIndexingQueueSize;
+			get { return prefetchingBehavior; }
 		}
 	}
 }

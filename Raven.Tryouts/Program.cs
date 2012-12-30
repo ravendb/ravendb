@@ -24,9 +24,9 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				using (var x = new MapReduceIndexOnLargeDataSet())
+				using (var x = new UsingCustomLuceneAnalyzer())
 				{
-					x.WillNotProduceAnyErrors();
+					x.map_reduce_used_for_counting();
 				}
 			}
 		}

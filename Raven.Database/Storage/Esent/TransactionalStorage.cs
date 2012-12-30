@@ -472,11 +472,11 @@ namespace Raven.Storage.Esent
 					return;
 				}
 			}
-			Action afterCommit = null;
+			Action afterStorageCommit = null;
 			disposerLock.EnterReadLock();
 			try
 			{
-				afterCommit = ExecuteBatch(action);
+				afterStorageCommit = ExecuteBatch(action);
 			}
 			catch (EsentErrorException e)
 			{
@@ -502,9 +502,9 @@ namespace Raven.Storage.Esent
 				if (disposed == false)
 					current.Value = null;
 			}
+			if (afterStorageCommit != null)
+				afterStorageCommit(); 
 			onCommit(); // call user code after we exit the lock
-			if (afterCommit != null)
-				afterCommit();
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -535,7 +535,7 @@ namespace Raven.Storage.Esent
 				action();
 				return;
 			}
-			current.Value.OnCommit += action;
+			current.Value.OnStorageCommit += action;
 		}
 
 		internal StorageActionsAccessor GetCurrentBatch()

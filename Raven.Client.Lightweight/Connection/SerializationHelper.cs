@@ -17,6 +17,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -100,6 +101,7 @@ namespace Raven.Client.Connection
 		{
 			if (metadata == null) return defaultValue;
 			if (!metadata.ContainsKey(key)) return defaultValue;
+			if (metadata[key].Type == JTokenType.Array) return defaultValue;
 
 			var value = metadata[key].Value<object>();
 

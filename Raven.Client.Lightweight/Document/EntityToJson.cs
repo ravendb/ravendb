@@ -82,8 +82,7 @@ namespace Raven.Client.Document
 				entityType == typeof(DynamicJsonObject) ||
 				entityType == typeof(RavenJObject)) // dynamic types
 			{
-				if (metadata.ContainsKey(Constants.RavenClrType))
-					return;// do not overwrite the value
+				return;// do not overwrite the value
 			}
 
 			metadata[Constants.RavenClrType] = documentStore.Conventions.GetClrTypeName(entityType);
