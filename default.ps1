@@ -137,12 +137,12 @@ task Test -depends Compile {
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 	}
 }
@@ -159,12 +159,12 @@ task StressTest -depends Compile {
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 	}
 }
@@ -185,7 +185,7 @@ task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
-		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
+		& ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
 	}
 	finally
 	{
