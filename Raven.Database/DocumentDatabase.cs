@@ -325,7 +325,7 @@ namespace Raven.Database
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
-					InMemoryIndexingQueueSize = indexingExecuter.GetInMemoryIndexingQueueSize(),
+					InMemoryIndexingQueueSize = indexingExecuter.PrefetchingBehavior.InMemoryIndexingQueueSize,
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
@@ -644,7 +644,7 @@ namespace Raven.Database
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
-						actions.AfterCommit(new JsonDocument
+						actions.AfterStorageCommitBeforeWorkNotifications(new JsonDocument
 						{
 							Metadata = metadata,
 							Key = key,
@@ -652,7 +652,7 @@ namespace Raven.Database
 							Etag = newEtag,
 							LastModified = addDocumentResult.SavedAt,
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
-						}, indexingExecuter.AfterCommit);
+						}, indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications);
 
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
@@ -864,7 +864,7 @@ namespace Raven.Database
 								task.Keys.Add(key);
 							}
 						    if (deletedETag != null)
-						        indexingExecuter.AfterDelete(key, deletedETag.Value);
+						        indexingExecuter.PrefetchingBehavior.AfterDelete(key, deletedETag.Value);
 							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 						}
 

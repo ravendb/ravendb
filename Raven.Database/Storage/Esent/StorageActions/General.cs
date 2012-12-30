@@ -24,7 +24,7 @@ namespace Raven.Storage.Esent.StorageActions
 	[CLSCompliant(false)]
 	public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions
 	{
-		public event Action OnCommit = delegate { };
+		public event Action OnStorageCommit = delegate { };
 		private readonly TableColumnsCache tableColumnsCache;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 		private readonly IUuidGenerator uuidGenerator;
@@ -157,7 +157,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			transaction.Commit(txMode);
 
-			return OnCommit;
+			return OnStorageCommit;
 		}
 
 
@@ -325,15 +325,6 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], null);
 				update.Save();
 			}
-		}
-
-
-		public void InsertFirstOnCommit(Action newOnCommit)
-		{
-			var oldOnCommit = OnCommit;
-			OnCommit = newOnCommit;
-			if (oldOnCommit != null)
-				OnCommit += oldOnCommit;
 		}
 	}
 

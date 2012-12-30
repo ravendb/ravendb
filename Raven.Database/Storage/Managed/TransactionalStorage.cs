@@ -140,7 +140,7 @@ namespace Raven.Storage.Managed
 				action();
 				return;
 			}
-			current.Value.OnCommit += action;
+			current.Value.OnStorageCommit += action;
 		}
 
 		public bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)

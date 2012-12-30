@@ -91,6 +91,10 @@ namespace Raven.Database.Indexing
 				hasDocs = true;
 				nextDocEtag = Etag.Increment(nextDocEtag, 1);
 			}
+			if (nextDocEtag != Guid.Empty && hasDocs == false)
+			{
+				
+			}
 			return hasDocs;
 		}
 
@@ -162,6 +166,7 @@ namespace Raven.Database.Indexing
 
 				if (TryGetInMemoryJsonDocuments(nextDocEtag, results))
 				{
+					nextDocEtag = GetNextDocEtag(results.Last().Etag.Value);
 					continue;
 				}
 
@@ -360,7 +365,7 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		public void AfterCommit(JsonDocument[] docs)
+		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing || docs.Length == 0)
 				return;
@@ -369,13 +374,11 @@ namespace Raven.Database.Indexing
 				context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 				return;
 
-			foreach (JsonDocument doc in docs)
-			{
-				DocumentRetriever.EnsureIdInMetadata(doc);
-			}
-
+		
+			Console.WriteLine(string.Join(",", docs.Select(x=>x.Key)));
 			foreach (var jsonDocument in docs)
 			{
+				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
 				inMemoryDocs.Enqueue(jsonDocument);
 			}
 		}

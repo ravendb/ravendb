@@ -59,7 +59,7 @@ namespace Raven.Storage.Managed
 
 		public IMappedResultsStorageAction MapReduce { get; private set; }
 
-		public event Action OnCommit;
+		public event Action OnStorageCommit;
 
 		public bool IsWriteConflict(Exception exception)
 		{
@@ -82,18 +82,15 @@ namespace Raven.Storage.Managed
 
 		private Action<JsonDocument[]> afterCommitAction;
 		private List<JsonDocument> docsForCommit;
-		private MappedResultsStorageAction mappedResultsStorageAction;
+		private readonly MappedResultsStorageAction mappedResultsStorageAction;
 
-		public void AfterCommit(JsonDocument doc, Action<JsonDocument[]> afterCommit)
+		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit)
 		{
 			afterCommitAction = afterCommit;
 			if (docsForCommit == null)
 			{
 				docsForCommit = new List<JsonDocument>();
-				var oldOnCommit = OnCommit;
-				OnCommit = () => afterCommitAction(docsForCommit.ToArray());
-				if (oldOnCommit != null)
-					OnCommit += oldOnCommit;
+				OnStorageCommit += () => afterCommitAction(docsForCommit.ToArray());
 			}
 			docsForCommit.Add(doc);
 		}
@@ -110,7 +107,7 @@ namespace Raven.Storage.Managed
 		[DebuggerNonUserCode]
 		public void InvokeOnCommit()
 		{
-			var handler = OnCommit;
+			var handler = OnStorageCommit;
 			if (handler != null)
 				handler();
 		}
