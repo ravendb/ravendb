@@ -18,10 +18,11 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void LegacyRavenLastModifiedMetadata()
 		{
-			string ravenLastModified = "[\"2012-12-23T07:36:31.281+02:00\",\"2012-12-25T20:13:54.1534138Z\"],2012-12-26T06:34:57.8189446Z";
 			var webHeaderCollection = new NameValueCollection
 			{
-				{Constants.RavenLastModified, ravenLastModified},
+				{Constants.RavenLastModified, "2012-12-26T06:34:57.8189446Z"},
+				{Constants.RavenLastModified, "[\"2012-12-23T07:36:31.281+02:00\",\"2012-12-25T20:13:54.1534138Z\"]"},
+				{Constants.LastModified, "2012-12-26T06:34:57.8189446Z"},
 				{"ETag", Guid.NewGuid().ToString()},
 			};
 			JsonDocument document = SerializationHelper.DeserializeJsonDocument("products/ravendb", new RavenJObject(), webHeaderCollection, HttpStatusCode.OK);
