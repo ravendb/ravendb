@@ -666,20 +666,19 @@ namespace Raven.Client.Connection.Async
 				});
 		}
 
-		public Task<BuildNumber> GetBuildNumber()
+		public async Task<BuildNumber> GetBuildNumber()
 		{
 			var actualUrl = string.Format("{0}/build/version", url).NoCache();
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => new BuildNumber
-				{
-					BuildVersion = task.Result.Value<string>("BuildVersion"),
-					ProductVersion = task.Result.Value<string>("ProductVersion")
-				});
-
+			var result = await request.ReadResponseJsonAsync();
+			return new BuildNumber
+			{
+				BuildVersion = result.Value<string>("BuildVersion"),
+				ProductVersion = result.Value<string>("ProductVersion")
+			};
 		}
 
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
