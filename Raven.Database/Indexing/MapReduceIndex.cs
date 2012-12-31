@@ -117,14 +117,12 @@ namespace Raven.Database.Indexing
 			}
 
 			int mapCount = 0;
-			var sp = Stopwatch.StartNew();
 			foreach (var mapResultItem in items)
 			{
 				actions.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
 				if(mapCount++ % 50000 == 0)
 					actions.General.PulseTransaction();
 			}
-			Console.WriteLine("Map reduce over {0:#,#} items took {1}", mapCount, sp.Elapsed);
 
 			UpdateIndexingStats(context, stats);
 			actions.MapReduce.ScheduleReductions(name, 0, changed);
