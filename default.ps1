@@ -127,7 +127,6 @@ task Test -depends Compile {
 	Clear-Host
 	
 	Write-Host $test_prjs
-	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
 	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
