@@ -185,7 +185,10 @@ task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
-		& ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
+	
+		$statLight = Get-PackagePath StatLight
+		$statLight = "$statLight\tools\StatLight.exe"
+		&$statLight "--XapPath=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\build\Raven.Tests.Silverlight.Results.xml" 
 	}
 	finally
 	{
