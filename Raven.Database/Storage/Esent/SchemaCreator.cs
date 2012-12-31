@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "4.4";
+		public const string SchemaVersion = "4.5";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -344,7 +344,9 @@ namespace Raven.Storage.Esent
 			{
 				try
 				{
-					Api.JetCreateIndex(session, tableid, index.szIndexName, index.grbit, index.szKey, index.szKey.Length, 90);
+					if (index.ulDensity == 0)
+						index.ulDensity = 90;
+					Api.JetCreateIndex(session, tableid, index.szIndexName, index.grbit, index.szKey, index.szKey.Length, index.ulDensity);
 				}
 				catch (Exception e)
 				{
@@ -504,12 +506,6 @@ namespace Raven.Storage.Esent
 				},
 				new JET_INDEXCREATE
 				{
-					szIndexName = "by_view",
-					szKey = "+view\0\0",
-					grbit = CreateIndexGrbit.IndexDisallowNull
-				},
-				new JET_INDEXCREATE
-				{
 					szIndexName = "by_view_level_and_hashed_reduce_key",
 					szKey = "+view\0+level\0+hashed_reduce_key\0\0",
 				},
@@ -603,24 +599,8 @@ namespace Raven.Storage.Esent
 				},
 				new JET_INDEXCREATE
 				{
-					szIndexName = "by_view",
-					szKey = "+view\0\0",
-					grbit = CreateIndexGrbit.IndexDisallowNull
-				},
-				new JET_INDEXCREATE
-				{
-					szIndexName = "by_view_and_etag",
-					szKey = "+view\0-etag\0\0",
-				},
-				new JET_INDEXCREATE
-				{
-					szIndexName = "by_view_bucket_and_hashed_reduce_key",
-					szKey = "+view\0+bucket\0+hashed_reduce_key\0\0",
-				},
-				new JET_INDEXCREATE
-				{
-					szIndexName = "by_view_and_hashed_reduce_key",
-					szKey = "+view\0+hashed_reduce_key\0\0",
+					szIndexName = "by_view_hashed_reduce_key_and_bucket",
+					szKey = "+view\0+hashed_reduce_key\0+bucket\0\0",
 				});
 		}
 
@@ -705,14 +685,8 @@ namespace Raven.Storage.Esent
 			              },
 			              new JET_INDEXCREATE
 			              {
-				              szIndexName = "by_view",
-				              szKey = "+view\0\0",
-				              grbit = CreateIndexGrbit.IndexDisallowNull
-			              },
-			              new JET_INDEXCREATE
-			              {
-				              szIndexName = "by_view_level_bucket_and_hashed_reduce_key",
-							  szKey = "+view\0+level\0+bucket\0+hashed_reduce_key\0\0",
+							  szIndexName = "by_view_level_hashed_reduce_key_and_bucket",
+							  szKey = "+view\0+level\0+hashed_reduce_key\0+bucket\0\0",
 						  },
 						  new JET_INDEXCREATE
 						  {
@@ -1063,12 +1037,6 @@ namespace Raven.Storage.Esent
 				},
 				new JET_INDEXCREATE
 				{
-					szIndexName = "by_view",
-					szKey = "+view\0\0",
-					grbit = CreateIndexGrbit.IndexDisallowNull
-				},
-				new JET_INDEXCREATE
-				{
 					szIndexName = "by_view_and_hashed_reduce_key",
 					szKey = "+view\0+hashed_reduce_key\0+reduce_key\0\0",
 					grbit = CreateIndexGrbit.IndexUnique
@@ -1125,12 +1093,6 @@ namespace Raven.Storage.Esent
 				},
 				new JET_INDEXCREATE
 				{
-					szIndexName = "by_view",
-					szKey = "+view\0\0",
-					grbit = CreateIndexGrbit.IndexDisallowNull
-				},
-				new JET_INDEXCREATE
-				{
 					szIndexName = "by_view_and_hashed_reduce_key",
 					szKey = "+view\0+hashed_reduce_key\0+reduce_key\0\0",
 					grbit = CreateIndexGrbit.IndexUnique
@@ -1184,12 +1146,6 @@ namespace Raven.Storage.Esent
 				new JET_INDEXCREATE
 				{
 					szIndexName = "by_key",
-					szKey = "+key\0\0",
-					grbit = CreateIndexGrbit.IndexDisallowNull
-				},
-				new JET_INDEXCREATE
-				{
-					szIndexName = "by_view",
 					szKey = "+key\0\0",
 					grbit = CreateIndexGrbit.IndexDisallowNull
 				},
