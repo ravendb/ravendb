@@ -169,26 +169,35 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetDelete(session, IndexesStatsReduce);
 			}
 
-			foreach (var table in new[] { MappedResults, ReducedResults, ScheduledReductions, ReduceKeysCounts, ReduceKeysStatus, IndexedDocumentsReferences })
+			foreach (var op in new[]
 			{
-				Api.JetSetCurrentIndex(session, table, "by_view");
-				Api.MakeKey(session, table, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if (!Api.TrySeek(session, table, SeekGrbit.SeekEQ))
+				new { Table = MappedResults, Index = "by_view_and_doc_key" },
+				new { Table = ScheduledReductions, Index = "by_view_level_bucket_and_hashed_reduce_key" },
+				new { Table = ReducedResults, Index = "by_view_level_hashed_reduce_key_and_bucket" },
+				new { Table = ReduceKeysCounts, Index = "by_view_and_hashed_reduce_key" },
+				new { Table = ReduceKeysStatus, Index = "by_view_and_hashed_reduce_key" },
+				new { Table = IndexedDocumentsReferences, Index = "by_view_and_key" },
+			})
+			{
+				Api.JetSetCurrentIndex(session, op.Table, op.Index);
+				Api.MakeKey(session, op.Table, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				if (!Api.TrySeek(session, op.Table, SeekGrbit.SeekGE))
 					continue;
-
-				Api.MakeKey(session, table, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				Api.JetSetIndexRange(session, table, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+				var columnids = Api.GetColumnDictionary(session, op.Table);
 				var count = 0;
 				do
 				{
-					if (count++ > 1000)
+					var indexNameFromDb = Api.RetrieveColumnAsString(session, op.Table, columnids["view"]);
+					if (string.Equals(name, indexNameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+						break;
+					if (count++ > 10000)
 					{
 						PulseTransaction();
 						count = 0;
 					}
 
-					Api.JetDelete(session, table);
-				} while (Api.TryMoveNext(session, table));
+					Api.JetDelete(session, op.Table);
+				} while (Api.TryMoveNext(session, op.Table));
 			}
 
 		}

@@ -1861,7 +1861,11 @@ namespace Raven.Database
 			{
 				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
+				var indexStats = accessor.Indexing.GetIndexStats(indexName);
+				if(indexStats != null)
+				{
+					lastReducedEtag = indexStats.LastReducedEtag;
+				}
 				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
 

@@ -141,16 +141,5 @@ namespace Raven.Storage.Managed
 			}
 			return Guid.Empty;
 		}
-
-		public Guid? GetMostRecentReducedEtag(string name)
-		{
-			var keyWithHighestEqualTo = storage.MappedResults["ByViewAndEtag"]
-				.GreatestEqual(new RavenJObject {{"view", name}}, token => token.Value<string>("view") == name);
-
-			if(keyWithHighestEqualTo == null)
-				return null;
-
-			return new Guid(keyWithHighestEqualTo.Value<byte[]>("etag"));
-		}
 	}
 }

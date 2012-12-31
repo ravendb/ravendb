@@ -117,11 +117,14 @@ namespace Raven.Database.Indexing
 			}
 
 			int mapCount = 0;
+			var sp = Stopwatch.StartNew();
 			foreach (var mapResultItem in items)
 			{
 				actions.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
-				PulseTransactionIfNeeded(actions, mapCount++);
+				if(mapCount++ % 50000 == 0)
+					actions.General.PulseTransaction();
 			}
+			Console.WriteLine("Map reduce over {0:#,#} items took {1}", mapCount, sp.Elapsed);
 
 			UpdateIndexingStats(context, stats);
 			actions.MapReduce.ScheduleReductions(name, 0, changed);
@@ -134,16 +137,6 @@ namespace Raven.Database.Indexing
 				Started = start
 			});
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
-		}
-
-		private static void PulseTransactionIfNeeded(IStorageActionsAccessor actions, int count)
-		{
-			if (count%50000 != 0)
-				return;
-			
-			// The reason this is here is to protect us from Version Store Out Of Memory error during indexing
-			// this can happen if we have indexes that output a VERY large number of items per doc.
-			actions.General.PulseTransaction();
 		}
 
 		// we don't use the usual GroupBy, because that isn't streaming
@@ -430,7 +423,8 @@ namespace Raven.Database.Indexing
 									case 0:
 									case 1:
 										Actions.MapReduce.PutReducedResult(name, reduceKeyAsString, Level + 1, mappedResults.Key, mappedResults.Key / 1024, ToJsonDocument(doc));
-										PulseTransactionIfNeeded(Actions, count);
+										if(count % 50000 == 0)
+											Actions.General.PulseTransaction();
 										break;
 									case 2:
 										WriteDocumentToIndex(doc, indexWriter, analyzer);
