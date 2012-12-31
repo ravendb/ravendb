@@ -87,8 +87,9 @@
     <Reference Include="AsyncCtpLibrary_Silverlight5">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
     </Reference>
-    <Reference Include="Kent.Boogaart.HelperTrinity">
-      <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.4.0.0\lib\sl40\Kent.Boogaart.HelperTrinity.dll</HintPath>
+    <Reference Include="Kent.Boogaart.HelperTrinity, Version=1.5.0.0, Culture=neutral, PublicKeyToken=cc96fa93a217f7a1, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.5.0.0\lib\sl50\Kent.Boogaart.HelperTrinity.dll</HintPath>
     </Reference>
     <Reference Include="Kent.Boogaart.KBCsv">
       <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\sl40\Kent.Boogaart.KBCsv.dll</HintPath>
