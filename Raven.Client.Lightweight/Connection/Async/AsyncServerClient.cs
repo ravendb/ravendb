@@ -8,20 +8,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-#if !SILVERLIGHT
-using System.Transactions;
-#endif
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Util;
-using Raven.Client.Listeners;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Transactions;
 #endif
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
@@ -29,12 +23,16 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
-using Raven.Json.Linq;
+using Raven.Client.Listeners;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
 {

@@ -851,6 +851,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
+    <None Include="app.config" />
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />
   </ItemGroup>

@@ -250,6 +250,7 @@
       <Link>RavenDB.snk</Link>
     </None>
     <None Include="packages.config" />
+    <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
