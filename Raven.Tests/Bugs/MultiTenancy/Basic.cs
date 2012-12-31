@@ -48,7 +48,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				{
 					var entity = new User
 					{
-						Name = "First Mutlti Tenant Bank",
+						Name = "First Multitenant Bank",
 					};
 					s.Store(entity);
 					userId = entity.Id;
@@ -145,7 +145,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				{
 					var entity = new User
 					{
-						Name = "First Mutlti Tenant Bank",
+						Name = "First Multitenant Bank",
 					};
 					s.Store(entity);
 					userId = entity.Id;
@@ -189,7 +189,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				{
 					var entity = new User
 					{
-						Name = "First Mutlti Tenant Bank",
+						Name = "First Multitenant Bank",
 					};
 					s.Store(entity);
 					userId = entity.Id;

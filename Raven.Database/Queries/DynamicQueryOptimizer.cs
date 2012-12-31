@@ -49,7 +49,7 @@ namespace Raven.Database.Queries
 
 			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery).Select(x => x.Item2).ToArray();
 			var normalizedFieldsQueriedUpon =
-				fieldsQueriedUpon.Select(DynamicQueryMapping.ReplaceIndavlidCharactersForFields).ToArray();
+				fieldsQueriedUpon.Select(DynamicQueryMapping.ReplaceInvalidCharactersForFields).ToArray();
 			var distinctSelectManyFields = new HashSet<string>();
 			foreach (var field in fieldsQueriedUpon)
 			{
@@ -219,10 +219,10 @@ namespace Raven.Database.Queries
 							//If any of the fields we want to query on are set to something other than the default, don't use the index
 							var anyFieldWithNonDefaultIndexing = normalizedFieldsQueriedUpon.Where(x =>
 							{
-								FieldIndexing analysedInfo;
-								if (indexDefinition.Indexes.TryGetValue(x, out analysedInfo))
+								FieldIndexing analyzedInfo;
+								if (indexDefinition.Indexes.TryGetValue(x, out analyzedInfo))
 								{
-									if (analysedInfo != FieldIndexing.Default)
+									if (analyzedInfo != FieldIndexing.Default)
 										return true;
 								}
 								return false;

@@ -10,7 +10,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void IfStaticQueryHasWhere_SeparateDynamicQueryCreated()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				new Docs_Flagged().Execute(store);
 				const int docsCount = 10;

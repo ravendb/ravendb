@@ -103,7 +103,7 @@ namespace Raven.Database.Server.Responders
 			}
 			else 
 			{
-				GetIndexQueryRessult(context, index);
+				GetIndexQueryResult(context, index);
 			}
 		}
 
@@ -351,7 +351,7 @@ namespace Raven.Database.Server.Responders
 			});
 		}
 
-		private void GetIndexQueryRessult(IHttpContext context, string index)
+		private void GetIndexQueryResult(IHttpContext context, string index)
 		{
 			Guid indexEtag;
 			var queryResult = ExecuteQuery(context, index, out indexEtag);

@@ -97,7 +97,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 		}
 
 		[Fact]
-		public void Can_confclit_on_deletes_as_well()
+		public void Can_conflict_on_deletes_as_well()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();

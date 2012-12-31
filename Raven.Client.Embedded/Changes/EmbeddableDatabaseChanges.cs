@@ -11,8 +11,8 @@ namespace Raven.Client.Embedded.Changes
 	internal class EmbeddableDatabaseChanges : IDatabaseChanges, IDisposable
 	{
 		private readonly Action onDispose;
-		private readonly EmbeddableObserableWithTask<IndexChangeNotification> indexesObservable;
-		private readonly EmbeddableObserableWithTask<DocumentChangeNotification> documentsObservable;
+		private readonly EmbeddableObservableWithTask<IndexChangeNotification> indexesObservable;
+		private readonly EmbeddableObservableWithTask<DocumentChangeNotification> documentsObservable;
 
 		private readonly BlockingCollection<Action> enqueuedActions = new BlockingCollection<Action>();
 		private Task enqueuedTask;
@@ -21,8 +21,8 @@ namespace Raven.Client.Embedded.Changes
 		{
 			this.onDispose = onDispose;
 			Task = new CompletedTask();
-			indexesObservable = new EmbeddableObserableWithTask<IndexChangeNotification>();
-			documentsObservable = new EmbeddableObserableWithTask<DocumentChangeNotification>();
+			indexesObservable = new EmbeddableObservableWithTask<IndexChangeNotification>();
+			documentsObservable = new EmbeddableObservableWithTask<DocumentChangeNotification>();
 
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += (o, notification) => 
 				enqueuedActions.Add(() => indexesObservable.Notify(o, notification));
@@ -42,7 +42,7 @@ namespace Raven.Client.Embedded.Changes
 		}
 
 		public bool Connected { get; private set; }
-		public event EventHandler ConnectionStatusCahnged = delegate {  };
+		public event EventHandler ConnectionStatusChanged = delegate {  };
 		public Task Task { get; private set; }
 
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)

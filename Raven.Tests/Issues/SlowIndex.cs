@@ -43,7 +43,7 @@ namespace Raven.Tests.Issues
 				stopwatch.Stop();
 				Debug.WriteLine("Took {0} ms to finish indexing", stopwatch.ElapsedMilliseconds);
 
-				// It should be less, but at 20 seconds, there's definately something wrong
+				// It should be less, but at 20 seconds, there's definitely something wrong
 				Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 20000);
 				
 				//using (var session = documentStore.OpenSession())

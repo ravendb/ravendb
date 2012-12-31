@@ -36,7 +36,7 @@ namespace Raven.Client.Document.Batches
 			this.sessionOperations = sessionOperations;
 		}
 
-		public GetRequest CraeteRequest()
+		public GetRequest CreateRequest()
 		{
 			return new GetRequest
 				   {

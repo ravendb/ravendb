@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs
 	public class MultipleResultsPerDocumentAndPaging : RavenTest
 	{
 		[Fact]
-		public void WhenOutputingMultipleResultsPerDocAndPagingWillGetCorrectSize()
+		public void WhenOutputtingMultipleResultsPerDocAndPagingWillGetCorrectSize()
 		{
 			using (var store = NewDocumentStore())
 			{

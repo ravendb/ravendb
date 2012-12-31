@@ -185,7 +185,7 @@ namespace Raven.Studio.Models
 				var field = Fields.FirstOrDefault(f => f.Name == localItem.Key);
 				if (field == null)
 				{
-					field = FieldProperties.Defualt;
+					field = FieldProperties.Default;
 					field.Name = localItem.Key;
 					Fields.Add(field);
 				}
@@ -362,7 +362,7 @@ namespace Raven.Studio.Models
 
 		public ICommand AddField
 		{
-			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Fields.Add(FieldProperties.Defualt)); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Fields.Add(FieldProperties.Default)); }
 		}
 
 		public ICommand RemoveField
@@ -661,7 +661,7 @@ namespace Raven.Studio.Models
 				}
 			}
 
-			public static FieldProperties Defualt
+			public static FieldProperties Default
 			{
 				get
 				{

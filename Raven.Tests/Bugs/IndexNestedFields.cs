@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void can_query_by_ID()
 		{
-			UsingPrepoulatedDatabase(delegate(IDocumentSession session3)
+			UsingPrepopulatedDatabase(delegate(IDocumentSession session3)
 			{
 				var results1 = session3.Advanced.LuceneQuery<Outer>("matryoshka").Where("middle_inner_ID:" + ExpectedId).ToArray();
 
@@ -46,7 +46,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void can_query_by_ID_with_linq()
 		{
-			UsingPrepoulatedDatabase(delegate(IDocumentSession session3)
+			UsingPrepopulatedDatabase(delegate(IDocumentSession session3)
 				{
 					var results1 = session3.Query<Outer>("matryoshka")
 						.Where(d => d.middle.inner.ID == ExpectedId)
@@ -56,7 +56,7 @@ namespace Raven.Tests.Bugs
 				});
 		}
 
-		void UsingPrepoulatedDatabase(Action<IDocumentSession> testOperation)
+		void UsingPrepopulatedDatabase(Action<IDocumentSession> testOperation)
 		{
 			using (var store = NewDocumentStore())
 			{

@@ -41,8 +41,8 @@ namespace Raven.Tests.Bugs
 		}
 		private static SimpleObject LoadObject(IDocumentStore store, string id)
 		{
-			using (var sesion = store.OpenSession())
-				return sesion.Load<SimpleObject>(id);
+			using (var session = store.OpenSession())
+				return session.Load<SimpleObject>(id);
 		}
 
 

@@ -58,6 +58,23 @@ namespace Raven.Database.Indexing
 
 		public List<JsonDocument> GetDocumentsBatchFrom(Guid etag)
 		{
+			var results = GetDocsFromBatchWithPossibleDuplicates(etag);
+			// a single doc may appear multiple times, if it was updated while we were fetching things, 
+			// so we have several versions of the same doc loaded, this will make sure that we will only  
+			// take one of them.
+			var ids = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			for (int i = results.Count - 1; i >= 0; i--)
+			{
+				if(ids.Add(results[i].Key) == false)
+				{
+					results.RemoveAt(i);
+				}
+			}
+			return results;
+		}
+
+		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Guid etag)
+		{
 			var inMemResults = new List<JsonDocument>();
 			var nextDocEtag = GetNextDocEtag(etag);
 			if (TryGetInMemoryJsonDocuments(nextDocEtag, inMemResults))
@@ -120,7 +137,7 @@ namespace Raven.Database.Indexing
 		{
 			List<JsonDocument> jsonDocs = null;
 			var untilEtag = GetNextEtagInMemory();
-			context.TransactionaStorage.Batch(actions =>
+			context.TransactionalStorage.Batch(actions =>
 			{
 				jsonDocs = actions.Documents
 					.GetDocumentsAfter(
@@ -162,6 +179,7 @@ namespace Raven.Database.Indexing
 
 				if (TryGetInMemoryJsonDocuments(nextDocEtag, results))
 				{
+					nextDocEtag = GetNextDocEtag(results.Last().Etag.Value);
 					continue;
 				}
 
@@ -183,15 +201,7 @@ namespace Raven.Database.Indexing
 				results.AddRange(nextBatch.Task.Result);
 				nextDocEtag = GetNextDocEtag(nextBatch.Task.Result.Last().Etag.Value);
 			}
-
-			// a single doc may appear multiple times, if it was updated
-			// while we were fetching things, so we have several versions
-			// of the same doc loaded, this will make sure that we will only 
-			// take one of them.
-			return results
-				.GroupBy(x => x.Key)
-				.Select(g => g.OrderBy(x => x.Etag, ByteArrayComparer.Instance).First())
-				.ToList();
+			return results;
 		}
 
 		private void MaybeAddFutureBatch(List<JsonDocument> past)
@@ -279,7 +289,7 @@ namespace Raven.Database.Indexing
 				futureIndexBatches.ContainsKey(oneUpEtag))
 				return oneUpEtag;
 
-			context.TransactionaStorage.Batch(
+			context.TransactionalStorage.Batch(
 				accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(highestEtag); });
 			return nextDocEtag;
 		}
@@ -360,7 +370,7 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		public void AfterCommit(JsonDocument[] docs)
+		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing || docs.Length == 0)
 				return;
@@ -369,13 +379,9 @@ namespace Raven.Database.Indexing
 				context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 				return;
 
-			foreach (JsonDocument doc in docs)
-			{
-				DocumentRetriever.EnsureIdInMetadata(doc);
-			}
-
 			foreach (var jsonDocument in docs)
 			{
+				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
 				inMemoryDocs.Enqueue(jsonDocument);
 			}
 		}

@@ -58,14 +58,14 @@ namespace Raven.Tests.Bugs.TransformResults
 					Content = result.Content,
 					UserId = result.UserId,
 					Votes = from vote in result.Votes
-							let anwser = database.Load<Answer2>(vote.AnswerId.ToString())
-							let firstVote = anwser.Votes.FirstOrDefault(x => x.QuestionId == result.QuestionId)
+							let answer = database.Load<Answer2>(vote.AnswerId.ToString())
+							let firstVote = answer.Votes.FirstOrDefault(x => x.QuestionId == result.QuestionId)
 							select new // AnswerVote2
 									   {
 										   vote.Id,
 										   vote.Delta,
 										   vote.QuestionId,
-										   Answer = anwser,
+										   Answer = answer,
 										   FirstVote = firstVote
 									   }
 				};

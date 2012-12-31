@@ -395,7 +395,7 @@ namespace Raven.Client.Document.Async
 
 		protected override string GenerateKey(object entity)
 		{
-			throw new NotSupportedException("Async session cannot generate keys syncronously");
+			throw new NotSupportedException("Async session cannot generate keys synchronously");
 		}
 
 		protected override void RememberEntityForDocumentKeyGeneration(object entity)

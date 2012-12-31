@@ -27,7 +27,7 @@ namespace Raven.Client.Document.Batches
 			this.includes = includes;
 		}
 
-		public GetRequest CraeteRequest()
+		public GetRequest CreateRequest()
 		{
 			string query = "?";
 			if (includes != null && includes.Length > 0)

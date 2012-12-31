@@ -50,8 +50,8 @@ namespace Raven.Tests.Issues
 
 			store1.DatabaseCommands.PutAttachment("users/1", null, new MemoryStream(new byte[] { 1 }), new RavenJObject());
 
-			WaitForAttachement(store2, "users/1");
-			WaitForAttachement(store3, "users/1");
+			WaitForAttachment(store2, "users/1");
+			WaitForAttachment(store3, "users/1");
 
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);

@@ -36,7 +36,7 @@ namespace Raven.Abstractions.Data
 		public const string EmptyString = "EMPTY_STRING";
 		public const string DocumentIdFieldName = "__document_id";
 		public const string ReduceKeyFieldName = "__reduce_key";
-		public const string IntersectSeperator = " INTERSECT ";
+		public const string IntersectSeparator = " INTERSECT ";
 		public const string RavenClrType = "Raven-Clr-Type";
 		public const string RavenEntityName = "Raven-Entity-Name";
 		public const string RavenReadOnly = "Raven-Read-Only";

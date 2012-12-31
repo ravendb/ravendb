@@ -166,7 +166,7 @@ namespace Raven.Tests.Bugs
 				var item = ((TestClass)jobject.Deserialize(typeof(TestClass), Conventions.Document));
 				item.Id = jobject.Value<RavenJObject>("@metadata").Value<string>("@id");
 				if (item == null)
-					throw new ApplicationException("Deserialisation failed");
+					throw new ApplicationException("Deserialization failed");
 
 				return item;
 			}

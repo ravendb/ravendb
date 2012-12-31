@@ -26,10 +26,10 @@ namespace Raven.Database.Extensions
 			var analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??
 				Type.GetType(analyzerTypeAsString);
 			if (analyzerType == null)
-				throw new InvalidOperationException("Cannot find analzyer type '" + analyzerTypeAsString + "' for field: " + name);
+				throw new InvalidOperationException("Cannot find analyzer type '" + analyzerTypeAsString + "' for field: " + name);
 			try
 			{
-				// try to get paramerless ctor
+				// try to get parameterless ctor
 				var ctors = analyzerType.GetConstructor(Type.EmptyTypes);
 				if (ctors != null)
 					return (Analyzer)Activator.CreateInstance(analyzerType);

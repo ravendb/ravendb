@@ -87,7 +87,7 @@ namespace Raven.Tests.Triggers
 		}
 
 		[Fact]
-		public void CanRemoveFitleredDocumentsFromIndexes()
+		public void CanRemoveFilteredDocumentsFromIndexes()
 		{
 			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 			db.SpinBackgroundWorkers();

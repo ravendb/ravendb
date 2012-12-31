@@ -20,21 +20,21 @@ namespace Raven.Tests.MailingList
 		{
 			using (var session = documentStore.OpenSession())
 			{
-				var category = new Category() { Colour = "green", Name = "c1" };
+				var category = new Category() { Color = "green", Name = "c1" };
 				session.Store(category);
 				var activity = new Activity() { Name = "a1", Category = category };
 				session.Store(activity);
 				session.SaveChanges();
-				category.Colour = "yellow";
+				category.Color = "yellow";
 				session.Store(category);
 				session.SaveChanges();
 				session.ClearStaleIndexes();
-				UpdateLinkedIndexes(category, new[] { "Activity/ByCategoryId" }, new[] { "Colour" });
+				UpdateLinkedIndexes(category, new[] { "Activity/ByCategoryId" }, new[] { "Color" });
 			}
 			using (var session = documentStore.OpenSession())
 			{
 				var a2 = session.Load<Activity>("activities/1");
-				Assert.Equal("yellow", a2.Category.Colour);
+				Assert.Equal("yellow", a2.Category.Color);
 			}
 		}
 
@@ -49,7 +49,7 @@ namespace Raven.Tests.MailingList
 				return new PatchRequest()
 				{
 					Type = PatchCommandType.Set,
-					Name = p,         // "Colour"
+					Name = p,         // "Color"
 					Value = d[entity]    // "yellow"
 				};
 			}).ToArray();
@@ -133,7 +133,7 @@ namespace Raven.Tests.MailingList
 	{
 		public string Id { get; set; }
 		public string Name { get; set; }
-		public bool Favourite { get; set; }
+		public bool Favorite { get; set; }
 		public CategoryReference Category { get; set; }
 	}
 
@@ -141,12 +141,12 @@ namespace Raven.Tests.MailingList
 	{
 		public string Id { get; set; }
 		public string Name { get; set; }
-		public string Colour { get; set; }
+		public string Color { get; set; }
 	}
 
 	public class CategoryReference : DenormalizedReference<Category>
 	{
-		public string Colour { get; set; }
+		public string Color { get; set; }
 
 		public static implicit operator CategoryReference(Category doc)
 		{
@@ -154,7 +154,7 @@ namespace Raven.Tests.MailingList
 			{
 				Id = doc.Id,
 				Name = doc.Name,
-				Colour = doc.Colour
+				Color = doc.Color
 			};
 		}
 	}

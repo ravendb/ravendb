@@ -109,7 +109,7 @@ namespace Raven.Tests.MailingList
 					at Raven.Database.DocumentDatabase.Query(String index, IndexQuery query) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\DocumentDatabase.cs:line 951
 					at Raven.Database.Server.Responders.Index.PerformQueryAgainstExistingIndex(IHttpContext context, String index, IndexQuery indexQuery, Guid& indexEtag) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\Responders\Index.cs:line 386
 					at Raven.Database.Server.Responders.Index.ExecuteQuery(IHttpContext context, String index, Guid& indexEtag) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\Responders\Index.cs:line 323
-					at Raven.Database.Server.Responders.Index.GetIndexQueryRessult(IHttpContext context, String index) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\Responders\Index.cs:line 262
+					at Raven.Database.Server.Responders.Index.GetIndexQueryResult(IHttpContext context, String index) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\Responders\Index.cs:line 262
 					at Raven.Database.Server.HttpServer.DispatchRequest(IHttpContext ctx) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\HttpServer.cs:line 685
 					at Raven.Database.Server.HttpServer.HandleActualRequest(IHttpContext ctx) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\HttpServer.cs:line 447*/
 				});

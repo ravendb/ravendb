@@ -65,7 +65,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void Can_query_on_collection_primitiv()
+		public void Can_query_on_collection_primitive()
 		{
 			using (var store = NewDocumentStore())
 			{

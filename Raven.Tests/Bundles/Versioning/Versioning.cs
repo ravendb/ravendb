@@ -51,9 +51,9 @@ namespace Raven.Tests.Bundles.Versioning
 				Assert.Null(session.Load<Comment>(comment.Id + "/revisions/1"));
 			}
 
-			using (var sesion = documentStore.OpenSession())
+			using (var session = documentStore.OpenSession())
 			{
-				var metadata = sesion.Advanced.GetMetadataFor(sesion.Load<User>(user.Id));
+				var metadata = session.Advanced.GetMetadataFor(session.Load<User>(user.Id));
 				Assert.Null(metadata.Value<string>("Raven-Document-Revision-Status"));
 				Assert.Equal(0, metadata.Value<int>("Raven-Document-Revision"));
 			}
@@ -81,7 +81,7 @@ namespace Raven.Tests.Bundles.Versioning
 		}
 
 		[Fact]
-		public void Will_automatically_craete_duplicate_on_first_insert()
+		public void Will_automatically_create_duplicate_on_first_insert()
 		{
 			var company = new Company {Name = "Company Name"};
 			using (var session = documentStore.OpenSession())
@@ -100,7 +100,7 @@ namespace Raven.Tests.Bundles.Versioning
 		}
 
 		[Fact]
-		public void Will_automatically_craete_duplicate_on_next_insert()
+		public void Will_automatically_create_duplicate_on_next_insert()
 		{
 			var company = new Company {Name = "Company Name"};
 			using (var session = documentStore.OpenSession())

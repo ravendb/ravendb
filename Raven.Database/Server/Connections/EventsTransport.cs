@@ -145,7 +145,7 @@ namespace Raven.Database.Server.Connections
 
 			Connected = false;
 			Disconnected();
-			context.FinalizeResonse();
+			context.FinalizeResponse();
 		}
 	}
 }

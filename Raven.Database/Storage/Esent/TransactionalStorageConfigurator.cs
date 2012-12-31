@@ -88,7 +88,7 @@ namespace Raven.Storage.Esent
 
 		private static Lazy<int> VersionPageSize = new Lazy<int>(()=>
 		{
-			// see dicussion here: http://managedesent.codeplex.com/discussions/405939
+			// see discussion here: http://managedesent.codeplex.com/discussions/405939
 			const int JET_paramVerPageSize = 128;
 			int versionPageSize = 0;
 			string paramString;

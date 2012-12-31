@@ -106,13 +106,13 @@ namespace Raven.Studio.Features.Documents
                 isCustomChoice = value;
                 if (!isCustomChoice)
                 {
-                    RepopuplateColumnsFromAutomaticChoice();
+                    RepopulateColumnsFromAutomaticChoice();
                 }
                 OnPropertyChanged(() => IsCustomChoice);
             }
         }
 
-        private void RepopuplateColumnsFromAutomaticChoice()
+        private void RepopulateColumnsFromAutomaticChoice()
         {
             columnEditorViewModels.Clear();
             columnEditorViewModels.AddRange(ColumnEditorViewModelsFromColumns(automaticColumnsFetcher()));

@@ -478,7 +478,7 @@ namespace Raven.Client.Document
 
 				if (ApiKey == null)
 				{
-					AssertUnuthorizedCredentialSupportWindowsAuth(response);
+					AssertUnauthorizedCredentialSupportWindowsAuth(response);
 
 					return null;
 				}
@@ -511,7 +511,7 @@ namespace Raven.Client.Document
 
 				if (ApiKey == null)
 				{
-					AssertUnuthorizedCredentialSupportWindowsAuth(unauthorizedResponse);
+					AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse);
 					return null;
 				}
 				oauthSource = Url + "/OAuth/API-Key";
@@ -521,7 +521,7 @@ namespace Raven.Client.Document
 
 		}
 
-		private void AssertUnuthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
+		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
 		{
 			if (Credentials == null) 
 				return;
@@ -534,7 +534,7 @@ namespace Raven.Client.Document
 				// we are trying to do windows auth, but we didn't get the windows auth headers
 				throw new SecurityException(
 					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
-					+ " but either worng credentials where entered or the specified server does not support Windows authentication." +
+					+ " but either wrong credentials where entered or the specified server does not support Windows authentication." +
 					Environment.NewLine +
 					"If you are running inside IIS, make sure to enable Windows authentication.");
 			}

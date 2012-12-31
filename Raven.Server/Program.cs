@@ -348,7 +348,7 @@ Configuration options:
 			}
 		}
 
-		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool lauchBrowser)
+		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser)
 		{
 			var sp = Stopwatch.StartNew();
 			using (var server = new RavenDbServer(ravenConfiguration))
@@ -369,7 +369,7 @@ Configuration options:
 					server.Database.TransactionalStorage.FriendlyName);
 				Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
 
-				if (lauchBrowser)
+				if (launchBrowser)
 				{
 					try
 					{

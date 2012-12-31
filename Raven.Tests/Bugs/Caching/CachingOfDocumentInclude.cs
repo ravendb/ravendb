@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs.Caching
 		}
 
 		[Fact]
-		public void Will_referesh_result_when_main_document_changes()
+		public void Will_refresh_result_when_main_document_changes()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
@@ -150,7 +150,7 @@ namespace Raven.Tests.Bugs.Caching
 		}
 
 		[Fact]
-		public void Will_referesh_result_when_included_document_changes()
+		public void Will_refresh_result_when_included_document_changes()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())

@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			context.WriteETag(typeof (ClientAccessPolicy).FullName);
-			context.Response.SetPublicCachability();
+			context.Response.SetPublicCacheability();
 			context.Response.ContentType = "text/xml";
 			context.Write(@"<?xml version='1.0' encoding='utf-8'?>
 <access-policy>

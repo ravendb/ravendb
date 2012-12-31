@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs
 	public class TranslatingLinqQueriesToIndexes
 	{
 		[Fact]
-		public void WillTranslateReferenceToIdTo__docuent_id()
+		public void WillTranslateReferenceToIdTo__document_id()
 		{
 			Expression<Func<IEnumerable<Nestable>, IEnumerable>> map = nests => from nestable in nests
 																				select new { nestable.Id };

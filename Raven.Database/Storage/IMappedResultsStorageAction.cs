@@ -17,7 +17,6 @@ namespace Raven.Database.Storage
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
-		IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take);
 
 		IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take);
 

@@ -6,7 +6,7 @@ namespace Raven.Abstractions.Data
 	{
 		/// <summary>
 		/// The facet terms and hits up to a limit of MaxResults items (as specified in the facet setup document), sorted
-		/// in TermSortMode order (as indiciated in the facet setup document).
+		/// in TermSortMode order (as indicated in the facet setup document).
 		/// </summary>
 		public List<FacetValue> Values { get; set; }
 		/// <summary>

@@ -27,13 +27,13 @@ namespace Raven.Client.Indexes
 			AnalyzersStrings = new Dictionary<string, string>();
 		}
 
-		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuey, IEnumerable<object> enumerable)
+		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
 		{
 			if (Reduce == null)
-				return enumerable.Take(indexQuey.PageSize);
+				return enumerable.Take(indexQuery.PageSize);
 			
 			var compile = Reduce.Compile();
-			return compile(enumerable.Cast<TReduceResult>()).Cast<object>().Take(indexQuey.PageSize);
+			return compile(enumerable.Cast<TReduceResult>()).Cast<object>().Take(indexQuery.PageSize);
 		}
 
 		/// <summary>

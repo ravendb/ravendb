@@ -18,21 +18,21 @@ namespace Raven.Tests.Bugs
 		{
 			using (var store = NewDocumentStore())
 			{
-				using (var sess = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					var a1 = new RavenA { SomeProp = "findme" };
-					sess.Store(a1);
+					session.Store(a1);
 
-					sess.Advanced.GetMetadataFor(a1)["METAPROP"] = "metadata";
+					session.Advanced.GetMetadataFor(a1)["METAPROP"] = "metadata";
 
-					sess.SaveChanges();
+					session.SaveChanges();
 				}
 
-				using (var sess2 = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					var a1 = sess2.Query<RavenA>().Where(a => a.SomeProp == "findme").FirstOrDefault();
+					var a1 = session.Query<RavenA>().Where(a => a.SomeProp == "findme").FirstOrDefault();
 
-					Assert.Equal("metadata", sess2.Advanced.GetMetadataFor(a1)["METAPROP"]);
+					Assert.Equal("metadata", session.Advanced.GetMetadataFor(a1)["METAPROP"]);
 				}
 			}
 		}

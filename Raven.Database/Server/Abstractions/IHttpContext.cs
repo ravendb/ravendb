@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Abstractions
 		IHttpResponse Response { get; }
 		IPrincipal User { get; set; }
 		string GetRequestUrlForTenantSelection();
-		void FinalizeResonse();
+		void FinalizeResponse();
 		void SetResponseFilter(Func<Stream, Stream> responseFilter);
 		void OutputSavedLogItems(ILog logger);
 		void Log(Action<ILog> loggingAction);

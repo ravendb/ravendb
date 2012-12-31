@@ -72,7 +72,7 @@ namespace Raven.Client.Document.OAuth
 					{OAuthHelper.Keys.RSAModulus, serverRSAModulus},
 					{
 						OAuthHelper.Keys.EncryptedData,
-						OAuthHelper.EncryptAssymetric(exponent, modulus, OAuthHelper.DictionaryToString(new Dictionary<string, string>
+						OAuthHelper.EncryptAsymmetric(exponent, modulus, OAuthHelper.DictionaryToString(new Dictionary<string, string>
 						{
 							{OAuthHelper.Keys.APIKeyName, apiKeyName},
 							{OAuthHelper.Keys.Challenge, challenge},

@@ -35,7 +35,7 @@ namespace Raven.Studio.Models
 	    public readonly double MaximumIndicatorPosition = 100;
 	    private const double DetailsToIdSwitchover = 20;
 	    private const double IdToCardSwitchover = 40;
-	    private const string IndicatorPostitionSettingsKey = "DocumentSize.IndicatorPosition";
+	    private const string IndicatorPositionSettingsKey = "DocumentSize.IndicatorPosition";
 
 	    public DocumentSize()
         {

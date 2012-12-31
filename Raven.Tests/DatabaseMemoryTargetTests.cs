@@ -74,7 +74,7 @@ namespace Raven.Tests
 		}
 
 		[Fact]
-		public void When_numebr_of_log_events_written_exceed_limit_Then_log_count_should_equal_limit()
+		public void When_number_of_log_events_written_exceed_limit_Then_log_count_should_equal_limit()
 		{
 			for (int i = 0; i < DatabaseMemoryTarget.BoundedMemoryTarget.Limit + 1; i++)
 			{

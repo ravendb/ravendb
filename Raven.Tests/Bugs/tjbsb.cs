@@ -57,7 +57,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void WorkWithTransactionAndNoAllowNonAutoritiveInformation()
+		public void WorkWithTransactionAndNoAllowNonAuthoritiveInformation()
 		{
 			using (var store = new EmbeddableDocumentStore
 			{

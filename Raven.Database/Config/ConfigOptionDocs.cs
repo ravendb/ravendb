@@ -39,7 +39,7 @@ namespace Raven.Database.Config
 
 			// Tenants
 			{"Raven/Tenants/MaxIdleTimeForTenantDatabase", "int", null, "The time in seconds to allow a tenant database to be idle"},
-			{"Raven/Tenants/FrequnecyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
+			{"Raven/Tenants/FrequencyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
 
 			// Storage
 			{"Raven/StorageTypeName", "string", "esent,munin,Fully Qualified Type Name", "The storage engine to use for the database. Default: esent."},

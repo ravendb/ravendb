@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
 
 
 		[Fact]
-		public void CanHandleRefrenceChecking()
+		public void CanHandleReferenceChecking()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{

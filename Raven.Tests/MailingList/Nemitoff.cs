@@ -15,12 +15,12 @@ namespace Raven.Tests.MailingList
 					 session.SaveChanges();
 				 }
 
-				 using(var sesion = store.OpenSession())
+				 using(var session = store.OpenSession())
 				 {
-					 var x = sesion.Load<Item>(1);
+					 var x = session.Load<Item>(1);
 					 Assert.NotNull(x);
-					 sesion.Advanced.Evict(x);
-					 x = sesion.Load<Item>(1);
+					 session.Advanced.Evict(x);
+					 x = session.Load<Item>(1);
 					 Assert.NotNull(x);
 
 				 }

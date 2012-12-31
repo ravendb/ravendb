@@ -37,7 +37,7 @@ namespace Raven.Studio.Models
 		public ICommand PromoteIndex { get { return promoteIndex ?? (promoteIndex = new PromoteToAutoIndexCommand(this)); } }
 		public ICommand DeleteIndex { get { return deleteIndex ?? (deleteIndex = new DeleteIndexCommand(this)); } }
 		public ICommand ResetIndex { get { return resetIndex ?? (resetIndex = new ResetIndexCommand(this)); } }
-		public ICommand DeleteAllIndexes { get { return new DeleteAllIndexsCommand(this); } }
+		public ICommand DeleteAllIndexes { get { return new DeleteAllIndexesCommand(this); } }
 
 		private void UpdateGroupedIndexList(IList<string> indexes)
 		{

@@ -272,7 +272,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				firstTimeFoundNoReplicationDocument = false;
 				log.Warn(
-					"Replication bundle is installed, but there is no destination in 'Raven/Replication/Destinations'.\r\nRepliaction results in NO-OP");
+					"Replication bundle is installed, but there is no destination in 'Raven/Replication/Destinations'.\r\nReplication results in NO-OP");
 			}
 		}
 

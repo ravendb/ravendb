@@ -68,7 +68,7 @@ namespace Raven.Database.Indexing
 
 			var sizeInMegabytes = size / 1024 / 1024;
 
-			// we don't actually *know* what the actual cost of indexing, beause that depends on many factors (how the index
+			// we don't actually *know* what the actual cost of indexing, because that depends on many factors (how the index
 			// is structured, is it analyzed/default/not analyzed, etc). We just assume for now that it takes 25% of the actual
 			// on disk structure per each active index. That should give us a good guesstimate about the value.
 			// Because of the way we are executing indexes, only N are running at once, where N is the parallel level, so we take

@@ -268,24 +268,24 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		{
 			if (!indexDefinition.IsMapReduce)
 				return;
-			VariableInitializer reduceDefiniton;
+			VariableInitializer reduceDefinition;
 			AstNode groupBySource;
-			string groupByParamter;
+			string groupByParameter;
 			string groupByIdentifier;
 			if (indexDefinition.Reduce.Trim().StartsWith("from"))
 			{
-				reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
-				var queryExpression = ((QueryExpression)reduceDefiniton.Initializer);
+				reduceDefinition = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
+				var queryExpression = ((QueryExpression)reduceDefinition.Initializer);
 				var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().First();
 				var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryGroupClause>().First();
 				groupByIdentifier = queryContinuationClause.Identifier;
 				groupBySource = queryGroupClause.Key;
-				groupByParamter = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryFromClause>().First().Identifier;
+				groupByParameter = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryFromClause>().First().Identifier;
 			}
 			else
 			{
-				reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
-				var initialInvocation = ((InvocationExpression)reduceDefiniton.Initializer);
+				reduceDefinition = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
+				var initialInvocation = ((InvocationExpression)reduceDefinition.Initializer);
 				var invocation = initialInvocation;
 				var target = (MemberReferenceExpression)invocation.Target;
 				while (target.MemberName != "GroupBy")
@@ -294,16 +294,16 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 					target = (MemberReferenceExpression)invocation.Target;
 				}
 				var lambdaExpression = GetLambdaExpression(invocation);
-				groupByParamter = lambdaExpression.Parameters.First().Name;
+				groupByParameter = lambdaExpression.Parameters.First().Name;
 				groupBySource = lambdaExpression.Body;
 				groupByIdentifier = null;
 			}
 
 			var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
 			captureSelectNewFieldNamesVisitor.Clear();// reduce override the map fields
-			reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
-			reduceDefiniton.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForReduce, null);
-			reduceDefiniton.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(groupByIdentifier), null);
+			reduceDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+			reduceDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForReduce, null);
+			reduceDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(groupByIdentifier), null);
 
 			ValidateMapReduceFields(mapFields);
 
@@ -319,7 +319,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			                   				{
 			                   					new ParameterDeclaration(null, "results")
 			                   				},
-										Body = reduceDefiniton.Initializer.Clone()
+										Body = reduceDefinition.Initializer.Clone()
 									})));
 
 			ctor.Body.Statements.Add(new ExpressionStatement(
@@ -331,7 +331,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 									{
 										Parameters =
 			                   				{
-			                   					new ParameterDeclaration(null, groupByParamter)
+			                   					new ParameterDeclaration(null, groupByParameter)
 			                   				},
 										Body = groupBySource.Clone()
 									})));

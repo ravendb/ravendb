@@ -31,7 +31,7 @@ namespace Raven.Bundles.Replication.Responders
 				context.SetStatusToNotFound();
 				context.WriteJson(new
 				{
-					Error = "Cannot find replicaiton task setup in the database"
+					Error = "Cannot find replication task setup in the database"
 				});
 				return;
 			}

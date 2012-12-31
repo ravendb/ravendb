@@ -13,7 +13,7 @@ namespace Raven.Tests.Indexes
 	public class IndexWithSubProperty
 	{
 		[Fact]
-		public void IndexWithSubPropertyReturnAs_Property_SubPropery()
+		public void IndexWithSubPropertyReturnAs_Property_SubProperty()
 		{
 			using (var store = new DocumentStore
 			{

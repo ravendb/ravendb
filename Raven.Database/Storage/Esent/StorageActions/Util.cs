@@ -123,7 +123,7 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				catch (EsentKeyDuplicateException)
 				{
-					// someone else might ahvehave created this record in a separate thread
+					// someone else might have created this record in a separate thread
 					// that is fine from our point of view
 				}
 			}
