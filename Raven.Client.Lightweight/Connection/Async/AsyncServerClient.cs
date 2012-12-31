@@ -650,20 +650,20 @@ namespace Raven.Client.Connection.Async
 				.ContinueWith(task => convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(task.Result)));
 		}
 
-		public Task<LicensingStatus> GetLicenseStatus()
+		public async Task<LicensingStatus> GetLicenseStatus()
 		{
 			var actualUrl = string.Format("{0}/license/status", url).NoCache();
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => new LicensingStatus
-				{
-					Error = task.Result.Value<bool>("Error"),
-					Message = task.Result.Value<string>("Message"),
-					Status = task.Result.Value<string>("Status"),
-				});
+			var result = await request.ReadResponseJsonAsync();
+			return new LicensingStatus
+			{
+				Error = result.Value<bool>("Error"),
+				Message = result.Value<string>("Message"),
+				Status = result.Value<string>("Status"),
+			};
 		}
 
 		public async Task<BuildNumber> GetBuildNumber()
