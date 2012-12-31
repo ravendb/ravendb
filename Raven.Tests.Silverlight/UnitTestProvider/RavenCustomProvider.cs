@@ -13,7 +13,7 @@ namespace Raven.Tests.Silverlight.UnitTestProvider
 
 	public class RavenCustomProvider : IUnitTestProvider
 	{
-		const UnitTestProviderCapabilities MyCapabilities =
+		private const UnitTestProviderCapabilities MyCapabilities =
 			UnitTestProviderCapabilities.AssemblySupportsCleanupMethod |
 			UnitTestProviderCapabilities.AssemblySupportsInitializeMethod |
 			UnitTestProviderCapabilities.ClassCanIgnore |

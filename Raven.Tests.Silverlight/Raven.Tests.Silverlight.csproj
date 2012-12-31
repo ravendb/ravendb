@@ -88,9 +88,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\Testing\Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="Raven.Tests.Silverlight.UnitTestProvider">
-      <HintPath>..\Utilities\Binaries\Raven.Tests.Silverlight.UnitTestProvider.dll</HintPath>
-    </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.ComponentModel.Composition.dll</HintPath>
@@ -151,6 +148,16 @@
     <Compile Include="Entities\TheCompanyName.cs" />
     <Compile Include="SerializationHelperTests.cs" />
     <Compile Include="Statistics.cs" />
+    <Compile Include="UnitTestProvider\AsynchronousTaskTest.cs" />
+    <Compile Include="UnitTestProvider\ExpectedException.cs" />
+    <Compile Include="UnitTestProvider\Priority.cs" />
+    <Compile Include="UnitTestProvider\ProviderAttributes.cs" />
+    <Compile Include="UnitTestProvider\RavenCustomProvider.cs" />
+    <Compile Include="UnitTestProvider\TestClass.cs" />
+    <Compile Include="UnitTestProvider\TestMethod.cs" />
+    <Compile Include="UnitTestProvider\TestProperty.cs" />
+    <Compile Include="UnitTestProvider\UnitTestContext.cs" />
+    <Compile Include="UnitTestProvider\UnitTestFrameworkAssembly.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">

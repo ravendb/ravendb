@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Silverlight.Testing;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Silverlight.UnitTestProvider
 {
@@ -10,7 +11,7 @@ namespace Raven.Tests.Silverlight.UnitTestProvider
 	{
 		protected Task Delay(int milliseconds)
 		{
-			return TaskEx.Delay(TimeSpan.FromMilliseconds(milliseconds));
+			return Time.Delay(TimeSpan.FromMilliseconds(milliseconds));
 		}
 
 		internal void ExecuteTest(MethodInfo test)
