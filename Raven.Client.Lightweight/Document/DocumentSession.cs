@@ -649,7 +649,7 @@ namespace Raven.Client.Document
 			{
 				if (DatabaseCommands is ServerClient) // server mode
 				{
-					var requests = pendingLazyOperations.Select(x => x.CraeteRequest()).ToArray();
+					var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
 					var responses = DatabaseCommands.MultiGet(requests);
 					for (int i = 0; i < pendingLazyOperations.Count; i++)
 					{

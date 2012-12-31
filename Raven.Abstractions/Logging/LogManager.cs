@@ -29,7 +29,7 @@ namespace Raven.Abstractions.Logging
 		private static ILogManager currentLogManager;
 		public static ILogManager CurrentLogManager
 		{
-			get { return currentLogManager ?? (currentLogManager = ResolveExtenalLogManager()); }
+			get { return currentLogManager ?? (currentLogManager = ResolveExternalLogManager()); }
 			set { currentLogManager = value; }
 		}
 
@@ -49,7 +49,7 @@ namespace Raven.Abstractions.Logging
 			return new LoggerExecutionWrapper(log, name, targets.ToArray());
 		}
 
-		private static ILogManager ResolveExtenalLogManager()
+		private static ILogManager ResolveExternalLogManager()
 		{
 			if (NLogLogManager.IsLoggerAvailable())
 			{

@@ -18,7 +18,7 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
 		public Log4NetLogManagerLoggingEnabledTests()
 		{
-			Log4NetLogManager.ProviderIsAvailabileOverride = true;
+			Log4NetLogManager.ProviderIsAvailableOverride = true;
 			memoryAppender = new MemoryAppender();
 			BasicConfigurator.Configure(memoryAppender);
 			log4NetLogManager = new Log4NetLogManager();

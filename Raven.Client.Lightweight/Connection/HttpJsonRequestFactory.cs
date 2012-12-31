@@ -34,11 +34,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Invoke the LogRequest event
 		/// </summary>
-		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequentResult)
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequestResult)
 		{
 			var handler = LogRequest;
 			if (handler != null) 
-				handler(sender, generateRequentResult());
+				handler(sender, generateRequestResult());
 		}
 
 		private readonly int maxNumberOfCachedRequests;
@@ -153,9 +153,9 @@ namespace Raven.Client.Connection
 		/// 
 		/// Enable using basic authentication using http
 		/// By default, RavenDB only allows basic authentication over HTTPS, setting this property to true
-		/// will instruct RavenDB to make unsecure calls (usually only good for testing / internal networks).
+		/// will instruct RavenDB to make unsecured calls (usually only good for testing / internal networks).
 		/// </summary>
-		public bool EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
+		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
 
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 
@@ -225,7 +225,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDisposable DisableAllCaching()
 		{
-			var oldAgressiveCaching = AggressiveCacheDuration;
+			var oldAggressiveCaching = AggressiveCacheDuration;
 			var oldHttpCaching = DisableHttpCaching;
 
 			AggressiveCacheDuration = null;
@@ -233,7 +233,7 @@ namespace Raven.Client.Connection
 
 			return new DisposableAction(() =>
 			{
-				AggressiveCacheDuration = oldAgressiveCaching;
+				AggressiveCacheDuration = oldAggressiveCaching;
 				DisableHttpCaching = oldHttpCaching;
 			});
 		}

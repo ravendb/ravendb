@@ -144,11 +144,11 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private void SetPropertyOrField(Type propertyOrFieldType, object entity, Action<object> setIdenitifer, string id)
+		private void SetPropertyOrField(Type propertyOrFieldType, object entity, Action<object> setIdentifier, string id)
 		{
 			if (propertyOrFieldType == typeof(string))
 			{
-				setIdenitifer(id);
+				setIdentifier(id);
 			}
 			else // need converting
 			{
@@ -158,7 +158,7 @@ namespace Raven.Client.Document
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
 												" because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				setIdenitifer(converter.ConvertTo(documentStore.Conventions.FindIdValuePartForValueTypeConversion(entity, id)));
+				setIdentifier(converter.ConvertTo(documentStore.Conventions.FindIdValuePartForValueTypeConversion(entity, id)));
 			}
 		}
 	}

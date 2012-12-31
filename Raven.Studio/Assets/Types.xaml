@@ -44,7 +44,7 @@
 	<Converters:CollectionCountToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedWhenNonEmpty"/>
 	<Converters:StringToDefaultOperatorConverter x:Key="StringToDefaultOperator"/>
     <Converters:NegatingBoolConverter x:Key="NegatingBool"/>
-    <Converters:EnumToVisibilityConverter x:Key="VisibleWhenNotificationLevelIsError" ValuesWhenVisibile="Error" Type="Messages:NotificationLevel"/>
+    <Converters:EnumToVisibilityConverter x:Key="VisibleWhenNotificationLevelIsError" ValuesWhenVisible="Error" Type="Messages:NotificationLevel"/>
     <Converters:TrimmedStringConverter x:Key="TrimmedString"/>
     <Converters:StringToSingleLineConverter x:Key="StringToSingleLine"/>
 	<Models:DocumentSize x:Key="DocumentSize" />

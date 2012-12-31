@@ -58,7 +58,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// The entities waiting to be deleted
 		/// </summary>
-		protected readonly HashSet<object> deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparerer<object>.Default);
+		protected readonly HashSet<object> deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
 
 		/// <summary>
 		/// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 		/// hold the data required to manage the data for RavenDB's Unit of Work
 		/// </summary>
 		protected readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata =
-			new Dictionary<object, DocumentMetadata>(ObjectReferenceEqualityComparerer<object>.Default);
+			new Dictionary<object, DocumentMetadata>(ObjectReferenceEqualityComparer<object>.Default);
 
 		/// <summary>
 		/// Translate between a key and its associated entity

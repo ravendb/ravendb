@@ -104,7 +104,7 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> CanGetDeleteADcoumentById()
+		public IEnumerable<Task> CanGetDeleteADocumentById()
 		{
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())

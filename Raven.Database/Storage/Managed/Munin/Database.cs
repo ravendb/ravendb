@@ -41,7 +41,7 @@ namespace Raven.Munin
 
 		const int version = 1;
 
-		public void Initialze()
+		public void Initialize()
 		{
 			persistentSource.Write(log =>
 			{

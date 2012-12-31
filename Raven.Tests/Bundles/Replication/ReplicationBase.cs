@@ -254,7 +254,7 @@ namespace Raven.Tests.Bundles.Replication
 			return document;
 		}
 
-		protected Attachment WaitForAttachement(IDocumentStore store2, string expectedId)
+		protected Attachment WaitForAttachment(IDocumentStore store2, string expectedId)
 		{
 			Attachment attachment = null;
 

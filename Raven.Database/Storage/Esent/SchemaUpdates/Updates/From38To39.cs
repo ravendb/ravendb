@@ -20,6 +20,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 		{
 			using(var tasks = new Table(session, dbid, "tasks",OpenTableGrbit.None))
 			{
+				// NOTE: the typo in the following string must stay because that's how the original index was named.
 				Api.JetDeleteIndex(session, tasks, "mergables_by_task_type");
 
 				Api.JetDeleteColumn(session, tasks, "supports_merging");

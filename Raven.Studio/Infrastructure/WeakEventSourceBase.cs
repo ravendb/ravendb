@@ -80,7 +80,7 @@ namespace Raven.Studio.Infrastructure
 			// do some implementation checks when a debugger is attached
 			if (Debugger.IsAttached)
 			{
-				// search in each type separately unitl we reach the type WeakEventSourceBase 
+				// search in each type separately until we reach the type WeakEventSourceBase 
 				//(because Reflection can not return private members in FlattenHierarchy.
 				Type type = this.GetType();
 				while ((!type.IsGenericType || type.GetGenericTypeDefinition() != typeof (WeakEventSourceBase<>)) && type != typeof (object))
@@ -104,7 +104,7 @@ namespace Raven.Studio.Infrastructure
 					var query = queryFields.Union(queryProperties);
 
 					// The EventWrapper is intended to be used as a weak-event-wrapper. One should not add additional 
-					// members to this class, because of the possibilty to store the WeakEventListener reference to a member.
+					// members to this class, because of the possibility to store the WeakEventListener reference to a member.
 					// Is this the case the memory leak can still occur. 
 					// Therefore, if any field or property is implemented, throw an exception as warning.
 					if (query.Count() > 0)

@@ -147,7 +147,7 @@ namespace Raven.Abstractions.Json
 			var currentRankLength = rankLengthList[currentRank];
 			for (var i = 0; i < currentRankLength; i++)
 			{
-				// Assign currentIndex to the list of assignMentIndexes
+				// Assign currentIndex to the list of assignmentIndexes
 				myAssignToIndexList[myAssignToIndex] = i;
 
 				// If more ranks are found, process them

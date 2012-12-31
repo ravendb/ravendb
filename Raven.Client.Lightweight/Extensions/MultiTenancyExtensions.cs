@@ -15,7 +15,7 @@ namespace Raven.Client.Extensions
 	using System.Threading.Tasks;
 
 	///<summary>
-	/// Extension methods to create mutli tenants databases
+	/// Extension methods to create multitenant databases
 	///</summary>
 	public static class MultiTenancyExtensions
 	{

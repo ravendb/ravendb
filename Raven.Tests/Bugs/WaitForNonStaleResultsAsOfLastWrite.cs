@@ -52,7 +52,7 @@ namespace Raven.Tests.Bugs
 
 
 		[Fact]
-		public void CanExpclitlyAskForNonStaleAsOfLastWrite()
+		public void CanExplicitlyAskForNonStaleAsOfLastWrite()
 		{
 			using(var store = NewDocumentStore())
 			{

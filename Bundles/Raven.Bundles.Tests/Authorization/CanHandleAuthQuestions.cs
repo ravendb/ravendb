@@ -221,7 +221,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Tags = { "Fortune 500", "Technology/Application Sofware" }
+								Tags = { "Fortune 500", "Technology/Application Software" }
 							}
 						}
 				});

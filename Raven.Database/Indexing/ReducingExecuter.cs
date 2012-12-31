@@ -195,7 +195,7 @@ namespace Raven.Database.Indexing
 			var result = new ReduceResultStats();
 			var needToMoveToSingleStep = new HashSet<string>();
 
-			Log.Debug(() => string.Format("Executing single step reduciong for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
+			Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
 			transactionalStorage.Batch(actions =>
 			{
 				var scheduledItems = actions.MapReduce.GetItemsToReduce

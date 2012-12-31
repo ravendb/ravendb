@@ -326,7 +326,7 @@
 					<TextBlock Text="Sort By"
 							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 					<ItemsControl ItemsSource="{Binding SortBy}"
-								  Style="{StaticResource Style_ItemsControl_QuerySortyBy}">
+								  Style="{StaticResource Style_ItemsControl_QuerySortBy}">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<StackPanel Orientation="Horizontal"

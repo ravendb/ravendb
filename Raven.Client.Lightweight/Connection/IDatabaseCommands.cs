@@ -194,7 +194,7 @@ namespace Raven.Client.Connection
 		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite);
 
 		/// <summary>
-		/// Queries the specified index in the Raven flavoured Lucene query syntax
+		/// Queries the specified index in the Raven flavored Lucene query syntax
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>

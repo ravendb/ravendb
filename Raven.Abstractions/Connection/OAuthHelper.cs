@@ -43,7 +43,7 @@ namespace Raven.Abstractions.Connection
 			return BytesToString(hash);
 		}
 
-		public static string EncryptAssymetric(byte[] exponent, byte[] modulus, string data)
+		public static string EncryptAsymmetric(byte[] exponent, byte[] modulus, string data)
 		{
 			var bytes = Encoding.UTF8.GetBytes(data);
 			var results = new List<byte>();

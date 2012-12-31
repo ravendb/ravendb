@@ -267,7 +267,7 @@ namespace Raven.Database.Data
 		{
 			foreach (var dynamicSortInfo in sortDescriptors)
 			{
-				dynamicSortInfo.Field = ReplaceIndavlidCharactersForFields(dynamicSortInfo.Field);
+				dynamicSortInfo.Field = ReplaceInvalidCharactersForFields(dynamicSortInfo.Field);
 			}
 		}
 
@@ -294,7 +294,7 @@ namespace Raven.Database.Data
 				Items = fields.Select(x => new DynamicQueryMappingItem
 				{
 					From = x.Item1,
-					To = ReplaceIndavlidCharactersForFields(x.Item2),
+					To = ReplaceInvalidCharactersForFields(x.Item2),
 					QueryFrom = x.Item2
 				}).OrderByDescending(x => x.QueryFrom.Length).ToArray();
 				if (GroupByItems != null && DynamicAggregation)
@@ -308,7 +308,7 @@ namespace Raven.Database.Data
 			}
 		}
 
-		public static string ReplaceIndavlidCharactersForFields(string field)
+		public static string ReplaceInvalidCharactersForFields(string field)
 		{
 			return replaceInvalidCharacterForFields.Replace(field, "_");
 		}

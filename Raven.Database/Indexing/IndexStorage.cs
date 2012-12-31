@@ -116,7 +116,7 @@ namespace Raven.Database.Indexing
 				{
 					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
-					LoadExistingSuggesionsExtentions(indexName, indexImplementation);
+					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
 						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
@@ -157,7 +157,7 @@ namespace Raven.Database.Indexing
 			indexes.TryAdd(indexName, indexImplementation);
 		}
 
-		private void LoadExistingSuggesionsExtentions(string indexName, Index indexImplementation)
+		private void LoadExistingSuggestionsExtentions(string indexName, Index indexImplementation)
 		{
 			var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
 			if (!Directory.Exists(suggestionsForIndex))
@@ -417,7 +417,7 @@ namespace Raven.Database.Indexing
 			}
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
-			if (query.Query != null && query.Query.Contains(Constants.IntersectSeperator))
+			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery();
 			return indexQueryOperation.Query();
 		}

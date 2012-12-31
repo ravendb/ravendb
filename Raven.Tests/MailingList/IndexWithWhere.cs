@@ -38,7 +38,7 @@ namespace Raven.Tests.MailingList
 		}
 		
 		[Fact]
-		public void CanCreateIndeX()
+		public void CanCreateIndex()
 		{
 			using(var store = NewDocumentStore())
 			{
@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void CanCreateIndeX2()
+		public void CanCreateIndex2()
 		{
 			using (var store = NewDocumentStore())
 			{

@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs
 	public class UsingStartsWith : RavenTest
 	{
 		[Fact]
-		public void DefaultIndexingBehaviourAllowStartsWith()
+		public void DefaultIndexingBehaviorAllowStartsWith()
 		{
 			using (var store = this.NewDocumentStore())
 			{

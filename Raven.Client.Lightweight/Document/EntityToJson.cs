@@ -64,7 +64,7 @@ namespace Raven.Client.Document
 			if (jsonSerializer.TypeNameHandling == TypeNameHandling.Auto)// remove the default types
 			{
 				var resolveContract = jsonSerializer.ContractResolver.ResolveContract(entity.GetType());
-				TrySimplfyingJson(jObject, resolveContract);
+				TrySimplifyingJson(jObject, resolveContract);
 			}
 
 			if (CachedJsonDocs != null)
@@ -100,11 +100,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDisposable EntitiesToJsonCachingScope()
 		{
-			CachedJsonDocs = new Dictionary<object, RavenJObject>(ObjectReferenceEqualityComparerer<object>.Default);
+			CachedJsonDocs = new Dictionary<object, RavenJObject>(ObjectReferenceEqualityComparer<object>.Default);
 			return new DisposableAction(() => CachedJsonDocs = null);
 		}
 
-		private static void TrySimplfyingJson(RavenJObject jObject, JsonContract contract)
+		private static void TrySimplifyingJson(RavenJObject jObject, JsonContract contract)
 		{
 			var objectContract = contract as JsonObjectContract;
 			if (objectContract == null)
@@ -122,7 +122,7 @@ namespace Raven.Client.Document
 
 				var jsonProperty = objectContract.Properties.GetClosestMatchProperty(prop.Key);
 
-				if (ShouldSimplfyJsonBasedOnType(obj.Value<string>("$type"), jsonProperty) == false)
+				if (ShouldSimplifyJsonBasedOnType(obj.Value<string>("$type"), jsonProperty) == false)
 					continue;
 
 				if (obj.ContainsKey("$values") == false)
@@ -148,17 +148,17 @@ namespace Raven.Client.Document
 						{
 							var ravenJObject = item as RavenJObject;
 							if (ravenJObject != null)
-								TrySimplfyingJson(ravenJObject, contract);
+								TrySimplifyingJson(ravenJObject, contract);
 						}
 						break;
 					case JTokenType.Object:
-						TrySimplfyingJson((RavenJObject)prop.Value, contract);
+						TrySimplifyingJson((RavenJObject)prop.Value, contract);
 						break;
 				}
 			}
 		}
 
-		private static bool ShouldSimplfyJsonBasedOnType(string typeValue, JsonProperty jsonProperty)
+		private static bool ShouldSimplifyJsonBasedOnType(string typeValue, JsonProperty jsonProperty)
 		{
 			if (jsonProperty != null && (jsonProperty.TypeNameHandling == TypeNameHandling.All || jsonProperty.TypeNameHandling == TypeNameHandling.Arrays))
 				return false; // explicitly rejected what we are trying to do here

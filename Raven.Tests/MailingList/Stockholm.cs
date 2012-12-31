@@ -60,7 +60,7 @@ namespace Raven.Tests.MailingList
 						Name = "RavenDB",
 						Content = new string('*', 10),
 						Date = DateTime.Today,
-						Instructor = "instrucctors/1",
+						Instructor = "instructors/1",
 						Location = "Stockholm",
 						Technologies = new[] { "dotNet", "RavenDB" }
 					};

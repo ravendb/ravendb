@@ -6,7 +6,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 {
 	public class Log4NetLogManager : LogManagerBase
 	{
-		private static bool providerIsAvailabileOverride = true;
+		private static bool providerIsAvailableOverride = true;
 		private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerTypeStatic, true);
 
 		public Log4NetLogManager()
@@ -18,15 +18,15 @@ namespace Raven.Abstractions.Logging.LogProviders
 			}
 		}
 
-		public static bool ProviderIsAvailabileOverride
+		public static bool ProviderIsAvailableOverride
 		{
-			get { return providerIsAvailabileOverride; }
-			set { providerIsAvailabileOverride = value; }
+			get { return providerIsAvailableOverride; }
+			set { providerIsAvailableOverride = value; }
 		}
 
 		public static bool IsLoggerAvailable()
 		{
-			return ProviderIsAvailabileOverride && LazyGetLogManagerType.Value != null;
+			return ProviderIsAvailableOverride && LazyGetLogManagerType.Value != null;
 		}
 
 		protected override Type GetLogManagerType()

@@ -69,7 +69,7 @@ namespace Raven.Studio.Commands
                                          }
                                          else if (!t.IsCanceled)
                                          {
-                                             ApplicationModel.Current.AddInfoNotification("Report Exported Succesfully");
+                                             ApplicationModel.Current.AddInfoNotification("Report Exported Successfully");
                                          }
                                      });
 

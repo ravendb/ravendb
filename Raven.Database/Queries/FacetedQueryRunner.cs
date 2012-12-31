@@ -80,12 +80,12 @@ namespace Raven.Database.Queries
 				HighValue = trimmedHigh.Substring(0, trimmedHigh.Length - 1)
 			};
 
-			if (RangeQueryParser.NumerciRangeValue.IsMatch(parsedRange.LowValue))
+			if (RangeQueryParser.NumericRangeValue.IsMatch(parsedRange.LowValue))
 			{
 				parsedRange.LowValue = NumericStringToSortableNumeric(parsedRange.LowValue);
 			}
 
-			if (RangeQueryParser.NumerciRangeValue.IsMatch(parsedRange.HighValue))
+			if (RangeQueryParser.NumericRangeValue.IsMatch(parsedRange.HighValue))
 			{
 				parsedRange.HighValue = NumericStringToSortableNumeric(parsedRange.HighValue);
 			}
@@ -121,7 +121,7 @@ namespace Raven.Database.Queries
 				return NumericUtils.DoubleToPrefixCoded((double)number);
 			}
 
-			throw new ArgumentException("Uknown type for " + number.GetType() + " which started as " + value);
+			throw new ArgumentException("Unknown type for " + number.GetType() + " which started as " + value);
 		}
 
 		private static bool IsInclusive(char ch)

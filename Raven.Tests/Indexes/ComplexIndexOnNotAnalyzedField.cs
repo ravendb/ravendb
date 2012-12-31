@@ -35,7 +35,7 @@ namespace Raven.Tests.Indexes
 		public void CanQueryOnKey()
 		{
 			db.Put("companies/", null,
-			       RavenJObject.Parse("{'Name':'Hiberanting Rhinos', 'Partners': ['companies/49', 'companies/50']}"), 
+			       RavenJObject.Parse("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}"), 
 				   RavenJObject.Parse("{'Raven-Entity-Name': 'Companies'}"),
 			       null);
 
@@ -55,7 +55,7 @@ namespace Raven.Tests.Indexes
 				});
 			} while (queryResult.IsStale);
 
-			Assert.Equal("Hiberanting Rhinos", queryResult.Results[0].Value<string>("Name"));
+			Assert.Equal("Hibernating Rhinos", queryResult.Results[0].Value<string>("Name"));
 		}
 	}
 }

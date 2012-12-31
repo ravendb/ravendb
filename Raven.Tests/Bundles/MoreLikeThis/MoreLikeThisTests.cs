@@ -353,7 +353,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				var list = new List<Data>
 				{
 					new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-					new Data {Body = "I should not hit this documet. I hope"},
+					new Data {Body = "I should not hit this document. I hope"},
 					new Data {Body = "Cake is great."},
 					new Data {Body = "This document has the word test only once"},
 					new Data {Body = "test"},

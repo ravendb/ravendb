@@ -19,7 +19,7 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
 		public NLogLogProviderLoggingEnabledTests()
 		{
-			NLogLogManager.ProviderIsAvailabileOverride = true;
+			NLogLogManager.ProviderIsAvailableOverride = true;
 			var config = new LoggingConfiguration();
 
 			simpleLayoutTarget = new MemoryTarget

@@ -235,7 +235,7 @@ namespace Raven.Tests.Patching
 		}
 		
 		[Fact]
-		public void PropertyAddition_WithConcurrenty_MissingProp()
+		public void PropertyAddition_WithConcurrently_MissingProp()
 		{
 			var patchedDoc = new JsonPatcher(doc).Apply(
 			   new[]
@@ -254,7 +254,7 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
-		public void PropertyAddition_WithConcurrenty_NullValueOnMissingPropShouldThrow()
+		public void PropertyAddition_WithConcurrently_NullValueOnMissingPropShouldThrow()
 		{
 			Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
 			   new[]
@@ -270,7 +270,7 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
-		public void PropertyAddition_WithConcurrenty_BadValueOnMissingPropShouldThrow()
+		public void PropertyAddition_WithConcurrently_BadValueOnMissingPropShouldThrow()
 		{
 			Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
 				new[]
@@ -286,7 +286,7 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
-		public void PropertyAddition_WithConcurrenty_ExistingValueOn_Ok()
+		public void PropertyAddition_WithConcurrently_ExistingValueOn_Ok()
 		{
 			RavenJObject apply = new JsonPatcher(doc).Apply(
 				new[]
@@ -295,12 +295,12 @@ namespace Raven.Tests.Patching
 					{
 						Type = PatchCommandType.Set,
 						Name = "body",
-						Value = new RavenJValue("differnt markup"),
+						Value = new RavenJValue("different markup"),
 						PrevVal = new RavenJValue("html markup")
 					},
 				});
 
-			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""differnt markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}", apply.ToString(Formatting.None));
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""different markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}", apply.ToString(Formatting.None));
 		}
 
 

@@ -9,7 +9,7 @@ namespace Raven.Tests.MailingList
 	public class MultiMapIndexWithDynamicFieldsTests : RavenTest
 	{
 		[Fact]
-		public void CanSortDynamicaly()
+		public void CanSortDynamically()
 		{
 			using (var store = NewDocumentStore())
 			{

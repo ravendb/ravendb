@@ -71,7 +71,7 @@ namespace Raven.Studio.Models
 			// already gives the user a clear warning about the dangers of sending passwords in the clear. I think that 
 			// this is sufficient warning and we don't require an additional step, so we can disable this check safely.
 			documentStore.JsonRequestFactory.
-				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
+				EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				true;
 
 			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
@@ -85,7 +85,7 @@ namespace Raven.Studio.Models
 			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 
 			DisplayBuildNumber();
-			DisplyaLicenseStatus();
+			DisplayLicenseStatus();
 		    TimerTickedAsync();
 		}
 
@@ -219,7 +219,7 @@ namespace Raven.Studio.Models
 				.Catch();
 		}
 
-		private void DisplyaLicenseStatus()
+		private void DisplayLicenseStatus()
 		{
 			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatusAsync()
 				.ContinueOnSuccessInTheUIThread(x =>

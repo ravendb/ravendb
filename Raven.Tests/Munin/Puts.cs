@@ -50,7 +50,7 @@ namespace Raven.Munin.Tests
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
 			Table.ReadResult data = null;
-			SupressTx(() => data = Table.Read(RavenJToken.FromObject("123")));
+			SuppressTx(() => data = Table.Read(RavenJToken.FromObject("123")));
 			Assert.Null(data);
 		}
 

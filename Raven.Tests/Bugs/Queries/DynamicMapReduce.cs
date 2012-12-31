@@ -66,7 +66,7 @@ namespace Raven.Tests.Bugs.Queries
 		}
 
 		[Fact]
-		public void CanGroupByCollectionProperty_Dymamic()
+		public void CanGroupByCollectionProperty_Dynamic()
 		{
 			using (var store = NewDocumentStore())
 			{

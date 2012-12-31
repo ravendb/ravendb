@@ -99,7 +99,7 @@ namespace Raven.Tests.Transactions
 
 
 		[Fact]
-		public void SeveralUdpatesInTheSameTransaction()
+		public void SeveralUpdatesInTheSameTransaction()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
 			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };

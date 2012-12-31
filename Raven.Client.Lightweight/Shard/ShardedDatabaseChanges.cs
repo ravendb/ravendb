@@ -24,7 +24,7 @@ namespace Raven.Client.Shard
 		}
 
 		public bool Connected { get; private set; }
-		public event EventHandler ConnectionStatusCahnged = delegate {};
+		public event EventHandler ConnectionStatusChanged = delegate {};
 		public Task Task { get; private set; }
 
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)

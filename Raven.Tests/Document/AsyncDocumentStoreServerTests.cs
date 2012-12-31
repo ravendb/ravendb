@@ -18,11 +18,11 @@ using Xunit;
 
 namespace Raven.Tests.Document
 {
-    public class AysncEmbeddedDocumentStoreServerTests : AsyncDocumentStoreServerTests
+    public class AsyncEmbeddedDocumentStoreServerTests : AsyncDocumentStoreServerTests
     {
         private readonly RavenTest ravenTest;
 
-        public AysncEmbeddedDocumentStoreServerTests()
+        public AsyncEmbeddedDocumentStoreServerTests()
         {
             ravenTest = new RavenTest();
             DocumentStore = ravenTest.NewDocumentStore().Initialize();
@@ -35,12 +35,12 @@ namespace Raven.Tests.Document
         }
     }
 
-    public class AysncRemoteDocumentStoreServerTests : AsyncDocumentStoreServerTests
+    public class AsyncRemoteDocumentStoreServerTests : AsyncDocumentStoreServerTests
     {
         private readonly string path;
         private readonly RemoteClientTest ravenTest;
 
-        public AysncRemoteDocumentStoreServerTests()
+        public AsyncRemoteDocumentStoreServerTests()
         {
             ravenTest = new RemoteClientTest();
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);

@@ -113,10 +113,10 @@ namespace Raven.Database.Queries
 						result.Includes.Add(includedDoc);
 					}, include ?? new string[0], loadedIds);
 
-					foreach (var jsonDocumet in jsonDocuments)
+					foreach (var jsonDocument in jsonDocuments)
 					{
-						result.Results.Add(jsonDocumet.ToJson());
-						addIncludesCommand.Execute(jsonDocumet.DataAsJson);
+						result.Results.Add(jsonDocument.ToJson());
+						addIncludesCommand.Execute(jsonDocument.DataAsJson);
 					}
 
 					Guid computedEtag;

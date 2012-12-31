@@ -100,13 +100,13 @@ namespace Raven.Database.Indexing
 			return shape;
 		}
 
-		private static readonly Regex CirlceShape =
+		private static readonly Regex CircleShape =
 			new Regex(@"Circle \s* \( \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ d=([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* \)",
 					  RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled | RegexOptions.IgnoreCase);
 		
 		private static string TranslateCircleFromKmToRadians(string shapeWKT)
 		{
-			var match = CirlceShape.Match(shapeWKT);
+			var match = CircleShape.Match(shapeWKT);
 			if(match.Success == false)
 				return shapeWKT;
 

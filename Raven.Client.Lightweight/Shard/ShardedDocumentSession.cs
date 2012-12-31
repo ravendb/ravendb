@@ -74,7 +74,7 @@ namespace Raven.Client.Shard
 
 		protected override Task<string> GenerateKeyAsync(object entity)
 		{
-			throw new NotSupportedException("Cannot generate key asyncronously using syncronous session");
+			throw new NotSupportedException("Cannot generate key asynchronously using synchronous session");
 		}
 
 		#region Properties to access different interfacess
@@ -454,13 +454,13 @@ namespace Raven.Client.Shard
 				foreach (var operationPerShard in operationsPerShardGroup)
 				{
 					var lazyOperations = operationPerShard.Select(x => x.Item1).ToArray();
-					var requests = lazyOperations.Select(x => x.CraeteRequest()).ToArray();
+					var requests = lazyOperations.Select(x => x.CreateRequest()).ToArray();
 					var multiResponses = shardStrategy.ShardAccessStrategy.Apply(operationPerShard.Key, new ShardRequestData(),
 					                                                             (commands, i) => commands.MultiGet(requests));
 
 					var sb = new StringBuilder();
-					foreach (var response in from shardReponses in multiResponses
-					                         from getResponse in shardReponses
+					foreach (var response in from shardResponses in multiResponses
+					                         from getResponse in shardResponses
 					                         where getResponse.RequestHasErrors()
 					                         select getResponse)
 						sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.Status, Environment.NewLine,

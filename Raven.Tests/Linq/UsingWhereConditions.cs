@@ -178,7 +178,7 @@ namespace Raven.Tests.Linq
 			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/FirstTest/test.txt", Repository = Repo, Revision = 3, Date = SystemTime.UtcNow, CommitMessage = "Third commit" });
 			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/test/SecondTest/", Repository = Repo, Revision = 4, Date = SystemTime.UtcNow, CommitMessage = "Fourth commit" });
 			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/", Repository = Repo, Revision = 5, Date = SystemTime.UtcNow, CommitMessage = "Fifth commit" });
-			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/test/SecondTest/test.txt", Repository = Repo, Revision = 6, Date = SystemTime.UtcNow, CommitMessage = "Sixt commit" });
+			documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/test/SecondTest/test.txt", Repository = Repo, Revision = 6, Date = SystemTime.UtcNow, CommitMessage = "Sixth commit" });
 			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/SecondTest/test1.txt", Repository = Repo, Revision = 7, Date = SystemTime.UtcNow, CommitMessage = "Seventh commit" });
 			documentSession.SaveChanges();
 		}

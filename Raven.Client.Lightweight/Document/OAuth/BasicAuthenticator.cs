@@ -76,7 +76,7 @@ namespace Raven.Client.Document.OAuth
 				SetHeader(authRequest.Headers, "Api-Key", apiKey);
 
 			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
-			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
+			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
 			return authRequest;
 		}
@@ -86,7 +86,7 @@ Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.
 You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTokenServer' configuration value), or setup your own behavior by providing a value for:
 	documentStore.Conventions.HandleUnauthorizedResponse
 If you are on an internal network or requires this for testing, you can disable this warning by calling:
-	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
+	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
 ";
 	}
 }

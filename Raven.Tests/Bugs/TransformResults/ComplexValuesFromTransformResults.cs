@@ -392,7 +392,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		}
 
 		[Fact]
-		public void will_work_normally_when_querying_multip_times()
+		public void will_work_normally_when_querying_multiple_times()
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
