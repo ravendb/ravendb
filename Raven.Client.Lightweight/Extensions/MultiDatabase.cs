@@ -8,7 +8,7 @@ using Raven.Json.Linq;
 namespace Raven.Client.Extensions
 {
 	///<summary>
-	/// Methods to create mutli tenants databases
+	/// Methods to create multitenant databases
 	///</summary>
 	internal static class MultiDatabase
 	{

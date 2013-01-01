@@ -10,7 +10,7 @@ namespace Raven.Tests.Bundles.Replication
 	class StoreIndex : ReplicationBase
 	{
 		[Fact]
-		public void When_storeing_index_replicate_to_all_stores()
+		public void When_storing_index_replicate_to_all_stores()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -26,7 +26,7 @@ namespace Raven.Tests.Bundles.Replication
 		}
 
 		[Fact]
-		public void When_storeing_index_replicate_to_all_stores_async()
+		public void When_storing_index_replicate_to_all_stores_async()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();

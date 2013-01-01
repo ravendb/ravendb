@@ -1266,7 +1266,7 @@
 		<Setter Property="BorderBrush" Value="#FFE9E9E9"/>
 	</Style>
 	
-	<Style x:Name="Style_ItemsControl_QuerySortyBy"
+	<Style x:Name="Style_ItemsControl_QuerySortBy"
 		   TargetType="ItemsControl">
 		<Setter Property="ItemsPanel"
 				Value="{StaticResource FluidWrapPanel}" />
@@ -2608,7 +2608,7 @@
 		</Setter>
 	</Style>
 
-    <Style x:Key="Style_ListBoxItem_Autorization" TargetType="ListBoxItem">
+    <Style x:Key="Style_ListBoxItem_Authorization" TargetType="ListBoxItem">
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Padding" Value="10"/>

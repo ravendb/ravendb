@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 		}
 
 		[Fact]
-		public void SimplePropertiesWithNamedArugment()
+		public void SimplePropertiesWithNamedArgument()
 		{
 			var qp = Translate("from doc in docs select new { N2 = doc.Name }");
 

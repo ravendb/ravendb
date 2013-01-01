@@ -85,7 +85,7 @@ namespace Raven.Database.Server.Abstractions
 			set { internalUser = value; }
 		}
 
-		public void FinalizeResonse()
+		public void FinalizeResponse()
 		{
 			try
 			{

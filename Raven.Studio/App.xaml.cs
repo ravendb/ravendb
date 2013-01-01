@@ -38,9 +38,9 @@ namespace Raven.Studio
 
 		private void HandleExit(object sender, EventArgs e)
 		{
-			foreach (var databaseChangese in ApplicationModel.ChangesToDispose)
+			foreach (var databaseChanges in ApplicationModel.ChangesToDispose)
 			{
-				var toDispose = databaseChangese as IDisposable;
+				var toDispose = databaseChanges as IDisposable;
 				if(toDispose != null)
 					toDispose.Dispose();
 			}

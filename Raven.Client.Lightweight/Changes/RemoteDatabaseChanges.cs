@@ -73,7 +73,7 @@ namespace Raven.Client.Changes
 									{
 										logger.WarnException("Could not connect to server, will retry", task.Exception);
 										Connected = false;
-										ConnectionStatusCahnged(this, EventArgs.Empty);
+										ConnectionStatusChanged(this, EventArgs.Empty);
 										
 										if (disposed)
 											return task;
@@ -93,7 +93,7 @@ namespace Raven.Client.Changes
 									}
 
 									Connected = true;
-									ConnectionStatusCahnged(this, EventArgs.Empty);
+									ConnectionStatusChanged(this, EventArgs.Empty);
 									connection = (IDisposable)task.Result;
 									task.Result.Subscribe(this);
 
@@ -114,7 +114,7 @@ namespace Raven.Client.Changes
 		}
 
 		public bool Connected { get; private set; }
-		public event EventHandler ConnectionStatusCahnged = delegate { }; 
+		public event EventHandler ConnectionStatusChanged = delegate { }; 
 		public Task Task { get; private set; }
 
 		private Task AfterConnection(Func<Task> action)

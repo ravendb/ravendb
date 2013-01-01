@@ -107,7 +107,7 @@
             </toolkit:HeaderedContentControl.Header>
             <ListBox  Style="{StaticResource Databases_FluidList}"
                       ItemsSource="{Binding VersioningConfigurations}"
-                      SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
+                      SelectedItem="{Binding SelectedVersioning, Mode=TwoWay}"
                       ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
                       ItemTemplate="{StaticResource VersioningItemTemplate}"
                       ScrollViewer.VerticalScrollBarVisibility="Auto">

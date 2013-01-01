@@ -25,7 +25,7 @@ namespace Raven.Database.Json
 			return DateTools.DateToString(self, DateTools.Resolution.MINUTE);
 		}
 
-		public static string Secoonds(this DateTime self)
+		public static string Seconds(this DateTime self)
 		{
 			return DateTools.DateToString(self, DateTools.Resolution.SECOND);
 		}

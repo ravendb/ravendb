@@ -18,13 +18,13 @@ namespace Raven.Studio.Features.Documents
 
         }
 
-        public static IEnumerable<string> GetMetadataFromDocuments(IEnumerable<JsonDocument> jsonDocuments, bool includeNestedPropeties)
+        public static IEnumerable<string> GetMetadataFromDocuments(IEnumerable<JsonDocument> jsonDocuments, bool includeNestedProperties)
         {
             return
                 jsonDocuments.SelectMany(
                     doc =>
                     GetPropertiesFromJObject(doc.Metadata, parentPropertyPath: "",
-                                             includeNestedProperties: includeNestedPropeties));
+                                             includeNestedProperties: includeNestedProperties));
 
         }
 

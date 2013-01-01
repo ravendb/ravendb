@@ -36,7 +36,7 @@ namespace Raven.Client.Shard
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			throw new NotSupportedException("This method requires a syncronous call to the server, which is not supported by the async session");
+			throw new NotSupportedException("This method requires a synchronous call to the server, which is not supported by the async session");
 		}
 
 		#region Properties to access different interfacess
@@ -332,7 +332,7 @@ namespace Raven.Client.Shard
 
 		protected override string GenerateKey(object entity)
 		{
-			throw new NotSupportedException("Cannot generated key syncronously in an async session");
+			throw new NotSupportedException("Cannot generated key synchronously in an async session");
 		}
 
 		protected override void RememberEntityForDocumentKeyGeneration(object entity)

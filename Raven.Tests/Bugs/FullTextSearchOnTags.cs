@@ -391,7 +391,7 @@ namespace Raven.Tests.Bugs
 						.ToList();
 
 					var query = session.Query<Image>("test")
-						.Search(x => x.Tags, "anmal lover")
+						.Search(x => x.Tags, "animal lover")
 						.Suggest();
 					Assert.NotEmpty(query.Suggestions);
 					Assert.Equal("animal", query.Suggestions[0]);

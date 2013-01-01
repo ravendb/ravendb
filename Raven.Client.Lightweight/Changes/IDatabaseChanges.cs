@@ -8,7 +8,7 @@ namespace Raven.Client.Changes
 	public interface IDatabaseChanges
 	{
 		bool Connected { get; }
-		event EventHandler ConnectionStatusCahnged;
+		event EventHandler ConnectionStatusChanged;
 
 		Task Task { get; }
 		IObservableWithTask<IndexChangeNotification> ForIndex(string indexName);

@@ -113,7 +113,7 @@ namespace Raven.Munin
 				switch (command.Type)
 				{
 					case CommandType.Put:
-						AddInteral(command.Key, new PositionInFile
+						AddInternal(command.Key, new PositionInFile
 						{
 							Position = command.Position,
 							Size = command.Size,
@@ -209,8 +209,8 @@ namespace Raven.Munin
 		{
 			byte[] readData = null;
 
-			Guid mofiedByTx;
-			if (keysModifiedInTx.TryGetValue(key, out mofiedByTx) && mofiedByTx == txId)
+			Guid modifiedByTx;
+			if (keysModifiedInTx.TryGetValue(key, out modifiedByTx) && modifiedByTx == txId)
 			{
 				Command command = operationsInTransactions.GetOrAdd(txId, new List<Command>()).LastOrDefault(
 					x => comparer.Equals(x.Key, key));
@@ -347,7 +347,7 @@ namespace Raven.Munin
 			return true;
 		}
 
-		private void AddInteral(RavenJToken key, PositionInFile position)
+		private void AddInternal(RavenJToken key, PositionInFile position)
 		{
 			var ravenJObject = key as RavenJObject;
 			if (ravenJObject != null)

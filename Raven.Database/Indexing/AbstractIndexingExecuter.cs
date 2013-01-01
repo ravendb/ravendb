@@ -24,7 +24,7 @@ namespace Raven.Database.Indexing
 
 		protected AbstractIndexingExecuter(WorkContext context)
 		{
-			this.transactionalStorage = context.TransactionaStorage;
+			this.transactionalStorage = context.TransactionalStorage;
 			this.context = context;
 			this.scheduler = context.TaskScheduler;
 		}
@@ -77,7 +77,7 @@ namespace Raven.Database.Indexing
 					}
 					catch (OperationCanceledException)
 					{
-						Log.Info("Got rude cancelation of indexing as a result of shutdown, aborting current indexing run");
+						Log.Info("Got rude cancellation of indexing as a result of shutdown, aborting current indexing run");
 						return;
 					}
 					catch (Exception e)

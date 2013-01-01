@@ -30,7 +30,7 @@ namespace Raven.Tests.Queries
 		}
 
 		[Fact]
-		public void CanPeformIntersectionQuery_Embedded()
+		public void CanPerformIntersectionQuery_Embedded()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -51,9 +51,9 @@ namespace Raven.Tests.Queries
 						.OrderBy(x=>x.BarcodeNumber)
 						.Where(x => x.Name == "Wolf")
 						.Intersect()
-						.Where(x => x.Types.Any(t => t.Colour == "Blue" && t.Size == "Small"))
+						.Where(x => x.Types.Any(t => t.Color == "Blue" && t.Size == "Small"))
 						.Intersect()
-						.Where(x => x.Types.Any(t => t.Colour == "Gray" && t.Size == "Large"))
+						.Where(x => x.Types.Any(t => t.Color == "Gray" && t.Size == "Large"))
 						.ToList();
 
 					Assert.Equal(6, shirts.Count);
@@ -71,7 +71,7 @@ namespace Raven.Tests.Queries
 			{
 				//This should be BarCodeNumber = -999, 10001
 				var resultPage1 = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
-					.Where("Name:Wolf INTERSECT Types_Colour:Blue AND Types_Size:Small INTERSECT Types_Colour:Gray AND Types_Size:Large")
+					.Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Take(2)
 					.ToList();
@@ -79,14 +79,14 @@ namespace Raven.Tests.Queries
 				Assert.True(resultPage1.All(x => x.Name == "Wolf"));
 				foreach (var result in resultPage1)
 				{
-					Assert.True(result.Types.Any(x => x.Colour == "Gray" && x.Size == "Large"));
-					Assert.True(result.Types.Any(x => x.Colour == "Blue" && x.Size == "Small"));
+					Assert.True(result.Types.Any(x => x.Color == "Gray" && x.Size == "Large"));
+					Assert.True(result.Types.Any(x => x.Color == "Blue" && x.Size == "Small"));
 				}
 				Assert.Equal(new[] { -999, 10001 }, resultPage1.Select(r => r.BarcodeNumber));
 
 				//This should be BarCodeNumber = 10001, 10002 (i.e. it spans pages 1 & 2)
 				var resultPage1a = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
-					.Where("Name:Wolf INTERSECT Types_Colour:Blue AND Types_Size:Small INTERSECT Types_Colour:Gray AND Types_Size:Large")
+					.Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Skip(1)
 					.Take(2)
@@ -95,14 +95,14 @@ namespace Raven.Tests.Queries
 				Assert.True(resultPage1a.All(x => x.Name == "Wolf"));
 				foreach (var result in resultPage1a)
 				{
-					Assert.True(result.Types.Any(x => x.Colour == "Gray" && x.Size == "Large"));
-					Assert.True(result.Types.Any(x => x.Colour == "Blue" && x.Size == "Small"));
+					Assert.True(result.Types.Any(x => x.Color == "Gray" && x.Size == "Large"));
+					Assert.True(result.Types.Any(x => x.Color == "Blue" && x.Size == "Small"));
 				}
 				Assert.Equal(new[] { 10001, 10002 }, resultPage1a.Select(r => r.BarcodeNumber));
 
 				//This should be BarCodeNumber = 10002, 10003, 10004, 10006 (But NOT 10005
 				var resultPage2 = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
-					.Where("Name:Wolf INTERSECT Types_Colour:Blue AND Types_Size:Small INTERSECT Types_Colour:Gray AND Types_Size:Large")
+					.Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Skip(2)
 					.Take(10) //we should only get 4 here, want to test a page size larger than what is possible!!!!!
@@ -111,8 +111,8 @@ namespace Raven.Tests.Queries
 				Assert.True(resultPage2.All(x => x.Name == "Wolf"));
 				foreach (var result in resultPage2)
 				{
-					Assert.True(result.Types.Any(x => x.Colour == "Gray" && x.Size == "Large"));
-					Assert.True(result.Types.Any(x => x.Colour == "Blue" && x.Size == "Small"));
+					Assert.True(result.Types.Any(x => x.Color == "Gray" && x.Size == "Large"));
+					Assert.True(result.Types.Any(x => x.Color == "Blue" && x.Size == "Small"));
 				}
 				Assert.Equal(new[] { 10002, 10003, 10004, 10006 }, resultPage2.Select(r => r.BarcodeNumber));
 			}
@@ -128,7 +128,7 @@ namespace Raven.Tests.Queries
 				                                	Map =
 				                                	@"from s in docs.TShirts
 															from t in s.Types
-															select new { s.Name, Types_Colour = t.Colour, Types_Size = t.Size, s.BarcodeNumber }",
+															select new { s.Name, Types_Color = t.Color, Types_Size = t.Size, s.BarcodeNumber }",
 				                                	SortOptions =
 				                                	new Dictionary<String, SortOptions> {{"BarcodeNumber", SortOptions.Int}}
 				                                });
@@ -151,10 +151,10 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = 10001,
 				Types = new List<TShirtType>
 					{
-						new TShirtType { Colour = "Blue",  Size = "Small" },
-						new TShirtType { Colour = "Black", Size = "Small" },
-						new TShirtType { Colour = "Black", Size = "Medium" },
-						new TShirtType { Colour = "Gray",  Size = "Large" }
+						new TShirtType { Color = "Blue",  Size = "Small" },
+						new TShirtType { Color = "Black", Size = "Small" },
+						new TShirtType { Color = "Black", Size = "Medium" },
+						new TShirtType { Color = "Gray",  Size = "Large" }
 					}
 			};
 			var tShirt2 = new TShirt
@@ -163,9 +163,9 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = 1,
 				Types = new List<TShirtType>
 								{
-									new TShirtType { Colour = "Blue",  Size = "Small" },                                    
-									new TShirtType { Colour = "Black", Size = "Large" },
-									new TShirtType { Colour = "Gray",  Size = "Medium" }
+									new TShirtType { Color = "Blue",  Size = "Small" },                                    
+									new TShirtType { Color = "Black", Size = "Large" },
+									new TShirtType { Color = "Gray",  Size = "Medium" }
 								}
 			};
 			var tShirt3 = new TShirt
@@ -174,8 +174,8 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = 99999,
 				Types = new List<TShirtType>
 								{
-									new TShirtType { Colour = "Blue",  Size = "Small" },
-									new TShirtType { Colour = "Gray",  Size = "Medium" }
+									new TShirtType { Color = "Blue",  Size = "Small" },
+									new TShirtType { Color = "Gray",  Size = "Medium" }
 								}
 			};
 			var tShirt4 = new TShirt
@@ -184,10 +184,10 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = -999,
 				Types = new List<TShirtType>
 					{
-						new TShirtType { Colour = "Blue",  Size = "Small" },
-						new TShirtType { Colour = "Black", Size = "Small" },
-						new TShirtType { Colour = "Black", Size = "Medium" },
-						new TShirtType { Colour = "Gray",  Size = "Large" }
+						new TShirtType { Color = "Blue",  Size = "Small" },
+						new TShirtType { Color = "Black", Size = "Small" },
+						new TShirtType { Color = "Black", Size = "Medium" },
+						new TShirtType { Color = "Gray",  Size = "Large" }
 					}
 			};
 			var tShirt5 = new TShirt
@@ -196,8 +196,8 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = 10002,
 				Types = new List<TShirtType>
 								{
-									new TShirtType { Colour = "Blue",  Size = "Small" },
-									new TShirtType { Colour = "Gray",  Size = "Large" }
+									new TShirtType { Color = "Blue",  Size = "Small" },
+									new TShirtType { Color = "Gray",  Size = "Large" }
 								}
 			};
 			var tShirt6 = new TShirt
@@ -206,8 +206,8 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = 10003,
 				Types = new List<TShirtType>
 								{
-									new TShirtType { Colour = "Blue",  Size = "Small" },
-									new TShirtType { Colour = "Gray",  Size = "Large" }
+									new TShirtType { Color = "Blue",  Size = "Small" },
+									new TShirtType { Color = "Gray",  Size = "Large" }
 								}
 			};
 			var tShirt7 = new TShirt
@@ -216,8 +216,8 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = 10004,
 				Types = new List<TShirtType>
 								{
-									new TShirtType { Colour = "Blue",  Size = "Small" },
-									new TShirtType { Colour = "Gray",  Size = "Large" }
+									new TShirtType { Color = "Blue",  Size = "Small" },
+									new TShirtType { Color = "Gray",  Size = "Large" }
 								}
 			};
 
@@ -227,8 +227,8 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = 10005,
 				Types = new List<TShirtType> //Doesn't MAtch SUB-QUERIES
 								{
-									new TShirtType { Colour = "Blue",  Size = "Small" },
-									new TShirtType { Colour = "Gray",  Size = "Medium" }
+									new TShirtType { Color = "Blue",  Size = "Small" },
+									new TShirtType { Color = "Gray",  Size = "Medium" }
 								}
 			};
 
@@ -238,8 +238,8 @@ namespace Raven.Tests.Queries
 				BarcodeNumber = 10006,
 				Types = new List<TShirtType>
 								{
-									new TShirtType { Colour = "Blue",  Size = "Small" },
-									new TShirtType { Colour = "Gray",  Size = "Large" }
+									new TShirtType { Color = "Blue",  Size = "Small" },
+									new TShirtType { Color = "Gray",  Size = "Large" }
 								}
 			};
 
@@ -264,12 +264,12 @@ namespace Raven.Tests.Queries
 
 		public class TShirtType
 		{
-			public String Colour { get; set; }
+			public String Color { get; set; }
 			public String Size { get; set; }
 
 			public override string ToString()
 			{
-				return String.Format("{{{0}, {1}}}", Colour, Size);
+				return String.Format("{{{0}, {1}}}", Color, Size);
 			}
 		}
 	}

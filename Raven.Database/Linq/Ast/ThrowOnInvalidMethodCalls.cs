@@ -55,7 +55,7 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			if (SimplifyLetExpression(queryLetClause.Expression) is LambdaExpression)
 			{
 				var text = QueryParsingUtils.ToText(queryLetClause);
-				throw new SecurityException("Let expression cannot contain labmda expressions, but got: " + text);
+				throw new SecurityException("Let expression cannot contain lambda expressions, but got: " + text);
 			}
 
 			return base.VisitQueryLetClause(queryLetClause, data);

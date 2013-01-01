@@ -22,8 +22,8 @@ namespace Raven.Studio.Models
             AuthorizationUsers = new ObservableCollection<AuthorizationUser>();
         }
 
-        public AuthorizationRole SeletedRole { get; set; }
-        public AuthorizationUser SeletedUser { get; set; }
+        public AuthorizationRole SelectedRole { get; set; }
+        public AuthorizationUser SelectedUser { get; set; }
 		public string NewRoleForUser { get; set; }
 		public string SelectedRoleInUser { get; set; }
         public string SearchUsers { get; set; }
@@ -55,7 +55,7 @@ namespace Raven.Studio.Models
 				return addPermissionToUserCommand ??
 				       (addPermissionToUserCommand = new ActionCommand(() =>
 				       {
-					       SeletedUser.Permissions.Add(new OperationPermission());
+					       SelectedUser.Permissions.Add(new OperationPermission());
 						   AuthorizationUsers = new ObservableCollection<AuthorizationUser>(AuthorizationUsers);
 						   OnPropertyChanged(() => AuthorizationUsers);
 				       }));
@@ -78,7 +78,7 @@ namespace Raven.Studio.Models
 				return addPermissionToRoleCommand ??
 					   (addPermissionToRoleCommand = new ActionCommand(() =>
 					   {
-						   SeletedRole.Permissions.Add(new OperationPermission());
+						   SelectedRole.Permissions.Add(new OperationPermission());
 						   AuthorizationRoles = new ObservableCollection<AuthorizationRole>(AuthorizationRoles);
 						   OnPropertyChanged(() => AuthorizationRoles);
 					   }));
@@ -137,7 +137,7 @@ namespace Raven.Studio.Models
 				{
 					if (string.IsNullOrWhiteSpace(NewRoleForUser))
 						return;
-					SeletedUser.Roles.Add(NewRoleForUser);
+					SelectedUser.Roles.Add(NewRoleForUser);
 					NewRoleForUser = "";
 					AuthorizationUsers = new ObservableCollection<AuthorizationUser>(AuthorizationUsers);
 					OnPropertyChanged(() => AuthorizationUsers);
@@ -169,7 +169,7 @@ namespace Raven.Studio.Models
 			var role = parameter as string;
 			if (role == null)
 				return;
-			SeletedUser.Roles.Remove(role);
+			SelectedUser.Roles.Remove(role);
 			AuthorizationUsers = new ObservableCollection<AuthorizationUser>(AuthorizationUsers);
 			OnPropertyChanged(() => AuthorizationUsers);
 		}
@@ -180,7 +180,7 @@ namespace Raven.Studio.Models
 			if(permission == null)
 				return;
 
-			SeletedUser.Permissions.Remove(permission);
+			SelectedUser.Permissions.Remove(permission);
 			AuthorizationUsers = new ObservableCollection<AuthorizationUser>(AuthorizationUsers);
 			OnPropertyChanged(() => AuthorizationUsers);
 		}
@@ -191,7 +191,7 @@ namespace Raven.Studio.Models
 			if (permission == null)
 				return;
 
-			SeletedRole.Permissions.Remove(permission);
+			SelectedRole.Permissions.Remove(permission);
 			AuthorizationRoles = new ObservableCollection<AuthorizationRole>(AuthorizationRoles);
 			OnPropertyChanged(() => AuthorizationRoles);
 		}
@@ -202,7 +202,7 @@ namespace Raven.Studio.Models
 			if (role == null)
 				return;
 			AuthorizationRoles.Remove(role);
-			SeletedRole = null;
+			SelectedRole = null;
 		}
 
 		private void HandleDeleteAuthorizationUser(object parameter)
@@ -211,7 +211,7 @@ namespace Raven.Studio.Models
 			if (user == null)
 				return;
 			AuthorizationUsers.Remove(user);
-			SeletedUser = null;
+			SelectedUser = null;
 		}
 
         public override void LoadFor(DatabaseDocument databaseDocument)

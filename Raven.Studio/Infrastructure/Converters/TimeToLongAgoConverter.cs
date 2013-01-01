@@ -32,7 +32,7 @@ namespace Raven.Studio.Infrastructure.Converters
 				if (timeAgo.TotalSeconds >= 1)
 					return string.Format("{0:#,#} seconds ago", timeAgo.TotalSeconds);
 
-				return string.Format("{0:#,#} milli-seconds ago", timeAgo.TotalMilliseconds);
+				return string.Format("{0:#,#} milliseconds ago", timeAgo.TotalMilliseconds);
 			}
 			return null;
 

@@ -72,7 +72,7 @@ namespace Raven.Database.Server.Abstractions
 			response.Close();
 		}
 
-		public void SetPublicCachability()
+		public void SetPublicCacheability()
 		{
 			response.Cache.SetCacheability(HttpCacheability.Public);
 		}

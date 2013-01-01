@@ -82,7 +82,7 @@ namespace Raven.Database.Server.Abstractions
 			return this.GetRequestUrl();
 		}
 
-		public void FinalizeResonse()
+		public void FinalizeResponse()
 		{
 			
 		}

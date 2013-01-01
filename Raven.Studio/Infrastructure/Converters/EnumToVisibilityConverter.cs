@@ -8,19 +8,19 @@ namespace Raven.Studio.Infrastructure.Converters
 {
     public class EnumToVisibilityConverter : IValueConverter
     {
-        private string valuesWhenVisibile;
+        private string valuesWhenVisible;
         private string valuesWhenCollapsed;
 
         public Type Type { get; set; }
         private object[] parsedVisibleValues;
         private object[] parsedCollapsedValues;
         
-        public string ValuesWhenVisibile
+        public string ValuesWhenVisible
         {
-            get { return valuesWhenVisibile ?? string.Empty; }
+            get { return valuesWhenVisible ?? string.Empty; }
             set
             {
-                valuesWhenVisibile = value;
+                valuesWhenVisible = value;
                 parsedVisibleValues = null;
             }
         }
@@ -49,7 +49,7 @@ namespace Raven.Studio.Infrastructure.Converters
         {
             if (parsedVisibleValues == null)
             {
-                var enumValues = ParseEnumValues(ValuesWhenVisibile);
+                var enumValues = ParseEnumValues(ValuesWhenVisible);
 
                 parsedVisibleValues = enumValues;
             }

@@ -82,7 +82,7 @@ namespace Raven.Client.Indexes
 			}
 			else
 			{
-				Out("UnamedLabel_" + GetLabelId(target));
+				Out("UnnamedLabel_" + GetLabelId(target));
 			}
 		}
 
@@ -224,7 +224,7 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
-				// only translate from the root type or deriatives
+				// only translate from the root type or derivatives
 				(queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
 				// only translate from the root alias
 				(queryRootName == null || (

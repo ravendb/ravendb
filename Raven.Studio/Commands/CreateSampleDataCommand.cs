@@ -69,7 +69,7 @@ namespace Raven.Studio.Commands
 		{
 			var commands = database.Value.AsyncDatabaseCommands;
 
-			output("Createing Sample Data, Please wait...");
+			output("Creating Sample Data, Please wait...");
 
 			// this code assumes a small enough dataset, and doesn't do any sort
 			// of paging or batching whatsoever.

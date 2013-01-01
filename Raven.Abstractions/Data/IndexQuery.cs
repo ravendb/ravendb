@@ -82,15 +82,15 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <remarks>
 		/// Cutoff etag is used to check if the index has already process a document with the given
-		/// etag. Unlike Cutoff, which uses dates and is susceptible to clock syncronization issues between
-		/// machines, cutoff etag doesn't rely on both the server and client having a syncronized clock and 
+		/// etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between
+		/// machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and 
 		/// can work without it.
 		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this
 		/// etag belong to is actually considered for the results. 
 		/// What it does it guarantee that the document has been mapped, but not that the mapped values has been reduce. 
 		/// Since map/reduce queries, by their nature,tend to be far less susceptible to issues with staleness, this is 
 		/// considered to be an acceptable tradeoff.
-		/// If you need absolute no staleness with a map/reduce index, you will need to ensure syncronized clocks and 
+		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
 		/// use the Cutoff date option, instead.
 		/// </remarks>
 		public Guid? CutoffEtag { get; set; }
@@ -104,7 +104,7 @@ namespace Raven.Abstractions.Data
 		/// Changes the default operator mode we use for queries.
 		/// When set to Or a query such as 'Name:John Age:18' will be interpreted as:
 		///  Name:John OR Age:18
-		/// When set to And the queyr will be interpreted as:
+		/// When set to And the query will be interpreted as:
 		///	 Name:John AND Age:18
 		/// </summary>
 		public QueryOperator DefaultOperator { get; set; }

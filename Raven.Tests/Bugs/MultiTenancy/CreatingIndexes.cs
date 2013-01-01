@@ -33,7 +33,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 
 
 		[Fact]
-		public void Mulitenancy_Test()
+		public void Multitenancy_Test()
 		{
 			using (GetNewServer(8079))
 			using (var store = new DocumentStore
@@ -50,16 +50,16 @@ namespace Raven.Tests.Bugs.MultiTenancy
 																	select new {movie.Name}
 												});
 
-				using (var sess = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					sess.Store(new Test {Name = "xxx"});
+					session.Store(new Test {Name = "xxx"});
 
-					sess.SaveChanges();
+					session.SaveChanges();
 				}
 
-				using (var sess = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					var result = sess.Query<Test>("TestIndex")
+					var result = session.Query<Test>("TestIndex")
 						.Customize(x=>x.WaitForNonStaleResults())
 						.Where(x => x.Name == "xxx")
 						.FirstOrDefault();

@@ -57,11 +57,11 @@ namespace Raven.Studio.Models
 
 		static EditableDocumentModel()
 		{
-			InitialiseOutliningModes();
+			InitializeOutliningModes();
 			JsonLanguage = new JsonSyntaxLanguageExtended();
 		}
 
-		private static void InitialiseOutliningModes()
+		private static void InitializeOutliningModes()
 		{
 			OutliningModes = (new List<DocumentOutliningMode>()
 			                  {
@@ -109,7 +109,7 @@ namespace Raven.Studio.Models
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
 			documentIdManager = JsonDataDocument.Properties.GetOrCreateSingleton(() => new DocumentReferencedIdManager());
 
-			InitialiseDocument();
+			InitializeDocument();
 
 			ParentPathSegments = new ObservableCollection<PathSegment>()
 			                     {
@@ -155,7 +155,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private void InitialiseDocument()
+		private void InitializeDocument()
 		{
 			document.Value = new JsonDocument
 			                 {
@@ -272,7 +272,7 @@ namespace Raven.Studio.Models
 			if (url.GetQueryParam("mode") == "new")
 			{
 				Mode = DocumentMode.New;
-				InitialiseDocument();
+				InitializeDocument();
 				Navigator = null;
 				CurrentIndex = 0;
 				TotalItems = 0;
@@ -333,13 +333,13 @@ namespace Raven.Studio.Models
 				})
 			         .Catch(exception =>
 			         {
-				         var conflictExeption = exception.GetBaseException() as ConflictException;
+				         var conflictException = exception.GetBaseException() as ConflictException;
 
-				         if (conflictExeption != null)
+				         if (conflictException != null)
 				         {
 					         ApplicationModel.Current.Server.Value.SelectedDatabase.Value
 					                         .AsyncDatabaseCommands
-					                         .GetAsync(conflictExeption.ConflictedVersionIds, null)
+					                         .GetAsync(conflictException.ConflictedVersionIds, null)
 					                         .ContinueOnSuccessInTheUIThread(doc =>
 					                         {
 						                         var docs = new List<RavenJObject>();
@@ -359,7 +359,7 @@ namespace Raven.Studio.Models
 						                         Key = url.GetQueryParam("id");
 						                         DocumentKey = Key;
 						                         OnPropertyChanged(() => DisplayId);
-						                         Etag = conflictExeption.Etag;
+						                         Etag = conflictException.Etag;
 
 						                         ResolvingConflict = true;
 
@@ -678,10 +678,10 @@ namespace Raven.Studio.Models
 
 		private void UpdateReferences()
 		{
-			if (Seperator == null)
+			if (Separator == null)
 				return;
 
-			// Note: if this proves to be too slow with large documents, we can potential optimise the finding 
+			// Note: if this proves to be too slow with large documents, we can potential optimize the finding 
 			// of references by only considering the parts of the AST which occur after the Offset at which the text change began
 			// (we can find this by getting hold of the TextSnapshotChangedEventArgs)
 			var potentialReferences = FindPotentialReferences(JsonDataDocument).ToList();
@@ -735,28 +735,28 @@ namespace Raven.Studio.Models
 				return false;
 			}
 
-			var pattern = "\\w" + Seperator + "\\w";
+			var pattern = "\\w" + Separator + "\\w";
 			return Regex.IsMatch(value, pattern);
 		}
 
 		private void UpdateRelated()
 		{
-			if (string.IsNullOrEmpty(Key) || string.IsNullOrEmpty(Seperator))
+			if (string.IsNullOrEmpty(Key) || string.IsNullOrEmpty(Separator))
 				return;
 
-			var childrenTask = DatabaseCommands.StartsWithAsync(Key + Seperator, 0, 15)
+			var childrenTask = DatabaseCommands.StartsWithAsync(Key + Separator, 0, 15)
 			                                   .ContinueOnSuccess(items => items == null ? new string[0] : items.Select(i => i.Key));
 
 			// find parent Ids
 			var parentids = new List<string>();
 			var id = Key;
-			var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+			var lastindex = id.LastIndexOf(Separator, StringComparison.Ordinal);
 
 			while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
 			{
 				id = id.Remove(lastindex);
 				parentids.Add(id);
-				lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+				lastindex = id.LastIndexOf(Separator, StringComparison.Ordinal);
 			}
 
 			var parentsTask = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null, metadataOnly: true)
@@ -875,7 +875,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public string Seperator
+		public string Separator
 		{
 			get
 			{
@@ -1077,7 +1077,7 @@ namespace Raven.Studio.Models
 		{
 			private readonly EditableDocumentModel parentModel;
 
-			public string Seperator
+			public string Separator
 			{
 				get
 				{
@@ -1161,9 +1161,9 @@ namespace Raven.Studio.Models
 				{
 					doc = RavenJObject.Parse(parentModel.JsonData);
 					metadata = RavenJObject.Parse(parentModel.JsonMetadata);
-					if (parentModel.Key != null && Seperator != null && metadata.Value<string>(Constants.RavenEntityName) == null)
+					if (parentModel.Key != null && Separator != null && metadata.Value<string>(Constants.RavenEntityName) == null)
 					{
-						var entityName = parentModel.Key.Split(new[] { Seperator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+						var entityName = parentModel.Key.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
 
 						if (entityName != null && entityName.Length > 1)
 						{

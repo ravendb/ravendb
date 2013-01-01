@@ -61,7 +61,7 @@ namespace Raven.Tests.Bundles.Expiration
 		public void Can_add_entity_with_expiry_then_read_it_before_it_expires()
 		{
 			var company = new Company {Name = "Company Name"};
-			var expiry = DateTimeOffset.UtcNow.AddMinutes(5);
+			var expiry = DateTime.UtcNow.AddMinutes(5);
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -74,9 +74,9 @@ namespace Raven.Tests.Bundles.Expiration
 				var company2 = session.Load<Company>(company.Id);
 				Assert.NotNull(company2);
 				var metadata = session.Advanced.GetMetadataFor(company2);
-				var expirationDate = metadata.Value<DateTimeOffset>("Raven-Expiration-Date");
-				Assert.Equal(TimeSpan.Zero, expirationDate. Offset);
-				Assert.Equal(expiry.ToString(), expirationDate.ToString());
+				var expirationDate = metadata.Value<DateTime>("Raven-Expiration-Date");
+				Assert.Equal(DateTimeKind.Utc, expirationDate.Kind);
+				Assert.Equal(expiry, expirationDate);
 			}
 		}
 

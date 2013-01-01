@@ -19,7 +19,7 @@
 		/// The request was served from the local cache without
 		/// checking with the server and may be out of date
 		/// </summary>
-		AggresivelyCached,
+		AggressivelyCached,
 		/// <summary>
 		/// The server returned an error
 		/// </summary>

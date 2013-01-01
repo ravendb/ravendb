@@ -29,8 +29,8 @@
 			<TextBlock Text="You can use the auto generated key or enter one of you own" Margin="5" Grid.Row="1" Grid.ColumnSpan="2"/>
 			<TextBlock Text="Save this key in a safe place: if you lose this key you could lose access to your data!" Margin="5" Grid.Row="2" Grid.ColumnSpan="2" TextWrapping="Wrap" FontWeight="Bold"/>
 
-			<TextBlock Margin="5" Grid.Row="3" Text="Encryption Algorithem: "/>
-			<ComboBox Margin="5" Grid.Row="3" Grid.Column="1" SelectedIndex="0" x:Name="EncryptionAlgorithem">
+			<TextBlock Margin="5" Grid.Row="3" Text="Encryption Algorithm: "/>
+			<ComboBox Margin="5" Grid.Row="3" Grid.Column="1" SelectedIndex="0" x:Name="EncryptionAlgorithm">
 				<ComboBoxItem Content="DESC"/>
 				<ComboBoxItem Content="RC2C"/>
 				<ComboBoxItem Content="Rijndael"/>

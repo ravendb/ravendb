@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs
 			public decimal Orangeness { get; set; }
 		}
 
-		public class Potatoe : IVegetable
+		public class Potato : IVegetable
 		{
 			public decimal Mushiness { get; set; }
 		}
@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
 					{
 						SideDishes = new List<IVegetable>
 			            {
-			                new Potatoe{ Mushiness = 1.43m},
+			                new Potato{ Mushiness = 1.43m},
 			                new Carrot{Orangeness = 23.3m},
 			            }
 					});
@@ -57,7 +57,7 @@ namespace Raven.Tests.Bugs
 				{
 					var recipe = session.Load<Recipe>("recipes/1");
 
-					Assert.IsType<Potatoe>(recipe.SideDishes[0]);
+					Assert.IsType<Potato>(recipe.SideDishes[0]);
 					Assert.IsType<Carrot>(recipe.SideDishes[1]);
 				}
 			}

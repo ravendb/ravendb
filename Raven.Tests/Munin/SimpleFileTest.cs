@@ -35,11 +35,11 @@ namespace Raven.Munin.Tests
 			PersistentSource = new FileBasedPersistentSource(tempPath, "test", writeThrough: true);
 			database = new Database(PersistentSource);
 			Table = database.Add(new Table("Test"));
-			database.Initialze();
+			database.Initialize();
 			database.BeginTransaction();
 		}
 
-		protected void SupressTx(Action action)
+		protected void SuppressTx(Action action)
 		{
 			using (database.SuppressTransaction())
 				action();

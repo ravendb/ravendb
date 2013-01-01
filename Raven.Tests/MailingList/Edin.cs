@@ -21,7 +21,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void CanUseMultiDimentionalArray_Int()
+		public void CanUseMultiDimensionalArray_Int()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -44,7 +44,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void CanUseMultiDimentionalArray_Double()
+		public void CanUseMultiDimensionalArray_Double()
 		{
 			using (var store = NewDocumentStore())
 			{

@@ -9,7 +9,7 @@ namespace Raven.Client.Document.Batches
 {
 	public interface ILazyOperation
 	{
-		GetRequest CraeteRequest();
+		GetRequest CreateRequest();
 		object Result { get;  }
 		bool RequiresRetry { get; }
 		void HandleResponse(GetResponse response);

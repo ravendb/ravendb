@@ -69,7 +69,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 		}
 
 		/* 
-		 * Can't use OperationVetoedException here for some reason I don't understad 
+		 * Can't use OperationVetoedException here for some reason I don't understand 
 		 * The code won't compile.
 		 * 
 		[Fact]

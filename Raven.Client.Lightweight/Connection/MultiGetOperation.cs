@@ -77,7 +77,7 @@ namespace Raven.Client.Connection
 					DurationMilliseconds = httpJsonRequest.CalculateDuration(),
 					Method = httpJsonRequest.webRequest.Method,
 					HttpResult = 0,
-					Status = RequestStatus.AggresivelyCached,
+					Status = RequestStatus.AggressivelyCached,
 					Result = "",
 					Url = httpJsonRequest.webRequest.RequestUri.AbsolutePath + "?" + httpJsonRequest.webRequest.RequestUri.Query,
 					//TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
@@ -98,7 +98,7 @@ namespace Raven.Client.Connection
 				{
 					hasCachedRequests = true;
 
-					requestStatuses[i] = responses[i] == null ? RequestStatus.AggresivelyCached : RequestStatus.Cached;
+					requestStatuses[i] = responses[i] == null ? RequestStatus.AggressivelyCached : RequestStatus.Cached;
 					responses[i] = responses[i] ?? new GetResponse { Status = 0 };
 
 					foreach (string header in cachedData[i].Headers)

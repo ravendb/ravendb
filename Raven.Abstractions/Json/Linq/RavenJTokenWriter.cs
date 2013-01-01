@@ -45,7 +45,7 @@ namespace Raven.Json.Linq
 			base.WritePropertyName(name);
 
 			if (_tempPropName != null)
-				throw new JsonWriterException("Was not expecting a propery name here");
+				throw new JsonWriterException("Was not expecting a property name here");
 
 			_tempPropName = name;
 		}

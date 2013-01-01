@@ -38,7 +38,7 @@ namespace Raven.Studio.Commands
 			if (ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Statistics.Value != null 
 				&& ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Statistics.Value.CountOfDocuments != 0)
 			{
-				AskUser.ConfirmationWithEvent("Override Docuements?", "There are documents in the database :" +
+				AskUser.ConfirmationWithEvent("Override Documents?", "There are documents in the database :" +
 				                                                  ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 				                                                  "." + Environment.NewLine
 				                                                  + "This operation can override those documents.",

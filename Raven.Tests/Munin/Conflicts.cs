@@ -12,11 +12,11 @@ namespace Raven.Munin.Tests
 	public class Conflicts : SimpleFileTest
 	{
 		[Fact]
-		public void TwoTxCannotAddSameDataBeforeCmmmit()
+		public void TwoTxCannotAddSameDataBeforeCommit()
 		{
 			Assert.True(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 }));
 
-			SupressTx(() => Assert.False(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 })));
+			SuppressTx(() => Assert.False(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 })));
 		}
 
 		[Fact]
@@ -24,12 +24,12 @@ namespace Raven.Munin.Tests
 		{
 			Assert.True(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 }));
 
-			SupressTx(() => Assert.False(Table.Remove(RavenJToken.FromObject("a"))));
+			SuppressTx(() => Assert.False(Table.Remove(RavenJToken.FromObject("a"))));
 		}
 
 
 		[Fact]
-		public void TwoTxCanAddSameDataAfterCmmmit()
+		public void TwoTxCanAddSameDataAfterCommit()
 		{
 			Assert.True(Table.Put(RavenJToken.FromObject("a"), new byte[] { 1 }));
 
