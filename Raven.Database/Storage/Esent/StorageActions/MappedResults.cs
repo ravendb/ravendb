@@ -397,8 +397,8 @@ namespace Raven.Storage.Esent.StorageActions
 
 			Api.MakeKey(session, ReducedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
-			Api.MakeKey(session, ReducedResults, bucket, MakeKeyGrbit.None);
 			Api.MakeKey(session, ReducedResults, HashReduceKey(reduceKey), MakeKeyGrbit.None);
+			Api.MakeKey(session, ReducedResults, bucket, MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, ReducedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 			bool returnedResults = false;
 			do
