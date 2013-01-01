@@ -455,7 +455,7 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
-		public void CanGetDocumemts()
+		public void CanGetDocuments()
 		{
 			using (var session = documentStore.OpenSession())
 			{

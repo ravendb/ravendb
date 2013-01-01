@@ -11,7 +11,7 @@ namespace BulkStressTest
 {
 	class Program
 	{
-		private const string DbName = "BultStressTestDb";
+		private const string DbName = "BulkStressTestDb";
 		static void Main(string[] args)
 		{
 			const int numberOfItems = 100000000;
@@ -97,13 +97,13 @@ namespace BulkStressTest
 												 {
 													 while (true)
 													 {
-														 var quary1 = store.DatabaseCommands.Query("BlogPosts/PostsCountByTag", new IndexQuery(), new string[0]);
-														 var quary2 = store.DatabaseCommands.Query("BlogPosts/CountByCommenter", new IndexQuery(), new string[0]);
-														 var quary3 = store.DatabaseCommands.Query("SingleMapIndex", new IndexQuery(), new string[0]);
-														 var quary4 = store.DatabaseCommands.Query("SingleMapIndex2", new IndexQuery(), new string[0]);
-														 var quary5 = store.DatabaseCommands.Query("BlogPost/Search", new IndexQuery(), new string[0]);
+														 var query1 = store.DatabaseCommands.Query("BlogPosts/PostsCountByTag", new IndexQuery(), new string[0]);
+														 var query2 = store.DatabaseCommands.Query("BlogPosts/CountByCommenter", new IndexQuery(), new string[0]);
+														 var query3 = store.DatabaseCommands.Query("SingleMapIndex", new IndexQuery(), new string[0]);
+														 var query4 = store.DatabaseCommands.Query("SingleMapIndex2", new IndexQuery(), new string[0]);
+														 var query5 = store.DatabaseCommands.Query("BlogPost/Search", new IndexQuery(), new string[0]);
 
-														 if (quary1.IsStale || quary2.IsStale || quary3.IsStale || quary4.IsStale || quary5.IsStale)
+														 if (query1.IsStale || query2.IsStale || query3.IsStale || query4.IsStale || query5.IsStale)
 														 {
 															 Thread.Sleep(100);
 														 }
