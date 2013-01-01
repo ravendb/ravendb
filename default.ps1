@@ -137,12 +137,12 @@ task Test -depends Compile {
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 	}
 }
@@ -159,12 +159,12 @@ task StressTest -depends Compile {
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 	}
 }
@@ -185,7 +185,7 @@ task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
-		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
+		& ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
 	}
 	finally
 	{
@@ -212,27 +212,33 @@ task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
 task Release -depends RunTests,DoRelease
 
 task CopySamples {
-	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
-			   "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", `
-			   "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", `
-			   "Raven.Sample.MultiTenancy", "Raven.Sample.Suggestions", `
-			   "Raven.Sample.LiveProjections", "Raven.Sample.FullTextSearch")
-	$exclude = @("bin", "obj", "Data", "Plugins")
+	Remove-Item "$build_dir\Output\Samples\" -recurse -force -ErrorAction SilentlyContinue 
+
+	Copy-Item "$base_dir\.nuget\" "$build_dir\Output\Samples\.nuget" -recurse -force
+	Copy-Item "$base_dir\CommonAssemblyInfo.cs" "$build_dir\Output\Samples\CommonAssemblyInfo.cs" -force
+	Copy-Item "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
+	Copy-Item $base_dir\Raven.VisualHost "$build_dir\Output\Samples\Raven.VisualHost" -recurse -force
 	
+	$samples =  Get-ChildItem $base_dir\Samples | Where-Object { $_.PsIsContainer }
+	$samples = $samples
 	foreach ($sample in $samples) {
-	  echo $sample 
-	  
-	  Delete-Sample-Data-For-Release "$base_dir\Samples\$sample"
-	  
-	  cp "$base_dir\Samples\$sample" "$build_dir\Output\Samples" -recurse -force
-	  
-	  Delete-Sample-Data-For-Release "$build_dir\Output\Samples\$sample" 
+		Write-Output $sample
+		Copy-Item "$base_dir\Samples\$sample" "$build_dir\Output\Samples\$sample" -recurse -force
+		
+		Remove-Item "$sample_dir\bin" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\obj" -force -recurse -ErrorAction SilentlyContinue
+
+		Remove-Item "$sample_dir\Servers\Shard1\Data" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\Data" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard1\Plugins" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\Plugins" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard1\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue 
 	}
 	
-	cp "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
-	cp "$base_dir\Samples\Samples.ps1" "$build_dir\Output\Samples" -force
-	  
-	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.Samples.PrepareForRelease\Raven.Samples.PrepareForRelease.csproj" /p:OutDir="$buildartifacts_dir\" }
+	exec { &"$build_dir\Raven.Samples.PrepareForRelease.exe" "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
 }
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {

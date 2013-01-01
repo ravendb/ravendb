@@ -20,17 +20,5 @@ namespace Raven.StressTests.Storage.MultiThreaded.Stress
 		{
 			Run<BatchOperation>(storages => storages.WhenUsingEsentOnDisk(), 10);
 		}
-
-		[Fact]
-		public void WhenUsingMuninInMemory()
-		{
-			Run<BatchOperation>(storages => storages.WhenUsingMuninInMemory(), 10);
-		}
-
-		[Fact]
-		public void WhenUsingMuninOnDisk()
-		{
-			Run<BatchOperation>(storages => storages.WhenUsingMuninOnDisk(), 10);
-		}
 	}
 }

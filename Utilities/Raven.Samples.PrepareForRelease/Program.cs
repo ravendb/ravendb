@@ -12,7 +12,7 @@ namespace Raven.Samples.PrepareForRelease
 {
 	class Program
 	{
-		static void Main(string[] args)
+		private static void Main(string[] args)
 		{
 			try
 			{
@@ -23,9 +23,9 @@ namespace Raven.Samples.PrepareForRelease
 				RemoveProjectReferencesNotInSameDirectory(slnPath);
 
 				var ns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
-				foreach (var projectFile in Directory.GetFiles(Path.GetDirectoryName(slnPath), "*.csproj", SearchOption.AllDirectories))
+				foreach (var projectFile in Directory.GetFiles(Path.GetDirectoryName(slnPath), "*.*proj", SearchOption.AllDirectories))
 				{
-					Console.WriteLine("Preparing project file: " +projectFile);
+					Console.WriteLine("Preparing project file: " + projectFile);
 					var prj = XDocument.Load(projectFile);
 
 					foreach (var reference in prj.Descendants(ns + "Reference").ToArray())
@@ -34,7 +34,7 @@ namespace Raven.Samples.PrepareForRelease
 						if (hintPath == null)
 							continue;
 						var guessFileName = GuessFileName(Path.GetFileName(hintPath.Value), libPath, true);
-						if(guessFileName == null)
+						if (guessFileName == null)
 							continue;
 						hintPath.Value = Path.Combine(@"..\..", guessFileName);
 					}
@@ -44,29 +44,41 @@ namespace Raven.Samples.PrepareForRelease
 						var includeAttrib = prjRef.Attribute("Include");
 						if (includeAttrib == null)
 							continue;
-						if (includeAttrib.Value.StartsWith(@"..\..\") == false)
+						if (includeAttrib.Value.StartsWith(@"..\..\") == false && includeAttrib.Value.StartsWith(@"..\") == false)
 							continue;
 						var prjRefName = prjRef.Element(ns + "Name");
-						if(prjRefName == null)
+						if (prjRefName == null)
 							continue;
 						var refName = prjRefName.Value;
 						var parent = prjRef.Parent;
-						if(parent == null)
+						if (parent == null)
 							continue;
 						parent.Add(
-							new XElement(ns + "Reference",
-								new XAttribute("Include", refName),
-								new XElement(ns+"HintPath", Path.Combine(@"..\..", GuessFileName(refName, libPath, false)))
-								)
+						           new XElement(ns + "Reference",
+						                        new XAttribute("Include", refName),
+						                        new XElement(ns + "HintPath", Path.Combine(@"..\..", GuessFileName(refName, libPath, false)))
+							           )
 							);
 
 						prjRef.Remove();
 					}
-				   
+
+					foreach (var compileFile in prj.Descendants(ns + "Compile").ToArray())
+					{
+						var include = compileFile.Attribute("Include");
+						if (include == null)
+							continue;
+
+						if (include.Value.Contains("CommonAssemblyInfo"))
+						{
+							include.Value = @"..\CommonAssemblyInfo.cs";
+						}
+					}
+
 					prj.Save(projectFile);
 				}
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
 				Console.Error.WriteLine(e);
 				Environment.Exit(-1);
@@ -78,14 +90,12 @@ namespace Raven.Samples.PrepareForRelease
 			var fullPath = Path.GetFullPath(libPath);
 			var searchPattern = Path.GetExtension(refName) == ".dll" ? refName : refName + ".*";
 			var filePath = Directory.GetFiles(fullPath, searchPattern, SearchOption.AllDirectories)
-				.Where(x=>x.ToUpperInvariant().Contains("SAMPLES") == false)
-				.FirstOrDefault();
+				.FirstOrDefault(x => x.ToUpperInvariant().Contains("SAMPLES") == false);
 			if (filePath == null)
 			{
 				if (allowMissingFiles)
 					return null;
-				throw new InvalidOperationException("Could not file a file matching '" + searchPattern + "' in: " +
-					libPath);
+				throw new InvalidOperationException("Could not file a file matching '" + searchPattern + "' in: " + libPath);
 			}
 			filePath = Path.GetFullPath(filePath);
 			return filePath.Substring(fullPath.Length + 1);
@@ -93,17 +103,35 @@ namespace Raven.Samples.PrepareForRelease
 
 		private static void RemoveProjectReferencesNotInSameDirectory(string path)
 		{
+			var projectsToRemove = new[]
+			{
+				"Raven",
+				"Raven.Server",
+				"Raven.Database",
+				"Raven.Abstractions",
+				"Raven.Client.Embedded",
+				"Raven.Client.Lightweight",
+				"Bundles",
+				"Raven.Bundles.IndexReplication",
+			};
+
 			var lastLineHadReferenceToParentDirectory = false;
 			var slnLines = File.ReadAllLines(path)
 				.Where(line =>
 				{
 					if (lastLineHadReferenceToParentDirectory)
 					{
-						lastLineHadReferenceToParentDirectory = false;
+						if (line == "EndProject")
+							lastLineHadReferenceToParentDirectory = false;
 						return false;
 					}
-					return (lastLineHadReferenceToParentDirectory = line.Contains("..")) == false;
-				});
+					return (lastLineHadReferenceToParentDirectory = line.StartsWith(@"Project(""{") && projectsToRemove.Any(item => line.Contains(string.Format(@"}}"") = ""{0}"", """, item)))) == false;
+				})
+				.Select(line => line
+					.Replace(@""", ""Samples\", @""", """)
+					.Replace(@""", ""Raven\", @""", """)
+					)
+				.ToArray();
 
 			File.WriteAllLines(path, slnLines);
 		}
