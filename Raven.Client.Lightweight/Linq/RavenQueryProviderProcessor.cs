@@ -407,7 +407,7 @@ namespace Raven.Client.Linq
 			return info.Type;
 		}
 
-		private static readonly Regex castingRemover = new Regex(@"(<!\\)[\(\)]",
+		private static readonly Regex castingRemover = new Regex(@"(?<!\\)[\(\)]",
 #if SILVERLIGHT
 				RegexOptions.None
 #else
