@@ -93,17 +93,32 @@ namespace Raven.Samples.PrepareForRelease
 
 		private static void RemoveProjectReferencesNotInSameDirectory(string path)
 		{
+			var projectsToRemove = new[]
+			{
+				".nuget",
+				"Raven",
+				"Raven.Server",
+				"Raven.Database",
+				"Raven.Abstractions",
+				"Raven.Client.Embedded",
+				"Raven.Client.Lightweight",
+				"Bundles",
+				"Raven.Bundles.IndexReplication",
+			};
+
 			var lastLineHadReferenceToParentDirectory = false;
 			var slnLines = File.ReadAllLines(path)
 				.Where(line =>
 				{
 					if (lastLineHadReferenceToParentDirectory)
 					{
-						lastLineHadReferenceToParentDirectory = false;
+						if (line == "EndProject")
+							lastLineHadReferenceToParentDirectory = false;
 						return false;
 					}
-					return (lastLineHadReferenceToParentDirectory = line.Contains("..")) == false;
-				});
+					return (lastLineHadReferenceToParentDirectory = line.StartsWith(@"Project(""{") && projectsToRemove.Any(item => line.Contains(string.Format(@"}}"") = ""{0}"", """, item)))) == false;
+				})
+				.ToArray();
 
 			File.WriteAllLines(path, slnLines);
 		}

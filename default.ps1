@@ -212,25 +212,25 @@ task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
 task Release -depends RunTests,DoRelease
 
 task CopySamples {
-	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
-			   "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", `
-			   "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", `
-			   "Raven.Sample.MultiTenancy", "Raven.Sample.Suggestions", `
-			   "Raven.Sample.LiveProjections", "Raven.Sample.FullTextSearch")
-	$exclude = @("bin", "obj", "Data", "Plugins")
+	Copy-Item "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
+	Copy-Item $base_dir\Raven.VisualHost "$build_dir\Output\Samples\Raven.VisualHost" -recurse -force
 	
+	$samples =  Get-ChildItem $base_dir\Samples | Where-Object { $_.PsIsContainer }
+	$samples = $samples
 	foreach ($sample in $samples) {
-	  echo $sample 
-	  
-	  Delete-Sample-Data-For-Release "$base_dir\Samples\$sample"
-	  
-	  cp "$base_dir\Samples\$sample" "$build_dir\Output\Samples" -recurse -force
-	  
-	  Delete-Sample-Data-For-Release "$build_dir\Output\Samples\$sample" 
+		Write-Output $sample
+		Copy-Item "$base_dir\Samples\$sample" "$build_dir\Output\Samples\$sample" -recurse -force
+		
+		Remove-Item "$sample_dir\bin" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\obj" -force -recurse -ErrorAction SilentlyContinue
+
+		Remove-Item "$sample_dir\Servers\Shard1\Data" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\Data" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard1\Plugins" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\Plugins" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard1\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue 
 	}
-	
-	cp "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
-	cp "$base_dir\Samples\Samples.ps1" "$build_dir\Output\Samples" -force
 	  
 	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
 }
