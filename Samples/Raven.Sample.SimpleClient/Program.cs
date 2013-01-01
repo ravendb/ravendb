@@ -16,10 +16,7 @@ namespace Raven.Sample.SimpleClient
 	{
 		static void Main()
 		{
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8079",
-			}.Initialize())
+			using (var documentStore = new DocumentStore {Url = "http://localhost:8080"}.Initialize())
 			{
 				for (int i = 0; i < 1000; i++)
 				{
