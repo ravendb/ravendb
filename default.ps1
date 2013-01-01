@@ -212,6 +212,9 @@ task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
 task Release -depends RunTests,DoRelease
 
 task CopySamples {
+	Remove-Item "$build_dir\Output\Samples\" -recurse -force -ErrorAction SilentlyContinue 
+
+	Copy-Item "$base_dir\.nuget\" "$build_dir\Output\Samples\.nuget" -recurse -force
 	Copy-Item "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
 	Copy-Item $base_dir\Raven.VisualHost "$build_dir\Output\Samples\Raven.VisualHost" -recurse -force
 	

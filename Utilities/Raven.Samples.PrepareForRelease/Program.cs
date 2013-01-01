@@ -95,7 +95,6 @@ namespace Raven.Samples.PrepareForRelease
 		{
 			var projectsToRemove = new[]
 			{
-				".nuget",
 				"Raven",
 				"Raven.Server",
 				"Raven.Database",
@@ -118,6 +117,10 @@ namespace Raven.Samples.PrepareForRelease
 					}
 					return (lastLineHadReferenceToParentDirectory = line.StartsWith(@"Project(""{") && projectsToRemove.Any(item => line.Contains(string.Format(@"}}"") = ""{0}"", """, item)))) == false;
 				})
+				.Select(line => line
+					.Replace(@""", ""Samples\", @""", """)
+					.Replace(@""", ""Raven\", @""", """)
+					)
 				.ToArray();
 
 			File.WriteAllLines(path, slnLines);
