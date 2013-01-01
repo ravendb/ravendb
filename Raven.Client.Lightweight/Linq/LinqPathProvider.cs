@@ -33,53 +33,65 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public Result GetPath(Expression expression)
 		{
-			var result = new Result();
 			var callExpression = expression as MethodCallExpression;
 			if (callExpression != null)
 			{
+				if(callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
+				{
+					var target = GetPath(callExpression.Arguments[0]);
+					return new Result
+					{
+						MemberType = callExpression.Method.ReturnType,
+						IsNestedPath = false,
+						Path = target.Path + @".Count\(\)"
+					};
+				}
 				if (callExpression.Method.Name != "get_Item")
 					throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
 
 				var parent = GetPath(callExpression.Object);
 
-
-				result.MemberType = callExpression.Method.ReturnType;
-				result.IsNestedPath = false;
-				result.Path = parent.Path + "." +
-					   GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType);
-
+				return new Result
+				{
+					MemberType = callExpression.Method.ReturnType,
+					IsNestedPath = false,
+					Path = parent.Path + "." +
+					       GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
+				};
 			}
-			else
+			var memberExpression = GetMemberExpression(expression);
+
+			// we truncate the nullable .Value because in json all values are nullable
+			if (memberExpression.Member.Name == "Value" &&
+			    Nullable.GetUnderlyingType(memberExpression.Expression.Type) != null)
 			{
-				var memberExpression = GetMemberExpression(expression);
-
-				// we truncate the nullable .Value because in json all values are nullable
-				if (memberExpression.Member.Name == "Value" &&
-					Nullable.GetUnderlyingType(memberExpression.Expression.Type) != null)
-				{
-					return GetPath(memberExpression.Expression);
-				}
-
-
-				AssertNoComputation(memberExpression);
-
-				result.Path = memberExpression.ToString();
-				var props = memberExpression.Member.GetCustomAttributes(false)
-					.Where(x => x.GetType().Name == "JsonPropertyAttribute")
-					.ToArray();
-				if (props.Length != 0)
-				{
-					string propertyName = ((dynamic)props[0]).PropertyName;
-					if (String.IsNullOrEmpty(propertyName) == false)
-					{
-						result.Path = result.Path.Substring(0, result.Path.Length - memberExpression.Member.Name.Length) +
-							   propertyName;
-					}
-				}
-				result.IsNestedPath = memberExpression.Expression is MemberExpression;
-				result.MemberType = memberExpression.Member.GetMemberType();
+				return GetPath(memberExpression.Expression);
 			}
 
+
+			AssertNoComputation(memberExpression);
+
+			var result = new Result
+			{
+				Path = memberExpression.ToString(),
+				IsNestedPath = memberExpression.Expression is MemberExpression,
+				MemberType = memberExpression.Member.GetMemberType()
+			};
+
+			var props = memberExpression.Member.GetCustomAttributes(false)
+				.Where(x => x.GetType().Name == "JsonPropertyAttribute")
+				.ToArray();
+
+			if (props.Length != 0)
+			{
+				string propertyName = ((dynamic)props[0]).PropertyName;
+				if (String.IsNullOrEmpty(propertyName) == false)
+				{
+					result.Path = result.Path.Substring(0, result.Path.Length - memberExpression.Member.Name.Length) +
+					              propertyName;
+				}
+			}
+			
 			return result;
 		}
 
