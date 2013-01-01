@@ -215,6 +215,7 @@ task CopySamples {
 	Remove-Item "$build_dir\Output\Samples\" -recurse -force -ErrorAction SilentlyContinue 
 
 	Copy-Item "$base_dir\.nuget\" "$build_dir\Output\Samples\.nuget" -recurse -force
+	Copy-Item "$base_dir\CommonAssemblyInfo.cs" "$build_dir\Output\Samples\CommonAssemblyInfo.cs" -force
 	Copy-Item "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
 	Copy-Item $base_dir\Raven.VisualHost "$build_dir\Output\Samples\Raven.VisualHost" -recurse -force
 	
@@ -234,8 +235,10 @@ task CopySamples {
 		Remove-Item "$sample_dir\Servers\Shard1\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
 		Remove-Item "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue 
 	}
-	  
-	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
+	
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.Samples.PrepareForRelease\Raven.Samples.PrepareForRelease.csproj" /p:OutDir="$buildartifacts_dir\" }
+	exec { &"$build_dir\Raven.Samples.PrepareForRelease.exe" "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
 }
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
