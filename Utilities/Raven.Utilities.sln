@@ -1,5 +1,5 @@
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Merger", "Raven.Merger\Raven.Merger.csproj", "{42FFC01C-64D5-41CA-B29C-FA576B3E8034}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.ProjectRewriter", "Raven.ProjectRewriter\Raven.ProjectRewriter.csproj", "{CE9E7035-2502-4875-9B8A-CB7C198D04A2}"
@@ -11,8 +11,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.CustomStyleCopRules", "Raven.CustomStyleCopRules\Raven.CustomStyleCopRules.csproj", "{B8888574-1ED6-416D-9705-626EE8E470DD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.NormalizeCrLF", "Raven.NormalizeCrLF\Raven.NormalizeCrLF.csproj", "{4DAEEBFA-84BA-43CB-8914-6D263C94EC62}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Silverlight.UnitTestProvider", "Raven.Tests.Silverlight.UnitTestProvider\Raven.Tests.Silverlight.UnitTestProvider.csproj", "{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -84,16 +82,6 @@ Global
 		{4DAEEBFA-84BA-43CB-8914-6D263C94EC62}.Release|Mixed Platforms.Build.0 = Release|x86
 		{4DAEEBFA-84BA-43CB-8914-6D263C94EC62}.Release|x86.ActiveCfg = Release|x86
 		{4DAEEBFA-84BA-43CB-8914-6D263C94EC62}.Release|x86.Build.0 = Release|x86
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|Any CPU.Build.0 = Release|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

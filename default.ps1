@@ -127,7 +127,6 @@ task Test -depends Compile {
 	Clear-Host
 	
 	Write-Host $test_prjs
-	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
 	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
@@ -137,12 +136,12 @@ task Test -depends Compile {
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 	}
 }
@@ -159,12 +158,12 @@ task StressTest -depends Compile {
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$xUnit" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
 		}
 	}
 }
@@ -185,7 +184,10 @@ task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
-		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
+	
+		$statLight = Get-PackagePath StatLight
+		$statLight = "$statLight\tools\StatLight.exe"
+		&$statLight "--XapPath=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\build\Raven.Tests.Silverlight.Results.xml" 
 	}
 	finally
 	{

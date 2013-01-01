@@ -20,24 +20,12 @@ namespace Raven.StressTests.Storage.MultiThreaded.Stress
 		{
 			Run<PutOperation>(storages => storages.WhenUsingEsentOnDisk(), 50);
 		}
-
-		[Fact]
-		public void WhenUsingMuninInMemory()
-		{
-			Run<PutOperation>(storages => storages.WhenUsingMuninInMemory(), 200);
-		}
-
-		[Fact]
-		public void WhenUsingMuninOnDisk()
-		{
-			Run<PutOperation>(storages => storages.WhenUsingMuninOnDisk(), 200);
-		}
 	}
 
 	public class BigPutOperationStress : StressTest
 	{
 		// TODO: increase iterations to 10.
-		private const int Iterations = 1;
+		private const int Iterations = 4;
 
 		[Fact]
 		public void WhenUsingEsentInUnreliableMode()
@@ -49,18 +37,6 @@ namespace Raven.StressTests.Storage.MultiThreaded.Stress
 		public void WhenUsingEsentOnDisk()
 		{
 			Run<BigPutOperation>(storages => storages.WhenUsingEsentOnDisk(), Iterations);
-		}
-
-		[Fact]
-		public void WhenUsingMuninInMemory()
-		{
-			Run<BigPutOperation>(storages => storages.WhenUsingMuninInMemory(), Iterations);
-		}
-
-		[Fact]
-		public void WhenUsingMuninOnDisk()
-		{
-			Run<BigPutOperation>(storages => storages.WhenUsingMuninOnDisk(), Iterations);
 		}
 	}
 
@@ -76,18 +52,6 @@ namespace Raven.StressTests.Storage.MultiThreaded.Stress
 		public void WhenUsingEsentOnDisk()
 		{
 			Run<MediumPutOperation>(storages => storages.WhenUsingEsentOnDisk(), 10);
-		}
-
-		[Fact]
-		public void WhenUsingMuninInMemory()
-		{
-			Run<MediumPutOperation>(storages => storages.WhenUsingMuninInMemory(), 10);
-		}
-
-		[Fact]
-		public void WhenUsingMuninOnDisk()
-		{
-			Run<MediumPutOperation>(storages => storages.WhenUsingMuninOnDisk(), 10);
 		}
 	}
 }

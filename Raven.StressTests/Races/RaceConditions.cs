@@ -33,6 +33,12 @@ namespace Raven.StressTests.Races
 		}
 
 		[Fact]
+		public void IndexingEachFieldInEachDocumentSeparetedly()
+		{
+			Run<IndexingEachFieldInEachDocumentSeparetedly>(x => x.ForIndexing(), 500);
+		}
+
+		[Fact]
 		public void ConcurrentlyOpenedTenantsUsingEsent()
 		{
 			Run<ConcurrentlyOpenedTenantsUsingEsent>(x => x.CanConcurrentlyPutDocsToDifferentTenants(), 10);
@@ -56,6 +62,12 @@ namespace Raven.StressTests.Races
 			Run<MapReduce>(x => x.CanUpdateReduceValue_WhenChangingReduceKey(), 10);
 		}
 
+		[Fact]
+		public void MultiGetNonStaleRequslts()
+		{
+			Run<MultiGetNonStaleRequslts>(x => x.ShouldBeAbleToGetNonStaleResults(), 15);
+		}
+		
 		[Fact]
 		public void AfterCommitWillNotRetainSameEtag()
 		{
