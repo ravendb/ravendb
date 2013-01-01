@@ -619,8 +619,8 @@ namespace Raven.Bundles.Replication.Tasks
 					result.LastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 					while (true)
 					{
-						docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 100, 1024*1024*10)
-							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, 100)
+						docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024*1024*25)
+							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, 1024)
 								        .Select(x => new JsonDocument
 								        {
 									        Etag = x.Etag,
