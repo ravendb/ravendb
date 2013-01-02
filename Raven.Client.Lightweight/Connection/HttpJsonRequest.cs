@@ -546,6 +546,13 @@ namespace Raven.Client.Connection
 			get { return webRequest.ContentType; }
 			set { webRequest.ContentType = value; }
 		}
+		public TimeSpan Timeout
+		{
+			set
+			{
+				webRequest.Timeout = (int)value.TotalMilliseconds;
+			}
+		}
 
 		private void WriteMetadata(RavenJObject metadata)
 		{

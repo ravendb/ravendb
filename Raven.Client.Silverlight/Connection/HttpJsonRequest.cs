@@ -73,6 +73,11 @@ namespace Raven.Client.Silverlight.Connection
 
 		private static Task noopWaitForTask = new CompletedTask();
 
+
+		public TimeSpan Timeout
+		{
+			set { } // can't set timeout in Silverlight
+		}
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
