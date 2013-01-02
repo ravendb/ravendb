@@ -5,6 +5,7 @@ namespace Raven.Database.Indexing
 	public class IndexToWorkOn
 	{
 		public string IndexName { get; set; }
+
 		public Guid LastIndexedEtag { get; set; }
 
 		public override string ToString()

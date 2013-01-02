@@ -30,7 +30,7 @@ namespace Raven.Tests.Queries
 		}
 
 		[Fact]
-		public void CanPeformIntersectionQuery_Embedded()
+		public void CanPerformIntersectionQuery_Embedded()
 		{
 			using (var store = NewDocumentStore())
 			{

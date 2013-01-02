@@ -311,6 +311,10 @@ namespace Raven.Abstractions.Linq
 			{
 				return inner;
 			}
+			if(name == "Count" || name == "Count()")
+			{
+				return inner.Count;
+			}
 			return new DynamicNullObject();
 		}
 

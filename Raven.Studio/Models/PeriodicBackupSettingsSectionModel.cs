@@ -43,7 +43,7 @@ namespace Raven.Studio.Models
 		public string AwsAccessKey { get; set; }
 		public string AwsSecretKey { get; set; }
         public Observable<bool> IsS3Selected { get; set; }
-        //TODO: add selection between S3 and Glecuir
+        //TODO: add selection between S3 and Glacier
 		public bool HasDocument { get; set; }
 
 		public override void LoadFor(DatabaseDocument document)

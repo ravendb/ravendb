@@ -78,7 +78,8 @@ namespace Raven.Database.Indexing
 				.Where(x => x is FilteredDocument == false);
 			var items = new List<MapResultItem>();
 			var stats = new IndexingWorkStats();
-			using (CurrentIndexingScope.Current = new CurrentIndexingScope(name, actions, LoadDocument))
+			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+			using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 			{
 				var mapResults = RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats);
 				foreach (var mappedResultFromDocument in GroupByDocumentId(context, mapResults))
@@ -113,6 +114,15 @@ namespace Raven.Database.Indexing
 
 						changed.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), reduceKey));
 					}
+				}
+			}
+
+			IDictionary<string, HashSet<string>> result;
+			while (allReferencedDocs.TryDequeue(out result))
+			{
+				foreach (var referencedDocument in result)
+				{
+					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
 				}
 			}
 

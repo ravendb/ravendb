@@ -214,6 +214,10 @@ namespace Raven.Server
 		{
 			user = user ?? WindowsIdentity.GetCurrent().Name;
 			PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(user);
+
+			var actionToTake = user.StartsWith("IIS") ? "restart IIS service" : "log in the user again";
+
+			Console.Write("User {0} has been added to Performance Monitoring Users group. Please {1} to take an effect.", user, actionToTake);
 		}
 
 		private static void ProtectConfiguration(string file)
