@@ -46,6 +46,8 @@ namespace Raven.Client.Document
 
 
 			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
+			// the request may take a long time to process, so we need to set a large timeout value
+			httpJsonRequest.Timeout = TimeSpan.FromHours(6); 
 			nextTask = httpJsonRequest.GetRawRequestStream()
 			                          .ContinueWith(task =>
 			                          {
