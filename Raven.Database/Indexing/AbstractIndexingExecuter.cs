@@ -34,6 +34,7 @@ namespace Raven.Database.Indexing
 			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
+				Init();
 				LogContext.DatabaseName.Value = context.DatabaseName;
 				var name = GetType().Name;
 				var workComment = "WORK BY " + name;
@@ -120,10 +121,9 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		protected virtual void Dispose()
-		{
+		protected virtual void Dispose() { }
 
-		}
+		protected virtual void Init(){}
 
 		private void HandleOutOfMemoryException(Exception oome)
 		{

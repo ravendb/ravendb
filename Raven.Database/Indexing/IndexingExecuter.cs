@@ -28,7 +28,6 @@ namespace Raven.Database.Indexing
 		public IndexingExecuter(WorkContext context)
 			: base(context)
 		{
-			indexingSemaphore = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks);
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
 		}
@@ -119,8 +118,8 @@ namespace Raven.Database.Indexing
 			return lastEtag;
 		}
 
-		readonly SemaphoreSlim indexingSemaphore;
-		private readonly ManualResetEventSlim indexingCompletedEvent = new ManualResetEventSlim(false);
+		SemaphoreSlim indexingSemaphore;
+		private ManualResetEventSlim indexingCompletedEvent;
 		readonly ConcurrentSet<System.Threading.Tasks.Task> pendingTasks = new ConcurrentSet<System.Threading.Tasks.Task>();
 
 		private void ExecuteAllInterleaved(IList<IndexingBatchForIndex> result, Action<IndexingBatchForIndex> action)
@@ -427,9 +426,20 @@ namespace Raven.Database.Indexing
 			{
 				exceptionAggregator.Execute(pendingTask.Wait);
 			}
+			pendingTasks.Clear();
 			exceptionAggregator.Execute(indexingCompletedEvent.Dispose);
 			exceptionAggregator.Execute(indexingSemaphore.Dispose);
 			exceptionAggregator.ThrowIfNeeded();
+
+			indexingCompletedEvent = null;
+			indexingSemaphore = null;
+		}
+
+		protected override void Init()
+		{
+			indexingSemaphore = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks);
+			indexingCompletedEvent = new ManualResetEventSlim(false);
+			base.Init();
 		}
 	}
 }
