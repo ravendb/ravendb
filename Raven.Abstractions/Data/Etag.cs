@@ -3,98 +3,122 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
-    public class Etag : IEquatable<Etag>, IComparable<Etag>
-    {
-        long restarts;
-        long changes;
+	public class Etag : IEquatable<Etag>, IComparable<Etag>
+	{
+		long restarts;
+		long changes;
 
-        public long Restarts
-        {
-            get { return restarts; }
-        }
-        public long Changes
-        {
-            get { return changes; }
-        }
+		public long Restarts
+		{
+			get { return restarts; }
+		}
+		public long Changes
+		{
+			get { return changes; }
+		}
 
-        private Etag()
-        {
-            
-        }
+		public Etag()
+		{
 
-        public Etag(UuidType type, long restarts, long changes)
-        {
-            this.restarts = ((long)type << 56) | restarts;
-            this.changes = changes;
-        }
+		}
 
-        public bool Equals(Etag other)
-        {
-            return other.changes == changes && other.restarts == restarts;
-        }
+		public Etag(string str)
+		{
+			Parse(str);
+		}
 
-        public int CompareTo(Etag other)
-        {
-            var sub = restarts - other.restarts;
-            if (sub != 0)
-                return sub > 0 ? 1 : -1;
-            sub = changes - other.changes;
-            if (sub != 0)
-                return sub > 0 ? 1 : -1;
-            return 0;
-        }
+		public Etag(UuidType type, long restarts, long changes)
+		{
+			this.restarts = ((long)type << 56) | restarts;
+			this.changes = changes;
+		}
 
-        public IEnumerable<byte> ToBytes()
-        {
-            foreach (var source in BitConverter.GetBytes(restarts).Reverse())
-            {
-                yield return source;
-            }
-            foreach (var source in BitConverter.GetBytes(changes).Reverse())
-            {
-                yield return source;
-            }
-        }
+		public static bool operator ==(Etag a, Etag b)
+		{
+			if (ReferenceEquals(a, null) && ReferenceEquals(b, null))
+				return true;
+			if (ReferenceEquals(a, null))
+				return false;
+			return a.Equals(b);
+		}
 
-        public byte[] ToByteArray()
-        {
-            return ToBytes().ToArray();
-        }
+		public static bool operator !=(Etag a, Etag b)
+		{
+			return !(a == b);
+		}
 
-        public override string ToString()
-        {
-            var sb = new StringBuilder(36);
-            foreach (var by in ToBytes())
-            {
-                sb.Append(by.ToString("X2"));
-            }
-            sb.Insert(8, "-")
-                    .Insert(13, "-")
-                    .Insert(18, "-")
-                    .Insert(23, "-");
-            return sb.ToString();
-        }
+		public bool Equals(Etag other)
+		{
+			if (ReferenceEquals(other, null))
+				return false;
+			return other.changes == changes && other.restarts == restarts;
+		}
 
-        public static Etag Parse(byte[] bytes)
-        {
-            return new Etag
-            {
-                restarts = BitConverter.ToInt64(bytes.Take(8).Reverse().ToArray(), 0),
-                changes = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0)
-            };
-        }
+		public int CompareTo(Etag other)
+		{
+			if (ReferenceEquals(other, null))
+				return -1;
+			var sub = restarts - other.restarts;
+			if (sub != 0)
+				return sub > 0 ? 1 : -1;
+			sub = changes - other.changes;
+			if (sub != 0)
+				return sub > 0 ? 1 : -1;
+			return 0;
+		}
 
-        public static Etag Parse(string str)
-        {
-            if (string.IsNullOrEmpty(str))
-                throw new ArgumentException("str cannot be empty or null");
-            if (str.Length != 36)
-                throw new ArgumentException("str must be 36 characters");
+		public IEnumerable<byte> ToBytes()
+		{
+			foreach (var source in BitConverter.GetBytes(restarts).Reverse())
+			{
+				yield return source;
+			}
+			foreach (var source in BitConverter.GetBytes(changes).Reverse())
+			{
+				yield return source;
+			}
+		}
 
-            var buffer = new byte[16]
+		public byte[] ToByteArray()
+		{
+			return ToBytes().ToArray();
+		}
+
+		public override string ToString()
+		{
+			var sb = new StringBuilder(36);
+			foreach (var by in ToBytes())
+			{
+				sb.Append(by.ToString("X2"));
+			}
+			sb.Insert(8, "-")
+					.Insert(13, "-")
+					.Insert(18, "-")
+					.Insert(23, "-");
+			return sb.ToString();
+		}
+
+		public static Etag Parse(byte[] bytes)
+		{
+			return new Etag
+			{
+				restarts = BitConverter.ToInt64(bytes.Take(8).Reverse().ToArray(), 0),
+				changes = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0)
+			};
+		}
+
+		public static Etag Parse(string str)
+		{
+			if (string.IsNullOrEmpty(str))
+				throw new ArgumentException("str cannot be empty or null");
+			if (str.Length != 36)
+				throw new ArgumentException("str must be 36 characters");
+
+			var buffer = new byte[16]
                                 {
                                         byte.Parse(str.Substring(16,2), NumberStyles.HexNumber),
                                         byte.Parse(str.Substring(14,2), NumberStyles.HexNumber),
@@ -115,120 +139,130 @@ namespace Raven.Abstractions.Data
                                         byte.Parse(str.Substring(19,2), NumberStyles.HexNumber),
                                 };
 
-            return new Etag
-            {
-                restarts = BitConverter.ToInt64(buffer, 0),
-                changes = BitConverter.ToInt64(buffer, 8)
-            };
-        }
+			return new Etag
+			{
+				restarts = BitConverter.ToInt64(buffer, 0),
+				changes = BitConverter.ToInt64(buffer, 8)
+			};
+		}
 
-        public static Etag InvalidEtag
-        {
-            get
-            {
-                return new Etag
-                {
-                    restarts = -1,
-                    changes = -1
-                };
-            }
-        }
-        public static Etag Empty
-        {
-            get { return new Etag
-            {
-                restarts = 0,
-                changes = 0
-            }; }
-        }
+		public static Etag InvalidEtag
+		{
+			get
+			{
+				return new Etag
+				{
+					restarts = -1,
+					changes = -1
+				};
+			}
+		}
+		public static Etag Empty
+		{
+			get
+			{
+				return new Etag
+					{
+						restarts = 0,
+						changes = 0
+					};
+			}
+		}
 
-        public Etag IncrementBy(int amount)
-        {
-            return new Etag
-            {
-                restarts = restarts,
-                changes = changes + amount
-            };
-        }
-    }
+		public Etag IncrementBy(int amount)
+		{
+			return new Etag
+			{
+				restarts = restarts,
+				changes = changes + amount
+			};
+		}
 
-    //public class Etag : IComparable, IComparable<Etag>
-    //{
-    //    public Etag()
-    //    {
-            
-    //    }
-    //    public Etag(string s)
-    //    {
-    //        Value = s;
-    //    }
+		public static implicit operator string(Etag etag)
+		{
+			if (etag == null)
+				return null;
+			return etag.ToString();
+		}
+	}
 
-    //    public Etag(Guid guid)
-    //    {
-    //        Value = guid.ToString();
-    //    }
+	//public class Etag : IComparable, IComparable<Etag>
+	//{
+	//    public Etag()
+	//    {
 
-    //    public Etag(Guid? guid)
-    //    {
-    //        if (guid != null)
-    //            Value = guid.ToString();
-    //    }
+	//    }
+	//    public Etag(string s)
+	//    {
+	//        Value = s;
+	//    }
 
-    //    public string Value { get; private set; }
+	//    public Etag(Guid guid)
+	//    {
+	//        Value = guid.ToString();
+	//    }
 
-    //    //public static implicit operator string(Etag etag)
-    //    //{
-    //    //    return etag.Value;
-    //    //}
+	//    public Etag(Guid? guid)
+	//    {
+	//        if (guid != null)
+	//            Value = guid.ToString();
+	//    }
 
-    //    //public override string ToString()
-    //    //{
-    //    //    return Value;
-    //    //}
+	//    public string Value { get; private set; }
 
-    //    //public static implicit operator Guid(Etag etag)
-    //    //{
-    //    //    return new Guid(etag.Value);
-    //    //}
-    //    //public static implicit operator Guid?(Etag etag)
-    //    //{
-    //    //    if (string.IsNullOrWhiteSpace(etag.Value))
-    //    //        return null;
-    //    //    return new Guid(etag.Value);
-    //    //}
+	//    //public static implicit operator string(Etag etag)
+	//    //{
+	//    //    return etag.Value;
+	//    //}
 
-    //    //public static implicit operator Etag(Guid guid)
-    //    //{
-    //    //    return new Etag(guid);
-    //    //}
+	//    //public override string ToString()
+	//    //{
+	//    //    return Value;
+	//    //}
 
-    //    //public static implicit operator Etag(Guid? guid)
-    //    //{
-    //    //    return new Etag(guid);
-    //    //}
+	//    //public static implicit operator Guid(Etag etag)
+	//    //{
+	//    //    return new Guid(etag.Value);
+	//    //}
+	//    //public static implicit operator Guid?(Etag etag)
+	//    //{
+	//    //    if (string.IsNullOrWhiteSpace(etag.Value))
+	//    //        return null;
+	//    //    return new Guid(etag.Value);
+	//    //}
 
-    //    //public static implicit operator Etag(string s)
-    //    //{
-    //    //    return new Etag(s);
-    //    //}
-    //    public int CompareTo(object obj)
-    //    {
-    //        var etag = obj as string;
-    //        if (etag == null)
-    //            return 1;
-    //        return Value.CompareTo(etag);
-    //    }
+	//    //public static implicit operator Etag(Guid guid)
+	//    //{
+	//    //    return new Etag(guid);
+	//    //}
 
-    //    public int CompareTo(Etag other)
-    //    {
-    //        if (other == null)
-    //            return 1;
-    //        return Value.CompareTo(other.Value);
-    //    }
+	//    //public static implicit operator Etag(Guid? guid)
+	//    //{
+	//    //    return new Etag(guid);
+	//    //}
 
-    //    public byte[] ToByteArray()
-    //    {
-    //        return Encoding.UTF8.GetBytes(Value);
-    //    }
-    //}
+	//    //public static implicit operator Etag(string s)
+	//    //{
+	//    //    return new Etag(s);
+	//    //}
+	//    public int CompareTo(object obj)
+	//    {
+	//        var etag = obj as string;
+	//        if (etag == null)
+	//            return 1;
+	//        return Value.CompareTo(etag);
+	//    }
+
+	//    public int CompareTo(Etag other)
+	//    {
+	//        if (other == null)
+	//            return 1;
+	//        return Value.CompareTo(other.Value);
+	//    }
+
+	//    public byte[] ToByteArray()
+	//    {
+	//        return Encoding.UTF8.GetBytes(Value);
+	//    }
+	//}
 }

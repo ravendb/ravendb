@@ -69,7 +69,7 @@ namespace Raven.Tests.Bugs
 					webClient.UseDefaultCredentials = true;
 					webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
 
-					var lastEtag = Guid.Empty;
+					var lastEtag = Raven.Abstractions.Data.Etag.Empty;
 					int totalCount = 0;
 					while (true)
 					{
@@ -81,7 +81,7 @@ namespace Raven.Tests.Bugs
 
 						totalCount += array.Length;
 
-						lastEtag = new Guid(array.Last().Value<string>("Etag"));
+						lastEtag = Raven.Abstractions.Data.Etag.Parse(array.Last().Value<string>("Etag"));
 					}
 				}
 			}

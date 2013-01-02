@@ -304,7 +304,7 @@ namespace Raven.Database.Indexing
 
 		public static JsonDocument GetHighestJsonDocumentByEtag(List<JsonDocument> past)
 		{
-			var highest = new ComparableByteArray((Etag)null);
+			var highest = new ComparableByteArray(Etag.Empty);
 			JsonDocument highestDoc = null;
 			for (int i = past.Count - 1; i >= 0; i--)
 			{
