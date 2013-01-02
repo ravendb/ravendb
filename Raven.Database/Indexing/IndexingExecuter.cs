@@ -120,6 +120,7 @@ namespace Raven.Database.Indexing
 		}
 
 		readonly SemaphoreSlim indexingSemaphore;
+		private readonly ManualResetEventSlim indexingCompletedEvent = new ManualResetEventSlim(false);
 		readonly ConcurrentSet<System.Threading.Tasks.Task> pendingTasks = new ConcurrentSet<System.Threading.Tasks.Task>();
 
 		private void ExecuteAllInterleaved(IList<IndexingBatchForIndex> result, Action<IndexingBatchForIndex> action)
@@ -142,11 +143,19 @@ namespace Raven.Database.Indexing
 				var task = new System.Threading.Tasks.Task(() => action(indexToWorkOn));
 				indexToWorkOn.Index.CurrentMapIndexingTask = tasks[i] = task.ContinueWith(_ =>
 				{
-					sp.Stop();
-					indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
-					indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
-					indexToWorkOn.Index.CurrentMapIndexingTask = null;
-					indexingSemaphore.Release();
+					try
+					{
+						sp.Stop();
+						indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
+						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
+						indexToWorkOn.Index.CurrentMapIndexingTask = null;
+					}
+					finally 
+					{
+						indexingSemaphore.Release();
+						indexingCompletedEvent.Set();
+					}
+					
 				});
 
 				indexingSemaphore.Wait();
@@ -160,20 +169,22 @@ namespace Raven.Database.Indexing
 			int minIndexingSpots = Math.Min((maxNumberOfParallelIndexTasks / 2), 8);
 			while (indexingSemaphore.CurrentCount < minIndexingSpots)
 			{
-				indexingSemaphore.Wait();
+				indexingCompletedEvent.Reset();
+				indexingCompletedEvent.Wait();
 			}
 
 			// now we have the chance to start a new indexing batch with the old items, but we still
 			// want to wait for a bit to _avoid_ creating multiple batches if we can possibly avoid it.
-			// We will wait for half the time we waited so far, and a min of 5 seconds
-			var timeToWait = Math.Min((int)totalIndexingTime.ElapsedMilliseconds / 2, 5000);
+			// We will wait for 3/4 the time we waited so far, and a min of 15 seconds
+			var timeToWait = Math.Max((int)(totalIndexingTime.ElapsedMilliseconds / 4) * 3, 15000);
 			var totalWaitTime = Stopwatch.StartNew();
 			while (indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks)
 			{
-				var timeout = (int)(timeToWait - totalWaitTime.ElapsedMilliseconds);
+				int timeout = timeToWait - (int) totalWaitTime.ElapsedMilliseconds;
 				if (timeout <= 0)
 					break;
-				indexingSemaphore.Wait(timeout);
+				indexingCompletedEvent.Reset();
+				indexingCompletedEvent.Wait(timeout);
 			}
 			if (Log.IsDebugEnabled == false)
 				return;
@@ -416,6 +427,7 @@ namespace Raven.Database.Indexing
 			{
 				exceptionAggregator.Execute(pendingTask.Wait);
 			}
+			exceptionAggregator.Execute(indexingCompletedEvent.Dispose);
 			exceptionAggregator.Execute(indexingSemaphore.Dispose);
 			exceptionAggregator.ThrowIfNeeded();
 		}
