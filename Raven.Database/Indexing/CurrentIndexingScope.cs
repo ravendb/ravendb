@@ -29,7 +29,7 @@ namespace Raven.Database.Indexing
 
 		public dynamic Source { get; set; }
 
-		public IDictionary<string,HashSet<string>> ReferencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.InvariantCultureIgnoreCase); 
+		public IDictionary<string,HashSet<string>> ReferencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase); 
 
 		public dynamic LoadDocument(string key)
 		{
@@ -52,7 +52,7 @@ namespace Raven.Database.Indexing
 
 			HashSet<string> set;
 			if(ReferencedDocuments.TryGetValue(id, out set) == false)
-				ReferencedDocuments.Add(id, set = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
+				ReferencedDocuments.Add(id, set = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 			set.Add(key);
 			return loadDocument(key);
 		}

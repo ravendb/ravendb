@@ -75,7 +75,7 @@ namespace Raven.Client.Document.OAuth
 			if (String.IsNullOrEmpty(apiKey) == false)
 				SetHeader(authRequest.Headers, "Api-Key", apiKey);
 
-			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
+			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false &&
 			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
 			return authRequest;

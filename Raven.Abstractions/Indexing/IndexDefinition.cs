@@ -85,7 +85,7 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public bool IsTemp
 		{
-			get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase); }
+			get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase); }
 		}
 
 		/// <summary>

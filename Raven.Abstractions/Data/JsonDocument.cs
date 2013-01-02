@@ -42,7 +42,7 @@ namespace Raven.Abstractions.Data
 		/// <value>The metadata.</value>
 		public RavenJObject Metadata
 		{
-			get { return metadata ?? (metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase)); }
+			get { return metadata ?? (metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase)); }
 			set { metadata = value; }
 		}
 

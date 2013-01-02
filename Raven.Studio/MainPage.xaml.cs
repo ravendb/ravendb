@@ -51,13 +51,13 @@ namespace Raven.Studio
 		private static bool HyperlinkMatchesUri(string uri, HyperlinkButton link)
 		{
 			if (link.CommandParameter != null &&
-				uri.StartsWith(link.CommandParameter.ToString(), StringComparison.InvariantCultureIgnoreCase))
+				uri.StartsWith(link.CommandParameter.ToString(), StringComparison.OrdinalIgnoreCase))
 			{
 				return true;
 			}
 
 			var alternativeUris = LinkHighlighter.GetAlternativeUris(link);
-			if (alternativeUris != null && alternativeUris.Any(alternative => uri.StartsWith(alternative, StringComparison.InvariantCultureIgnoreCase)))
+			if (alternativeUris != null && alternativeUris.Any(alternative => uri.StartsWith(alternative, StringComparison.OrdinalIgnoreCase)))
 			{
 				return true;
 			}

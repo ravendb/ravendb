@@ -116,7 +116,7 @@ namespace Raven.Database
 		/// <summary>
 		/// Requires to avoid having serialize writes to the same attachments
 		/// </summary>
-		private readonly ConcurrentDictionary<string, object> putAttachmentSerialLock = new ConcurrentDictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, object> putAttachmentSerialLock = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
 		/// <summary>
 		/// This is used to hold state associated with this instance by external extensions
@@ -134,7 +134,7 @@ namespace Raven.Database
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches =
-			new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.InvariantCultureIgnoreCase);
+			new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.OrdinalIgnoreCase);
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
@@ -1053,7 +1053,7 @@ namespace Raven.Database
 			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
 			var nonAuthoritativeInformation = false;
-			var idsToLoad = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			TransactionalStorage.Batch(
 				actions =>
 				{
@@ -1929,7 +1929,7 @@ namespace Raven.Database
 					{
                         var inserts = 0;
 					    var batch = 0;
-						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+						var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 						foreach (var doc in docs)
 						{
 							if (options.CheckReferencesInIndexes)

@@ -231,7 +231,7 @@ namespace Raven.Studio.Commands
 		{
 			foreach (var data in versioningData)
 			{
-				if (data.Id.StartsWith("Raven/Versioning/", StringComparison.InvariantCultureIgnoreCase) == false)
+				if (data.Id.StartsWith("Raven/Versioning/", StringComparison.OrdinalIgnoreCase) == false)
 					data.Id = "Raven/Versioning/" + data.Id;
 				session.Store(data);
 			}

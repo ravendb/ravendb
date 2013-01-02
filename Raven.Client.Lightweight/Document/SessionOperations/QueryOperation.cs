@@ -72,8 +72,8 @@ namespace Raven.Client.Document.SessionOperations
 		private void AssertNotQueryById()
 		{
 			// this applies to dynamic indexes only
-			if (!indexName.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
-			    !string.Equals(indexName, "dynamic", StringComparison.InvariantCultureIgnoreCase))
+			if (!indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) &&
+			    !string.Equals(indexName, "dynamic", StringComparison.OrdinalIgnoreCase))
 				return;
 
 			var match = idOnly.Match(IndexQuery.Query);

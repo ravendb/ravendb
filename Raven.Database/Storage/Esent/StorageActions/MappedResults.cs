@@ -84,7 +84,7 @@ namespace Raven.Storage.Esent.StorageActions
 			while (start > 0)
 			{
 				var viewFromDb = Api.RetrieveColumnAsString(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["view"]);
-				if(string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if(string.Equals(view, viewFromDb, StringComparison.OrdinalIgnoreCase) == false)
 					yield break;
 				start--;
 				if (Api.TryMoveNext(session, ReduceKeysCounts) == false)
@@ -99,7 +99,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var viewFromDb = Api.RetrieveColumnAsString(session, ReduceKeysCounts,
 													tableColumnsCache.ReduceKeysCountsColumns["view"], Encoding.Unicode);
 
-				if(string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if(string.Equals(view, viewFromDb, StringComparison.OrdinalIgnoreCase) == false)
 					continue;
 
 				var key = Api.RetrieveColumnAsString(session, ReduceKeysCounts,
@@ -242,7 +242,7 @@ namespace Raven.Storage.Esent.StorageActions
 					var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
 												   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
 
-					if (string.Equals(index, indexFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+					if (string.Equals(index, indexFromDb, StringComparison.OrdinalIgnoreCase) == false)
 						continue;
 					if (levelFromDb != level)
 						continue;
@@ -312,7 +312,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var indexFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value;
-				if (string.Equals(indexFromDb, index, StringComparison.InvariantCultureIgnoreCase) == false ||
+				if (string.Equals(indexFromDb, index, StringComparison.OrdinalIgnoreCase) == false ||
 					bucketFromDb != bucket ||
 					string.Equals(keyFromDb, reduceKey, StringComparison.Ordinal) == false // the key is explicitly compared using case sensitive approach
 					)
@@ -362,7 +362,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				var indexFromDb = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["source_bucket"], RetrieveColumnGrbit.RetrieveFromIndex).Value;
-				if (string.Equals(indexFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false ||
+				if (string.Equals(indexFromDb, indexName, StringComparison.OrdinalIgnoreCase) == false ||
 					bucketFromDb != sourceBucket)
 				{
 					break;
@@ -450,10 +450,10 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
 				var viewFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(viewFromDb, view) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(viewFromDb, view) == false)
 					continue;
 				var documentIdFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"]);
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(documentIdFromDb, documentId) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(documentIdFromDb, documentId) == false)
 					continue;
 				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"],
 														   Encoding.Unicode);
@@ -482,7 +482,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
 				var viewFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(viewFromDb, view) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(viewFromDb, view) == false)
 					break;
 
 				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
@@ -529,7 +529,7 @@ namespace Raven.Storage.Esent.StorageActions
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
 														   tableColumnsCache.MappedResultsColumns["reduce_key"]);
-				var comparison = String.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
+				var comparison = String.Compare(indexNameFromDb, indexName, StringComparison.OrdinalIgnoreCase);
 				if (comparison < 0)
 					continue; // skip to the next item
 				if (comparison > 0) // after the current item
@@ -566,13 +566,13 @@ namespace Raven.Storage.Esent.StorageActions
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
 														   tableColumnsCache.MappedResultsColumns["reduce_key"]);
 
-				var indexCompare = string.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
+				var indexCompare = string.Compare(indexNameFromDb, indexName, StringComparison.OrdinalIgnoreCase);
 
 				if (indexCompare < 0)
 					continue;
 				if (indexCompare > 0)
 					break;
-				var keyCompare = string.Compare(key, keyFromDb, StringComparison.InvariantCultureIgnoreCase);
+				var keyCompare = string.Compare(key, keyFromDb, StringComparison.OrdinalIgnoreCase);
 				if (keyCompare != 0)
 					continue;
 
@@ -621,7 +621,7 @@ namespace Raven.Storage.Esent.StorageActions
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, ReducedResults,
 														   tableColumnsCache.ReduceResultsColumns["reduce_key"]);
-				var indexCompare = string.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
+				var indexCompare = string.Compare(indexNameFromDb, indexName, StringComparison.OrdinalIgnoreCase);
 
 				if (indexCompare < 0)
 					continue;
@@ -631,7 +631,7 @@ namespace Raven.Storage.Esent.StorageActions
 					continue;
 				if (levelFromDb > level)
 					break;
-				var keyCompare = string.Compare(key, keyFromDb, StringComparison.InvariantCultureIgnoreCase);
+				var keyCompare = string.Compare(key, keyFromDb, StringComparison.OrdinalIgnoreCase);
 				if (keyCompare != 0)
 					continue;
 
@@ -656,7 +656,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int limitOfItemsToReduceInSingleStep)
 		{
-			var allKeysToReduce = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			var allKeysToReduce = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
 			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -668,7 +668,7 @@ namespace Raven.Storage.Esent.StorageActions
 															 tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode,
 															 RetrieveColumnGrbit.RetrieveFromIndex);
 
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(indexName, indexFromDb) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(indexName, indexFromDb) == false)
 					break;
 
 				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions,
@@ -771,7 +771,7 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 				var viewFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(viewFromDb, indexName) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(viewFromDb, indexName) == false)
 					continue;
 
 				var rKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"],
@@ -801,7 +801,7 @@ namespace Raven.Storage.Esent.StorageActions
 					var indexFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 					var hashKeyFromDb = Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["hashed_reduce_key"]);
 
-					if (string.Equals(indexFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false ||
+					if (string.Equals(indexFromDb, indexName, StringComparison.OrdinalIgnoreCase) == false ||
 						hashReduceKey.SequenceEqual(hashKeyFromDb) == false)
 					{
 						break;

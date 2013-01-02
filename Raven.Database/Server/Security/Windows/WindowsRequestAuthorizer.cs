@@ -193,8 +193,8 @@ namespace Raven.Database.Server.Security.Windows
 		private Dictionary<string, List<DatabaseAccess>> GenerateDatabaseAccessLists(IHttpContext ctx)
 		{
 			var databaseAccessLists = requiredUsers
-				.Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
-				.ToDictionary(source => source.Name, source => source.Databases, StringComparer.InvariantCultureIgnoreCase);
+				.Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.OrdinalIgnoreCase))
+				.ToDictionary(source => source.Name, source => source.Databases, StringComparer.OrdinalIgnoreCase);
 
 			foreach (var windowsAuthData in requiredGroups.Where(data => ctx.User.IsInRole(data.Name)))
 			{

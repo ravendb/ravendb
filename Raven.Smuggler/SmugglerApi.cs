@@ -53,7 +53,7 @@ namespace Raven.Smuggler
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
 			var builder = new StringBuilder();
-			if (url.StartsWith("http", StringComparison.InvariantCultureIgnoreCase) == false)
+			if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase) == false)
 			{
 				builder.Append(ConnectionStringOptions.Url);
 				if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)

@@ -74,7 +74,7 @@ namespace Raven.Client.Shard
 			{
 				// Only load items which aren't already loaded
 				idsToLoad = ids.Where(id => IsLoaded(id) == false)
-					.Distinct(StringComparer.InvariantCultureIgnoreCase)
+					.Distinct(StringComparer.OrdinalIgnoreCase)
 					.ToArray();
 			}
 

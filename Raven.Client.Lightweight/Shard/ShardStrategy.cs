@@ -32,7 +32,7 @@ namespace Raven.Client.Shard
 			if (shards.Count == 0)
 				throw new ArgumentException("Shards collection must have at least one item", "shards");
 
-			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.InvariantCultureIgnoreCase);
+			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.OrdinalIgnoreCase);
 
 
 			Conventions = shards.First().Value.Conventions.Clone();

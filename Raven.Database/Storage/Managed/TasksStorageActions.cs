@@ -84,8 +84,8 @@ namespace Raven.Storage.Managed
 			})
 			.Where(x => new Guid(x.Value<byte[]>("id")) != new Guid(taskId))
 				.TakeWhile(x =>
-						   StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("index"), task.Index) &&
-						   StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("type"), taskType)
+						   StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("index"), task.Index) &&
+						   StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType)
 				);
 
 			int totalTaskCount = 0;

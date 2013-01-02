@@ -1275,7 +1275,7 @@ namespace Raven.Client.Connection.Async
 
 		private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
 		{
-			if (!primaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+			if (!primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 			{
 				var forceCheck = headers[Constants.RavenForcePrimaryServerCheck];
 				bool shouldForceCheck;

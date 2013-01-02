@@ -327,7 +327,7 @@ namespace Raven.Client.Document
 
 			// only load documents that aren't already cached
 			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
-			                                 .Distinct(StringComparer.InvariantCultureIgnoreCase)
+			                                 .Distinct(StringComparer.OrdinalIgnoreCase)
 			                                 .ToArray();
 
 			if (idsOfNotExistingObjects.Length > 0)

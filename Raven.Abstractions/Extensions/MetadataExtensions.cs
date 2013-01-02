@@ -211,7 +211,7 @@ namespace Raven.Abstractions.Extensions
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static RavenJObject FilterHeaders(this NameValueCollection self)
 		{
-			var metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
+			var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
 			foreach (string header in self)
 			{
 				try

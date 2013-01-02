@@ -188,7 +188,7 @@ namespace Raven.Storage.Esent.StorageActions
 				do
 				{
 					var indexNameFromDb = Api.RetrieveColumnAsString(session, op.Table, columnids["view"]);
-					if (string.Equals(name, indexNameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+					if (string.Equals(name, indexNameFromDb, StringComparison.OrdinalIgnoreCase) == false)
 						break;
 					if (count++ > 10000)
 					{
@@ -382,7 +382,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
 			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
-			var results = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			do
 			{
 				var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,

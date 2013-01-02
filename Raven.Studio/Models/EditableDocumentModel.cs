@@ -1107,7 +1107,7 @@ namespace Raven.Studio.Models
 					this.parentModel.IsShowingErrors = true;
 				}
 
-				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 				{
 					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
 					       .ContinueWhenTrueInTheUIThread(SaveDocument);
@@ -1184,7 +1184,7 @@ namespace Raven.Studio.Models
 				parentModel.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddInfoNotification("Saving document " + parentModel.Key + " ...");
 
-				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) || parentModel.ResolvingConflict
+				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.OrdinalIgnoreCase) || parentModel.ResolvingConflict
 					             ? parentModel.Etag
 					             : Guid.Empty;
 

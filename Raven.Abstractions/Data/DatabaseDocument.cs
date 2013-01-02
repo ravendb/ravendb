@@ -17,8 +17,8 @@ namespace Raven.Abstractions.Data
 
 		public DatabaseDocument()
 		{
-			Settings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-			SecuredSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+			Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		}
 	}
 }

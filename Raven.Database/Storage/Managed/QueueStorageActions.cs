@@ -39,7 +39,7 @@ namespace Raven.Storage.Managed
 			foreach (var queuedMsgKey in storage.Queues["ByName"].SkipTo(new RavenJObject
 			{
 				{"name", name}
-			}).TakeWhile(x=> StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("name"), name)))
+			}).TakeWhile(x=> StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("name"), name)))
 			{
 				var readResult = storage.Queues.Read(queuedMsgKey);
 				if(readResult == null)

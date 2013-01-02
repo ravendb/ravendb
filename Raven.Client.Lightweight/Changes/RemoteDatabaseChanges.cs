@@ -33,7 +33,7 @@ namespace Raven.Client.Changes
 		private readonly DocumentConvention conventions;
 		private readonly ReplicationInformer replicationInformer;
 		private readonly Action onDispose;
-		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.OrdinalIgnoreCase);
 		private IDisposable connection;
 
 		private static int connectionCounter;
@@ -149,7 +149,7 @@ namespace Raven.Client.Changes
 			counter.Inc();
 			var taskedObservable = new TaskedObservable<IndexChangeNotification>(
 				counter,
-				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(notification.Name, indexName, StringComparison.OrdinalIgnoreCase));
 
 			counter.OnIndexChangeNotification += taskedObservable.Send;
 			counter.OnError = taskedObservable.Error;
@@ -217,7 +217,7 @@ namespace Raven.Client.Changes
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
 				counter,
-				notification => string.Equals(notification.Id, docId, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(notification.Id, docId, StringComparison.OrdinalIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError = taskedObservable.Error;
@@ -324,7 +324,7 @@ namespace Raven.Client.Changes
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
 				counter,
-				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;

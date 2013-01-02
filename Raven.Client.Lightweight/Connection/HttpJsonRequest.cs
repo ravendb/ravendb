@@ -494,7 +494,7 @@ namespace Raven.Client.Connection
 
 		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
-			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return this;
 			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
 				return this; // not because of failover, no need to do this.

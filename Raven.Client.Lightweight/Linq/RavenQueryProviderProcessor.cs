@@ -464,7 +464,7 @@ namespace Raven.Client.Linq
 						isAnalyzed = false;
 						break;
 					case StringComparison.CurrentCultureIgnoreCase:
-					case StringComparison.InvariantCultureIgnoreCase:
+					case StringComparison.OrdinalIgnoreCase:
 					case StringComparison.OrdinalIgnoreCase:
 						isAnalyzed = true;
 						break;

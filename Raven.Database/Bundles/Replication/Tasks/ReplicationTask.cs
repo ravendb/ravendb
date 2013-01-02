@@ -41,7 +41,7 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
-			new ConcurrentDictionary<string, DestinationStats>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
 
 		private DocumentDatabase docDb;
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -184,7 +184,7 @@ namespace Raven.Bundles.Replication.Tasks
 					var match = replicationDestinations.FirstOrDefault(x =>
 														   string.Equals(x.ConnectionStringOptions.Url,
 																		 sourceReplicationInformation.Source,
-																		 StringComparison.InvariantCultureIgnoreCase));
+																		 StringComparison.OrdinalIgnoreCase));
 
 					if (match != null)
 					{
@@ -931,6 +931,6 @@ namespace Raven.Bundles.Replication.Tasks
 			docDb.WorkContext.NotifyAboutWork();
 		}
 
-		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 	}
 }

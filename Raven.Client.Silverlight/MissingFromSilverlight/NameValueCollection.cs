@@ -9,11 +9,11 @@ namespace Raven.Client.Silverlight.MissingFromSilverlight
 	public class NameValueCollection : IEnumerable
 	{
 		private Dictionary<string, List<string>> inner =
-			new Dictionary<string, List<string>>(StringComparer.InvariantCultureIgnoreCase);
+			new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
 		public NameValueCollection()
 		{
-			inner = new Dictionary<string, List<string>>(StringComparer.InvariantCultureIgnoreCase);
+			inner = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public Dictionary<string, List<string>> Headers { get { return inner; } }

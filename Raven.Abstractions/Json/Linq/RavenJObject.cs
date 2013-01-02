@@ -55,7 +55,7 @@ namespace Raven.Json.Linq
 
 		public RavenJObject WithCaseInsensitivePropertyNames()
 		{
-			var props = new DictionaryWithParentSnapshot(StringComparer.InvariantCultureIgnoreCase);
+			var props = new DictionaryWithParentSnapshot(StringComparer.OrdinalIgnoreCase);
 			foreach (var property in Properties)
 			{
 				props[property.Key] = property.Value;

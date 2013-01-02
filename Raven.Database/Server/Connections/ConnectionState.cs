@@ -11,12 +11,12 @@ namespace Raven.Database.Server.Connections
 	public class ConnectionState
 	{
 		private readonly ConcurrentSet<string> matchingIndexes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 		private readonly ConcurrentSet<string> matchingDocuments =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ConcurrentSet<string> matchingDocumentPrefixes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
 
@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Connections
 				}
 
 				var hasPrefix = matchingDocumentPrefixes.Any(
-						x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
+						x => documentChangeNotification.Id.StartsWith(x, StringComparison.OrdinalIgnoreCase));
 				if (hasPrefix == false)
 					return;
 			}

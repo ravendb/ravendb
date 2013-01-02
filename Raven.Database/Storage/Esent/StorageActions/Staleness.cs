@@ -82,7 +82,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return false;
 			var view = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"],
 			                           Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
-			return string.Equals(view, name, StringComparison.InvariantCultureIgnoreCase);
+			return string.Equals(view, name, StringComparison.OrdinalIgnoreCase);
 		}
 
 		public bool IsMapStale(string name)

@@ -174,7 +174,7 @@ namespace Raven.Client.Document
 
 		internal static void AssertNoDuplicateIdsInResults(List<QueryOperation> shardQueryOperations)
 		{
-			var shardsPerId = new Dictionary<string, HashSet<QueryOperation>>(StringComparer.InvariantCultureIgnoreCase);
+			var shardsPerId = new Dictionary<string, HashSet<QueryOperation>>(StringComparer.OrdinalIgnoreCase);
 
 			foreach (var shardQueryOperation in shardQueryOperations)
 			{

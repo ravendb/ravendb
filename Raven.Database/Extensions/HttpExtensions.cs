@@ -335,14 +335,14 @@ namespace Raven.Database.Extensions
 
 		public static void RemoveFromRequestUrl(this IHttpRequest self, string token)
 		{
-			if (self.Url.LocalPath.StartsWith(token, StringComparison.InvariantCultureIgnoreCase))
+			if (self.Url.LocalPath.StartsWith(token, StringComparison.OrdinalIgnoreCase))
 			{
 				self.Url = new UriBuilder(self.Url)
 				{
 					Path = self.Url.LocalPath.Substring(token.Length)
 				}.Uri;
 			}
-			if (self.RawUrl.StartsWith(token, StringComparison.InvariantCultureIgnoreCase))
+			if (self.RawUrl.StartsWith(token, StringComparison.OrdinalIgnoreCase))
 			{
 				self.RawUrl = self.RawUrl.Substring(token.Length);
 				if (string.IsNullOrEmpty(self.RawUrl))

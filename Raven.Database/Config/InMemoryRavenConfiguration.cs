@@ -36,7 +36,7 @@ namespace Raven.Database.Config
 
 		public InMemoryRavenConfiguration()
 		{
-			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
+			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
 			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 64 * 1024;
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;

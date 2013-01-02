@@ -170,7 +170,7 @@ namespace Raven.Storage.Managed
 			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject { { "ref", key } })
 				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase))
 				.Select(x => x.Value<string>("key"))
-				.Distinct(StringComparer.InvariantCultureIgnoreCase);
+				.Distinct(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
@@ -178,7 +178,7 @@ namespace Raven.Storage.Managed
 			return storage.DocumentReferences["ByKey"].SkipTo(new RavenJObject { { "ref", key } })
 				.TakeWhile(x => key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase))
 				.Select(x => x.Value<string>("ref"))
-				.Distinct(StringComparer.InvariantCultureIgnoreCase);
+				.Distinct(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public void DeleteIndex(string name)
@@ -188,7 +188,7 @@ namespace Raven.Storage.Managed
 			foreach (var table in new[] { storage.MappedResults, storage.ReduceResults, storage.ScheduleReductions, storage.ReduceKeys, storage.DocumentReferences })
 			{
 				foreach (var key in table["ByView"].SkipTo(new RavenJObject { { "view", name } })
-					.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), name)))
+					.TakeWhile(x => StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("view"), name)))
 				{
 					table.Remove(key);
 				}

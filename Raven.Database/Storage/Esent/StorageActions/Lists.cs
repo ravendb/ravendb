@@ -61,7 +61,7 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 				var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
-				if (string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(name, nameFromDb, StringComparison.OrdinalIgnoreCase) == false)
 					break;
 
 				Api.JetDelete(session, Lists);
@@ -81,7 +81,7 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 				var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
-				if(string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if(string.Equals(name, nameFromDb, StringComparison.OrdinalIgnoreCase) == false)
 					yield break;
 
 				count++;

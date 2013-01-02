@@ -25,7 +25,7 @@ namespace Raven.Database.Indexing
 		private readonly BaseBatchSizeAutoTuner autoTuner;
 		private readonly WorkContext context;
 		private readonly ConcurrentDictionary<string, HashSet<Guid>> documentsToRemove =
-			new ConcurrentDictionary<string, HashSet<Guid>>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, HashSet<Guid>>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ConcurrentDictionary<Guid, FutureIndexBatch> futureIndexBatches =
 			new ConcurrentDictionary<Guid, FutureIndexBatch>();
@@ -62,7 +62,7 @@ namespace Raven.Database.Indexing
 			// a single doc may appear multiple times, if it was updated while we were fetching things, 
 			// so we have several versions of the same doc loaded, this will make sure that we will only  
 			// take one of them.
-			var ids = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			for (int i = results.Count - 1; i >= 0; i--)
 			{
 				if(ids.Add(results[i].Key) == false)

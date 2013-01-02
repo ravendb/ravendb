@@ -77,7 +77,7 @@ namespace Raven.Database.Queries
 					if (stopWordsSetup.StopWords != null)
 					{
 						var stopWords = stopWordsSetup.StopWords;
-						var ht = new Hashtable(StringComparer.InvariantCultureIgnoreCase);
+						var ht = new Hashtable(StringComparer.OrdinalIgnoreCase);
 						foreach (var stopWord in stopWords)
 						{
 							ht[stopWord] = stopWord;
