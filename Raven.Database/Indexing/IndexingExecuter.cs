@@ -67,6 +67,7 @@ namespace Raven.Database.Indexing
 			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
 			List<JsonDocument> jsonDocs = null;
+			var lastEtag = Guid.Empty;
 			try
 			{
 				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedGuidForAllIndexes);
@@ -74,27 +75,18 @@ namespace Raven.Database.Indexing
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-					          jsonDocs.Count, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
+							  jsonDocs.Count, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
 				}
 
 				context.ReportIndexingActualBatchSize(jsonDocs.Count);
 				context.CancellationToken.ThrowIfCancellationRequested();
 
-				if (jsonDocs.Count > 0)
-				{
-					context.IndexedPerSecIncreaseBy(jsonDocs.Count);
-					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
-					indexesToWorkOn = result.Select(x => x.Item1).ToList();
-					var sw = Stopwatch.StartNew();
-					BackgroundTaskExecuter.Instance.ExecuteAll(context, result, (indexToWorkOn, _) =>
-					{
-						var index = indexToWorkOn.Item1;
-						var docs = indexToWorkOn.Item2;
+				if (jsonDocs.Count <= 0) 
+					return;
 
-						transactionalStorage.Batch(actions => IndexDocuments(actions, index.IndexName, docs));
-					});
-					indexingDuration = sw.Elapsed;
-				}
+				var sw = Stopwatch.StartNew();
+				lastEtag = HandleDocumentIndexing(indexesToWorkOn, jsonDocs);
+				indexingDuration = sw.Elapsed;
 			}
 			catch (OperationCanceledException)
 			{
@@ -104,10 +96,38 @@ namespace Raven.Database.Indexing
 			{
 				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 				{
-					var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(jsonDocs);
-					var lastModified = lastByEtag.LastModified.Value;
-					var lastEtag = lastByEtag.Etag.Value;
+					prefetchingBehavior.CleanupDocumentsToRemove(lastEtag);
+					UpdateAutoThrottler(jsonDocs, indexingDuration);
+				}
 
+				prefetchingBehavior.BatchProcessingComplete();
+			}
+		}
+
+		private Guid HandleDocumentIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
+		{
+			var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(jsonDocs);
+			var lastModified = lastByEtag.LastModified.Value;
+			var lastEtag = lastByEtag.Etag.Value;
+
+			context.IndexedPerSecIncreaseBy(jsonDocs.Count);
+			var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
+			indexesToWorkOn = result.Select(x => x.Item1).ToList();
+			BackgroundTaskExecuter.Instance.ExecuteAll(context, result, (indexToWorkOn, _) =>
+			{
+				var index = indexToWorkOn.Item1;
+				var docs = indexToWorkOn.Item2;
+
+				try
+				{
+					transactionalStorage.Batch(actions => IndexDocuments(actions, index.IndexName, docs));
+				}
+				catch (Exception e)
+				{
+					Log.Warn("Failed to index " + index.IndexName, e);
+				}
+				finally
+				{
 					if (Log.IsDebugEnabled)
 					{
 						Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
@@ -117,29 +137,20 @@ namespace Raven.Database.Indexing
 							);
 					}
 
-					// whatever we succeeded in indexing or not, we have to update this
-					// because otherwise we keep trying to re-index failed documents
 					transactionalStorage.Batch(actions =>
-					{
-						foreach (var indexToWorkOn in indexesToWorkOn)
-						{
-							actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
-						}
-					});
-
-					prefetchingBehavior.CleanupDocumentsToRemove(lastEtag);
-					UpdateAutoThrottler(jsonDocs, indexingDuration);
+					                           // whatever we succeeded in indexing or not, we have to update this
+					                           // because otherwise we keep trying to re-index failed documents
+					                           actions.Indexing.UpdateLastIndexed(index.IndexName, lastEtag, lastModified));
 				}
-
-				prefetchingBehavior.BatchProcessingComplete();
-			}
+			});
+			return lastEtag;
 		}
 
 		private void UpdateAutoThrottler(List<JsonDocument> jsonDocs, TimeSpan indexingDuration)
 		{
 			int futureLen;
 			int futureSize;
-			prefetchingBehavior.GetFutureStats(autoTuner.NumberOfItemsToIndexInSingleBatch ,out futureLen, out futureSize);
+			prefetchingBehavior.GetFutureStats(autoTuner.NumberOfItemsToIndexInSingleBatch, out futureLen, out futureSize);
 			autoTuner.AutoThrottleBatchSize(jsonDocs.Count + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 		}
 
@@ -165,7 +176,7 @@ namespace Raven.Database.Indexing
 					return filteredDoc == null ? new
 					{
 						Doc = doc,
-						Json = (object) new FilteredDocument(doc)
+						Json = (object)new FilteredDocument(doc)
 					} : new
 					{
 						Doc = filteredDoc,
@@ -207,7 +218,7 @@ namespace Raven.Database.Indexing
 
 					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
-					    viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
+						viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
 					{
 						continue;
 					}
@@ -218,14 +229,14 @@ namespace Raven.Database.Indexing
 						batch.DateTime = item.Doc.LastModified;
 					else
 						batch.DateTime = batch.DateTime > item.Doc.LastModified
-							                 ? item.Doc.LastModified
-							                 : batch.DateTime;
+											 ? item.Doc.LastModified
+											 : batch.DateTime;
 				}
 
 				if (batch.Docs.Count == 0)
 				{
 					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
-					          lastEtag, lastModified);
+							  lastEtag, lastModified);
 					// we use it this way to batch all the updates together
 					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
 					return;
