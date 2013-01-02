@@ -35,7 +35,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void IndexingEachFieldInEachDocumentSeparetedly()
 		{
-			Run<IndexingEachFieldInEachDocumentSeparetedly>(x => x.ForIndexing(), 500);
+			Run<IndexingEachFieldInEachDocumentSeparately>(x => x.ForIndexing(), 500);
 		}
 
 		[Fact]
@@ -65,7 +65,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void MultiGetNonStaleRequslts()
 		{
-			Run<MultiGetNonStaleRequslts>(x => x.ShouldBeAbleToGetNonStaleResults(), 15);
+			Run<MultiGetNonStaleResults>(x => x.ShouldBeAbleToGetNonStaleResults(), 15);
 		}
 		
 		[Fact]
