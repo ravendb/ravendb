@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -112,38 +113,40 @@ namespace Raven.Database.Indexing
 
 			context.IndexedPerSecIncreaseBy(jsonDocs.Count);
 			var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
-			indexesToWorkOn = result.Select(x => x.Item1).ToList();
-			BackgroundTaskExecuter.Instance.ExecuteAll(context, result, (indexToWorkOn, _) =>
-			{
-				var index = indexToWorkOn.Item1;
-				var docs = indexToWorkOn.Item2;
 
-				try
-				{
-					transactionalStorage.Batch(actions => IndexDocuments(actions, index.IndexName, docs));
-				}
-				catch (Exception e)
-				{
-					Log.Warn("Failed to index " + index.IndexName, e);
-				}
-				finally
-				{
-					if (Log.IsDebugEnabled)
-					{
-						Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
-						          jsonDocs.Count,
-						          lastEtag,
-						          string.Join(", ", indexesToWorkOn.Select(x => x.IndexName))
-							);
-					}
+			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, result,
+			                                                      index => HandleIndexingFor(index, lastEtag, lastModified));
 
-					transactionalStorage.Batch(actions =>
-					                           // whatever we succeeded in indexing or not, we have to update this
-					                           // because otherwise we keep trying to re-index failed documents
-					                           actions.Indexing.UpdateLastIndexed(index.IndexName, lastEtag, lastModified));
-				}
-			});
 			return lastEtag;
+		}
+
+		
+
+		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Guid lastEtag, DateTime lastModified)
+		{
+			try
+			{
+				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex.IndexName, batchForIndex.Batch));
+			}
+			catch (Exception e)
+			{
+				Log.Warn("Failed to index " + batchForIndex.IndexName, e);
+			}
+			finally
+			{
+				if (Log.IsDebugEnabled)
+				{
+					Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
+							  batchForIndex.Batch.Docs.Count,
+					          lastEtag,
+							  batchForIndex.IndexName);
+				}
+
+				transactionalStorage.Batch(actions =>
+				                           // whatever we succeeded in indexing or not, we have to update this
+				                           // because otherwise we keep trying to re-index failed documents
+										   actions.Indexing.UpdateLastIndexed(batchForIndex.IndexName, lastEtag, lastModified));
+			}
 		}
 
 		private void UpdateAutoThrottler(List<JsonDocument> jsonDocs, TimeSpan indexingDuration)
@@ -154,8 +157,16 @@ namespace Raven.Database.Indexing
 			autoTuner.AutoThrottleBatchSize(jsonDocs.Count + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 		}
 
+		public class IndexingBatchForIndex
+		{
+			public string IndexName { get; set; }
 
-		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
+			public Guid LastIndexedEtag { get; set; }
+
+			public IndexingBatch Batch { get; set; }
+		}
+
+		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
 		{
 			var last = jsonDocs.Last();
 
@@ -186,7 +197,7 @@ namespace Raven.Database.Indexing
 
 			Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
-			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
+			var results = new IndexingBatchForIndex[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
@@ -245,7 +256,12 @@ namespace Raven.Database.Indexing
 				{
 					Log.Debug("Going to index {0} documents in {1}: ({2})", batch.Ids.Count, indexToWorkOn, string.Join(", ", batch.Ids));
 				}
-				results[i] = Tuple.Create(indexToWorkOn, batch);
+				results[i] = new IndexingBatchForIndex
+				{
+					Batch = batch,
+					IndexName = indexToWorkOn.IndexName,
+					LastIndexedEtag = indexToWorkOn.LastIndexedEtag
+				}; 
 
 			});
 
