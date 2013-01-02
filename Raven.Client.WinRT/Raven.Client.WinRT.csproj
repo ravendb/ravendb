@@ -1376,9 +1376,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="..\imports\newtonsoft.json\src\newtonsoft.json\Dynamic.snk">
-      <Link>Imports\Imports\Newtonsoft.Json\Dynamic.snk</Link>
-    </EmbeddedResource>
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
