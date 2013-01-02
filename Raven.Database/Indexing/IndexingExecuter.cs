@@ -61,14 +61,14 @@ namespace Raven.Database.Indexing
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
-			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
+			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
 
 			context.CancellationToken.ThrowIfCancellationRequested();
 
 			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
 			List<JsonDocument> jsonDocs = null;
-			var lastEtag = Guid.Empty;
+			var lastEtag = Etag.Empty;
 			try
 			{
 				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedGuidForAllIndexes);
@@ -105,11 +105,11 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private Guid HandleDocumentIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
+		private Etag HandleDocumentIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
 		{
 			var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(jsonDocs);
 			var lastModified = lastByEtag.LastModified.Value;
-			var lastEtag = lastByEtag.Etag.Value;
+			var lastEtag = lastByEtag.Etag;
 
 			context.IndexedPerSecIncreaseBy(jsonDocs.Count);
 			var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
@@ -122,7 +122,7 @@ namespace Raven.Database.Indexing
 
 		
 
-		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Guid lastEtag, DateTime lastModified)
+		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
 		{
 			try
 			{
@@ -161,7 +161,7 @@ namespace Raven.Database.Indexing
 		{
 			public string IndexName { get; set; }
 
-			public Guid LastIndexedEtag { get; set; }
+			public Etag LastIndexedEtag { get; set; }
 
 			public IndexingBatch Batch { get; set; }
 		}
@@ -173,7 +173,7 @@ namespace Raven.Database.Indexing
 			Debug.Assert(last.Etag != null);
 			Debug.Assert(last.LastModified != null);
 
-			var lastEtag = last.Etag.Value;
+			var lastEtag = last.Etag;
 			var lastModified = last.LastModified.Value;
 
 			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
@@ -223,7 +223,7 @@ namespace Raven.Database.Indexing
 					if (etag == null)
 						continue;
 
-					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
+					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.ToByteArray())) >= 0)
 						continue;
 
 

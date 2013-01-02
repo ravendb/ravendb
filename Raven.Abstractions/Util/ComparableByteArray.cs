@@ -94,6 +94,11 @@ namespace Raven.Abstractions.Util
 			return new Guid(inner);
 		}
 
+		public Etag ToEtag()
+		{
+			return Etag.Parse(inner);
+		}
+
 		public override string ToString()
 		{
 			return ToGuid().ToString();
