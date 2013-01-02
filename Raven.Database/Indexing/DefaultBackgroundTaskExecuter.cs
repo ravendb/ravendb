@@ -173,13 +173,12 @@ namespace Raven.Database.Indexing
 					var index = result[i];
 					var indexToWorkOn = index;
 
-					tasks[i] = new Task(() => action(indexToWorkOn));
-
-					tasks[i].ContinueWith(_ => semaphoreSlim.Release());
+					var task = new Task(() => action(indexToWorkOn));
+					tasks[i] = task.ContinueWith(_ => semaphoreSlim.Release());
 
 					semaphoreSlim.Wait();
 
-					tasks[i].Start(context.Database.BackgroundTaskScheduler);
+					task.Start(context.Database.BackgroundTaskScheduler);
 				}
 
 				Task.WaitAll(tasks);
