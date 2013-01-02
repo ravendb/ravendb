@@ -160,7 +160,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void ExecuteAllInterleaved<T>(WorkContext context, List<T> result, Action<T> action)
+		public void ExecuteAllInterleaved<T>(WorkContext context, IList<T> result, Action<T> action)
 		{
 			var semaphoreSlim = new SemaphoreSlim(0, context.Configuration.MaxNumberOfParallelIndexTasks);
 
