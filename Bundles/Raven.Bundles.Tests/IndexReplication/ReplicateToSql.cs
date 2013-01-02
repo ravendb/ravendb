@@ -49,7 +49,6 @@ namespace Raven.Bundles.Tests.IndexReplication
 				}
 			};
 			documentStore.Initialize();
-			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 
 			documentStore.DatabaseCommands.PutIndex(
 				"Questions/Votes",
