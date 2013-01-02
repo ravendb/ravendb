@@ -25,7 +25,7 @@ namespace Raven.Database.Util
 			}
 			else
 			{
-				userPrincipal = UserPrincipal.Current;
+				userPrincipal = UserPrincipal.FindByIdentity(machineCtx, IdentityType.Name, userName);
 			}
 
 			if (userPrincipal == null)
