@@ -269,7 +269,7 @@ namespace Raven.Tests.Storage
 				}
 
 				var docs = new List<string>();
-				Etag lastEtag = null;
+				var lastEtag = Etag.Empty;
 				var total = 0;
 				var stop = false;
 				do

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Bundles.UniqueConstraints
@@ -12,7 +11,7 @@ namespace Raven.Bundles.UniqueConstraints
 
 	public class UniqueConstraintsPutTrigger : AbstractPutTrigger
 	{
-		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, System.Guid etag, TransactionInformation transactionInformation)
+		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
 		{
 			if (key.StartsWith("Raven/"))
 			{
