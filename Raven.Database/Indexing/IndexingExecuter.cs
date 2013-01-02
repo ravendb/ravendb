@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
-			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
+			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => x.LastIndexedEtag);
 
 			context.CancellationToken.ThrowIfCancellationRequested();
 
@@ -106,7 +106,7 @@ namespace Raven.Database.Indexing
 				{
 					var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(jsonDocs);
 					var lastModified = lastByEtag.LastModified.Value;
-					var lastEtag = lastByEtag.Etag.Value;
+					var lastEtag = lastByEtag.Etag;
 
 					if (Log.IsDebugEnabled)
 					{
@@ -151,7 +151,7 @@ namespace Raven.Database.Indexing
 			Debug.Assert(last.Etag != null);
 			Debug.Assert(last.LastModified != null);
 
-			var lastEtag = last.Etag.Value;
+			var lastEtag = last.Etag;
 			var lastModified = last.LastModified.Value;
 
 			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
@@ -201,7 +201,7 @@ namespace Raven.Database.Indexing
 					if (etag == null)
 						continue;
 
-					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
+					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.ToByteArray())) >= 0)
 						continue;
 
 

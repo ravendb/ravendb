@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
@@ -28,7 +29,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					Guid lastDocEtag = Guid.Empty;
+					Etag lastDocEtag = Etag.Empty;
 					Database.TransactionalStorage.Batch(accessor =>
 					{
 						lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
@@ -55,7 +56,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "POST":
 					var json = context.ReadJson();
-					var id = Database.Put(null, Guid.Empty, json,
+					var id = Database.Put(null, Etag.Empty, json,
 					                      context.Request.Headers.FilterHeaders(),
 					                      GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + Uri.EscapeUriString(id.Key));

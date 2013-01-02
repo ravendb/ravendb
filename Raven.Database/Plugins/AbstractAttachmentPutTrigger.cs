@@ -6,6 +6,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
@@ -57,7 +58,7 @@ namespace Raven.Database.Plugins
 		/// <param name="data">The new attachment data about to be put into Raven</param>
 		/// <param name="metadata">The new document metadata</param>
 		/// <param name="etag">The etag of the just put document</param>
-		public virtual void AfterPut(string key, Stream data, RavenJObject metadata, Guid etag)
+		public virtual void AfterPut(string key, Stream data, RavenJObject metadata, Etag etag)
 		{
 
 		}
@@ -71,7 +72,7 @@ namespace Raven.Database.Plugins
 		/// <param name="data">The attachment data that was put into Raven</param>
 		/// <param name="metadata">The document metadata</param>
 		/// <param name="etag">The etag of the just put document</param>
-		public virtual void AfterCommit(string key, Stream data, RavenJObject metadata, Guid etag)
+		public virtual void AfterCommit(string key, Stream data, RavenJObject metadata, Etag etag)
 		{
 
 		}

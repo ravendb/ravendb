@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
@@ -33,8 +34,8 @@ namespace Raven.Database.Indexing
 				return indexes;
 
 			var indexesByIndexedEtag = indexes
-				.GroupBy(x => x.LastIndexedEtag, new RoughGuidEqualityAndComparison())
-				.OrderBy(x => x.Key, new RoughGuidEqualityAndComparison())
+				.GroupBy(x => x.LastIndexedEtag, new RoughEtagEqualityAndComparison())
+				.OrderBy(x => x.Key, new RoughEtagEqualityAndComparison())
 				.ToList();
 
 			if (indexesByIndexedEtag.Count == 1)
@@ -123,40 +124,39 @@ namespace Raven.Database.Indexing
 		// here we compare, but only up to the last 116 bits, not the full 128 bits
 		// this means that we can gather documents that are within 4K docs from one another, because
 		// at that point, it doesn't matter much, it would be gone within one or two indexing cycles
-		public class RoughGuidEqualityAndComparison : IEqualityComparer<Guid>, IComparer<Guid>
+		public class RoughEtagEqualityAndComparison : IEqualityComparer<Etag>, IComparer<Etag>
 		{
-			public bool Equals(Guid x, Guid y)
-			{
-				return Compare(x, y) == 0;
-			}
+		    public bool Equals(Etag x, Etag y)
+		    {
+		        return Compare(x, y) == 0;
+		    }
 
-			public int GetHashCode(Guid obj)
-			{
-				var start = 0;
-				var bytes = obj.ToByteArray();
-				for (var i = 0; i < 14; i++)
-				{
-					start = (start * 397) ^ bytes[i];
-				}
-				var last4Bits = bytes[15] >> 4;
-				start = (start * 397) ^ last4Bits;
-				return start;
-			}
+		    public int GetHashCode(Etag obj)
+		    {
+                var start = 0;
+                var bytes = obj.ToByteArray();
+                for (var i = 0; i < 14; i++)
+                {
+                    start = (start * 397) ^ bytes[i];
+                }
+                var last4Bits = bytes[15] >> 4;
+                start = (start * 397) ^ last4Bits;
+                return start;
+		    }
 
-			public int Compare(Guid x, Guid y)
-			{
-				var xBytes = x.ToByteArray();
-				var yBytes = y.ToByteArray();
+		    public int Compare(Etag x, Etag y)
+		    {
+               if (x.Restarts == y.Restarts)
+               {
+                   var delta = Math.Abs(x.Changes - y.Changes);
+                   if (delta <= 4096)
+                       return 0;
 
-				for (int i = 0; i < 14; i++)
-				{
-					if (xBytes[i] != yBytes[i])
-						return xBytes[i] - yBytes[i];
-				}
-				var xLast4Bits = xBytes[15] >> 4;
-				var yLast4Bits = yBytes[15] >> 4;
-				return xLast4Bits - yLast4Bits;
-			}
+                   return (int)(x.Changes - y.Changes);
+               }
+
+		        return (int) (x.Restarts - y.Restarts);
+		    }
 		}
 	}
 }

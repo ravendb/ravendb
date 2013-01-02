@@ -160,7 +160,7 @@ namespace Raven.Studio.Models
 			document.Value = new JsonDocument
 			                 {
 				                 DataAsJson = { { "Name", "..." } },
-				                 Etag = Guid.Empty
+				                 Etag = Etag.Empty
 			                 };
 		}
 
@@ -887,7 +887,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public Guid? Etag
+		public Etag Etag
 		{
 			get { return document.Value.Etag; }
 			set
@@ -925,7 +925,7 @@ namespace Raven.Studio.Models
 					.OrderBy(x => x.Key)
 					.Concat(new[]
 					        {
-						        new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : null),
+						        new KeyValuePair<string, string>("ETag", Etag != null ? Etag.ToString() : null),
 						        new KeyValuePair<string, string>("Last-Modified", GetMetadataLastModifiedString()),
 					        })
 					.Where(x => x.Value != null);
@@ -1184,9 +1184,9 @@ namespace Raven.Studio.Models
 				parentModel.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddInfoNotification("Saving document " + parentModel.Key + " ...");
 
-				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) || parentModel.ResolvingConflict
+				Etag etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) || parentModel.ResolvingConflict
 					             ? parentModel.Etag
-					             : Guid.Empty;
+					             : Etag.Empty;
 
 				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 				                .ContinueOnSuccess(result =>

@@ -217,7 +217,7 @@ namespace Raven.Database.Server.Responders
 					.IndexEntires(index, indexQuery, Database.IndexQueryTriggers, totalResults)
 					.ToArray();
 
-			Tuple<DateTime, Guid> indexTimestamp = null;
+			Tuple<DateTime, Etag> indexTimestamp = null;
 			bool isIndexStale = false;
 			Database.TransactionalStorage.Batch(
 				accessor =>
@@ -353,7 +353,7 @@ namespace Raven.Database.Server.Responders
 
 		private void GetIndexQueryResult(IHttpContext context, string index)
 		{
-			Guid indexEtag;
+			Etag indexEtag;
 			var queryResult = ExecuteQuery(context, index, out indexEtag);
 
 			if (queryResult == null)
@@ -409,7 +409,7 @@ namespace Raven.Database.Server.Responders
 			context.Write(viewGenerator.SourceCode);
 		}
 
-		private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Guid indexEtag)
+		private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Etag indexEtag)
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 			RewriteDateQueriesFromOldClients(context,indexQuery);
@@ -468,7 +468,7 @@ namespace Raven.Database.Server.Responders
 			indexQuery.Query = builder.ToString();
 		}
 
-		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
+		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Etag indexEtag)
 		{
 			indexEtag = Database.GetIndexEtag(index, null);
 			if (context.MatchEtag(indexEtag))
@@ -483,7 +483,7 @@ namespace Raven.Database.Server.Responders
 			return queryResult;
 		}
 
-		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
+		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Etag indexEtag)
 		{
 			string entityName;
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
@@ -502,7 +502,7 @@ namespace Raven.Database.Server.Responders
 			if (dynamicIndexName == null && // would have to create a dynamic index
 				Database.Configuration.CreateTemporaryIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
 			{
-				indexEtag = Guid.NewGuid();
+				indexEtag = Etag.InvalidEtag;
 				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
 				context.SetStatusToBadRequest();
 				var target = entityName == null ? "all documents" : entityName + " documents";
@@ -520,9 +520,9 @@ namespace Raven.Database.Server.Responders
 			// as we make a switch from temp to auto, and we need to refresh the etag
 			// if that is the case. This can also happen when the optmizer
 			// decided to switch indexes for a query.
-			indexEtag = (dynamicIndexName  == null || queryResult.IndexName == dynamicIndexName) ?
-				Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag) : 
-				Guid.NewGuid();
+		    indexEtag = (dynamicIndexName == null || queryResult.IndexName == dynamicIndexName)
+		                    ? Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag)
+		                    : Etag.InvalidEtag;
 
 			return queryResult;
 		}

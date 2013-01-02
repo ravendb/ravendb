@@ -294,7 +294,7 @@ namespace Raven.Database.Indexing
 			return new IndexToWorkOn
 			{
 				IndexName = indexesStat.Name,
-				LastIndexedEtag = Guid.Empty
+				LastIndexedEtag = Etag.Empty
 			};
 		}
 

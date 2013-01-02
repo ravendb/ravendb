@@ -578,6 +578,7 @@
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
     <Compile Include="Data\BulkInsertOptions.cs" />
+    <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
@@ -627,6 +628,7 @@
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
+    <Compile Include="Data\UuidType.cs" />
     <Compile Include="Extensions\AttachmentExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
@@ -709,7 +711,7 @@
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
-    <Compile Include="Util\Etag.cs" />
+    <Compile Include="Util\EtagUtil.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />

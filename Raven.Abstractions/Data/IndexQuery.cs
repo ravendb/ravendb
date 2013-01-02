@@ -93,7 +93,7 @@ namespace Raven.Abstractions.Data
 		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
 		/// use the Cutoff date option, instead.
 		/// </remarks>
-		public Guid? CutoffEtag { get; set; }
+		public Etag CutoffEtag { get; set; }
 
 		/// <summary>
 		/// The default field to use when querying directly on the Lucene query
@@ -196,7 +196,7 @@ namespace Raven.Abstractions.Data
 			}
 			if (CutoffEtag != null)
 			{
-				path.Append("&cutOffEtag=").Append(CutoffEtag.Value.ToString());
+				path.Append("&cutOffEtag=").Append(CutoffEtag);
 			}
 			
 

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Json;
@@ -20,7 +21,7 @@ namespace Raven.Abstractions.Smuggler
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
 			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
-			LastAttachmentEtag = LastDocsEtag = Guid.Empty;
+			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
 		}
 
 		/// <summary>
@@ -30,8 +31,8 @@ namespace Raven.Abstractions.Smuggler
 
 		public List<FilterSetting> Filters { get; set; }
 
-		public Guid LastDocsEtag { get; set; }
-		public Guid LastAttachmentEtag { get; set; }
+		public Etag LastDocsEtag { get; set; }
+		public Etag LastAttachmentEtag { get; set; }
 
 		/// <summary>
 		/// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.

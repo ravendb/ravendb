@@ -5,6 +5,7 @@
 // //-----------------------------------------------------------------------
 using System;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
@@ -24,7 +25,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 			// create
 			using (var session = store1.OpenSession())
 			{
-				session.Store(new Company { Name = "HR" }, Guid.Empty, "companies/1");
+				session.Store(new Company { Name = "HR" }, Etag.Empty, "companies/1");
 				session.SaveChanges();
 			}
 
@@ -44,7 +45,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 			// create
 			using (var session = store1.OpenSession())
 			{
-				session.Store(new Company { Name = "Hibernating Rhinos" }, Guid.Empty, "companies/1");
+				session.Store(new Company { Name = "Hibernating Rhinos" }, Etag.Empty, "companies/1");
 				session.SaveChanges();
 			}
 
@@ -72,7 +73,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				// create
 				using (var session = store1.OpenSession())
 				{
-					session.Store(new Company { Name = "HR" }, Guid.Empty, "companies/1");
+					session.Store(new Company { Name = "HR" }, Etag.Empty, "companies/1");
 					session.SaveChanges();
 				}
 
@@ -90,7 +91,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 			// create
 			using (var session = store1.OpenSession())
 			{
-				session.Store(new Company { Name = "Hibernating Rhinos" }, Guid.Empty, "companies/1");
+				session.Store(new Company { Name = "Hibernating Rhinos" }, Etag.Empty, "companies/1");
 				session.SaveChanges();
 			}
 

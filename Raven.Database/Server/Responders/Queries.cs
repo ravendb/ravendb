@@ -3,13 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
@@ -54,7 +51,7 @@ namespace Raven.Database.Server.Responders
 
 					if (documentByKey.Etag != null)
 					{
-						includedEtags.AddRange(documentByKey.Etag.Value.ToByteArray());
+						includedEtags.AddRange(documentByKey.Etag.ToByteArray());
 					}
 					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
 				}
@@ -71,12 +68,12 @@ namespace Raven.Database.Server.Responders
 				}
 			});
 
-			Guid computedEtag;
+			Etag computedEtag;
 
 			using (var md5 = MD5.Create())
 			{
 				var computeHash = md5.ComputeHash(includedEtags.ToArray());
-				computedEtag = new Guid(computeHash);
+				computedEtag = Etag.Parse(computeHash);
 			}
 
 			if (context.MatchEtag(computedEtag))

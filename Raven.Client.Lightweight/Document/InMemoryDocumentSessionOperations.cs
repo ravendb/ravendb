@@ -189,7 +189,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="instance">The instance.</param>
 		/// <returns></returns>
-		public Guid? GetEtagFor<T>(T instance)
+		public Etag GetEtagFor<T>(T instance)
 		{
 			return GetDocumentMetadata(instance).ETag;
 		}
@@ -222,7 +222,7 @@ namespace Raven.Client.Document
 					entitiesByKey[id] = instance;
 					entitiesAndMetadata[instance] = value = new DocumentMetadata
 					{
-						ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
+						ETag = UseOptimisticConcurrency ? Etag.Empty : null,
 						Key = id,
 						OriginalMetadata = jsonDocument.Metadata,
 						Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken(),
@@ -386,7 +386,7 @@ more responsive application.
 				OriginalValue = document,
 				Metadata = metadata,
 				OriginalMetadata = (RavenJObject)metadata.CloneToken(),
-				ETag = HttpExtensions.EtagHeaderToGuid(etag),
+				ETag = HttpExtensions.EtagHeaderToEtag(etag),
 				Key = key
 			};
 			entitiesByKey[key] = entity;
@@ -492,7 +492,7 @@ more responsive application.
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
 		/// </summary>
-		public void Store(object entity, Guid etag)
+		public void Store(object entity, Etag etag)
 		{
 			StoreInternal(entity, etag, null, forceConcurrencyCheck: true);
 		}
@@ -508,12 +508,12 @@ more responsive application.
 		/// <summary>
 		/// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
 		/// </summary>
-		public void Store(object entity, Guid etag, string id)
+		public void Store(object entity, Etag etag, string id)
 		{
 			StoreInternal(entity, etag, id, forceConcurrencyCheck: true);
 		}
 
-		private void StoreInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
+        private void StoreInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
@@ -592,7 +592,7 @@ more responsive application.
 
 		protected abstract Task<string> GenerateKeyAsync(object entity);
 
-		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
+        protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
@@ -657,9 +657,9 @@ more responsive application.
 
 			var json = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 
-			var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
-						   ? (documentMetadata.ETag ?? Guid.Empty)
-						   : (Guid?)null;
+		    var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
+		                   ? (documentMetadata.ETag ?? Etag.Empty)
+		                   : null;
 
 			return new PutCommandData
 			{
@@ -686,7 +686,7 @@ more responsive application.
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
 
-				batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag.ToString());
+				batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag);
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
@@ -763,7 +763,7 @@ more responsive application.
 
 			foreach (var key in keysToDelete)
 			{
-				Guid? etag = null;
+                Etag etag = null;
 				object existingEntity;
 				DocumentMetadata metadata = null;
 				if (entitiesByKey.TryGetValue(key, out existingEntity))
@@ -972,7 +972,7 @@ more responsive application.
 			/// Gets or sets the ETag.
 			/// </summary>
 			/// <value>The ETag.</value>
-			public Guid? ETag { get; set; }
+            public Etag ETag { get; set; }
 			/// <summary>
 			/// Gets or sets the key.
 			/// </summary>

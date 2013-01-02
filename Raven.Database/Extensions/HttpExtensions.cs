@@ -172,7 +172,7 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		public static void WriteData(this IHttpContext context, RavenJObject data, RavenJObject headers, Guid etag)
+		public static void WriteData(this IHttpContext context, RavenJObject data, RavenJObject headers, Etag etag)
 		{
 			var str = data.ToString(Formatting.None);
 			var jsonp = context.Request.QueryString["jsonp"];
@@ -188,13 +188,13 @@ namespace Raven.Database.Extensions
 			WriteData(context, defaultEncoding.GetBytes(str), headers, etag);
 		}
 
-		public static void WriteData(this IHttpContext context, byte[] data, RavenJObject headers, Guid etag)
+		public static void WriteData(this IHttpContext context, byte[] data, RavenJObject headers, Etag etag)
 		{
 			context.WriteHeaders(headers, etag);
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-		public static void WriteHeaders(this IHttpContext context, RavenJObject headers, Guid etag)
+		public static void WriteHeaders(this IHttpContext context, RavenJObject headers, Etag etag)
 		{
 			foreach (var header in headers)
 			{
@@ -409,31 +409,25 @@ namespace Raven.Database.Extensions
 			return null;
 		}
 
-		public static Guid? GetCutOffEtag(this IHttpContext context)
+		public static Etag GetCutOffEtag(this IHttpContext context)
 		{
 			var etagAsString = context.Request.QueryString["cutOffEtag"];
 			if (etagAsString != null)
 			{
 				etagAsString = Uri.UnescapeDataString(etagAsString);
 
-				Guid result;
-				if (Guid.TryParse(etagAsString, out result))
-					return result;
-				throw new BadRequestException("Could not parse cut off etag query parameter as guid");
+				return Etag.Parse(etagAsString);
 			}
 			return null;
 		}
 
 
-		public static Guid? GetEtag(this IHttpContext context)
+		public static Etag GetEtag(this IHttpContext context)
 		{
 			var etagAsString = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			if (etagAsString != null)
 			{
-				Guid result;
-				if (Guid.TryParse(etagAsString, out result))
-					return result;
-				throw new BadRequestException("Could not parse If-None-Match or If-Match header as Guid");
+				return Etag.Parse(etagAsString);
 			}
 			return null;
 		}
@@ -459,34 +453,31 @@ namespace Raven.Database.Extensions
 			return radius;
 		}
 
-		public static Guid? GetEtagFromQueryString(this IHttpContext context)
+		public static Etag GetEtagFromQueryString(this IHttpContext context)
 		{
 			var etagAsString = context.Request.QueryString["etag"];
 			if (etagAsString != null)
 			{
-				Guid result;
-				if (Guid.TryParse(etagAsString, out result))
-					return result;
-				throw new BadRequestException("Could not parse etag query parameter as Guid");
+				return Etag.Parse(etagAsString);
 			}
 			return null;
 		}
 
-		public static bool MatchEtag(this IHttpContext context, Guid etag)
+		public static bool MatchEtag(this IHttpContext context, Etag etag)
 		{
-			return EtagHeaderToGuid(context) == etag;
+			return EtagHeaderToEtag(context) == etag;
 		}
 
-		internal static Guid EtagHeaderToGuid(IHttpContext context)
+		internal static Etag EtagHeaderToEtag(IHttpContext context)
 		{
 			var responseHeader = context.Request.Headers["If-None-Match"];
 			if (string.IsNullOrEmpty(responseHeader))
-				return Guid.NewGuid();
+				return Etag.InvalidEtag;
 
 			if (responseHeader[0] == '\"')
-				return new Guid(responseHeader.Substring(1, responseHeader.Length - 2));
+				return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
 
-			return new Guid(responseHeader);
+			return Etag.Parse(responseHeader);
 		}
 
 		public static void WriteEmbeddedFile(this IHttpContext context, string ravenPath, string docPath)
@@ -538,7 +529,7 @@ namespace Raven.Database.Extensions
 		}
 
 
-		public static void WriteETag(this IHttpContext context, Guid etag)
+		public static void WriteETag(this IHttpContext context, Etag etag)
 		{
 			context.WriteETag(etag.ToString());
 		}

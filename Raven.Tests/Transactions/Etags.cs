@@ -9,9 +9,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Database.Exceptions;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Transactions
@@ -81,7 +78,7 @@ namespace Raven.Tests.Transactions
 			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
 			Assert.Throws<ConcurrencyException>(
 				() =>
-				db.Put("ayende", Guid.NewGuid(), RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(),
+				db.Put("ayende", Etag.InvalidEtag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(),
 					   transactionInformation));
 		}
 	}

@@ -641,6 +641,9 @@
     <Compile Include="..\Raven.Abstractions\Data\EnumerableExtension.cs">
       <Link>Imports\Data\EnumerableExtension.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Etag.cs">
+      <Link>Imports\Data\Etag.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Facet.cs">
       <Link>Imports\Data\Facet.cs</Link>
     </Compile>
@@ -685,6 +688,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ScriptedPatchRequest.cs">
       <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\UuidType.cs">
+      <Link>Imports\Data\UuidType.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Default.cs">
       <Link>Imports\Default.cs</Link>

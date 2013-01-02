@@ -31,7 +31,7 @@ namespace Raven.Storage.Managed
 			this.generator = generator;
 		}
 
-		public Guid AddAttachment(string key, Guid? etag, Stream data, RavenJObject headers)
+		public Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers)
 		{
 			AssertValidEtag(key, etag, "PUT");
 
@@ -59,27 +59,27 @@ namespace Raven.Storage.Managed
 			return newEtag;
 		}
 
-		private void AssertValidEtag(string key, Guid? etag, string op)
+		private void AssertValidEtag(string key, Etag etag, string op)
 		{
 			var readResult =
 				storage.Attachments.Read(new RavenJObject { { "key", key } });
 
 			if(readResult != null && etag != null)
 			{
-				var existingEtag = new Guid(readResult.Key.Value<byte[]>("etag"));
+				var existingEtag = Etag.Parse(readResult.Key.Value<byte[]>("etag"));
 				if (existingEtag != etag)
 				{
 					throw new ConcurrencyException(op + " attempted on attachment '" + key +
 												   "' using a non current etag")
 					{
 						ActualETag = existingEtag,
-						ExpectedETag = etag.Value
+						ExpectedETag = etag
 					};
 				}
 			}
 		}
 
-		public void DeleteAttachment(string key, Guid? etag)
+		public void DeleteAttachment(string key, Etag etag)
 		{
 			AssertValidEtag(key, etag, "DELETE");
 
@@ -100,7 +100,7 @@ namespace Raven.Storage.Managed
 			return new Attachment
 			{
 				Key = key,
-				Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+				Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 				Metadata = metadata,
 				Data = () => memoryStream,
 				Size = (int)(memoryStream.Length - memoryStream.Position)
@@ -114,7 +114,7 @@ namespace Raven.Storage.Managed
 				   select new AttachmentInformation
 				   {
 					   Key = key.Value<string>("key"),
-					   Etag = new Guid(key.Value<byte[]>("etag")),
+					   Etag = Etag.Parse(key.Value<byte[]>("etag")),
 					   Metadata = attachment.Metadata,
 					   Size = attachment.Size
 				   };
@@ -130,13 +130,13 @@ namespace Raven.Storage.Managed
 			       select new AttachmentInformation
 			       {
 			       	Key = key.Value<string>("key"),
-			       	Etag = new Guid(key.Value<byte[]>("etag")),
+			       	Etag = Etag.Parse(key.Value<byte[]>("etag")),
 			       	Metadata = attachment.Metadata,
 			       	Size = attachment.Size
 			       };
 		}
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value, int take, long maxTotalSize)
+		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Etag value, int take, long maxTotalSize)
 		{
 			long totalSize = 0;
 			return (from key in storage.Attachments["ByEtag"]
@@ -148,7 +148,7 @@ namespace Raven.Storage.Managed
 			        select new AttachmentInformation
 			        {
 				        Key = key.Value<string>("key"),
-				        Etag = new Guid(key.Value<byte[]>("etag")),
+				        Etag = Etag.Parse(key.Value<byte[]>("etag")),
 				        Metadata = attachment.Metadata,
 				        Size = attachment.Size
 			        });

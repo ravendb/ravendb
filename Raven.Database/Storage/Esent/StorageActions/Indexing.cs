@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
@@ -79,9 +80,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
 				IndexingErrors =
 					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
-				LastIndexedEtag =
-					Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).
-						TransfromToGuidWithProperSorting(),
+				LastIndexedEtag = Etag.Parse(Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])),
 				LastIndexedTimestamp = DateTime.FromBinary(lastIndexedTimestamp),
 				ReduceIndexingAttempts =
 					hasReduce == false
@@ -96,7 +95,7 @@ namespace Raven.Storage.Esent.StorageActions
 										   ? null
 										   : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
 																	   tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
-				LastReducedEtag = hasReduce == false ? (Guid?)null : GetLastReduceIndexWithPotentialNull(),
+				LastReducedEtag = hasReduce == false ? (Etag)null : GetLastReduceIndexWithPotentialNull(),
 				LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
 			};
 		}
@@ -109,12 +108,12 @@ namespace Raven.Storage.Esent.StorageActions
 			return DateTime.FromBinary(binary.Value);
 		}
 
-		private Guid GetLastReduceIndexWithPotentialNull()
+		private Etag GetLastReduceIndexWithPotentialNull()
 		{
 			var bytes = Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
 			if (bytes == null)
-				return Guid.Empty;
-			return bytes.TransfromToGuidWithProperSorting();
+				return null;
+			return Etag.Parse(bytes);
 		}
 
 		public void AddIndex(string name, bool createMapReduce)
@@ -217,7 +216,7 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
-		public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
+		public void UpdateLastIndexed(string index, Etag etag, DateTime timestamp)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -226,9 +225,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (var update = new Update(session, IndexesStats, JET_prep.Replace))
 			{
-				Api.SetColumn(session, IndexesStats,
-							  tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],
-							  etag.TransformToValueForEsentSorting());
+				Api.SetColumn(session, IndexesStats,tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats,
 							  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"],
 							  timestamp.ToBinary());
@@ -288,7 +285,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.EscrowUpdate(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"], 1);
 		}
 
-		public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
+		public void UpdateLastReduced(string index, Etag etag, DateTime timestamp)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
 			Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -297,9 +294,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
 			{
-				Api.SetColumn(session, IndexesStatsReduce,
-							  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"],
-							  etag.TransformToValueForEsentSorting());
+				Api.SetColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"],etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStatsReduce,
 							  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
 							  timestamp.ToBinary());

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -77,14 +78,14 @@ namespace Raven.Database.Storage
 	public class ScheduledReductionInfo
 	{
 		public DateTime Timestamp { get; set; }
-		public Guid Etag { get; set; }
+		public Etag Etag { get; set; }
 	}
 
 	public class MappedResultInfo
 	{
 		public string ReduceKey { get; set; }
 		public DateTime Timestamp { get; set; }
-		public Guid Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		public RavenJObject Data { get; set; }
 		[JsonIgnore]

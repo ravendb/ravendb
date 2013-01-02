@@ -29,7 +29,7 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 			TInternal existingItem;
-			Guid existingEtag;
+			Etag existingEtag;
 			var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag);
 			if (existingMetadata == null)
 			{
@@ -103,19 +103,19 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected abstract DocumentChangeTypes ReplicationConflict { get; }
 
-		private string SaveConflictedItem(string id, RavenJObject metadata, TExternal incoming, Guid existingEtag)
+		private string SaveConflictedItem(string id, RavenJObject metadata, TExternal incoming, Etag existingEtag)
 		{
 			metadata[Constants.RavenReplicationConflictDocument] = true;
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			AddWithoutConflict(newDocumentConflictId, Guid.Empty, metadata, incoming);
+			AddWithoutConflict(newDocumentConflictId, Etag.Empty, metadata, incoming);
 			return newDocumentConflictId;
 		}
 
 		private void ReplicateDelete(string id, RavenJObject metadata, TExternal incoming)
 		{
 			TInternal existingItem;
-			Guid existingEtag;
+			Etag existingEtag;
 			var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag);
 			if (existingMetadata == null)
 			{
@@ -181,17 +181,17 @@ namespace Raven.Bundles.Replication.Responders
 			CreateConflict(id, newConflictId, existingDocumentConflictId, existingItem, existingMetadata);
 		}
 
-		protected abstract void DeleteItem(string id, Guid etag);
+		protected abstract void DeleteItem(string id, Etag etag);
 
 		protected abstract void MarkAsDeleted(string id, RavenJObject metadata);
 
-		protected abstract void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, TExternal incoming);
+		protected abstract void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, TExternal incoming);
 
 		protected abstract void CreateConflict(string id, string newDocumentConflictId, string existingDocumentConflictId, TInternal existingItem, RavenJObject existingMetadata);
 
 		protected abstract void AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, TInternal existingItem);
 
-		protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Guid existingEtag);
+		protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Etag existingEtag);
 
 		protected abstract bool TryResolveConflict(string id, RavenJObject metadata, TExternal document,
 		                                          TInternal existing);
@@ -206,7 +206,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 		}
 
-		private string HashReplicationIdentifier(Guid existingEtag)
+		private string HashReplicationIdentifier(Etag existingEtag)
 		{
 			using (var md5 = MD5.Create())
 			{

@@ -63,14 +63,14 @@ namespace Raven.Client
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
-		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Guid cutOffEtag);
+		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Etag cutOffEtag);
 
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout);
+		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout);
 
 		/// <summary>
 		/// EXPERT ONLY: Instructs the query to wait for non stale results.

@@ -14,11 +14,11 @@ namespace Raven.Database.Storage
 {
 	public interface IAttachmentsStorageActions
 	{
-		Guid AddAttachment(string key, Guid? etag, Stream data, RavenJObject headers);
-		void DeleteAttachment(string key, Guid? etag);
+		Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers);
+		void DeleteAttachment(string key, Etag etag);
 		Attachment GetAttachment(string key);
 		IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start);
-		IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value, int take, long maxTotalSize);
+		IEnumerable<AttachmentInformation> GetAttachmentsAfter(Etag value, int take, long maxTotalSize);
 		IEnumerable<AttachmentInformation> GetAttachmentsStartingWith(string idPrefix, int start, int pageSize);
 	}
 }

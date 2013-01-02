@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
@@ -49,7 +50,7 @@ namespace Raven.Tests.Storage
 "
 						});
 
-			var one = new Guid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
+			var one = Etag.Parse(new Guid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1).ToByteArray());
 			var time = DateTime.Today;
 
 
@@ -65,7 +66,7 @@ namespace Raven.Tests.Storage
 
 				stats = accessor.Indexing.GetIndexesStats().Where(x => x.Name == "Leases/SearchIndex2").First();
 
-				Assert.Equal(Guid.Empty, stats.LastIndexedEtag);
+				Assert.Equal(Etag.Empty, stats.LastIndexedEtag);
 
 				Assert.Equal(DateTime.MinValue, stats.LastIndexedTimestamp);
 			});
@@ -94,7 +95,7 @@ namespace Raven.Tests.Storage
 "
 						});
 
-			var one = new Guid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
+			var one = Etag.Parse(new Guid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1).ToByteArray());
 			var time = DateTime.Today;
 
 
@@ -110,7 +111,7 @@ namespace Raven.Tests.Storage
 
 				stats = accessor.Indexing.GetIndexesStats().Where(x => x.Name == "Leases/SearchIndex").First();
 
-				Assert.Equal(Guid.Empty, stats.LastIndexedEtag);
+				Assert.Equal(Etag.Empty, stats.LastIndexedEtag);
 
 				Assert.Equal(DateTime.MinValue, stats.LastIndexedTimestamp);
 			});

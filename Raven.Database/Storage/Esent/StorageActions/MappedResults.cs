@@ -11,13 +11,11 @@ using System.Text;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-using Raven.Database.Extensions;
-using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
 
@@ -34,7 +32,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data)
 		{
-			Guid etag = uuidGenerator.CreateSequentialUuid(UuidType.MappedResults);
+			Etag etag = uuidGenerator.CreateSequentialUuid(UuidType.MappedResults);
 			using (var update = new Update(session, MappedResults, JET_prep.Insert))
 			{
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view, Encoding.Unicode);
@@ -84,7 +82,7 @@ namespace Raven.Storage.Esent.StorageActions
 			while (start > 0)
 			{
 				var viewFromDb = Api.RetrieveColumnAsString(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["view"]);
-				if(string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 					yield break;
 				start--;
 				if (Api.TryMoveNext(session, ReduceKeysCounts) == false)
@@ -99,7 +97,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var viewFromDb = Api.RetrieveColumnAsString(session, ReduceKeysCounts,
 													tableColumnsCache.ReduceKeysCountsColumns["view"], Encoding.Unicode);
 
-				if(string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 					continue;
 
 				var key = Api.RetrieveColumnAsString(session, ReduceKeysCounts,
@@ -117,7 +115,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void PutReducedResult(string view, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data)
 		{
-			Guid etag = uuidGenerator.CreateSequentialUuid(UuidType.ReduceResults);
+			Etag etag = uuidGenerator.CreateSequentialUuid(UuidType.ReduceResults);
 
 			using (var update = new Update(session, ReducedResults, JET_prep.Insert))
 			{
@@ -159,8 +157,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["hashed_reduce_key"],
 												  HashReduceKey(reduceKeysAndBucket.ReduceKey));
 
-					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"],
-								  uuidGenerator.CreateSequentialUuid(UuidType.ScheduledReductions));
+					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"], uuidGenerator.CreateSequentialUuid(UuidType.ScheduledReductions).ToByteArray());
 
 					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"],
 								  SystemTime.UtcNow.ToBinary());
@@ -193,7 +190,7 @@ namespace Raven.Storage.Esent.StorageActions
 						var timestamp =
 							Api.RetrieveColumnAsInt64(session, ScheduledReductions,
 														 tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
-						result.Etag = etagBinary.TransfromToGuidWithProperSorting();
+						result.Etag = Etag.Parse(etagBinary);
 						result.Timestamp = DateTime.FromBinary(timestamp);
 					}
 
@@ -326,7 +323,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Bucket = bucket,
 					ReduceKey =
 						keyFromDb,
-					Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+					Etag = Etag.Parse(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
 					Timestamp = DateTime.FromBinary(timestamp),
 					Data = loadData ? LoadMappedResults(keyFromDb) : null,
 					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
@@ -418,7 +415,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Bucket = bucket,
 					ReduceKey =
 						key,
-					Etag = new Guid(Api.RetrieveColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["etag"])),
+					Etag = Etag.Parse(Api.RetrieveColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["etag"])),
 					Timestamp = DateTime.FromBinary(timestamp),
 					Data = loadData ? LoadReducedResults(key) : null,
 					Size = Api.RetrieveColumnSize(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["data"]) ?? 0
@@ -584,7 +581,7 @@ namespace Raven.Storage.Esent.StorageActions
 				yield return new MappedResultInfo
 				{
 					ReduceKey = keyFromDb,
-					Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+					Etag = Etag.Parse(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
 					Timestamp = DateTime.FromBinary(timestamp),
 					Data = LoadMappedResults(keyFromDb),
 					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0,
@@ -642,7 +639,7 @@ namespace Raven.Storage.Esent.StorageActions
 				yield return new MappedResultInfo
 				{
 					ReduceKey = keyFromDb,
-					Etag = new Guid(Api.RetrieveColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["etag"])),
+					Etag = Etag.Parse(Api.RetrieveColumn(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["etag"])),
 					Timestamp = DateTime.FromBinary(timestamp),
 					Data = LoadReducedResults(keyFromDb),
 					Size = Api.RetrieveColumnSize(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["data"]) ?? 0,
@@ -812,7 +809,7 @@ namespace Raven.Storage.Esent.StorageActions
 					{
 						Bucket = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value,
 						ReduceKey = keyFromDb,
-						Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+						Etag = Etag.Parse(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
 						Timestamp = DateTime.FromBinary(timestamp),
 						Data = loadData ? LoadMappedResults(keyFromDb) : null,
 						Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
@@ -847,7 +844,7 @@ namespace Raven.Storage.Esent.StorageActions
 			foreach (var reduceKeyChange in reduceKeyChanges)
 			{
 				count++;
-				if(count  % 50000 == 0)
+				if (count % 50000 == 0)
 				{
 					PulseTransaction(); // avoid version store out of memory
 				}

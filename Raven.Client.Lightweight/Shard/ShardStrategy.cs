@@ -57,16 +57,16 @@ namespace Raven.Client.Shard
 		public QueryResult DefaultMergeQueryResults(IndexQuery query, IList<QueryResult> queryResults)
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
-			Guid indexEtag;
+			Etag indexEtag;
 #if !SILVERLIGHT
 			using (var md5 = MD5.Create())
 			{
-				indexEtag = new Guid(md5.ComputeHash(buffer));
+                indexEtag = Etag.Parse(md5.ComputeHash(buffer));
 			}
 #else
-			indexEtag = new Guid(MD5Core.GetHash(buffer));
+			indexEtag = new Etag(Convert.ToBase64String(MD5.HashCore(buffer)));
 #endif
-			var results = queryResults.SelectMany(x => x.Results);
+            var results = queryResults.SelectMany(x => x.Results);
 
 			// apply sorting
 			if (query.SortedFields != null)

@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Data
@@ -32,6 +32,6 @@ namespace Raven.Database.Data
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
-		public Guid Etag { get; set; }
+		public Etag Etag { get; set; }
 	}
 }

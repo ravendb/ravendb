@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 
@@ -50,7 +51,7 @@ namespace Raven.Client
 		/// Stores the specified entity with the specified etag.
 		/// The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
-		void Store(object entity, Guid etag);
+		void Store(object entity, Etag etag);
 
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when <see cref="SaveChangesAsync"/> is called.
@@ -61,7 +62,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Stores the specified entity with the specified etag, under the specified id
 		/// </summary>
-		void Store(object entity, Guid etag, string id);
+		void Store(object entity, Etag etag, string id);
 
 		/// <summary>
 		/// Stores the specified dynamic entity, under the specified id

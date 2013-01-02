@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Data
 		public string AwsRegionEndpoint { get; set; }
 		public int Interval { get; set; }
 
-		public Guid LastDocsEtag { get; set; }
-		public Guid LastAttachmentsEtag { get; set; }
+		public Etag LastDocsEtag { get; set; }
+		public Etag LastAttachmentsEtag { get; set; }
 	}
 }

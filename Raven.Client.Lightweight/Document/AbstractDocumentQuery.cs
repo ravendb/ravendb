@@ -210,7 +210,7 @@ namespace Raven.Client.Document
 		}
 
 		protected Action<QueryResult> afterQueryExecutedCallback;
-		protected Guid? cutoffEtag;
+		protected Etag cutoffEtag;
 
 		private TimeSpan DefaultTimeout
 		{
@@ -1329,7 +1329,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag);
 			return this;
@@ -1340,7 +1340,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
 			return this;
@@ -1393,7 +1393,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
-		public void WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		public void WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, DefaultTimeout);
 		}
@@ -1401,7 +1401,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
-		public void WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		public void WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			theWaitForNonStaleResults = true;
 			timeout = waitTimeout;

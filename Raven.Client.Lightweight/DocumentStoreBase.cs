@@ -133,7 +133,7 @@ namespace Raven.Client
 		/// Gets the etag of the last document written by any session belonging to this 
 		/// document store
 		///</summary>
-		public virtual Guid? GetLastWrittenEtag()
+		public virtual Etag GetLastWrittenEtag()
 		{
 			return LastEtagHolder.GetLastWrittenEtag();
 		}

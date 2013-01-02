@@ -130,7 +130,7 @@ namespace Raven.Client.Embedded
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
+		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.Put(key, etag, document, metadata, TransactionInformation);
@@ -141,7 +141,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		public void Delete(string key, Guid? etag)
+		public void Delete(string key, Etag etag)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.Delete(key, etag, TransactionInformation);
@@ -154,7 +154,7 @@ namespace Raven.Client.Embedded
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata)
+		public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			// we filter out content length, because getting it wrong will cause errors 
@@ -171,7 +171,7 @@ namespace Raven.Client.Embedded
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void UpdateAttachmentMetadata(string key, Guid? etag, RavenJObject metadata)
+		public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			// we filter out content length, because getting it wrong will cause errors 
@@ -249,7 +249,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		public void DeleteAttachment(string key, Guid? etag)
+		public void DeleteAttachment(string key, Etag etag)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.DeleteStatic(key, etag);
@@ -736,7 +736,7 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, PatchRequest[] patches, Guid? etag)
+		public void Patch(string key, PatchRequest[] patches, Etag etag)
 		{
 			Batch(new[]
 			      {
@@ -755,7 +755,7 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, ScriptedPatchRequest patch, Guid? etag)
+		public void Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
 			Batch(new[]
 			      {

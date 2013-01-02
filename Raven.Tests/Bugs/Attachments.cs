@@ -55,13 +55,13 @@ namespace Raven.Tests.Bugs
 				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
 				{
 					documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
-					documentStore.DatabaseCommands.PutAttachment("test2", Guid.NewGuid(), new MemoryStream(new byte[] { 1, 2, 3, 5 }), new RavenJObject());
-					documentStore.DatabaseCommands.PutAttachment("test3", Guid.NewGuid(), new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
-					documentStore.DatabaseCommands.PutAttachment("test4", Guid.NewGuid(), new MemoryStream(new byte[] { 1, 2, 3, 5 }), new RavenJObject());
-					documentStore.DatabaseCommands.PutAttachment("test5", Guid.NewGuid(), new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+					documentStore.DatabaseCommands.PutAttachment("test2", Raven.Abstractions.Data.Etag.InvalidEtag, new MemoryStream(new byte[] { 1, 2, 3, 5 }), new RavenJObject());
+					documentStore.DatabaseCommands.PutAttachment("test3", Raven.Abstractions.Data.Etag.InvalidEtag, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+					documentStore.DatabaseCommands.PutAttachment("test4", Raven.Abstractions.Data.Etag.InvalidEtag, new MemoryStream(new byte[] { 1, 2, 3, 5 }), new RavenJObject());
+					documentStore.DatabaseCommands.PutAttachment("test5", Raven.Abstractions.Data.Etag.InvalidEtag, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 					documentStore.DatabaseCommands.PutAttachment("test6", null, new MemoryStream(new byte[] { 1, 2, 3, 5 }), new RavenJObject());
-					documentStore.DatabaseCommands.PutAttachment("test7", Guid.NewGuid(), new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
-					documentStore.DatabaseCommands.PutAttachment("test8", Guid.NewGuid(), new MemoryStream(new byte[] { 1, 2, 3, 5 }), new RavenJObject());
+					documentStore.DatabaseCommands.PutAttachment("test7", Raven.Abstractions.Data.Etag.InvalidEtag, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+					documentStore.DatabaseCommands.PutAttachment("test8", Raven.Abstractions.Data.Etag.InvalidEtag, new MemoryStream(new byte[] { 1, 2, 3, 5 }), new RavenJObject());
 				}
 
 				using (var webClient = new WebClient())

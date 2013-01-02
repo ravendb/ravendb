@@ -421,14 +421,14 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name = "cutOffEtag">The cut off etag.</param>
 		/// <returns></returns>
-		TSelf WaitForNonStaleResultsAsOf(Guid cutOffEtag);
+		TSelf WaitForNonStaleResultsAsOf(Etag cutOffEtag);
 
 		/// <summary>
 		///   Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
 		/// </summary>
 		/// <param name = "cutOffEtag">The cut off etag.</param>
 		/// <param name = "waitTimeout">The wait timeout.</param>
-		TSelf WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout);
+		TSelf WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout);
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.

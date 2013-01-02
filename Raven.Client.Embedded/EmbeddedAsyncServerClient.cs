@@ -117,7 +117,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask();
 		}
 
-		public Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
+		public Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			return new CompletedTask<PutResult>(databaseCommands.Put(key, etag, document, metadata));
 		}
@@ -147,7 +147,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<string[]>(databaseCommands.GetDatabaseNames(pageSize, start));
 		}
 
-		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata)
+		public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
 		{
 			// Should the data paramater be changed to a Stream type so it matches IDatabaseCommands.PutAttachment?
 			var stream = new MemoryStream();
@@ -161,7 +161,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<Attachment>(databaseCommands.GetAttachment(key));
 		}
 
-		public Task DeleteAttachmentAsync(string key, Guid? etag)
+		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			databaseCommands.DeleteAttachment(key, etag);
 			return new CompletedTask();

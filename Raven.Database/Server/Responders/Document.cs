@@ -99,7 +99,7 @@ namespace Raven.Database.Server.Responders
 						return;
 					}
 					Debug.Assert(documentMetadata.Etag != null);
-					if (context.MatchEtag(documentMetadata.Etag.Value) && documentMetadata.NonAuthoritativeInformation == false)
+					if (context.MatchEtag(documentMetadata.Etag) && documentMetadata.NonAuthoritativeInformation == false)
 					{
 						context.SetStatusToNotModified();
 						return;
@@ -125,7 +125,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 			Debug.Assert(documentMetadata.Etag != null);
-			if (context.MatchEtag(documentMetadata.Etag.Value) && documentMetadata.NonAuthoritativeInformation == false)
+			if (context.MatchEtag(documentMetadata.Etag) && documentMetadata.NonAuthoritativeInformation == false)
 			{
 				context.SetStatusToNotModified();
 				return;
@@ -137,7 +137,7 @@ namespace Raven.Database.Server.Responders
 			}
 			documentMetadata.Metadata[Constants.DocumentIdFieldName] = documentMetadata.Key;
 			documentMetadata.Metadata[Constants.LastModified] = documentMetadata.LastModified; //HACK ? to get the document's last modified value into the response headers
-			context.WriteHeaders(documentMetadata.Metadata, documentMetadata.Etag.Value);
+			context.WriteHeaders(documentMetadata.Metadata, documentMetadata.Etag);
 		}
 
 		private void GetDocumentDirectly(IHttpContext context, string docId)
@@ -155,7 +155,7 @@ namespace Raven.Database.Server.Responders
 			Debug.Assert(doc.Etag != null);
 			doc.Metadata[Constants.LastModified] = doc.LastModified;
 			doc.Metadata[Constants.DocumentIdFieldName] = Uri.EscapeUriString(doc.Key ?? string.Empty);
-			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag.Value);
+			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 		}
 
 		private void Put(IHttpContext context, string docId)

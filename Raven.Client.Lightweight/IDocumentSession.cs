@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -141,12 +142,12 @@ namespace Raven.Client
 		/// <summary>
 		/// Stores the specified entity with the specified etag
 		/// </summary>
-		void Store(object entity, Guid etag);
+		void Store(object entity, Etag etag);
 
 		/// <summary>
 		/// Stores the specified entity with the specified etag, under the specified id
 		/// </summary>
-		void Store(object entity, Guid etag, string id);
+		void Store(object entity, Etag etag, string id);
 
 		/// <summary>
 		/// Stores the specified dynamic entity.

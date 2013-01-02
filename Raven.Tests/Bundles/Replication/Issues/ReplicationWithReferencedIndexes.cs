@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -102,10 +103,10 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			WaitForReplication(two, "items/1");
 
-			Guid item1Etag;
+			Etag item1Etag;
 			using (var s2 = two.OpenSession())
 			{
-				item1Etag = s2.Advanced.GetEtagFor(s2.Load<Item>(1)).Value;
+				item1Etag = s2.Advanced.GetEtagFor(s2.Load<Item>(1));
 			}
 			using (var s1 = one.OpenSession())
 			{
@@ -125,7 +126,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			WaitForReplication(two, "items/3");
 			using (var s2 = two.OpenSession())
 			{
-				var item1Etag2 = s2.Advanced.GetEtagFor(s2.Load<Item>(1)).Value;
+				var item1Etag2 = s2.Advanced.GetEtagFor(s2.Load<Item>(1));
 				Assert.Equal(item1Etag, item1Etag2);
 			}
 		}

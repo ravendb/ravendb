@@ -8,15 +8,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
-using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using Table = Raven.Munin.Table;
@@ -133,7 +132,7 @@ namespace Raven.Storage.Managed
 				{
 					hasResult = true;
 					var timestamp = readResult.Key.Value<DateTime>("timestamp");
-					result.Etag = etagBinary.TransfromToGuidWithProperSorting();
+					result.Etag = Etag.Parse(etagBinary);
 					result.Timestamp = timestamp;
 				}
 
@@ -228,7 +227,7 @@ namespace Raven.Storage.Managed
 				var mappedResultInfo = new MappedResultInfo
 				{
 					ReduceKey = readResult.Key.Value<string>("reduceKey"),
-					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+					Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 					Timestamp = readResult.Key.Value<DateTime>("timestamp"),
 					Bucket = readResult.Key.Value<int>("bucket"),
 					Source = readResult.Key.Value<int>("sourceBucket").ToString(),
@@ -271,7 +270,7 @@ namespace Raven.Storage.Managed
 				yield return new MappedResultInfo
 				{
 					ReduceKey = readResult.Key.Value<string>("reduceKey"),
-					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+					Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 					Timestamp = readResult.Key.Value<DateTime>("timestamp"),
 					Bucket = readResult.Key.Value<int>("bucket"),
 					Source = readResult.Key.Value<string>("docId"),
@@ -428,7 +427,7 @@ namespace Raven.Storage.Managed
 					yield return new MappedResultInfo
 					{
 						ReduceKey = readResult.Key.Value<string>("reduceKey"),
-						Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+						Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 						Timestamp = readResult.Key.Value<DateTime>("timestamp"),
 						Bucket = readResult.Key.Value<int>("bucket"),
 						Source = readResult.Key.Value<string>("docId"),
@@ -468,7 +467,7 @@ namespace Raven.Storage.Managed
 					   select new MappedResultInfo
 					   {
 						   ReduceKey = readResult.Key.Value<string>("reduceKey"),
-						   Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+						   Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 						   Timestamp = readResult.Key.Value<DateTime>("timestamp"),
 						   Bucket = readResult.Key.Value<int>("bucket"),
 						   Source = readResult.Key.Value<string>("docId"),
@@ -496,7 +495,7 @@ namespace Raven.Storage.Managed
 					   select new MappedResultInfo
 					   {
 						   ReduceKey = readResult.Key.Value<string>("reduceKey"),
-						   Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+						   Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 						   Timestamp = readResult.Key.Value<DateTime>("timestamp"),
 						   Bucket = readResult.Key.Value<int>("bucket"),
 						   Source = readResult.Key.Value<string>("docId"),
@@ -538,7 +537,7 @@ namespace Raven.Storage.Managed
 			{
 				if (value <= 0)
 					return;
-				storage.ReduceKeys.Put(new RavenJObject()
+				storage.ReduceKeys.Put(new RavenJObject
 				                       {
 					                       {"view", view},
 					                       {"reduceKey", reduceKey},

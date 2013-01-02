@@ -8,8 +8,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Database.Extensions;
-using Raven.Database.Impl;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -47,11 +47,11 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Lists, key, Encoding.Unicode, MakeKeyGrbit.None);
 
-			if(Api.TrySeek(session, Lists, SeekGrbit.SeekEQ))
+			if (Api.TrySeek(session, Lists, SeekGrbit.SeekEQ))
 				Api.JetDelete(session, Lists);
 		}
 
-		public void RemoveAllBefore(string name, Guid etag)
+		public void RemoveAllBefore(string name, Etag etag)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -70,7 +70,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		}
 
-		public IEnumerable<ListItem> Read(string name, Guid start, int take)
+		public IEnumerable<ListItem> Read(string name, Etag start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -81,12 +81,12 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 				var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
-				if(string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 					yield break;
 
 				count++;
 
-				var etag = Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]).TransfromToGuidWithProperSorting();
+				var etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]));
 				using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
 				{
 					yield return new ListItem
@@ -97,7 +97,7 @@ namespace Raven.Storage.Esent.StorageActions
 					};
 				}
 			} while (Api.TryMoveNext(session, Lists) && count < take);
-		
+
 		}
 
 		public ListItem Read(string name, string key)
@@ -115,7 +115,7 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Data = stream.ToJObject(),
 					Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode),
-					Etag = Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]).TransfromToGuidWithProperSorting()
+					Etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]))
 				};
 			}
 		}

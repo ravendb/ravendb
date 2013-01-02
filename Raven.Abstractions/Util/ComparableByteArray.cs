@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
+using System.Linq;
 
 namespace Raven.Abstractions.Util
 {
@@ -33,7 +35,7 @@ namespace Raven.Abstractions.Util
 	{
 		private readonly byte[] inner;
 
-		public ComparableByteArray(Guid etag) : this(etag.ToByteArray())
+		public ComparableByteArray(Etag etag) : this(etag.ToByteArray())
 		{
 			
 		}

@@ -49,7 +49,7 @@ namespace Raven.Bundles.Replication.Responders
 					break;
 				case "PUT":
 					OnPut(context, src);
-					break;	
+					break;
 
 			}
 		}
@@ -91,15 +91,22 @@ namespace Raven.Bundles.Replication.Responders
 
 				SourceReplicationInformation sourceReplicationInformation;
 
-				Guid? docEtag = null, attachmentEtag = null;
-				Guid val;
-				if(Guid.TryParse(context.Request.QueryString["docEtag"], out val))
+				Etag docEtag = null, attachmentEtag = null;
+				try
 				{
-					docEtag = val;
+					docEtag = Etag.Parse(context.Request.QueryString["docEtag"]);
 				}
-				if(Guid.TryParse(context.Request.QueryString["attachmentEtag"], out val))
+				catch
 				{
-					attachmentEtag = val;
+
+				}
+				try
+				{
+					attachmentEtag = Etag.Parse(context.Request.QueryString["attachmentEtag"]);
+				}
+				catch
+				{
+
 				}
 
 				if (document == null)
@@ -107,8 +114,8 @@ namespace Raven.Bundles.Replication.Responders
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
 						ServerInstanceId = Database.TransactionalStorage.Id,
-						LastAttachmentEtag = attachmentEtag ?? Guid.Empty,
-						LastDocumentEtag = docEtag??Guid.Empty,
+						LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
+						LastDocumentEtag = docEtag ?? Etag.Empty,
 						Source = src
 					};
 				}
@@ -120,14 +127,14 @@ namespace Raven.Bundles.Replication.Responders
 					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
 				}
 
-				var etag = document == null ? Guid.Empty : document.Etag;
+				var etag = document == null ? Etag.Empty : document.Etag;
 				var metadata = document == null ? new RavenJObject() : document.Metadata;
 
 				var newDoc = RavenJObject.FromObject(sourceReplicationInformation);
 				log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
 								  sourceReplicationInformation.LastDocumentEtag,
 								  sourceReplicationInformation.LastAttachmentEtag);
-		
+
 				Database.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
 			}
 		}

@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Commands
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
-		public virtual Guid? Etag { get; set; }
+		public virtual Etag Etag { get; set; }
 		
 		/// <summary>
 		/// Gets or sets the document.

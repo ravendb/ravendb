@@ -3,18 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Impl
 {
 	public class DummyUuidGenerator : IUuidGenerator
 	{
 		private byte cur;
-		public Guid CreateSequentialUuid(UuidType type)
+		public Etag CreateSequentialUuid(UuidType type)
 		{
 			var bytes = new byte[16];
 			bytes[15] += ++cur;
-			return new Guid(bytes);
+			return Etag.Parse(bytes);
 		}
 	}
 }

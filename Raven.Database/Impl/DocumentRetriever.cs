@@ -238,7 +238,7 @@ namespace Raven.Database.Impl
 					case ReadVetoResult.ReadAllow.Deny:
 						return new T
 								{
-									Etag = Guid.Empty,
+									Etag = Etag.Empty,
 									LastModified = DateTime.MinValue,
 									NonAuthoritativeInformation = false,
 									Key = document.Key,

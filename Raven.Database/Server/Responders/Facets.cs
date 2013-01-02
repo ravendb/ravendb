@@ -1,4 +1,3 @@
-using System;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using Raven.Database.Queries;
@@ -47,13 +46,13 @@ namespace Raven.Database.Server.Responders
 			context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facetSetupDoc));
 		}
 
-		private Guid GetFacetsEtag(JsonDocument jsonDocument, string index)
+		private Etag GetFacetsEtag(JsonDocument jsonDocument, string index)
 		{
-			Guid etag;
+			Etag etag;
 			using(var md5 = MD5.Create())
 			{
-				var etagBytes = md5.ComputeHash(Database.GetIndexEtag(index, null).ToByteArray().Concat(jsonDocument.Etag.Value.ToByteArray()).ToArray());
-				etag = new Guid(etagBytes);
+				var etagBytes = md5.ComputeHash(Database.GetIndexEtag(index, null).ToBytes().Concat(jsonDocument.Etag.ToBytes()).ToArray());
+				etag = Etag.Parse(etagBytes);
 			}
 			return etag;
 		}

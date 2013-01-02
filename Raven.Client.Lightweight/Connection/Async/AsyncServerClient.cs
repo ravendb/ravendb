@@ -309,18 +309,18 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
-		public Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
+		public Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("PUT", opUrl => DirectPutAsync(opUrl, key, etag, document, metadata));
 		}
 
-		private Task<PutResult> DirectPutAsync(string opUrl, string key, Guid? etag, RavenJObject document, RavenJObject metadata)
+        private Task<PutResult> DirectPutAsync(string opUrl, string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			if (metadata == null)
 				metadata = new RavenJObject();
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 			if (etag != null)
-				metadata["ETag"] = new RavenJValue(etag.Value.ToString());
+				metadata["ETag"] = new RavenJValue(etag);
 
 			if (key != null)
 				key = Uri.EscapeUriString(key);
@@ -995,8 +995,8 @@ namespace Raven.Client.Connection.Async
 				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
 				{
 					url = (string)null,
-					actualETag = Guid.Empty,
-					expectedETag = Guid.Empty,
+					actualETag = Etag.Empty,
+					expectedETag = Etag.Empty,
 					error = (string)null
 				});
 				return new ConcurrencyException(errorResults.error)
@@ -1065,7 +1065,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata)
+        public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("PUT", operationUrl =>
 			{
@@ -1073,7 +1073,7 @@ namespace Raven.Client.Connection.Async
 					metadata = new RavenJObject();
 
 				if (etag != null)
-					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
+					metadata["ETag"] = new RavenJValue(etag);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationUrl, key), "PUT", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
@@ -1169,14 +1169,14 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		public Task DeleteAttachmentAsync(string key, Guid? etag)
+        public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			return ExecuteWithReplication("DELETE", operationUrl =>
 			{
 				var metadata = new RavenJObject();
 
 				if (etag != null)
-					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
+					metadata["ETag"] = new RavenJValue(etag);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationUrl, key), "DELETE", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
@@ -1334,7 +1334,7 @@ namespace Raven.Client.Connection.Async
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
 			{
 				return TryResolveConflictOrCreateConcurrencyException(opUrl, metadata.Value<string>("@id"), docResult,
-															   HttpExtensions.EtagHeaderToGuid(metadata.Value<string>("@etag")))
+															   HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag")))
 					.ContinueWith(task =>
 					{
 						if (task.Result == null)
@@ -1346,7 +1346,7 @@ namespace Raven.Client.Connection.Async
 			return new CompletedTask<bool>(false);
 		}
 
-		private Task<ConflictException> TryResolveConflictOrCreateConcurrencyException(string opUrl, string key, RavenJObject conflictsDoc, Guid etag)
+		private Task<ConflictException> TryResolveConflictOrCreateConcurrencyException(string opUrl, string key, RavenJObject conflictsDoc, Etag etag)
 		{
 			var ravenJArray = conflictsDoc.Value<RavenJArray>("Conflicts");
 			if (ravenJArray == null)

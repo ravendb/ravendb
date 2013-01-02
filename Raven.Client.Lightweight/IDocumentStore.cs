@@ -145,7 +145,7 @@ namespace Raven.Client
 		/// Gets the etag of the last document written by any session belonging to this 
 		/// document store
 		///</summary>
-		Guid? GetLastWrittenEtag();
+		Etag GetLastWrittenEtag();
 
 #if !SILVERLIGHT
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);

@@ -6,6 +6,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Config;
@@ -39,7 +40,7 @@ namespace Raven.Tests.Storage
 			db.TransactionalStorage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
 			{
 				{"test", "data"}
-			},UuidType.Indexing));
+			}, UuidType.Indexing));
 
 			db.TransactionalStorage.Batch(actions =>
 			{
@@ -84,7 +85,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var list = actions.Lists.Read("items", Guid.Empty, 100).ToList();
+				var list = actions.Lists.Read("items", Etag.Empty, 100).ToList();
 				Assert.Equal(10, list.Count);
 				for (int i = 0; i < 10; i++)
 				{
@@ -108,7 +109,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var list = actions.Lists.Read("items", Guid.Empty, 5).ToList();
+				var list = actions.Lists.Read("items", Etag.Empty, 5).ToList();
 				Assert.Equal(5, list.Count);
 				for (int i = 0; i < 5; i++)
 				{
@@ -119,7 +120,7 @@ namespace Raven.Tests.Storage
 				Assert.Equal(5, list.Count);
 				for (int i = 0; i < 5; i++)
 				{
-					Assert.Equal(i+5, list[i].Data.Value<int>("i"));
+					Assert.Equal(i + 5, list[i].Data.Value<int>("i"));
 				}
 			});
 		}
@@ -144,7 +145,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var list = actions.Lists.Read("items", Guid.Empty, 100).ToList();
+				var list = actions.Lists.Read("items", Etag.Empty, 100).ToList();
 				Assert.Equal(10, list.Count);
 				for (int i = 0; i < 10; i++)
 				{
