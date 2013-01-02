@@ -5,13 +5,15 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+#if SILVERLIGHT || NETFX_CORE
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
 using System.Collections.Specialized;
+#endif
 using System.Diagnostics;
 using System.IO;
 #if !SILVERLIGHT
 using System.IO.Compression;
-#else
-using Raven.Client.Silverlight.MissingFromSilverlight;
 #endif
 using System.Net;
 using System.Text;
