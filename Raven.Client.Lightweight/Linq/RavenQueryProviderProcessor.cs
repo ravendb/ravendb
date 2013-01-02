@@ -459,12 +459,16 @@ namespace Raven.Client.Linq
 				switch ((StringComparison) ((ConstantExpression) expression.Arguments[1]).Value)
 				{
 					case StringComparison.CurrentCulture:
-					case StringComparison.Ordinal:
+#if !NETFX_CORE
 					case StringComparison.InvariantCulture:
+#endif
+					case StringComparison.Ordinal:
 						isAnalyzed = false;
 						break;
 					case StringComparison.CurrentCultureIgnoreCase:
-					case StringComparison.OrdinalIgnoreCase:
+#if !NETFX_CORE
+					case StringComparison.InvariantCultureIgnoreCase:
+#endif
 					case StringComparison.OrdinalIgnoreCase:
 						isAnalyzed = true;
 						break;
