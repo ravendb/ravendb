@@ -103,7 +103,6 @@ namespace Raven.Smuggler
 		{
 			var program = new Program();
 			program.Parse(args);
-		    Console.ReadKey();
 		}
 
 		private void Parse(string[] args)

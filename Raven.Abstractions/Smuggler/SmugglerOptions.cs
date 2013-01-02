@@ -93,23 +93,26 @@ namespace Raven.Abstractions.Smuggler
             const string RavenExpirationDate = "Raven-Expiration-Date";
 
             // check for expired documents and exclude them if expired
-            if (metadata != null)
-            {
-                var property = metadata[RavenExpirationDate];
-                if (property != null)
-                {
-                    var dateTime = property.Value<DateTime>();
-                    if (dateTime < GetCurrentUtcDate())
-                    {
-                        return false;
-                    }
-                }
-            }
+	        if (metadata == null)
+	        {
+		        return false;
+	        }
+	        var property = metadata[RavenExpirationDate];
+	        if (property == null)
+		        return false;
 
-            return true;
+	        DateTime dateTime;
+	        try
+	        {
+		        dateTime = property.Value<DateTime>();
+	        }
+	        catch (FormatException)
+	        {
+		        return false;
+	        }
+
+	        return dateTime >= SystemTime.UtcNow;
         }
-
-        public static Func<DateTime> GetCurrentUtcDate = () => SystemTime.UtcNow;
 	}
 
 

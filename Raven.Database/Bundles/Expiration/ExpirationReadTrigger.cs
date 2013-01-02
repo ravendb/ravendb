@@ -29,11 +29,10 @@ namespace Raven.Bundles.Expiration
 			if (property == null)
 				return ReadVetoResult.Allowed;
 			var dateTime = property.Value<DateTime>();
-			if(dateTime > GetCurrentUtcDate())
+			if(dateTime > SystemTime.UtcNow)
 				return ReadVetoResult.Allowed;
 			return ReadVetoResult.Ignore;
 		}
 
-		public static Func<DateTime> GetCurrentUtcDate = () => SystemTime.UtcNow;
 	}
 }
