@@ -197,7 +197,13 @@ namespace Raven.Database.Indexing
 					}
 					if (IsIndexStale(indexesStat, actions) == false)
 						continue;
-					indexesToWorkOn.Add(GetIndexToWorkOn(indexesStat));
+					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
+					var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
+					if(index == null ||  // not there
+						index.CurrentMapIndexingTask != null)  // busy doing indexing work already, not relevant for this batch
+						continue;
+					indexToWorkOn.Index = index;
+					indexesToWorkOn.Add(indexToWorkOn);
 				}
 			});
 

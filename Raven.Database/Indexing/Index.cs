@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -70,6 +71,10 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
+		public TimeSpan LastIndexingDuration { get; set; }
+		public long TimePerDoc { get; set; }
+		public Task CurrentMapIndexingTask { get; set; } 
+
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
 			if (directory == null) throw new ArgumentNullException("directory");
@@ -102,6 +107,7 @@ namespace Raven.Database.Indexing
 				return lastQueryTime;
 			}
 		}
+
 		public DateTime LastIndexTime { get; set; }
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
@@ -127,17 +133,30 @@ namespace Raven.Database.Indexing
 				}
 
 				disposed = true;
+				var task = CurrentMapIndexingTask;
+				if (task != null)
+				{
+					try
+					{
+						task.Wait();
+					}
+					catch (Exception e)
+					{
+						logIndexing.Warn("Error while closing the index (could not wait for current indexing task)", e);
+					}
+				}
+
 				foreach (var indexExtension in indexExtensions)
 				{
 					indexExtension.Value.Dispose();
 				}
+
 				if (currentIndexSearcherHolder != null)
 				{
 					var item = currentIndexSearcherHolder.SetIndexSearcher(null, wait: true);
 					if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
 					{
 						logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
-						Console.Beep();
 					}
 				}
 
