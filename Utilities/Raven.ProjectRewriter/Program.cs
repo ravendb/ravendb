@@ -46,27 +46,40 @@ namespace Raven.ProjectRewriter
 
 			foreach (var element in database.Root.Descendants(xmlns + "Reference").ToArray())
 			{
-				if (element.Attribute("Include").Value == "AsyncCtpLibrary_Silverlight5")
+				string include = element.Attribute("Include").Value;
+				if (include == "AsyncCtpLibrary_Silverlight5")
 				{
 					element.Attribute("Include").Value = "AsyncCtpLibrary_Silverlight";
 					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
 					if (hintPath != null)
 						hintPath.Value = hintPath.Value.Replace("Silverlight5", "Silverlight");
 				}
-				if (element.Attribute("Include").Value.Contains("Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"))
+				if (include.Contains("Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"))
 				{
-					element.Attribute("Include").Value = element.Attribute("Include").Value.Replace("5.0.5.0", "2.0.5.0");
+					element.Attribute("Include").Value = include.Replace("5.0.5.0", "2.0.5.0");
 					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
 					if (hintPath != null)
 						hintPath.Value = hintPath.Value.Replace(@"Microsoft SDKs\Silverlight\v5.0\", @"Microsoft SDKs\Silverlight\v4.0\");
 				}
-				if (element.Attribute("Include").Value.Contains("Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"))
-					element.Attribute("Include").Value = element.Attribute("Include").Value.Replace("5.0.5.0", "2.0.5.0");
+				if (include.Contains("Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"))
+					element.Attribute("Include").Value = include.Replace("5.0.5.0", "2.0.5.0");
 
-				if (element.Attribute("Include").Value.Contains("System.Reactive, "))
+				if (include.StartsWith("Microsoft.Threading.Tasks"))
 				{
 					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
-						hintPath.Value = hintPath.Value.Replace(@"\SL5\", @"\SL4\");
+					hintPath.Value = hintPath.Value.Replace(@"\sl5\", @"\portable-net40+sl4+win8+wp71\");
+				}
+
+				if (include.StartsWith("System.Runtime, Version") || include.StartsWith("System.Threading.Tasks"))
+				{
+					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
+					hintPath.Value = hintPath.Value.Replace(@"\sl5\", @"\sl4\");
+				}
+
+				if (include.StartsWith("System.Reactive."))
+				{
+					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
+					hintPath.Value = hintPath.Value.Replace(@"\SL5\", @"\SL4\");
 				}
 			}
 

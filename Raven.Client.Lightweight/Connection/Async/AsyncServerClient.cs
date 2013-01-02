@@ -8,20 +8,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-#if !SILVERLIGHT
-using System.Transactions;
-#endif
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Util;
-using Raven.Client.Listeners;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Transactions;
 #endif
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
@@ -29,12 +23,16 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
-using Raven.Json.Linq;
+using Raven.Client.Listeners;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
 {
@@ -650,36 +648,35 @@ namespace Raven.Client.Connection.Async
 				.ContinueWith(task => convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(task.Result)));
 		}
 
-		public Task<LicensingStatus> GetLicenseStatus()
+		public async Task<LicensingStatus> GetLicenseStatus()
 		{
 			var actualUrl = string.Format("{0}/license/status", url).NoCache();
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => new LicensingStatus
-				{
-					Error = task.Result.Value<bool>("Error"),
-					Message = task.Result.Value<string>("Message"),
-					Status = task.Result.Value<string>("Status"),
-				});
+			var result = await request.ReadResponseJsonAsync();
+			return new LicensingStatus
+			{
+				Error = result.Value<bool>("Error"),
+				Message = result.Value<string>("Message"),
+				Status = result.Value<string>("Status"),
+			};
 		}
 
-		public Task<BuildNumber> GetBuildNumber()
+		public async Task<BuildNumber> GetBuildNumber()
 		{
 			var actualUrl = string.Format("{0}/build/version", url).NoCache();
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => new BuildNumber
-				{
-					BuildVersion = task.Result.Value<string>("BuildVersion"),
-					ProductVersion = task.Result.Value<string>("ProductVersion")
-				});
-
+			var result = await request.ReadResponseJsonAsync();
+			return new BuildNumber
+			{
+				BuildVersion = result.Value<string>("BuildVersion"),
+				ProductVersion = result.Value<string>("ProductVersion")
+			};
 		}
 
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
