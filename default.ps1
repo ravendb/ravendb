@@ -145,6 +145,11 @@ task Test -depends Compile {
 			&"$xUnit" "$build_dir\$_"
 		}
 	}
+	
+	if ($LastExitCode -ne 0) {
+		$global:failedTest = true
+		write-host "We have a failing test!!!!!..........!!!!!.........!!!!!" -BackgroundColor Red -ForegroundColor Yellow		
+	}
 }
 
 task StressTest -depends Compile {
@@ -536,8 +541,14 @@ task CreateNugetPackages -depends Compile {
 }
 
 TaskTearDown {
+	if ($global:failedTest)
+	{
+		write-host "Again... We have a failing test!!!!! Now that you know about it, you can take care of that." -BackgroundColor Red -ForegroundColor Yellow		
+	}
+	
 	if ($LastExitCode -ne 0) {
-		write-host "TaskTearDown detected an error. Build failed."
+		write-host "TaskTearDown detected an error. Build failed." -BackgroundColor Red -ForegroundColor Yellow
+		write-host "Yes, something was failed!!!!!!!!!!!!!!!!!!!!!" -BackgroundColor Red -ForegroundColor Yellow
 		# throw "TaskTearDown detected an error. Build failed."
 		exit 1
 	}
