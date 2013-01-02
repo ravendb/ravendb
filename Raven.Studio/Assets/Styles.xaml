@@ -3152,7 +3152,7 @@
 		<Setter Property="Foreground" Value="Black"/>
 	</Style>
 	
-	<Style x:Key="Style_ScrollViewer_Unintrusive" TargetType="ScrollViewer">
+	<Style x:Key="Style_ScrollViewer_Unobtrusive" TargetType="ScrollViewer">
 		<Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
 		<Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
 		<Setter Property="BorderThickness" Value="0"/>

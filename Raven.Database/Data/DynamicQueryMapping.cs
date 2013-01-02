@@ -279,7 +279,7 @@ namespace Raven.Database.Data
 			{
 				GroupByItems = query.GroupBy.Select(x => new DynamicQueryMappingItem
 				{
-					From = EscapeParanthesis(x),
+					From = EscapeParentheses(x),
 					To = x.Replace(".", "").Replace(",", ""),
 					QueryFrom = x
 				}).ToArray();
@@ -296,7 +296,7 @@ namespace Raven.Database.Data
 				{
 					From = x.Item1,
 					To = ReplaceInvalidCharactersForFields(x.Item2),
-					QueryFrom = EscapeParanthesis(x.Item2)
+					QueryFrom = EscapeParentheses(x.Item2)
 				}).OrderByDescending(x => x.QueryFrom.Length).ToArray();
 				if (GroupByItems != null && DynamicAggregation)
 				{
@@ -309,7 +309,7 @@ namespace Raven.Database.Data
 			}
 		}
 
-		private string EscapeParanthesis(string str)
+		private string EscapeParentheses(string str)
 		{
 			return str.Replace("(", @"\(").Replace(")", @"\)");
 		}
