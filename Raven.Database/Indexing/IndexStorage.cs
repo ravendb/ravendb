@@ -88,8 +88,8 @@ namespace Raven.Database.Indexing
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
 
-				BackgroundTaskExecuter.Instance.ExecuteAll(documentDatabase.WorkContext, 
-					indexDefinitionStorage.IndexNames, (indexName, _) => OpenIndexOnStartup(indexName));
+				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext, 
+					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
 			}
 			catch
 			{

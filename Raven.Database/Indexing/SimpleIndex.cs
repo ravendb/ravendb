@@ -83,7 +83,7 @@ namespace Raven.Database.Indexing
 						.Where(x => x is FilteredDocument == false)
 						.ToList();
 
-
+					var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
 						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
@@ -91,7 +91,7 @@ namespace Raven.Database.Indexing
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
 						                                Field.Index.NOT_ANALYZED_NO_NORMS);
 
-						using (CurrentIndexingScope.Current = new CurrentIndexingScope(name, actions,LoadDocument))
+						using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 						{
 							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
 							{
@@ -129,8 +129,17 @@ namespace Raven.Database.Indexing
 								Interlocked.Increment(ref stats.IndexingSuccesses);
 							}
 						}
-						
 					});
+
+					IDictionary<string, HashSet<string>> result;
+					while (allReferencedDocs.TryDequeue(out result))
+					{
+						foreach (var referencedDocument in result)
+						{
+							actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+						}
+					}
+
 				}
 				catch(Exception e)
 				{
