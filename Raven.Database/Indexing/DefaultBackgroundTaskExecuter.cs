@@ -162,23 +162,28 @@ namespace Raven.Database.Indexing
 
 		public void ExecuteAllInterleaved<T>(WorkContext context, IList<T> result, Action<T> action)
 		{
-			var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks);
+			if (result.Count == 0)
+				return;
 
-			var tasks = new Task[result.Count];
-			for (int i = 0; i < result.Count; i++)
+			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
 			{
-				var index = result[i];
-				var indexToWorkOn = index;
+				var tasks = new Task[result.Count];
+				for (int i = 0; i < result.Count; i++)
+				{
+					var index = result[i];
+					var indexToWorkOn = index;
 
-				tasks[i] = new Task(() => action(indexToWorkOn))
-					.ContinueWith(_ => semaphoreSlim.Release());
+					tasks[i] = new Task(() => action(indexToWorkOn));
 
-				semaphoreSlim.Wait();
+					tasks[i].ContinueWith(_ => semaphoreSlim.Release());
 
-				tasks[i].Start(context.Database.BackgroundTaskScheduler);
+					semaphoreSlim.Wait();
+
+					tasks[i].Start(context.Database.BackgroundTaskScheduler);
+				}
+
+				Task.WaitAll(tasks);
 			}
-
-			Task.WaitAll(tasks);
 		}
 	}
 }
