@@ -237,8 +237,7 @@ namespace Raven.Database.Indexing
 				var mappedResults = actions.MapReduce.GetMappedResults(
 						index.IndexName, 
 						keysToReduce, 
-						loadData: true,
-						take: context.CurrentNumberOfItemsToReduceInSingleBatch
+						loadData: true
 					).ToList();
 
 				result.count += mappedResults.Count;

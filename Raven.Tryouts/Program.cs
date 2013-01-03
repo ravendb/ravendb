@@ -13,14 +13,14 @@ namespace BulkStressTest
 	class Program
 	{
 		private const string DbName = "BulkStressTestDb";
-		static void Main(string[] args)
+		static void Main()
 		{
 			for (int i = 0; i < 1000; i++)
 			{
 				Console.WriteLine(i);
-				using(var x= new CanSearchLazily())
+				using(var x= new DataSetIndexTests())
 				{
-					x.CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex();
+					x.can_execute_query_default();
 				}
 			}
 
