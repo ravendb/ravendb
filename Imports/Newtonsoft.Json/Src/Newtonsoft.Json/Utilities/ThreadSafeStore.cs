@@ -26,11 +26,12 @@
 using System;
 using System.Collections.Generic;
 #if NET20
-using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
+using Newtonsoft.Json.Utilities.LinqBridge;
 #endif
-using Raven.Imports.Newtonsoft.Json.Serialization;
+using System.Threading;
+using Newtonsoft.Json.Serialization;
 
-namespace Raven.Imports.Newtonsoft.Json.Utilities
+namespace Newtonsoft.Json.Utilities
 {
   internal class ThreadSafeStore<TKey, TValue>
   {
@@ -44,13 +45,11 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         throw new ArgumentNullException("creator");
 
       _creator = creator;
+      _store = new Dictionary<TKey, TValue>();
     }
 
     public TValue Get(TKey key)
     {
-      if (_store == null)
-        return AddValue(key);
-
       TValue value;
       if (!_store.TryGetValue(key, out value))
         return AddValue(key);
@@ -79,6 +78,9 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
           Dictionary<TKey, TValue> newStore = new Dictionary<TKey, TValue>(_store);
           newStore[key] = value;
 
+#if !NETFX_CORE
+          Thread.MemoryBarrier();
+#endif
           _store = newStore;
         }
 

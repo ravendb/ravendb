@@ -31,9 +31,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Raven.Imports.Newtonsoft.Json.Serialization;
+using System.Globalization;
+using Newtonsoft.Json.Serialization;
 
-namespace Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge
+namespace Newtonsoft.Json.Utilities.LinqBridge
 {
   /// <summary>
   /// Provides a set of static (Shared in Visual Basic) methods for 
@@ -2966,12 +2967,12 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge
 
     public override string ToString()
     {
-      return string.Format(@"{{ First = {0}, Second = {1} }}", First, Second);
+      return string.Format(CultureInfo.InvariantCulture, @"{{ First = {0}, Second = {1} }}", First, Second);
     }
   }
 }
 
-namespace Raven.Imports.Newtonsoft.Json.Serialization
+namespace Newtonsoft.Json.Serialization
 {
   public delegate TResult Func<TResult>();
 

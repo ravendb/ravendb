@@ -82,27 +82,11 @@ namespace Raven.Imports.Newtonsoft.Json
     }
 #endif
 
-    internal static string FormatExceptionMessage(IJsonLineInfo lineInfo, string path, string message)
+    internal static JsonException Create(IJsonLineInfo lineInfo, string path, string message)
     {
-      // don't add a fullstop and space when message ends with a new line
-      if (!message.EndsWith(Environment.NewLine))
-      {
-        message = message.Trim();
+      message = JsonPosition.FormatMessage(lineInfo, path, message);
 
-        if (!message.EndsWith("."))
-          message += ".";
-
-        message += " ";
-      }
-
-      message += "Path '{0}'".FormatWith(CultureInfo.InvariantCulture, path);
-
-      if (lineInfo != null && lineInfo.HasLineInfo())
-        message += ", line {0}, position {1}".FormatWith(CultureInfo.InvariantCulture, lineInfo.LineNumber, lineInfo.LinePosition);
-
-      message += ".";
-
-      return message;
+      return new JsonException(message);
     }
   }
 }

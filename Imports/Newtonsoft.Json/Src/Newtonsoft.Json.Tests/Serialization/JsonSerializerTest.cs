@@ -40,9 +40,9 @@ using System.Text;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 using Newtonsoft.Json;
 using System.IO;
@@ -1312,7 +1312,7 @@ keyword such as type of business.""
       String strFromTest = JsonConvert.SerializeObject(testClass);
 
       ExceptionAssert.Throws<JsonSerializationException>(
-        @"Could not create an instance of type Newtonsoft.Json.Tests.TestObjects.ICo. Type is an interface or abstract class and cannot be instantated. Path 'co.Name', line 1, position 14.",
+        @"Could not create an instance of type Newtonsoft.Json.Tests.TestObjects.ICo. Type is an interface or abstract class and cannot be instantiated. Path 'co.Name', line 1, position 14.",
         () =>
         {
           InterfacePropertyTestClass testFromDe = (InterfacePropertyTestClass)JsonConvert.DeserializeObject(strFromTest, typeof(InterfacePropertyTestClass));
@@ -2246,8 +2246,8 @@ Path '', line 1, position 2.",
     [Test]
     public void DeserializeEnsureTypeEmptyStringToIntError()
     {
-      ExceptionAssert.Throws<JsonReaderException>(
-        @"Could not convert string to integer: . Path 'ReadTimeout', line 1, position 15.",
+      ExceptionAssert.Throws<JsonSerializationException>(
+        @"Error converting value {null} to type 'System.Int32'. Path 'ReadTimeout', line 1, position 15.",
         () =>
         {
           JsonConvert.DeserializeObject<MemoryStream>("{ReadTimeout:''}", new JsonSerializerSettings
@@ -3847,24 +3847,6 @@ To fix this error either change the environment to be fully trusted, change the 
       Assert.AreEqual(null, cc.Ignored);
     }
 
-    public class ShouldSerializeTestClass
-    {
-      internal bool _shouldSerializeName;
-
-      public string Name { get; set; }
-      public int Age { get; set; }
-
-      public void ShouldSerializeAge()
-      {
-        // dummy. should never be used because it doesn't return bool
-      }
-
-      public bool ShouldSerializeName()
-      {
-        return _shouldSerializeName;
-      }
-    }
-
     [Test]
     public void ShouldSerializeTest()
     {
@@ -3927,43 +3909,6 @@ To fix this error either change the environment to be fully trusted, change the 
       // ]
 
       Console.WriteLine(json);
-    }
-
-    public class SpecifiedTestClass
-    {
-      private bool _nameSpecified;
-
-      public string Name { get; set; }
-      public int Age { get; set; }
-      public int Weight { get; set; }
-      public int Height { get; set; }
-      public int FavoriteNumber { get; set; }
-
-      // dummy. should never be used because it isn't of type bool
-      [JsonIgnore]
-      public long AgeSpecified { get; set; }
-
-      [JsonIgnore]
-      public bool NameSpecified
-      {
-        get { return _nameSpecified; }
-        set { _nameSpecified = value; }
-      }
-
-      [JsonIgnore]
-      public bool WeightSpecified;
-
-      [JsonIgnore]
-      [System.Xml.Serialization.XmlIgnoreAttribute]
-      public bool HeightSpecified;
-
-      [JsonIgnore]
-
-      public bool FavoriteNumberSpecified
-      {
-        // get only example
-        get { return FavoriteNumber != 0; }
-      }
     }
 
     [Test]
@@ -6319,9 +6264,9 @@ Parameter name: value",
           Venue = "Gryphon Theatre",
           Performances = new List<DateTime>
             {
-              DateTime.Parse("8 Tue May 2012, 6:30pm"),
-              DateTime.Parse("9 Wed May 2012, 6:30pm"),
-              DateTime.Parse("10 Thu May 2012, 8:00pm")
+              JsonConvert.ConvertJavaScriptTicksToDateTime(1336458600000),
+              JsonConvert.ConvertJavaScriptTicksToDateTime(1336545000000),
+              JsonConvert.ConvertJavaScriptTicksToDateTime(1336636800000)
             }
         };
 
@@ -6447,6 +6392,26 @@ Parameter name: value",
     }
 #endif
 
+   [Test]
+   public void AdditionalContentAfterFinish()
+   {
+     ExceptionAssert.Throws<JsonException>(
+       "Additional text found in JSON string after finishing deserializing object.",
+       () =>
+         {
+           string json = "[{},1]";
+
+           JsonSerializer serializer = new JsonSerializer();
+           serializer.CheckAdditionalContent = true;
+
+           var reader = new JsonTextReader(new StringReader(json));
+           reader.Read();
+           reader.Read();
+
+           serializer.Deserialize(reader, typeof (MyType));
+         });
+   }
+
     [Test]
     public void DeserializeRelativeUri()
     {
@@ -6495,6 +6460,761 @@ Parameter name: value",
     {
       var actual = JsonConvert.DeserializeObject<MyType>(@"{ ""MyProperty"":{""Key"":""Y""}}");
       Assert.AreEqual("X", actual.MyProperty["Key"]);
+    }
+
+    [Test]
+    public void DeserializeCaseInsensitiveKeyValuePairConverter()
+    {
+      KeyValuePair<int, string> result =
+        JsonConvert.DeserializeObject<KeyValuePair<int, string>>(
+          "{key: 123, \"VALUE\": \"test value\"}"
+          );
+
+      Assert.AreEqual(123, result.Key);
+      Assert.AreEqual("test value", result.Value);
+    }
+
+    [Test]
+    public void SerializeKeyValuePairConverterWithCamelCase()
+    {
+      string json =
+        JsonConvert.SerializeObject(new KeyValuePair<int, string>(123, "test value"), Formatting.Indented, new JsonSerializerSettings
+          {
+            ContractResolver = new CamelCasePropertyNamesContractResolver()
+          });
+
+      Assert.AreEqual(@"{
+  ""key"": 123,
+  ""value"": ""test value""
+}", json);
+    }
+
+    [JsonObject(MemberSerialization.Fields)]
+    public class MyTuple<T1>
+    {
+      private readonly T1 m_Item1;
+
+      public MyTuple(T1 item1)
+      {
+        m_Item1 = item1;
+      }
+
+      public T1 Item1
+      {
+        get { return m_Item1; }
+      }
+    }
+
+    [JsonObject(MemberSerialization.Fields)]
+    public class MyTuplePartial<T1>
+    {
+      private readonly T1 m_Item1;
+
+      public MyTuplePartial(T1 item1)
+      {
+        m_Item1 = item1;
+      }
+
+      public T1 Item1
+      {
+        get { return m_Item1; }
+      }
+    }
+
+    [Test]
+    public void SerializeCustomTupleWithSerializableAttribute()
+    {
+      var tuple = new MyTuple<int>(500);
+      var json = JsonConvert.SerializeObject(tuple);
+      Assert.AreEqual(@"{""m_Item1"":500}", json);
+
+      MyTuple<int> obj = null;
+
+      Action doStuff = () =>
+      {
+        obj = JsonConvert.DeserializeObject<MyTuple<int>>(json);
+      };
+
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+      doStuff();
+      Assert.AreEqual(500, obj.Item1);
+#else
+      ExceptionAssert.Throws<JsonSerializationException>(
+         "Unable to find a constructor to use for type Newtonsoft.Json.Tests.Serialization.JsonSerializerTest+MyTuple`1[System.Int32]. A class should either have a default constructor, one constructor with arguments or a constructor marked with the JsonConstructor attribute. Path 'm_Item1', line 1, position 11.",
+         doStuff);
+#endif
+    }
+
+#if DEBUG
+    [Test]
+    public void SerializeCustomTupleWithSerializableAttributeInPartialTrust()
+    {
+      try
+      {
+        JsonTypeReflector.SetFullyTrusted(false);
+
+        var tuple = new MyTuplePartial<int>(500);
+        var json = JsonConvert.SerializeObject(tuple);
+        Assert.AreEqual(@"{""m_Item1"":500}", json);
+
+        ExceptionAssert.Throws<JsonSerializationException>(
+           "Unable to find a constructor to use for type Newtonsoft.Json.Tests.Serialization.JsonSerializerTest+MyTuplePartial`1[System.Int32]. A class should either have a default constructor, one constructor with arguments or a constructor marked with the JsonConstructor attribute. Path 'm_Item1', line 1, position 11.",
+           () => JsonConvert.DeserializeObject<MyTuplePartial<int>>(json));
+      }
+      finally
+      {
+        JsonTypeReflector.SetFullyTrusted(true);
+      }
+    }
+#endif
+
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || NET35 || NET20)
+    [Test]
+    public void SerializeTupleWithSerializableAttribute()
+    {
+      var tuple = Tuple.Create(500);
+      var json = JsonConvert.SerializeObject(tuple, new JsonSerializerSettings
+      {
+        ContractResolver = new SerializableContractResolver()
+      });
+      Assert.AreEqual(@"{""m_Item1"":500}", json);
+
+      var obj = JsonConvert.DeserializeObject<Tuple<int>>(json, new JsonSerializerSettings
+      {
+        ContractResolver = new SerializableContractResolver()
+      });
+      Assert.AreEqual(500, obj.Item1);
+    }
+
+    public class SerializableContractResolver : DefaultContractResolver
+    {
+      public SerializableContractResolver()
+      {
+        IgnoreSerializableAttribute = false;
+      }
+    }
+#endif
+
+    [Test]
+    public void SerializeArray2D()
+    {
+      Array2D aa = new Array2D();
+      aa.Before = "Before!";
+      aa.After = "After!";
+      aa.Coordinates = new[,] { { 1, 1 }, { 1, 2 }, { 2, 1 }, { 2, 2 } };
+
+      string json = JsonConvert.SerializeObject(aa);
+
+      Assert.AreEqual(@"{""Before"":""Before!"",""Coordinates"":[[1,1],[1,2],[2,1],[2,2]],""After"":""After!""}", json);
+    }
+
+    [Test]
+    public void SerializeArray3D()
+    {
+      Array3D aa = new Array3D();
+      aa.Before = "Before!";
+      aa.After = "After!";
+      aa.Coordinates = new[, ,] { { { 1, 1, 1 }, { 1, 1, 2 } }, { { 1, 2, 1 }, { 1, 2, 2 } }, { { 2, 1, 1 }, { 2, 1, 2 } }, { { 2, 2, 1 }, { 2, 2, 2 } } };
+
+      string json = JsonConvert.SerializeObject(aa);
+
+      Assert.AreEqual(@"{""Before"":""Before!"",""Coordinates"":[[[1,1,1],[1,1,2]],[[1,2,1],[1,2,2]],[[2,1,1],[2,1,2]],[[2,2,1],[2,2,2]]],""After"":""After!""}", json);
+    }
+
+    [Test]
+    public void SerializeArray3DWithConverter()
+    {
+      Array3DWithConverter aa = new Array3DWithConverter();
+      aa.Before = "Before!";
+      aa.After = "After!";
+      aa.Coordinates = new[, ,] { { { 1, 1, 1 }, { 1, 1, 2 } }, { { 1, 2, 1 }, { 1, 2, 2 } }, { { 2, 1, 1 }, { 2, 1, 2 } }, { { 2, 2, 1 }, { 2, 2, 2 } } };
+
+      string json = JsonConvert.SerializeObject(aa, Formatting.Indented);
+
+      Assert.AreEqual(@"{
+  ""Before"": ""Before!"",
+  ""Coordinates"": [
+    [
+      [
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        1.0,
+        1.0,
+        2.0
+      ]
+    ],
+    [
+      [
+        1.0,
+        2.0,
+        1.0
+      ],
+      [
+        1.0,
+        2.0,
+        2.0
+      ]
+    ],
+    [
+      [
+        2.0,
+        1.0,
+        1.0
+      ],
+      [
+        2.0,
+        1.0,
+        2.0
+      ]
+    ],
+    [
+      [
+        2.0,
+        2.0,
+        1.0
+      ],
+      [
+        2.0,
+        2.0,
+        2.0
+      ]
+    ]
+  ],
+  ""After"": ""After!""
+}", json);
+    }
+
+    [Test]
+    public void DeserializeArray3DWithConverter()
+    {
+      string json = @"{
+  ""Before"": ""Before!"",
+  ""Coordinates"": [
+    [
+      [
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        1.0,
+        1.0,
+        2.0
+      ]
+    ],
+    [
+      [
+        1.0,
+        2.0,
+        1.0
+      ],
+      [
+        1.0,
+        2.0,
+        2.0
+      ]
+    ],
+    [
+      [
+        2.0,
+        1.0,
+        1.0
+      ],
+      [
+        2.0,
+        1.0,
+        2.0
+      ]
+    ],
+    [
+      [
+        2.0,
+        2.0,
+        1.0
+      ],
+      [
+        2.0,
+        2.0,
+        2.0
+      ]
+    ]
+  ],
+  ""After"": ""After!""
+}";
+
+      Array3DWithConverter aa = JsonConvert.DeserializeObject<Array3DWithConverter>(json);
+
+      Assert.AreEqual("Before!", aa.Before);
+      Assert.AreEqual("After!", aa.After);
+      Assert.AreEqual(4, aa.Coordinates.GetLength(0));
+      Assert.AreEqual(2, aa.Coordinates.GetLength(1));
+      Assert.AreEqual(3, aa.Coordinates.GetLength(2));
+      Assert.AreEqual(1, aa.Coordinates[0, 0, 0]);
+      Assert.AreEqual(2, aa.Coordinates[1, 1, 1]);
+    }
+
+    [Test]
+    public void DeserializeArray2D()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[[1,1],[1,2],[2,1],[2,2]],""After"":""After!""}";
+
+      Array2D aa = JsonConvert.DeserializeObject<Array2D>(json);
+
+      Assert.AreEqual("Before!", aa.Before);
+      Assert.AreEqual("After!", aa.After);
+      Assert.AreEqual(4, aa.Coordinates.GetLength(0));
+      Assert.AreEqual(2, aa.Coordinates.GetLength(1));
+      Assert.AreEqual(1, aa.Coordinates[0, 0]);
+      Assert.AreEqual(2, aa.Coordinates[1, 1]);
+
+      string after = JsonConvert.SerializeObject(aa);
+
+      Assert.AreEqual(json, after);
+    }
+
+    [Test]
+    public void DeserializeArray2D_WithTooManyItems()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[[1,1],[1,2,3],[2,1],[2,2]],""After"":""After!""}";
+
+      ExceptionAssert.Throws<Exception>(
+        "Cannot deserialize non-cubical array as multidimensional array.",
+        () => JsonConvert.DeserializeObject<Array2D>(json));
+    }
+
+    [Test]
+    public void DeserializeArray2D_WithTooFewItems()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[[1,1],[1],[2,1],[2,2]],""After"":""After!""}";
+
+      ExceptionAssert.Throws<Exception>(
+        "Cannot deserialize non-cubical array as multidimensional array.",
+        () => JsonConvert.DeserializeObject<Array2D>(json));
+    }
+
+    [Test]
+    public void DeserializeArray3D()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[[[1,1,1],[1,1,2]],[[1,2,1],[1,2,2]],[[2,1,1],[2,1,2]],[[2,2,1],[2,2,2]]],""After"":""After!""}";
+
+      Array3D aa = JsonConvert.DeserializeObject<Array3D>(json);
+
+      Assert.AreEqual("Before!", aa.Before);
+      Assert.AreEqual("After!", aa.After);
+      Assert.AreEqual(4, aa.Coordinates.GetLength(0));
+      Assert.AreEqual(2, aa.Coordinates.GetLength(1));
+      Assert.AreEqual(3, aa.Coordinates.GetLength(2));
+      Assert.AreEqual(1, aa.Coordinates[0, 0, 0]);
+      Assert.AreEqual(2, aa.Coordinates[1, 1, 1]);
+
+      string after = JsonConvert.SerializeObject(aa);
+
+      Assert.AreEqual(json, after);
+    }
+
+    [Test]
+    public void DeserializeArray3D_WithTooManyItems()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[[[1,1,1],[1,1,2,1]],[[1,2,1],[1,2,2]],[[2,1,1],[2,1,2]],[[2,2,1],[2,2,2]]],""After"":""After!""}";
+
+      ExceptionAssert.Throws<Exception>(
+        "Cannot deserialize non-cubical array as multidimensional array.",
+        () => JsonConvert.DeserializeObject<Array3D>(json));
+    }
+
+    [Test]
+    public void DeserializeArray3D_WithBadItems()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[[[1,1,1],[1,1,2]],[[1,2,1],[1,2,2]],[[2,1,1],[2,1,2]],[[2,2,1],{}]],""After"":""After!""}";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "Unexpected token when deserializing multidimensional array: StartObject. Path 'Coordinates[3][1]', line 1, position 99.",
+        () => JsonConvert.DeserializeObject<Array3D>(json));
+    }
+
+    [Test]
+    public void DeserializeArray3D_WithTooFewItems()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[[[1,1,1],[1,1]],[[1,2,1],[1,2,2]],[[2,1,1],[2,1,2]],[[2,2,1],[2,2,2]]],""After"":""After!""}";
+
+      ExceptionAssert.Throws<Exception>(
+        "Cannot deserialize non-cubical array as multidimensional array.",
+        () => JsonConvert.DeserializeObject<Array3D>(json));
+    }
+
+    [Test]
+    public void SerializeEmpty3DArray()
+    {
+      Array3D aa = new Array3D();
+      aa.Before = "Before!";
+      aa.After = "After!";
+      aa.Coordinates = new int[0, 0, 0];
+
+      string json = JsonConvert.SerializeObject(aa);
+
+      Assert.AreEqual(@"{""Before"":""Before!"",""Coordinates"":[],""After"":""After!""}", json);
+    }
+
+    [Test]
+    public void DeserializeEmpty3DArray()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[],""After"":""After!""}";
+
+      Array3D aa = JsonConvert.DeserializeObject<Array3D>(json);
+
+      Assert.AreEqual("Before!", aa.Before);
+      Assert.AreEqual("After!", aa.After);
+      Assert.AreEqual(0, aa.Coordinates.GetLength(0));
+      Assert.AreEqual(0, aa.Coordinates.GetLength(1));
+      Assert.AreEqual(0, aa.Coordinates.GetLength(2));
+
+      string after = JsonConvert.SerializeObject(aa);
+
+      Assert.AreEqual(json, after);
+    }
+
+    [Test]
+    public void DeserializeIncomplete3DArray()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[/*hi*/[/*hi*/[1/*hi*/,/*hi*/1/*hi*/,1]/*hi*/,/*hi*/[1,1";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "Unexpected end when deserializing array. Path 'Coordinates[0][1][1]', line 1, position 90.",
+        () => JsonConvert.DeserializeObject<Array3D>(json));
+    }
+
+    [Test]
+    public void DeserializeIncompleteNotTopLevel3DArray()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[/*hi*/[/*hi*/";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "Unexpected end when deserializing array. Path 'Coordinates[0]', line 1, position 48.",
+        () => JsonConvert.DeserializeObject<Array3D>(json));
+    }
+
+    [Test]
+    public void DeserializeNull3DArray()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":null,""After"":""After!""}";
+
+      Array3D aa = JsonConvert.DeserializeObject<Array3D>(json);
+
+      Assert.AreEqual("Before!", aa.Before);
+      Assert.AreEqual("After!", aa.After);
+      Assert.AreEqual(null, aa.Coordinates);
+
+      string after = JsonConvert.SerializeObject(aa);
+
+      Assert.AreEqual(json, after);
+    }
+
+    [Test]
+    public void DeserializeSemiEmpty3DArray()
+    {
+      string json = @"{""Before"":""Before!"",""Coordinates"":[[]],""After"":""After!""}";
+
+      Array3D aa = JsonConvert.DeserializeObject<Array3D>(json);
+
+      Assert.AreEqual("Before!", aa.Before);
+      Assert.AreEqual("After!", aa.After);
+      Assert.AreEqual(1, aa.Coordinates.GetLength(0));
+      Assert.AreEqual(0, aa.Coordinates.GetLength(1));
+      Assert.AreEqual(0, aa.Coordinates.GetLength(2));
+
+      string after = JsonConvert.SerializeObject(aa);
+
+      Assert.AreEqual(json, after);
+    }
+
+    [Test]
+    public void SerializeReferenceTracked3DArray()
+    {
+      Event e1 = new Event
+        {
+          EventName = "EventName!"
+        };
+      Event[,] array1 = new [,] { { e1, e1 }, { e1, e1 } };
+      IList<Event[,]> values1 = new List<Event[,]>
+        {
+          array1,
+          array1
+        };
+
+      string json = JsonConvert.SerializeObject(values1, new JsonSerializerSettings
+        {
+          PreserveReferencesHandling = PreserveReferencesHandling.All,
+          Formatting = Formatting.Indented
+        });
+
+      Assert.AreEqual(@"{
+  ""$id"": ""1"",
+  ""$values"": [
+    {
+      ""$id"": ""2"",
+      ""$values"": [
+        [
+          {
+            ""$id"": ""3"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          },
+          {
+            ""$ref"": ""3""
+          }
+        ],
+        [
+          {
+            ""$ref"": ""3""
+          },
+          {
+            ""$ref"": ""3""
+          }
+        ]
+      ]
+    },
+    {
+      ""$ref"": ""2""
+    }
+  ]
+}", json);
+    }
+
+    [Test]
+    public void SerializeTypeName3DArray()
+    {
+      Event e1 = new Event
+      {
+        EventName = "EventName!"
+      };
+      Event[,] array1 = new[,] { { e1, e1 }, { e1, e1 } };
+      IList<Event[,]> values1 = new List<Event[,]>
+        {
+          array1,
+          array1
+        };
+
+      string json = JsonConvert.SerializeObject(values1, new JsonSerializerSettings
+      {
+        TypeNameHandling = TypeNameHandling.All,
+        Formatting = Formatting.Indented
+      });
+
+      Assert.AreEqual(@"{
+  ""$type"": ""System.Collections.Generic.List`1[[Newtonsoft.Json.Tests.Serialization.Event[,], Newtonsoft.Json.Tests]], mscorlib"",
+  ""$values"": [
+    {
+      ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event[,], Newtonsoft.Json.Tests"",
+      ""$values"": [
+        [
+          {
+            ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event, Newtonsoft.Json.Tests"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          },
+          {
+            ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event, Newtonsoft.Json.Tests"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          }
+        ],
+        [
+          {
+            ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event, Newtonsoft.Json.Tests"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          },
+          {
+            ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event, Newtonsoft.Json.Tests"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          }
+        ]
+      ]
+    },
+    {
+      ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event[,], Newtonsoft.Json.Tests"",
+      ""$values"": [
+        [
+          {
+            ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event, Newtonsoft.Json.Tests"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          },
+          {
+            ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event, Newtonsoft.Json.Tests"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          }
+        ],
+        [
+          {
+            ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event, Newtonsoft.Json.Tests"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          },
+          {
+            ""$type"": ""Newtonsoft.Json.Tests.Serialization.Event, Newtonsoft.Json.Tests"",
+            ""EventName"": ""EventName!"",
+            ""Venue"": null,
+            ""Performances"": null
+          }
+        ]
+      ]
+    }
+  ]
+}", json);
+
+      IList<Event[,]> values2 = (IList<Event[,]>)JsonConvert.DeserializeObject(json, new JsonSerializerSettings
+        {
+          TypeNameHandling = TypeNameHandling.All
+        });
+
+      Assert.AreEqual(2, values2.Count);
+      Assert.AreEqual("EventName!", values2[0][0, 0].EventName);
+    }
+
+#if NETFX_CORE
+    [Test]
+    public void SerializeWinRTJsonObject()
+    {
+      var o = Windows.Data.Json.JsonObject.Parse(@"{
+  ""CPU"": ""Intel"",
+  ""Drives"": [
+    ""DVD read/writer"",
+    ""500 gigabyte hard drive""
+  ]
+}");
+
+      string json = JsonConvert.SerializeObject(o, Formatting.Indented);
+      Assert.AreEqual(@"{
+  ""Drives"": [
+    ""DVD read/writer"",
+    ""500 gigabyte hard drive""
+  ],
+  ""CPU"": ""Intel""
+}", json);
+    }
+#endif
+
+#if !NET20
+    [Test]
+    public void RoundtripOfDateTimeOffset()
+    {
+      var content = @"{""startDateTime"":""2012-07-19T14:30:00+09:30""}";
+
+      var jsonSerializerSettings = new JsonSerializerSettings() {DateFormatHandling = DateFormatHandling.IsoDateFormat, DateParseHandling = DateParseHandling.DateTimeOffset, DateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind};
+      
+      var obj = (JObject)JsonConvert.DeserializeObject(content, jsonSerializerSettings);
+
+      var dateTimeOffset = (DateTimeOffset)((JValue) obj["startDateTime"]).Value;
+
+      Assert.AreEqual(TimeSpan.FromHours(9.5), dateTimeOffset.Offset);
+      Assert.AreEqual("07/19/2012 14:30:00 +09:30", dateTimeOffset.ToString(CultureInfo.InvariantCulture));
+    }
+#endif
+
+#if !NET20
+    public class NullableTestClass
+    {
+      public bool? MyNullableBool { get; set; }
+      public int? MyNullableInteger { get; set; }
+      public DateTime? MyNullableDateTime { get; set; }
+      public DateTimeOffset? MyNullableDateTimeOffset { get; set; }
+      public Decimal? MyNullableDecimal { get; set; }
+    }
+
+    [Test]
+    public void TestStringToNullableDeserialization()
+    {
+      string json = @"{
+  ""MyNullableBool"": """",
+  ""MyNullableInteger"": """",
+  ""MyNullableDateTime"": """",
+  ""MyNullableDateTimeOffset"": """",
+  ""MyNullableDecimal"": """"
+}";
+
+      NullableTestClass c2 = JsonConvert.DeserializeObject<NullableTestClass>(json);
+      Assert.IsNull(c2.MyNullableBool);
+      Assert.IsNull(c2.MyNullableInteger);
+      Assert.IsNull(c2.MyNullableDateTime);
+      Assert.IsNull(c2.MyNullableDateTimeOffset);
+      Assert.IsNull(c2.MyNullableDecimal);
+    }
+#endif
+
+#if !(PORTABLE || NET20 || NET35 || WINDOWS_PHONE)
+    [Test]
+    public void HashSetInterface()
+    {
+      ISet<string> s1 = new HashSet<string>(new[] {"1", "two", "III"});
+
+      string json = JsonConvert.SerializeObject(s1);
+
+      ISet<string> s2 = JsonConvert.DeserializeObject<ISet<string>>(json);
+
+      Assert.AreEqual(s1.Count, s2.Count);
+      foreach (string s in s1)
+      {
+        Assert.IsTrue(s2.Contains(s));
+      }
+    }
+#endif
+
+    public class NewEmployee : Employee
+    {
+        public int Age { get; set; }
+
+        public bool ShouldSerializeName()
+        {
+            return false;
+        }
+    }
+
+    [Test]
+    public void ShouldSerializeInheritedClassTest()
+    {
+      NewEmployee joe = new NewEmployee();
+      joe.Name = "Joe Employee";
+      joe.Age = 100;
+
+      Employee mike = new Employee();
+      mike.Name = "Mike Manager";
+      mike.Manager = mike;
+
+      joe.Manager = mike;
+
+      //StringWriter sw = new StringWriter();
+
+      //XmlSerializer x = new XmlSerializer(typeof(NewEmployee));
+      //x.Serialize(sw, joe);
+
+      //Console.WriteLine(sw);
+
+      //JavaScriptSerializer s = new JavaScriptSerializer();
+      //Console.WriteLine(s.Serialize(new {html = @"<script>hi</script>; & ! ^ * ( ) ! @ # $ % ^ ' "" - , . / ; : [ { } ] ; ' - _ = + ? ` ~ \ |"}));
+
+      string json = JsonConvert.SerializeObject(joe, Formatting.Indented);
+
+      Assert.AreEqual(@"{
+  ""Age"": 100,
+  ""Name"": ""Joe Employee"",
+  ""Manager"": {
+    ""Name"": ""Mike Manager""
+  }
+}", json);
     }
   }
 
@@ -6668,7 +7388,7 @@ Parameter name: value",
 
   internal class Bb : Aa
   {
-    public bool no;
+    public new bool no;
   }
 
 #if !(NET35 || NET20 || SILVERLIGHT || WINDOWS_PHONE)
@@ -6806,4 +7526,98 @@ Parameter name: value",
     public string IgnoreDataMemberAndDataMemberAttribute { get; set; }
   }
 #endif
+
+  public class Array2D
+  {
+    public string Before { get; set; }
+    public int[,] Coordinates { get; set; }
+    public string After { get; set; }
+  }
+
+  public class Array3D
+  {
+    public string Before { get; set; }
+    public int[,,] Coordinates { get; set; }
+    public string After { get; set; }
+  }
+
+  public class Array3DWithConverter
+  {
+    public string Before { get; set; }
+    [JsonProperty(ItemConverterType = typeof(IntToFloatConverter))]
+    public int[, ,] Coordinates { get; set; }
+    public string After { get; set; }
+  }
+
+  public class IntToFloatConverter : JsonConverter
+  {
+    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+    {
+      writer.WriteValue(Convert.ToDouble(value));
+    }
+
+    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+    {
+      return Convert.ToInt32(reader.Value);
+    }
+
+    public override bool CanConvert(Type objectType)
+    {
+      return objectType == typeof (int);
+    }
+  }
+
+  public class ShouldSerializeTestClass
+  {
+    internal bool _shouldSerializeName;
+
+    public string Name { get; set; }
+    public int Age { get; set; }
+
+    public void ShouldSerializeAge()
+    {
+      // dummy. should never be used because it doesn't return bool
+    }
+
+    public bool ShouldSerializeName()
+    {
+      return _shouldSerializeName;
+    }
+  }
+
+  public class SpecifiedTestClass
+  {
+    private bool _nameSpecified;
+
+    public string Name { get; set; }
+    public int Age { get; set; }
+    public int Weight { get; set; }
+    public int Height { get; set; }
+    public int FavoriteNumber { get; set; }
+
+    // dummy. should never be used because it isn't of type bool
+    [JsonIgnore]
+    public long AgeSpecified { get; set; }
+
+    [JsonIgnore]
+    public bool NameSpecified
+    {
+      get { return _nameSpecified; }
+      set { _nameSpecified = value; }
+    }
+
+    [JsonIgnore]
+    public bool WeightSpecified;
+
+    [JsonIgnore]
+    [System.Xml.Serialization.XmlIgnoreAttribute]
+    public bool HeightSpecified;
+
+    [JsonIgnore]
+    public bool FavoriteNumberSpecified
+    {
+      // get only example
+      get { return FavoriteNumber != 0; }
+    }
+  }
 }

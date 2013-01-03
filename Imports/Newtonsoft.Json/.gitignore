@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [Bb]in/
 [Oo]bj/
 [Ww]orking/
@@ -5,3 +6,15 @@ TestResults/
 AppPackages/
 *.suo
 *.user
+=======
+[Bb]in/
+[Oo]bj/
+[Ww]orking/
+TestResults/
+AppPackages/
+*.suo
+*.user
+_ReSharper.*
+*.ReSharper.user
+*.resharper.user
+>>>>>>> 9187d8a6b35992589a4b5102422bc6370bb4b38b
