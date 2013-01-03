@@ -3,11 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+#if NETFX_CORE
+using Raven.Imports.Newtonsoft.Json.Utilities;
+#endif
 
 namespace Raven.Client.Extensions
 {
@@ -42,3 +46,4 @@ namespace Raven.Client.Extensions
 		}
 	}
 }
+#endif

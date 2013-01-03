@@ -5,14 +5,26 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Reflection;
+#if NETFX_CORE
+using Raven.Imports.Newtonsoft.Json.Utilities;
+#endif
 
 namespace Raven.Client.Linq
 {
 	internal static class ReflectionExtensions
 	{
+		public static Assembly Assembly(this Type type)
+		{
+#if NETFX_CORE
+			return type.GetTypeInfo().Assembly;
+#else
+			return type.Assembly;
+#endif
+		}
+
 		public static Type GetMemberType(this MemberInfo member)
 		{
-			switch (member.MemberType)
+			switch (member.MemberType())
 			{
 				case MemberTypes.Field:
 					return ((FieldInfo)member).FieldType;
