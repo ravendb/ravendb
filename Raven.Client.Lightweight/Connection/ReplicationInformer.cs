@@ -7,11 +7,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.IsolatedStorage;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -20,22 +19,15 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection.Async;
-using Raven.Client.Document;
-using System.Net;
-using System.Net.Sockets;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Client.Extensions;
-
 #if SILVERLIGHT
-using Raven.Client.Silverlight.MissingFromSilverlight;
-using Raven.Json.Linq;
+using Raven.Client.Connection.Async;
 #endif
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-
-
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
@@ -113,9 +105,9 @@ namespace Raven.Client.Connection
 			{
 				if (firstTime)
 				{
-					var serverHash = GetServerHash(serverClient);
+					var serverHash = ServerHash.GetServerHash(serverClient.Url);
 
-					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
+					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 					if (IsInvalidDestinationsDocument(document) == false)
 					{
 						UpdateReplicationInformationFromDocument(document);
@@ -309,7 +301,7 @@ namespace Raven.Client.Connection
 #if SILVERLIGHT
 		public Task RefreshReplicationInformation(AsyncServerClient commands)
 		{
-			var serverHash = GetServerHash(commands);
+			var serverHash = ServerHash.GetServerHash(commands.Url);
 			return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
 			{
 				JsonDocument document;
@@ -321,7 +313,7 @@ namespace Raven.Client.Connection
 				else
 				{
 					log.ErrorException("Could not contact master for new replication information", getTask.Exception);
-					document = TryLoadReplicationInformationFromLocalCache(serverHash);
+					document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 				}
 
 
@@ -331,7 +323,7 @@ namespace Raven.Client.Connection
 					return;
 				}
 
-				TrySavingReplicationInformationToLocalCache(serverHash, document);
+				ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 				UpdateReplicationInformationFromDocument(document);
 
@@ -343,7 +335,7 @@ namespace Raven.Client.Connection
 #else
 		public void RefreshReplicationInformation(ServerClient commands)
 		{
-			var serverHash = GetServerHash(commands);
+			var serverHash = ServerHash.GetServerHash(commands.Url);
 
 			JsonDocument document;
 			try
@@ -354,7 +346,7 @@ namespace Raven.Client.Connection
 			catch (Exception e)
 			{
 				log.ErrorException("Could not contact master for new replication information", e);
-				document = TryLoadReplicationInformationFromLocalCache(serverHash);
+				document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 			}
 			if (document == null)
 			{
@@ -362,7 +354,7 @@ namespace Raven.Client.Connection
 				return;
 			}
 
-			TrySavingReplicationInformationToLocalCache(serverHash, document);
+			ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 			UpdateReplicationInformationFromDocument(document);
 
@@ -400,73 +392,6 @@ namespace Raven.Client.Connection
 				failureCounts[replicationDestination.Url] = new FailureCounter();
 			}
 		}
-
-		private IsolatedStorageFile GetIsolatedStorageFileForReplicationInformation()
-		{
-#if SILVERLIGHT
-			return IsolatedStorageFile.GetUserStoreForSite();
-#else
-			return IsolatedStorageFile.GetMachineStoreForDomain();
-#endif
-		}
-
-		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
-		{
-			try
-			{
-				using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
-				{
-					var path = "RavenDB Replication Information For - " + serverHash;
-
-					if (machineStoreForApplication.GetFileNames(path).Length == 0)
-						return null;
-
-					using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
-					{
-						return stream.ToJObject().ToJsonDocument();
-					}
-				}
-			}
-			catch (Exception e)
-			{
-				log.ErrorException("Could not understand the persisted replication information", e);
-				return null;
-			}
-		}
-
-		private void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
-		{
-			try
-			{
-				using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
-				{
-					var path = "RavenDB Replication Information For - " + serverHash;
-					using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
-					{
-						document.ToJson().WriteTo(stream);
-					}
-				}
-			}
-			catch (Exception e)
-			{
-				log.ErrorException("Could not persist the replication information", e);
-			}
-		}
-
-#if SILVERLIGHT
-		private static string GetServerHash(AsyncServerClient commands)
-		{
-			return BitConverter.ToString(MD5Core.GetHash(Encoding.UTF8.GetBytes(commands.Url)));
-		}
-#else
-		private static string GetServerHash(ServerClient commands)
-		{
-			using (var md5 = MD5.Create())
-			{
-				return BitConverter.ToString(md5.ComputeHash(Encoding.UTF8.GetBytes(commands.Url)));
-			}
-		}
-#endif
 
 		/// <summary>
 		/// Resets the failure count for the specified URL
