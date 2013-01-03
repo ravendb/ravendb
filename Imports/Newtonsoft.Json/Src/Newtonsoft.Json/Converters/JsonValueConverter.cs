@@ -27,10 +27,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Security;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Windows.Data.Json;
 
-namespace Newtonsoft.Json.Converters
+namespace Raven.Imports.Newtonsoft.Json.Converters
 {
   public class JsonValueConverter : JsonConverter
   {

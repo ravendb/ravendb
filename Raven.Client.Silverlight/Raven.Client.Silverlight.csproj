@@ -173,6 +173,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\JavaScriptDateTimeConverter.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Converters\JavaScriptDateTimeConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\JsonValueConverter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Converters\JsonValueConverter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\KeyValuePairConverter.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Converters\KeyValuePairConverter.cs</Link>
     </Compile>
@@ -422,6 +425,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DefaultSerializationBinder.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\DefaultSerializationBinder.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DynamicValueProvider.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\DynamicValueProvider.cs</Link>
     </Compile>
@@ -436,6 +442,9 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IReferenceResolver.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IReferenceResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ITraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ITraceWriter.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IValueProvider.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IValueProvider.cs</Link>
@@ -497,6 +506,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\LateBoundMetadataTypeAttribute.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\LateBoundMetadataTypeAttribute.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\ObjectConstructor.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\ObjectConstructor.cs</Link>
     </Compile>
@@ -508,6 +520,12 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\StreamingContext.cs">
       <Link>Imports\Imports\Newtonsoft.Json\StreamingContext.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\StringEscapeHandling.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\StringEscapeHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\TraceLevel.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\TraceLevel.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\TypeNameHandling.cs">
       <Link>Imports\Imports\Newtonsoft.Json\TypeNameHandling.cs</Link>
