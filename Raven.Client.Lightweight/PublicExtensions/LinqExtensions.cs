@@ -96,6 +96,7 @@ namespace Raven.Client
 			return results;
 		}
 
+#if !NETFX_CORE
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
@@ -111,7 +112,6 @@ namespace Raven.Client
 			var queryable =
 				self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
 			return (IRavenQueryable<T>)queryable;
-
 		}
 
 		public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
@@ -130,6 +130,7 @@ namespace Raven.Client
 			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
 			return (IRavenQueryable<TResult>)results;
 		}
+#endif
 
 #if !SILVERLIGHT
 
@@ -262,6 +263,7 @@ namespace Raven.Client
 				.ContinueWith(task => task.Result.Item1.TotalResults);
 		}
 
+#if !NETFX_CORE
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
@@ -300,5 +302,7 @@ namespace Raven.Client
 			var queryable = self.Provider.CreateQuery (Expression.Call (null, currentMethod.MakeGenericMethod (typeof (T)), expression));
 			return (IOrderedQueryable<T>)queryable;
 		}
+#endif
+
 	}
 }

@@ -5,7 +5,11 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using System.Windows.Browser;
+#endif
+#if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Connection

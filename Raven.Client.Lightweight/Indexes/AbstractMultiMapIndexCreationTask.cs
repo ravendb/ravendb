@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Client.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -36,7 +37,7 @@ namespace Raven.Client.Indexes
 			AddMap(expr);
 
 			// Index child classes.
-			var children = typeof(TBase).Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
+			var children = typeof(TBase).Assembly().GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
 			var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
 			foreach (var child in children)
 			{
