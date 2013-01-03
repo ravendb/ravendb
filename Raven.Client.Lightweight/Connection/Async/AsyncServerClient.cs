@@ -1201,25 +1201,6 @@ namespace Raven.Client.Connection.Async
 			return jsonRequestFactory.DisableAllCaching();
 		}
 
-		/// <summary>
-		/// Ensures that the silverlight startup tasks have run
-		/// </summary>
-		public Task EnsureSilverlightStartUpAsync()
-		{
-#if !SILVERLIGHT
-			throw new NotSupportedException("Only applicable in silverlight");
-#else
-			return ExecuteWithReplication("GET", url =>
-			{
-				return url
-					.SilverlightEnsuresStartup()
-					.NoCache()
-					.ToJsonRequest(this, credentials, convention)
-					.ReadResponseBytesAsync();
-			});
-#endif
-		}
-
 		///<summary>
 		/// Get the possible terms for the specified field in the index asynchronously
 		/// You can page through the results by use fromValue parameter as the 

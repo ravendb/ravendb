@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Studio.Commands;
+using Raven.Studio.Impl;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Abstractions.Extensions;
