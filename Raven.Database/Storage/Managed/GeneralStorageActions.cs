@@ -43,6 +43,11 @@ namespace Raven.Storage.Managed
 			
 		}
 
+		public void MaybePulseTransaction()
+		{
+
+		}
+
 		public void UseLazyCommit()
 		{
 			

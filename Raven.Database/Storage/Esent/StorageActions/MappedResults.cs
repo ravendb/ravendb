@@ -843,14 +843,9 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			if (reduceKeyChanges == null)
 				return;
-			int count = 0;
 			foreach (var reduceKeyChange in reduceKeyChanges)
 			{
-				count++;
-				if(count  % 50000 == 0)
-				{
-					PulseTransaction(); // avoid version store out of memory
-				}
+				MaybePulseTransaction();
 				IncrementReduceKeyCounter(reduceKeyChange.Key.Item1, reduceKeyChange.Key.Item2, reduceKeyChange.Value);
 			}
 		}

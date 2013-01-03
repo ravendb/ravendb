@@ -184,18 +184,12 @@ namespace Raven.Storage.Esent.StorageActions
 				if (!Api.TrySeek(session, op.Table, SeekGrbit.SeekGE))
 					continue;
 				var columnids = Api.GetColumnDictionary(session, op.Table);
-				var count = 0;
 				do
 				{
 					var indexNameFromDb = Api.RetrieveColumnAsString(session, op.Table, columnids["view"]);
 					if (string.Equals(name, indexNameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 						break;
-					if (count++ > 10000)
-					{
-						PulseTransaction();
-						count = 0;
-					}
-
+					MaybePulseTransaction();
 					Api.JetDelete(session, op.Table);
 				} while (Api.TryMoveNext(session, op.Table));
 			}

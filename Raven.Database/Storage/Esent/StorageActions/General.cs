@@ -151,6 +151,24 @@ namespace Raven.Storage.Esent.StorageActions
 			transaction.Begin();
 		}
 
+		private int maybePulseCount;
+		public void MaybePulseTransaction()
+		{
+			if (++maybePulseCount % 100 != 0)
+				return;
+
+			var sizeInBytes = transactionalStorage.GetDatabaseTransactionVersionSizeInBytes();
+			if (sizeInBytes <= 0) // there has been an error
+			{
+				if (maybePulseCount % 15000 == 0)
+					PulseTransaction();
+				return;
+			}
+			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
+			if (eightyPrecentOfMax >= sizeInBytes || maybePulseCount % 15000 == 0)
+				PulseTransaction();
+		}
+
 		public bool UsingLazyCommit { get; set; }
 
 		public Action Commit(CommitTransactionGrbit txMode)

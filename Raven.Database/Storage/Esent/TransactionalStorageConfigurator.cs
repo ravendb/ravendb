@@ -17,10 +17,12 @@ namespace Raven.Storage.Esent
 		public const int MaxSessions = 256;
 
 		private readonly InMemoryRavenConfiguration configuration;
+		private readonly TransactionalStorage transactionalStorage;
 
-		public TransactionalStorageConfigurator(InMemoryRavenConfiguration configuration)
+		public TransactionalStorageConfigurator(InMemoryRavenConfiguration configuration, TransactionalStorage transactionalStorage)
 		{
 			this.configuration = configuration;
+			this.transactionalStorage = transactionalStorage;
 		}
 
 		public InstanceParameters ConfigureInstance(JET_INSTANCE jetInstance, string path)
@@ -34,6 +36,11 @@ namespace Raven.Storage.Esent
 			var circularLog = GetValueFromConfiguration("Raven/Esent/CircularLog", true);
 			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 64);
 			logFileSizeInMb = Math.Max(1, logFileSizeInMb / 4);
+			var maxVerPages = GetValueFromConfiguration("Raven/Esent/MaxVerPages", 512);
+			if (transactionalStorage != null)
+			{
+				transactionalStorage.MaxVerPagesValueInBytes = maxVerPages*1024*1024;
+			}
 			var instanceParameters = new InstanceParameters(jetInstance)
 			{
 				CircularLog = circularLog,
@@ -44,7 +51,7 @@ namespace Raven.Storage.Esent
 				TempDirectory = Path.Combine(logsPath, "temp"),
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
-				MaxVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 512), 1024 * 1024),
+				MaxVerPages = TranslateToSizeInVersionPages(maxVerPages, 1024 * 1024),
 				PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", 472), 1024 * 1024),
 				BaseName = "RVN",
 				EventSource = "Raven",

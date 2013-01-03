@@ -67,7 +67,7 @@ namespace Raven.Storage.Esent.Backup
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
-				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
+				new TransactionalStorageConfigurator(new RavenConfiguration(), null).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
