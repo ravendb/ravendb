@@ -710,6 +710,9 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
       <Link>Imports\Extensions\Buffers.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\CharExtensions.cs">
+      <Link>Imports\Extensions\CharExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\CryptoTransformExtensions.cs">
       <Link>Imports\Extensions\CryptoTransformExtensions.cs</Link>
     </Compile>
@@ -910,6 +913,12 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\RavenUrlExtensions.cs">
       <Link>Connection\RavenUrlExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformerCache.cs">
+      <Link>Imports\Connection\ReplicationInformerCache.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerHash.cs">
+      <Link>Imports\Connection\ServerHash.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
       <Link>Imports\DocumentStoreBase.cs</Link>
