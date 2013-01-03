@@ -10,11 +10,15 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
 using System.Transactions;
+#endif
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -1009,7 +1013,7 @@ namespace Raven.Client.Connection.Async
 
 		private static void AddTransactionInformation(RavenJObject metadata)
 		{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			if (Transaction.Current == null)
 				return;
 
