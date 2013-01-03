@@ -3,18 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Raven.Imports.Newtonsoft.Json;
-using System;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#else
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
 #endif
 
 namespace Raven.Abstractions.Extensions

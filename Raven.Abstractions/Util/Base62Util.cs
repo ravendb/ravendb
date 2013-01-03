@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Globalization;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Util
 {
@@ -36,8 +37,8 @@ namespace Raven.Abstractions.Util
 			long x = value % 62L;
 			long y = value / 62L;
 			if (y > 0)
-				return Base62ToString(y) + ValToChar(x).ToString(CultureInfo.InvariantCulture);
-			return ValToChar(x).ToString(CultureInfo.InvariantCulture);
+				return Base62ToString(y) + ValToChar(x).CharToString();
+			return ValToChar(x).CharToString();
 		}
 
 		private static char ValToChar(long value)
