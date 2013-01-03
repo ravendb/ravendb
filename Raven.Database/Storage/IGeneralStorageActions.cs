@@ -12,6 +12,5 @@ namespace Raven.Database.Storage
 
 		void PulseTransaction();
 		void MaybePulseTransaction();
-		void UseLazyCommit();
 	}
 }

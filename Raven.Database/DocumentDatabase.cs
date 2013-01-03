@@ -1922,7 +1922,6 @@ namespace Raven.Database
 				{
 					Type = DocumentChangeTypes.BulkInsertStarted
 				});
-				accessor.General.UseLazyCommit();
 				foreach (var docs in docBatches)
 				{
 					lock (putSerialLock)

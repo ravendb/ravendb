@@ -148,6 +148,7 @@ namespace Raven.Storage.Esent.StorageActions
 		public void PulseTransaction()
 		{
 			transaction.Commit(CommitTransactionGrbit.LazyFlush);
+			UseLazyCommit();
 			transaction.Begin();
 		}
 
