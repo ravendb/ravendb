@@ -526,11 +526,16 @@ Reduce only fields: {2}
 														 Condition = binaryOperatorExpression
 													 });
 			}
-			var projection = queryExpression.Clauses.OfType<QuerySelectClause>().First().Expression;
-			if (projection is AnonymousTypeCreateExpression == false)
+			var projection = 
+				QueryParsingUtils.GetAnonymousCreateExpression(
+					queryExpression.Clauses.OfType<QuerySelectClause>().First().Expression);
+
+			var anonymousTypeCreateExpression = projection as AnonymousTypeCreateExpression;
+
+			if (anonymousTypeCreateExpression == null)
 				return variableDeclaration;
 
-			var objectInitializer = ((AnonymousTypeCreateExpression)projection).Initializers;
+			var objectInitializer = anonymousTypeCreateExpression.Initializers;
 
 			var identifierExpression = new IdentifierExpression(fromClause.Identifier);
 
