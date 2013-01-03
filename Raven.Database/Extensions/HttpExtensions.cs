@@ -209,8 +209,8 @@ namespace Raven.Database.Extensions
 					default:
 						if (header.Value.Type == JTokenType.Date)
 						{
-							var rfc1123 = header.Value.Value<DateTime>().ToString("r");
-							var iso8601 = header.Value.Value<DateTime>().ToString("o");
+							var rfc1123 = GetDateString(header.Value, "r");
+							var iso8601 = GetDateString(header.Value, "o");
 							context.Response.AddHeader(header.Key, rfc1123);
 							context.Response.AddHeader("Raven-" + header.Key, iso8601);
 						}
@@ -228,6 +228,23 @@ namespace Raven.Database.Extensions
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
 			context.WriteETag(etag);
+		}
+
+		private static string GetDateString(RavenJToken token, string format)
+		{
+			var value = token as RavenJValue;
+			if (value == null)
+				return token.ToString();
+
+			var obj = value.Value;
+
+			if (obj is DateTime)
+				return ((DateTime) obj).ToString(format);
+
+			if (obj is DateTimeOffset)
+				return ((DateTimeOffset) obj).ToString(format);
+
+			return obj.ToString();
 		}
 
 		private static string StripQuotesIfNeeded(string str)
