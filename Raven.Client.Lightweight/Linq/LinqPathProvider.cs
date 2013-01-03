@@ -107,10 +107,11 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
-				if (type.IsEnum && (value is IEnumerable == false) && // skip arrays, lists
-					conventions.SaveEnumsAsIntegers == false)
+				if (value is Enum)
 				{
-					return Enum.GetName(type, value);
+					if (conventions.SaveEnumsAsIntegers == false)
+						return Enum.GetName(type, value);
+					return Convert.ToInt32(value);
 				}
 				return value;
 			}
