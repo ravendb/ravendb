@@ -19,5 +19,11 @@ namespace Raven.Bundles.Replication.Data
 		{
 			return string.Format("LastDocumentEtag: {0}, LastAttachmentEtag: {1}", LastDocumentEtag, LastAttachmentEtag);
 		}
+
+		public SourceReplicationInformation()
+		{
+			LastDocumentEtag = Etag.Empty;
+			LastAttachmentEtag = Etag.Empty;
+		}
 	}
 }

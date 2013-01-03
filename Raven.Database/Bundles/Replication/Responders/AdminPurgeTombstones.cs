@@ -46,11 +46,11 @@ namespace Raven.Bundles.Replication.Responders
 
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				if (docEtag != Etag.Empty)
+				if (docEtag != null)
 				{
 					accessor.Lists.RemoveAllBefore(Constants.RavenReplicationDocsTombstones, docEtag);
 				}
-				if (attachmentEtag != Etag.Empty)
+				if (attachmentEtag != null)
 				{
 					accessor.Lists.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones, attachmentEtag);
 				}

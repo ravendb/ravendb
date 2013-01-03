@@ -77,7 +77,7 @@ namespace Raven.Tests
 			}
 
 			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count);
-			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(EtagUtil.Increment(null, 15)).Count);
+			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(EtagUtil.Increment(Etag.Empty, 15)).Count);
 		}
 	}
 }

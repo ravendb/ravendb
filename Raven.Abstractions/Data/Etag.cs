@@ -1,8 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Linq;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
+
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -71,7 +77,7 @@ namespace Raven.Abstractions.Data
 			return 0;
 		}
 
-		public IEnumerable<byte> ToBytes()
+		private IEnumerable<byte> ToBytes()
 		{
 			foreach (var source in BitConverter.GetBytes(restarts).Reverse())
 			{
@@ -183,6 +189,44 @@ namespace Raven.Abstractions.Data
 			if (etag == null)
 				return null;
 			return etag.ToString();
+		}
+
+		public Etag HashWith(Etag other)
+		{
+			byte[] etagBytes = other.ToBytes().Concat(ToBytes()).ToArray();
+#if !SILVERLIGHT
+			using (var md5 = MD5.Create())
+			{
+				return Parse(md5.ComputeHash(etagBytes));
+			}
+#else
+			return Parse(MD5Core.GetHash(etagBytes));
+#endif
+		}
+	}
+
+	public class EtagJsonConverter : JsonConverter
+	{
+		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+		{
+			var etag = value as Etag;
+			if(etag == null)
+				writer.WriteNull();
+			else
+				writer.WriteValue(etag.ToString());
+		}
+
+		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		{
+			var s = reader.Value as string;
+			if (s == null)
+				return null;
+			return Etag.Parse(s);
+		}
+
+		public override bool CanConvert(Type objectType)
+		{
+			return objectType == typeof (Etag);
 		}
 	}
 

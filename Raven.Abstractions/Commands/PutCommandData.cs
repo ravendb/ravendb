@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
@@ -34,7 +33,7 @@ namespace Raven.Abstractions.Commands
 		/// </summary>
 		/// <value>The etag.</value>
 		public virtual Etag Etag { get; set; }
-		
+
 		/// <summary>
 		/// Gets or sets the document.
 		/// </summary>

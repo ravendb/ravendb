@@ -48,13 +48,7 @@ namespace Raven.Database.Server.Responders
 
 		private Etag GetFacetsEtag(JsonDocument jsonDocument, string index)
 		{
-			Etag etag;
-			using(var md5 = MD5.Create())
-			{
-				var etagBytes = md5.ComputeHash(Database.GetIndexEtag(index, null).ToBytes().Concat(jsonDocument.Etag.ToBytes()).ToArray());
-				etag = Etag.Parse(etagBytes);
-			}
-			return etag;
+			return jsonDocument.Etag.HashWith(Database.GetIndexEtag(index, null));
 		}
 	}	
 }
