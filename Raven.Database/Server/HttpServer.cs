@@ -250,13 +250,15 @@ namespace Raven.Database.Server
 
 		private static long GetCurrentManagedMemorySize()
 		{
-			return
-				PerformanceCountersUtils.SafelyGetPerformanceCounter(".NET CLR Memory", "# Total committed Bytes", CurrentProcessName.Value) ?? -1;
+			var safelyGetPerformanceCounter = PerformanceCountersUtils.SafelyGetPerformanceCounter(
+				".NET CLR Memory", "# Total committed Bytes", CurrentProcessName.Value);
+			return safelyGetPerformanceCounter ?? GC.GetTotalMemory(false);
 		}
 
 		private static readonly Lazy<string> CurrentProcessName = new Lazy<string>(() =>
 		{
-			return Assembly.GetEntryAssembly().GetName().Name;
+			using (var p = Process.GetCurrentProcess())
+				return p.ProcessName;
 		});
 
 		public void Dispose()
