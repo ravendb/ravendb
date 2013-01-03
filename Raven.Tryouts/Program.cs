@@ -18,9 +18,9 @@ namespace BulkStressTest
 			for (int i = 0; i < 1000; i++)
 			{
 				Console.WriteLine(i);
-				using(var x= new DataSetIndexTests())
+				using(var x= new CanSearchLazily())
 				{
-					x.can_execute_query_default();
+					x.CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_NonLazy();
 				}
 			}
 
