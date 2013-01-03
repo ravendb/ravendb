@@ -31,17 +31,17 @@ using System.Linq.Expressions;
 #endif
 using System.IO;
 using System.Text;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Diagnostics;
 using System.Globalization;
 using System.Collections;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Linq
+namespace Raven.Imports.Newtonsoft.Json.Linq
 {
   /// <summary>
   /// Represents an abstract JSON token.

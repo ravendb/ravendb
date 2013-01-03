@@ -28,7 +28,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Imports.Newtonsoft.Json.Serialization
 {

@@ -31,7 +31,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif

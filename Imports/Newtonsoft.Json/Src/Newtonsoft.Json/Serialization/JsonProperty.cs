@@ -24,7 +24,7 @@
 #endregion
 
 using System;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 #if NET20
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
