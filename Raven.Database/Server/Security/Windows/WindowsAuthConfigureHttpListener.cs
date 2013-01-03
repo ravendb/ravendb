@@ -23,7 +23,8 @@ namespace Raven.Database.Server.Security.Windows
 		private AuthenticationSchemes AuthenticationSchemeSelectorDelegate(HttpListenerRequest request)
 		{
 			var authHeader = request.Headers["Authorization"];
-			if(string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+			var hasApiKey = "True".Equals(request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
+			if(string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer ") || hasApiKey)
 			{
 				// this is an OAuth request that has a token
 				// we allow this to go through and we will authenticate that on the OAuth Request Authorizer
