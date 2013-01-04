@@ -254,7 +254,7 @@ namespace Raven.Imports.Newtonsoft.Json
       _currentState = State.Start;
       _stack = new List<JsonPosition>(4);
       _dateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind;
-      _dateParseHandling = DateParseHandling.DateTime;
+      _dateParseHandling = DateParseHandling.None;
 
       CloseInput = true;
     }

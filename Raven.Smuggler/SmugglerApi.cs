@@ -31,10 +31,7 @@ namespace Raven.Smuggler
 		{
 			RavenJArray indexes = null;
 			var request = CreateRequest("/indexes?pageSize=" + smugglerOptions.BatchSize + "&start=" + totalCount);
-			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)
-			{
-				DateParseHandling = DateParseHandling.None
-			}));
+			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
 			return indexes;
 		}
 
@@ -90,10 +87,7 @@ namespace Raven.Smuggler
 				{
 					RavenJArray documents = null;
 					var request = CreateRequest("/docs?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
-					request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)
-					{
-						DateParseHandling = DateParseHandling.None
-					}));
+					request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
 					return documents;
 				}
 				catch (Exception e)
@@ -113,10 +107,7 @@ namespace Raven.Smuggler
 			{
 				RavenJArray attachmentInfo = null;
 				var request = CreateRequest("/static/?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
-				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)
-				{
-					DateParseHandling = DateParseHandling.None
-				}));
+				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
 
 				if (attachmentInfo.Length == 0)
 				{
