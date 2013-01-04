@@ -11,7 +11,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class SuggestionResponder : RequestResponder
+	public class SuggestionResponder : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -48,25 +48,30 @@ namespace Raven.Database.Server.Responders
 			float accuracy;
 
 			if (Enum.TryParse(context.Request.QueryString["distance"], true, out distanceTypes) == false)
-				distanceTypes =StringDistanceTypes.Default;
+				distanceTypes = StringDistanceTypes.Default;
 
 			if (int.TryParse(context.Request.QueryString["max"], out numOfSuggestions) == false)
 				numOfSuggestions = 10;
 
-			if(float.TryParse(context.Request.QueryString["accuracy"], out accuracy) == false)
+			if (float.TryParse(context.Request.QueryString["accuracy"], out accuracy) == false)
 				accuracy = 0.5f;
 
+			bool popularity;
+			if (bool.TryParse(context.Request.QueryString["popularity"], out popularity) == false)
+				popularity = false;
+
 			var query = new SuggestionQuery
-							{
-								Distance = distanceTypes,
-								Field = field,
-								MaxSuggestions = numOfSuggestions,
-								Term = term,
-								Accuracy = accuracy
-							};
+			{
+				Distance = distanceTypes,
+				Field = field,
+				MaxSuggestions = numOfSuggestions,
+				Term = term,
+				Accuracy = accuracy,
+				Popularity = popularity
+			};
 
 			var suggestionQueryResult = Database.ExecuteSuggestionQuery(index, query);
-			context.Response.AddHeader("ETag", Database.GetIndexEtag(index, null).ToString());
+			context.WriteETag(Database.GetIndexEtag(index, null));
 			context.WriteJson(suggestionQueryResult);
 		}
 	}

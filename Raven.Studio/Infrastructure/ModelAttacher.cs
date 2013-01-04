@@ -36,24 +36,11 @@ namespace Raven.Studio.Infrastructure
 				view.DataContext = observable;
 
 				SetPageTitle(model, view);
-				
-				var weakListener = new WeakEventListener<IObservable, object, RoutedEventArgs>(observable);
-				view.Loaded += weakListener.OnEvent;
-				weakListener.OnEventAction = OnViewLoaded;
-				weakListener.OnDetachAction = listener => view.Loaded -= listener.OnEvent;
 			}
 			catch (Exception ex)
 			{
 				throw new InvalidOperationException(string.Format("Cannot create instance of model type: {0}", modelType), ex);
 			}
-		}
-
-		private static void OnViewLoaded(IObservable observable, object sender, RoutedEventArgs arg)
-		{
-			var viewModel = observable.Value as ViewModel;
-			if (viewModel == null) 
-				return;
-			viewModel.LoadModel(UrlUtil.Url);
 		}
 
 		private static void SetPageTitle(Model model, FrameworkElement view)

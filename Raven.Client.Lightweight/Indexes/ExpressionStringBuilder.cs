@@ -3,12 +3,10 @@
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
 // //-----------------------------------------------------------------------
-#if !NET_3_5
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -84,7 +82,7 @@ namespace Raven.Client.Indexes
 			}
 			else
 			{
-				Out("UnamedLabel_" + GetLabelId(target));
+				Out("UnnamedLabel_" + GetLabelId(target));
 			}
 		}
 
@@ -226,7 +224,7 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
-				// only translate from the root type or deriatives
+				// only translate from the root type or derivatives
 				(queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
 				// only translate from the root alias
 				(queryRootName == null || (
@@ -282,31 +280,31 @@ namespace Raven.Client.Indexes
 			{
 				Out("((decimal)");
 			}
-			if (memberType == typeof(double))
+			else if (memberType == typeof(double))
 			{
 				Out("((double)");
 			}
-			if (memberType == typeof(long))
+			else if (memberType == typeof(long))
 			{
 				Out("((long)");
 			}
-			if (memberType == typeof(float))
+			else if (memberType == typeof(float))
 			{
 				Out("((float)");
 			}
-			if (memberType == typeof(decimal?))
+			else if (memberType == typeof(decimal?))
 			{
 				Out("((decimal?)");
 			}
-			if (memberType == typeof(double?))
+			else if (memberType == typeof(double?))
 			{
 				Out("((double?)");
 			}
-			if (memberType == typeof(long?))
+			else if (memberType == typeof(long?))
 			{
 				Out("((long?)");
 			}
-			if (memberType == typeof(float?))
+			else if (memberType == typeof(float?))
 			{
 				Out("((float?)");
 			}
@@ -743,54 +741,187 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitConstant(ConstantExpression node)
 		{
-			if (node.Value != null)
+			if (node.Value == null)
 			{
-				var s = Convert.ToString(node.Value, CultureInfo.InvariantCulture);
-				if (node.Value is string)
-				{
-					Out("\"");
-					Out(s);
-					Out("\"");
-					return node;
-				}
-				if (node.Value is bool)
-				{
-					Out(node.Value.ToString().ToLower());
-					return node;
-				}
-				if (node.Value is char)
-				{
-					Out("'");
-					Out(s);
-					Out("'");
-					return node;
-				}
-				if (node.Value is Enum)
-				{
-					var enumType = node.Value.GetType();
-					if (TypeExistsOnServer(enumType))
-					{
-						Out(enumType.FullName);
-						Out('.');
-						Out(s);
-						return node;
-					}
-					Out('"');
-					Out(node.Value.ToString());
-					Out('"');
-					return node;
-				}
-				if (node.Value is decimal)
-				{
-					Out(s);
-					Out('M');
-					return node;
-				}
-				Out(s);
+				// Avoid converting/casting the type, if it already converted/casted.
+				if (IsLastOperatorIs('='))
+					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
+				Out("null");
 				return node;
 			}
-			Out("null");
+
+			var s = Convert.ToString(node.Value, CultureInfo.InvariantCulture);
+			if (node.Value is string)
+			{
+				Out("\"");
+				Out(s);
+				Out("\"");
+				return node;
+			}
+			if (node.Value is bool)
+			{
+				Out(node.Value.ToString().ToLower());
+				return node;
+			}
+			if (node.Value is char)
+			{
+				Out("'");
+				Out(s);
+				Out("'");
+				return node;
+			}
+			if (node.Value is Enum)
+			{
+				var enumType = node.Value.GetType();
+				if (TypeExistsOnServer(enumType))
+				{
+					Out(enumType.FullName.Replace("+", "."));
+					Out('.');
+					Out(s);
+					return node;
+				}
+				Out('"');
+				Out(node.Value.ToString());
+				Out('"');
+				return node;
+			}
+			if (node.Value is decimal)
+			{
+				Out(s);
+				Out('M');
+				return node;
+			}
+			Out(s);
 			return node;
+		}
+
+		private bool IsLastOperatorIs(char s)
+		{
+			var i = _out.Length - 1;
+			while (i >= 0 && i < _out.Length)
+			{
+				var lastChar = _out[i];
+				if (lastChar != ' ')
+				{
+					return lastChar == s;
+				}
+				--i;
+			}
+
+			return false;
+		}
+
+		private void ConvertTypeToCSharpKeywordIncludeNullable(Type type)
+		{
+			var nonNullableType = Nullable.GetUnderlyingType(type);
+			type = nonNullableType ?? type;
+			var isNullableType = nonNullableType != null;
+
+			// we only cast enums and types is mscorlib. We don't support anything else
+			// because the VB compiler like to put converts all over the place, and include
+			// types that we can't really support (only exists on the client)
+			if (ShouldConvert(type) == false)
+				return;
+
+			Out("(");
+			Out(ConvertTypeToCSharpKeyword(type));
+
+			if (isNullableType && nonNullableType != typeof(Guid))
+			{
+				Out("?");
+			}
+			Out(")");
+		}
+
+		private string ConvertTypeToCSharpKeyword(Type type)
+		{
+			if (type == typeof(string))
+			{
+				return "string";
+			}
+			if (type == typeof(Guid) || type == typeof(Guid?))
+			{
+				return "string"; // on the server, Guids are represented as strings
+			}
+			if (type == typeof(char))
+			{
+				return "char";
+			}
+			if (type == typeof(bool))
+			{
+				return "bool";
+			}
+			if (type == typeof(bool?))
+			{
+				return "bool?";
+			}
+			if (type == typeof (decimal))
+			{
+				return "decimal";
+			}
+			if (type == typeof (decimal?))
+			{
+				return "decimal?";
+			}
+			if (type == typeof (double))
+			{
+				return "double";
+			}
+			if (type == typeof (double?))
+			{
+				return "double?";
+			}
+			if (type == typeof (float))
+			{
+				return "float";
+			}
+			if (type == typeof (float?))
+			{
+				return "float?";
+			}
+
+			if (type == typeof (long))
+			{
+				return "long";
+			}
+			if (type == typeof(long?))
+			{
+				return "long?";
+			}
+			if (type == typeof(int))
+			{
+				return "int";
+			}
+			if (type == typeof(int?))
+			{
+				return "int?";
+			}
+			if (type == typeof(short))
+			{
+				return "short";
+			}
+			if (type == typeof(short?))
+			{
+				return "short?";
+			}
+			if (type == typeof(byte))
+			{
+				return "byte";
+			}
+			if (type == typeof(byte?))
+			{
+				return "byte?";
+			}
+
+			if (type.FullName == "System.Object")
+			{
+				return "object";
+			}
+
+			const string knownNamespace = "System";
+			if (knownNamespace == type.Namespace)
+				return type.Name;
+			return type.FullName;
 		}
 
 		private bool TypeExistsOnServer(Type type)
@@ -799,6 +930,10 @@ namespace Raven.Client.Indexes
 				return true;
 
 			if (type.Assembly == typeof(RavenJObject).Assembly)
+				return true;
+
+			if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
+				type.Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181")) 
 				return true;
 
 			return false;
@@ -1006,7 +1141,7 @@ namespace Raven.Client.Indexes
 			}
 			Out(" => ");
 			var body = node.Body;
-			if(castLambdas)
+			if (castLambdas)
 			{
 				switch (body.NodeType)
 				{
@@ -1041,7 +1176,16 @@ namespace Raven.Client.Indexes
 				{
 					Out(", ");
 				}
-				Out(node.Initializers[num].ToString());
+				Out("{");
+				bool first = true;
+				foreach (var expression in node.Initializers[num].Arguments)
+				{
+					if (first == false)
+						Out(", ");
+					first = false;
+					Visit(expression);
+				}
+				Out("}");
 				num++;
 			}
 			Out("}");
@@ -1083,6 +1227,20 @@ namespace Raven.Client.Indexes
 		{
 			Out(assignment.Member.Name);
 			Out(" = ");
+			var constantExpression = assignment.Expression as ConstantExpression;
+			if (constantExpression != null && constantExpression.Value == null)
+			{
+				var memberType = GetMemberType(assignment.Member);
+				if (ShouldConvert(memberType))
+				{
+					Visit(Expression.Convert(assignment.Expression, memberType));
+				}
+				else
+				{
+					Out("(object)null");
+				}
+				return assignment;
+			}
 			Visit(assignment.Expression);
 			return assignment;
 		}
@@ -1103,6 +1261,11 @@ namespace Raven.Client.Indexes
 			else
 			{
 				Visit(node.NewExpression);
+				if (TypeExistsOnServer(node.Type) == false)
+				{
+					const int removeLength = 2;
+					_out.Remove(_out.Length - removeLength, removeLength);
+				}
 			}
 			Out(" {");
 			var num = 0;
@@ -1196,9 +1359,6 @@ namespace Raven.Client.Indexes
 					case "AsDocument":
 						Visit(node.Arguments[0]);
 						return node;
-					case "Hierarchy":
-						VisitHierarchy(node, expression);
-						return node;
 				}
 				if (expression.Type == typeof(IClientSideDatabase))
 				{
@@ -1216,24 +1376,45 @@ namespace Raven.Client.Indexes
 				{
 					Visit(expression);
 				}
-				if (node.Method.Name != "get_Item") // VB indexer
+				if (IsIndexerCall(node) == false)
 				{
 					Out(".");
 				}
 			}
-			if (node.Method.IsStatic && IsExtensionMethod(node) == false)
+			if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
+			{
+				Out("DynamicEnumerable.");
+			}
+			else if (node.Method.IsStatic && IsExtensionMethod(node) == false)
 			{
 				Out(node.Method.DeclaringType.Name);
 				Out(".");
 			}
-			if (node.Method.Name != "get_Item") // VB indexer
+			if (IsIndexerCall(node))
 			{
-				Out(node.Method.Name);
-				Out("(");
+				Out("[");
 			}
 			else
 			{
-				Out("[");
+				switch (node.Method.Name)
+				{
+					case "First":
+						Out("FirstOrDefault");
+						break;
+					case "Last":
+						Out("LastOrDefault");
+						break;
+					case "Single":
+						Out("SingleOrDefault");
+						break;
+					case "ElementAt":
+						Out("ElementAtOrDefault");
+						break;
+					default:
+						Out(node.Method.Name);
+						break;
+				}
+				Out("(");
 			}
 			var num2 = num;
 			var count = node.Arguments.Count;
@@ -1266,10 +1447,37 @@ namespace Raven.Client.Indexes
 				}
 				num2++;
 			}
-			Out(node.Method.Name != "get_Item" ? ")" : "]");
+			Out(IsIndexerCall(node) ? "]" : ")");
 			return node;
 		}
 
+		private static bool IsIndexerCall(MethodCallExpression node)
+		{
+			return node.Method.IsSpecialName && (node.Method.Name.StartsWith("get_") || node.Method.Name.StartsWith("set_"));
+		}
+
+		private static bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
+		{
+			if (node.Method.DeclaringType.Name == "Enumerable")
+			{
+				switch (node.Method.Name)
+				{
+					case "First":
+					case "FirstOrDefault":
+					case "Single":
+					case "SingleOrDefault":
+					case "Last":
+					case "LastOrDefault":
+					case "ElementAt":
+					case "ElementAtOrDefault":
+					case "Min":
+					case "Max":
+						return true;
+				}
+			}
+
+			return false;
+		}
 		private static bool IsExtensionMethod(MethodCallExpression node)
 		{
 			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
@@ -1286,40 +1494,12 @@ namespace Raven.Client.Indexes
 					case "OrderBy":
 					case "OrderByDescending":
 					case "DefaultIfEmpty":
-					case "Count":
-					case "First":
-					case "FirstOrDefault":
-					case "Single":
-					case "SingleOrDefault":
-					case "Last":
-					case "LastOrDefault":
-					case "Sum":
 					case "Reverse":
 						return true;
 				}
 				return false;
 			}
 			return true;
-		}
-
-		private void VisitHierarchy(MethodCallExpression node, Expression expression)
-		{
-			Out("Hierarchy(");
-			Visit(expression);
-			Out(", ");
-			var path = node.Arguments.Last();
-			if (path.NodeType == ExpressionType.Lambda)
-			{
-				var body = ((LambdaExpression)path).Body;
-				Out("\"");
-				Out(((MemberExpression)body).Member.Name);
-				Out("\"");
-			}
-			else
-			{
-				Visit(path);
-			}
-			Out(")");
 		}
 
 		/// <summary>
@@ -1331,8 +1511,16 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitNew(NewExpression node)
 		{
-			Out("new " + node.Type.Name);
-			Out("(");
+			Out("new ");
+			if (TypeExistsOnServer(node.Type))
+			{
+				VisitType(node.Type);
+				Out("(");
+			}
+			else
+			{
+				Out("{");
+			}
 			for (var i = 0; i < node.Arguments.Count; i++)
 			{
 				if (i > 0)
@@ -1348,15 +1536,64 @@ namespace Raven.Client.Indexes
 					if (constantExpression != null && constantExpression.Value == null)
 					{
 						Out("(");
-						Out(GetMemberType(node.Members[i]).FullName);
+						VisitType(GetMemberType(node.Members[i]));
 						Out(")");
 					}
 				}
 
 				Visit(node.Arguments[i]);
 			}
-			Out(")");
+			if (TypeExistsOnServer(node.Type))
+			{
+				Out(")");
+			}
+			else
+			{
+				Out("}");
+			}
 			return node;
+		}
+
+		private void VisitType(Type type)
+		{
+			if (type.IsGenericType == false || CheckIfAnonymousType(type))
+			{
+				if(type.IsArray)
+				{
+					VisitType(type.GetElementType());
+					Out("[");
+					for (int i = 0; i < type.GetArrayRank()-1; i++)
+					{
+						Out(",");
+					}
+					Out("]");
+					return;
+				}
+				var nonNullableType = Nullable.GetUnderlyingType(type);
+				if(nonNullableType != null)
+				{
+					VisitType(nonNullableType);
+					Out("?");
+					return;
+				}
+				Out(ConvertTypeToCSharpKeyword(type));
+				return;
+			}
+			var genericArguments = type.GetGenericArguments();
+			var genericTypeDefinition = type.GetGenericTypeDefinition();
+			var lastIndexOfTag = genericTypeDefinition.FullName.LastIndexOf('`');
+
+			Out(genericTypeDefinition.FullName.Substring(0, lastIndexOfTag));
+			Out("<");
+			bool first = true;
+			foreach (var genericArgument in genericArguments)
+			{
+				if (first == false)
+					Out(", ");
+				first = false;
+				VisitType(genericArgument);
+			}
+			Out(">");
 		}
 
 		/// <summary>
@@ -1372,9 +1609,13 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.NewArrayInit:
 					Out("new ");
-					if (!CheckIfAnonymousType(node.Type.GetElementType()))
+					if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
 					{
-						Out(node.Type.GetElementType().FullName + " ");
+						Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
+					}
+					else if (node.Expressions.Count == 0)
+					{
+						Out("object");
 					}
 					Out("[]");
 					VisitExpressions('{', node.Expressions, '}');
@@ -1659,19 +1900,8 @@ namespace Raven.Client.Indexes
 					break;
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
-					// we only cast enums and types is mscorlib), we don't support anything else
-					// because the VB compiler like to put converts all over the place, and include
-					// types that we can't really support (only exists on the client)
-					if ((node.Type.IsEnum ||
-						 node.Type.Assembly == typeof(string).Assembly) &&
-						node.Type.IsGenericType == false)
-					{
-						Out("(");
-						Out("(");
-						Out(node.Type.FullName);
-						Out(")");
-					}
 					Out("(");
+					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
 					break;
 				case ExpressionType.ArrayLength:
 					// we don't want to do nothing for those
@@ -1704,15 +1934,6 @@ namespace Raven.Client.Indexes
 
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
-					// we only cast enums and types is mscorlib), we don't support anything else
-					// because the VB compiler like to put converts all over the place, and include
-					// types that we can't really support (only exists on the client)
-					if ((node.Type.IsEnum ||
-						 node.Type.Assembly == typeof(string).Assembly) &&
-						node.Type.IsGenericType == false)
-					{
-						Out(")");
-					}
 					Out(")");
 					break;
 
@@ -1742,7 +1963,13 @@ namespace Raven.Client.Indexes
 
 			return node;
 		}
+
+		private static bool ShouldConvert(Type nonNullableType)
+		{
+			if(nonNullableType.IsEnum)
+				return true;
+
+			return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
+		}
 	}
 }
-
-#endif

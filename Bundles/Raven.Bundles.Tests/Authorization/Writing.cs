@@ -6,10 +6,7 @@
 extern alias client;
 using client::Raven.Client.Authorization;
 using client::Raven.Bundles.Authorization.Model;
-
 using System;
-using Raven.Bundles.Tests.Versioning;
-
 using Xunit;
 
 namespace Raven.Bundles.Tests.Authorization
@@ -41,7 +38,7 @@ namespace Raven.Bundles.Tests.Authorization
 			using (var s = store.OpenSession())
 			{
 				s.SecureFor(UserId, "Company/Rename");
-				company.Name = "Stampading Rhinos";
+				company.Name = "Stampeding Rhinos";
 				s.Store(company);
 
 				Assert.Throws<InvalidOperationException>(() => s.SaveChanges());
@@ -84,7 +81,7 @@ namespace Raven.Bundles.Tests.Authorization
 			using (var s = store.OpenSession())
 			{
 				s.SecureFor(UserId, "Company/Rename");
-				s.Load<Company>(company.Id).Name = "Stampading Rhinos";
+				s.Load<Company>(company.Id).Name = "Stampeding Rhinos";
 
 				Assert.DoesNotThrow(s.SaveChanges);
 			}
@@ -126,7 +123,7 @@ namespace Raven.Bundles.Tests.Authorization
 			using (var s = store.OpenSession())
 			{
 				s.SecureFor(UserId.ToLower(), "Company/Rename");
-				s.Load<Company>(company.Id).Name = "Stampading Rhinos";
+				s.Load<Company>(company.Id).Name = "Stampeding Rhinos";
 
 				Assert.DoesNotThrow(s.SaveChanges);
 			}

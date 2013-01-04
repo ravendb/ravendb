@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -12,24 +13,21 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class IndexStaleViaEtags : AbstractDocumentStorageTest
+	public class IndexStaleViaEtags : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public IndexStaleViaEtags()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir, 
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-			});
-
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
@@ -46,22 +44,20 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanIndexDocuments()
 		{
-			db.SpinBackgroundWorkers();
-
 			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 
 			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
 
-			for (int i = 0; i < 50; i++)
+			bool indexed = false;
+			for (int i = 0; i < 500; i++)
 			{
-				bool indexed = false;
 				db.TransactionalStorage.Batch(accessor => indexed = (accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 				if (indexed == false)
 					break;
 				Thread.Sleep(50);
 			}
 
-			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+			Assert.False(indexed);
 		}
 	}
 }

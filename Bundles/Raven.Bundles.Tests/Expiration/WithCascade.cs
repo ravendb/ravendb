@@ -6,12 +6,10 @@ using System.Reflection;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
-using Raven.Bundles.Expiration;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Bundles.Tests.Expiration
 {
@@ -23,29 +21,29 @@ namespace Raven.Bundles.Tests.Expiration
 
 		public WithCascade()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(WithCascade)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
-			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
-				{
-					Port = 8079,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					DataDirectory = path,
-					Catalog =
-						{
-							Catalogs =
-								{
-									new AssemblyCatalog(typeof (ExpirationReadTrigger).Assembly),
-									new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly)
-								}
-						},
-					Settings =
-						{
-							{"Raven/Expiration/DeleteFrequencySeconds", "1"}
-						}
-				});
-			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
+			var ravenConfiguration = new database::Raven.Database.Config.RavenConfiguration
+			{
+				Port = 8079,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				DataDirectory = path,
+				Catalog =
+					{
+						Catalogs =
+							{
+								new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly)
+							}
+					},
+				Settings =
+					{
+						{"Raven/Expiration/DeleteFrequencySeconds", "1"},
+						{"Raven/ActiveBundles", "documentExpiration"}
+			}
+			};
+			ravenConfiguration.PostInit();
+			ravenDbServer = new RavenDbServer(ravenConfiguration);
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"

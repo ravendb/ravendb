@@ -8,18 +8,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Smuggler
 {
 	public class DataDumper : SmugglerApiBase
 	{
-		public DataDumper(DocumentDatabase database)
+		public DataDumper(DocumentDatabase database, SmugglerOptions options) : base(options)
 		{
 			_database = database;
 		}
@@ -39,6 +41,14 @@ namespace Raven.Database.Smuggler
 				var array = GetAttachments(totalCount, lastEtag);
 				if (array.Length == 0)
 				{
+					var databaseStatistics = GetStats();
+					var lastEtagComparable = new ComparableByteArray(lastEtag);
+					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+					{
+						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
+						continue;
+					}
 					ShowProgress("Done with reading attachments, total: {0}", totalCount);
 					return lastEtag;
 				}
@@ -52,11 +62,11 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		protected override void FlushBatch(List<RavenJObject> batch)
+		protected override Guid FlushBatch(List<RavenJObject> batch)
 		{
 			var sw = Stopwatch.StartNew();
 
-			_database.Batch(batch.Select(x =>
+			var results = _database.Batch(batch.Select(x =>
 			{
 				var metadata = x.Value<RavenJObject>("@metadata");
 				var key = metadata.Value<string>("@id");
@@ -70,15 +80,20 @@ namespace Raven.Database.Smuggler
 				};
 			}).ToArray());
 
-			ShowProgress("Wrote {0} documents in {1}", batch.Count, sw.ElapsedMilliseconds);
-			ShowProgress(" in {0:#,#;;0} ms", sw.ElapsedMilliseconds);
+			ShowProgress("Wrote {0:#,#} documents in {1:#,#;;0} ms", batch.Count, sw.ElapsedMilliseconds);
 			batch.Clear();
+
+
+			if(results.Length == 0)
+				return Guid.Empty;
+
+			return results.Last().Etag.Value;
 		}
 
 		protected override RavenJArray GetDocuments(Guid lastEtag)
 		{
 			const int dummy = 0;
-			return _database.GetDocuments(dummy, 128, lastEtag);
+			return _database.GetDocuments(dummy, smugglerOptions.BatchSize, lastEtag);
 		}
 
 		protected override RavenJArray GetIndexes(int totalCount)
@@ -101,6 +116,11 @@ namespace Raven.Database.Smuggler
 			_database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
 		}
 
+		protected override DatabaseStatistics GetStats()
+		{
+			return _database.Statistics;
+		}
+
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			if (Progress != null)
@@ -112,7 +132,7 @@ namespace Raven.Database.Smuggler
 		private RavenJArray GetAttachments(int start, Guid? etag)
 		{
 			var array = new RavenJArray();
-			var attachmentInfos = _database.GetAttachments(start, 128, etag);
+			var attachmentInfos = _database.GetAttachments(start, 128, etag, null, 1024*1024*10);
 
 			foreach (var attachmentInfo in attachmentInfos)
 			{

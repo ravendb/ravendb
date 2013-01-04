@@ -29,6 +29,7 @@ namespace Raven.Tests.MailingList
 			var id = string.Empty;
 			using (var store = NewDocumentStore())
 			{
+				store.Conventions.AllowQueriesOnId = true;
 				var defaultFindIdentityProperty = store.Conventions.FindIdentityProperty;
 				store.Conventions.FindIdentityProperty = property =>
 					typeof(IEntity).IsAssignableFrom(property.DeclaringType)

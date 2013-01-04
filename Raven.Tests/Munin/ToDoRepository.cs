@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Munin.Tests
 {
@@ -15,7 +15,7 @@ namespace Raven.Munin.Tests
 		{
 			database = new Database(source);
 			todos = database.Add(new Table("todo"));
-			database.Initialze();
+			database.Initialize();
 		}
 
 		public Guid Save(ToDo todo)
@@ -43,13 +43,13 @@ namespace Raven.Munin.Tests
 		{
 			using(database.BeginTransaction())
 			{
-				var readResult = todos.Read(guid.ToByteArray());
-				if (readResult == null)
-					return null;
-				var bytes = readResult.Data();
+			var readResult = todos.Read(guid.ToByteArray());
+			if (readResult == null)
+				return null;
+			var bytes = readResult.Data();
 
-				return ConvertToToDo(bytes);
-			}
+			return ConvertToToDo(bytes);
+		}
 		}
 
 		private static ToDo ConvertToToDo(byte[] bytes)

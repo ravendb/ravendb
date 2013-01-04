@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -13,23 +14,20 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class ComplexIndexOnNotAnalyzedField: AbstractDocumentStorageTest
+	public class ComplexIndexOnNotAnalyzedField: RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public ComplexIndexOnNotAnalyzedField()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-			});
-			db.SpinBackgroundWorkers();
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
@@ -37,7 +35,7 @@ namespace Raven.Tests.Indexes
 		public void CanQueryOnKey()
 		{
 			db.Put("companies/", null,
-			       RavenJObject.Parse("{'Name':'Hiberanting Rhinos', 'Partners': ['companies/49', 'companies/50']}"), 
+			       RavenJObject.Parse("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}"), 
 				   RavenJObject.Parse("{'Raven-Entity-Name': 'Companies'}"),
 			       null);
 
@@ -57,7 +55,7 @@ namespace Raven.Tests.Indexes
 				});
 			} while (queryResult.IsStale);
 
-			Assert.Equal("Hiberanting Rhinos", queryResult.Results[0].Value<string>("Name"));
+			Assert.Equal("Hibernating Rhinos", queryResult.Results[0].Value<string>("Name"));
 		}
 	}
 }

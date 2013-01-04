@@ -4,15 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
+using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Xunit;
 
@@ -20,21 +16,17 @@ namespace Raven.Tests.Bugs
 {
 	public class OverwriteDocuments : IDisposable
 	{
-		private DocumentStore documentStore;
+		private readonly IDocumentStore documentStore;
 
-		private void CreateFreshDocumentStore() {
-			if (documentStore != null)
-				documentStore.Dispose();
-
-			IOExtensions.DeleteDirectory("HiLoData");
+		public OverwriteDocuments()
+		{
 			documentStore = new EmbeddableDocumentStore
-			{
-				Configuration =
-					{
-						DataDirectory = "HiLoData"
-					}
-			};
-			documentStore.Initialize();
+			                	{
+			                		Configuration =
+			                			{
+			                				DataDirectory = "HiLoData"
+			                			}
+			                	}.Initialize();
 
 			documentStore.DatabaseCommands.PutIndex("Foo/Something", new IndexDefinitionBuilder<Foo>
 			{
@@ -43,12 +35,10 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void Will_throw_if_asked_to_store_new_document_which_exists_when_optimistic_concurrency_is_on()
+		public void WillThrowWhenOptimisticConcurrencyIsOn()
 		{
-			CreateFreshDocumentStore();
-
 			using (var session = documentStore.OpenSession()) {
-				var foo = new Foo() { Id = "foos/1", Something = "something1" };
+				var foo = new Foo { Id = "foos/1", Something = "something1" };
 				session.Store(foo);
 				session.SaveChanges();
 			}
@@ -56,34 +46,31 @@ namespace Raven.Tests.Bugs
 			using (var session = documentStore.OpenSession())
 			{
 				session.Advanced.UseOptimisticConcurrency = true;
-				var foo = new Foo() { Id = "foos/1", Something = "something1" };
+				var foo = new Foo { Id = "foos/1", Something = "something1" };
 				session.Store(foo);
 				Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
 			}
 		}
 
 		[Fact]
-		public void Will_overwrite_doc_if_asked_to_store_new_document_which_exists_when_optimistic_concurrency_is_off()
+		public void WillOverwriteDocWhenOptimisticConcurrencyIsOff()
 		{
-			CreateFreshDocumentStore();
-
 			using (var session = documentStore.OpenSession())
 			{
-				var foo = new Foo() { Id = "foos/1", Something = "something1" };
+				var foo = new Foo { Id = "foos/1", Something = "something1" };
 				session.Store(foo);
 				session.SaveChanges();
 			}
 
 			using (var session = documentStore.OpenSession())
 			{
-				var foo = new Foo() { Id = "foos/1", Something = "something1" };
+				var foo = new Foo { Id = "foos/1", Something = "something1" };
 				session.Store(foo);
 				session.SaveChanges();
 			}
 		}
 
-
-		public class Foo
+		private class Foo
 		{
 			public string Id { get; set; }
 			public string Something { get; set; }
@@ -91,8 +78,7 @@ namespace Raven.Tests.Bugs
 
 		public void Dispose()
 		{
-			if (documentStore != null)
-				documentStore.Dispose();
+			documentStore.Dispose();
 			IOExtensions.DeleteDirectory("HiLoData");
 		}
 	}

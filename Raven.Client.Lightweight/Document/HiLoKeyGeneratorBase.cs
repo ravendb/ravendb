@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 
@@ -12,25 +13,27 @@ namespace Raven.Client.Document
 
 		protected readonly string tag;
 		protected long capacity;
-		[CLSCompliant(false)]
-		protected volatile Range range;
+		protected long baseCapacity;
+		private volatile RangeValue range;
+
 		protected string lastServerPrefix;
-		protected DateTime lastRequestedUtc;
+		protected DateTime lastRequestedUtc1, lastRequestedUtc2;
 
 		protected HiLoKeyGeneratorBase(string tag, long capacity)
 		{
 			this.tag = tag;
 			this.capacity = capacity;
-			this.range = new Range(1, 0);
+			baseCapacity = capacity;
+			this.range = new RangeValue(1, 0);
 		}
 
 		protected string GetDocumentKeyFromId(DocumentConvention convention, long nextId)
 		{
 			return string.Format("{0}{1}{2}{3}",
-			                     tag,
-			                     convention.IdentityPartsSeparator,
-			                     lastServerPrefix,
-			                     nextId);
+								 tag,
+								 convention.IdentityPartsSeparator,
+								 lastServerPrefix,
+								 nextId);
 		}
 
 		protected long GetMaxFromDocument(JsonDocument document, long minMax)
@@ -52,15 +55,24 @@ namespace Raven.Client.Document
 			get { return RavenKeyGeneratorsHilo + tag; }
 		}
 
-		protected void IncreaseCapacityIfRequired()
+		protected void ModifyCapacityIfRequired()
 		{
-			var span = DateTime.UtcNow - lastRequestedUtc;
-			if (span.TotalSeconds < 1)
+			var span = SystemTime.UtcNow - lastRequestedUtc1;
+			if (span.TotalSeconds < 5)
 			{
-				capacity *= 2;
+				span = SystemTime.UtcNow - lastRequestedUtc2;
+				if (span.TotalSeconds < 3)
+					capacity *= 4;
+				else
+					capacity *= 2;
+			}
+			else if (span.TotalMinutes > 1)
+			{
+				capacity = Math.Max(baseCapacity, capacity / 2);
 			}
 
-			lastRequestedUtc = DateTime.UtcNow;
+			lastRequestedUtc2 = lastRequestedUtc1;
+			lastRequestedUtc1 = SystemTime.UtcNow;
 		}
 
 		protected JsonDocument HandleGetDocumentResult(MultiLoadResult documents)
@@ -83,14 +95,20 @@ namespace Raven.Client.Document
 			return jsonDocument;
 		}
 
+		protected RangeValue Range
+		{
+			get { return range; }
+			set { range = value; }
+		}
+
 		[System.Diagnostics.DebuggerDisplay("[{Min}-{Max}]: {Current}")]
-		protected class Range
+		protected class RangeValue
 		{
 			public readonly long Min;
 			public readonly long Max;
 			public long Current;
 
-			public Range(long min, long max)
+			public RangeValue(long min, long max)
 			{
 				this.Min = min;
 				this.Max = max;

@@ -16,19 +16,20 @@ namespace Raven.Tests.Indexes
 		[CLSCompliant(false)]
 		public static IEnumerable<string> TokensFromAnalysis(Analyzer analyzer, String text)
 		{
-			TokenStream stream = analyzer.TokenStream("contents", new StringReader(text));
-			List<string> result = new List<string>();
-			TermAttribute tokenAttr = (TermAttribute)stream.GetAttribute(typeof(TermAttribute));
-
-			while (stream.IncrementToken())
+			using (TokenStream stream = analyzer.TokenStream("contents", new StringReader(text)))
 			{
-				result.Add(tokenAttr.Term());
+				var result = new List<string>();
+				var tokenAttr = (TermAttribute) stream.GetAttribute<ITermAttribute>();
+
+				while (stream.IncrementToken())
+				{
+					result.Add(tokenAttr.Term);
+				}
+
+				stream.End();
+
+				return result;
 			}
-
-			stream.End();
-			stream.Close();
-
-			return result;
 		}
 	}
 }

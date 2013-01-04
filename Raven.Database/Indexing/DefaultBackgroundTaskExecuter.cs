@@ -4,49 +4,56 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NLog;
-using Raven.Database.Config;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
+using Raven.Database.Server;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
 	public class DefaultBackgroundTaskExecuter : IBackgroundTaskExecuter
 	{
-		private static Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		public IList<TResult> Apply<T, TResult>(IEnumerable<T> source, Func<T, TResult> func)
+		public IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class
 		{
+			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			{
+				return source.Select(func).ToList();
+			}
+
 			return source.AsParallel()
 				.Select(func)
 				.Where(x => x != null)
 				.ToList();
 		}
 
-		private readonly ConcurrentDictionary<TimeSpan, Tuple<Timer, ConcurrentSet<IRepeatedAction>>> timers =
-			new ConcurrentDictionary<TimeSpan, Tuple<Timer, ConcurrentSet<IRepeatedAction>>>();
+		private readonly AtomicDictionary<Tuple<Timer, ConcurrentSet<IRepeatedAction>>> timers =
+			new AtomicDictionary<Tuple<Timer, ConcurrentSet<IRepeatedAction>>>();
 
 		public void Repeat(IRepeatedAction action)
 		{
-			var tuple = timers.GetOrAddAtomically(action.RepeatDuration,
-			                                      span =>
-			                                      {
-			                                      	var repeatedActions = new ConcurrentSet<IRepeatedAction>
+			var tuple = timers.GetOrAdd(action.RepeatDuration.ToString(),
+												  span =>
+												  {
+													  var repeatedActions = new ConcurrentSet<IRepeatedAction>
 			                                      	{
 			                                      		action
 			                                      	};
-			                                      	var timer = new Timer(ExecuteTimer, action.RepeatDuration,
-			                                      	                      action.RepeatDuration,
-			                                      	                      action.RepeatDuration);
-			                                      	return Tuple.Create(timer, repeatedActions);
-			                                      });
+													  var timer = new Timer(ExecuteTimer, action.RepeatDuration,
+																			action.RepeatDuration,
+																			action.RepeatDuration);
+													  return Tuple.Create(timer, repeatedActions);
+												  });
 			tuple.Item2.TryAdd(action);
 		}
 
 		private void ExecuteTimer(object state)
 		{
-			var span = (TimeSpan) state;
+			var span = state.ToString();
 			Tuple<Timer, ConcurrentSet<IRepeatedAction>> tuple;
 			if (timers.TryGetValue(span, out tuple) == false)
 				return;
@@ -66,7 +73,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			if (tuple.Item2.Count != 0) 
+			if (tuple.Item2.Count != 0)
 				return;
 
 			if (timers.TryRemove(span, out tuple) == false)
@@ -76,12 +83,43 @@ namespace Raven.Database.Indexing
 		}
 
 		/// <summary>
+		/// Note that here we assume that  source may be very large (number of documents)
+		/// </summary>
+		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
+		{
+			const int bufferSize = 256;
+			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
+			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= bufferSize)
+			{
+				using (var e = source.GetEnumerator())
+					action(e);
+				return;
+			}
+			var steps = source.Count/maxNumberOfParallelIndexTasks;
+			Parallel.For(0, steps,
+			             new ParallelOptions {MaxDegreeOfParallelism = maxNumberOfParallelIndexTasks},
+			             i => action(Yield(source, i*bufferSize, bufferSize)));
+		}
+
+		private IEnumerator<T> Yield<T>(IList<T> source, int start, int end)
+		{
+			while (start < source.Count && end > 0)
+			{
+				end--;
+				yield return source[start];
+				start++;
+			}
+		}
+
+		/// <summary>
 		/// Note that we assume that source is a relatively small number, expected to be 
 		/// the number of indexes, not the number of documents.
 		/// </summary>
-		public void ExecuteAll<T>(InMemoryRavenConfiguration configuration, TaskScheduler scheduler, IList<T> source, Action<T, long> action)
+		public void ExecuteAll<T>(
+			WorkContext context,
+			IList<T> source, Action<T, long> action)
 		{
-			if(configuration.MaxNumberOfParallelIndexTasks == 1)
+			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 			{
 				long i = 0;
 				foreach (var item in source)
@@ -90,26 +128,60 @@ namespace Raven.Database.Indexing
 				}
 				return;
 			}
-
-			var partitioneds = Partition(source, configuration.MaxNumberOfParallelIndexTasks).ToList();
+			context.CancellationToken.ThrowIfCancellationRequested();
+			var partitioneds = Partition(source, context.Configuration.MaxNumberOfParallelIndexTasks).ToList();
 			int start = 0;
 			foreach (var partitioned in partitioneds)
 			{
+				context.CancellationToken.ThrowIfCancellationRequested();
 				var currentStart = start;
 				Parallel.ForEach(partitioned, new ParallelOptions
 				{
-					TaskScheduler = scheduler,
-					MaxDegreeOfParallelism = configuration.MaxNumberOfParallelIndexTasks
-				},(item,_,index)=>action(item, currentStart + index));
+					TaskScheduler = context.TaskScheduler,
+					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
+				}, (item, _, index) =>
+				{
+					using(LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
+					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+					{
+						LogContext.DatabaseName.Value = context.DatabaseName;
+						action(item, currentStart + index);
+					}
+				});
 				start += partitioned.Count;
 			}
 		}
 
 		static IEnumerable<IList<T>> Partition<T>(IList<T> source, int size)
 		{
-			for (int i = 0; i < source.Count; i+=size)
+			for (int i = 0; i < source.Count; i += size)
 			{
 				yield return source.Skip(i).Take(size).ToList();
+			}
+		}
+
+		public void ExecuteAllInterleaved<T>(WorkContext context, IList<T> result, Action<T> action)
+		{
+			if (result.Count == 0)
+				return;
+
+			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
+			{
+				var tasks = new Task[result.Count];
+				for (int i = 0; i < result.Count; i++)
+				{
+					var index = result[i];
+					var indexToWorkOn = index;
+
+					var task = new Task(() => action(indexToWorkOn));
+					tasks[i] = task.ContinueWith(_ => semaphoreSlim.Release());
+
+					semaphoreSlim.Wait();
+
+					task.Start(context.Database.BackgroundTaskScheduler);
+				}
+
+				Task.WaitAll(tasks);
 			}
 		}
 	}

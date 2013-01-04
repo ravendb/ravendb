@@ -13,8 +13,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
-using Newtonsoft.Json;
-using NLog;
+using Raven.Abstractions.Logging;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -37,7 +37,7 @@ namespace Raven.Database.Storage
 		private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
 			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
 
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly string path;
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
@@ -212,9 +212,10 @@ namespace Raven.Database.Storage
 
 		public IndexCreationOptions FindIndexCreationOptions(IndexDefinition indexDef)
 		{
-			if (indexCache.ContainsKey(indexDef.Name))
+			var indexDefinition = GetIndexDefinition(indexDef.Name);
+			if (indexDefinition != null)
 			{
-				return GetIndexDefinition(indexDef.Name).Equals(indexDef)
+				return indexDefinition.Equals(indexDef)
 					? IndexCreationOptions.Noop
 					: IndexCreationOptions.Update;
 			}
@@ -267,8 +268,8 @@ namespace Raven.Database.Storage
 
 		public IDisposable TryRemoveIndexContext()
 		{
-			if(currentlyIndexingLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
-				throw new InvalidOperationException("Cannot modify indexes while indexing is in progress (already waited 10 seconds). Try again later");
+			if(currentlyIndexingLock.TryEnterWriteLock(TimeSpan.FromSeconds(60)) == false)
+				throw new InvalidOperationException("Cannot modify indexes while indexing is in progress (already waited full minute). Try again later");
 			return new DisposableAction(currentlyIndexingLock.ExitWriteLock);
 		}
 

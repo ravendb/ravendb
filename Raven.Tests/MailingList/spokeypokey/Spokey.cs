@@ -159,7 +159,6 @@ namespace Raven.Tests.MailingList.spokeypokey
 					var result = (from p in session.Query<Provider1, IdentityProjectionIndex1>()
 								  .Customize(x => x.WaitForNonStaleResults())
 								  select p).First();
-					WaitForUserToContinueTheTest();
 					Assert.Equal(provider1.Name, result.Name);
 					Assert.Equal(provider1.InternalId, result.InternalId);
 				}

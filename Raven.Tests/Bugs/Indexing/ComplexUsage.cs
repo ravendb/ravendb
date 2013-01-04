@@ -1,12 +1,13 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class ComplexUsage : LocalClientTest
+	public class ComplexUsage : RavenTest
 	{
 		[Fact]
 		public void ShouldNotOutputNull()

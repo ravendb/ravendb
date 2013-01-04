@@ -14,9 +14,11 @@ namespace Raven.Database.Server.Abstractions
 		bool IsLocal { get; }
 		NameValueCollection Headers { get;  }
 		Stream InputStream { get; }
+		long ContentLength { get; }
 		NameValueCollection QueryString { get; }
 		string HttpMethod { get; }
 		Uri Url { get; set; }
 		string RawUrl { get; set; }
+		Stream GetBufferLessInputStream();
 	}
 }

@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class WhenRavenClrTypeNotFound : LocalClientTest
+	public class WhenRavenClrTypeNotFound : RavenTest
 	{
 		[Fact]
 		public void WillStillBeAbleToDeserialize()

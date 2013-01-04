@@ -14,6 +14,7 @@ namespace Raven.Tests.Bugs
 			using(var store = new DocumentStore{Url =  "http://localhost:8079"})
 			{
 				store.Initialize();
+				store.InitializeProfiling();
 				// make the replication check here
 				using(var session = store.OpenSession())
 				{
@@ -25,7 +26,7 @@ namespace Raven.Tests.Bugs
 				{
 					session.Load<User>("users/1");
 
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
 				}
 
 				var profilingInformation = store.GetProfilingInformationFor(id);
@@ -41,6 +42,7 @@ namespace Raven.Tests.Bugs
 			using (var store = new DocumentStore {Url = "http://localhost:8079"})
 			{
 				store.Initialize();
+				store.InitializeProfiling();
 				// make the replication check here
 				using (var session = store.OpenSession())
 				{
@@ -52,7 +54,7 @@ namespace Raven.Tests.Bugs
 				{
 					session.Query<User>().ToList();
 
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
 				}
 
 				var profilingInformation = store.GetProfilingInformationFor(id);
@@ -69,10 +71,13 @@ namespace Raven.Tests.Bugs
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
-				// make the replication check here
+				store.InitializeProfiling();
+				
+				// make hilo & replication checks here
 				using (var session = store.OpenSession())
 				{
-					session.Load<User>("users/1");
+					session.Store(new User());
+					session.SaveChanges();
 				}
 
 				Guid id;
@@ -81,11 +86,12 @@ namespace Raven.Tests.Bugs
 					session.Store(new User());
 					session.SaveChanges();
 
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
 				}
 
 				var profilingInformation = store.GetProfilingInformationFor(id);
 
+				
 				Assert.Equal(1, profilingInformation.Requests.Count);
 			}
 		}

@@ -13,10 +13,11 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Tests.Storage;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Spatial
 {
-	public class SpatialIndexTest : AbstractDocumentStorageTest
+	public class SpatialIndexTest : RavenTest
 	{
 		private readonly DocumentDatabase db;
 
@@ -35,13 +36,13 @@ namespace Raven.Tests.Spatial
 			base.Dispose();
 		}
 
-		// same test as in Spatial.Net test cartisian
+		// same test as in Spatial.Net test cartesian
 		[Fact]
 		public void CanPerformSpatialSearch()
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialGenerate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -59,37 +60,39 @@ namespace Raven.Tests.Spatial
 			}
 
 			const double lat = 38.96939, lng = -77.386398;
-			const double radius = 6.0;
+			const double radiusInKm = 6.0*1.609344;
 			QueryResult queryResult;
 			do
 			{
 				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
 					Query = "Tag:[[Event]]",
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radiusInKm),
+					SpatialRelation = SpatialRelation.Within,
+					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[] { new SortedField("__distance"), }
 				});
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
 
+			var expected = events.Count(e => Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
+
+			Assert.Equal(expected, queryResult.Results.Count);
 			Assert.Equal(7, queryResult.Results.Count);
 
-			//TODO
-			//double previous = 0;
-			//foreach (var r in queryResult.Results)
-			//{
-			//    Event e = r.JsonDeserialization<Event>();
+			double previous = 0;
+			foreach (var r in queryResult.Results)
+			{
+				Event e = r.JsonDeserialization<Event>();
 
-			//    double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
-			//    Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
+				double distance = Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude);
+				Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 
-			//    Assert.True(distance < radius);
-			//    Assert.True(distance >= previous);
-			//    previous = distance;
-			//}
+				Assert.True(distance < radiusInKm);
+				Assert.True(distance >= previous);
+				previous = distance;
+			}
 		}
 
 		[Fact]
@@ -97,7 +100,7 @@ namespace Raven.Tests.Spatial
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialGenerate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -109,16 +112,12 @@ namespace Raven.Tests.Spatial
 				RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
 				RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 
-			const double radius = 6.0;
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				queryResult = db.Query("eventsByLatLng", new IndexQuery()
 				{
 					Query = "Tag:[[Event]]",
-					Latitude = 0,
-					Longitude = 0,
-					Radius = radius,
 					SortedFields = new[] { new SortedField("__distance"), }
 				});
 				if (queryResult.IsStale)
@@ -133,7 +132,7 @@ namespace Raven.Tests.Spatial
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Map = "from e in docs.Events select new { e.Venue, _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Map = "from e in docs.Events select new { e.Venue, _ = SpatialGenerate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -168,9 +167,9 @@ namespace Raven.Tests.Spatial
 			{
 				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					SpatialRelation = SpatialRelation.Within,
+					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[]
 					{
 						new SortedField("__distance"), 
@@ -197,7 +196,7 @@ namespace Raven.Tests.Spatial
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Map = "from e in docs.Events select new { e.Venue, _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				Map = "from e in docs.Events select new { e.Venue, _ = SpatialGenerate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -231,9 +230,9 @@ namespace Raven.Tests.Spatial
 			{
 				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					SpatialRelation = SpatialRelation.Within,
+					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[]
 					{
 						new SortedField("Venue"),

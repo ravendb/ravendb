@@ -53,6 +53,21 @@
             typeof(Popup),
             new PropertyMetadata(null));
 
+        private static PopupWatcher GetPopupWatcher(DependencyObject obj)
+        {
+            return (PopupWatcher)obj.GetValue(PopupWatcherProperty);
+        }
+
+        private static void SetPopupWatcher(DependencyObject obj, PopupWatcher value)
+        {
+            obj.SetValue(PopupWatcherProperty, value);
+        }
+
+        // Using a DependencyProperty as the backing store for PopupWatcher.  This enables animation, styling, binding, etc...
+        private static readonly DependencyProperty PopupWatcherProperty =
+            DependencyProperty.RegisterAttached("PopupWatcher", typeof(PopupWatcher), typeof(Popup), new PropertyMetadata(null));
+
+        
         public static FrameworkElement GetPlacementTarget(Windows.Popup popup)
         {
             //popup.AssertNotNull("popup");
@@ -156,17 +171,15 @@
         private static void OnStaysOpenChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
         {
             var popup = dependencyObject as Windows.Popup;
-            var popupWatcher = (PopupWatcher)null;
+            var popupWatcher = GetPopupWatcher(popup); ;
             var staysOpen = (bool)e.NewValue;
-
-            popupWatcherCache.TryGetValue(popup, out popupWatcher);
 
             if (staysOpen)
             {
                 if (popupWatcher != null)
                 {
                     popupWatcher.Detach();
-                    popupWatcherCache.Remove(popup);
+                    SetPopupWatcher(popup, null);
                 }
             }
             else
@@ -174,7 +187,7 @@
                 if (popupWatcher == null)
                 {
                     popupWatcher = new PopupWatcher(popup);
-                    popupWatcherCache[popup] = popupWatcher;
+                    SetPopupWatcher(popup, popupWatcher);
                 }
 
                 popupWatcher.Attach();
@@ -188,18 +201,14 @@
             var placementChild = GetPlacementChild(popup) ?? popup.Child as FrameworkElement;
 
             if (parent == null || placementParent == null || placementChild == null)
-            {
                 return;
-            }
 
             var preferredOrientations = GetPreferredOrientations(popup) ?? Enumerable.Empty<PopupOrientation>();
 
             foreach (var preferredOrientation in preferredOrientations)
             {
                 if (TryPlacePopup(popup, parent, placementParent, placementChild, preferredOrientation))
-                {
                     return;
-                }
             }
 
             var fallbackOrientations = from placement in popupPlacements
@@ -211,18 +220,14 @@
             foreach (var fallbackOrientation in fallbackOrientations)
             {
                 if (TryPlacePopup(popup, parent, placementParent, placementChild, fallbackOrientation))
-                {
                     return;
-                }
             }
 
             // give up and just use the first preferred orientation, if any
             var orientation = GetPreferredOrientations(popup).FirstOrDefault();
 
             if (orientation != null)
-            {
                 SetActualOrientation(popup, orientation);
-            }
         }
 
         private static bool TryPlacePopup(Windows.Popup popup, FrameworkElement parent, FrameworkElement placementParent, FrameworkElement placementChild, PopupOrientation orientation)
@@ -357,9 +362,8 @@
                 ++index;
 
                 if (index == horizontalAlignments.Count)
-                {
                     index = 0;
-                }
+
             } while (index != startIndex);
         }
 
@@ -375,18 +379,15 @@
                 ++index;
 
                 if (index == verticalAlignments.Count)
-                {
                     index = 0;
-                }
+
             } while (index != startIndex);
         }
 
         private static void InvalidatePosition(Windows.Popup popup)
         {
             if (popup.IsOpen)
-            {
                 PositionPopup(popup);
-            }
 
             popup.Opened -= OnPopupOpened;
             popup.Opened += OnPopupOpened;
@@ -424,9 +425,7 @@
                 var parent = VisualTreeHelper.GetParent(ancestor) as FrameworkElement;
 
                 if (parent == null)
-                {
                     return ancestor;
-                }
 
                 ancestor = parent;
             }
@@ -458,9 +457,7 @@
                 var popupAncestor = FindHighestAncestor(this.popup);
 
                 if (popupAncestor == null)
-                {
                     return;
-                }
 
                 popupAncestor.AddHandler(Windows.Popup.MouseLeftButtonDownEvent, (MouseButtonEventHandler)OnMouseLeftButtonDown, true);
             }
@@ -470,9 +467,7 @@
                 var popupAncestor = FindHighestAncestor(this.popup);
 
                 if (popupAncestor == null)
-                {
                     return;
-                }
 
                 popupAncestor.RemoveHandler(Windows.Popup.MouseLeftButtonDownEvent, (MouseButtonEventHandler)OnMouseLeftButtonDown);
             }

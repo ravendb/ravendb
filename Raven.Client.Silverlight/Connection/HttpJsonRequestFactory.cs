@@ -1,9 +1,7 @@
 using System;
-using System.Net;
-using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Document;
+using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Silverlight.Connection
@@ -19,9 +17,9 @@ namespace Raven.Client.Silverlight.Connection
 		/// 
 		/// Enable using basic authentication using http
 		/// By default, RavenDB only allows basic authentication over HTTPS, setting this property to true
-		/// will instruct RavenDB to make unsecure calls (usually only good for testing / internal networks).
+		/// will instruct RavenDB to make unsecured calls (usually only good for testing / internal networks).
 		/// </summary>
-		public bool EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
+		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
 
 		/// <summary>
 		/// Occurs when a json request is created
@@ -36,51 +34,50 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Invoke the LogRequest event
 		/// </summary>
-		internal void InvokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs e)
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequestResult)
 		{
 			var handler = LogRequest;
 			if (handler != null)
-				handler(sender, e);
-		}
-
-		/// <summary>
-		/// Creates the HTTP json request.
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="convention">The document conventions governing this request</param>
-		/// <returns></returns>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
-		{
-			return CreateHttpJsonRequest(self, url, method, new RavenJObject(), credentials, convention);
-		}
-
-		/// <summary>
-		/// Creates the HTTP json request.
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="metadata">The metadata.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="convention">The document conventions governing this request</param>
-		/// <returns></returns>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
-		{
-			var request = new HttpJsonRequest(url, method, metadata, convention, this);
-			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
-			return request;
+				handler(sender, generateRequestResult.Invoke());
 		}
 
 		/// <summary>
 		/// Determine whether to use compression or not 
 		/// </summary>
 		public bool DisableRequestCompression { get; set; }
+		public bool DisableHttpCaching
+		{
+			get { return false; }
+		}
 
 		public void Dispose()
 		{
+		}
+
+		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
+		{
+			var request = new HttpJsonRequest(createHttpJsonRequestParams.Url, createHttpJsonRequestParams.Method, createHttpJsonRequestParams.Metadata, createHttpJsonRequestParams.Convention, this);
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
+			return request;
+		}
+
+		public IDisposable DisableAllCaching()
+		{
+			return null;
+		}
+
+		internal CachedRequestOp ConfigureCaching(string url, Action<string, string> setHeader)
+		{
+			return new CachedRequestOp();
+		}
+
+		public void IncrementCachedRequests()
+		{
+		}
+
+		public void CacheResponse(string s, RavenJToken result, NameValueCollection nameValueCollection)
+		{
+			
 		}
 	}
 }

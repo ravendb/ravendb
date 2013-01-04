@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
@@ -23,7 +24,7 @@ namespace Raven.StressTests.Tenants
 		[Fact]
 		public void CanConcurrentlyPutDocsToDifferentTenants()
 		{
-			const int count = 1000;
+			const int count = 50;
 			using (GetNewServer())
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{

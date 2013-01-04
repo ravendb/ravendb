@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class NullableDateTime : LocalClientTest
+	public class NullableDateTime : RavenTest
 	{
 		[Fact]
 		public void WillNotIncludeItemsWithNullDate()
@@ -166,7 +166,7 @@ namespace Raven.Tests.Bugs
 					var items = new[]
 					            	{
 					            		new Doc {Date = null},
-					            		new Doc {Date = SystemTime.Now},
+					            		new Doc {Date = SystemTime.UtcNow},
 					            	};
 					foreach (var item in items)
 						session.Store(item);
@@ -180,7 +180,6 @@ namespace Raven.Tests.Bugs
 						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
 						.ToArray();
 
-					WaitForUserToContinueTheTest(store);
 
 					Assert.Equal(2, items.Length);
 				}

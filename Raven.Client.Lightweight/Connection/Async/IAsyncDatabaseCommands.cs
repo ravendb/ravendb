@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5
-
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -13,6 +11,9 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -23,7 +24,7 @@ namespace Raven.Client.Connection.Async
 	public interface IAsyncDatabaseCommands : IDisposable, IHoldProfilingInformation
 	{
 		/// <summary>
-		/// Gets or sets the operations headers.
+		/// Gets the operations headers.
 		/// </summary>
 		/// <value>The operations headers.</value>
 		IDictionary<string, string> OperationsHeaders { get; }
@@ -37,28 +38,18 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes);
+		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins an async get operation for documents
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <remarks>
 		/// This is primarily useful for administration of a database
 		/// </remarks>
-		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize);
-
-		/// <summary>
-		/// Begins an async get operation for documents whose id starts with the specified prefix
-		/// </summary>
-		/// <param name="prefix">Prefix that the ids begin with.</param>
-		/// <param name="start">Paging start.</param>
-		/// <param name="pageSize">Size of the page.</param>
-		/// <remarks>
-		/// This is primarily useful for administration of a database
-		/// </remarks>
-		Task<JsonDocument[]> GetDocumentsStartingWithAsync(string prefix, int start, int pageSize);
+		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins the async query.
@@ -66,7 +57,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The include paths</param>
-		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes);
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins the async batch operation
@@ -148,7 +140,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Create a http request to the specified relative url on the current database
 		/// </summary>
-		Silverlight.Connection.HttpJsonRequest CreateRequest(string relativeUrl, string method);
+		HttpJsonRequest CreateRequest(string relativeUrl, string method);
 #endif
 
 		/// <summary>
@@ -177,7 +169,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Gets the list of databases from the server asynchronously
 		/// </summary>
-		Task<string[]> GetDatabaseNamesAsync(int pageSize);
+		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
 
 		/// <summary>
 		/// Puts the attachment with the specified key asynchronously
@@ -211,11 +203,6 @@ namespace Raven.Client.Connection.Async
 		Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize);
 
 		/// <summary>
-		/// Ensures that the silverlight startup tasks have run
-		/// </summary>
-		Task EnsureSilverlightStartUpAsync();
-
-		/// <summary>
 		/// Disable all caching within the given scope
 		/// </summary>
 		IDisposable DisableAllCaching();
@@ -226,19 +213,76 @@ namespace Raven.Client.Connection.Async
 		Task<GetResponse[]> MultiGetAsync(GetRequest[] requests);
 
 		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
+
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
+
+		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
-		Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
+		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
 
+		/// <summary>
+		/// Gets the Logs
+		/// </summary>
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
 
-		Task<LicensingStatus> GetLicenseStatus();
+		/// <summary>
+		/// Gets the license Status
+		/// </summary>
+		Task<LicensingStatus> GetLicenseStatusAsync();
 
-		Task<BuildNumber> GetBuildNumber();
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		Task<BuildNumber> GetBuildNumberAsync();
 
-		Task StartBackupAsync(string backupLocation);
+		/// <summary>
+		/// Begins an async backup operation
+		/// </summary>
+		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
 
-		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize);
+		/// <summary>
+		/// Begins an async restore operation
+		/// </summary>
+		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null);
+
+		/// <summary>
+		/// Sends an async command that enables indexing
+		/// </summary>
+		Task StartIndexingAsync();
+
+		/// <summary>
+		/// Sends an async command that disables all indexing
+		/// </summary>
+		Task StopIndexingAsync();
+
+		/// <summary>
+		/// Get the indexing status
+		/// </summary>
+		Task<string> GetIndexingStatusAsync();
+
+		/// <summary>
+		/// Get documents with id of a specific prefix
+		/// </summary>
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false);
+
+		/// <summary>
+		/// Force the database commands to read directly from the master, unless there has been a failover.
+		/// </summary>
+		void ForceReadFromMaster();
 	}
 }
-#endif

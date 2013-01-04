@@ -7,17 +7,20 @@ using System;
 using System.IO;
 using System.Net;
 using NDesk.Options;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
 {
+	using System.Net.Sockets;
+
 	public class Program
 	{
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 		private readonly SmugglerOptions options;
 		private readonly OptionSet optionSet;
-		bool incremental;
+		bool incremental, waitForIndexing;
 
 		private Program()
 		{
@@ -33,7 +36,7 @@ namespace Raven.Smuggler
 			            			                                                                     	{
 			            			                                                                     		try
 			            			                                                                     		{
-			            			                                                                     			options.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), value);
+			            			                                                                     			options.OperateOnTypes = options.ItemTypeParser(value);
 			            			                                                                     		}
 			            			                                                                     		catch (Exception e)
 			            			                                                                     		{
@@ -43,18 +46,50 @@ namespace Raven.Smuggler
 			            			},
 			            		{
 			            			"metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
-			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters["@metadata." + key] = val
+			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters.Add(new FilterSetting
+			            			                       {
+				            			                       Path = "@metadata." + key,
+															   ShouldMatch = true,
+															   Value = val
+			            			                       })
+			            			},
+								{
+			            			"negative-metadata-filter:{=}", "Filter documents NOT matching a metadata property." + Environment.NewLine +
+			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters.Add(new FilterSetting
+			            			                       {
+				            			                       Path = "@metadata." + key,
+															   ShouldMatch = false,
+															   Value = val
+			            			                       })
 			            			},
 			            		{
 			            			"filter:{=}", "Filter documents by a document property" + Environment.NewLine +
-			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters[key] = val
+			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
+			            			              {
+													  Path = key,
+													  ShouldMatch = true,
+				            			              Value = val
+			            			              })
 			            			},
+								{
+			            			"negative-filter:{=}", "Filter documents NOT matching a document property" + Environment.NewLine +
+			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
+			            			              {
+													  Path = key,
+													  ShouldMatch = true,
+				            			              Value = val
+			            			              })
+			            			},
+								{"timeout:", "The timeout to use for requests", s => options.Timeout = int.Parse(s) },
+								{"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s) },
 			            		{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
 			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
 			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
 			            		{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
 								{"incremental", "States usage of incremental operations", _ => incremental = true },
+								{"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _=> waitForIndexing=true},
+                                {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true },
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}
@@ -92,8 +127,8 @@ namespace Raven.Smuggler
 			}
 			connectionStringOptions.Url = url;
 
-			options.File = args[2];
-			if (options.File == null)
+			options.BackupPath = args[2];
+			if (options.BackupPath == null)
 				PrintUsageAndExit(-1);
 
 			try
@@ -105,12 +140,12 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
-			if (options.File != null && Directory.Exists(options.File))
+			if (options.BackupPath != null && Directory.Exists(options.BackupPath))
 			{
 				incremental = true;
 			}
 
-			var smugglerApi = new SmugglerApi(connectionStringOptions);
+			var smugglerApi = new SmugglerApi(options,connectionStringOptions);
 
 			try
 			{
@@ -118,6 +153,8 @@ namespace Raven.Smuggler
 				{
 					case SmugglerAction.Import:
 						smugglerApi.ImportData(options, incremental);
+						if(waitForIndexing)
+							smugglerApi.WaitForIndexing(options);
 						break;
 					case SmugglerAction.Export:
 						smugglerApi.ExportData(options, incremental);
@@ -126,6 +163,19 @@ namespace Raven.Smuggler
 			}
 			catch (WebException e)
 			{
+				if (e.Status == WebExceptionStatus.ConnectFailure)
+				{
+					Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
+					var socketException = e.InnerException as SocketException;
+					if (socketException != null)
+					{
+						Console.WriteLine("Details: {0}", socketException.Message);
+						Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
+					}
+
+					Environment.Exit((int)e.Status);
+				}
+
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null)
 					throw;
@@ -169,7 +219,7 @@ Usage:
 	- Export a local instance to dump.raven:
 		Raven.Smuggler out http://localhost:8080/ dump.raven
 
-Command line options:", DateTime.UtcNow.Year);
+Command line options:", SystemTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);
 			Console.WriteLine();

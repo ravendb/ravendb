@@ -1,11 +1,10 @@
 extern alias client;
+extern alias database;
 using client::Raven.Client.Authorization;
 using client::Raven.Bundles.Authorization.Model;
 
 
 using System.Collections.Generic;
-using Raven.Bundles.Tests.Versioning;
-
 using Raven.Client.Exceptions;
 using Xunit;
 using System.Linq;

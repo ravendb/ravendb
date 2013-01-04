@@ -10,6 +10,7 @@ namespace Raven.Studio.Features.Tasks
 		public ExportTask()
 		{
 			Name = "Export Database";
+		    IconResource = "Image_Export_Tiny";
 			Description = "Export your database to a dump file. Both indexes and documents are exported.";
 		}
 

@@ -4,11 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
+using Raven.Client.Changes;
 using Raven.Client.Document;
+using Raven.Client.Embedded.Changes;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
@@ -18,6 +23,8 @@ namespace Raven.Client.Embedded
 	/// </summary>
 	public class EmbeddableDocumentStore : DocumentStore
 	{
+		ILog log = LogManager.GetCurrentClassLogger();
+
 		static EmbeddableDocumentStore()
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
@@ -70,8 +77,53 @@ namespace Raven.Client.Embedded
 		/// <value>The data directory.</value>
 		public string DataDirectory
 		{
-			get { return Configuration.DataDirectory; }
+			get
+			{
+				return Configuration.DataDirectory;
+			}
 			set { Configuration.DataDirectory = value; }
+		}
+
+		/// <summary>
+		/// Gets or sets the URL.
+		/// </summary>
+		public override string Url
+		{
+			get
+			{
+				return base.Url;
+			}
+			set
+			{
+				DataDirectory = null;
+				base.Url = value;
+			}
+		}
+
+		private EmbeddableDatabaseChanges databaseChanges;
+		private Timer idleTimer;
+
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		public override IDatabaseChanges Changes(string database = null)
+		{
+			if(string.IsNullOrEmpty(Url) == false)
+				return base.Changes(database);
+
+			if(database != null)
+				throw new NotSupportedException("Embedded document store does not support multi tenancy");
+
+			if(databaseChanges == null)
+			{
+				lock(this)
+				{
+					Thread.MemoryBarrier();
+					if(databaseChanges == null)
+						databaseChanges = new EmbeddableDatabaseChanges(this, () => databaseChanges = null);
+				}
+			}
+			return databaseChanges;
 		}
 
 		///<summary>
@@ -88,6 +140,8 @@ namespace Raven.Client.Embedded
 				return;
 			wasDisposed = true;
 			base.Dispose();
+			if (idleTimer != null)
+				idleTimer.Dispose();
 			if (DocumentDatabase != null)
 				DocumentDatabase.Dispose();
 			if (httpServer != null)
@@ -133,26 +187,75 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		protected override void InitializeInternal()
 		{
+			if (string.IsNullOrEmpty(Url) == false && string.IsNullOrEmpty(DataDirectory) == false)
+				throw new InvalidOperationException("You cannot specify both Url and DataDirectory at the same time. Url implies running in client/server mode against the remote server. DataDirectory implies running in embedded mode. Those two options are incompatible");
+
+			if (string.IsNullOrEmpty(DataDirectory) == false && string.IsNullOrEmpty(DefaultDatabase) == false)
+				throw new InvalidOperationException("You cannot specify DefaultDatabase value when the DataDirectory has been set, running in Embedded mode, the Default Database is not a valid option.");
+
 			if (configuration != null && Url == null)
 			{
 				configuration.PostInit();
-				if(configuration.RunInMemory || configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
+				if (configuration.RunInMemory || configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 				{
 					ResourceManagerId = Guid.NewGuid(); // avoid conflicts
 				}
+				configuration.SetSystemDatabase();
 				DocumentDatabase = new DocumentDatabase(configuration);
 				DocumentDatabase.SpinBackgroundWorkers();
 				if (UseEmbeddedHttpServer)
 				{
+					SetStudioConfigToAllowSingleDb();
 					httpServer = new HttpServer(configuration, DocumentDatabase);
 					httpServer.StartListening();
 				}
+				else // we need to setup our own idle timer
+				{
+					idleTimer = new Timer(state =>
+					{
+						try
+						{
+							DocumentDatabase.RunIdleOperations();
+						}
+						catch (Exception e)
+						{
+							log.WarnException("Error during database idle operations", e);
+						}
+					},null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+				}
 				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
+				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DatabaseCommands);
 			}
 			else
 			{
 				base.InitializeInternal();
 			}
+		}
+
+		/// <summary>
+		/// Let the studio knows that it shouldn't display the warning about sys db access
+		/// </summary>
+		public void SetStudioConfigToAllowSingleDb()
+		{
+			if (DocumentDatabase == null)
+				return;
+			var jsonDocument = DocumentDatabase.Get("Raven/StudioConfig", null);
+			RavenJObject doc;
+			RavenJObject metadata;
+			if(jsonDocument == null)
+			{
+				doc = new RavenJObject();
+				metadata = new RavenJObject();
+			}
+			else
+			{
+				doc = jsonDocument.DataAsJson;
+				metadata = jsonDocument.Metadata;
+			}
+
+			doc["WarnWhenUsingSystemDatabase"] = false;
+
+			DocumentDatabase.Put("Raven/StudioConfig", null, doc, metadata, null);
 		}
 
 
@@ -163,12 +266,12 @@ namespace Raven.Client.Embedded
 		{
 			if (RunInMemory)
 				return;
-			if(string.IsNullOrEmpty(DataDirectory))  // if we don't have a data dir...
+			if (string.IsNullOrEmpty(DataDirectory))  // if we don't have a data dir...
 				base.AssertValidConfiguration();	 // we need to check the configuration for url
 
 		}
 
-	
+
 		/// <summary>
 		/// Expose the internal http server, if used
 		/// </summary>

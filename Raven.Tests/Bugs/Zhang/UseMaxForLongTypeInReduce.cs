@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Tests.Bugs.Zhang
 {
-	public class UseMaxForLongTypeInReduce : LocalClientTest
+	public class UseMaxForLongTypeInReduce : RavenTest
 	{
 		private const string map = @"
 from doc in docs
@@ -34,18 +34,18 @@ select new {Name = g.Key, CreatedTimeTicks = createdTimeTicks}
 													Reduce = reduce,
 												});
 
-				using (var sesion = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					sesion.Store(new { Topic = "RavenDB is Hot", CreatedTimeTicks = SystemTime.Now.Ticks, Tags = new[] { new { Name = "DB" }, new { Name = "NoSQL" } } });
+					session.Store(new { Topic = "RavenDB is Hot", CreatedTimeTicks = SystemTime.UtcNow.Ticks, Tags = new[] { new { Name = "DB" }, new { Name = "NoSQL" } } });
 
-					sesion.Store(new { Topic = "RavenDB is Fast", CreatedTimeTicks = SystemTime.Now.AddMinutes(10).Ticks, Tags = new[] { new { Name = "NoSQL" } } });
+					session.Store(new { Topic = "RavenDB is Fast", CreatedTimeTicks = SystemTime.UtcNow.AddMinutes(10).Ticks, Tags = new[] { new { Name = "NoSQL" } } });
 
-					sesion.SaveChanges();
+					session.SaveChanges();
 				}
 
-				using (var sesion = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					sesion.Advanced.LuceneQuery<object>("test").WaitForNonStaleResults().ToArray<object>();
+					session.Advanced.LuceneQuery<object>("test").WaitForNonStaleResults().ToArray<object>();
 				}
 
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);

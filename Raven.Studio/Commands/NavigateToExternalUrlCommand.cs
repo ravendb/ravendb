@@ -1,7 +1,4 @@
-using System;
-using System.Windows.Browser;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
@@ -17,12 +14,7 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			if (href.StartsWith("http://") == false)
-			{
-				var ravendbUrl = ApplicationModel.Current.Server.Value.Url;
-				href = ravendbUrl + "/" + href;
-			}
-			HtmlPage.Window.Navigate(new Uri(href, UriKind.Absolute), "_blank");
+		    UrlUtil.NavigateToExternal(href);
 		}
 	}
 }

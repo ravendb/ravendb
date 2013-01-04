@@ -1,8 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Studio.Commands;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -26,6 +28,26 @@ namespace Raven.Studio.Infrastructure
 
 		internal void TimerTicked()
 		{
+			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
+			{
+				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
+				ApplicationModel.Current.Server.Value.DocumentStore
+					.AsyncDatabaseCommands
+					.ForDefaultDatabase()
+					.GetAsync("Raven/StudioConfig")
+					.ContinueOnSuccessInTheUIThread(doc =>
+					{
+						if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+						{
+							if(doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+								return;
+						}
+						Command.ExecuteCommand(new CreateDatabaseCommand());
+					});
+			}
+
+			ApplicationModel.Current.UpdateAlerts();
+
 			if (currentTask != null)
 				return;
 
@@ -34,7 +56,7 @@ namespace Raven.Studio.Infrastructure
 				if (currentTask != null)
 					return;
 
-				var timeFromLastRefresh = DateTime.Now - lastRefresh;
+				var timeFromLastRefresh = SystemTime.UtcNow - lastRefresh;
 				var refreshRate = GetRefreshRate();
 				if (timeFromLastRefresh < refreshRate)
 					return;
@@ -49,7 +71,7 @@ namespace Raven.Studio.Infrastructure
 					.Catch()
 					.Finally(() =>
 					{
-						lastRefresh = DateTime.Now;
+						lastRefresh = SystemTime.UtcNow;
 						IsForced = false;
 						currentTask = null;
 					});
@@ -69,8 +91,8 @@ namespace Raven.Studio.Infrastructure
 		{
 			return null;
 		}
-		
-		[ThreadStatic] 
+
+	    [ThreadStatic] 
 		protected static Action<WebRequest> onWebRequest;
 
 		public static IDisposable OnWebRequest(Action<WebRequest> action)

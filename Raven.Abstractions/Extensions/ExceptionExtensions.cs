@@ -1,7 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Net;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-#if !NET_3_5
 namespace Raven.Abstractions.Extensions
 {
 	///<summary>
@@ -22,7 +25,7 @@ namespace Raven.Abstractions.Extensions
 			while (true)
 			{
 				if (e.InnerExceptions.Count != 1)
-					return null;
+					return e;
 
 				var aggregateException = e.InnerExceptions[0] as AggregateException;
 				if (aggregateException == null)
@@ -47,6 +50,51 @@ namespace Raven.Abstractions.Extensions
 				? firstLine.Remove(0, index + 2)
 				: firstLine;
 		}
+
+        public static string TryReadResponseIfWebException(this Exception ex)
+        {
+            if (!(ex is WebException))
+            {
+                return string.Empty;
+            }
+
+            var webException = ex as WebException;
+
+            if (webException.Response == null)
+            {
+                return string.Empty;
+            }
+
+            using (var reader = new StreamReader(webException.Response.GetResponseStream()))
+            {
+                var response = reader.ReadToEnd();
+                return response;
+            }
+        }
+
+        public static string TryReadErrorPropertyFromJson(this string errorString)
+        {
+            if (string.IsNullOrEmpty(errorString) || !errorString.StartsWith("{"))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                var jObject = JObject.Parse(errorString);
+                if (jObject["Error"] != null)
+                {
+                    return (string)jObject["Error"];
+                }
+                else
+                {
+                    return string.Empty;
+                }
+            }
+            catch (JsonReaderException)
+            {
+                return string.Empty;
+            }
+        }
 	}
 }
-#endif

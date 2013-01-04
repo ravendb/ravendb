@@ -13,6 +13,8 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -23,7 +25,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DocumentationFile>bin\Debug\Raven.Client.Lightweight.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
     <NoWarn>1573, 1587, 1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -34,6 +36,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+    <DocumentationFile>bin\Release\Raven.Client.Lightweight.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -43,13 +46,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="NLog">
-      <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
@@ -59,17 +55,25 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
+    <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Changes\IDatabaseChanges.cs" />
+    <Compile Include="Changes\LocalConnectionState.cs" />
+    <Compile Include="Changes\RemoteDatabaseChanges.cs" />
+    <Compile Include="Changes\TaskedObservable.cs" />
+    <Compile Include="Changes\TaskErrorExtensions.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
     <Compile Include="Connection\CachedRequest.cs" />
-    <Compile Include="Connection\CompletedTask.cs" />
     <Compile Include="Connection\CreateHttpJsonRequestParams.cs" />
+    <Compile Include="Connection\ObservableLineStream.cs" />
+    <Compile Include="Connection\HttpExtensions.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\IDatabaseCommands.cs" />
     <Compile Include="Connection\IRavenQueryInspector.cs" />
-    <Compile Include="Connection\JsonExtensions.cs" />
+    <Compile Include="Connection\DocumentConventionJsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Connection\MultiGetOperation.cs" />
     <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />
@@ -78,7 +82,6 @@
     <Compile Include="Connection\Profiling\RequestStatus.cs" />
     <Compile Include="Connection\Profiling\RequestResultArgs.cs" />
     <Compile Include="Connection\Profiling\ProfilingInformation.cs" />
-    <Compile Include="Connection\RavenQuery.cs" />
     <Compile Include="Connection\RavenTransactionAccessor.cs" />
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
@@ -89,6 +92,22 @@
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />
     <Compile Include="Converters\ITypeConverter.cs" />
+    <Compile Include="Document\AsyncMultiDatabaseHiLoKeyGenerator.cs" />
+    <Compile Include="Document\AsyncShardedDocumentQuery.cs" />
+    <Compile Include="Document\AsyncMultiTypeHiLoKeyGenerator.cs" />
+    <Compile Include="Document\AsyncHiLoKeyGenerator.cs" />
+    <Compile Include="Document\Async\AsyncDocumentKeyGeneration.cs" />
+    <Compile Include="Document\Batches\LazyStartsWithOperation.cs" />
+    <Compile Include="Document\GenerateEntityIdOnTheClient.cs" />
+    <Compile Include="Document\EntityToJson.cs" />
+    <Compile Include="Document\MultiDatabaseHiLoGenerator.cs" />
+    <Compile Include="Document\RemoteBulkInsertOperation.cs" />
+    <Compile Include="Document\OAuth\AbstractAuthenticator.cs" />
+    <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
+    <Compile Include="Document\OAuth\SecuredAuthenticator.cs" />
+    <Compile Include="Document\BulkInsertOperation.cs" />
+    <Compile Include="Exceptions\ServerRequestError.cs" />
+    <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
@@ -136,6 +155,7 @@
     <Compile Include="Extensions\DatabaseCommandsExtensions.cs" />
     <Compile Include="Extensions\MultiDatabase.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
@@ -146,8 +166,11 @@
     <Compile Include="Indexes\AbstractGenericIndexCreationTask.cs" />
     <Compile Include="Indexes\AbstractMultiMapIndexCreationTask.cs" />
     <Compile Include="Linq\Indexing\IndexingLinqExtensions.cs" />
+    <Compile Include="Linq\LinqPathProvider.cs" />
+    <Compile Include="Linq\RavenQueryableExtensions.cs" />
     <Compile Include="Linq\ReflectionExtensions.cs" />
-    <Compile Include="Linq\SearchOptions.cs" />
+    <Compile Include="Listeners\IDocumentConflictListener.cs" />
+    <Compile Include="PublicExtensions\SearchOptions.cs" />
     <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
     <Compile Include="IDocumentQuery.cs" />
@@ -166,22 +189,24 @@
     <Compile Include="Indexes\IndexDefinitionBuilder.cs" />
     <Compile Include="Indexes\IndexDefinitionHelper.cs" />
     <Compile Include="Indexes\RavenDocumentsByEntityName.cs" />
-    <Compile Include="Indexes\SpatialIndex.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\ExpressionInfo.cs" />
     <Compile Include="Linq\IDocumentQueryGenerator.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />
-    <Compile Include="Linq\LinqExtensions.cs" />
-    <Compile Include="Linq\LinqExtensions_Obsolete.cs" />
+    <Compile Include="PublicExtensions\LinqExtensions.cs" />
+    <Compile Include="PublicExtensions\LinqExtensions_Obsolete.cs" />
     <Compile Include="Linq\RavenQueryInspector.cs" />
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
-    <Compile Include="Linq\RavenQueryStatistics.cs" />
-    <Compile Include="Linq\ExpressionExtensions.cs" />
+    <Compile Include="RavenQueryStatistics.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
+    <Compile Include="Shard\BaseShardedDocumentSession.cs" />
+    <Compile Include="Shard\AsyncShardedDocumentSession.cs" />
+    <Compile Include="Shard\AsyncShardedHiloKeyGenerator.cs" />
     <Compile Include="Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardedDatabaseChanges.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />
     <Compile Include="Shard\ShardedHiloKeyGenerator.cs" />
@@ -190,12 +215,17 @@
     <Compile Include="Shard\ParallelShardAccessStrategy.cs" />
     <Compile Include="Shard\SequentialShardAccessStrategy.cs" />
     <Compile Include="Shard\DefaultShardResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardedObservableWithTask.cs" />
     <Compile Include="Shard\ShardRequestData.cs" />
     <Compile Include="Shard\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
-    <Compile Include="Util\ConcurrentDictionary.cs" />
+    <Compile Include="Util\GlobalLastEtagHolder.cs" />
+    <Compile Include="Util\JSBeautify.cs" />
+    <Compile Include="Util\ConcatObservable.cs" />
+    <Compile Include="Changes\TaskObservable.cs" />
     <Compile Include="Util\Inflector.cs" />
-    <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
+    <Compile Include="Util\LastEtagHolder.cs" />
+    <Compile Include="Util\ObjectReferenceEqualityComparer.cs" />
     <Compile Include="Util\SimpleCache.cs" />
     <Compile Include="Util\Types.cs" />
     <Compile Include="WhereEqualsParams.cs" />
@@ -204,7 +234,6 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
@@ -214,6 +243,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

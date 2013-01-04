@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class TakeQueries : LocalClientTest
+	public class TakeQueries : RavenTest
 	{
 		[Fact]
 		public void ShouldGetNoResultsOnTake0()

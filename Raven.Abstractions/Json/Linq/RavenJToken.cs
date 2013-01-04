@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -26,11 +28,15 @@ namespace Raven.Json.Linq
 		/// <returns>A cloned RavenJToken</returns>
 		public abstract RavenJToken CloneToken();
 
+		public abstract void EnsureSnapshot();
+
+		public abstract RavenJToken CreateSnapshot();
+
 		protected RavenJToken CloneTokenImpl(RavenJToken newObject)
 		{
 			var readingStack = new Stack<IEnumerable<KeyValuePair<string, RavenJToken>>>();
 			var writingStack = new Stack<RavenJToken>();
-			
+
 			writingStack.Push(newObject);
 			readingStack.Push(GetCloningEnumerator());
 
@@ -40,6 +46,11 @@ namespace Raven.Json.Linq
 				var curObject = writingStack.Pop();
 				foreach (var current in curReader)
 				{
+					if (current.Value == null)
+					{
+						curObject.AddForCloning(current.Key, null); // we call this explicitly to support null entries in JArray
+						continue;
+					}
 					if (current.Value is RavenJValue)
 					{
 						curObject.AddForCloning(current.Key, current.Value.CloneToken());
@@ -47,7 +58,7 @@ namespace Raven.Json.Linq
 					}
 
 					var newVal = current.Value is RavenJArray ? (RavenJToken)new RavenJArray() : new RavenJObject();
-					
+
 					curObject.AddForCloning(current.Key, newVal);
 
 					writingStack.Push(newVal);
@@ -80,7 +91,7 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJToken"/> with the value of the specified object</returns>
 		public static RavenJToken FromObject(object o)
 		{
-			return FromObjectInternal(o, new JsonSerializer());
+			return FromObjectInternal(o, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
 		/// <summary>
@@ -177,14 +188,24 @@ namespace Raven.Json.Linq
 		{
 			try
 			{
-				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+				JsonReader jsonReader = new RavenJsonTextReader(new StringReader(json));
 
 				return Load(jsonReader);
 			}
 			catch (Exception e)
 			{
-				throw new JsonSerializationException("Could not parse: [" + json +"]", e);
+				throw new JsonSerializationException("Could not parse: [" + json + "]", e);
 			}
+		}
+
+		public static RavenJToken TryLoad(Stream stream)
+		{
+			var jsonTextReader = new RavenJsonTextReader(new StreamReader(stream));
+			if (jsonTextReader.Read() == false || jsonTextReader.TokenType == JsonToken.None)
+			{
+				return null;
+			}
+			return Load(jsonTextReader);
 		}
 
 		/// <summary>
@@ -257,8 +278,8 @@ namespace Raven.Json.Linq
 					switch (curOtherReader.Type)
 					{
 						case JTokenType.Array:
-							var selfArray = (RavenJArray) curThisReader;
-							var otherArray = (RavenJArray) curOtherReader;
+							var selfArray = (RavenJArray)curThisReader;
+							var otherArray = (RavenJArray)curOtherReader;
 							if (selfArray.Length != otherArray.Length)
 								return false;
 
@@ -269,8 +290,8 @@ namespace Raven.Json.Linq
 							}
 							break;
 						case JTokenType.Object:
-							var selfObj = (RavenJObject) curThisReader;
-							var otherObj = (RavenJObject) curOtherReader;
+							var selfObj = (RavenJObject)curThisReader;
+							var otherObj = (RavenJObject)curOtherReader;
 							if (selfObj.Count != otherObj.Count)
 								return false;
 
@@ -289,8 +310,8 @@ namespace Raven.Json.Linq
 									case JTokenType.Bytes:
 										var bytes = kvp.Value.Value<byte[]>();
 										byte[] tokenBytes = token.Type == JTokenType.String
-										                    	? Convert.FromBase64String(token.Value<string>())
-										                    	: token.Value<byte[]>();
+																? Convert.FromBase64String(token.Value<string>())
+																: token.Value<byte[]>();
 										if (bytes.Length != tokenBytes.Length)
 											return false;
 
@@ -346,23 +367,23 @@ namespace Raven.Json.Linq
 
 				if (cur.Item2.Type == JTokenType.Array)
 				{
-					var arr = (RavenJArray) cur.Item2;
+					var arr = (RavenJArray)cur.Item2;
 					for (int i = 0; i < arr.Length; i++)
 					{
-						stack.Push(Tuple.Create(cur.Item1 ^ (i*397), arr[i]));
+						stack.Push(Tuple.Create(cur.Item1 ^ (i * 397), arr[i]));
 					}
 				}
 				else if (cur.Item2.Type == JTokenType.Object)
 				{
-					var selfObj = (RavenJObject) cur.Item2;
+					var selfObj = (RavenJObject)cur.Item2;
 					foreach (var kvp in selfObj.Properties)
 					{
-						stack.Push(Tuple.Create(cur.Item1 ^ (397*kvp.Key.GetHashCode()), kvp.Value));
+						stack.Push(Tuple.Create(cur.Item1 ^ (397 * kvp.Key.GetHashCode()), kvp.Value));
 					}
 				}
 				else // value
 				{
-					ret ^= cur.Item1 ^ (cur.Item2.GetDeepHashCode()*397);
+					ret ^= cur.Item1 ^ (cur.Item2.GetDeepHashCode() * 397);
 				}
 			}
 
@@ -401,6 +422,37 @@ namespace Raven.Json.Linq
 			var p = new RavenJPath(path);
 			return p.Evaluate(this, errorWhenNoMatch);
 		}
+
+        /// <summary>
+        /// Selects the token that matches the object path.
+        /// </summary>
+        /// <param name="path">
+        /// The object path from the current <see cref="RavenJToken"/> to the <see cref="RavenJToken"/>
+        /// to be returned. This must be a string of property names or array indexes separated
+        /// by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
+        /// <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
+        /// </param>
+        /// <returns>The <see cref="RavenJToken"/> that matches the object path or a null reference if no matching token is found.</returns>
+        public RavenJToken SelectToken(RavenJPath path)
+        {
+            return SelectToken(path, false);
+        }
+
+        /// <summary>
+        /// Selects the token that matches the object path.
+        /// </summary>
+        /// <param name="path">
+        /// The object path from the current <see cref="RavenJToken"/> to the <see cref="RavenJToken"/>
+        /// to be returned. This must be a string of property names or array indexes separated
+        /// by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
+        /// <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
+        /// </param>
+        /// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
+        /// <returns>The <see cref="RavenJToken"/> that matches the object path.</returns>
+        public RavenJToken SelectToken(RavenJPath path, bool errorWhenNoMatch)
+        {
+            return path.Evaluate(this, errorWhenNoMatch);
+        }
 
 		/// <summary>
 		/// Returns a collection of the child values of this token, in document order.

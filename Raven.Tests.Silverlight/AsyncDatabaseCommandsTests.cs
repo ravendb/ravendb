@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Silverlight.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Raven.Client.Document;
+using Raven.Client.Document.Async;
 using Raven.Client.Extensions;
 using Raven.Tests.Document;
 
@@ -53,7 +54,7 @@ namespace Raven.Tests.Silverlight
 
 				var task = cmd
 					.ForDatabase(dbname)
-					.GetDocumentsStartingWithAsync("Companies", 0, 25);
+					.StartsWithAsync("Companies", 0, 25);
 				yield return task;
 
 				Assert.AreEqual(1, task.Result.Length);
@@ -103,7 +104,7 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> CanGetDeleteADcoumentById()
+		public IEnumerable<Task> CanGetDeleteADocumentById()
 		{
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
@@ -116,7 +117,7 @@ namespace Raven.Tests.Silverlight
 					session.Store(entity);
 					yield return session.SaveChangesAsync();
 
-					yield return session.Advanced.AsyncDatabaseCommands
+					yield return ((AsyncDocumentSession)session).AsyncDatabaseCommands
 						.DeleteDocumentAsync(entity.Id);
 				}
 
@@ -154,7 +155,7 @@ namespace Raven.Tests.Silverlight
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					yield return session.Advanced.AsyncDatabaseCommands
+					yield return ((AsyncDocumentSession)session).AsyncDatabaseCommands
 						.DeleteDocumentAsync(task.Result[0].Key);
 
 					var second = cmd.ForDatabase(dbname).GetDocumentsAsync(0, 25);

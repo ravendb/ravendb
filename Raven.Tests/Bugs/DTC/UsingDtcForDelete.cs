@@ -8,14 +8,14 @@ using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Bugs.DTC
 {
-	public class UsingDtcForDelete : LocalClientTest
+	public class UsingDtcForDelete : RavenTest
 	{
 		private string documentKey;
 
 		[Fact]
 		public void ShouldWork()
 		{
-			using (var store = NewDocumentStore("esent", false))
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				documentKey = "tester123";
 

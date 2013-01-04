@@ -6,6 +6,7 @@
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -16,24 +17,21 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexingBehavior : AbstractDocumentStorageTest 
+	public class IndexingBehavior : RavenTest 
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public IndexingBehavior()
 		{
-			db =
-				new DocumentDatabase(new RavenConfiguration
-				{
-					DataDirectory = DataDir, 
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-				});
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
@@ -55,7 +53,7 @@ namespace Raven.Tests.Bugs
 		{
 			db.PutIndex("test", new IndexDefinition
 			{
-				Map = "from doc in docs select new { User = 1/doc.Name }"
+				Map = "from doc in docs select new { User = ((string)null).ToString() }"
 			});
 
 			for (int i = 0; i < 15; i++)
@@ -63,13 +61,9 @@ namespace Raven.Tests.Bugs
 				db.Put("a" + i, null, new RavenJObject(), new RavenJObject(), null);
 			}
 
-			Assert.Empty(db.Statistics.Errors); 
-
-			db.SpinBackgroundWorkers();
-
+			bool isIndexStale = false;
 			for (int i = 0; i < 50; i++)
 			{
-				bool isIndexStale = false;
 				db.TransactionalStorage.Batch(actions =>
 				{
 					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
@@ -78,7 +72,7 @@ namespace Raven.Tests.Bugs
 					break;
 				Thread.Sleep(100);
 			}
-
+			Assert.False(isIndexStale);
 			Assert.NotEmpty(db.Statistics.Errors);
 		}
 
@@ -87,15 +81,13 @@ namespace Raven.Tests.Bugs
 		{
 			db.PutIndex("test", new IndexDefinition
 			{
-				Map = "from doc in docs select new { User = 1/doc.User }"
+				Map = "from doc in docs select new { User = ((string)null).ToString() }"
 			});
 
 			for (int i = 0; i < 150; i++)
 			{
 				db.Put("a"+i, null, new RavenJObject(), new RavenJObject(),null);
 			}
-
-			db.SpinBackgroundWorkers();
 
 			for (int i = 0; i < 50; i++)
 			{
@@ -131,8 +123,6 @@ namespace Raven.Tests.Bugs
 
 			db.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
 			RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
-
-			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do

@@ -80,7 +80,7 @@ namespace Raven.Studio.Infrastructure
 
 			var uri = Path;
 			if (string.IsNullOrWhiteSpace(uri))
-				uri = "/home";
+				uri = "/databases";
 			var query = string.Join("&", QueryParams.Select(x => string.Format("{0}={1}", x.Key, x.Value)));
 			if (string.IsNullOrEmpty(query) == false)
 			{
@@ -91,7 +91,7 @@ namespace Raven.Studio.Infrastructure
 
 		private void EnsureDatabaseParameterIncluded()
 		{
-			if (GetQueryParam("database") != null)
+			if (GetQueryParam("database") != null || ApplicationModel.Database.Value == null)
 				return;
 
 			SetQueryParam("database", ApplicationModel.Database.Value.Name);

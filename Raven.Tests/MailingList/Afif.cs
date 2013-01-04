@@ -1,164 +1,141 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using FizzWare.NBuilder;
-using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Embedded;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Afif
+	public class WhenGroupinByLocation : RavenTest
 	{
-		public class ByVehicle : AbstractIndexCreationTask<Vehicle>
+		[Fact]
+		public void CanFindSale()
 		{
-			public ByVehicle()
+			using (var d = NewDocumentStore())
 			{
-				Map = vehicles => from vehicle in vehicles
-								  select new
-								  {
-									  vehicle.Model,
-									  vehicle.Make,
-									  _ = SpatialIndex.Generate(vehicle.Latitude, vehicle.Longitude)
-								  };
+				new Sales_ByLocation().Execute(d);
+				using (var s = d.OpenSession())
+				{
+					var sale = new Sale
+					{
+						Locations =
+							new[] { new Sale.Location { Lat = 37.780, Lng = 144.960 }, new Sale.Location { Lat = 37.790, Lng = 144.960 }, },
+						Quantity = 10,
+						Title = "raven master class"
+					};
+					s.Store(sale);
+					s.Store(new Order { SaleId = sale.Id });
+					s.Store(new Order { SaleId = sale.Id });
+					s.SaveChanges();
+
+					List<SiteSale> sitesales = s.Query<SiteSale, Sales_ByLocation>().Customize(x => x.WaitForNonStaleResults())
+						.ToList();
+
+					Assert.Empty(d.DocumentDatabase.Statistics.Errors);
+
+					Assert.NotEmpty(sitesales);
+				}
 			}
 		}
 
-		public class Vehicle
+		#region Nested type: Order
+
+		[Serializable]
+		public class Order
 		{
 			public string Id { get; set; }
-			public string Model { get; set; }
-			public string Make { get; set; }
-			public double Latitude { get; set; }
-			public double Longitude { get; set; }
+			public string SaleId { get; set; }
 		}
 
-		public class HawthornEast : Location
-		{
-			public HawthornEast()
-				: base(longitude: 145.052097, latitude: -37.834855)
-			{ }
-		}
+		#endregion
 
-		public class Darwin : Location
-		{
-			public Darwin()
-				: base(longitude: 130.841904, latitude: 12.461334)
-			{ }
-		}
+		#region Nested type: Sale
 
-		public class Location
+		[Serializable]
+		public class Sale
 		{
-			public Location(double longitude, double latitude)
+			public string Id { get; set; }
+			public string Title { get; set; }
+			public Location[] Locations { get; set; }
+			public int Quantity { get; set; }
+
+			#region Nested type: Location
+
+			public class Location
 			{
-				Longitude = longitude;
-				Latitude = latitude;
+				public double Lat { get; set; }
+				public double Lng { get; set; }
 			}
 
-			public double Latitude { get; private set; }
-			public double Longitude { get; private set; }
+			#endregion
 		}
 
-		public class CanGetFacetsOnVehicleSpatialSearch :UsingEmbeddedRavenStoreWithVehicles
+		#endregion
+
+		#region Nested type: Sales_ByLocation
+
+		public class Sales_ByLocation : AbstractMultiMapIndexCreationTask<SiteSale>
 		{
-			[Fact]
-			public void ShouldMatchMakeFacetsOnLocation()
+			public Sales_ByLocation()
 			{
-				IDictionary<string, IEnumerable<FacetValue>> facetvalues;
+				AddMap<Sale>(sales => from sale in sales
+									  select new
+									  {
+										  _ = (object)null,
+										  SaleId = sale.Id,
+										  Locations = sale.Locations.Select(l => new { l.Lat, l.Lng }).ToArray(),
+										  TotalSold = 0
+									  });
 
-				using (var s = Store.OpenSession())
-				{
-					var index = typeof(ByVehicle).Name;
+				AddMap<Order>(orders => from order in orders
+										select new
+										{
+											_ = (object)null,
+											order.SaleId,
+											Locations = new[] { new { Lat = (double)0, Lng = (double)0 } },
+											TotalSold = 1
+										});
 
-					facetvalues = s.Advanced.DatabaseCommands.GetFacets(
-						index: index,
-						query: new SpatialIndexQuery()
-						{
-							Radius = 5,
-							Latitude = new Darwin().Latitude,
-							Longitude = new Darwin().Longitude
-						},
-						facetSetupDoc: "facets/Vehicle");
-				}
-
-				Assert.NotNull(facetvalues);
-				Assert.Equal(2, facetvalues["Make"].Count());
-			}
-		}
-
-		public abstract class UsingEmbeddedRavenStoreWithVehicles : UsingEmbeddedRavenStore
-		{
-			protected static IEnumerable<Vehicle> Vehicles { get; set; }
-
-			public UsingEmbeddedRavenStoreWithVehicles()
-			{
-				Open();
-				Vehicles = Builder<Vehicle>.CreateListOfSize(10)
-					.TheFirst(3)
-						.With(x => x.Make = "Mazda")
-						.With(x => x.Model = "Rx8")
-						.With(x => x.Latitude = new Darwin().Latitude)
-						.With(x => x.Longitude = new Darwin().Longitude)
-					.TheNext(3)
-						.With(x => x.Make = "Mercedes")
-						.With(x => x.Model = "AMG")
-						.With(x => x.Latitude = new Darwin().Latitude)
-						.With(x => x.Longitude = new Darwin().Longitude)
-					.TheNext(4)
-						.With(x => x.Make = "Toyota")
-						.With(x => x.Model = "Camry")
-						.With(x => x.Latitude = new HawthornEast().Latitude)
-						.With(x => x.Longitude = new HawthornEast().Longitude)
-					.Build();
-
-				using (var session = Store.OpenSession())
-				{
-					session.Store(new FacetSetup
-					{
-						Id = "facets/Vehicle",
-						Facets = new List<Facet> { new Facet { Name = "Make" }, new Facet { Name = "Model" } }
-					});
-					new ByVehicle().Execute(session.Advanced.DocumentStore);
-					session.SaveChanges();
-
-					foreach (var vehicle in Vehicles)
-						session.Store(vehicle);
-					session.SaveChanges();
-
-					RavenQueryStatistics stats;
-					session.Query<Vehicle, ByVehicle>().Where(x => x.Make == "Mazda").Customize(x => x.WaitForNonStaleResults()).
-						Statistics(out stats).ToList();
-				}
-			}
-
-			public override void Dispose()
-			{
-				Vehicles = null;
-				base.Dispose();
+				Reduce = sitesales => from sitesale in sitesales
+									  group sitesale by sitesale.SaleId
+										  into sales
+										  let locations = sales.SelectMany(x => x.Locations)
+										  from sale in sales
+										  select new
+										  {
+											  _ = locations.Select(l => SpatialIndex.Generate(l.Lat, l.Lng)),
+											  // marking this as empty works
+											  sale.SaleId,
+											  Locations = locations,
+											  TotalSold = sales.Sum(x => x.TotalSold)
+										  };
 			}
 		}
 
-		public abstract class UsingEmbeddedRavenStore : IDisposable
+		#endregion
+
+		#region Nested type: SiteSale
+
+		[Serializable]
+		public class SiteSale
 		{
-			protected EmbeddableDocumentStore Store { get; set; }
+			public string SaleId { get; set; }
+			public Location[] Locations { get; set; }
+			public int TotalSold { get; set; }
 
-			protected void Open()
+			#region Nested type: Location
+
+			public class Location
 			{
-				Store = new EmbeddableDocumentStore
-				{
-					RunInMemory =
-						true
-				};
-				Store.Initialize();
+				public double Lat { get; set; }
+				public double Lng { get; set; }
 			}
 
-			public virtual void Dispose()
-			{
-				Store.Dispose();
-			}
+			#endregion
 		}
+
+		#endregion
 	}
 }

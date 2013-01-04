@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class GuidProjection : LocalClientTest
+	public class GuidProjection : RavenTest
 	{
 		public class TestView
 		{

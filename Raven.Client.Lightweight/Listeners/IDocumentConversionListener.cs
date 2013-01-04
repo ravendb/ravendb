@@ -16,12 +16,12 @@ namespace Raven.Client.Listeners
 		/// <summary>
 		/// Called when converting an entity to a document and metadata
 		/// </summary>
-		void EntityToDocument(object entity, RavenJObject document, RavenJObject metadata);
+		void EntityToDocument(string key, object entity, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Called when converting a document and metadata to an entity
 		/// </summary>
-		void DocumentToEntity(object entity, RavenJObject document, RavenJObject metadata);
+		void DocumentToEntity(string key, object entity, RavenJObject document, RavenJObject metadata);
 
 	}
 }

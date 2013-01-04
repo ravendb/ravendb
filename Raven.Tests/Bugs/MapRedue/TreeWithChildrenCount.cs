@@ -76,10 +76,8 @@ namespace Raven.Tests.Bugs.MapRedue
 				using (var session = store.OpenSession())
 				{
 					var results = session.Query<CategoriesWithChildrenCount.ReduceResult, CategoriesWithChildrenCount>()
-						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.ToList();
-
-					WaitForUserToContinueTheTest(store);
 
 					Assert.NotEmpty(results);
 					Assert.Equal(3, results.First(x => x.Id == "categories/1").Count);

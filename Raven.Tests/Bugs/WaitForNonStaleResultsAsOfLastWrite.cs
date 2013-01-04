@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class WaitForNonStaleResultsAsOfLastWrite : LocalClientTest
+	public class WaitForNonStaleResultsAsOfLastWrite : RavenTest
 	{
 		[Fact]
 		public void WillRecordLastWrittenEtag()
@@ -52,7 +52,7 @@ namespace Raven.Tests.Bugs
 
 
 		[Fact]
-		public void CanExpclitlyAskForNonStaleAsOfLastWrite()
+		public void CanExplicitlyAskForNonStaleAsOfLastWrite()
 		{
 			using(var store = NewDocumentStore())
 			{

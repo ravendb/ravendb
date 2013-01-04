@@ -13,6 +13,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -32,7 +33,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Retrieves documents for the specified key prefix
 		/// </summary>
-		JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize);
+		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,  bool metadataOnly = false);
 
 		/// <summary>
 		/// Retrieves the document for the specified key
@@ -46,8 +47,20 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		MultiLoadResult Get(string[] ids, string[] includes);
+		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
+
+		/// <summary>
+		/// Get documents from server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Puts the document in the database with the specified key
@@ -76,12 +89,24 @@ namespace Raven.Client.Connection
 		void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
+		/// Updates just the attachment with the specified key's metadata
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="metadata">The metadata.</param>
+		void UpdateAttachmentMetadata(string key, Guid? etag, RavenJObject metadata);
+
+		/// <summary>
 		/// Retrieves the attachment with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
 		Attachment GetAttachment(string key);
 
+		/// <summary>
+		/// Gets the attachments starting with the specified prefix
+		/// </summary>
+		IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
 
 		/// <summary>
 		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
@@ -102,7 +127,7 @@ namespace Raven.Client.Connection
 		/// Returns the names of all tenant databases on the RavenDB server
 		/// </summary>
 		/// <returns>List of tenant database names</returns>
-		string[] GetDatabaseNames(int pageSize);
+		string[] GetDatabaseNames(int pageSize, int start = 0);
 
 		/// <summary>
 		/// Returns the names of all indexes that exist on the server
@@ -111,6 +136,13 @@ namespace Raven.Client.Connection
 		/// <param name="pageSize">Size of the page.</param>
 		/// <returns></returns>
 		string[] GetIndexNames(int start, int pageSize);
+
+		/// <summary>
+		/// Gets the indexes from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		IndexDefinition[] GetIndexes(int start, int pageSize);
 
 		/// <summary>
 		/// Resets the specified index
@@ -162,12 +194,12 @@ namespace Raven.Client.Connection
 		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite);
 
 		/// <summary>
-		/// Queries the specified index in the Raven flavoured Lucene query syntax
+		/// Queries the specified index in the Raven flavored Lucene query syntax
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
-		QueryResult Query(string index, IndexQuery query, string[] includes);
+		QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
 
 		/// <summary>
 		/// Deletes the specified index
@@ -240,6 +272,15 @@ namespace Raven.Client.Connection
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests);
 
 		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
+
+		/// <summary>
 		/// Perform a set based update using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
@@ -247,6 +288,15 @@ namespace Raven.Client.Connection
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
+
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
@@ -267,6 +317,13 @@ namespace Raven.Client.Connection
 		/// <param name="suggestionQuery">The suggestion query.</param>
 		SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
 
+		/// <summary>
+		/// Return a list of documents that based on the MoreLikeThisQuery.
+		/// </summary>
+		/// <param name="query">The more like this query parameters</param>
+		/// <returns></returns>
+		MultiLoadResult MoreLikeThis(MoreLikeThisQuery query);
+
 		///<summary>
 		/// Get the all terms stored in the index for the specified field
 		/// You can page through the results by use fromValue parameter as the 
@@ -278,7 +335,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
-		IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc);
+		FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc);
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
@@ -288,12 +345,27 @@ namespace Raven.Client.Connection
 		void Patch(string key, PatchRequest[] patches);
 
 		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		void Patch(string key, ScriptedPatchRequest patch);
+
+		/// <summary>
 		/// Sends a patch request for a specific document
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		void Patch(string key, PatchRequest[] patches, Guid? etag);
+
+		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		void Patch(string key, ScriptedPatchRequest patch, Guid? etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope
@@ -318,6 +390,11 @@ namespace Raven.Client.Connection
 		JsonDocumentMetadata Head(string key);
 
 		/// <summary>
+		/// Generate the next identity value from the server
+		/// </summary>
+		long NextIdentityFor(string name);
+
+		/// <summary>
 		/// Get the full URL for the given document key
 		/// </summary>
 		string UrlFor(string documentKey);
@@ -326,6 +403,11 @@ namespace Raven.Client.Connection
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		void ForceReadFromMaster();
+
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
 	}
 }
 #endif

@@ -3,11 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5
-
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
 
 namespace Raven.Client
 {
@@ -16,12 +13,6 @@ namespace Raven.Client
 	/// </summary>
 	public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
 	{
-		/// <summary>
-		/// Gets the async database commands.
-		/// </summary>
-		/// <value>The async database commands.</value>
-		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
-
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
@@ -39,4 +30,3 @@ namespace Raven.Client
 		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
 	}
 }
-#endif

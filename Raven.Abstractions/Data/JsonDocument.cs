@@ -70,10 +70,21 @@ namespace Raven.Abstractions.Data
 		public DateTime? LastModified { get; set; }
 
 		/// <summary>
+		/// The ranking of this result in the current query
+		/// </summary>
+		public float? TempIndexScore { get; set; }
+
+		/// <summary>
 		/// How much space this document takes on disk
 		/// Only relevant during indexing phases, and not available on the client
 		/// </summary>
 		public int SerializedSizeOnDisk;
+
+		/// <summary>
+		/// Whatever this document can be skipped from delete
+		/// Only relevant during indexing phases, and not available on the client
+		/// </summary>
+		public bool SkipDeleteFromIndex;
 
 		/// <summary>
 		/// Translate the json document to a <see cref = "RavenJObject" />
@@ -81,16 +92,20 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
-			var doc = (RavenJObject)DataAsJson.CloneToken();
-			var metadata = (RavenJObject)Metadata.CloneToken();
+			DataAsJson.EnsureSnapshot();
+			Metadata.EnsureSnapshot();
+
+			var doc = (RavenJObject)DataAsJson.CreateSnapshot();
+			var metadata = (RavenJObject)Metadata.CreateSnapshot();
 
 			if (LastModified != null)
 				metadata[Constants.LastModified] = LastModified.Value;
-			if(Etag != null)
+			if (Etag != null)
 				metadata["@etag"] = Etag.Value.ToString();
 			if (NonAuthoritativeInformation != null)
 				metadata["Non-Authoritative-Information"] = NonAuthoritativeInformation.Value;
-
+			//if (metadata.ContainsKey("@id") == false)
+			//	metadata["@id"] = Key;
 			doc["@metadata"] = metadata;
 
 			return doc;

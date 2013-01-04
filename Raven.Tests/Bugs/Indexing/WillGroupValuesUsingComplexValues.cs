@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class WillGroupValuesUsingComplexValues : LocalClientTest
+	public class WillGroupValuesUsingComplexValues : RavenTest
 	{
 		[Fact]
 		public void CanGroupByComplexObject()
@@ -20,10 +20,10 @@ namespace Raven.Tests.Bugs.Indexing
 			{
 				using (var session = store.OpenSession())
 				{
-					session.Store(new { Name = "Oren", Address = new { City = "New York", Street = "Braodway" } });
+					session.Store(new { Name = "Oren", Address = new { City = "New York", Street = "Broadway" } });
 					session.Store(new { Name = "Eini", Address = new { City = "Halom", Street = "Silk" } });
 					session.Store(new { Name = "Rahien", Address = new { City = "Halom", Street = "Silk" } });
-					session.Store(new { Name = "Ayende", Address = new { City = "New York", Street = "Braodway" } });
+					session.Store(new { Name = "Ayende", Address = new { City = "New York", Street = "Broadway" } });
 
 					session.SaveChanges();
 				}
@@ -32,6 +32,7 @@ namespace Raven.Tests.Bugs.Indexing
 				{
 					var objects = session.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count, "Address")
+						.OrderBy("-Address")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(1))
 						.ToArray();
 

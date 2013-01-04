@@ -98,7 +98,7 @@ namespace Raven.Tests.Issues
 			public string Id { get; set; }
 		}
 		[Fact]
-		public void CanGetErrorOnOptimisticDeleteInTransaction()
+	 	public void CanGetErrorOnOptimisticDeleteInTransaction()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -111,7 +111,7 @@ namespace Raven.Tests.Issues
 					{
 						Id = Guid.NewGuid()
 					};
-				Assert.Throws<ConcurrencyException>(() =>
+				Assert.Throws<ConcurrencyException>(() => 
 					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), tx));
 			}
 		}

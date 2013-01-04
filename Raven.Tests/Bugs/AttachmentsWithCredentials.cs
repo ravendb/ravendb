@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Client;
@@ -16,7 +17,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class AttachmentsWithCredentials : RemoteClientTest, IDisposable
+	public class AttachmentsWithCredentials : RemoteClientTest
 	{
 		private readonly string path;
 		private readonly IDocumentStore store;
@@ -24,7 +25,7 @@ namespace Raven.Tests.Bugs
 
 		public AttachmentsWithCredentials()
 		{
-			path = GetPath(DbName);
+			path = GetPath(DataDir);
 			server = GetNewServer(8079, path);
 
 			store = new DocumentStore
@@ -41,7 +42,7 @@ namespace Raven.Tests.Bugs
 			base.Dispose();
 		}
 
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}

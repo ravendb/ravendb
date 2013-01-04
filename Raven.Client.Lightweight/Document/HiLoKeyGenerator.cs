@@ -7,13 +7,8 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Transactions;
-#if !NET_3_5
-using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
-#endif
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
@@ -25,16 +20,14 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class HiLoKeyGenerator : HiLoKeyGeneratorBase
 	{
-		private readonly IDatabaseCommands databaseCommands;
 		private readonly object generatorLock = new object();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
 		/// </summary>
-		public HiLoKeyGenerator(IDatabaseCommands databaseCommands, string tag, long capacity)
+		public HiLoKeyGenerator(string tag, long capacity)
 			: base(tag, capacity)
 		{
-			this.databaseCommands = databaseCommands;
 		}
 
 		/// <summary>
@@ -43,19 +36,19 @@ namespace Raven.Client.Document
 		/// <param name="convention">The convention.</param>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-		public string GenerateDocumentKey(DocumentConvention convention, object entity)
+		public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
 		{
-			return GetDocumentKeyFromId(convention, NextId());
+			return GetDocumentKeyFromId(convention, NextId(databaseCommands));
 		}
 
 		///<summary>
 		/// Create the next id (numeric)
 		///</summary>
-		public long NextId()
+		public long NextId(IDatabaseCommands commands)
 		{
 			while (true)
 			{
-				var myRange = range; // thread safe copy
+				var myRange = Range; // thread safe copy
 
 				var current = Interlocked.Increment(ref myRange.Current);
 				if (current <= myRange.Max)
@@ -63,30 +56,30 @@ namespace Raven.Client.Document
 
 				lock (generatorLock)
 				{
-					if (range != myRange)
+					if (Range != myRange)
 						// Lock was contended, and the max has already been changed. Just get a new id as usual.
 						continue;
 
-					range = GetNextRange();
+					Range = GetNextRange(commands);
 				}
 			}
 		}
 
-		private Range GetNextRange()
+		private RangeValue GetNextRange(IDatabaseCommands databaseCommands)
 		{
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
-				IncreaseCapacityIfRequired();
+				ModifyCapacityIfRequired();
 				while (true)
 				{
 					try
 					{
-						var minNextMax = range.Max;
+						var minNextMax = Range.Max;
 						JsonDocument document;
 
 						try
 						{
-							document = GetDocument();
+							document = GetDocument(databaseCommands);
 						}
 						catch (ConflictException e)
 						{
@@ -95,7 +88,7 @@ namespace Raven.Client.Document
 								.Select(conflictedVersionId => GetMaxFromDocument(databaseCommands.Get(conflictedVersionId), minNextMax))
 								.Max();
 
-							PutDocument(new JsonDocument
+							PutDocument(databaseCommands, new JsonDocument
 							{
 								Etag = e.Etag,
 								Metadata = new RavenJObject(),
@@ -128,9 +121,9 @@ namespace Raven.Client.Document
 
 							document.DataAsJson["Max"] = max;
 						}
-						PutDocument(document);
+						PutDocument(databaseCommands, document);
 
-						return new Range(min, max);
+						return new RangeValue(min, max);
 					}
 					catch (ConcurrencyException)
 					{
@@ -140,14 +133,14 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private void PutDocument(JsonDocument document)
+		private void PutDocument(IDatabaseCommands databaseCommands,JsonDocument document)
 		{
 			databaseCommands.Put(HiLoDocumentKey, document.Etag,
 								 document.DataAsJson,
 								 document.Metadata);
 		}
 
-		private JsonDocument GetDocument()
+		private JsonDocument GetDocument(IDatabaseCommands databaseCommands)
 		{
 			var documents = databaseCommands.Get(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]);
 			return HandleGetDocumentResult(documents);

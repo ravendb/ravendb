@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OrderOfInsertionDoesNotAffectQuerying : LocalClientTest
+	public class OrderOfInsertionDoesNotAffectQuerying : RavenTest
 	{
 		[Fact]
 		public void Works()

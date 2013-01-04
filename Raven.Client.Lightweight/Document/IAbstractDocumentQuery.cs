@@ -144,24 +144,6 @@ namespace Raven.Client.Document
 		void WhereIn(string fieldName, IEnumerable<object> values);
 
 		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		void WhereContains(string fieldName, object value);
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		void WhereContains(string fieldName, params object [] values);
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		void WhereContains(string fieldName, IEnumerable<object> values);
-
-		/// <summary>
 		///   Matches fields which starts with the specified value.
 		/// </summary>
 		/// <param name = "fieldName">Name of the field.</param>
@@ -320,8 +302,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   The last term that we asked the query to use equals on
 		/// </summary>
-		KeyValuePair<string, string> GetLastEqualityTerm();
+		KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
 
 		void Intersect();
+		void AddRootType(Type type);
 	}
 }

@@ -16,10 +16,6 @@ namespace Raven.Tests.Bugs.MapRedue
 			Map = aDocuments =>
 			      from document in aDocuments
 			      from version in document.Versions
-			      where (
-			            	(document.DateRemoved == null ||
-							 document.DateRemoved >= SystemTime.Now) 
-			            )
 			      select new
 			      {
 			      	document.Id,

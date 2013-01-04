@@ -9,7 +9,6 @@ namespace Raven.Client.Linq.Indexing
 	/// </summary>
 	public static class IndexingLinqExtensions
 	{
-
 		/// <summary>
 		/// Marker method for allowing complex (multi entity) queries on the server.
 		/// </summary>
@@ -33,21 +32,5 @@ namespace Raven.Client.Linq.Indexing
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
-
-		/// <summary>
-		/// Marker method for allowing hierarchical queries on the server.
-		/// </summary>
-		public static IEnumerable<TResult> Hierarchy<TResult>(this TResult item, string path)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		}
-
-		/// <summary>
-		/// Marker method for allowing hierarchical queries on the server.
-		/// </summary>
-		public static IEnumerable<TResult> Hierarchy<TResult>(this TResult item, Func<TResult, IEnumerable<TResult>> path)
-		{
-			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-		} 
 	}
 }

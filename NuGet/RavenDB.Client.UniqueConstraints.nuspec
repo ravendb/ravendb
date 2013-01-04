@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Client.UniqueConstraints</id>
-		<version>1.0</version>
+		<version>1.2</version>
 		<title>RavenDB Client for Unique Constraints bundle</title>
 		<authors>Hibernating Rhinos</authors>
 		<description>RavenDB 'Unique Constraints' bundle client. Allow the user to implement unique constraints in the objects (useful for properties like email or social security number).</description>

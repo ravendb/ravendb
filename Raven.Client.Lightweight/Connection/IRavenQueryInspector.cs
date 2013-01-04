@@ -5,9 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using Raven.Client.Document;
-#if !NET_3_5
 using Raven.Client.Connection.Async;
-#endif
 
 namespace Raven.Client.Connection
 {
@@ -28,12 +26,10 @@ namespace Raven.Client.Connection
 		IDatabaseCommands DatabaseCommands { get; }
 #endif
 
-#if !NET_3_5
 		/// <summary>
 		/// Grant access to the async database commands
 		/// </summary>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
-#endif
 
 		/// <summary>
 		/// The query session
@@ -43,6 +39,6 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// The last term that we asked the query to use equals on
 		/// </summary>
-		KeyValuePair<string, string> GetLastEqualityTerm();
+		KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
 	}
 }

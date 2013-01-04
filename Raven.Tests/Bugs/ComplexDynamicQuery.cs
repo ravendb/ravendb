@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class ComplexDynamicQuery : LocalClientTest
+	public class ComplexDynamicQuery : RavenTest
 	{
 		[Fact]
 		public void UsingNestedCollections()

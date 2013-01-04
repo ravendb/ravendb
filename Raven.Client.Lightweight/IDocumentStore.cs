@@ -9,6 +9,8 @@ using System.Collections.Specialized;
 #endif
 using System.Collections.Generic;
 using System.Net;
+using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -17,9 +19,8 @@ using Raven.Client.Silverlight.Connection;
 #else
 using Raven.Client.Indexes;
 #endif
-#if !NET_3_5
 using Raven.Client.Connection.Async;
-#endif
+
 
 namespace Raven.Client
 {
@@ -29,15 +30,20 @@ namespace Raven.Client
 	public interface IDocumentStore : IDisposalNotification
 	{
 		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		IDatabaseChanges Changes(string database = null);
+
+		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>
-		/// <param name="cahceDuration">Specify the aggressive cache duration</param>
+		/// <param name="cacheDuration">Specify the aggressive cache duration</param>
 		/// <remarks>
 		/// Aggressive caching means that we will not check the server to see whatever the response
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
+		IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
 
 		/// <summary>
 		/// Setup the context for no aggressive caching
@@ -76,8 +82,6 @@ namespace Raven.Client
 		/// <returns></returns>
 		IDocumentStore Initialize();
 
-
-#if !NET_3_5
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
@@ -95,7 +99,6 @@ namespace Raven.Client
 		/// </summary>
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
-#endif
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -143,5 +146,9 @@ namespace Raven.Client
 		/// document store
 		///</summary>
 		Guid? GetLastWrittenEtag();
+
+#if !SILVERLIGHT
+		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
+#endif
 	}
 }

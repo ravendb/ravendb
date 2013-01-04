@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs
 
 		public RoundCrisis()
 		{
-			_documentStore = new EmbeddableDocumentStore {RunInMemory = true, UseEmbeddedHttpServer = true};
+			_documentStore = new EmbeddableDocumentStore {RunInMemory = true};
 			_documentStore.Initialize();
 			IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(PriceDocuments_ByDateBySource))), _documentStore);
 		}

@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 
 namespace Rhino.Licensing.Discovery
 {
@@ -16,13 +17,11 @@ namespace Rhino.Licensing.Discovery
 		private readonly UdpClient udpClient;
 		private readonly IPEndPoint allHostsGroup;
 		private DateTime lastPublish;
-		
+
 		public DiscoveryClient(Guid senderId, Guid userId, string machineName, string userName)
-			:this(senderId, userId, machineName, userName, TimeSpan.FromMinutes(5))
+			: this(senderId, userId, machineName, userName, TimeSpan.FromMinutes(5))
 		{
-				
 		}
-		
 
 		public DiscoveryClient(Guid senderId, Guid userId, string machineName, string userName, TimeSpan publishLimit)
 		{
@@ -40,15 +39,15 @@ namespace Rhino.Licensing.Discovery
 		///</summary>
 		public void PublishMyPresence()
 		{
-			if ((DateTime.UtcNow - lastPublish) < publishLimit)
+			if ((SystemTime.UtcNow - lastPublish) < publishLimit)
 				return;
 			// avoid a ping storm when we re-publish because we discovered another client
-			lock(this)
+			lock (this)
 			{
-				if ((DateTime.UtcNow - lastPublish) < publishLimit)
+				if ((SystemTime.UtcNow - lastPublish) < publishLimit)
 					return;
 
-				lastPublish = DateTime.UtcNow;
+				lastPublish = SystemTime.UtcNow;
 			}
 
 			Task.Factory.FromAsync<byte[], int, IPEndPoint, int>(udpClient.BeginSend, udpClient.EndSend, buffer, buffer.Length, allHostsGroup, null)

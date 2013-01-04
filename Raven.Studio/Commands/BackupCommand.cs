@@ -1,7 +1,9 @@
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
@@ -20,15 +22,29 @@ namespace Raven.Studio.Commands
 			if(location == null)
 				return;
 
-			DatabaseCommands.StartBackupAsync(location.Value)
-				.ContinueWith(task =>
-				              	{
-				              		task.Wait(); // throws
-				              		startBackupTask.Status = new BackupStatus
-				              		                         	{
-				              		                         		IsRunning = true
-				              		                         	};
-				              	}).Catch();
+			ApplicationModel.Current.Server.Value.DocumentStore
+				.AsyncDatabaseCommands
+				.ForDefaultDatabase()
+				.CreateRequest("/admin/databases/" + ApplicationModel.Database.Value.Name, "GET")
+				.ReadResponseJsonAsync()
+				.ContinueOnSuccessInTheUIThread(doc =>
+				{
+					if (doc == null)
+						return;
+
+					var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
+						.Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
+
+					DatabaseCommands.StartBackupAsync(location.Value, databaseDocument)
+						.ContinueWith(task =>
+						{
+							task.Wait(); // throws
+							startBackupTask.Status = new BackupStatus
+							{
+								IsRunning = true
+							};
+						}).Catch(exception => startBackupTask.ReportError(exception));
+				});
 		}
 	}
 }

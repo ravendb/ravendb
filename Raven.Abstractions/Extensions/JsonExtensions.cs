@@ -8,9 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Extensions
@@ -22,15 +22,12 @@ namespace Raven.Abstractions.Extensions
 	{
 	    public static RavenJObject ToJObject(object result)
 		{
-#if !NET_3_5
 			var dynamicJsonObject = result as Linq.IDynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner;
-#endif
 			if (result is string || result is ValueType)
 				return new RavenJObject { { "Value", new RavenJValue(result) } };
-
-			return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
+			return RavenJObject.FromObject(result);
 		}
 
 		/// <summary>
@@ -63,7 +60,7 @@ namespace Raven.Abstractions.Extensions
 			self.WriteTo(new BsonWriter(stream)
 			{
 				DateTimeKindHandling = DateTimeKind.Unspecified
-			});
+			}, Default.Converters);
 		}
 
 
@@ -134,6 +131,7 @@ namespace Raven.Abstractions.Extensions
 		{
 			var jsonSerializer = new JsonSerializer
 			{
+				DateParseHandling = DateParseHandling.None,
 				ContractResolver = contractResolver
 			};
 			foreach (var defaultJsonConverter in Default.Converters)

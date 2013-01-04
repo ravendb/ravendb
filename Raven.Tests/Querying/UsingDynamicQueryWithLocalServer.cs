@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingDynamicQueryWithLocalServer : LocalClientTest
+	public class UsingDynamicQueryWithLocalServer : RavenTest
 	{
 		[Fact]
 		public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()

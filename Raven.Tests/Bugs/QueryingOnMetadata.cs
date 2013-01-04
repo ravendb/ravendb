@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingOnMetadata : LocalClientTest
+	public class QueryingOnMetadata : RavenTest
 	{
 		[Fact]
 		public void CanQueryOnNullableProperty()

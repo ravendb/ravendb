@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 using System.Linq;
 

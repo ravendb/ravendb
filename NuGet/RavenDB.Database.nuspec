@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Database</id>
-		<version>1.0</version>
+		<version>1.2</version>
 		<title>RavenDB Database</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>This package allows you to extend RavenDB database.</summary>
@@ -12,13 +12,13 @@
 		<projectUrl>http://www.ravendb.net/</projectUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<tags>nosql ravendb raven document database</tags>
-		<dependencies>
-			<dependency id="Newtonsoft.Json" version="[4.0.8]"/>
-			<dependency id="NLog" version="[2.0.0.2000]" />
-		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
 		</frameworkAssemblies>
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
+		<references>
+			<reference file="Raven.Abstractions.dll" />
+			<reference file="Raven.Database.dll" />
+		</references>
 	</metadata>
 </package>

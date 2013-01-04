@@ -4,14 +4,18 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using System;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+#if !SILVERLIGHT
+using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 
 namespace Raven.Abstractions.Extensions
 {
@@ -20,20 +24,15 @@ namespace Raven.Abstractions.Extensions
 	/// </summary>
 	public static class MetadataExtensions
 	{
-		private static readonly HashSet<string> HeadersToIgnoreServerDocument =
-			new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-			{
-				"Content-Type",
-				
-			};
-
-		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		private static readonly HashSet<string> headersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Raven internal headers
 			"Raven-Server-Build",
+			"Raven-Client-Version",
 			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
 			"Raven-Authenticated-User",
+			"Raven-Last-Modified",
 
 			// COTS
 			"Access-Control-Allow-Origin",
@@ -52,6 +51,7 @@ namespace Raven.Abstractions.Extensions
 			"Content-Location",
 			"Content-MD5",
 			"Content-Range",
+			"Content-Type",
 			"Expires",
 			// ignoring this header, we handle this internally
 			"Last-Modified",
@@ -112,12 +112,11 @@ namespace Raven.Abstractions.Extensions
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
-		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this RavenJObject self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this RavenJObject self)
 		{
 			if (self == null)
-				return self;
+				return null;
 
 			var metadata = new RavenJObject();
 			foreach (var header in self)
@@ -126,9 +125,7 @@ namespace Raven.Abstractions.Extensions
 					continue;
 				if(header.Key == Constants.DocumentIdFieldName)
 					continue;
-				if (HeadersToIgnoreClient.Contains(header.Key))
-					continue;
-				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
+				if (headersToIgnoreClient.Contains(header.Key))
 					continue;
 				var headerName = CaptureHeaderName(header.Key);
 				metadata[headerName] = header.Value;
@@ -137,22 +134,57 @@ namespace Raven.Abstractions.Extensions
 		}
 
 #if SILVERLIGHT
+		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
+		{
+			var filterHeaders = self.FilterHeaders();
+			if (self.ContainsKey("Content-Type"))
+				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
+			return filterHeaders;
+		}
+
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this NameValueCollection self)
+		{
+			var metadata = new RavenJObject();
+			foreach (var header in self.Headers)
+			{
+				if (header.Key.StartsWith("Temp"))
+					continue;
+				if (headersToIgnoreClient.Contains(header.Key))
+					continue;
+				var values = header.Value;
+				var headerName = CaptureHeaderName(header.Key);
+				if (values.Count == 1)
+					metadata.Add(headerName, GetValue(values[0]));
+				else
+					metadata.Add(headerName, new RavenJArray(values.Select(GetValue)));
+			}
+			return metadata;
+		}
+
+		public static RavenJObject FilterHeadersAttachment(this IDictionary<string, IList<string>> self)
+		{
+			var filterHeaders = self.FilterHeaders();
+			if (self.ContainsKey("Content-Type"))
+				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
+			return filterHeaders;
+		}
+
+		/// <summary>
+		/// Filters the headers from unwanted headers
+		/// </summary>
+		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self)
 		  {
 			  var metadata = new RavenJObject();
 			foreach (var header in self)
 			{
 				if (header.Key.StartsWith("Temp"))
 					continue;
-				if (HeadersToIgnoreClient.Contains(header.Key))
-					continue;
-				if(isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
+				if (headersToIgnoreClient.Contains(header.Key))
 					continue;
 				var values = header.Value;
 				var headerName = CaptureHeaderName(header.Key);
@@ -164,13 +196,20 @@ namespace Raven.Abstractions.Extensions
 			return metadata;
 		}
 #else
+		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
+		{
+			var filterHeaders = self.FilterHeaders();
+			if (self["Content-Type"] != null)
+				filterHeaders["Content-Type"] = self["Content-Type"];
+			return filterHeaders;
+		}
+
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
-		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this NameValueCollection self)
 		{
 			var metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
 			foreach (string header in self)
@@ -179,9 +218,7 @@ namespace Raven.Abstractions.Extensions
 				{
 					if(header.StartsWith("Temp"))
 						continue;
-					if (HeadersToIgnoreClient.Contains(header))
-						continue;
-					if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
+					if (headersToIgnoreClient.Contains(header))
 						continue;
 					var valuesNonDistinct = self.GetValues(header);
 					if(valuesNonDistinct == null)
@@ -225,9 +262,19 @@ namespace Raven.Abstractions.Extensions
 					return RavenJObject.Parse(val);
 				if (val.StartsWith("["))
 					return RavenJArray.Parse(val);
-				DateTime result;
-				if (DateTime.TryParseExact(val, new[]{"r","o"}, CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
-					return new RavenJValue(result);
+
+				DateTime dateTime;
+				if (DateTime.TryParseExact(val, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+				{
+					if (val.EndsWith("Z"))
+						return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+					return new RavenJValue(dateTime);
+				} 
+					
+				DateTimeOffset dateTimeOffset;
+				if (DateTimeOffset.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
+					return new RavenJValue(dateTimeOffset);
+				
 				return new RavenJValue(val);
 
 			}

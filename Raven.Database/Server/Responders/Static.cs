@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -10,7 +11,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Static : RequestResponder
+	public class Static : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -19,7 +20,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET", "PUT", "DELETE","HEAD"}; }
+			get { return new[] {"GET", "PUT", "POST", "DELETE","HEAD"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -70,10 +71,17 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "PUT":
 					var newEtag = Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream,
-					                                 context.Request.Headers.FilterHeaders(isServerDocument:false));
+					                                 context.Request.Headers.FilterHeadersAttachment());
 
-					context.Response.AddHeader("ETag", newEtag.ToString());
-					context.SetStatusToCreated("/static/" + filename);
+					context.WriteETag(newEtag);
+					context.SetStatusToCreated("/static/" + Uri.EscapeUriString(filename));
+					break;
+
+				case "POST":
+					var newEtagPost = Database.PutStatic(filename, context.GetEtag(), null,
+													 context.Request.Headers.FilterHeadersAttachment());
+
+					context.WriteETag(newEtagPost);
 					break;
 				case "DELETE":
 					Database.DeleteStatic(filename, etag);

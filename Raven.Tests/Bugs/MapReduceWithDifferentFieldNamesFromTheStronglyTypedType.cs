@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MapReduceWithDifferentFieldNamesFromTheStronglyTypedType : LocalClientTest
+	public class MapReduceWithDifferentFieldNamesFromTheStronglyTypedType : RavenTest
 	{
 		[Fact]
 		public void WhenTheAnonymousTypeResultIsNotTheSameAsTheStronglyType_ShouldThrowAnException()

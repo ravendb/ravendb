@@ -6,10 +6,10 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OrderByCollectionCount : LocalClientTest
+	public class OrderByCollectionCount : RavenTest
 	{
 		[Fact]
-		public void CanOrderByTheCountOfASubSollection() {
+		public void CanOrderByTheCountOfASubCollection() {
 			using (var store = NewDocumentStore()) {
 				using (var session = store.OpenSession()) {
 					session.Store(new OrderByCollectionCount_User {

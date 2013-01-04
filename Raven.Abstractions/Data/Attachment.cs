@@ -35,5 +35,10 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The etag.</value>
 		public Guid Etag { get; set; }
+
+		/// <summary>
+		/// The attachment name
+		/// </summary>
+		public string Key { get; set; }
 	}
 }

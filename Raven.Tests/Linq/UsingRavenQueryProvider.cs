@@ -319,7 +319,7 @@ namespace Raven.Tests.Linq
 									select new { info.TimeOfDay }",
 						});
 
-				var currentTime = SystemTime.Now;
+				var currentTime = SystemTime.UtcNow;
 				using (var s = db.OpenSession())
 				{
 					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });
@@ -368,9 +368,9 @@ namespace Raven.Tests.Linq
 
 				using (var s = db.OpenSession())
 				{
-					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.Now.AddDays(1) });
-					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.Now.AddDays(-1) });
-					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.Now.AddDays(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.UtcNow.AddDays(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.UtcNow.AddDays(-1) });
+					s.Store(new DateTimeInfo { TimeOfDay = SystemTime.UtcNow.AddDays(1) });
 					s.SaveChanges();
 				}
 
@@ -380,7 +380,7 @@ namespace Raven.Tests.Linq
 					s.Query<DateTimeInfo>("DateTime")
 						.Customize(x => x.WaitForNonStaleResults()).FirstOrDefault();
 
-					var count = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > SystemTime.Now).Count();
+					var count = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > SystemTime.UtcNow).Count();
 					Assert.Equal(2, count);
 				}
 			}
@@ -400,7 +400,7 @@ namespace Raven.Tests.Linq
 									select new { info.TimeOfDay }",
 						});
 
-				var currentTime = SystemTime.Now;
+				var currentTime = SystemTime.UtcNow;
 				using (var s = db.OpenSession())
 				{
 					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });
@@ -599,14 +599,28 @@ namespace Raven.Tests.Linq
 				using (var s = store.OpenSession())
 				{
 					var ravenQueryable = (from item in s.Query<OrderItem>()
-										  .Customize(x => x.WaitForNonStaleResults())
-										  where item.Description.In(new[] { "", "First" })
-										  select item
-										 );
+						                      .Customize(x => x.WaitForNonStaleResults())
+					                      where item.Description.In(new[] {"", "First"})
+					                      select item
+					                     );
 					var items = ravenQueryable.ToArray();
 
 
 					Assert.Equal(items.Length, 1);
+
+				}
+
+				using (var s2 = store.OpenSession())
+				{
+					var ravenQueryable2 = (from item in s2.Query<OrderItem>()
+										  .Customize(x => x.WaitForNonStaleResults())
+										  where item.Description.In(new[] { "First", "" })
+										  select item
+										 );
+					var items2 = ravenQueryable2.ToArray();
+
+
+					Assert.Equal(items2.Length, 1);
 				}
 			}
 		}

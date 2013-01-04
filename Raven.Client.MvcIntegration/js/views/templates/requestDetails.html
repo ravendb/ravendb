@@ -1,0 +1,31 @@
+<h2>{{ data.Method }} {{ helper.url(data.Url) }}</h2>
+<div class="request-data">
+	<table class='request-details-table'>
+		<thead>
+			<tr>
+				<th>Status</th>
+				<th>Http Result</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>{{ data.Status }}</td>
+				<td>{{ data.HttpResult }}</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="query">
+		<h3>Query</h3>
+		<pre class="query">{{ helper.query(data.Url) }}</pre>
+	</div>
+
+	<div class="postData">
+		<h3>Posted Data</h3>
+		<pre class="prettyprint">{{ data.PostedData }}</pre>
+	</div>
+
+	<h3>Result</h3>
+	<pre class="prettyprint">{{ data.Result }}</pre>
+</div>
+<a href="#">Close</a>

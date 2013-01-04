@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 #if !SILVERLIGHT
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Shard
 {
@@ -17,6 +17,8 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class SequentialShardAccessStrategy : IShardAccessStrategy
 	{
+		public event ShardingErrorHandle<IDatabaseCommands> OnError;
+
 		/// <summary>
 		/// Applies the specified action for all shard sessions.
 		/// </summary>
@@ -39,7 +41,7 @@ namespace Raven.Client.Shard
 					var error = OnError;
 					if (error == null)
 						throw;
-					if(error(commands[i], request, e) == false)
+					if (error(commands[i], request, e) == false)
 					{
 						throw;
 					}
@@ -49,19 +51,61 @@ namespace Raven.Client.Shard
 
 			// if ALL nodes failed, we still throw
 			if (errors.Count == commands.Count)
-#if !NET_3_5
 				throw new AggregateException(errors);
-#else
-			throw new InvalidOperationException("Got an error from all servers", errors.First())
-				{
-					Data = {{"Errors", errors}}
-				};
-#endif
 
 			return list.ToArray();
 		}
 
-		public event ShardingErrorHandle OnError;
+		public event ShardingErrorHandle<IAsyncDatabaseCommands> OnAsyncError;
+
+		public Task<T[]> ApplyAsync<T>(IList<IAsyncDatabaseCommands> commands, ShardRequestData request, Func<IAsyncDatabaseCommands, int, Task<T>> operation)
+		{
+			var resultsTask = new TaskCompletionSource<List<T>>();
+			var results = new List<T>();
+			var errors = new List<Exception>();
+
+			Action<int> executer = null;
+			executer = index =>
+				{
+					if (index >= commands.Count)
+					{
+						if (errors.Count == commands.Count)
+							throw new AggregateException(errors);
+						// finished all commands successfully
+						resultsTask.SetResult(results);
+						return;
+					}
+
+					operation(commands[index], index).ContinueWith(task =>
+					{
+						if (task.IsFaulted)
+						{
+							var error = OnAsyncError;
+							if (error == null)
+							{
+								resultsTask.SetException(task.Exception);
+								return;
+							}
+							if (error(commands[index], request, task.Exception) == false)
+							{
+								resultsTask.SetException(task.Exception);
+								return;
+							}
+							errors.Add(task.Exception);
+						}
+						else
+						{
+							results.Add(task.Result);
+						}
+
+						// After we've dealt with one result, we call the operation on the next shard
+						executer(index + 1);
+					});
+				};
+
+			executer(0);
+			return resultsTask.Task.ContinueWith(task => task.Result.ToArray());
+		}
 	}
 }
 #endif

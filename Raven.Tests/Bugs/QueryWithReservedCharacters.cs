@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
@@ -13,7 +14,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryWithReservedCharacters : LocalClientTest
+	public class QueryWithReservedCharacters : RavenTest
 	{
 		[Fact]
 		public void WhenQueryingByGenericClrTypes_ThenAutoQuotedLuceneQueryFails()

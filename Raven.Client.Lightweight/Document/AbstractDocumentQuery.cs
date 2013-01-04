@@ -4,32 +4,31 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-#if !NET_3_5
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Batches;
-#endif
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
-using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
-using Raven.Json.Linq;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -39,7 +38,19 @@ namespace Raven.Client.Document
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
 		protected bool isSpatialQuery;
-		protected double lat, lng, radius;
+		protected string spatialFieldName, queryShape;
+		protected SpatialRelation spatialRelation;
+		protected double distanceErrorPct;
+		private readonly LinqPathProvider linqPathProvider;
+		protected Action<IndexQuery> beforeQueryExecutionAction;
+
+		protected readonly HashSet<Type> rootTypes = new HashSet<Type>
+		{
+			typeof (T)
+		};
+
+
+		static Dictionary<Type, Func<object, string>> implicitStringsCache = new Dictionary<Type, Func<object, string>>();
 
 		/// <summary>
 		/// Whatever to negate the next operation
@@ -51,12 +62,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly IDatabaseCommands theDatabaseCommands;
 #endif
-#if !NET_3_5
+		
 		/// <summary>
 		/// Async database commands to use
 		/// </summary>
 		protected readonly IAsyncDatabaseCommands theAsyncDatabaseCommands;
-#endif
+		
 		/// <summary>
 		/// The index to query
 		/// </summary>
@@ -71,9 +82,14 @@ namespace Raven.Client.Document
 		private KeyValuePair<string, string> lastEquality;
 
 		/// <summary>
-		///   The list of fields to project directly from the index
+		///   The list of fields to project directly from the results
 		/// </summary>
 		protected readonly string[] projectionFields;
+
+		/// <summary>
+		///   The list of fields to project directly from the index on the server
+		/// </summary>
+		protected readonly string[] fieldsToFetch;
 
 		/// <summary>
 		/// The query listeners for this query
@@ -110,13 +126,14 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// The query to use
 		/// </summary>
-		protected StringBuilder theQueryText = new StringBuilder();
+		protected StringBuilder queryText = new StringBuilder();
 
 		/// <summary>
 		///   which record to start reading from
 		/// </summary>
 		protected int start;
 
+		private DocumentConvention conventions;
 		/// <summary>
 		/// Timeout for this query
 		/// </summary>
@@ -161,7 +178,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5
 		/// <summary>
 		///   Grant access to the async database commands
 		/// </summary>
@@ -169,7 +185,6 @@ namespace Raven.Client.Document
 		{
 			get { return theAsyncDatabaseCommands; }
 		}
-#endif
 
 		/// <summary>
 		/// Gets the document convention from the query session
@@ -194,16 +209,8 @@ namespace Raven.Client.Document
 			get { return theSession; }
 		}
 
-		/// <summary>
-		///   Gets the query text built so far
-		/// </summary>
-		protected StringBuilder QueryText
-		{
-			get { return theQueryText; }
-		}
-
 		protected Action<QueryResult> afterQueryExecutedCallback;
-		private Guid? cutoffEtag;
+		protected Guid? cutoffEtag;
 
 		private TimeSpan DefaultTimeout
 		{
@@ -215,16 +222,17 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT && !NET_3_5
+#if !SILVERLIGHT
 		/// <summary>
 		///   Initializes a new instance of the <see cref = "DocumentQuery{T}" /> class.
 		/// </summary>
 		protected AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 									 IDatabaseCommands databaseCommands,
 									 string indexName,
+									 string[] fieldsToFetch,
 									 string[] projectionFields,
 									 IDocumentQueryListener[] queryListeners)
-			: this(theSession, databaseCommands, null, indexName, projectionFields, queryListeners)
+			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners)
 		{
 		}
 #endif
@@ -236,10 +244,9 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 									 IDatabaseCommands databaseCommands,
 #endif
-#if !NET_3_5
 									 IAsyncDatabaseCommands asyncDatabaseCommands,
-#endif
 									 string indexName,
+									 string [] fieldsToFetch,
 									 string[] projectionFields,
 									 IDocumentQueryListener[] queryListeners)
 		{
@@ -247,17 +254,20 @@ namespace Raven.Client.Document
 			this.theDatabaseCommands = databaseCommands;
 #endif
 			this.projectionFields = projectionFields;
+			this.fieldsToFetch = fieldsToFetch;
 			this.queryListeners = queryListeners;
 			this.indexName = indexName;
 			this.theSession = theSession;
-#if !NET_3_5
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
-#endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
 
-			if (this.theSession != null &&  // tests may decide to send null here
-				this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
+			linqPathProvider = new LinqPathProvider(conventions);
+
+			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			{
 				WaitForNonStaleResultsAsOfLastWrite();
+			}
 		}
 
 		/// <summary>
@@ -269,23 +279,25 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			theDatabaseCommands = other.theDatabaseCommands;
 #endif
-#if !NET_3_5
 			theAsyncDatabaseCommands = other.theAsyncDatabaseCommands;
-#endif
 			indexName = other.indexName;
+			linqPathProvider = other.linqPathProvider;
 			projectionFields = other.projectionFields;
 			theSession = other.theSession;
+			conventions = other.conventions;
 			cutoff = other.cutoff;
 			orderByFields = other.orderByFields;
 			sortByHints = other.sortByHints;
 			pageSize = other.pageSize;
-			theQueryText = other.theQueryText;
+			queryText = other.queryText;
 			start = other.start;
 			timeout = other.timeout;
 			theWaitForNonStaleResults = other.theWaitForNonStaleResults;
 			includes = other.includes;
 			queryListeners = other.queryListeners;
 			queryStats = other.queryStats;
+			defaultOperator = other.defaultOperator;
+			defaultField = other.defaultField;
 
 			AfterQueryExecuted(queryStats.UpdateQueryStats);
 		}
@@ -312,17 +324,13 @@ namespace Raven.Client.Document
 			WaitForNonStaleResults(waitTimeout);
 			return this;
 		}
-		
+
 		/// <summary>
-		///   Filter matches to be inside the specified radius
+		/// When using spatial queries, instruct the query to sort by the distance from the origin point
 		/// </summary>
-		/// <param name = "radius">The radius.</param>
-		/// <param name = "latitude">The latitude.</param>
-		/// <param name = "longitude">The longitude.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude,
-																			   double longitude)
+		IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance()
 		{
-			GenerateQueryWithinRadiusOf(radius, latitude, longitude);
+			OrderBy(Constants.DistanceFieldName);
 			return this;
 		}
 
@@ -332,7 +340,31 @@ namespace Raven.Client.Document
 		/// <param name = "radius">The radius.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
-		protected abstract object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude);
+		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude,
+																			   double longitude)
+		{
+			GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		{
+			GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel)
+		{
+			GenerateSpatialQueryData(fieldName, shapeWKT, rel);
+			return this;
+		}
+
+		/// <summary>
+		///   Filter matches to be inside the specified radius
+		/// </summary>
+		protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025);
+
+		protected abstract object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025);
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -347,6 +379,11 @@ namespace Raven.Client.Document
 		public void UsingDefaultField(string field)
 		{
 			defaultField = field;
+		}
+
+		public void UsingDefaultOperator(QueryOperator @operator)
+		{
+			defaultOperator = @operator;
 		}
 
 		/// <summary>
@@ -395,17 +432,22 @@ namespace Raven.Client.Document
 
 		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
-			var query = theQueryText.ToString();
+			var query = queryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);
+
+			if(beforeQueryExecutionAction != null)
+				beforeQueryExecutionAction(indexQuery);
+
 			return new QueryOperation(theSession,
-												indexName,
-												indexQuery,
-												projectionFields,
-												sortByHints,
-												theWaitForNonStaleResults,
-												setOperationHeaders,
-												timeout,
-												transformResultsFunc);
+			                          indexName,
+			                          indexQuery,
+			                          projectionFields,
+			                          sortByHints,
+			                          theWaitForNonStaleResults,
+			                          setOperationHeaders,
+			                          timeout,
+			                          transformResultsFunc,
+			                          includes);
 		}
 
 #if !SILVERLIGHT
@@ -435,14 +477,13 @@ namespace Raven.Client.Document
 			ExecuteActualQuery();
 		}
 
-		protected void ClearSortHints(IDatabaseCommands shardDbCommands)
+		protected void ClearSortHints(IDatabaseCommands dbCommands)
 		{
-			foreach (var key in shardDbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
+			foreach (var key in dbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
 			{
-				shardDbCommands.OperationsHeaders.Remove(key);
+				dbCommands.OperationsHeaders.Remove(key);
 			}
 		}
-
 
 		protected virtual void ExecuteActualQuery()
 		{
@@ -464,7 +505,15 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5 && !SILVERLIGHT
+		protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
+		{
+			foreach (var key in dbCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
+			{
+				dbCommands.OperationsHeaders.Remove(key);
+			}
+		}
+
+#if !SILVERLIGHT
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -481,24 +530,20 @@ namespace Raven.Client.Document
 		/// </summary>
 		public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
+			var headers = new Dictionary<string,string>();
 			if (queryOperation == null)
 			{
-				foreach (var key in DatabaseCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
-				{
-					DatabaseCommands.OperationsHeaders.Remove(key);
-				}
 				ExecuteBeforeQueryListeners();
-				queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+				queryOperation = InitializeQueryOperation(headers.Add);
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+			lazyQueryOperation.SetHeaders(headers);
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
 
 #endif
-
-#if !NET_3_5
 
 		/// <summary>
 		///   Gets the query result
@@ -514,21 +559,17 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private Task<QueryOperation> InitAsync()
+		protected virtual Task<QueryOperation> InitAsync()
 		{
 			if (queryOperation != null)
-				return TaskResult(queryOperation);
-			foreach (var key in AsyncDatabaseCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
-			{
-				AsyncDatabaseCommands.OperationsHeaders.Remove(key);
-			}
+				return CompletedTask.With(queryOperation);
+			ClearSortHints(AsyncDatabaseCommands);
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
 			theSession.IncrementRequestCount();
 			return ExecuteActualQueryAsync();
 		}
-#endif
 
 		protected void ExecuteBeforeQueryListeners()
 		{
@@ -562,6 +603,12 @@ namespace Raven.Client.Document
 		public void RandomOrdering(string seed)
 		{
 			AddOrder(Constants.RandomFieldName + ";" + seed, false);
+		}
+
+		public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
+		{
+			beforeQueryExecutionAction += action;
+			return this;
 		}
 
 		public IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer)
@@ -620,8 +667,6 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5
-	 
 		private Task<Tuple<QueryOperation,IList<T>>> ProcessEnumerator(Task<QueryOperation> task)
 		{
 			var currentQueryOperation = task.Result;
@@ -640,7 +685,6 @@ namespace Raven.Client.Document
 			}
 		}
 
-#endif
 		/// <summary>
 		///   Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
@@ -737,12 +781,16 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name = "whereClause">The where clause.</param>
 		public void Where(string whereClause)
 		{
-			if (theQueryText.Length > 0)
-			{
-				theQueryText.Append(" ");
-			}
+			AppendSpaceIfRequired();
+			queryText.Append(whereClause);
+		}
 
-			theQueryText.Append(whereClause);
+		private void AppendSpaceIfRequired()
+		{
+			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
+			{
+				queryText.Append(" ");
+			}
 		}
 
 		/// <summary>
@@ -785,12 +833,9 @@ If you really want to do in memory filtering on the data returned from the query
 		public void OpenSubclause()
 		{
 			currentClauseDepth++;
-			if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
-			{
-				theQueryText.Append(" ");
-			}
+			AppendSpaceIfRequired();
 			NegateIfNeeded();
-			theQueryText.Append("(");
+			queryText.Append("(");
 		}
 
 		///<summary>
@@ -812,7 +857,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void CloseSubclause()
 		{
 			currentClauseDepth--;
-			theQueryText.Append(")");
+			queryText.Append(")");
 		}
 
 		/// <summary>
@@ -823,16 +868,16 @@ If you really want to do in memory filtering on the data returned from the query
 			EnsureValidFieldName(whereParams);
 			var transformToEqualValue = TransformToEqualValue(whereParams);
 			lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
-			if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
+			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
 			{
-				theQueryText.Append(" ");
+				queryText.Append(" ");
 			}
 
 			NegateIfNeeded();
 
-			theQueryText.Append(whereParams.FieldName);
-			theQueryText.Append(":");
-			theQueryText.Append(transformToEqualValue);
+			queryText.Append(whereParams.FieldName);
+			queryText.Append(":");
+			queryText.Append(transformToEqualValue);
 		}
 
 		private string EnsureValidFieldName(WhereParams whereParams)
@@ -840,11 +885,18 @@ If you really want to do in memory filtering on the data returned from the query
 			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
 				return whereParams.FieldName;
 
-			var identityProperty = theSession.Conventions.GetIdentityProperty(typeof(T));
-			if (identityProperty == null || identityProperty.Name != whereParams.FieldName)
-				return whereParams.FieldName;
-			
-			return whereParams.FieldName = Constants.DocumentIdFieldName;
+			foreach (var rootType in rootTypes)
+			{
+				var identityProperty = theSession.Conventions.GetIdentityProperty(rootType);
+				if (identityProperty != null && identityProperty.Name == whereParams.FieldName)
+				{
+					whereParams.FieldTypeForIdentifier = rootType;
+					return whereParams.FieldName = Constants.DocumentIdFieldName;
+				}
+			}
+
+			return whereParams.FieldName;
+
 		}
 
 		///<summary>
@@ -860,48 +912,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (negate == false)
 				return;
 			negate = false;
-			theQueryText.Append("-");
-		}
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, object value)
-		{
-			WhereEquals(new WhereParams
-			{
-				AllowWildcards = true,
-				IsAnalyzed = true,
-				FieldName = fieldName,
-				Value = value
-			});
-		}
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, params object[] values)
-		{
-			if (values == null || values.Length == 0)
-			{
-				WhereEquals(fieldName, "Empty_Contains_" + Guid.NewGuid());
-				return;
-			}
-
-			OpenSubclause();
-
-			WhereContains(fieldName, values[0]);
-
-
-			for (var i = 1; i < values.Length; i++)
-			{
-				OrElse();
-				WhereContains(fieldName, values[i]);
-			}
-
-			CloseSubclause();
+			queryText.Append("-");
 		}
 
 		/// <summary>
@@ -909,43 +920,44 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WhereIn(string fieldName, IEnumerable<object> values)
 		{
-			bool first = true;
+			if (queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false)
+				queryText.Append(" ");
 
-			OpenSubclause();
+			NegateIfNeeded();
 
-			foreach (var value in values)
+			var list = values.ToList();
+
+			if(list.Count == 0)
 			{
-				if (first == false)
-				{
-					OrElse();
-				}
-
-				first = false;
-
-				WhereEquals(new WhereParams
-				{
-					AllowWildcards = true,
-					IsAnalyzed = true,
-					FieldName = fieldName,
-					Value = value
-				});
-
-				
+				queryText.Append("@emptyIn<")
+					.Append(fieldName)
+					.Append(">:(no-results)");
+				return;
 			}
 
-			if(first) // no items
-				WhereEquals(fieldName, "Empty_In_" + Guid.NewGuid());
+			queryText.Append("@in<")
+				.Append(fieldName)
+				.Append(">:(");
 
-			CloseSubclause();
-		}
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, IEnumerable<object> values)
-		{
-			WhereContains(fieldName, values.ToArray());
+			var first = true;
+			foreach (var value in list)
+			{
+				if(first == false)
+				{
+					queryText.Append(",");
+				}
+				first = false;
+				var whereParams = new WhereParams
+				{
+					AllowWildcards = true, 
+					IsAnalyzed = true, 
+					FieldName = fieldName, 
+					Value = value
+				};
+				EnsureValidFieldName(whereParams);
+				queryText.Append(TransformToEqualValue(whereParams).Replace(",", "`,`"));
+			}
+			queryText.Append(") ");
 		}
 
 		/// <summary>
@@ -996,9 +1008,9 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WhereBetween(string fieldName, object start, object end)
 		{
-			if (theQueryText.Length > 0)
+			if (queryText.Length > 0)
 			{
-				theQueryText.Append(" ");
+				queryText.Append(" ");
 			}
 
 			if ((start ?? end) != null)
@@ -1008,11 +1020,11 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			theQueryText.Append(fieldName).Append(":{");
-			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
-			theQueryText.Append(" TO ");
-			theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams{Value = end, FieldName = fieldName}));
-			theQueryText.Append("}");
+			queryText.Append(fieldName).Append(":{");
+			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
+			queryText.Append(" TO ");
+			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams{Value = end, FieldName = fieldName}));
+			queryText.Append("}");
 		}
 
 		/// <summary>
@@ -1024,9 +1036,9 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WhereBetweenOrEqual(string fieldName, object start, object end)
 		{
-			if (theQueryText.Length > 0)
+			if (queryText.Length > 0)
 			{
-				theQueryText.Append(" ");
+				queryText.Append(" ");
 			}
 			if ((start ?? end) != null)
 				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
@@ -1035,11 +1047,11 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			theQueryText.Append(fieldName).Append(":[");
-			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
-			theQueryText.Append(" TO ");
-			theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
-			theQueryText.Append("]");
+			queryText.Append(fieldName).Append(":[");
+			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
+			queryText.Append(" TO ");
+			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
+			queryText.Append("]");
 		}
 
 		private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
@@ -1102,12 +1114,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void AndAlso()
 		{
-			if (theQueryText.Length < 1)
-			{
-				throw new InvalidOperationException("Missing where clause");
-			}
+			if (queryText.Length < 1)
+				return;
 
-			theQueryText.Append(" AND");
+			queryText.Append(" AND");
 		}
 
 		/// <summary>
@@ -1115,12 +1125,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void OrElse()
 		{
-			if (theQueryText.Length < 1)
-			{
-				throw new InvalidOperationException("Missing where clause");
-			}
+			if (queryText.Length < 1)
+				return;
 
-			theQueryText.Append(" OR");
+			queryText.Append(" OR");
 		}
 
 		/// <summary>
@@ -1134,7 +1142,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </remarks>
 		public void Boost(decimal boost)
 		{
-			if (theQueryText.Length < 1)
+			if (queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
@@ -1147,7 +1155,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (boost != 1m)
 			{
 				// 1.0 is the default
-				theQueryText.Append("^").Append(boost);
+				queryText.Append("^").Append(boost.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1161,7 +1169,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </remarks>
 		public void Fuzzy(decimal fuzzy)
 		{
-			if (theQueryText.Length < 1)
+			if (queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
@@ -1171,18 +1179,18 @@ If you really want to do in memory filtering on the data returned from the query
 				throw new ArgumentOutOfRangeException("Fuzzy distance must be between 0.0 and 1.0");
 			}
 
-			var ch = theQueryText[theQueryText.Length - 1];
+			var ch = queryText[queryText.Length - 1];
 			if (ch == '"' || ch == ']')
 			{
 				// this check is overly simplistic
 				throw new InvalidOperationException("Fuzzy factor can only modify single word terms");
 			}
 
-			theQueryText.Append("~");
+			queryText.Append("~");
 			if (fuzzy != 0.5m)
 			{
 				// 0.5 is the default
-				theQueryText.Append(fuzzy);
+				queryText.Append(fuzzy.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1196,23 +1204,23 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </remarks>
 		public void Proximity(int proximity)
 		{
-			if (theQueryText.Length < 1)
+			if (queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
 
 			if (proximity < 1)
 			{
-				throw new ArgumentOutOfRangeException("proximity", "Proximity distance must be positive number");
+				throw new ArgumentOutOfRangeException("proximity", "Proximity distance must be a positive number");
 			}
 
-			if (theQueryText[theQueryText.Length - 1] != '"')
+			if (queryText[queryText.Length - 1] != '"')
 			{
 				// this check is overly simplistic
 				throw new InvalidOperationException("Proximity distance can only modify a phrase");
 			}
 
-			theQueryText.Append("~").Append(proximity);
+			queryText.Append("~").Append(proximity.ToString(CultureInfo.InvariantCulture));
 		}
 
 		/// <summary>
@@ -1225,6 +1233,28 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			orderByFields = orderByFields.Concat(fields).ToArray();
 		}
+
+		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "fields">The fields.</param>
+		public void OrderByDescending(params string[] fields)
+		{
+			fields = fields.Select(MakeFieldSortDescending).ToArray();
+			OrderBy(fields);
+		}
+
+		string MakeFieldSortDescending(string field)
+		{
+			if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
+			{
+				return field;
+			}
+
+			return "-" + field;
+		}	
 
 		/// <summary>
 		///   Instructs the query to wait for non stale results as of now.
@@ -1296,6 +1326,27 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag);
+			return this;
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
+			return this;
+		}
+
+		/// <summary>
 		///   Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>
@@ -1340,6 +1391,24 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		public void WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		{
+			WaitForNonStaleResultsAsOf(cutOffEtag, DefaultTimeout);
+		}
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		public void WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		{
+			theWaitForNonStaleResults = true;
+			timeout = waitTimeout;
+			cutoffEtag = cutOffEtag;
+		}
+		
+		/// <summary>
 		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
 		/// current document store.
 		/// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
@@ -1349,6 +1418,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			WaitForNonStaleResultsAsOfLastWrite(DefaultTimeout);
 		}
+
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
 		/// current document store.
@@ -1399,7 +1469,6 @@ If you really want to do in memory filtering on the data returned from the query
 
 		#endregion
 
-#if !NET_3_5
 		protected virtual Task<QueryOperation> ExecuteActualQueryAsync()
 		{
 			using(queryOperation.EnterQueryContext())
@@ -1422,26 +1491,18 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private static Task TaskDelay(int dueTimeMilliseconds)
 		{
-			var taskComplectionSource = new TaskCompletionSource<object>();
+			var taskCompletionSource = new TaskCompletionSource<object>();
 			var cancellationTokenRegistration = new CancellationTokenRegistration();
 			var timer = new Timer(o =>
 			{
 				cancellationTokenRegistration.Dispose();
 				((Timer)o).Dispose();
-				taskComplectionSource.TrySetResult(null);
+				taskCompletionSource.TrySetResult(null);
 			});
 			timer.Change(dueTimeMilliseconds, -1);
-			return taskComplectionSource.Task;
+			return taskCompletionSource.Task;
 		}
 
-		private static Task<TResult> TaskResult<TResult>(TResult value)
-		{
-			var taskComplectionSource = new TaskCompletionSource<TResult>();
-			taskComplectionSource.SetResult(value);
-			return taskComplectionSource.Task;
-		}
-#endif
-	 
 		/// <summary>
 		///   Generates the index query.
 		/// </summary>
@@ -1461,11 +1522,13 @@ If you really want to do in memory filtering on the data returned from the query
 					Cutoff = cutoff,
 					CutoffEtag = cutoffEtag,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-					FieldsToFetch = projectionFields,
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
-					DefaultField = defaultField
+					FieldsToFetch = fieldsToFetch,
+					SpatialFieldName = spatialFieldName,
+					QueryShape = queryShape,
+					SpatialRelation =  spatialRelation,
+					DistanceErrorPercentage = distanceErrorPct,
+					DefaultField = defaultField,
+					DefaultOperator = defaultOperator
 				};
 			}
 
@@ -1479,8 +1542,9 @@ If you really want to do in memory filtering on the data returned from the query
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-				FieldsToFetch = projectionFields,
-				DefaultField = defaultField
+				FieldsToFetch = fieldsToFetch,
+				DefaultField = defaultField,
+				DefaultOperator = defaultOperator
 			};
 		}
 
@@ -1492,6 +1556,7 @@ If you really want to do in memory filtering on the data returned from the query
 #endif
 
 			);
+		private QueryOperator defaultOperator;
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
@@ -1499,8 +1564,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
 		{
-			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
-			theQueryText.Append(' ');
+			queryText.Append(' ');
 			
 			NegateIfNeeded();
 			switch (escapeQueryOptions)
@@ -1521,8 +1585,9 @@ If you really want to do in memory filtering on the data returned from the query
 				default:
 					throw new ArgumentOutOfRangeException("escapeQueryOptions", "Value: "  + escapeQueryOptions);
 			}
+			lastEquality = new KeyValuePair<string, string>(fieldName, "(" + searchTerms + ")");
 
-			theQueryText.Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">>");
+			queryText.Append(fieldName).Append(":").Append("(").Append(searchTerms).Append(")");
 		}
 
 		private string TransformToEqualValue(WhereParams whereParams)
@@ -1545,7 +1610,16 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if (type == typeof(DateTime))
 			{
-				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
+				var val = (DateTime)whereParams.Value;
+				var s = val.ToString(Default.DateTimeFormatsToWrite);
+				if(val.Kind == DateTimeKind.Utc)
+					s += "Z";
+				return s;
+			}
+			if (type == typeof(DateTimeOffset))
+			{
+				var val = (DateTimeOffset)whereParams.Value;
+				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
 			}
 			
 			if(type == typeof(decimal))
@@ -1553,23 +1627,76 @@ If you really want to do in memory filtering on the data returned from the query
 				return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false);
 			}
 
-			if (type == typeof(DateTimeOffset))
-			{
-				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
-			}
-
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
-				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
+				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, 
+					whereParams.FieldTypeForIdentifier ?? typeof(T), false);
 			}
 
-			var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-											whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+			if (whereParams.Value is string || whereParams.Value is ValueType)
+			{
+				var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+												whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
-			if (whereParams.Value is string == false)
-				return escaped;
+				if (whereParams.Value is string == false)
+					return escaped;
+				return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+			}
 
-			return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+			var result = GetImplicitStringConvertion(whereParams.Value.GetType());
+			if(result != null)
+			{
+				return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+			}
+
+			var jsonSerializer = conventions.CreateSerializer();
+			var ravenJTokenWriter = new RavenJTokenWriter();
+			jsonSerializer.Serialize(ravenJTokenWriter, whereParams.Value);
+			var term = ravenJTokenWriter.Token.ToString(Formatting.None);
+			if(term.Length > 1 && term[0] == '"' && term[term.Length-1] == '"')
+			{
+				term = term.Substring(1, term.Length - 2);
+			}
+			switch (ravenJTokenWriter.Token.Type)
+			{
+				case JTokenType.Object:
+				case JTokenType.Array:
+					return "[[" + RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, false) + "]]";
+		
+				default:
+					return RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+			}
+		}
+
+		private Func<object,string> GetImplicitStringConvertion(Type type)
+		{
+			if(type == null)
+				return null;
+
+			Func<object, string> value;
+			if(implicitStringsCache.TryGetValue(type,out value))
+				return value;
+
+			var methodInfo = type.GetMethod("op_Implicit", new[] {type});
+
+			if (methodInfo == null || methodInfo.ReturnType != typeof(string))
+			{
+				implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+				{
+					{type, null}
+				};
+				return null;
+			}
+
+			var arg = Expression.Parameter(typeof(object), "self");
+
+			var func = (Func<object, string>) Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
+
+			implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+				{
+					{type, func}
+				};
+			return func;
 		}
 
 		private string TransformToRangeValue(WhereParams whereParams)
@@ -1580,9 +1707,15 @@ If you really want to do in memory filtering on the data returned from the query
 				return Constants.EmptyStringNotAnalyzed;
 
 			if (whereParams.Value is DateTime)
-				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
+			{
+				var dateTime = (DateTime) whereParams.Value;
+				var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite);
+				if(dateTime.Kind == DateTimeKind.Utc)
+					dateStr += "Z";
+				return dateStr;
+			}
 			if (whereParams.Value is DateTimeOffset)
-				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
+				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
 
 			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
@@ -1598,39 +1731,55 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((double)whereParams.Value);
 			if (whereParams.Value is float)
 				return NumberUtil.NumberToString((float)whereParams.Value);
-		   
+		   if(whereParams.Value is string)
+				return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+			if(whereParams.Value is ValueType)
+				return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+				                         false, true);
 
-			return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+			var stringWriter = new StringWriter();
+			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
+
+			var sb = stringWriter.GetStringBuilder();
+			if (sb.Length > 1 && sb[0] == '"' && sb[sb.Length - 1] == '"')
+			{
+				sb.Remove(sb.Length - 1, 1);
+				sb.Remove(0, 1);
+			}
+		
+			return RavenQuery.Escape(sb.ToString(), false, true);
 		}
 
 		/// <summary>
-		///   Returns a <see cref = "System.String" /> that represents this instance.
+		///   Returns a <see cref = "System.String" /> that represents the query for this instance.
 		/// </summary>
 		/// <returns>
-		///   A <see cref = "System.String" /> that represents this instance.
+		///   A <see cref = "System.String" /> that represents the query for this instance.
 		/// </returns>
 		public override string ToString()
 		{
 			if (currentClauseDepth != 0)
-			{
-				throw new InvalidOperationException(
-					string.Format("A clause was not closed correctly within this query, current clause depth = {0}",
-								  currentClauseDepth));
-			}
-			return theQueryText.ToString().Trim();
+				throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", currentClauseDepth));
+
+			return queryText.ToString().Trim();
 		}
 
 		/// <summary>
 		///   The last term that we asked the query to use equals on
 		/// </summary>
-		public KeyValuePair<string, string> GetLastEqualityTerm()
+		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
 			return lastEquality;
 		}
 
 		public void Intersect()
 		{
-			theQueryText.Append(Constants.IntersectSeperator);
+			queryText.Append(Constants.IntersectSeparator);
+		}
+
+		public void AddRootType(Type type)
+		{
+			rootTypes.Add(type);
 		}
 
 		/// <summary>
@@ -1652,7 +1801,6 @@ If you really want to do in memory filtering on the data returned from the query
 			return this;
 		}
 
-#if !NET_3_5
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
@@ -1673,6 +1821,20 @@ If you really want to do in memory filtering on the data returned from the query
 			return QueryResultAsync
 				.ContinueWith(r => r.Result.TotalResults);
 		}
-#endif
+
+		public string GetMemberQueryPath(Expression expression)
+		{
+			var result = linqPathProvider.GetPath(expression);
+			result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+
+			if (expression.NodeType == ExpressionType.ArrayLength)
+				result.Path += ".Length";
+
+			var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
+				? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
+				: conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
+			return propertyName;
+
+		}
 	}
 }

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class DynamicMapReduce : LocalClientTest
+	public class DynamicMapReduce : RavenTest
 	{
 		[Fact]
 		public void CanDynamicallyQueryOverItemCount()
@@ -50,7 +50,9 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Name.First")
+						.OrderBy("Name.First")
 						.WaitForNonStaleResults()
+						.OrderBy("Name.First")
 						.ToArray();
 
 					Assert.Equal(2, objects.Length);
@@ -64,7 +66,7 @@ namespace Raven.Tests.Bugs.Queries
 		}
 
 		[Fact]
-		public void CanGroupByCollectionProperty_Dymamic()
+		public void CanGroupByCollectionProperty_Dynamic()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -80,7 +82,9 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Tags,Id")
+						.OrderBy("Tags,Id")
 						.WaitForNonStaleResults()
+						.OrderBy("Tags,Id")
 						.ToArray();
 
 					Assert.Equal(2, objects.Length);
@@ -140,6 +144,7 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count, "Tags,Id")
+						.OrderBy("Tags,Id")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.ToArray();
 
@@ -169,8 +174,8 @@ namespace Raven.Tests.Bugs.Queries
 				using (var s = store.OpenSession())
 				{
 					var objects = s.Advanced.LuceneQuery<dynamic>()
-						.GroupBy(AggregationOperation.Count, "Name")
 						.WaitForNonStaleResults()
+						.GroupBy(AggregationOperation.Count, "Name")
 						.OrderBy("Name")
 						.ToArray();
 
@@ -202,7 +207,9 @@ namespace Raven.Tests.Bugs.Queries
 					var objects = s.Advanced.LuceneQuery<dynamic>()
 						.WhereEquals("Active",true)
 						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Name")
+						.OrderBy("Name")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+						.OrderBy("Name")
 						.ToArray();
 
 

@@ -2,7 +2,7 @@
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class Generics : LocalClientTest
+	public class Generics : RavenTest
 	{
 		public class MyClass<T>
 		{

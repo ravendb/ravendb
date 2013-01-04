@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class MultiEntityIndex : LocalClientTest
+	public class MultiEntityIndex : RavenTest
 	{
 		[Fact]
 		public void CanCreateIndexOnMultipleEntities()

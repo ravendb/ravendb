@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Shard;
 
 namespace Raven.Tests.Shard.BlogModel
@@ -16,7 +17,7 @@ namespace Raven.Tests.Shard.BlogModel
 			this.numberOfShardsForPosts = numberOfShardsForPosts;
 		}
 
-		public string GenerateShardIdFor(object entity)
+		public string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata)
 		{
 			return GetShardIdFromObjectType(entity);
 		}

@@ -12,7 +12,6 @@ using Raven.Client;
 using Raven.Client.Linq;
 using Xunit;
 using Raven.Abstractions.Indexing;
-using System.Threading;
 using System.Linq.Expressions;
 using Raven.Client.Document;
 
@@ -21,14 +20,15 @@ namespace Raven.Tests.Faceted
 	public class FacetedIndex : RavenTest
 	{
 		private readonly IList<Camera> _data;
-		private readonly List<Facet> _facets;
-		private const int NumCameras = 1000;
+		private readonly List<Facet> _originalFacets;
+		private readonly List<Facet> _stronglyTypedFacets;
+		private const int NumCameras = 1;
 
 		public FacetedIndex()
 		{
 			_data = FacetedIndexTestHelper.GetCameras(NumCameras);
 
-			_facets = new List<Facet>
+			_originalFacets = new List<Facet>
 			          	{
 			          		new Facet {Name = "Manufacturer"},
 			          		//default is term query		                         
@@ -39,11 +39,11 @@ namespace Raven.Tests.Faceted
 			          				Mode = FacetMode.Ranges,
 			          				Ranges =
 			          					{
-			          						"[NULL TO Dx200.0]",
-			          						"[Dx200.0 TO Dx400.0]",
-			          						"[Dx400.0 TO Dx600.0]",
-			          						"[Dx600.0 TO Dx800.0]",
-			          						"[Dx800.0 TO NULL]",
+			                                "[NULL TO Dx200]",
+			                                "[Dx200 TO Dx400]",
+			                                "[Dx400 TO Dx600]",
+			                                "[Dx600 TO Dx800]",
+			                                "[Dx800 TO NULL]",
 			          					}
 			          			},
 			          		new Facet
@@ -52,10 +52,38 @@ namespace Raven.Tests.Faceted
 			          				Mode = FacetMode.Ranges,
 			          				Ranges =
 			          					{
-			          						"[NULL TO Dx3.0]",
-			          						"[Dx3.0 TO Dx7.0]",
-			          						"[Dx7.0 TO Dx10.0]",
-			          						"[Dx10.0 TO NULL]",
+			                                "[NULL TO Dx3]",
+			                                "[Dx3 TO Dx7]",
+			                                "[Dx7 TO Dx10]",
+			                                "[Dx10 TO NULL]",
+			                            }
+			                    }
+			            };
+
+			_stronglyTypedFacets = new List<Facet>
+			{
+				new Facet<Camera> {Name = x => x.Manufacturer},
+				new Facet<Camera>
+				{
+					Name = x => x.Cost,
+					Ranges =
+						{
+							x => x.Cost < 200m,
+							x => x.Cost > 200m && x.Cost < 400m,
+							x => x.Cost > 400m && x.Cost < 600m,
+							x => x.Cost > 600m && x.Cost < 800m,
+							x => x.Cost > 800m
+						}
+				},
+				new Facet<Camera>
+				{
+					Name = x => x.Megapixels,
+					Ranges =
+						{
+							x => x.Megapixels < 3.0m,
+							x => x.Megapixels > 3.0m && x.Megapixels < 7.0m,
+							x => x.Megapixels > 7.0m && x.Megapixels < 10.0m,
+							x => x.Megapixels > 10.0m
 			          					}
 			          			}
 			          	};
@@ -70,7 +98,51 @@ namespace Raven.Tests.Faceted
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				ExecuteTest(store);
+				ExecuteTest(store, _originalFacets);
+			}
+		}
+
+		[Fact]
+		public void CanPerformFacetedSearch_Remotely_Asynchronously()
+		{
+			using(GetNewServer())
+			using(var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				ExecuteTestAsynchronously(store, _originalFacets);
+			}
+		}
+
+		[Fact]
+		public void CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				ExecuteTest(store, _originalFacets);
+			}
+		}
+
+		[Fact]
+		public void CanPerformFacetedSearch_Embedded()
+		{
+			using (var store = NewDocumentStore())
+			{
+				ExecuteTest(store, _stronglyTypedFacets);
+			}
+		}
+
+		[Fact]
+		public void CanPerformFacetedSearch_Embedded_WithStronglyTypedAPI()
+		{
+			using (var store = NewDocumentStore())
+			{
+				ExecuteTest(store, _stronglyTypedFacets);
 			}
 		}
 
@@ -83,7 +155,7 @@ namespace Raven.Tests.Faceted
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				Setup(store);
+				Setup(store, _originalFacets);
 
 				using (var s = store.OpenSession())
 				{
@@ -109,7 +181,6 @@ namespace Raven.Tests.Faceted
 						CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
 
 						Assert.Equal(oldRequests +1, s.Advanced.NumberOfRequests);
-
 					}
 				}
 			}
@@ -124,7 +195,7 @@ namespace Raven.Tests.Faceted
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				Setup(store);
+				Setup(store, _originalFacets);
 
 				using (var s = store.OpenSession())
 				{
@@ -134,7 +205,6 @@ namespace Raven.Tests.Faceted
 						x => x.DateOfListing > new DateTime(2000, 1, 1),
 						x => x.Megapixels > 5.0m && x.Cost < 500
 					};
-
 
 					foreach (var exp in expressions)
 					{
@@ -150,25 +220,14 @@ namespace Raven.Tests.Faceted
 						CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
 						var forceLoading = load.Value;
 						Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
-
 					}
 				}
 			}
 		}
 
-		[Fact]
-		public void CanPerformFacetedSearch_Embedded()
+		private void ExecuteTest(IDocumentStore store, List<Facet> facetsToUse)
 		{
-			using (var store = NewDocumentStore())
-			{
-				ExecuteTest(store);
-			}
-		}
-
-
-		private void ExecuteTest(IDocumentStore store)
-		{
-			Setup(store);
+			Setup(store, facetsToUse);
 
 			using (var s = store.OpenSession())
 			{
@@ -188,19 +247,47 @@ namespace Raven.Tests.Faceted
 						.ToFacets("facets/CameraFacets");
 					facetQueryTimer.Stop();
 
-					PrintFacetResults(facetResults);
-
 					var filteredData = _data.Where(exp.Compile()).ToList();
 					CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
 				}
 			}
 		}
 
-		private void Setup(IDocumentStore store)
+		private void ExecuteTestAsynchronously(IDocumentStore store, List<Facet> facetsToUse)
+		{
+			Setup(store, facetsToUse);
+
+			using(var s = store.OpenAsyncSession())
+			{
+				var expressions = new Expression<Func<Camera, bool>>[]
+				{
+					x => x.Cost >= 100 && x.Cost <= 300,
+					x => x.DateOfListing > new DateTime(2000, 1, 1),
+					x => x.Megapixels > 5.0m && x.Cost < 500,
+					x => x.Manufacturer == "abc&edf"
+				};
+
+				foreach(var exp in expressions)
+				{
+					var facetQueryTimer = Stopwatch.StartNew();
+					var task = s.Query<Camera>("CameraCost")
+						.Where(exp)
+						.ToFacetsAsync("facets/CameraFacets");
+					task.Wait();
+					facetQueryTimer.Stop();
+					var facetResults = task.Result;
+					var filteredData = _data.Where(exp.Compile()).ToList();
+					CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
+				}
+			}
+		}
+
+		private void Setup(IDocumentStore store, List<Facet> facetsToUse)
 		{
 			using (var s = store.OpenSession())
 			{
-				s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = _facets });
+				var facetSetupDoc = new FacetSetup { Id = "facets/CameraFacets", Facets = facetsToUse };
+				s.Store(facetSetupDoc);
 				s.SaveChanges();
 
 				store.DatabaseCommands.PutIndex("CameraCost",
@@ -218,14 +305,9 @@ namespace Raven.Tests.Faceted
                                                         }"
 												});
 
-				var counter = 0;
 				foreach (var camera in _data)
 				{
 					s.Store(camera);
-					counter++;
-
-					if (counter % (NumCameras / 25) == 0)
-						s.SaveChanges();
 				}
 				s.SaveChanges();
 
@@ -235,16 +317,16 @@ namespace Raven.Tests.Faceted
 			}
 		}
 
-		private void PrintFacetResults(IDictionary<string, IEnumerable<FacetValue>> facetResults)
+		private void PrintFacetResults(FacetResults facetResults)
 		{
-			foreach (var kvp in facetResults)
+			foreach (var kvp in facetResults.Results)
 			{
-				if (kvp.Value.Count() > 0)
+				if (kvp.Value.Values.Count() > 0)
 				{
 					Console.WriteLine(kvp.Key + ":");
-					foreach (var facet in kvp.Value)
+					foreach (var facet in kvp.Value.Values)
 					{
-						Console.WriteLine("    {0}: {1}", facet.Range, facet.Count);
+						Console.WriteLine("    {0}: {1}", facet.Range, facet.Hits);
 					}
 					Console.WriteLine();
 				}
@@ -252,41 +334,43 @@ namespace Raven.Tests.Faceted
 		}
 
 		private void CheckFacetResultsMatchInMemoryData(
-					IDictionary<string, IEnumerable<FacetValue>> facetResults,
+					FacetResults facetResults,
 					List<Camera> filteredData)
 		{
+			//Make sure we get all range values
 			Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
-						facetResults["Manufacturer"].Count());
-			foreach (var facet in facetResults["Manufacturer"])
+						facetResults.Results["Manufacturer"].Values.Count());
+
+			foreach (var facet in facetResults.Results["Manufacturer"].Values)
 			{
-				var inMemoryCount = filteredData.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-				Assert.Equal(inMemoryCount, facet.Count);
+				var inMemoryCount = filteredData.Count(x => x.Manufacturer.ToLower() == facet.Range);
+				Assert.Equal(inMemoryCount, facet.Hits);
 			}
 
 			//Go through the expected (in-memory) results and check that there is a corresponding facet result
 			//Not the prettiest of code, but it works!!!
-			var costFacets = facetResults["Cost_Range"];
-			CheckFacetCount(filteredData.Where(x => x.Cost <= 200.0m).Count(),
-							costFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx200.0]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 200.0m && x.Cost <= 400).Count(),
-							costFacets.FirstOrDefault(x => x.Range == "[Dx200.0 TO Dx400.0]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 400.0m && x.Cost <= 600.0m).Count(),
-							costFacets.FirstOrDefault(x => x.Range == "[Dx400.0 TO Dx600.0]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 600.0m && x.Cost <= 800.0m).Count(),
-							costFacets.FirstOrDefault(x => x.Range == "[Dx600.0 TO Dx800.0]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 800.0m).Count(),
-							costFacets.FirstOrDefault(x => x.Range == "[Dx800.0 TO NULL]"));
+			var costFacets = facetResults.Results["Cost_Range"].Values;
+			CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m),
+							costFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx200]"));
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx200 TO Dx400]"));
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 400.0m && x.Cost <= 600.0m),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx400 TO Dx600]"));
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 600.0m && x.Cost <= 800.0m),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx600 TO Dx800]"));
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 800.0m),
+							costFacets.FirstOrDefault(x => x.Range == "[Dx800 TO NULL]"));
 
 			//Test the Megapixels_Range facets using the same method
-			var megapixelsFacets = facetResults["Megapixels_Range"];
+			var megapixelsFacets = facetResults.Results["Megapixels_Range"].Values;
 			CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
-							megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx3.0]"));
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx3]"));
 			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),
-							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx3.0 TO Dx7.0]"));
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx3 TO Dx7]"));
 			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count(),
-							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx7.0 TO Dx10.0]"));
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx7 TO Dx10]"));
 			CheckFacetCount(filteredData.Where(x => x.Megapixels >= 10.0m).Count(),
-							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx10.0 TO NULL]"));
+							megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx10 TO NULL]"));
 		}
 
 		private void CheckFacetCount(int expectedCount, FacetValue facets)
@@ -294,22 +378,8 @@ namespace Raven.Tests.Faceted
 			if (expectedCount > 0)
 			{
 				Assert.NotNull(facets);
-				Assert.Equal(expectedCount, facets.Count);
+				Assert.Equal(expectedCount, facets.Hits);
 			}
-		}
-
-		private static void Log(string text, params object[] args)
-		{
-			Trace.WriteLine(String.Format(text, args));
-			Console.WriteLine(text, args);
-		}
-
-		private static double TimeIt(Action action)
-		{
-			var timer = Stopwatch.StartNew();
-			action();
-			timer.Stop();
-			return timer.ElapsedMilliseconds;
 		}
 	}
 }

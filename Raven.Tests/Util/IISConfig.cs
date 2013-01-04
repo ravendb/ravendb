@@ -56,14 +56,14 @@ namespace Raven.Tests.Util
 			}
 		}
 
-		public static void CreateSite(string hostName, int port, string applicationPoolName, string phsyicalDirectory)
+		public static void CreateSite(string hostName, int port, string applicationPoolName, string physicalDirectory)
 		{
 			var siteName = applicationPoolName + "-" + hostName;
 
 			using (dynamic manager = Assembly.CreateInstance("Microsoft.Web.Administration.ServerManager"))
 			{
 				var pool = manager.ApplicationPools[applicationPoolName];
-				var site = manager.Sites.Add(siteName, "http", "*:" + port + ":" + hostName, phsyicalDirectory);
+				var site = manager.Sites.Add(siteName, "http", "*:" + port + ":" + hostName, physicalDirectory);
 				site.ApplicationDefaults.ApplicationPoolName = applicationPoolName;
 				manager.CommitChanges();
 			}

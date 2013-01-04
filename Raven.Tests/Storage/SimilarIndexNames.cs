@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Raven.Tests.Storage
 {
-	public class SimilarIndexNames : AbstractDocumentStorageTest
+	public class SimilarIndexNames : RavenTest
 	{
 		private readonly DocumentDatabase db;
 

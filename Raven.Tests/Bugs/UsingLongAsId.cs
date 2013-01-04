@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class UsingLongAsId : LocalClientTest
+	public class UsingLongAsId : RavenTest
 	{
 		[Fact]
 		public void Can_use_long_as_id()

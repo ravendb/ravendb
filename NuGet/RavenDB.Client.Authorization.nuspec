@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+	<metadata>
+		<id>RavenDB.Client.Authorization</id>
+		<version>1.2</version>
+		<title>RavenDB Client for Authorization bundle</title>
+		<authors>Hibernating Rhinos</authors>
+		<description>RavenDB 'Authorization' bundle client extend RavenDB and add document level permissions.</description>
+		<language>en-US</language>
+		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
+		<projectUrl>http://www.ravendb.net/</projectUrl>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<tags>nosql ravendb raven document database client bundles authorization</tags>
+		<frameworkAssemblies>
+			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
+		</frameworkAssemblies>
+		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
+	</metadata>
+</package>

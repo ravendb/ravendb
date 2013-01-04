@@ -8,10 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Hosting;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
 
 namespace Raven.Web
 {
@@ -21,7 +22,7 @@ namespace Raven.Web
 		internal static HttpServer server;
 		private static readonly object locker = new object();
 
-		private static Logger log = LogManager.GetCurrentClassLogger();
+		private static ILog log = LogManager.GetCurrentClassLogger();
 
 		public class ReleaseRavenDBWhenAppDomainIsTornDown : IRegisteredObject
 		{
@@ -37,15 +38,15 @@ namespace Raven.Web
 						if (shutdownTask == null)
 						{
 							shutdownTask = Task.Factory.StartNew(Shutdown)
-								.ContinueWith(_ =>
-								              	{
-								              		GC.KeepAlive(_.Exception); // ensure no unobserved exception
-								              		HostingEnvironment.UnregisterObject(this);
-								              	});
+							                   .ContinueWith(_ =>
+							                   {
+								                   GC.KeepAlive(_.Exception); // ensure no unobserved exception
+								                   HostingEnvironment.UnregisterObject(this);
+							                   });
 						}
 					}
 				}
-				
+
 				if (immediate)
 				{
 					shutdownTask.Wait();
@@ -63,6 +64,14 @@ namespace Raven.Web
 				throw new InvalidOperationException("Database has not been initialized properly");
 			if (server == null)
 				throw new InvalidOperationException("Server has not been initialized properly");
+
+			var reqUrl = UrlExtension.GetRequestUrlFromRawUrl(context.Request.RawUrl, database.Configuration);
+
+			if (HttpServer.ChangesQuery.IsMatch(reqUrl))
+			{
+				return new ChangesCurrentDatabaseForwardingHandler(server);
+			}
+
 
 			return new ForwardToRavenResponders(server);
 		}

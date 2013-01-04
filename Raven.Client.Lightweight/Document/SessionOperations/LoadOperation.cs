@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Net;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Data;
 
 namespace Raven.Client.Document.SessionOperations
 {
 	public class LoadOperation
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly Func<IDisposable> disableAllCaching;
 		private readonly string id;
@@ -55,7 +54,10 @@ namespace Raven.Client.Document.SessionOperations
 		public T Complete<T>()
 		{
 			if (documentFound == null)
+			{
+				sessionOperations.RegisterMissing(id);
 				return default(T);
+			}
 			return sessionOperations.TrackEntity<T>(documentFound);
 		}
 	}

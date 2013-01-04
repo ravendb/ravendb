@@ -43,8 +43,9 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The total results.</value>
 		public int TotalResults { get; set; }
+
 		/// <summary>
-		/// Gets or sets the skipped results (duplicate documents);
+		/// Gets or sets the skipped results
 		/// </summary>
 		/// <value>The skipped results.</value>
 		public int SkippedResults { get; set; }
@@ -71,6 +72,11 @@ namespace Raven.Abstractions.Data
 		/// are non authoritative (modified by uncommitted transaction).
 		/// </summary>
 		public bool NonAuthoritativeInformation { get; set; }
+
+		/// <summary>
+		/// The timestamp of the last time the index was queried
+		/// </summary>
+		public DateTime LastQueryTime { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
@@ -103,8 +109,8 @@ namespace Raven.Abstractions.Data
 		{
 			return new QueryResult
 			{
-				Results = new List<RavenJObject>(Results.Select(x => x.CreateSnapshot())),
-				Includes = new List<RavenJObject>(Includes.Select(x => x.CreateSnapshot())),
+				Results = new List<RavenJObject>(Results.Select(x => (RavenJObject)x.CreateSnapshot())),
+				Includes = new List<RavenJObject>(Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
 				IndexEtag = IndexEtag,
 				IndexName = IndexName,
 				IndexTimestamp = IndexTimestamp,

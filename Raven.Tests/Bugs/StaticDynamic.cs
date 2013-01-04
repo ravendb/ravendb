@@ -5,12 +5,12 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class StaticDynamic : LocalClientTest
+	public class StaticDynamic : RavenTest
 	{
 		[Fact]
 		public void IfStaticQueryHasWhere_SeparateDynamicQueryCreated()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				new Docs_Flagged().Execute(store);
 				const int docsCount = 10;
@@ -57,21 +57,21 @@ namespace Raven.Tests.Bugs
 				session.SaveChanges();
 			}
 		}
-	}
 
-	public class Docs_Flagged : AbstractIndexCreationTask<TestDoc>
-	{
-		public Docs_Flagged()
+		public class Docs_Flagged : AbstractIndexCreationTask<TestDoc>
 		{
-			Map = testDocs => from doc in testDocs
-							  where doc.Flag
-							  select new { doc.Id };
+			public Docs_Flagged()
+			{
+				Map = testDocs => from doc in testDocs
+								  where doc.Flag
+								  select new { doc.Id };
+			}
 		}
-	}
 
-	public class TestDoc
-	{
-		public string Id { get; set; }
-		public bool Flag { get; set; }
+		public class TestDoc
+		{
+			public string Id { get; set; }
+			public bool Flag { get; set; }
+		}
 	}
 }

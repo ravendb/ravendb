@@ -4,7 +4,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class CollectionModel : ViewModel
+	public class CollectionModel : PageViewModel
 	{
 		Brush fill;
 		public Brush Fill

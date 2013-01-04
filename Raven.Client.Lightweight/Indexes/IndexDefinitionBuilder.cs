@@ -94,6 +94,9 @@ namespace Raven.Client.Indexes
 				throw new InvalidOperationException(
 					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", GetType().Name));
 
+			if (Reduce != null)
+				IndexDefinitionHelper.ValidateReduce(Reduce);
+
 			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 			var indexDefinition = new IndexDefinition
 			{
@@ -135,7 +138,6 @@ namespace Raven.Client.Indexes
 			return indexDefinition;
 		}
 
-#if !NET_3_5
 		private static bool ContainsWhereEntityIs(Expression body)
 		{
 			var whereEntityIsVisitor = new WhereEntityIsVisitor();
@@ -154,19 +156,13 @@ namespace Raven.Client.Indexes
 				return base.VisitMethodCall(node);
 			}
 		}
-#else
-		 private static bool ContainsWhereEntityIs(Expression body)
-	    {
-	        return body.ToString().Contains("WhereEntityIs");
-	    }
-#endif
 
 		private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
 		{
 			var result = new Dictionary<string, TValue>();
 			foreach (var value in input)
 			{
-				var propertyPath = value.Key.ToPropertyPath("_");
+				var propertyPath = value.Key.ToPropertyPath('_');
 				result[propertyPath] = value.Value;
 			}
 			return result;

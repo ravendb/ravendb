@@ -6,11 +6,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Ionic.Zlib;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using TaskStatus = Raven.Studio.Models.TaskStatus;
@@ -24,7 +25,7 @@ namespace Raven.Studio.Commands
 		private readonly Action<string> output;
 		private int totalCount;
 		private int totalIndexes;
-		private TaskModel taskModel;
+		private readonly TaskModel taskModel;
 
 		public ImportDatabaseCommand(TaskModel taskModel, Action<string> output)
 		{
@@ -34,10 +35,27 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
+			if (ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Statistics.Value != null 
+				&& ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Statistics.Value.CountOfDocuments != 0)
+			{
+				AskUser.ConfirmationWithEvent("Override Documents?", "There are documents in the database :" +
+				                                                  ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+				                                                  "." + Environment.NewLine
+				                                                  + "This operation can override those documents.",
+																  ExecuteInternal);
+			}
+			else
+			{
+				ExecuteInternal();
+			}
+		}
+
+		private void ExecuteInternal()
+		{
 			var openFile = new OpenFileDialog
-			               {
-			               	Filter = "Raven Dumps|*.raven.dump"
-			               };
+			{
+				Filter = "Raven Dumps|*.ravendump;*.raven.dump",
+			};
 
 			if (openFile.ShowDialog() != true)
 				return;
@@ -46,6 +64,7 @@ namespace Raven.Studio.Commands
 			totalIndexes = 0;
 
 			taskModel.TaskStatus = TaskStatus.Started;
+			taskModel.CanExecute.Value = false;
 			output(String.Format("Importing from {0}", openFile.File.Name));
 
 			var sw = Stopwatch.StartNew();
@@ -60,12 +79,15 @@ namespace Raven.Studio.Commands
 			try
 			{
 				if (jsonReader.TokenType != JsonToken.StartObject)
+				{
+					taskModel.ReportError("StartObject was expected");
 					throw new InvalidOperationException("StartObject was expected");
+				}
 
 				// should read indexes now
 				if (jsonReader.Read() == false)
 				{
-					output("Invalid Json file specified!");
+					taskModel.ReportError("Invalid Json file specified!");
 					stream.Dispose();
 					return;
 				}
@@ -73,22 +95,31 @@ namespace Raven.Studio.Commands
 				output(String.Format("Begin reading indexes"));
 
 				if (jsonReader.TokenType != JsonToken.PropertyName)
+				{
+					taskModel.ReportError("PropertyName was expected");
 					throw new InvalidOperationException("PropertyName was expected");
+				}
 
 				if (Equals("Indexes", jsonReader.Value) == false)
+				{
+					taskModel.ReportError("Indexes property was expected");
 					throw new InvalidOperationException("Indexes property was expected");
+				}
 
 				if (jsonReader.Read() == false)
 					return;
 
 				if (jsonReader.TokenType != JsonToken.StartArray)
+				{
+					taskModel.ReportError("StartArray was expected");
 					throw new InvalidOperationException("StartArray was expected");
+				}
 
 				// import Indexes
 				WriteIndexes(jsonReader)
 					.ContinueOnSuccess(() =>
 					{
-						output(String.Format("Imported {0:#,#;;0} indexes", totalIndexes));
+						output(String.Format("Done with reading indexes, total: {0}", totalIndexes));
 
 						output(String.Format("Begin reading documents"));
 
@@ -101,10 +132,16 @@ namespace Raven.Studio.Commands
 						}
 
 						if (jsonReader.TokenType != JsonToken.PropertyName)
+						{
+							taskModel.ReportError("PropertyName was expected");
 							throw new InvalidOperationException("PropertyName was expected");
+						}
 
 						if (Equals("Docs", jsonReader.Value) == false)
+						{
+							taskModel.ReportError("Docs property was expected");
 							throw new InvalidOperationException("Docs property was expected");
+						}
 
 						if (jsonReader.Read() == false)
 						{
@@ -114,19 +151,30 @@ namespace Raven.Studio.Commands
 						}
 
 						if (jsonReader.TokenType != JsonToken.StartArray)
+						{
+							taskModel.ReportError("StartArray was expected");
 							throw new InvalidOperationException("StartArray was expected");
+						}
 
 						WriteDocuments(jsonReader)
 							.ContinueOnSuccess(
 								() =>
 								output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount, sw.ElapsedMilliseconds)))
-							.Finally(() => taskModel.TaskStatus = TaskStatus.Ended);
-					});
+							.Catch(exception => taskModel.ReportError(exception))
+							.Finally(() =>
+							{
+								taskModel.TaskStatus = TaskStatus.Ended;
+								taskModel.CanExecute.Value = true;
+							});
+					})
+					.Catch(exception => taskModel.ReportError(exception));
 			}
 
 			catch (Exception e)
 			{
 				taskModel.TaskStatus = TaskStatus.Ended;
+				taskModel.CanExecute.Value = true;
+				taskModel.ReportError(e);
 				throw e;
 			}
 		}
@@ -149,7 +197,8 @@ namespace Raven.Studio.Commands
 				output(String.Format("Importing index: {0}", indexName));
 
 				return DatabaseCommands.PutIndexAsync(indexName, index, overwrite: true)
-					.ContinueOnSuccess(() => WriteIndexes(jsonReader));
+					.ContinueOnSuccess(() => WriteIndexes(jsonReader))
+					.Catch(exception => taskModel.ReportError(exception));
 			}
 
 			return Infrastructure.Execute.EmptyResult<object>();
@@ -171,10 +220,16 @@ namespace Raven.Studio.Commands
 			return FlushBatch(batch);
 		}
 
+		private Stopwatch StopWatch = Stopwatch.StartNew();
 		Task FlushBatch(List<RavenJObject> batch)
 		{
+			if (totalCount == 0)
+			{
+				StopWatch = Stopwatch.StartNew();
+			}
+
 			totalCount += batch.Count;
-			var sw = Stopwatch.StartNew();
+
 			var commands = (from doc in batch
 			                let metadata = doc.Value<RavenJObject>("@metadata")
 			                let removal = doc.Remove("@metadata")
@@ -187,7 +242,8 @@ namespace Raven.Studio.Commands
 
 
 			output(String.Format("Wrote {0} documents  in {1:#,#;;0} ms",
-			                     batch.Count, sw.ElapsedMilliseconds));
+			                     batch.Count, StopWatch.ElapsedMilliseconds));
+			StopWatch = Stopwatch.StartNew();
 
 			return DatabaseCommands
 				.BatchAsync(commands);
@@ -220,7 +276,7 @@ namespace Raven.Studio.Commands
 
 				if (jsonReader.Read() == false)
 				{
-					output("Invalid json file found!");
+					taskModel.ReportError("Invalid json file found!");
 					return false;
 				}
 			}

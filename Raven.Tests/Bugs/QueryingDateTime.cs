@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingDateTime : LocalClientTest
+	public class QueryingDateTime : RavenTest
 	{
 		[Fact]
 		public void QueryingNonUtcTime()

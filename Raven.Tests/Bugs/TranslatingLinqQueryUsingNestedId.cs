@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class TranslatingLinqQueryUsingNestedId : LocalClientTest
+	public class TranslatingLinqQueryUsingNestedId : RavenTest
 	{
 		[Fact]
 		public void Id_on_member_should_not_be_converted_to_document_id()
@@ -26,14 +26,9 @@ namespace Raven.Tests.Bugs
 								  SubCategoryId = subCategory.Parent.Id
 							  }
 			}.ToIndexDefinition(new DocumentConvention());
-			var original = new IndexDefinition
-			{
-				Map =
-					@"docs.SubCategories
-	.Select(subCategory => new {CategoryId = subCategory.__document_id, SubCategoryId = subCategory.Parent.Id})"
-			};
-
-			Assert.Equal(original.Map, generated.Map);
+			
+			Assert.Contains("CategoryId = subCategory.__document_id", generated.Map);
+			Assert.Contains("SubCategoryId = subCategory.Parent.Id", generated.Map);
 		}
 
 		#region Nested type: Category

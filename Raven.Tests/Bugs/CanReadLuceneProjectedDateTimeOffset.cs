@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Document;
 using Xunit;
 
@@ -16,10 +16,9 @@ namespace Raven.Tests.Bugs
 			Assert.Equal(2009, deserialize.Item.Year);
 		}
 
-		public class Test
+		private class Test
 		{
 			public DateTimeOffset Item { get; set; }
-			public int A { get; set; }
 		}
 	}
 }

@@ -21,6 +21,7 @@
  */
 
 using System;
+using SupportClass = Lucene.Net.Support;
 
 // {{Aroush-2.9}} Port issue?  Both of those were treated as: System.IO.MemoryStream
 //using CharBuffer = java.nio.CharBuffer;
@@ -51,7 +52,7 @@ namespace Raven.Database.Indexing.Collation
 	/// on the CharBuffers and ByteBuffers it uses, so only wrapped arrays may be
 	/// used.  This class interprets the arrayOffset() and limit() values returned by
 	/// its input buffers as beginning and end+1 positions on the wrapped array,
-	/// resprectively; similarly, on the output buffer, arrayOffset() is the first
+	/// respectively; similarly, on the output buffer, arrayOffset() is the first
 	/// position written to, and limit() is set to one past the final output array
 	/// position.
 	/// </summary>
@@ -124,7 +125,7 @@ namespace Raven.Database.Indexing.Collation
 			// only adjust capacity if needed
 			if (output.Length < outputLength)
 			{
-				throw new ArgumentException("Insufficent array length");
+				throw new ArgumentException("Insufficient array length");
 			}
 
 			if (input.Length > 0)
@@ -194,7 +195,7 @@ namespace Raven.Database.Indexing.Collation
 			int numOutputBytes = GetDecodedLength(input);
 			if (output.Length < numOutputBytes)
 			{
-				throw new ArgumentException("Insufficent length in the array");
+				throw new ArgumentException("Insufficient length in the array");
 			}
 
 			if (input.Length > 0)

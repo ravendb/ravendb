@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
@@ -23,11 +24,12 @@ namespace Raven.Tests.Bugs
 			{
 				const string tenantName = "   Tenant with some    spaces     in it ";
 				// TODO: we better throw here.
-				documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName);	
+				Assert.Throws<InvalidOperationException>(() => documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName));	
 				
 				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
 				// TODO: we better throw here with a better error message than "tenant not found".
-				Assert.Throws<InvalidOperationException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
+				var webException = Assert.Throws<WebException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
+				Assert.Equal(HttpStatusCode.NotFound,((HttpWebResponse)webException.Response).StatusCode);
 			}
 		}
 	}

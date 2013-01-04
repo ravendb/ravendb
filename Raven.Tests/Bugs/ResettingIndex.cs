@@ -3,23 +3,12 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ResettingIndex : LocalClientTest
+	public class ResettingIndex : RavenTest
 	{
 		[Fact]
-		public void CanResetIndexInMuninStorage()
+		public void CanResetIndex()
 		{
-			using (var store = NewDocumentStore("munin", false))
-			{
-				var ravenDocumentsByEntityName = new RavenDocumentsByEntityName();
-				ravenDocumentsByEntityName.Execute(store);
-				store.DocumentDatabase.ResetIndex(ravenDocumentsByEntityName.IndexName);
-			}
-		}
-
-		[Fact]
-		public void CanResetIndexInEsentStorage()
-		{
-			using (var store = NewDocumentStore("esent", false))
+			using (var store = NewDocumentStore())
 			{
 				var ravenDocumentsByEntityName = new RavenDocumentsByEntityName();
 				ravenDocumentsByEntityName.Execute(store);

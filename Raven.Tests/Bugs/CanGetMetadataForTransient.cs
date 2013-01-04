@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanGetMetadataForTransient : LocalClientTest
+	public class CanGetMetadataForTransient : RavenTest
 	{
 		[Fact]
 		public void GetMetadataForTransient()

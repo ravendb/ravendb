@@ -3,18 +3,17 @@
 					xmlns:Commands="clr-namespace:Raven.Studio.Commands"
 					xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents">
 
-	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
 	<Commands:CopyToClipboardCommand x:Name="CopyToClipboardCommand" />
-	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
 	<Commands:DeleteAllDocumentsOfCollectionCommand	x:Name="DeleteAllDocumentsOfCollectionCommand" />
 	<Commands:NavigateToCommand x:Name="NavigateToCommand" />
-	<Documents:EditNeighbouringDocumentCommand x:Name="EditNeighbouringDocumentCommand" />
+	<Commands:NavigateToCommand x:Name="NavigateToCommandEnsureRefresh" ForceRefresh="True"/>
+	<Commands:NavigateToCommand x:Name="NavigateToCommandSameWindow" EnsureSameWindow="True"/>
+	<Documents:EditNeighboringDocumentCommand x:Name="EditNeighboringDocumentCommand" />
 	<Commands:ChangeDatabaseCommand x:Name="ChangeDatabaseCommand" />
 	<Commands:NavigateToExternalUrlCommand x:Name="NavigateToExternalUrlCommand" />
 	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />
 	<Commands:ShowLicensingStatusCommand x:Name="ShowLicensingStatusCommand" />
 	<Commands:CreateDatabaseCommand x:Name="CreateDatabaseCommand" />
-	<Commands:DeleteIndexCommand x:Name="DeleteIndexCommand" />
-	<Commands:PromoteToAutoIndexCommand x:Name="PromoteToAutoIndexCommand" />
-	<Commands:ResetIndexCommand x:Name="ResetIndexCommand" />
+	<Commands:SelectSystemDatabaseCommand x:Name="SelectSystemDatabaseCommand"/>
+	<Commands:ShowErrorListWindowCommand x:Name="ShowErrorListWindowCommand" />
 </ResourceDictionary>

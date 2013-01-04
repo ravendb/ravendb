@@ -4,19 +4,22 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
+using System.Web;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using SpellChecker.Net.Search.Spell;
 
 namespace Raven.Database.Queries
 {
 	public class SuggestionQueryRunner
 	{
-		private readonly DocumentDatabase _database;
+		private readonly DocumentDatabase database;
 
 		public SuggestionQueryRunner(DocumentDatabase database)
 		{
-			_database = database;
+			this.database = database;
 		}
 
 		public SuggestionQueryResult ExecuteSuggestionQuery(string indexName, SuggestionQuery suggestionQuery)
@@ -29,33 +32,44 @@ namespace Raven.Database.Queries
 			if (suggestionQuery.Accuracy <= 0 || suggestionQuery.Accuracy > 1) suggestionQuery.Accuracy = 0.5f;
 
 			suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions,
-													  _database.Configuration.MaxPageSize);
+													  database.Configuration.MaxPageSize);
 
-			var indexExtensionKey = suggestionQuery.Field + "/" + suggestionQuery.Distance + "/" + suggestionQuery.Accuracy;
+			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field + "-" + suggestionQuery.Distance + "-" + suggestionQuery.Accuracy);
 
-			var indexExtension = _database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
-
-			if (indexExtension != null)
-				return indexExtension.Query(suggestionQuery);
+			var indexExtension = database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
 
 			IndexSearcher currentSearcher;
-			using(_database.IndexStorage.GetCurrentIndexSearcher(indexName,out currentSearcher))
+			using (database.IndexStorage.GetCurrentIndexSearcher(indexName, out currentSearcher))
 			{
-				var indexReader = currentSearcher.GetIndexReader();
+				if (currentSearcher == null)
+				{
+					throw new InvalidOperationException("Could not find current searcher");
+				}
+				var indexReader = currentSearcher.IndexReader;
 
-				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(GetStringDistance(suggestionQuery), suggestionQuery.Field, suggestionQuery.Accuracy);
+				if (indexExtension != null)
+					return indexExtension.Query(suggestionQuery, indexReader);
+
+
+				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
+					indexReader,
+					GetStringDistance(suggestionQuery.Distance),
+					suggestionQuery.Field,
+					suggestionQuery.Accuracy);
 				suggestionQueryIndexExtension.Init(indexReader);
 
-				_database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
+				database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 
-				return suggestionQueryIndexExtension.Query(suggestionQuery);
+				return suggestionQueryIndexExtension.Query(suggestionQuery, indexReader);
 			}
 		}
 
-		private static StringDistance GetStringDistance(SuggestionQuery query)
+		[CLSCompliant(false)]
+		public static StringDistance GetStringDistance(StringDistanceTypes distanceAlg)
 		{
-			switch (query.Distance)
+			switch (distanceAlg)
 			{
 				case StringDistanceTypes.NGram:
 					return new NGramDistance();

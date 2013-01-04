@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+Actipro Syntax Language Project (.langproj)
+  For use with Actipro SyntaxEditor and related products.
+  http://www.actiprosoftware.com
+
+-->
+<LanguageProject LanguageKey="Json" LanguageDescription="Json" OutputLanguageDefinition="False" OutputLanguageKey="CSharp" OutputNamespaceName="Raven.Studio.Features.JsonEditor" OutputPath="C:\Projects\HibernatingRhinos\RavenDb\Raven.Studio\Features\JsonEditor" xmlns="http://schemas.actiprosoftware.com/langproj/1.0">
+	<!-- Classification types -->
+	<LanguageProject.ClassificationTypes>
+		<ClassificationType Key="Delimiter" />
+		<ClassificationType Key="Keyword" DefaultStyle="#FF0000FF" />
+		<ClassificationType Key="Number" />
+		<ClassificationType Key="Operator" />
+		<ClassificationType Key="String" DefaultStyle="#FF800000" />
+	</LanguageProject.ClassificationTypes>
+	<!-- Lexer -->
+	<LanguageProject.Lexer>
+		<DynamicLexer>
+			<!-- Default state -->
+			<State Key="Default">
+				<State.ChildStates>
+					<StateRef Key="PrimaryString" />
+				</State.ChildStates>
+				<RegexPatternGroup TokenKey="Whitespace" Pattern="{LineTerminatorWhitespace}+" />
+				<ExplicitPatternGroup TokenKey="Comma" ClassificationTypeKey="Delimiter" Pattern="," />
+				<ExplicitPatternGroup TokenKey="Colon" ClassificationTypeKey="Delimiter" Pattern=":" />
+				<ExplicitPatternGroup TokenKey="OpenCurlyBrace" ClassificationTypeKey="Delimiter" Pattern="{" />
+				<ExplicitPatternGroup TokenKey="CloseCurlyBrace" ClassificationTypeKey="Delimiter" Pattern="}" />
+				<ExplicitPatternGroup TokenKey="OpenSquareBrace" ClassificationTypeKey="Delimiter" Pattern="[" />
+				<ExplicitPatternGroup TokenKey="CloseSquareBrace" ClassificationTypeKey="Delimiter" Pattern="]" />
+				<ExplicitPatternGroup TokenKey="True" ClassificationTypeKey="Keyword" Pattern="true" CaseSensitivity="AutoCorrect" />
+				<ExplicitPatternGroup TokenKey="False" ClassificationTypeKey="Keyword" Pattern="false" CaseSensitivity="AutoCorrect" />
+				<ExplicitPatternGroup TokenKey="Null" ClassificationTypeKey="Keyword" Pattern="null" CaseSensitivity="AutoCorrect" />
+				<RegexPatternGroup TokenKey="Number" ClassificationTypeKey="Number" LookAheadPattern="{NonWord}|\z">
+					<RegexPattern Value="[\+\-]?{Digit}* \. {Digit}+ ([Ee] [\+\-]? {Digit}+)?" />
+					<RegexPattern Value="[\+\-]?{Digit}+ [Ee] [\+\-]? {Digit}+" />
+					<RegexPattern Value="[\+\-]?{Digit}+" />
+				</RegexPatternGroup>
+			</State>
+			<!-- PrimaryString state -->
+			<State Key="PrimaryString" Description="Primary string" DefaultTokenKey="PrimaryStringText" DefaultClassificationTypeKey="String">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<ExplicitPatternGroup TokenKey="StringStartDelimiter" Pattern="&quot;" />
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<ExplicitPatternGroup TokenKey="StringEndDelimiter" Pattern="&quot;" />
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<ExplicitPatternGroup TokenKey="EscapedCharacter">
+					<ExplicitPatterns><![CDATA[
+						\" \\ \/ \b \f \n \r \t
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<RegexPatternGroup TokenKey="EscapedUnicode" Pattern="\\u[0-9a-fA-F]{4}" />
+				<RegexPatternGroup TokenKey="StringText" Pattern="[^\&quot;\\\n]+" />
+			</State>
+		</DynamicLexer>
+	</LanguageProject.Lexer>
+	<!-- LL Parser -->
+	<LanguageProject.LLParser>
+		<LLParser DebuggerAssemblyPath="C:\Projects\HibernatingRhinos\RavenJsonParserTest\JsonDebuggerTest\JsonDebuggerTest\bin\Debug\JsonDebuggerTest.dll" DebuggerParserTypeName="Raven.Studio.Features.JsonEditor.JsonParser" />
+	</LanguageProject.LLParser>
+	<!-- AST nodes -->
+	<LanguageProject.AstNodes>
+		<AstNode Key="JsonArrayNode" Description="Json array">
+			<AstNode.Properties>
+				<AstNodeProperty Key="Values" PropertyType="AstNodeList" Type="IAstNode" Description="Values" />
+			</AstNode.Properties>
+		</AstNode>
+		<AstNode Key="JsonObjectNode" Description="Json object">
+			<AstNode.Properties>
+				<AstNodeProperty Key="PropertyValues" PropertyType="AstNodeList" Type="JsonPropertyValuePairNode" Description="Property values" />
+			</AstNode.Properties>
+		</AstNode>
+		<AstNode Key="JsonPropertyValuePairNode" Description="Json property value pair">
+			<AstNode.Properties>
+				<AstNodeProperty Key="Name" PropertyType="AstNode" Type="JsonStringNode" Description="Name" />
+				<AstNodeProperty Key="Value" PropertyType="AstNode" Type="IAstNode" Description="Value" />
+			</AstNode.Properties>
+		</AstNode>
+		<AstNode Key="JsonStringNode" Description="Json string">
+			<AstNode.Properties>
+				<AstNodeProperty Key="Text" Type="String" Description="Text" />
+			</AstNode.Properties>
+		</AstNode>
+	</LanguageProject.AstNodes>
+	<!-- Example text -->
+	<LanguageProject.ExampleText><![CDATA[{
+  "Property": "StringValue",
+  "Another Property": [],
+  "Third Property": [
+  	{ "Nested" : 0 },
+	{ "2nd Nested" : true
+  ],
+  "Fourth" : false
+}]]></LanguageProject.ExampleText>
+</LanguageProject>

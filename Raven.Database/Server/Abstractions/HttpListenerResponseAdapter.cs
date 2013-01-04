@@ -4,20 +4,29 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
+using Raven.Database.Impl;
+using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.Abstractions
 {
-	public class HttpListenerResponseAdapter : IHttpResponse
+	public class HttpListenerResponseAdapter : IHttpResponse, IDisposable
 	{
+		private ILog log = LogManager.GetCurrentClassLogger();
 		private readonly HttpListenerResponse response;
 
-		public HttpListenerResponseAdapter(HttpListenerResponse response)
+		public HttpListenerResponseAdapter(HttpListenerResponse response, IBufferPool bufferPool)
 		{
+			StreamsToDispose = new List<Stream>();
 			this.response = response;
-			OutputStream = response.OutputStream;
+			OutputStream = new BufferPoolStream(response.OutputStream, bufferPool);
 		}
 
 		public string RedirectionPrefix
@@ -64,10 +73,24 @@ namespace Raven.Database.Server.Abstractions
 			response.Redirect(RedirectionPrefix + url);
 		}
 
+		public List<Stream> StreamsToDispose { get; set; }
+
 		public void Close()
 		{
-			OutputStream.Dispose();
-			response.Close();
+			var exceptionAggregator = new ExceptionAggregator(log, "Failed to close response");
+			exceptionAggregator.Execute(OutputStream.Flush);
+			exceptionAggregator.Execute(OutputStream.Dispose);
+			if (StreamsToDispose!= null)
+			{
+				foreach (var stream in StreamsToDispose)
+				{
+					exceptionAggregator.Execute(stream.Flush);
+					exceptionAggregator.Execute(stream.Dispose);
+				}
+			}
+			exceptionAggregator.Execute(response.Close);
+
+			exceptionAggregator.ThrowIfNeeded();
 		}
 
 		public void WriteFile(string path)
@@ -83,9 +106,39 @@ namespace Raven.Database.Server.Abstractions
 			return response.Headers;
 		}
 
-		public void SetPublicCachability()
+		public Task WriteAsync(string data)
+		{
+			try
+			{
+				var bytes = Encoding.UTF8.GetBytes(data);
+				return Task.Factory.FromAsync(
+					(callback, state) => response.OutputStream.BeginWrite(bytes, 0, bytes.Length, callback, state),
+					response.OutputStream.EndWrite,
+					null)
+					.ContinueWith(task =>
+					{
+						if (task.IsFaulted)
+							return task;
+						response.OutputStream.Flush();
+						return task;
+					})
+					.Unwrap();
+			}
+			catch (Exception e)
+			{
+				return new CompletedTask(e);
+			}
+		}
+
+		public void SetPublicCacheability()
 		{
 			response.Headers["Cache-Control"] = "Public";
+		}
+
+		public void Dispose()
+		{
+			if(OutputStream != null)
+				OutputStream.Dispose();
 		}
 	}
 }

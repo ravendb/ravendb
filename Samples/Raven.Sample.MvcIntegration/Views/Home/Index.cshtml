@@ -1,0 +1,44 @@
+﻿<header>
+    <div class="content-wrapper">
+        <div class="float-left">
+            <p class="site-title">
+                <a href="~/">RavenDB - Mvc Integration</a></p>
+        </div>
+    </div>
+</header>
+<div id="body">
+	<div style="float:right">
+		<p><button id="singleGet">Get single session</button></p>
+		<p><button id="multiGet">Get multiple sessions</button></p>
+	</div>
+	
+	<script src="@Url.Content("~/Scripts/jquery.min.js")"></script>
+	<script>
+		$('#singleGet').on('click', function() {
+			$.getJSON('@Url.Action("SingleSessionGet", "Home")');
+		});
+
+		$('#multiGet').on('click', function() {
+			$.getJSON('@Url.Action("MultiSessionGet", "Home")');
+		});
+	</script>
+	
+
+	<section class="featured">
+		<div class="content-wrapper">
+			<hgroup class="title">
+				<h1>Mvc Integration Sample</h1>
+			</hgroup>
+			<p>
+				ASP.NET Web API allows you to expose your applications, data and services to the
+				web directly over HTTP.
+			</p>
+		</div>
+	</section>
+	<section class="content-wrapper main-content clear-fix">
+	    <ul>
+	        <li><a href="@Url.Action("Index", "Home")">With initial requests</a></li>
+	        <li><a href="@Url.Action("NoRequests", "Home")">No requests</a></li>
+	    </ul>
+	</section>
+</div>

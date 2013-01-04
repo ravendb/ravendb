@@ -10,17 +10,21 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class BackupRestore : AbstractDocumentStorageTest
+	public class BackupRestore : RavenTest
 	{
+		private const string BackupDir = @".\BackupDatabase\";
 		private DocumentDatabase db;
 
 		public BackupRestore()
 		{
+			IOExtensions.DeleteDirectory(BackupDir);
+
 			db = new DocumentDatabase(new RavenConfiguration
 			{
 				DataDirectory = DataDir,
@@ -33,6 +37,7 @@ namespace Raven.Tests.Storage
 		{
 			db.Dispose();
 			base.Dispose();
+			IOExtensions.DeleteDirectory(BackupDir);
 		}
 
 		[Fact]
@@ -40,13 +45,13 @@ namespace Raven.Tests.Storage
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-			db.StartBackup(BackupDir, false);
+			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Dispose();
-			DeleteIfExists(DataDir);
+			IOExtensions.DeleteDirectory(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir);
+			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { });
 
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir});
 
@@ -60,13 +65,13 @@ namespace Raven.Tests.Storage
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-			db.StartBackup(BackupDir, false);
+			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Dispose();
-			DeleteIfExists(DataDir);
+			IOExtensions.DeleteDirectory(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir);
+			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { });
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 			db.SpinBackgroundWorkers();
@@ -98,13 +103,13 @@ namespace Raven.Tests.Storage
 			} while (queryResult.IsStale);
 			Assert.Equal(1, queryResult.Results.Count);
 
-			db.StartBackup(BackupDir, false);
+			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Dispose();
-			DeleteIfExists(DataDir);
+			IOExtensions.DeleteDirectory(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir);
+			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { });
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 
@@ -133,7 +138,7 @@ namespace Raven.Tests.Storage
 			Assert.Equal(1, queryResult.Results.Count);
 
 			File.WriteAllText("raven.db.test.backup.txt", "Sabotage!");
-			db.StartBackup("raven.db.test.backup.txt", false);
+			db.StartBackup("raven.db.test.backup.txt", false, new DatabaseDocument());
 			WaitForBackup(db, false);
 
 			Assert.True(GetStateOfLastStatusMessage().Severity == BackupStatus.BackupMessageSeverity.Error);

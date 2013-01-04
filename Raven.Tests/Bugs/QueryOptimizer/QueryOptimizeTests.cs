@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs.QueryOptimizer
 {
-	public class QueryOptimizeTests : LocalClientTest
+	public class QueryOptimizeTests : RavenTest
 	{
 		[Fact]
 		public void WillNotError()
@@ -183,8 +184,8 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 															   },
 															   new string[0]);
 
-				//Because the "test" index has a field set to Analyzed (and the default is Non-Analysed), 
-				//it should NOT be considered a match by the query optimiser!
+				//Because the "test" index has a field set to Analyzed (and the default is Non-Analyzed), 
+				//it should NOT be considered a match by the query optimizer!
 				Assert.NotEqual("test", queryResult.IndexName);
 
 				queryResult = store.DatabaseCommands.Query("dynamic",
@@ -195,6 +196,76 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 															   new string[0]);
 				//This query CAN use the existing index because "BodyText" is NOT set to analyzed
 				Assert.Equal("test", queryResult.IndexName);
+			}
+		}
+
+		public class SomeObject
+		{
+			public string StringField { get; set; }
+			public int IntField { get; set; }
+		}
+
+		[Fact]
+		public void WithRangeQuery()
+		{
+			using (var _documentStore = NewDocumentStore())
+			{
+				_documentStore.DatabaseCommands.PutIndex("SomeObjects/BasicStuff"
+										 , new IndexDefinition
+										 {
+											 Map = "from doc in docs.SomeObjects\r\nselect new { IntField = (int)doc.IntField, StringField = doc.StringField }",
+											 SortOptions = new Dictionary<string, SortOptions> { { "IntField", SortOptions.Int } },
+										 });
+
+				using (IDocumentSession session = _documentStore.OpenSession())
+				{
+					DateTime startedAt = DateTime.UtcNow;
+					for (int i = 0; i < 40; i++)
+					{
+						var p = new SomeObject
+						{
+							IntField = i,
+							StringField = "user " + i,
+						};
+						session.Store(p);
+					}
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(_documentStore);
+
+				using (IDocumentSession session = _documentStore.OpenSession())
+				{
+					RavenQueryStatistics stats;
+					var list = session.Query<SomeObject>()
+						.Statistics(out stats)
+						.Where(p => p.StringField == "user 1")
+						.ToList();
+
+					Assert.Equal("SomeObjects/BasicStuff", stats.IndexName);
+				}
+
+				using (IDocumentSession session = _documentStore.OpenSession())
+				{
+					RavenQueryStatistics stats;
+					var list = session.Query<SomeObject>()
+						.Statistics(out stats)
+						.Where(p => p.IntField > 150000 && p.IntField < 300000)
+						.ToList();
+
+					Assert.Equal("SomeObjects/BasicStuff", stats.IndexName);
+				}
+
+				using (IDocumentSession session = _documentStore.OpenSession())
+				{
+					RavenQueryStatistics stats;
+					var list = session.Query<SomeObject>()
+						.Statistics(out stats)
+						.Where(p => p.StringField == "user 1" && p.IntField > 150000 && p.IntField < 300000)
+						.ToList();
+
+					Assert.Equal("SomeObjects/BasicStuff", stats.IndexName);
+				}
 			}
 		}
 	}

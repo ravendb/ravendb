@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs.Caching
 		}
 
 		[Fact]
-		public void Will_referesh_result_when_main_document_changes()
+		public void Will_refresh_result_when_main_document_changes()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
@@ -92,7 +92,7 @@ namespace Raven.Tests.Bugs.Caching
 				using (var s = store.OpenSession())
 				{
 					s.Store(new User { Name = "Ayende", Email="same.email@example.com"});
-					s.Advanced.DatabaseCommands.PutIndex("index",
+					store.DatabaseCommands.PutIndex("index",
 														 new IndexDefinition()
 															 {
 																 Map =
@@ -101,7 +101,7 @@ namespace Raven.Tests.Bugs.Caching
 					s.SaveChanges();
 				}
 
-				DateTime firstTime = SystemTime.Now;
+				DateTime firstTime = SystemTime.UtcNow;
 
 				using (var s = store.OpenSession())
 				{
@@ -118,7 +118,7 @@ namespace Raven.Tests.Bugs.Caching
 					Assert.Equal(1, results.Length);
 				}
 
-				DateTime secondTime = SystemTime.Now;
+				DateTime secondTime = SystemTime.UtcNow;
 
 				if (firstTime == secondTime) // avoid getting the exact same url
 					secondTime = secondTime.AddMilliseconds(100);
@@ -150,7 +150,7 @@ namespace Raven.Tests.Bugs.Caching
 		}
 
 		[Fact]
-		public void Will_referesh_result_when_included_document_changes()
+		public void Will_refresh_result_when_included_document_changes()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())

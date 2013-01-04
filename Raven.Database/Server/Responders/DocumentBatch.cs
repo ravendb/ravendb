@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -17,7 +18,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class DocumentBatch : RequestResponder
+	public class DocumentBatch : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -26,7 +27,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "POST", "PATCH", "DELETE" }; }
+			get { return new[] { "POST", "PATCH", "EVAL", "DELETE" }; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -46,6 +47,12 @@ namespace Raven.Database.Server.Responders
 					OnBulkOperation(context, (index, query, allowStale) =>
 						databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
 					break;
+				case "EVAL":
+					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
+					var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
+					OnBulkOperation(context, (index, query, allowStale) =>
+						databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale));
+					break;
 			}
 		}
 
@@ -64,7 +71,6 @@ namespace Raven.Database.Server.Responders
 			var array = batchOperation(index, indexQuery, allowStale);
 
 			context.WriteJson(array);
-
 		}
 		
 		private void Batch(IHttpContext context)
@@ -78,7 +84,7 @@ namespace Raven.Database.Server.Responders
 
 			context.Log(log => log.Debug(()=>
 			{
-				if(commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+				if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
 				{
 					return "\tExecuted " + string.Join(", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key)));
 				}

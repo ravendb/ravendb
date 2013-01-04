@@ -2,7 +2,7 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class Edit : View
+	public partial class Edit : PageView
 	{
 		public Edit()
 		{

@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Linq;
 using System.Net;
 using Raven.Client.Connection.Profiling;
@@ -19,7 +23,7 @@ namespace Raven.Client.Connection
 			Metadata = metadata;
 			Credentials = credentials;
 			Convention = convention;
-			operationsHeadersColletion = new NameValueCollection();
+			operationsHeadersCollection = new NameValueCollection();
 		}
 
 		/// <summary>
@@ -48,8 +52,8 @@ namespace Raven.Client.Connection
 		public CreateHttpJsonRequestParams AddOperationHeaders(NameValueCollection operationsHeaders)
 		{
 			urlCached = null;
-			operationsHeadersColletion = operationsHeaders;
-			foreach (string operationsHeader in operationsHeadersColletion)
+			operationsHeadersCollection = operationsHeaders;
+			foreach (string operationsHeader in operationsHeadersCollection)
 			{
 				operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.GetHashCode();
 				var values = operationsHeaders.GetValues(operationsHeader);
@@ -73,18 +77,18 @@ namespace Raven.Client.Connection
 					webRequest.Headers[kvp.Key] = kvp.Value;
 				}
 			}
-			if(operationsHeadersColletion != null)
+			if(operationsHeadersCollection != null)
 			{
-				foreach (string header in operationsHeadersColletion)
+				foreach (string header in operationsHeadersCollection)
 				{
 					try
 					{
-						webRequest.Headers[header] = operationsHeadersColletion[header];
+						webRequest.Headers[header] = operationsHeadersCollection[header];
 					}
 					catch (Exception e)
 					{
 						throw new InvalidOperationException(
-							"Failed to set header '" + header + "' to the value: " + operationsHeadersColletion[header], e);
+							"Failed to set header '" + header + "' to the value: " + operationsHeadersCollection[header], e);
 					}
 				}
 			}
@@ -97,11 +101,12 @@ namespace Raven.Client.Connection
 		}
 
 		private int operationHeadersHash;
-		private NameValueCollection operationsHeadersColletion;
+		private NameValueCollection operationsHeadersCollection;
 		private IDictionary<string, string> operationsHeadersDictionary;
 		public IHoldProfilingInformation Owner { get; set; }
 		private string url;
 		private string urlCached;
+		public bool AvoidCachingRequest { get; set; }
 
 		public string Url
 		{
@@ -128,5 +133,6 @@ namespace Raven.Client.Connection
 		public RavenJObject Metadata { get; set; }
 		public ICredentials Credentials { get; set; }
 		public DocumentConvention Convention { get; set; }
+		public bool DisableRequestCompression { get; set; }
 	}
 }

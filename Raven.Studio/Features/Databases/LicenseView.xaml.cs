@@ -7,7 +7,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Databases
 {
-	public partial class LicenseView : View
+	public partial class LicenseView : PageView
 	{
 		public LicenseView()
 		{
@@ -27,7 +27,7 @@ namespace Raven.Studio.Features.Databases
 
 		private void StartAlert()
 		{
-			Brush originalBrsush = StatusText.Foreground;
+			var originalBrush = StatusText.Foreground;
 			Brush[] alertBrushes = new[]
 			{
 				new SolidColorBrush(Colors.Magenta),
@@ -37,14 +37,14 @@ namespace Raven.Studio.Features.Databases
 				new SolidColorBrush(Colors.Cyan),
 			};
 
-			int count = 0;
+			var count = 0;
 			Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(2))
 				.ObserveOnDispatcher()
 				.Subscribe(_ => StatusText.Foreground = alertBrushes[count++ % alertBrushes.Length]);
 
 			Observable.Timer(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2))
 				.ObserveOnDispatcher()
-				.Subscribe(_ => StatusText.Foreground = originalBrsush);
+				.Subscribe(_ => StatusText.Foreground = originalBrush);
 		}
 	}
 }

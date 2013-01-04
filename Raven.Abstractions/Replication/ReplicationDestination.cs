@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel;
+
 namespace Raven.Abstractions.Replication
 {
 	/// <summary>
@@ -15,7 +17,6 @@ namespace Raven.Abstractions.Replication
 		/// server configuration file. 
 		/// Override all other properties of the destination
 		/// </summary>
-		public string ConnectionStringName { get; set; }
 
 		private string url;
 
@@ -63,6 +64,21 @@ namespace Raven.Abstractions.Replication
 		/// this destination, or should we replicate only documents that were locally modified.
 		/// </summary>
 		public TransitiveReplicationOptions TransitiveReplicationBehavior { get; set; }
+
+		/// <summary>
+		/// Gets or sets if the replication will ignore this destination in the client
+		/// </summary>
+		public bool IgnoredClient { get; set; }
+
+		/// <summary>
+		/// Gets or sets if replication to this destination is disabled in both client and server.
+		/// </summary>
+		public bool Disabled { get; set; }
+
+		/// <summary>
+		/// Gets or sets the Client URL of the replication destination
+		/// </summary>
+		public string ClientVisibleUrl { get; set; }
 	}
 
 	/// <summary>
@@ -73,10 +89,12 @@ namespace Raven.Abstractions.Replication
 		/// <summary>
 		/// Don't replicate replicated documents
 		/// </summary>
+		[Description("Changed only")]
 		None,
 		/// <summary>
 		/// Replicate replicated documents
 		/// </summary>
+		[Description("Changed and replicated")]
 		Replicate
 	}
 }

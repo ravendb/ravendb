@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CustomDynamicObject : LocalClientTest
+	public class CustomDynamicObject : RavenTest
 	{
 		[Fact]
 		public void CanReadFromDB()

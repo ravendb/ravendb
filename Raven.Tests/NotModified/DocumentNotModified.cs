@@ -6,6 +6,7 @@ using System.Text;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
 using Xunit;
+using Raven.Client.Connection;
 
 namespace Raven.Tests.NotModified
 {
@@ -64,7 +65,7 @@ namespace Raven.Tests.NotModified
 				using (var response = GetHttpResponseHandle304(getRequest))
 				{
 					Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-					Assert.Equal(firstEtag.ToString(), response.Headers["ETag"]);
+					Assert.Equal(firstEtag, response.GetEtagHeader());
 				}
 
 				// If we ask with If-None-Match (and it's a match), we'll get 304 Not Modified
@@ -90,7 +91,7 @@ namespace Raven.Tests.NotModified
 				using (var response = GetHttpResponseHandle304(getRequest))
 				{
 					Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-					Assert.Equal(secondEtag.ToString(), response.Headers["ETag"]);
+					Assert.Equal(secondEtag, response.GetEtagHeader());
 				}
 
 				// If we ask with the new etag, we'll get 304 Not Modified

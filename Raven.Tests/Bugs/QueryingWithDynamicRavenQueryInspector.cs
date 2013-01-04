@@ -1,4 +1,5 @@
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Database.Server;
@@ -66,5 +67,11 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 
+		private class Blog
+		{
+			public string Title { get; set; }
+			public int SortWeight { get; set; }
+			public string Category { get; set; }
+		}
 	}
 }

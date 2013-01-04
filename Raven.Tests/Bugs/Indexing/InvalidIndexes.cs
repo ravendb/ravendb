@@ -22,9 +22,7 @@ where user.LastLogin > DateTime.Now.AddDays(-10)
 select new { user.Name}"
 				                                                                                   }));
 
-				Assert.Equal(@"Cannot use DateTime.Now during a map or reduce phase.
-The map or reduce functions must be referentially transparent, that is, for the same set of values, they always return the same results.
-Using DateTime.Now invalidate that premise, and is not allowed", ioe.Message);
+				Assert.Contains(@"Cannot use DateTime.Now during a map or reduce phase.", ioe.Message);
 			}
 		}
 
@@ -41,10 +39,7 @@ Using DateTime.Now invalidate that premise, and is not allowed", ioe.Message);
 				                                                                                                         		"from user in docs.Users orderby user.Id select new { user.Name}"
 				                                                                                                         }));
 
-				Assert.Equal(@"OrderBy calls are not valid during map or reduce phase, but the following was found:
-orderby user.Id
-OrderBy calls modify the indexing output, but doesn't actually impact the order of results returned from the database.
-You should be calling OrderBy on the QUERY, not on the index, if you want to specify ordering.", ioe.Message);
+				Assert.Contains(@"OrderBy calls are not valid during map or reduce phase, but the following was found:", ioe.Message);
 			}
 		}
 	}

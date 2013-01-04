@@ -13,12 +13,12 @@ namespace Raven.Studio.Features.Input
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = true;
+            DialogResult = true;
 		}
 
 		private void CancelButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = false;
+			DialogResult = false;
 		}
 
 		private void LayoutRoot_OnKeyDown(object sender, KeyEventArgs e)

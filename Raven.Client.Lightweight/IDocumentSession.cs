@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -12,7 +13,6 @@ using Raven.Client.Linq;
 
 namespace Raven.Client
 {
-#if !SILVERLIGHT
 	/// <summary>
 	/// Interface for document session
 	/// </summary>
@@ -53,7 +53,7 @@ namespace Raven.Client
 		T[] Load<T>(IEnumerable<string> ids);
 
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Loads the specified entity with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
@@ -65,7 +65,35 @@ namespace Raven.Client
 		/// Or whatever your conventions specify.
 		/// </remarks>
 		T Load<T>(ValueType id);
-		
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1,2,3)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		T[] Load<T>(params ValueType[] ids);
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(new List&lt;int&gt;(){1,2,3})
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		T[] Load<T>(IEnumerable<ValueType> ids);
+
 		/// <summary>
 		/// Queries the specified index using Linq.
 		/// </summary>
@@ -87,7 +115,6 @@ namespace Raven.Client
 		/// <returns></returns>
 		IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
-		
 		/// <summary>
 		/// Begin a load while including the specified path 
 		/// </summary>
@@ -98,14 +125,14 @@ namespace Raven.Client
 		/// Begin a load while including the specified path 
 		/// </summary>
 		/// <param name="path">The path.</param>
-		ILoaderWithInclude<T> Include<T>(Expression<Func<T,object>> path);
+		ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Begin a load while including the specified path 
 		/// </summary>
 		/// <param name="path">The path.</param>
 		ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
-	
+
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
@@ -121,7 +148,6 @@ namespace Raven.Client
 		/// </summary>
 		void Store(object entity, Guid etag, string id);
 
-#if !NET_3_5        
 		/// <summary>
 		/// Stores the specified dynamic entity.
 		/// </summary>
@@ -134,21 +160,7 @@ namespace Raven.Client
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
 		void Store(dynamic entity, string id);
-#else 
-		/// <summary>
-		/// Stores the specified dynamic entity.
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		void Store(object entity);
-
-		/// <summary>
-		/// Stores the specified dynamic entity, under the specified id
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		void Store(object entity, string id);
-#endif
 	}
+}
 
 #endif
-}

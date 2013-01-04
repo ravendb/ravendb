@@ -38,16 +38,22 @@ namespace Raven.Tests.Triggers
 
 			public override void OnIndexEntryDeleted(string entryKey)
 			{
-				var dataRows = parent.DataTable.Rows.Cast<DataRow>().Where(x => (string)x["entry"] == entryKey).ToArray();
-				foreach (var dataRow in dataRows)
+				lock (parent.DataTable)
 				{
-					parent.DataTable.Rows.Remove(dataRow);
+					var dataRows = parent.DataTable.Rows.Cast<DataRow>().Where(x => (string) x["entry"] == entryKey).ToArray();
+					foreach (var dataRow in dataRows)
+					{
+						parent.DataTable.Rows.Remove(dataRow);
+					}
 				}
 			}
 
 			public override void OnIndexEntryCreated(string entryKey, Lucene.Net.Documents.Document document)
 			{
-				parent.DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue());
+				lock (parent.DataTable)
+				{
+					parent.DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue);
+				}
 			}
 		}
 	}

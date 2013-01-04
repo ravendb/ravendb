@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Raven.Abstractions.Extensions;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -10,13 +6,17 @@ namespace Raven.Studio.Commands
 	public class ChangeDatabaseCommand : Command
 	{
 		private string databaseName;
-		private readonly IList<Type> refreshStaticModels = new List<Type>
-		                                                   	{
-		                                                   		typeof (HomeModel),
-		                                                   		typeof (CollectionsModel),
-		                                                   		typeof (IndexesModel),
-		                                                   		typeof (AllDocumentsModel),
-		                                                   	};
+		private readonly bool navigateAfter;
+
+		public ChangeDatabaseCommand(bool navigateAfter = false)
+		{
+			this.navigateAfter = navigateAfter;
+		}
+
+		public ChangeDatabaseCommand()
+		{
+			
+		}
 
 		public override bool CanExecute(object parameter)
 		{
@@ -26,31 +26,17 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			bool shouldRedirect = true;
-
 			var urlParser = new UrlParser(UrlUtil.Url);
 			if (urlParser.GetQueryParam("database") == databaseName)
-				shouldRedirect = false;
+			{
+			    return;
+			}
+			if (navigateAfter) 
+				urlParser = new UrlParser("/documents");
 
 			urlParser.SetQueryParam("database", databaseName);
-
-			var server = ApplicationModel.Current.Server.Value;
-			server.SetCurrentDatabase(urlParser);
-			server.SelectedDatabase.Value.AsyncDatabaseCommands
-				.EnsureSilverlightStartUpAsync()
-				.Catch();
-
-			var updateAllFromServer = View.UpdateAllFromServer();
-			refreshStaticModels
-				.Except(updateAllFromServer.Select(x=>x.GetType()))
-				.Select(model => (Model) Activator.CreateInstance(model))
-				.ForEach(model => model.ForceTimerTicked());
-			
-			
-			if (shouldRedirect)
-			{
-				UrlUtil.Navigate(urlParser.BuildUrl());
-			}
+			// MainPage.ContentFrame_Navigated takes care of actually responding to the db name change
+			UrlUtil.Navigate(urlParser.BuildUrl());
 		}
 	}
 }

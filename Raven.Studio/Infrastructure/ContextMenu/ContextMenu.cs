@@ -3,13 +3,15 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System.ComponentModel;
+using System;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace System.Windows.Controls
+namespace Raven.Studio.Infrastructure.ContextMenu
 {
     /// <summary>
     /// Represents a pop-up menu that enables a control to expose functionality that is specific to the context of the control.
@@ -62,19 +64,19 @@ namespace System.Windows.Controls
             {
                 if (null != _owner)
                 {
-                    FrameworkElement ownerFrameworkElement = _owner as FrameworkElement;
+                    var ownerFrameworkElement = _owner as FrameworkElement;
                     if (null != ownerFrameworkElement)
                     {
-                        ownerFrameworkElement.MouseRightButtonDown -= new MouseButtonEventHandler(HandleOwnerMouseRightButtonDown);
+                        ownerFrameworkElement.MouseRightButtonDown -= HandleOwnerMouseRightButtonDown;
                     }
                 }
                 _owner = value;
                 if (null != _owner)
                 {
-                    FrameworkElement ownerFrameworkElement = _owner as FrameworkElement;
+                    var ownerFrameworkElement = _owner as FrameworkElement;
                     if (null != ownerFrameworkElement)
                     {
-                        ownerFrameworkElement.MouseRightButtonDown += new MouseButtonEventHandler(HandleOwnerMouseRightButtonDown);
+                        ownerFrameworkElement.MouseRightButtonDown += HandleOwnerMouseRightButtonDown;
                     }
                 }
             }
@@ -218,7 +220,7 @@ namespace System.Windows.Controls
             DefaultStyleKey = typeof(ContextMenu);
 
             // Temporarily hook LayoutUpdated to find out when Application.Current.RootVisual gets set.
-            LayoutUpdated += new EventHandler(HandleLayoutUpdated);
+            LayoutUpdated += HandleLayoutUpdated;
         }
 
         /// <summary>
@@ -278,7 +280,7 @@ namespace System.Windows.Controls
                 // Application.Current.RootVisual is valid
                 InitializeRootVisual();
                 // Unhook event
-                LayoutUpdated -= new EventHandler(HandleLayoutUpdated);
+                LayoutUpdated -= HandleLayoutUpdated;
             }
         }
 
@@ -314,8 +316,19 @@ namespace System.Windows.Controls
                 _rootVisual = Application.Current.RootVisual as FrameworkElement;
                 if (null != _rootVisual)
                 {
-                    // Ideally, this would use AddHandler(MouseMoveEvent), but MouseMoveEvent doesn't exist
-                    _rootVisual.MouseMove += new MouseEventHandler(HandleRootVisualMouseMove);
+                    var rootVisual = _rootVisual;
+                    // Use a weak event listener.
+                    var rootVisualMouseMoveListener = new WeakEventListener<ContextMenu, object, MouseEventArgs>(this)
+                    {
+                        OnEventAction =
+                            (instance, source, eventArgs) =>
+                            instance.HandleRootVisualMouseMove(source, eventArgs),
+                        OnDetachAction =
+                            (weakEventListener) =>
+                            rootVisual.MouseMove -= weakEventListener.OnEvent
+                    };
+
+                    rootVisual.MouseMove += rootVisualMouseMoveListener.OnEvent;
                 }
             }
         }
@@ -326,24 +339,21 @@ namespace System.Windows.Controls
         /// <param name="down">True to move the focus down; false to move it up.</param>
         private void FocusNextItem(bool down)
         {
-            int count = Items.Count;
-            int startingIndex = down ? -1 : count;
-            MenuItem focusedMenuItem = FocusManager.GetFocusedElement() as MenuItem;
+            var count = Items.Count;
+            var startingIndex = down ? -1 : count;
+            var focusedMenuItem = FocusManager.GetFocusedElement() as MenuItem;
             if (null != focusedMenuItem && (this == focusedMenuItem.ParentMenuBase))
-            {
                 startingIndex = ItemContainerGenerator.IndexFromContainer(focusedMenuItem);
-            }
-            int index = startingIndex;
+            
+            var index = startingIndex;
             do
             {
                 index = (index + count + (down ? 1 : -1)) % count;
-                MenuItem container = ItemContainerGenerator.ContainerFromIndex(index) as MenuItem;
+                var container = ItemContainerGenerator.ContainerFromIndex(index) as MenuItem;
                 if (null != container)
                 {
                     if (container.IsEnabled && container.Focus())
-                    {
                         break;
-                    }
                 }
             }
             while (index != startingIndex);
@@ -386,8 +396,8 @@ namespace System.Windows.Controls
             if ((null != _rootVisual) && (null != _overlay))
             {
                 // Start with the current Popup alignment point
-                double x = _popupAlignmentPoint.X;
-                double y = _popupAlignmentPoint.Y;
+                var x = _popupAlignmentPoint.X;
+                var y = _popupAlignmentPoint.Y;
                 // Adjust for offset
                 x += HorizontalOffset;
                 y += VerticalOffset;
@@ -417,22 +427,21 @@ namespace System.Windows.Controls
             InitializeRootVisual();
 
             _overlay = new Canvas { Background = new SolidColorBrush(Colors.Transparent) };
-            _overlay.MouseLeftButtonDown += new MouseButtonEventHandler(HandleOverlayMouseButtonDown);
-            _overlay.MouseRightButtonDown += new MouseButtonEventHandler(HandleOverlayMouseButtonDown);
+            _overlay.MouseLeftButtonDown += HandleOverlayMouseButtonDown;
+            _overlay.MouseRightButtonDown += HandleOverlayMouseButtonDown;
             _overlay.Children.Add(this);
 
             _popup = new Popup { Child = _overlay };
 
-            SizeChanged += new SizeChangedEventHandler(HandleContextMenuOrRootVisualSizeChanged);
+            SizeChanged += HandleContextMenuOrRootVisualSizeChanged;
             if (null != _rootVisual)
-            {
-                _rootVisual.SizeChanged += new SizeChangedEventHandler(HandleContextMenuOrRootVisualSizeChanged);
-            }
+                _rootVisual.SizeChanged += HandleContextMenuOrRootVisualSizeChanged;
+            
             UpdateContextMenuPlacement();
 
             if (ReadLocalValue(DataContextProperty) == DependencyProperty.UnsetValue)
             {
-                DependencyObject dataContextSource = Owner ?? _rootVisual;
+                var dataContextSource = Owner ?? _rootVisual;
                 SetBinding(DataContextProperty, new Binding("DataContext") { Source = dataContextSource });
             }
 
@@ -463,11 +472,10 @@ namespace System.Windows.Controls
                 _overlay.Children.Clear();
                 _overlay = null;
             }
-            SizeChanged -= new SizeChangedEventHandler(HandleContextMenuOrRootVisualSizeChanged);
+
+            SizeChanged -= HandleContextMenuOrRootVisualSizeChanged;
             if (null != _rootVisual)
-            {
-                _rootVisual.SizeChanged -= new SizeChangedEventHandler(HandleContextMenuOrRootVisualSizeChanged);
-            }
+                _rootVisual.SizeChanged -= HandleContextMenuOrRootVisualSizeChanged;
 
             // Update IsOpen
             _settingIsOpen = true;

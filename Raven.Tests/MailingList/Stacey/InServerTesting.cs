@@ -1,4 +1,5 @@
-﻿using Raven.Client.Document;
+﻿using Raven.Client;
+using Raven.Client.Document;
 using Xunit;
 using Raven.Client.Linq;
 using Enumerable = System.Linq.Enumerable;

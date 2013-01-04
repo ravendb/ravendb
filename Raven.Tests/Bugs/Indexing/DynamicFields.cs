@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class DynamicFields : LocalClientTest
+	public class DynamicFields : RavenTest
 	{
 		public class Product
 		{

@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 
@@ -125,7 +125,7 @@ namespace Raven.Abstractions.Json
 				yield return Tuple.Create(result, self);
 				yield break;
 			}
-			if(result == null)
+			if(result == null || result.Type == JTokenType.Null)
 			{
 				yield break;
 			}

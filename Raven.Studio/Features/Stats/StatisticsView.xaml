@@ -1,127 +1,127 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Stats.StatisticsView"
-					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-					 mc:Ignorable="d">
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Stats.StatisticsView"
+                         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         mc:Ignorable="d">
 
-	<Grid Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Path=Database.Value.Statistics.Value}">
+	<UserControl.Resources>
+		<DataTemplate x:Key="Statistics_Item_Tamplate">
+			<Grid Margin="4" x:Name="grid">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="300" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+
+				<TextBlock Text="{Binding Key}" Style="{StaticResource Style_TextBlock_FieldName}"/>
+				<TextBlock Grid.Column="1" Text="{Binding Value.Message}" Visibility="{Binding Value.IsList, Converter={StaticResource BooleanToOppositeVisibility}}"/>
+				<ListBox Grid.Column="1"
+						 Visibility="{Binding Value.IsList, Converter={StaticResource BooleanToVisibility}}"
+						 ItemsSource="{Binding Value.ListItems}"
+						 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}">
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Grid>
+								<Grid Visibility="{Binding ItemType, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='System.String'}">
+									<HyperlinkButton Content="{Binding Item}"
+													 Click="IndexClicked"/>
+								</Grid>
+
+								<Grid Visibility="{Binding ItemType, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Raven.Abstractions.Data.IndexStats'}">
+									<Grid.RowDefinitions>
+										<RowDefinition Height="Auto"/>
+										<RowDefinition Height="Auto"/>
+									</Grid.RowDefinitions>
+
+									<TextBlock Text="{Binding Title}" Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
+
+									<ListBox Grid.Row="1"
+											 ItemsSource="{Binding ItemData}"
+											 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}">
+										<ListBox.ItemTemplate>
+											<DataTemplate>
+												<Grid>
+													<Grid.ColumnDefinitions>
+														<ColumnDefinition Width="180"/>
+														<ColumnDefinition Width="*"/>
+													</Grid.ColumnDefinitions>
+
+													<TextBlock Grid.Row="1"
+															   Text="{Binding Key}" 
+															   Style="{StaticResource Style_TextBlock_InlineSubHeader}"
+															   VerticalAlignment="Top"/>
+													
+													<TextBlock Grid.Row="1" 
+															   Grid.Column="1" 
+															   Text="{Binding Value}"/>
+
+												</Grid>
+											</DataTemplate>
+										</ListBox.ItemTemplate>
+									</ListBox>
+								</Grid>
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+			</Grid>
+		</DataTemplate>
+	</UserControl.Resources>
+
+	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
-		<Border 
-			Grid.Row="0"
-			Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0">
+		<Border Grid.Row="0"
+                Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0"
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1">
 			<toolkit:DockPanel Margin="4" LastChildFill="False">
 				<StackPanel Orientation="Horizontal">
-					<HyperlinkButton Content="Summary"
+					<HyperlinkButton Content="{Binding Breadcrumb}"
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="/home"/>
+									 CommandParameter="{Binding Breadcrumb, StringFormat='/\{0\}'}"/>
 					<TextBlock Text=">" VerticalAlignment="Center" Margin="4,0"/>
 					<TextBlock Text="Statistics" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
 				</StackPanel>
 				<StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">
-					
+
 				</StackPanel>
 			</toolkit:DockPanel>
 		</Border>
 
 		<ScrollViewer BorderThickness="1"
 					  BorderBrush="#FFEAE7E4"
-				Background="{StaticResource Brush_SubtleBackground2}"
-				  VerticalScrollBarVisibility="Auto"
-				  HorizontalScrollBarVisibility="Disabled"
-				  Grid.Row="1"
-				  Margin="0,10,0,0">
-			<Grid HorizontalAlignment="Left">
-				<Grid.Resources>
-				</Grid.Resources>
-				
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="8" />
-					<ColumnDefinition Width="*" />
-				</Grid.ColumnDefinitions>
+                      Background="{StaticResource Brush_SubtleBackground2}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Grid.Row="1"
+                      Margin="0,10,0,0">
+			<Grid>
 				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
 
-				<TextBlock Text="Count Of Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Column="2" Text="{Binding CountOfIndexes, StringFormat='\{0:#,#;;0\}'}" />
+				<ComboBox x:Name="ViewSelect" ItemsSource="{Binding ViewOptions}" SelectedIndex="0" SelectedValue="{Binding SeletedViewOption.Value, Mode=TwoWay}"/>
 
-				<TextBlock Grid.Row="1" Text="Tasks Count" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ApproximateTaskCount, StringFormat='\{0:#,#;;0\}'}" />
-
-				<TextBlock Grid.Row="2" Text="Count Of Documents" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments, StringFormat='\{0:#,#;;0\}'}" />
-
-				<TextBlock Grid.Row="3" Text="Count of Item to Index In Batch" Style="{StaticResource Style_TextBlock_FieldName}" />
-				<TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding CurrentNumberOfItemsToIndexInSingleBatch, StringFormat='\{0:#,#;;0\}'}" />
-				
-				<TextBlock Grid.Row="4" Text="Stale Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<ItemsControl Grid.Row="4" Grid.Column="2" ItemsSource="{Binding StaleIndexes}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<StackPanel>
-								<TextBlock Text="{Binding}" />
-							</StackPanel>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
-
-				<TextBlock Grid.Row="6" Text="Extensions" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<ItemsControl Grid.Row="6"
-						  Grid.Column="2"
-						  ItemsSource="{Binding Extensions}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<StackPanel>
-								<TextBlock Text="{Binding Name}" FontWeight="Bold" />
-								<ItemsControl ItemsSource="{Binding Installed}" Margin="20,0,0,10">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<StackPanel Orientation="Horizontal">
-												<TextBlock Text="{Binding Name}" />
-												<TextBlock Text=", " />
-												<TextBlock Text="{Binding Assembly}" />
-											</StackPanel>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</StackPanel>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
-
-				<TextBlock Grid.Row="7"
-						   Text="Triggers"
-						   Style="{StaticResource Style_TextBlock_FieldName}" />
-				<ItemsControl Grid.Row="7"
-							  Grid.Column="2"
-							  ItemsSource="{Binding Triggers}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<StackPanel>
-								<TextBlock Text="{Binding Name}"
-										   FontWeight="Bold" />
-								<TextBlock Text="{Binding Type, StringFormat='Type: {0}'}" />
-							</StackPanel>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
+				<ListBox Grid.Row="1"
+						 Grid.ColumnSpan="2"
+						 ItemsSource="{Binding StatisticsToView}"
+						 ItemTemplate="{StaticResource Statistics_Item_Tamplate}"
+						 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}">
+				</ListBox>
 			</Grid>
+
 		</ScrollViewer>
 	</Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

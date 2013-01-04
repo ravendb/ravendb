@@ -1,4 +1,5 @@
-﻿The following icons from Fatcow Web Hosting (http://www.fatcow.com/free-icons) via www.iconarchive.com. License: CC Attribution 3.0
+﻿Icons are licensed from IconExperience (http://www.iconexperience.com/)
+The following icons from Fatcow Web Hosting (http://www.fatcow.com/free-icons) via www.iconarchive.com. License: CC Attribution 3.0
 
 document-index-icon.png
 document_prepare.png
@@ -7,6 +8,8 @@ document_page_next.png
 document_page_previous.png
 database.png
 database_add.png
+online.png
+offline.png
 
 The following icons from Marco Martin (http://www.notmart.org/) via iconfinder.com (http://www.iconfinder.com/search/?q=iconset%3Aglaze). License: LGPL
 
@@ -39,3 +42,8 @@ Document.png
 The following Icons came from Mark James (http://www.famfamfam.com/about/) via IconFinder (http://www.iconfinder.com/search/?q=iconset%3Asilk2)
 
 ChangeView
+
+The following Icons came from pixel-mixer.com
+
+Up.png
+Down.png

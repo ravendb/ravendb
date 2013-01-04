@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanHandleDocumentRemoval : LocalClientTest
+	public class CanHandleDocumentRemoval : RavenTest
 	{
 		[Fact]
 		public void CanHandleDocumentDeletion()

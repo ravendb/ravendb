@@ -8,32 +8,30 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class CompiledIndex : AbstractDocumentStorageTest
+	public class CompiledIndex : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public CompiledIndex()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				Catalog = { Catalogs = { new TypeCatalog(typeof(ShoppingCartEventsToShopingCart), typeof(MapOnlyView)) } }
-			});
-			db.SpinBackgroundWorkers();
+			store =
+
+				NewDocumentStore(catalog:new AggregateCatalog
+				{Catalogs = {new TypeCatalog(typeof (ShoppingCartEventsToShopingCart), typeof (MapOnlyView))}});
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
@@ -44,7 +42,7 @@ namespace Raven.Tests.Indexes
 			{
 				For = "ShoppingCart",
 				Type = "Create",
-				Timestamp = SystemTime.Now,
+				Timestamp = SystemTime.UtcNow,
 				ShoppingCartId = "shoppingcarts/12",
 				CustomerId = "users/ayende",
 				CustomerName = "Ayende Rahien"
@@ -74,7 +72,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Create",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					CustomerId = "users/ayende",
 					CustomerName = "Ayende Rahien"
@@ -83,7 +81,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Add",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					ProductId = "products/8123",
 					ProductName = "Fish & Chips",
@@ -93,7 +91,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Add",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					ProductId = "products/3214",
 					ProductName = "Guinness",
@@ -103,7 +101,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Remove",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					ProductId = "products/8123",
 					ProductName = "Fish & Chips",
@@ -113,7 +111,7 @@ namespace Raven.Tests.Indexes
 				{
 					For = "ShoppingCart",
 					Type = "Add",
-					Timestamp = SystemTime.Now,
+					Timestamp = SystemTime.UtcNow,
 					ShoppingCartId = "shoppingcarts/12",
 					ProductId = "products/8121",
 					ProductName = "Beef Pie",

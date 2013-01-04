@@ -19,7 +19,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class WiseShrek : LocalClientTest
+	public class WiseShrek : RavenTest
 	{
 
 		public class Soft
@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs.Indexing
 		public void Isolated()
 		{
 			var ramDirectory = new RAMDirectory();
-			new IndexWriter(ramDirectory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED).Close();
+			using (new IndexWriter(ramDirectory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED)){}
 			var simpleIndex = new SimpleIndex(ramDirectory, "test", new IndexDefinition
 			{
 				Map =
@@ -59,15 +59,15 @@ namespace Raven.Tests.Bugs.Indexing
 			                                                        		{"f_License", SortOptions.Int},
 			                                                        	}
 
-			}, new MapOnlyView(), new InMemoryRavenConfiguration());
+			}, new MapOnlyView(), new WorkContext());
 
 			var perFieldAnalyzerWrapper = simpleIndex.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), new List<Action>());
 
 			var tokenStream = perFieldAnalyzerWrapper.TokenStream("f_name", new StringReader("hello Shrek"));
 			while (tokenStream.IncrementToken())
 			{
-				var attribute = (TermAttribute)tokenStream.GetAttribute(typeof(TermAttribute));
-				Assert.Equal("hello Shrek", attribute.Term());
+				var attribute = (TermAttribute) tokenStream.GetAttribute<ITermAttribute>();
+				Assert.Equal("hello Shrek", attribute.Term);
 			}
 		}
 
@@ -77,7 +77,7 @@ namespace Raven.Tests.Bugs.Indexing
 			using(var store = NewDocumentStore())
 			using (var session = store.OpenSession())
 			{
-				session.Advanced.DatabaseCommands.PutIndex("test", new IndexDefinition
+				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map =
 						@"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}",

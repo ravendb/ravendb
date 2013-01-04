@@ -2,7 +2,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class NullableEnum : LocalClientTest
+	public class NullableEnum : RavenTest
 	{
 		[Fact]
 		public void CanSerializeAndDeserializeCorrectly()

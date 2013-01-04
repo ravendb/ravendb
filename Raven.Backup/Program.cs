@@ -1,5 +1,6 @@
 ﻿using System;
 using NDesk.Options;
+using Raven.Abstractions;
 
 namespace Raven.Backup
 {
@@ -14,9 +15,9 @@ namespace Raven.Backup
 			                	{
 			                		{"url=", "RavenDB server {0:url}", url => op.ServerUrl = url},
 			                		{"dest=", "Full {0:path} to backup folder", path => op.BackupPath = path},
-			                		{"nowait", "Return immedialtey without waiting for a response from the server", _ => op.NoWait = true},
-			                		{"readkey", _ => doReadKeyOnExit = true},
-									{"incremental", s => incrementalBackup= true}
+			                		{"nowait", "Return immediately without waiting for a response from the server", _ => op.NoWait = true},
+			                		{"readkey", "Specifying this flag will make the utility wait for key press before exiting.", _ => doReadKeyOnExit = true},
+									{"incremental", "When specified, the backup process will be incremental when done to a folder where a previous backup lies. If dest is an empty folder, or it does not exist, a full backup will be created. For incremental backups to work, the configuration option Raven/Esent/CircularLog must be set to false.", s => incrementalBackup= true}
 			                	};
 
 			try
@@ -28,6 +29,7 @@ namespace Raven.Backup
 			}
 			catch (Exception e)
 			{
+				Console.WriteLine("Could not understand arguments");
 				Console.WriteLine(e.Message);
 				PrintUsage(optionSet);
 				return;
@@ -56,7 +58,7 @@ namespace Raven.Backup
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(ex.Message);
+				Console.WriteLine(ex);
 			}
 
 			if (doReadKeyOnExit) Console.ReadKey();
@@ -70,7 +72,7 @@ Backup utility for RavenDB
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
-Command line options:", DateTime.UtcNow.Year);
+Command line options:", SystemTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);
 

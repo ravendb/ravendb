@@ -1,6 +1,6 @@
 ﻿
 using System.Reflection;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Client.Document;
 
 namespace Raven.Tests.Json
@@ -8,21 +8,21 @@ namespace Raven.Tests.Json
 	using System.Collections.Generic;
 	using Xunit;
 
-	public class JsonNetBugsTests : LocalClientTest
+	public class JsonNetBugsTests : RavenTest
 	{
-		class ObjectyWithByteArray
+		class ObjectWithByteArray
 		{
 			public byte[] Data { get; set; }
 		}
 
 		[Fact]
-		public void can_serialize_object_whth_byte_array_when_TypeNameHandling_is_All()
+		public void can_serialize_object_with_byte_array_when_TypeNameHandling_is_All()
 		{
-			ObjectyWithByteArray data = new ObjectyWithByteArray { Data = new byte[] { 72, 63, 62, 71, 92, 55 } };
+			ObjectWithByteArray data = new ObjectWithByteArray { Data = new byte[] { 72, 63, 62, 71, 92, 55 } };
 			using (var store = NewDocumentStore())
 			{
 				// this is an edge case since it does not make a lot of sense for users to set this.
-				store.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.All;
+				store.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = Raven.Imports.Newtonsoft.Json.TypeNameHandling.All;
 
 				using (var session = store.OpenSession())
 				{
@@ -31,7 +31,7 @@ namespace Raven.Tests.Json
 				}
 				using (var session = store.OpenSession())
 				{
-					var result = session.Load<ObjectyWithByteArray>("test");
+					var result = session.Load<ObjectWithByteArray>("test");
 					Assert.NotNull(result);
 					Assert.Equal(data.Data, result.Data);   
 				}

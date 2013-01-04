@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Xunit;
@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 		public string Version { get; set; }
 	}
 
-	public class EntitiesWithAttributes : LocalClientTest
+	public class EntitiesWithAttributes : RavenTest
 	{
 		public void EntitiesSerializeCorrectlyWithAttributes()
 		{

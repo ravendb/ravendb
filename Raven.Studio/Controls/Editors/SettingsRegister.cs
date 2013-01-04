@@ -4,10 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
-using System.Windows;
 
 namespace Raven.Studio.Controls.Editors
 {

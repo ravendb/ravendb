@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +9,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 {
 	/// <summary>
 	/// Extension methods that we are translating on dynamic objects during the 
-	/// translation phase of the indx compilation
+	/// translation phase of the index compilation
 	/// </summary>
 	public class DynamicExtensionMethods
 	{

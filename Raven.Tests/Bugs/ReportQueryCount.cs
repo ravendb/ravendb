@@ -4,13 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Client;
 using Raven.Client.Linq;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class ReportQueryCount : LocalClientTest
+	public class ReportQueryCount : RavenTest
 	{
 		[Fact]
 		public void CanFindOutWhatTheQueryTotalCountIs()

@@ -9,7 +9,18 @@ namespace Raven.Studio.Infrastructure
 	{
 		public virtual bool CanExecute(object parameter)
 		{
-			return true;
+			return shouldExecute;
+		}
+
+		private bool shouldExecute = true;
+		protected bool ShouldExecute
+		{
+			get { return shouldExecute; }
+			set
+			{
+				shouldExecute = value;
+				RaiseCanExecuteChanged();
+			}
 		}
 
 		public abstract void Execute(object parameter);
@@ -18,7 +29,7 @@ namespace Raven.Studio.Infrastructure
 
 		public void RaiseCanExecuteChanged()
 		{
-			EventHandler handler = CanExecuteChanged;
+			var handler = CanExecuteChanged;
 			if (handler != null) handler(this, EventArgs.Empty);
 		}
 

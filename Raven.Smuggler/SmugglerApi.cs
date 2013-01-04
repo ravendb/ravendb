@@ -9,22 +9,28 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
-using Newtonsoft.Json;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
 	public class SmugglerApi : SmugglerApiBase
 	{
+		const int retriesCount = 5;
+
+		private int total;
+		private int count;
 		protected override RavenJArray GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
-			var request = CreateRequest("/indexes?pageSize=128&start=" + totalCount);
+			var request = CreateRequest("/indexes?pageSize=" + smugglerOptions.BatchSize + "&start=" + totalCount);
 			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
 			return indexes;
 		}
@@ -39,32 +45,59 @@ namespace Raven.Smuggler
 		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
 
-		public SmugglerApi(RavenConnectionStringOptions connectionStringOptions)
+		public SmugglerApi(SmugglerOptions smugglerOptions, RavenConnectionStringOptions connectionStringOptions)
+			: base(smugglerOptions)
 		{
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
-			var builder = new StringBuilder(ConnectionStringOptions.Url, 2);
-			if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
+			var builder = new StringBuilder();
+			if (url.StartsWith("http", StringComparison.InvariantCultureIgnoreCase) == false)
 			{
-				if (ConnectionStringOptions.Url.EndsWith("/") == false)
-					builder.Append("/");
-				builder.Append("databases/");
-				builder.Append(ConnectionStringOptions.DefaultDatabase);
-				builder.Append('/');
+				builder.Append(ConnectionStringOptions.Url);
+				if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
+				{
+					if (ConnectionStringOptions.Url.EndsWith("/") == false)
+						builder.Append("/");
+					builder.Append("databases/");
+					builder.Append(ConnectionStringOptions.DefaultDatabase);
+					builder.Append('/');
+				}
 			}
 			builder.Append(url);
-			return httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
+			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
+			httpRavenRequest.WebRequest.Timeout = smugglerOptions.Timeout;
+			if (LastRequestErrored)
+			{
+				httpRavenRequest.WebRequest.KeepAlive = false;
+				httpRavenRequest.WebRequest.Timeout *= 2;
+				LastRequestErrored = false;
+			}
+			return httpRavenRequest;
 		}
 
 		protected override RavenJArray GetDocuments(Guid lastEtag)
 		{
-			RavenJArray documents = null;
-			var request = CreateRequest("/docs?pageSize=128&etag=" + lastEtag);
-			request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
-			return documents;
+			int retries = retriesCount;
+			while (true)
+			{
+				try
+				{
+					RavenJArray documents = null;
+					var request = CreateRequest("/docs?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
+					request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
+					return documents;
+				}
+				catch (Exception e)
+				{
+					if (retries-- == 0)
+						throw;
+					LastRequestErrored = true;
+					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e, retriesCount);
+				}
+			}
 		}
 
 		protected override Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
@@ -73,11 +106,19 @@ namespace Raven.Smuggler
 			while (true)
 			{
 				RavenJArray attachmentInfo = null;
-				var request = CreateRequest("/static/?pageSize=128&etag=" + lastEtag);
+				var request = CreateRequest("/static/?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
 				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
 
 				if (attachmentInfo.Length == 0)
 				{
+					var databaseStatistics = GetStats();
+					var lastEtagComparable = new ComparableByteArray(lastEtag);
+					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+					{
+						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
+						continue;
+					}
 					ShowProgress("Done with reading attachments, total: {0}", totalCount);
 					return lastEtag;
 				}
@@ -136,12 +177,18 @@ namespace Raven.Smuggler
 			request.ExecuteRequest();
 		}
 
+		protected override DatabaseStatistics GetStats()
+		{
+			var request = CreateRequest("/stats");
+			return request.ExecuteRequest<DatabaseStatistics>();
+		}
+
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			Console.WriteLine(format, args);
 		}
 
-		protected override void FlushBatch(List<RavenJObject> batch)
+		protected override Guid FlushBatch(List<RavenJObject> batch)
 		{
 			var sw = Stopwatch.StartNew();
 
@@ -149,7 +196,8 @@ namespace Raven.Smuggler
 			foreach (var doc in batch)
 			{
 				var metadata = doc.Value<RavenJObject>("@metadata");
-				doc.Remove("@metadata");
+
+			    doc.Remove("@metadata");
 				commands.Add(new RavenJObject
 								{
 									{"Method", "PUT"},
@@ -159,15 +207,46 @@ namespace Raven.Smuggler
 								});
 			}
 
-			var request = CreateRequest("/bulk_docs", "POST");
-			request.Write(commands);
-			request.ExecuteRequest();
+			var retries = retriesCount;
+			HttpRavenRequest request = null;
+			BatchResult[] results;
+			while (true)
+			{
+				try
+				{
+					request = CreateRequest("/bulk_docs", "POST");
+					request.Write(commands);
+					results = request.ExecuteRequest<BatchResult[]>();
+					sw.Stop();
+					break;
+				}
+				catch (Exception e)
+				{
+					if (--retries == 0 || request == null)
+						throw;
+					sw.Stop();
+					LastRequestErrored = true;
+					ShowProgress("Error flushing to database, remaining attempts {0} - time {2:#,#} ms, will retry [{3:#,#.##;;0} kb compressed to {4:#,#.##;;0} kb]. Error: {1}",
+								 retriesCount - retries, e, sw.ElapsedMilliseconds,
+								 (double)request.NumberOfBytesWrittenUncompressed / 1024,
+								 (double)request.NumberOfBytesWrittenCompressed / 1024);
+				}
+			}
+			total += batch.Count;
+			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} in {1,6:#,#;;0} ms ({6:0.00} ms per doc) (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,#.##;;0} kb]",
+				batch.Count, sw.ElapsedMilliseconds, ++count, total,
+				(double)request.NumberOfBytesWrittenUncompressed / 1024,
+				(double)request.NumberOfBytesWrittenCompressed / 1024,
+				Math.Round((double)sw.ElapsedMilliseconds / Math.Max(1, batch.Count), 2));
 
-			ShowProgress("Wrote {0} documents in {1}", batch.Count, sw.ElapsedMilliseconds);
-
-			ShowProgress(" in {0:#,#;;0} ms", sw.ElapsedMilliseconds);
 			batch.Clear();
+
+			if (results.Length == 0)
+				return Guid.Empty;
+			return results.Last().Etag.Value;
 		}
+
+		public bool LastRequestErrored { get; set; }
 
 		protected override void EnsureDatabaseExists()
 		{

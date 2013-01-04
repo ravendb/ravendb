@@ -6,13 +6,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class IndexingOnDictionary : LocalClientTest
+	public class IndexingOnDictionary : RavenTest
 	{
 		[Fact]
 		public void CanIndexValuesForDictionary()

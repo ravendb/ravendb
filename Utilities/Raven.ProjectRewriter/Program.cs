@@ -14,13 +14,13 @@ namespace Raven.ProjectRewriter
 		static XNamespace xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 		static void Main(string[] args)
 		{
-			Generate35(@"Raven.Abstractions\Raven.Abstractions.csproj",
-				@"Raven.Abstractions\Raven.Abstractions.g.3.5.csproj",
-				"Raven.Json");
-			Generate35(@"Raven.Client.Lightweight\Raven.Client.Lightweight.csproj",
-				@"Raven.Client.Lightweight\Raven.Client.Lightweight.g.3.5.csproj",
-				"Raven.Json",
-				"Raven.Abstractions");
+			//Generate35(@"Raven.Abstractions\Raven.Abstractions.csproj",
+			//    @"Raven.Abstractions\Raven.Abstractions.g.3.5.csproj",
+			//    "Raven.Json");
+			//Generate35(@"Raven.Client.Lightweight\Raven.Client.Lightweight.csproj",
+			//    @"Raven.Client.Lightweight\Raven.Client.Lightweight.g.3.5.csproj",
+			//    "Raven.Json",
+			//    "Raven.Abstractions");
 
 			GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
 				@"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
@@ -62,6 +62,12 @@ namespace Raven.ProjectRewriter
 				}
 				if (element.Attribute("Include").Value.Contains("Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"))
 					element.Attribute("Include").Value = element.Attribute("Include").Value.Replace("5.0.5.0", "2.0.5.0");
+
+				if (element.Attribute("Include").Value.Contains("System.Reactive, "))
+				{
+					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
+						hintPath.Value = hintPath.Value.Replace(@"\SL5\", @"\SL4\");
+				}
 			}
 
 			foreach (var element in database.Root.Descendants(xmlns + "TargetFrameworkVersion"))
@@ -90,7 +96,7 @@ namespace Raven.ProjectRewriter
 			{
 				if (element.Value.EndsWith(";") == false)
 					element.Value += ";";
-				element.Value += "NET_3_5";
+				element.Value += "NET35";
 			}
 
 			foreach (var element in database.Root.Descendants(xmlns + "ProjectReference").ToArray())

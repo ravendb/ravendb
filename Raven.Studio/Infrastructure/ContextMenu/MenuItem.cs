@@ -3,11 +3,13 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
+using System;
 using System.Collections.Specialized;
-using System.Windows.Controls.Primitives;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace System.Windows.Controls
+namespace Raven.Studio.Infrastructure.ContextMenu
 {
     /// <summary>
     /// Represents a selectable item inside a Menu or ContextMenu.
@@ -29,6 +31,8 @@ namespace System.Windows.Controls
         /// Stores a value indicating whether this element has logical focus.
         /// </summary>
         private bool _isFocused;
+
+        private bool _isLoaded;
 
         /// <summary>
         /// Gets or sets a reference to the MenuBase parent.
@@ -71,13 +75,14 @@ namespace System.Windows.Controls
         private void OnCommandChanged(ICommand oldValue, ICommand newValue)
         {
             if (null != oldValue)
+                oldValue.CanExecuteChanged -= HandleCanExecuteChanged;
+
+            if (_isLoaded)
             {
-                oldValue.CanExecuteChanged -= new EventHandler(HandleCanExecuteChanged);
+                if (null != newValue)
+                    newValue.CanExecuteChanged += HandleCanExecuteChanged;
             }
-            if (null != newValue)
-            {
-                newValue.CanExecuteChanged += new EventHandler(HandleCanExecuteChanged);
-            }
+
             UpdateIsEnabled();
         }
 
@@ -144,6 +149,26 @@ namespace System.Windows.Controls
         {
             DefaultStyleKey = typeof(MenuItem);
             UpdateIsEnabled();
+
+            Loaded += HandleLoaded;
+            Unloaded += HandleUnloaded;
+        }
+
+        private void HandleUnloaded(object sender, RoutedEventArgs e)
+        {
+            if (Command != null)
+                Command.CanExecuteChanged -= HandleCanExecuteChanged;
+
+            _isLoaded = false;
+        }
+
+        private void HandleLoaded(object sender, RoutedEventArgs e)
+        {
+            if (Command != null)
+                Command.CanExecuteChanged += HandleCanExecuteChanged;
+
+            _isLoaded = true;
+            UpdateIsEnabled();
         }
 
         /// <summary>
@@ -196,9 +221,8 @@ namespace System.Windows.Controls
         {
             base.OnMouseLeave(e);
             if (null != ParentMenuBase)
-            {
                 ParentMenuBase.Focus();
-            }
+
             ChangeVisualState(true);
         }
 
@@ -213,6 +237,7 @@ namespace System.Windows.Controls
                 OnClick();
                 e.Handled = true;
             }
+
             base.OnMouseLeftButtonDown(e);
         }
 
@@ -227,6 +252,7 @@ namespace System.Windows.Controls
                 OnClick();
                 e.Handled = true;
             }
+
             base.OnMouseRightButtonDown(e);
         }
 
@@ -241,6 +267,7 @@ namespace System.Windows.Controls
                 OnClick();
                 e.Handled = true;
             }
+
             base.OnKeyDown(e);
         }
 
@@ -258,24 +285,20 @@ namespace System.Windows.Controls
         /// </summary>
         protected virtual void OnClick()
         {
-            ContextMenu contextMenu = ParentMenuBase as ContextMenu;
+            var contextMenu = ParentMenuBase as ContextMenu;
             if (null != contextMenu)
-            {
                 contextMenu.ChildMenuItemClicked();
-            }
+
             // Wrapping the remaining code in a call to Dispatcher.BeginInvoke provides
             // WPF-compatibility by allowing the ContextMenu to close before the command
             // executes. However, it breaks the Clipboard.SetText scenario because the
             // call to SetText is no longer in direct response to user input.
             RoutedEventHandler handler = Click;
             if (null != handler)
-            {
                 handler(this, new RoutedEventArgs());
-            }
+
             if ((null != Command) && Command.CanExecute(CommandParameter))
-            {
                 Command.Execute(CommandParameter);
-            }
         }
 
         /// <summary>
@@ -307,22 +330,14 @@ namespace System.Windows.Controls
         protected virtual void ChangeVisualState(bool useTransitions)
         {
             if (!IsEnabled)
-            {
                 VisualStateManager.GoToState(this, "Disabled", useTransitions);
-            }
             else
-            {
                 VisualStateManager.GoToState(this, "Normal", useTransitions);
-            }
 
             if (_isFocused && IsEnabled)
-            {
                 VisualStateManager.GoToState(this, "Focused", useTransitions);
-            }
             else
-            {
                 VisualStateManager.GoToState(this, "Unfocused", useTransitions);
-            }
         }
     }
 }

@@ -26,22 +26,30 @@ namespace Raven.Database.Tasks
 			Keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		}
 
-		public override bool TryMerge(Task task)
+		public override void Merge(Task task)
 		{
 			var removeFromIndexTask = ((RemoveFromIndexTask)task);
 			Keys.UnionWith(removeFromIndexTask.Keys);
-			return true;
 		}
 
 		public override void Execute(WorkContext context)
 		{
 			var keysToRemove = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-			context.TransactionaStorage.Batch(accessor =>
+			try
 			{
-				keysToRemove = new HashSet<string>(Keys.Where(key=>FilterDocuments(context, accessor, key)));
-				accessor.Indexing.TouchIndexEtag(Index);
-			});
-			context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);
+				context.TransactionalStorage.Batch(accessor =>
+				{
+					keysToRemove = new HashSet<string>(Keys.Where(key=>FilterDocuments(context, accessor, key)));
+					accessor.Indexing.TouchIndexEtag(Index);
+				});
+				if (keysToRemove.Count == 0)
+					return;
+				context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);
+			}
+			finally
+			{
+				context.MarkAsRemovedFromIndex(keysToRemove);
+			}
 		}
 
 		/// <summary>

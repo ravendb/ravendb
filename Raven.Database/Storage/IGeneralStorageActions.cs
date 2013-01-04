@@ -8,5 +8,9 @@ namespace Raven.Database.Storage
 	public interface IGeneralStorageActions
 	{
 		long GetNextIdentityValue(string name);
+		void SetIdentityValue(string name, long value);
+
+		void PulseTransaction();
+		void MaybePulseTransaction();
 	}
 }

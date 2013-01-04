@@ -6,7 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json;
+using Raven.Abstractions.Extensions;
+using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Bundles.Authorization;
 using System.Linq;
 using Raven.Bundles.Authorization.Model;
@@ -26,7 +28,7 @@ namespace Raven.Client.Authorization
 
 		public static OperationAllowedResult[] IsOperationAllowedOnDocument(this ISyncAdvancedSessionOperation session, string userId, string operation, params string[] documentIds)
 		{
-			var serverClient = session.DatabaseCommands as ServerClient;
+			var serverClient = ((DocumentSession)session).DatabaseCommands as ServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Cannot get whatever operation is allowed on document in embedded mode.");
 
@@ -53,19 +55,17 @@ namespace Raven.Client.Authorization
 			var docAuthAsJson = metadata[RavenDocumentAuthorization];
 			if (docAuthAsJson == null)
 				return null;
-			return new JsonSerializer
-			{
-				ContractResolver = session.Advanced.DocumentStore.Conventions.JsonContractResolver,
-			}.Deserialize<DocumentAuthorization>(new RavenJTokenReader(docAuthAsJson));
+			var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+			jsonSerializer.ContractResolver = session.Advanced.DocumentStore.Conventions.JsonContractResolver;
+			return jsonSerializer.Deserialize<DocumentAuthorization>(new RavenJTokenReader(docAuthAsJson));
 		}
 
 		public static void SetAuthorizationFor(this IDocumentSession session, object entity, DocumentAuthorization documentAuthorization)
 		{
 			var metadata = session.Advanced.GetMetadataFor(entity);
-			metadata[RavenDocumentAuthorization] = RavenJObject.FromObject(documentAuthorization, new JsonSerializer
-			{
-				ContractResolver = session.Advanced.DocumentStore.Conventions.JsonContractResolver,
-			});
+			var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+			jsonSerializer.ContractResolver = session.Advanced.DocumentStore.Conventions.JsonContractResolver;
+			metadata[RavenDocumentAuthorization] = RavenJObject.FromObject(documentAuthorization, jsonSerializer);
 		}
 
 		public static bool IsAllowed(
@@ -108,8 +108,9 @@ namespace Raven.Client.Authorization
 
 		public static void SecureFor(this IDocumentSession session, string userId, string operation)
 		{
-			session.Advanced.DatabaseCommands.OperationsHeaders[Constants.RavenAuthorizationUser] = userId;
-			session.Advanced.DatabaseCommands.OperationsHeaders[Constants.RavenAuthorizationOperation] = operation;
+			var databaseCommands = ((DocumentSession)session).DatabaseCommands;
+			databaseCommands.OperationsHeaders[Constants.RavenAuthorizationUser] = userId;
+			databaseCommands.OperationsHeaders[Constants.RavenAuthorizationOperation] = operation;
 		}
 	}
 }

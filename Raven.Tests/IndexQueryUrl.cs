@@ -73,7 +73,7 @@ namespace Raven.Tests
 			Assert.Equal(expected, result.Query);
 		}
 
-		[Fact(Skip = "Is PageSize always to be reloaded from configuration on the server?  Thats whats happening")]
+		[Fact(Skip = "Is PageSize always to be reloaded from configuration on the server?  That's what is happening.")]
 		public void can_encode_and_decode_IndexQuery_PageSize()
 		{
 			var expected = Some.Integer();

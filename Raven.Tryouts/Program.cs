@@ -1,248 +1,277 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Tests.MailingList;
 
-namespace RavenRepro
+namespace BulkStressTest
 {
-	using System.Messaging;
-	using System.Threading.Tasks;
-	using System.Transactions;
-	using Raven.Client;
-	using Raven.Client.Document;
-
 	class Program
 	{
-		const int NumTimeouts = 1000;
-		static DocumentStore store;
-
-		static Guid ResourceManagerId = new Guid("05216603-dd72-4ec5-88b6-0c88e7b74e05");
-
-		static MessageQueue outputQueue;
-
-		static string queueName = string.Format("FormatName:DIRECT=OS:localhost\\private$\\RavenRepro.Output");
-
-		static void Main(string[] args)
+		private const string DbName = "BulkStressTestDb";
+		static void Main()
 		{
-			store = new DocumentStore { Url = "http://localhost:8080", DefaultDatabase = "RavenRepro" };
-			store.Initialize();
-
-
-
-
-
-
-			//if(!MessageQueue.Exists(".\"))
-			//    MessageQueue.Create(queueName, true);
-
-			outputQueue = new MessageQueue(queueName, false, true, QueueAccessMode.Send);
-
-			Console.WriteLine("Ready");
-
-			string cmd;
-
-			while ((cmd = Console.ReadKey().Key.ToString().ToLower()) != "q")
+			for (int i = 0; i < 1000; i++)
 			{
-				switch (cmd)
+				Console.WriteLine(i);
+				using(var x= new CanSearchLazily())
 				{
-					case "s":
-						SeedDB();
-						break;
-					case "v":
-						Verify();
-						break;
-					default:
-						DispatchTimeouts();
-						break;
-
+					x.CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_NonLazy();
 				}
 			}
 
+			//const int numberOfItems = 100000000;
+			//BulkInsert(numberOfItems, IndexInfo.IndexBefore);
 
+			//Console.ReadLine();
+			////Uncomment to check updates
+			////	BulkInsert(numberOfItems, IndexInfo.AlreadyAdded, new BulkInsertOptions { CheckForUpdates = true });
 		}
 
-		static void Verify()
+		private static void BulkInsert(int numberOfItems, IndexInfo useIndexes, BulkInsertOptions bulkInsertOptions = null)
 		{
-			var numMessagesInQueue = new MessageQueue(queueName).GetAllMessages().Count();
+			Console.WriteLine("Starting Bulk insert for {0:#,#}", numberOfItems);
+		    switch (useIndexes)
+		    {
+		            case IndexInfo.DontIndex:
+		            Console.WriteLine("Not using indexes");
+                    break;
+		            case IndexInfo.IndexAfter:
+		            Console.WriteLine("Put indexes after all items are Added");
+                    break;
+                    case IndexInfo.IndexBefore:
+		            Console.WriteLine("Put indexes before all items are added");
+                    break;
+                    case IndexInfo.AlreadyAdded:
+                    Console.WriteLine("Indexes Already Added");
+                    break;
+            }
+		    
+			if (bulkInsertOptions != null && bulkInsertOptions.CheckForUpdates)
+				Console.WriteLine("Using check for updates");
+			else
+				Console.WriteLine("Not using check for updates");
 
-			Console.Out.WriteLine("Messages in q: {0}", numMessagesInQueue);
-
-		}
-
-		static void DispatchTimeouts()
-		{
-			Console.Out.WriteLine("Getting existing timeouts");
-
-
-			//get existing timeouts to dispatch
-			IEnumerable<string> timeoutIds;
-			do
+			using (var store = new DocumentStore
+								   {
+									   Url = "http://localhost:8080",
+									   DefaultDatabase = DbName
+								   }.Initialize())
+			using (var bulkInsert = store.BulkInsert(DbName, bulkInsertOptions))
 			{
+				var stopWatch = new Stopwatch();
 
-				using (var session = OpenSession())
+				if (useIndexes == IndexInfo.IndexBefore)
+					AddIndexesToDatabase(store);
+
+				stopWatch.Start();
+				for (var i = 0; i < numberOfItems; i++)
 				{
-					timeoutIds = session.Query<TimeoutData>().Select(t => t.Id).Take(1024).ToList();
+					bulkInsert.Store(new BlogPost
+										 {
+											 Id = "blogposts/" + i,
+											 Author = "Author" + i % 20,
+											 Category = "Category" + i % 3,
+											 Content = "This is the content for blog post " + i,
+											 Title = "Blog post " + i,
+											 Comments = new[]{new BlogComment
+												                  {
+													                  Commenter = string.Format("user/{0}", i % 50),
+																	  Content = "This is a comment",
+																	  Title = "Commenting on blogpost/" + i
+												                  } },
+											 Tags = new[] { string.Format("Tag{0}", i % 10), string.Format("Tag{0}", i % 5) }
+										 });
 				}
 
-
-				Console.Out.WriteLine("Found {0} timeouts", timeoutIds.Count());
-				var random = new Random();
-				//generate duplicates
-				for (int i = 0; i < 4; i++)
-				{
-					timeoutIds = timeoutIds.Concat(timeoutIds.OrderBy(x => random.Next()));
-				}
-
-
-				Console.Out.WriteLine("Dispatching {0} timeouts", timeoutIds.Count());
 				int count = 0;
-				Parallel.ForEach(timeoutIds, (id) =>
-				{
-					if (Thread.VolatileRead(ref count) > (NumTimeouts / 3))
-					{
-						Console.Beep();
-						Environment.FailFast("blah");
-					}
-					try
-					{
-						DispatchTimeout(id);
-					}
-					catch (Exception ex)
-					{
-						Console.Out.WriteLine("Dispatch failed {0}", ex.Message);
-					}
-					finally
-					{
-						Interlocked.Increment(ref count);
-					}
+				bulkInsert.Report += s =>
+										 {
+											 if(count ++ % 10 == 0)
+											 {
+												 Console.Write("\r" + s);
+											 }
+											 if (s.StartsWith("Done ", StringComparison.InvariantCultureIgnoreCase))
+											 {
+												 //stopWatch.Stop();
+												 Console.WriteLine("Operation took: " + stopWatch.Elapsed);
 
-				});
-			} while (timeoutIds.Any());
+                                                 if(useIndexes == IndexInfo.IndexAfter)
+                                                     AddIndexesToDatabase(store);
 
-			Console.Out.WriteLine("Done dispatching");
+												 if (useIndexes != IndexInfo.DontIndex)
+												 {
+													 while (true)
+													 {
+														 var query1 = store.DatabaseCommands.Query("BlogPosts/PostsCountByTag", new IndexQuery(), new string[0]);
+														 var query2 = store.DatabaseCommands.Query("BlogPosts/CountByCommenter", new IndexQuery(), new string[0]);
+														 var query3 = store.DatabaseCommands.Query("SingleMapIndex", new IndexQuery(), new string[0]);
+														 var query4 = store.DatabaseCommands.Query("SingleMapIndex2", new IndexQuery(), new string[0]);
+														 var query5 = store.DatabaseCommands.Query("BlogPost/Search", new IndexQuery(), new string[0]);
 
-		}
-
-		static void DispatchTimeout(string id)
-		{
-			using (var tx = new TransactionScope())
-			{
-				ForceDistributedTransaction();
-
-				if (TryRemove(id))
-					Enqueue(id);
-
-				tx.Complete();
+														 if (query1.IsStale || query2.IsStale || query3.IsStale || query4.IsStale || query5.IsStale)
+														 {
+															 Thread.Sleep(100);
+														 }
+														 else
+														 {
+															 Console.WriteLine("Indexing finished took: " + stopWatch.Elapsed);
+															 return;
+														 }
+													 }
+												 }
+											 }
+										 };
 			}
 		}
 
-		static void Enqueue(string id)
+		private static void AddIndexesToDatabase(IDocumentStore store)
 		{
-			outputQueue.Send(new Message { Label = id }, id, MessageQueueTransactionType.Automatic);
-		}
-
-		static void SeedDB()
-		{
-			Console.Out.WriteLine("Clearing q");
-			new MessageQueue(queueName).Purge();
-
-			Console.Out.WriteLine("Seeding db");
-			for (int i = 0; i < NumTimeouts; i++)
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new TimeoutData
-						{
-							Dispatched = false
-						});
-
-					session.SaveChanges();
-				}
-			}
-
-			Console.Out.WriteLine("Seeding done");
-
-		}
-
-		static bool TryRemove(string timeoutId)
-		{
-			using (var session = OpenSession())
-			{
-				var timeoutData = session.Load<TimeoutData>(timeoutId);
-
-				if (timeoutData == null)
-					return false;
-
-				timeoutData.Dispatched = true;
-				session.SaveChanges();
-
-				session.Delete(timeoutData);
-				session.SaveChanges();
-
-				return true;
-			}
-		}
-
-		static IDocumentSession OpenSession()
-		{
-			var session = store.OpenSession();
-
-			session.Advanced.AllowNonAuthoritativeInformation = false;
-			session.Advanced.UseOptimisticConcurrency = true;
-
-			return session;
-		}
-
-		static void ForceDistributedTransaction()
-		{
-			Transaction.Current.EnlistDurable(ResourceManagerId, new DummyEnlistmentNotification(),
-											  EnlistmentOptions.None);
+			IndexCreation.CreateIndexes(typeof(BlogPosts_PostsCountByTag).Assembly, store);
 		}
 	}
 
-	internal class TimeoutData
+    public enum IndexInfo
+    {
+        DontIndex,
+        IndexBefore,
+        IndexAfter,
+        AlreadyAdded
+    }
+
+	public class BlogPost
 	{
 		public string Id { get; set; }
-		public bool Dispatched { get; set; }
+		public string Title { get; set; }
+		public string Category { get; set; }
+		public string Content { get; set; }
+		public DateTime PublishedAt { get; set; }
+		public string[] Tags { get; set; }
+		public BlogComment[] Comments { get; set; }
+		public string Author { get; set; }
 	}
 
-	public class DummyEnlistmentNotification : IEnlistmentNotification
+	public class BlogComment
 	{
-		public static readonly Guid Id = Guid.NewGuid();
+		public string Title { get; set; }
+		public string Content { get; set; }
+		public string Commenter { get; set; }
+		public DateTime At { get; set; }
 
-		static Random rand = new Random();
-
-		public bool WasCommitted { get; set; }
-
-		public bool RandomRollback { get; set; }
-
-		public void Prepare(PreparingEnlistment preparingEnlistment)
+		public BlogComment()
 		{
+			At = DateTime.Now;
+		}
+	}
 
+	public class BlogAuthor
+	{
+		public string Name { get; set; }
+		public string ImageUrl { get; set; }
+	}
 
-			if (RandomRollback && rand.Next(0, 10) > 7)
-				preparingEnlistment.ForceRollback();
-			else
-				preparingEnlistment.Prepared();
+	public class BlogPosts_PostsCountByTag : AbstractIndexCreationTask<BlogPost, BlogPosts_PostsCountByTag.ReduceResult>
+	{
+		public class ReduceResult
+		{
+			public string Tag { get; set; }
+			public int Count { get; set; }
 		}
 
-		public void Commit(Enlistment enlistment)
+		public BlogPosts_PostsCountByTag()
 		{
-			WasCommitted = true;
-			enlistment.Done();
+			Map = posts => from post in posts
+						   from tag in post.Tags
+						   select new
+						   {
+							   Tag = tag,
+							   Count = 1
+						   };
 
+			Reduce = results => from result in results
+								group result by result.Tag
+									into g
+									select new
+									{
+										Tag = g.Key,
+										Count = g.Sum(x => x.Count)
+									};
+		}
+	}
+
+	public class BlogPosts_CountByCommenter : AbstractIndexCreationTask<BlogPost, BlogPosts_CountByCommenter.ReduceResult>
+	{
+		public class ReduceResult
+		{
+			public string Commenter { get; set; }
+			public int Count { get; set; }
 		}
 
-		public void Rollback(Enlistment enlistment)
+		public BlogPosts_CountByCommenter()
 		{
-			enlistment.Done();
+			Map = posts => from post in posts
+						   from comment in post.Comments
+						   select new
+						   {
+							   Commenter = comment.Commenter,
+							   Count = 1
+						   };
+
+			Reduce = results => from result in results
+								group result by result.Commenter
+									into g
+									select new
+									{
+										Commenter = g.Key,
+										Count = g.Sum(x => x.Count)
+									};
+		}
+	}
+
+	public class SingleMapIndex : AbstractIndexCreationTask<BlogPost>
+	{
+		public SingleMapIndex()
+		{
+			Map = posts => from post in posts
+						   select new { post.Title };
+		}
+	}
+
+	public class BlogPost_Search : AbstractIndexCreationTask<BlogPost, BlogPost_Search.ReduceResult>
+	{
+		public class ReduceResult
+		{
+			public string Query { get; set; }
+			public DateTime LastCommentDate { get; set; }
 		}
 
-		public void InDoubt(Enlistment enlistment)
+		public BlogPost_Search()
 		{
-			enlistment.Done();
+			Map = blogposts => from blogpost in blogposts
+			                   select new
+				                          {
+					                          Query = new object[]
+						                                  {
+							                                  blogpost.Author,
+							                                  blogpost.Category,
+							                                  blogpost.Content,
+							                                  blogpost.Comments.Select(comment => comment.Title)
+						                                  },
+					                          LastPaymentDate = blogpost.Comments.Last().At
+				                          };
+		}
+	}
+
+	public class SingleMapIndex2 : AbstractIndexCreationTask<BlogPost>
+	{
+		public SingleMapIndex2()
+		{
+			Map = posts => from post in posts
+						   select new { post.Title };
 		}
 	}
 }

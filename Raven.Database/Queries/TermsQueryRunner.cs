@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using Lucene.Net.Index;
@@ -29,22 +30,25 @@ namespace Raven.Database.Queries
 			IndexSearcher currentIndexSearcher;
 			using(database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
-				var termEnum = currentIndexSearcher.GetIndexReader().Terms(new Term(field, fromValue ?? string.Empty));
-				try
+				if(currentIndexSearcher == null)
+				{
+					throw new InvalidOperationException("Could not find current searcher");
+				}
+				using(var termEnum = currentIndexSearcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty)))
 				{
 					if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
 					{
-						while (termEnum.Term() == null || fromValue.Equals(termEnum.Term().Text()))
+						while (termEnum.Term == null || fromValue.Equals(termEnum.Term.Text))
 						{
 							if (termEnum.Next() == false)
 								return result;
 						}
 					}
-					while (termEnum.Term() == null || 
-						field.Equals(termEnum.Term().Field()))
+					while (termEnum.Term == null || 
+						field.Equals(termEnum.Term.Field))
 					{
-						if (termEnum.Term() != null)
-							result.Add(termEnum.Term().Text());
+						if (termEnum.Term != null)
+							result.Add(termEnum.Term.Text);
 
 						if (result.Count >= pageSize)
 							break;
@@ -52,10 +56,6 @@ namespace Raven.Database.Queries
 						if (termEnum.Next() == false)
 							break;
 					}
-				}
-				finally
-				{
-					termEnum.Close();
 				}
 			}
 

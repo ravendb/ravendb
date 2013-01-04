@@ -3,6 +3,7 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Xunit;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Bugs
 {
@@ -18,6 +19,7 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
+				store.DatabaseCommands.EnsureDatabaseExists("TESTS");
 				store.Conventions.FindTypeTagName = type =>
 				{
 					if (typeof(Oil).IsAssignableFrom(type))
@@ -32,9 +34,9 @@ namespace Raven.Tests.Bugs
 
 
 
-				using(var sesison = store.OpenSession())
+				using(var session = store.OpenSession())
 				{
-					var popularOilsResults = sesison.Query<PopularOilsResult, PopularOilsIndex>()
+					var popularOilsResults = session.Query<PopularOilsResult, PopularOilsIndex>()
 								  .Customize(x => x.WaitForNonStaleResultsAsOfNow())
 								  .OrderByDescending(x => x.Count).Take(10)
 								  .ToList();

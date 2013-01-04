@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage
 {
@@ -12,14 +13,17 @@ namespace Raven.Database.Storage
 		ITransactionStorageActions Transactions { get; }
 		IDocumentStorageActions Documents { get; }
 		IQueueStorageActions Queue { get; }
+		IListsStorageActions Lists { get; }
 		ITasksStorageActions Tasks { get; }
 		IStalenessStorageActions Staleness{ get; }
 		IAttachmentsStorageActions Attachments { get; }
 		IIndexingStorageActions Indexing { get; }
 		IGeneralStorageActions General { get; }
-		IMappedResultsStorageAction MappedResults { get; }
-		event Action OnCommit;
+		IMappedResultsStorageAction MapReduce { get; }
+		event Action OnStorageCommit;
 		bool IsWriteConflict(Exception exception);
 		T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.Task;
+		void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit);
 	}
+
 }

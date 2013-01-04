@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 
 namespace Raven.Client.Shard
@@ -22,7 +23,7 @@ namespace Raven.Client.Shard
 			this.capacity = capacity;
 		}
 
-		public string GenerateDocumentKey(DocumentConvention conventions, object entity)
+		public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
 		{
 			var shardId = shardedDocumentStore.ShardStrategy.ShardResolutionStrategy.MetadataShardIdFor(entity);
 			if (shardId == null)
@@ -31,13 +32,16 @@ namespace Raven.Client.Shard
 
 			MultiTypeHiLoKeyGenerator value;
 			if (generatorsByShard.TryGetValue(shardId, out value))
-				return value.GenerateDocumentKey(conventions, entity);
+			{
+				
+				return value.GenerateDocumentKey(databaseCommands, conventions, entity);
+			}
 
 			lock (this)
 			{
 				if (generatorsByShard.TryGetValue(shardId, out value) == false)
 				{
-					value = new MultiTypeHiLoKeyGenerator(shardedDocumentStore.DatabaseCommandsFor(shardId), capacity);
+					value = new MultiTypeHiLoKeyGenerator(capacity);
 					generatorsByShard = new Dictionary<string, MultiTypeHiLoKeyGenerator>(generatorsByShard)
 					                    	{
 					                    		{shardId, value}
@@ -45,7 +49,7 @@ namespace Raven.Client.Shard
 				}
 			}
 
-			return value.GenerateDocumentKey(conventions, entity);
+			return value.GenerateDocumentKey(databaseCommands, conventions, entity);
 		}
 	}
 }

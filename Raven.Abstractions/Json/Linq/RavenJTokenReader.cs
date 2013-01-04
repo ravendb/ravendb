@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -20,7 +20,10 @@ namespace Raven.Json.Linq
 			public ReadState(JsonToken type, object val = null)
 			{
 				TokenType = type;
-				Value = val;
+				if(type == JsonToken.String && val != null)
+					Value = val.ToString();
+				else
+					Value = val;
 			}
 			public JsonToken TokenType { get; private set; }
 			public object Value { get; private set; }
@@ -41,12 +44,14 @@ namespace Raven.Json.Linq
 		/// <summary>
 		/// Reads the next JSON token from the stream as a <see cref="T:Byte[]"/>.
 		/// </summary>
-		/// <returns>
-		/// A <see cref="T:Byte[]"/> or a null reference if the next JSON token is null.
-		/// </returns>
+		/// <returns>A <see cref="T:Byte[]"/> or a null reference if the next JSON token is null. This method will return <c>null</c> at the end of an array.</returns>
 		public override byte[] ReadAsBytes()
 		{
-			Read();
+			if (!Read())
+			{
+				SetToken(JsonToken.None);
+				return null;
+			}
 
 			if (IsWrappedInTypeObject())
 			{
@@ -69,7 +74,33 @@ namespace Raven.Json.Linq
 			if (TokenType == JsonToken.Bytes)
 				return (byte[])Value;
 
-			if (ReaderIsSerializerInArray())
+			if (TokenType == JsonToken.StartArray)
+			{
+				List<byte> data = new List<byte>();
+
+				while (Read())
+				{
+					switch (TokenType)
+					{
+						case JsonToken.Integer:
+							data.Add(Convert.ToByte(Value, CultureInfo.InvariantCulture));
+							break;
+						case JsonToken.EndArray:
+							byte[] d = data.ToArray();
+							SetToken(JsonToken.Bytes, d);
+							return d;
+						case JsonToken.Comment:
+							// skip
+							break;
+						default:
+							throw CreateReaderException(this, "Unexpected token when reading bytes: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+					}
+				}
+
+				throw CreateReaderException(this, "Unexpected end when reading bytes.");
+			}
+
+			if (TokenType == JsonToken.EndArray)
 				return null;
 
 			throw CreateReaderException(this, "Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
@@ -79,7 +110,9 @@ namespace Raven.Json.Linq
 		{
 			if (TokenType == JsonToken.StartObject)
 			{
-				Read();
+				if (!Read())
+					throw CreateReaderException(this, "Unexpected end when reading bytes.");
+
 				if (Value.ToString() == "$type")
 				{
 					Read();
@@ -102,14 +135,20 @@ namespace Raven.Json.Linq
 		/// <summary>
 		/// Reads the next JSON token from the stream as a <see cref="Nullable{Decimal}"/>.
 		/// </summary>
-		/// <returns>A <see cref="Nullable{Decimal}"/>.</returns>
+		/// <returns>A <see cref="Nullable{Decimal}"/>. This method will return <c>null</c> at the end of an array.</returns>
 		public override decimal? ReadAsDecimal()
 		{
-			Read();
+			if (!Read())
+			{
+				SetToken(JsonToken.None);
+				return null;
+			}
 
 			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
 			{
-				SetToken(JsonToken.Float, Convert.ToDecimal(Value, CultureInfo.InvariantCulture));
+				if (Value is decimal == false)
+					SetToken(JsonToken.Float, Convert.ToDecimal(Value, CultureInfo.InvariantCulture));
+
 				return (decimal)Value;
 			}
 
@@ -130,7 +169,7 @@ namespace Raven.Json.Linq
 				}
 			}
 
-			if (ReaderIsSerializerInArray())
+			if (TokenType == JsonToken.EndArray)
 				return null;
 
 			throw CreateReaderException(this, "Error reading decimal. Expected a number but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
@@ -139,15 +178,21 @@ namespace Raven.Json.Linq
 		/// <summary>
 		/// Reads the next JSON token from the stream as a <see cref="Nullable{Int32}"/>.
 		/// </summary>
-		/// <returns>A <see cref="Nullable{Int32}"/>.</returns>
+		/// <returns>A <see cref="Nullable{Int32}"/>. This method will return <c>null</c> at the end of an array.</returns>
 		public override int? ReadAsInt32()
 		{
-			Read();
+			if (!Read())
+			{
+				SetToken(JsonToken.None);
+				return null;
+			}
 
 			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
 			{
-				SetToken(JsonToken.Integer, Convert.ToInt32(Value, CultureInfo.InvariantCulture));
-				return (int)Value;
+				if (Value is int == false)
+					SetToken(JsonToken.Integer, Convert.ToInt32(Value, CultureInfo.InvariantCulture));
+
+				return (int) Value;
 			}
 
 			if (TokenType == JsonToken.Null)
@@ -167,20 +212,111 @@ namespace Raven.Json.Linq
 				}
 			}
 
-			if (ReaderIsSerializerInArray())
+			if (TokenType == JsonToken.EndArray)
 				return null;
 
 			throw CreateReaderException(this, "Error reading integer. Expected a number but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+		}
+
+		/// <summary>
+		/// Reads the next JSON token from the stream as a <see cref="String"/>.
+		/// </summary>
+		/// <returns>A <see cref="String"/>. This method will return <c>null</c> at the end of an array.</returns>
+		public override string ReadAsString()
+		{
+			if (!Read())
+			{
+				SetToken(JsonToken.None);
+				return null;
+			}
+
+			if (TokenType == JsonToken.String)
+				return (string)Value;
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			if (IsPrimitiveToken(TokenType))
+			{
+				if (Value != null)
+				{
+					string s;
+					if (Value is IConvertible)
+						s = ((IConvertible)Value).ToString(Culture);
+					else if (Value is IFormattable)
+						s = ((IFormattable)Value).ToString(null, Culture);
+					else
+						s = Value.ToString();
+
+					SetToken(JsonToken.String, s);
+					return s;
+				}
+			}
+
+			if (TokenType == JsonToken.EndArray)
+				return null;
+
+			throw CreateReaderException(this, "Error reading string. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+		}
+
+		/// <summary>
+		/// Reads the next JSON token from the stream as a <see cref="Nullable{DateTime}"/>.
+		/// </summary>
+		/// <returns>A <see cref="String"/>. This method will return <c>null</c> at the end of an array.</returns>
+		public override DateTime? ReadAsDateTime()
+		{
+			if (!Read())
+			{
+				SetToken(JsonToken.None);
+				return null;
+			}
+
+			if (TokenType == JsonToken.Date)
+				return (DateTime)Value;
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			DateTime dt;
+			if (TokenType == JsonToken.String)
+			{
+				string s = (string)Value;
+				if (string.IsNullOrEmpty(s))
+				{
+					SetToken(JsonToken.Null);
+					return null;
+				}
+
+				if (DateTime.TryParse(s, Culture, DateTimeStyles.RoundtripKind, out dt))
+				{
+					dt = RavenJsonConvert.EnsureDateTime(dt, DateTimeZoneHandling);
+					SetToken(JsonToken.Date, dt);
+					return dt;
+				}
+				else
+				{
+					throw CreateReaderException(this, "Could not convert string to DateTime: {0}.".FormatWith(CultureInfo.InvariantCulture, Value));
+				}
+			}
+
+			if (TokenType == JsonToken.EndArray)
+				return null;
+
+			throw CreateReaderException(this, "Error reading date. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
 
 #if !NET20
 		/// <summary>
 		/// Reads the next JSON token from the stream as a <see cref="Nullable{DateTimeOffset}"/>.
 		/// </summary>
-		/// <returns>A <see cref="Nullable{DateTimeOffset}"/>.</returns>
+		/// <returns>A <see cref="Nullable{DateTimeOffset}"/>. This method will return <c>null</c> at the end of an array.</returns>
 		public override DateTimeOffset? ReadAsDateTimeOffset()
 		{
-			Read();
+			if (!Read())
+			{
+				SetToken(JsonToken.None);
+				return null;
+			}
 
 			if (TokenType == JsonToken.Date)
 			{
@@ -205,10 +341,10 @@ namespace Raven.Json.Linq
 				}
 			}
 
-			if (ReaderIsSerializerInArray())
+			if (TokenType == JsonToken.EndArray)
 				return null;
 
-			throw CreateReaderException(this, "Error reading date. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+			throw CreateReaderException(this, "Error reading date. Expected date but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
 #endif
 
@@ -284,19 +420,34 @@ namespace Raven.Json.Linq
 					return JsonToken.Raw;
 				case JTokenType.Bytes:
 					return JsonToken.Bytes;
+				case JTokenType.Guid:
+					return JsonToken.String;
 				default:
 					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("Type", token.Type, "Unexpected JTokenType.");
 			}
 		}
 
-		internal bool ReaderIsSerializerInArray()
-		{
-			return TokenType == JsonToken.EndArray;
-		}
-
-		private JsonReaderException CreateReaderException(JsonReader reader, string message)
+		private static JsonReaderException CreateReaderException(JsonReader reader, string message)
 		{
 			return new JsonReaderException(message);
+		}
+
+		internal new static bool IsPrimitiveToken(JsonToken token)
+		{
+			switch (token)
+			{
+				case JsonToken.Integer:
+				case JsonToken.Float:
+				case JsonToken.String:
+				case JsonToken.Boolean:
+				case JsonToken.Undefined:
+				case JsonToken.Null:
+				case JsonToken.Date:
+				case JsonToken.Bytes:
+					return true;
+				default:
+					return false;
+			}
 		}
 	}
 }

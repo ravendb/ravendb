@@ -1,17 +1,16 @@
 using System;
-using Raven.Abstractions.Indexing;
-using Raven.Database.Indexing;
-using Xunit;
 using System.Linq;
+using Raven.Abstractions.Indexing;
+using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class MapReduceIndexOnLargeDataSet : LocalClientTest
+	public class MapReduceIndexOnLargeDataSet : RavenTest
 	{
 		[Fact]
 		public void WillNotProduceAnyErrors()
 		{
-			using(var store = NewDocumentStore("esent", false))
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
@@ -25,7 +24,7 @@ namespace Raven.Tests.Indexes
 					{
 						for (int j = 0; j < 25; j++)
 						{
-							s.Store(new {Name = "User #" +j});
+							s.Store(new {Name = "User #" + j});
 						}
 						s.SaveChanges();
 					}
@@ -33,9 +32,30 @@ namespace Raven.Tests.Indexes
 
 				using (var s = store.OpenSession())
 				{
-					s.Query<dynamic>("test")
-						.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
-						.ToArray();
+					var ret = s.Query<dynamic>("test")
+					           .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
+					           .ToArray();
+					Assert.Equal(25, ret.Length);
+					foreach (var x in ret)
+					{
+						try
+						{
+							Assert.Equal("200", x.Count);
+						}
+						catch (Exception)
+						{
+							PrintServerErrors(store.DocumentDatabase.Statistics.Errors);
+
+							var missed = ret.Where(item => item.Count != "200")
+							                .Select(item => "Name: " + item.Name + ". Count: " + item.Count)
+							                .Cast<string>()
+							                .ToList();
+							Console.WriteLine("Missed documents: ");
+							Console.WriteLine(string.Join(", ", missed));
+
+							throw;
+						}
+					}
 				}
 
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);

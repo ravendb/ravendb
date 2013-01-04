@@ -1,5 +1,4 @@
-﻿#if !NET_3_5
-using System;
+﻿using System;
 using System.Collections.Specialized;
 using System.Net;
 using Raven.Abstractions.Data;
@@ -22,7 +21,7 @@ namespace Raven.Client.Document.Batches
 			this.loadOperation = loadOperation;
 		}
 
-		public GetRequest CraeteRequest()
+		public GetRequest CreateRequest()
 		{
 			return new GetRequest
 			{
@@ -54,12 +53,13 @@ namespace Raven.Client.Document.Batches
 			{
 				headers[header.Key] = header.Value;
 			}
-			var jsonDocument = SerializationHelper.DeserializeJsonDocument(key, RavenJObject.Parse(response.Result), headers, (HttpStatusCode)response.Status);
+			var jsonDocument = SerializationHelper.DeserializeJsonDocument(key, response.Result, headers, (HttpStatusCode)response.Status);
 			HandleResponse(jsonDocument);
 		}
 
 		private void HandleResponse(JsonDocument jsonDocument)
 		{
+
 			RequiresRetry = loadOperation.SetResult(jsonDocument);
 			if (RequiresRetry == false)
 				Result = loadOperation.Complete<T>();
@@ -81,4 +81,3 @@ namespace Raven.Client.Document.Batches
 		}
 	}
 }
-#endif

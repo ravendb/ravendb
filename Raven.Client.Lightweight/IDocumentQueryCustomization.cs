@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Client
 {
@@ -36,6 +37,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <returns></returns>
 		IDocumentQueryCustomization WaitForNonStaleResultsAsOfNow();
+		
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of now for the specified timeout.
 		/// </summary>
@@ -49,12 +51,26 @@ namespace Raven.Client
 		/// <param name="cutOff">The cut off.</param>
 		/// <returns></returns>
 		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(DateTime cutOff);
+
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
 		/// </summary>
 		/// <param name="cutOff">The cut off.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
 		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Guid cutOffEtag);
+
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+		/// </summary>
+		/// <param name="cutOffEtag">The cut off etag.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout);
 
 		/// <summary>
 		/// EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -95,11 +111,27 @@ namespace Raven.Client
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name="radius">The radius.</param>
-		/// <param name="latitude">The latitude.</param>
-		/// <param name="longitude">The longitude.</param>
 		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
 
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+
+		/// <summary>
+		/// Filter matches based on a given shape - only documents with the shape defined in fieldName that
+		/// have a relation rel with the given shapeWKT will be returned
+		/// </summary>
+		/// <param name="fieldName">The name of the field containing the shape to use for filtering</param>
+		/// <param name="shapeWKT">The query shape</param>
+		/// <param name="rel">Spatial relation to check</param>
+		/// <returns></returns>
+		IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel);
+
+		/// <summary>
+		/// When using spatial queries, instruct the query to sort by the distance from the origin point
+		/// </summary>
+		IDocumentQueryCustomization SortByDistance();
 
 		/// <summary>
 		/// Order the search results randomly
@@ -113,7 +145,12 @@ namespace Raven.Client
 		IDocumentQueryCustomization RandomOrdering(string seed);
 
 		/// <summary>
-		/// Execute the transfromation function on the results of this query.
+		/// Allow you to modify the index query before it is executed
+		/// </summary>
+		IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action);
+
+		/// <summary>
+		/// Execute the transformation function on the results of this query.
 		/// </summary>
 		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 	}

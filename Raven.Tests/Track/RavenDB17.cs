@@ -21,15 +21,15 @@ namespace Raven.Tests.Track
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					System.Transactions.Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-																  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-																  EnlistmentOptions.None);
+					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					                                  EnlistmentOptions.None);
 
 
 					session.Advanced.UseOptimisticConcurrency = true;
 					session.Advanced.AllowNonAuthoritativeInformation = false;
 
-					session.Store(new SomeDocument() { Id = 1, Data = "Data1" });
+					session.Store(new SomeDocument {Id = 1, Data = "Data1"});
 
 					session.SaveChanges();
 					scope.Complete();
@@ -39,9 +39,9 @@ namespace Raven.Tests.Track
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					System.Transactions.Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-																  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-																  EnlistmentOptions.None);
+					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					                                  EnlistmentOptions.None);
 
 					session.Advanced.UseOptimisticConcurrency = true;
 					session.Advanced.AllowNonAuthoritativeInformation = false;
@@ -61,9 +61,9 @@ namespace Raven.Tests.Track
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					System.Transactions.Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-																  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-																  EnlistmentOptions.None);
+					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					                                  EnlistmentOptions.None);
 
 					session.Advanced.UseOptimisticConcurrency = true;
 					session.Advanced.AllowNonAuthoritativeInformation = false;

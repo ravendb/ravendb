@@ -1,28 +1,24 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Principal;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.Security.OAuth
 {
 	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		public override bool Authorize(IHttpContext ctx)
+		public bool Authorize(IHttpContext ctx, bool hasApiKey)
 		{
 			var httpRequest = ctx.Request;
-
-			var requestUrl = ctx.GetRequestUrl();
-			
-			if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
-				return true;
 
 			var isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
 				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All || 
 			        Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
 			        isGetRequest;
-			
 
 			var token = GetToken(ctx);
 			
@@ -30,13 +26,14 @@ namespace Raven.Database.Server.Security.OAuth
 			{
 				if (allowUnauthenticatedUsers)
 					return true;
-				WriteAuthorizationChallenge(ctx, 401, "invalid_request", "The access token is required");
+
+				WriteAuthorizationChallenge(ctx, hasApiKey ? 412 : 401, "invalid_request", "The access token is required");
 				
 				return false;
 			}
 
 			AccessTokenBody tokenBody;
-			if (!AccessToken.TryParseBody(Settings.OAuthTokenCertificate, token, out tokenBody))
+			if (!AccessToken.TryParseBody(Settings.OAuthTokenKey, token, out tokenBody))
 			{
 				if (allowUnauthenticatedUsers)
 					return true;
@@ -74,12 +71,25 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
+		public override List<string> GetApprovedDatabases(IHttpContext context)
+		{
+			var user = context.User as OAuthPrincipal;
+			if(user == null)
+				return new List<string>();
+			return user.GetApprovedDatabases();
+		}
+
+		public override void Dispose()
+		{
+			
+		}
+
 		static string GetToken(IHttpContext ctx)
 		{
 			const string bearerPrefix = "Bearer ";
 
-			var auth = ctx.Request.Headers["Authorization"];
 
+			var auth = ctx.Request.Headers["Authorization"];
 			if (auth == null || auth.Length <= bearerPrefix.Length || !auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
 				return null;
 
@@ -141,6 +151,11 @@ namespace Raven.Database.Server.Security.OAuth
 		public bool IsAuthenticated
 		{
 			get { return true; }
+		}
+
+		public List<string> GetApprovedDatabases()
+		{
+			return tokenBody.AuthorizedDatabases.Select(access => access.TenantId).ToList();
 		}
 	}
 }

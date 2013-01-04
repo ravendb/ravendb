@@ -15,7 +15,7 @@ namespace Raven.Studio.Features.Tasks
 		{
 			Name = "Backup Database";
 			Description = "Backup your database.";
-
+		    IconResource = "Image_Backup_Tiny";
 			TaskInputs.Add(new TaskInput("Location", @"C:\path-to-your-backup-folder"));
 		}
 
@@ -29,7 +29,7 @@ namespace Raven.Studio.Features.Tasks
 			if (Status == null || Status.IsRunning == false)
 				return null;
 			TaskStatus = TaskStatus.Started;
-			return DatabaseCommands.GetAsync(BackupStatus.RavenBackupStatusDocumentKey)
+			return ApplicationModel.DatabaseCommands.GetAsync(BackupStatus.RavenBackupStatusDocumentKey)
 				.ContinueOnSuccessInTheUIThread(item =>
 				{
 					var documentConvention = ApplicationModel.Current.Server.Value.Conventions;
@@ -40,8 +40,10 @@ namespace Raven.Studio.Features.Tasks
 					{
 						Output.Add("[" + backupMessage.Timestamp + "]   	" + backupMessage.Severity + " :    	"+ backupMessage.Message);	
 					}
-				})
-				.Finally(() => TaskStatus = TaskStatus.Ended);
+
+					if(Status.Completed != null)
+						TaskStatus = TaskStatus.Ended;
+				});
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
 using Xunit;
@@ -42,6 +43,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079", DefaultDatabase = "test"}.Initialize())
 			{
+				store.DatabaseCommands.EnsureDatabaseExists("test");
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -92,6 +94,7 @@ namespace Raven.Tests.MultiGet
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079", DefaultDatabase = "test"}.Initialize())
 			{
+				store.DatabaseCommands.EnsureDatabaseExists("test");
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User());

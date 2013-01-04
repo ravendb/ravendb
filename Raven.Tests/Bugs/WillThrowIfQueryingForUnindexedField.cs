@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class WillThrowIfQueryingForUnindexedField : LocalClientTest
+	public class WillThrowIfQueryingForUnindexedField : RavenTest
 	{
 		[Fact]
 		public void ThrowOnMapIndex()

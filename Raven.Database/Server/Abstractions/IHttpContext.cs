@@ -5,9 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using System.IO.Compression;
 using System.Security.Principal;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 
 namespace Raven.Database.Server.Abstractions
@@ -20,10 +19,10 @@ namespace Raven.Database.Server.Abstractions
 		IHttpResponse Response { get; }
 		IPrincipal User { get; set; }
 		string GetRequestUrlForTenantSelection();
-		void FinalizeResonse();
+		void FinalizeResponse();
 		void SetResponseFilter(Func<Stream, Stream> responseFilter);
-		void OutputSavedLogItems(Logger logger);
-		void Log(Action<Logger> loggingAction);
+		void OutputSavedLogItems(ILog logger);
+		void Log(Action<ILog> loggingAction);
 		void SetRequestFilter(Func<Stream, Stream> requestFilter);
 	}
 }

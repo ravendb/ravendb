@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
-using NLog;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Database.Util;
@@ -8,7 +8,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Logs : RequestResponder
+	public class Logs : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -22,20 +22,28 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			BoundedMemoryTarget boundedMemoryTarget = null;
-			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
-			{
-				boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
-			}
-			if(boundedMemoryTarget == null)
+			var target = LogManager.GetTarget<DatabaseMemoryTarget>();
+			if(target == null)
 			{
 				context.SetStatusToNotFound();
 				context.WriteJson(new
 				{
-					Error = "HttpEndpoint was not registered in the log configuration, logs endpoint disable"
+					Error = "DatabaseMemoryTarget was not registered in the log manager, logs endpoint disabled"
 				});
 				return;
 			}
+			var database = Database;
+			if(database == null)
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				{
+					Error = "No database found."
+				});
+				return;
+			}
+			var dbName = database.Name ?? Constants.SystemDatabase;
+			var boundedMemoryTarget = target[dbName];
 			IEnumerable<LogEventInfo> log = boundedMemoryTarget.GeneralLog;
 
 			switch (context.Request.QueryString["type"])
@@ -51,7 +59,7 @@ namespace Raven.Database.Server.Responders
 				x.TimeStamp,
 				Message = x.FormattedMessage,
 				x.LoggerName,
-				Level = x.Level.Name,
+				Level = x.Level.ToString(),
 				Exception = x.Exception == null ? null : x.Exception.ToString()
 			}));
 		}

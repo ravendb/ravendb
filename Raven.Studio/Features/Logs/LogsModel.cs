@@ -4,9 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
@@ -16,7 +13,7 @@ using System.Linq;
 
 namespace Raven.Studio.Features.Logs
 {
-	public class LogsModel : ViewModel
+	public class LogsModel : PageViewModel
 	{
 		public BindableCollection<LogItem> Logs { get; private set; }
 		public BindableCollection<LogItem> DisplayedLogs { get; private set; }
@@ -32,58 +29,15 @@ namespace Raven.Studio.Features.Logs
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (IsLogsEnabled == false)
+			if (Database.Value == null)
 				return null;
 
 			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
-				.ContinueOnSuccess(logs =>
-				                   	{
-										Logs.Match(logs.OrderByDescending(x=>x.TimeStamp).ToList(), () =>
-										{
-											if (DisplayedLogs.Count == 0)
-												DisplayedLogs.Match(Logs);
-										});
-				                   		IsLogsEnabled = true;
-				                   	})
-				.CatchIgnore<WebException>(LogsIsNotEnabled);
-		}
-
-		private void LogsIsNotEnabled()
-		{
-			IsLogsEnabled = false;
-			EnablingLogsInstructions = GetTextFromResource("Raven.Studio.Features.Logs.DefaultLogging.config");
-		}
-
-		private static string GetTextFromResource(string name)
-		{
-			using (var stream = typeof (LogsModel).Assembly.GetManifestResourceStream(name))
-			{
-				if (stream == null)
-					throw new InvalidOperationException("Could not find the following resource: " + name);
-				return new StreamReader(stream).ReadToEnd();
-			}
-		}
-
-		private bool? isLogsEnabled;
-		public bool? IsLogsEnabled
-		{
-			get { return isLogsEnabled; }
-			set
-			{
-				isLogsEnabled = value;
-				OnPropertyChanged(() => IsLogsEnabled);
-			}
-		}
-
-		private string enablingLogsInstructions;
-		public string EnablingLogsInstructions
-		{
-			get { return enablingLogsInstructions; }
-			set
-			{
-				enablingLogsInstructions = value;
-				OnPropertyChanged(() => EnablingLogsInstructions);
-			}
+				.ContinueOnSuccess(logs => Logs.Match(logs.OrderByDescending(x => x.TimeStamp).ToList(), () =>
+				{
+					if (DisplayedLogs.Count == 0)
+						DisplayedLogs.Match(Logs);
+				}));
 		}
 
 		private bool showErrorsOnly;

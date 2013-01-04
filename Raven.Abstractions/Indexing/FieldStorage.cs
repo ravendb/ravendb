@@ -18,10 +18,6 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Do not store the field value in the index.
 		/// </summary>
-		No,
-		/// <summary>
-		/// Store the original field value in the index in a compressed form. This is useful for long documents and for binary valued fields.
-		/// </summary>
-		Compress
+		No
 	}
 }

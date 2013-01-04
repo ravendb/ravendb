@@ -15,15 +15,16 @@ using Raven.Client.Indexes;
 
 namespace Raven.Samples.IndexReplication
 {
-	public class Questions_VoteTotals : AbstractIndexCreationTask<Question>
+	public class Questions_TitleAndVoteCount : AbstractIndexCreationTask<Question>
 	{
-		public Questions_VoteTotals()
+		public Questions_TitleAndVoteCount()
 		{
 			Map = questions => from question in questions
-			                   select new
-			                   {
-			                   	question.Title,
-			                   	VoteCount = question.Votes.Count
+							   select new
+							   {
+								   question.Title,
+								   UpVotes = question.Votes.Count(x => x.Up),
+								   DownVotes = question.Votes.Count(x => !x.Up)
 							   };
 		}
 	}
@@ -36,9 +37,9 @@ namespace Raven.Samples.IndexReplication
 
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
 			{
-				new Questions_VoteTotals().Execute(documentStore);	
+				new Questions_TitleAndVoteCount().Execute(documentStore);
 
-				using(var s = documentStore.OpenSession())
+				using (var s = documentStore.OpenSession())
 				{
 					var q = new Question
 					{
@@ -52,7 +53,23 @@ namespace Raven.Samples.IndexReplication
 							new Vote {Up = false, Comment = "No!"},
 						}
 					};
+
+					var indexReplicationDestination = new Raven.Bundles.IndexReplication.Data.IndexReplicationDestination
+					{
+						Id = "Raven/IndexReplication/Questions/TitleAndVoteCount",
+						ColumnsMapping =
+						{
+							{"Title", "Title"},
+							{"UpVotes", "UpVotes"},
+							{"DownVotes", "DownVotes"},
+						},
+						ConnectionStringName = "Reports",
+						PrimaryKeyColumnName = "Id",
+						TableName = "QuestionSummaries"
+					};
+
 					s.Store(q);
+					s.Store(indexReplicationDestination);
 					s.SaveChanges();
 				}
 
@@ -80,7 +97,8 @@ IF OBJECT_ID('QuestionSummaries') is not null
 CREATE TABLE [dbo].[QuestionSummaries]
 (
 	[Id] [nvarchar](50) NOT NULL,
-	[VoteCount] [int] NOT NULL,
+	[UpVotes] [int] NOT NULL,
+	[DownVotes] [int] NOT NULL,
 	[Title] [nvarchar](255) NOT NULL
 )
 ";

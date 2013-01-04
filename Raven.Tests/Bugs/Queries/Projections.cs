@@ -4,11 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -16,7 +14,7 @@ namespace Raven.Tests.Bugs.Queries
 {
 	using Document;
 
-	public class Projections : LocalClientTest
+	public class Projections : RavenTest
 	{
 		[Fact]
 		public void Can_project_value_from_collection()
@@ -92,7 +90,7 @@ namespace Raven.Tests.Bugs.Queries
 		}
 
 		[Fact]
-		public void Projections_to_anonym()
+		public void Projections_to_anonymous()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -140,12 +138,10 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 
-		public class User
+		private class User
 		{
 			public LiveProjection.Address[] Addresses { get; set; }
 		}
-
-
 
 		public class TheCompanyName
 		{

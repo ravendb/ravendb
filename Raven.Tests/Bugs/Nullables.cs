@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Nullables : LocalClientTest
+	public class Nullables : RavenTest
 	{
 		[Fact]
 		public void CanWriteNullablesProperly()

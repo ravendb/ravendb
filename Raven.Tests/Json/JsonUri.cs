@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Json
 {
-	public class JsonUri : LocalClientTest
+	public class JsonUri : RavenTest
 	{
 		public class ObjectWithUri
 		{

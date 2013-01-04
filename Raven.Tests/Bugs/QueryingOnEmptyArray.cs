@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingOnEmptyArray : LocalClientTest
+	public class QueryingOnEmptyArray : RavenTest
 	{
 		[Fact]
 		public void CanGetResults()

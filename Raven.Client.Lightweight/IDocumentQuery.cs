@@ -5,11 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if !NET_3_5
-using System.Threading.Tasks;
-#endif
 using Raven.Abstractions.Data;
-using Raven.Client.Linq;
 
 namespace Raven.Client
 {
@@ -26,6 +22,18 @@ namespace Raven.Client
 		/// <param name="fields">The fields.</param>
 		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
+		/// <summary>
+		/// Selects the specified fields directly from the index
+		/// </summary>
+		/// <typeparam name="TProjection">The type of the projection.</typeparam>
+		IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections);
+
+		/// <summary>
+		/// Selects the projection fields directly from the index
+		/// </summary>
+		/// <typeparam name="TProjection">The type of the projection.</typeparam>
+		IDocumentQuery<TProjection> SelectFields<TProjection>();
+
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -36,7 +44,6 @@ namespace Raven.Client
 		QueryResult QueryResult { get; }
 #endif
 
-#if !NET_3_5
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
@@ -49,6 +56,5 @@ namespace Raven.Client
 		/// Also provide a function to execute when the value is evaluated
 		/// </summary>
 		Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
-#endif
 	}
 }

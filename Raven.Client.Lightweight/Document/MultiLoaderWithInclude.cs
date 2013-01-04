@@ -40,12 +40,23 @@ namespace Raven.Client.Document
 			return Include(path.ToPropertyPath());
 		}
 
+		/// <summary>
+		/// Includes the specified path.
+		/// </summary>
+		/// <param name="path">The path.</param>
 		public MultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
 		{
+			var type = path.ExtractTypeFromPath();
 			var fullId = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
-			var idPrefix = fullId.Replace("-1", string.Empty);
 
-			var id = path.ToPropertyPath() + "(" + idPrefix + ")";
+			var id = path.ToPropertyPath();
+
+			if (type != typeof(string))
+			{
+				var idPrefix = fullId.Replace("-1", string.Empty);
+
+				id += "(" + idPrefix + ")";
+			}
 
 			return Include(id);
 		}
@@ -54,9 +65,20 @@ namespace Raven.Client.Document
 		/// Loads the specified ids.
 		/// </summary>
 		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
 		public T[] Load(params string[] ids)
 		{
 			return session.LoadInternal<T>(ids, includes.ToArray());
+		}
+
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
+		public T[] Load(IEnumerable<string> ids)
+		{
+			return session.LoadInternal<T>(ids.ToArray(), includes.ToArray());
 		}
 
 		/// <summary>
@@ -68,9 +90,8 @@ namespace Raven.Client.Document
 			return session.LoadInternal<T>(new[] { id }, includes.ToArray()).FirstOrDefault();
 		}
 
-
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Loads the specified entity with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
@@ -83,8 +104,44 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public T Load(ValueType id)
 		{
-			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T), false);
-			return Load(idAsStr);
+			var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+			return Load(documentKey);
+		}
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1,2,3)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public T[] Load(params ValueType[] ids)
+		{
+			var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Load(documentKeys);
+		}
+
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(new List&lt;int&gt;(){1,2,3})
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public T[] Load(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Load(documentKeys);
 		}
 
 		/// <summary>
@@ -107,13 +164,23 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <typeparam name="TResult"></typeparam>
+		/// <param name="ids">The ids.</param>
+		public TResult[] Load<TResult>(IEnumerable<string> ids)
+		{
+			return session.LoadInternal<TResult>(ids.ToArray(), includes.ToArray());
+		}
+
+		/// <summary>
 		/// Loads the specified id.
 		/// </summary>
 		/// <typeparam name="TResult"></typeparam>
 		/// <param name="id">The id.</param>
 		public TResult Load<TResult>(string id)
 		{
-			return Load<TResult>(new[] {id}).FirstOrDefault();
+			return Load<TResult>(new[] { id }).FirstOrDefault();
 		}
 
 		/// <summary>
@@ -130,9 +197,22 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public TResult Load<TResult>(ValueType id)
 		{
-			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
-			return Load<TResult>(new[] { idAsStr }).FirstOrDefault();
+			var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
+			return Load<TResult>(documentKey);
+		}
+
+		public TResult[] Load<TResult>(params ValueType[] ids)
+		{
+			var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Load<TResult>(documentKeys);
+		}
+
+		public TResult[] Load<TResult>(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return Load<TResult>(documentKeys);
 		}
 	}
 }
+
 #endif

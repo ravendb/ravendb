@@ -6,28 +6,30 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.Abstractions
 {
-	public class HttpListenerContextAdpater : IHttpContext
+	public class HttpListenerContextAdpater : IHttpContext, IDisposable
 	{
 		private readonly HttpListenerContext ctx;
 		private readonly InMemoryRavenConfiguration configuration;
+		private readonly IBufferPool bufferPool;
 		private static readonly Regex maxAgeFinder = new Regex(@"max-age \s* = \s* (\d+)",
 														   RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase |
 														   RegexOptions.Compiled);
 
-		public HttpListenerContextAdpater(HttpListenerContext ctx, InMemoryRavenConfiguration configuration)
+		public HttpListenerContextAdpater(HttpListenerContext ctx, InMemoryRavenConfiguration configuration, IBufferPool bufferPool)
 		{
 			this.ctx = ctx;
 			this.configuration = configuration;
-			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response);
+			this.bufferPool = bufferPool;
+			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response, bufferPool);
 			RequestInternal = new HttpListenerRequestAdapter(ctx.Request);
 
 			SetMaxAge();
@@ -83,13 +85,11 @@ namespace Raven.Database.Server.Abstractions
 			set { internalUser = value; }
 		}
 
-		public void FinalizeResonse()
+		public void FinalizeResponse()
 		{
 			try
 			{
-				ResponseInternal.OutputStream.Flush();
-				ResponseInternal.OutputStream.Dispose(); // this is required when using compressing stream
-				ctx.Response.Close();
+				Response.Close();
 			}
 			catch
 			{
@@ -98,6 +98,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void SetResponseFilter(Func<Stream, Stream> responseFilter)
 		{
+			ResponseInternal.StreamsToDispose.Add(ResponseInternal.OutputStream);
 			ResponseInternal.OutputStream = responseFilter(ResponseInternal.OutputStream);
 		}
 
@@ -107,8 +108,8 @@ namespace Raven.Database.Server.Abstractions
 			RequestInternal.InputStream = requestFilter(RequestInternal.InputStream);
 		}
 
-		private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();
-		public void OutputSavedLogItems(Logger logger)
+		private readonly List<Action<ILog>> loggedMessages = new List<Action<ILog>>();
+		public void OutputSavedLogItems(ILog logger)
 		{
 			foreach (var loggedMessage in loggedMessages)
 			{
@@ -116,7 +117,7 @@ namespace Raven.Database.Server.Abstractions
 			}
 		}
 
-		public void Log(Action<Logger> loggingAction)
+		public void Log(Action<ILog> loggingAction)
 		{
 			loggedMessages.Add(loggingAction);
 		}
@@ -124,6 +125,13 @@ namespace Raven.Database.Server.Abstractions
 		public string GetRequestUrlForTenantSelection()
 		{
 			return this.GetRequestUrl();
+		}
+
+		public void Dispose()
+		{
+			if (ResponseInternal != null)
+				ResponseInternal.Dispose();
+
 		}
 	}
 }

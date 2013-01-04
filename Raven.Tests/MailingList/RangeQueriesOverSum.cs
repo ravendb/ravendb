@@ -39,7 +39,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanQueryByRangeOverMapReduce()
 		{
-			using(var documentStore = NewDocumentStore("munin", false))
+			using(var documentStore = NewDocumentStore())
 			{
 				using(var session = documentStore.OpenSession())
 				{
@@ -54,7 +54,6 @@ namespace Raven.Tests.MailingList
 				}
 
 				new TheIndex().Execute(documentStore);
-				WaitForUserToContinueTheTest(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{

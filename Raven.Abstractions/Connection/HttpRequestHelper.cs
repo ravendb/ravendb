@@ -11,7 +11,9 @@ namespace Raven.Abstractions.Connection
 		public static void WriteDataToRequest(HttpWebRequest req, string data, bool disableCompression)
 		{
 			req.SendChunked = true;
-			using (var requestStream = req.GetRequestStream())
+			// we want to make sure that we use a buffer properly here so we won't send the data
+			// in many different TCP packets
+			using (var requestStream = new BufferedStream(req.GetRequestStream()))
 			using (var dataStream = new GZipStream(requestStream, CompressionMode.Compress))
 			using (var writer = disableCompression == false ?
 					new StreamWriter(dataStream, Encoding.UTF8) :
@@ -55,11 +57,9 @@ namespace Raven.Abstractions.Connection
 						case "Expect":
 							// explicitly ignoring this
 							break;
-#if !NET_3_5
 						case "Host":
 							dest.Host = src.Host;
 							break;
-#endif
 						case "If-Modified-Since":
 							dest.IfModifiedSince = src.IfModifiedSince;
 							break;

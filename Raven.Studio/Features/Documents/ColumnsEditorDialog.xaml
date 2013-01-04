@@ -1,0 +1,234 @@
+﻿<Infrastructure:DialogView x:Class="Raven.Studio.Features.Documents.ColumnsEditorDialog"
+                           xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                           xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" 
+                           Width="600" Height="600" 
+                           Title="Choose Columns" 
+                           xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                           xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                           xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                           xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+                           xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                           xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                           mc:Ignorable="d">
+    
+    <Grid x:Name="LayoutRoot" Margin="2" d:DataContext="{d:DesignInstance Documents:ColumnsEditorDialogViewModel}">
+        <i:Interaction.Triggers>
+            <Behaviors:StudioKeyTrigger Key="Escape">
+                <i:InvokeCommandAction Command="{Binding Cancel}"/>
+            </Behaviors:StudioKeyTrigger>
+            <Behaviors:StudioKeyTrigger Key="Enter">
+                <i:InvokeCommandAction Command="{Binding OK}"/>
+            </Behaviors:StudioKeyTrigger>
+        </i:Interaction.Triggers>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          <RowDefinition />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+        </Grid.ColumnDefinitions>
+        
+        <RadioButton IsChecked="{Binding IsCustomChoice, Converter={StaticResource NegatingBool}, Mode=TwoWay}"
+                     Grid.Row="0" 
+                     Margin="0,10">
+            <TextBlock>Automatic - <Run Foreground="Gray" Text=" Let RavenDB choose columns based on visible document contents" />
+            </TextBlock>
+        </RadioButton>
+
+      <RadioButton Content="Custom" 
+                   IsChecked="{Binding IsCustomChoice, Mode=TwoWay}"
+                   Grid.Row="1" 
+                   Margin="0,5,0,8"/>
+        
+        <Border Background="{StaticResource Brush_ToolbarBackground}"
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1,1,1,0"
+                Grid.Row="2">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
+            <StackPanel.Resources>
+                <Style TargetType="Button" BasedOn="{StaticResource Style_Button_MouseOverChrome}">
+                </Style>
+            </StackPanel.Resources>
+            <Button ToolTipService.ToolTip="Delete Selected Column" Command="{Binding DeleteSelectedColumn}" IsEnabled="{Binding IsCustomChoice}">
+                <Image Source="{StaticResource Image_Delete_Tiny}" Stretch="None"/>
+            </Button>
+            <Button ToolTipService.ToolTip="Move Selected Column Up" Command="{Binding MoveSelectedColumnUp}" IsEnabled="{Binding IsCustomChoice}">
+                <Image Source="{StaticResource Image_Up_Tiny}" Stretch="None"/>
+            </Button>
+            <Button ToolTipService.ToolTip="Move Selected Column Down" Command="{Binding MoveSelectedColumnDown}" IsEnabled="{Binding IsCustomChoice}">
+                <Image Source="{StaticResource Image_Down_Tiny}" Stretch="None"/>
+            </Button>
+        </StackPanel>
+        </Border>
+        <sdk:DataGrid x:Name="DataGrid"  
+                      Grid.Row="3" 
+                      ItemsSource="{Binding Columns}" 
+                      IsReadOnly="False" 
+                      AutoGenerateColumns="False" 
+                      SelectedItem="{Binding SelectedColumn, Mode=TwoWay}"
+                      CanUserSortColumns="False"
+                      CanUserReorderColumns="False"
+                      RowHeight="28"
+                      IsEnabled="{Binding IsCustomChoice}">
+            <i:Interaction.Behaviors>
+                <Behaviors:DefaultButtonBehavior DefaultButton="{Binding ElementName=OKButton}"/>
+            </i:Interaction.Behaviors>
+            <i:Interaction.Triggers>
+                <Behaviors:StudioKeyTrigger Key="Delete" SourceObject="{Binding ElementName=DataGrid}">
+                    <i:InvokeCommandAction Command="{Binding DeleteSelectedColumn}"/>
+                </Behaviors:StudioKeyTrigger>
+            </i:Interaction.Triggers>
+            <sdk:DataGrid.Columns>
+                <sdk:DataGridTemplateColumn Header="Binding" Width="*">
+                    <sdk:DataGridTemplateColumn.HeaderStyle>
+                        <Style TargetType="sdk:DataGridColumnHeader" BasedOn="{StaticResource Style_DataGridColumnHeader_Default}">
+                            <Setter Property="ContentTemplate">
+                                <Setter.Value>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding}" Margin="2,0,5,0" Foreground="{StaticResource Brush_ContrastColor}"/>
+                                            <Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" >
+                                                <i:Interaction.Behaviors>
+                                                    <Behaviors:ShowPopupWhilstMouseOver>
+                                                        <Behaviors:ShowPopupWhilstMouseOver.Popup>
+                                                            <Popup>
+                                                                <ContentControl Style="{StaticResource Style_InfoToolTip}">
+                                                                    <RichTextBlock MaxWidth="300" Margin="5">
+                                                                        <Paragraph>
+                                                                            <Bold>Properties</Bold>
+                                                                            <LineBreak/>
+                                                                            Bind to properties just like you would in code. For example:
+                                                                            <LineBreak/>
+                                                                            <Italic>Address.Postcode</Italic>
+                                                                            <LineBreak/>
+                                                                            <LineBreak/>
+                                                                            Bind to particular items in an array using an index in square brackets:
+                                                                            <LineBreak/>
+                                                                            <Italic>Tracks[0].Title</Italic>
+                                                                            <LineBreak/>
+                                                                        </Paragraph>
+                                                                        <Paragraph >
+                                                                            <Bold>Metadata</Bold>
+                                                                            <LineBreak/>
+                                                                            Bind to document metadata using prefix
+                                                                        '
+                                                                            <Italic>$Meta:</Italic> '. For instance:
+                                                                            <LineBreak/>
+                                                                            <Italic>$Meta:Raven-Clr-Type</Italic>
+                                                                            <LineBreak/>
+                                                                        </Paragraph>
+                                                                        <Paragraph>
+                                                                            <Bold>Advanced</Bold>
+                                                                            <LineBreak/>
+                                                                            Bind directly to the JsonDocument object (using XAML binding syntax) using prefix
+                                                                        '
+                                                                            <Italic>$JsonDocument:</Italic> '. For example
+                                                                            <LineBreak/>
+                                                                            <Italic>$JsonDocument:DataAsJson[Tracks].Length</Italic>
+                                                                            <LineBreak/>
+                                                                            displays the number of items in the Tracks array.
+                                                                        </Paragraph>
+                                                                    </RichTextBlock>
+                                                                </ContentControl>
+                                                            </Popup>
+                                                        </Behaviors:ShowPopupWhilstMouseOver.Popup>
+                                                    </Behaviors:ShowPopupWhilstMouseOver>
+                                                </i:Interaction.Behaviors>
+                                            </Image>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </sdk:DataGridTemplateColumn.HeaderStyle>
+                    <sdk:DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <TextBlock Text="{Binding Binding}" 
+                                           Visibility="{Binding IsNewRow, Converter={StaticResource BooleanToOppositeVisibility}}"
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                           VerticalAlignment="Center"
+                                           Margin="4"/>
+                                <TextBlock Text="[New Column]" 
+                                           Visibility="{Binding IsNewRow, Converter={StaticResource BooleanToVisibility}}"
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           ToolTipService.ToolTip="Double-click to edit"
+                                           VerticalAlignment="Center"
+                                           Foreground="Gray"
+                                           Margin="4"/>
+                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellTemplate>
+                    <sdk:DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <sdk:AutoCompleteBox Text="{Binding Binding, Mode=TwoWay}" 
+                                                     ItemsSource="{Binding DataContext.SuggestedBindings, RelativeSource={RelativeSource AncestorType=sdk:DataGrid}}"
+                                                     IsTextCompletionEnabled="True"
+                                                     MinimumPrefixLength="0"
+                                                     Style="{StaticResource Style_AutoCompleteBox_Default}">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="GotFocus">
+                                            <Behaviors:OpenDropDownAction/>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </sdk:AutoCompleteBox>
+                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellEditingTemplate>
+                </sdk:DataGridTemplateColumn>
+                <sdk:DataGridTemplateColumn Header="Title" Width="*" IsReadOnly="False">
+                    <sdk:DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <TextBlock Text="{Binding Header}" 
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                           VerticalAlignment="Center"
+                                           Margin="4"/>
+                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellTemplate>
+                    <sdk:DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <TextBox Text="{Binding Header, Mode=TwoWay}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellEditingTemplate>
+                </sdk:DataGridTemplateColumn>
+               
+                <sdk:DataGridTemplateColumn Header="Default Width" Width="120">
+                    <sdk:DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                                <TextBlock Text="{Binding DefaultWidth}" 
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                           VerticalAlignment="Center"
+                                           Margin="4"/>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellTemplate>
+                    <sdk:DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                                <TextBox Text="{Binding DefaultWidth, Mode=TwoWay}"/>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellEditingTemplate>
+                </sdk:DataGridTemplateColumn>
+            </sdk:DataGrid.Columns>
+        </sdk:DataGrid>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="4" Margin="0,10,0,0">
+            <Button Content="Save as Default" Command="{Binding SaveAsDefault}" Height="23" IsEnabled="{Binding IsCustomChoice}" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="4" Margin="0,10,0,0">
+            <Button x:Name="OKButton"  Content="OK" Command="{Binding OK}" Width="75" Height="23" Margin="5"/>
+            <Button Content="Cancel" Command="{Binding Cancel}" Width="75" Height="23" Margin="5" />
+            <Button Content="Apply" Command="{Binding Apply}"  Width="75" Height="23" Margin="5,0,0,0" />
+        </StackPanel>
+    </Grid>
+</Infrastructure:DialogView >

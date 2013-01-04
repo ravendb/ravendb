@@ -12,6 +12,25 @@ namespace Raven.Tests.Silverlight
 	public class Indexes : RavenTestBase
 	{
 		[Asynchronous]
+		public IEnumerable<Task> TaskIsFaultedWhenDeletingIndexFails()
+		{
+			using (var documentStore = new DocumentStore
+			{
+				Url = Url + Port,
+				Conventions =
+					{
+						FailoverBehavior = FailoverBehavior.FailImmediately
+					}
+			}.Initialize())
+			{
+				var task = documentStore.AsyncDatabaseCommands.ForDatabase("NonExistent").DeleteIndexAsync("NonExistent");
+				yield return task;
+
+				Assert.IsTrue(task.IsFaulted);
+			}
+		}
+
+		[Asynchronous]
 		public IEnumerable<Task> CanGetIndexNamesAsync()
 		{
 			var dbname = GenerateNewDatabaseName();

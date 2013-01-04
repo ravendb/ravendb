@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.CompiledIndexes
 {
-	public class UsingNetworkEventsToNetworkTemp : LocalClientTest
+	public class UsingNetworkEventsToNetworkTemp : RavenTest
 	{
 		[Fact]
 		public void CanGetGoodResults()

@@ -12,6 +12,7 @@ using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Raven.Database.Server;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -25,10 +26,17 @@ namespace Raven.Database.Extensions
 			var analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??
 				Type.GetType(analyzerTypeAsString);
 			if (analyzerType == null)
-				throw new InvalidOperationException("Cannot find analzyer type '" + analyzerTypeAsString + "' for field: " + name);
+				throw new InvalidOperationException("Cannot find analyzer type '" + analyzerTypeAsString + "' for field: " + name);
 			try
 			{
-				return (Analyzer)Activator.CreateInstance(analyzerType);
+				// try to get parameterless ctor
+				var ctors = analyzerType.GetConstructor(Type.EmptyTypes);
+				if (ctors != null)
+					return (Analyzer)Activator.CreateInstance(analyzerType);
+
+				ctors = analyzerType.GetConstructor(new[] {typeof (Lucene.Net.Util.Version)});
+				if (ctors != null)
+					return (Analyzer)Activator.CreateInstance(analyzerType, Lucene.Net.Util.Version.LUCENE_30);
 			}
 			catch (Exception e)
 			{
@@ -36,19 +44,28 @@ namespace Raven.Database.Extensions
 					"Could not create new analyzer instance '" + name + "' for field: " +
 						name, e);
 			}
+
+			throw new InvalidOperationException(
+				"Could not create new analyzer instance '" + name + "' for field: " + name + ". No recognizable constructor found.");
 		}
 
-		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index defaultIndex)
+		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index? defaultIndex)
 		{
 			if (self.Indexes == null)
-				return defaultIndex;
+				return defaultIndex ?? Field.Index.ANALYZED_NO_NORMS;
 			FieldIndexing value;
 			if (self.Indexes.TryGetValue(name, out value) == false)
 			{
-				string ignored;
-				if (self.Analyzers.TryGetValue(name, out ignored))
-					return Field.Index.ANALYZED;// if there is a custom analyzer, the value should be analyzed
-				return defaultIndex;
+				if(self.Indexes.TryGetValue(Constants.AllFields, out value) == false)
+				{
+					string ignored;
+					if (self.Analyzers.TryGetValue(name, out ignored) ||
+						self.Analyzers.TryGetValue(Constants.AllFields, out ignored))
+					{
+						return Field.Index.ANALYZED; // if there is a custom analyzer, the value should be analyzed
+					}
+					return defaultIndex ?? Field.Index.ANALYZED_NO_NORMS;
+				}
 			}
 			switch (value)
 			{
@@ -59,7 +76,7 @@ namespace Raven.Database.Extensions
 				case FieldIndexing.NotAnalyzed:
 					return Field.Index.NOT_ANALYZED_NO_NORMS;
 				case FieldIndexing.Default:
-					return defaultIndex;
+					return defaultIndex ?? Field.Index.ANALYZED_NO_NORMS;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
@@ -71,15 +88,17 @@ namespace Raven.Database.Extensions
 				return defaultStorage;
 			FieldStorage value;
 			if (self.Stores.TryGetValue(name, out value) == false)
-				return defaultStorage;
+			{
+				// do we have a overriding default?
+				if (self.Stores.TryGetValue(Constants.AllFields, out value) == false)
+					return defaultStorage;
+			}
 			switch (value)
 			{
 				case FieldStorage.Yes:
 					return Field.Store.YES;
 				case FieldStorage.No:
 					return Field.Store.NO;
-				case FieldStorage.Compress:
-					return Field.Store.COMPRESS;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
@@ -95,6 +114,10 @@ namespace Raven.Database.Extensions
 			return new Sort(self.SortedFields
 							.Select(sortedField =>
 							{
+								if (sortedField.Field == Constants.TemporaryScoreValue)
+								{
+									return SortField.FIELD_SCORE;
+								}
 								if(sortedField.Field.StartsWith(Constants.RandomFieldName))
 								{
 									var parts = sortedField.Field.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
@@ -104,27 +127,38 @@ namespace Raven.Database.Extensions
 								}
 								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
 								{
-									var dsort = new SpatialDistanceFieldComparatorSource(spatialQuery.Latitude, spatialQuery.Longitude);
+									var shape = SpatialIndex.ReadShape(spatialQuery.QueryShape);
+									var dsort = new SpatialDistanceFieldComparatorSource(shape.GetCenter());
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
+							
 								return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
+							
 							})
 							.ToArray());
 		}
+
 
 		public static SortOptions? GetSortOption(this IndexDefinition self, string name)
 		{
 			SortOptions value;
 			if (self.SortOptions.TryGetValue(name, out value))
+			{
 				return value;
-			
+			}
+			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
+				return value;
+
 			if (name.EndsWith("_Range"))
 			{
 				string nameWithoutRange = name.Substring(0, name.Length - "_Range".Length);
 				if (self.SortOptions.TryGetValue(nameWithoutRange, out value))
+					return value;
+
+				if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 					return value;
 			}
 			if (CurrentOperationContext.Headers.Value == null)

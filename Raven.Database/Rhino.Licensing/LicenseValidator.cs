@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Raven.Abstractions.Logging;
 
 namespace Rhino.Licensing
 {
@@ -43,6 +44,8 @@ namespace Rhino.Licensing
 		{
 			get
 			{
+				if (string.IsNullOrEmpty(licensePath))
+					return null;
 				return inMemoryLicense ?? File.ReadAllText(licensePath);
 			}
 			set
@@ -78,6 +81,7 @@ namespace Rhino.Licensing
 		/// </summary>
 		public override void RemoveExistingLicense()
 		{
+			base.RemoveExistingLicense();
 			File.Delete(licensePath);
 		}
 	}

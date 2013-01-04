@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class LuceneQueryShouldNotModifyDynamicDocument : LocalClientTest
+	public class LuceneQueryShouldNotModifyDynamicDocument : RavenTest
 	{
 		[Fact]
 		public void CanCustomizeEntityName()

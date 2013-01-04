@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
@@ -171,7 +171,7 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
-		public void CanAddServeralItemsToSeveralDifferentPartsAtTheSameTime()
+		public void CanAddSeveralItemsToSeveralDifferentPartsAtTheSameTime()
 		{
 			var patchedDoc = new JsonPatcher(doc).Apply(
 				new[]

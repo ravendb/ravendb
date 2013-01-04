@@ -15,7 +15,10 @@ namespace Raven.Tests.MailingList
 			var indexDefinition = technologySummaryIndex.CreateIndexDefinition();
 
 			Assert.Equal(
-				"docs.Technologies\r\n\t.Where(technology => !technology.Id.EndsWith(\"/published\"))\r\n\t.Select(technology => new {TechnologyId = technology.Id, DrugId = technology.Drug.Id})",
+				@"docs.Technologies.Where(technology => !technology.Id.EndsWith(""/published"")).Select(technology => new {
+    TechnologyId = technology.Id,
+    DrugId = technology.Drug.Id
+})",
 				indexDefinition.Map);
 		}
 

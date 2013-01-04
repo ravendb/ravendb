@@ -11,15 +11,6 @@ namespace Raven.Abstractions
 	{
 		public static Func<DateTime> UtcDateTime;
 
-		public static DateTime Now
-		{
-			get
-			{
-				var temp = UtcDateTime;
-				return temp == null ? DateTime.Now : temp().ToLocalTime();
-			}
-		}
-
 		public static DateTime UtcNow
 		{
 			get

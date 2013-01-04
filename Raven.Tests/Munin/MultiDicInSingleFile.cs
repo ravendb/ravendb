@@ -46,7 +46,7 @@ namespace Raven.Munin.Tests
 			tableOne = Database.Add(new Table("Test1"));
 			tableTwo = Database.Add(new Table("Test2"));
 
-			Database.Initialze();
+			Database.Initialize();
 			Database.BeginTransaction();
 		}
 	}

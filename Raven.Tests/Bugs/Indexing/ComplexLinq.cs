@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class ComplexLinq : LocalClientTest
+	public class ComplexLinq : RavenTest
 	{
 		[Fact]
 		public void QueryOnNegation()
@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs.Indexing
 																  x.LastName == last &&
 																  x.BirthDate == birthDate &&
 																  x.Country == country);
-					Assert.Equal("(((-FirstName:Ayende AND FirstName:*) AND LastName:Rahien) AND BirthDate:20010101000000000) AND Country:Israel", queryable.ToString());
+					Assert.Equal("(((-FirstName:Ayende AND FirstName:*) AND LastName:Rahien) AND BirthDate:2001-01-01T00:00:00.0000000) AND Country:Israel", queryable.ToString());
 					queryable.Any();
 
 				}
@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs.Indexing
 					                                              x.LastName == last &&
 					                                              x.BirthDate == birthDate &&
 					                                              x.Country == country);
-					Assert.Equal("((FirstName:Ayende AND LastName:Rahien) AND BirthDate:20010101000000000) AND Country:Israel", queryable.ToString());
+					Assert.Equal("((FirstName:Ayende AND LastName:Rahien) AND BirthDate:2001-01-01T00:00:00.0000000) AND Country:Israel", queryable.ToString());
 					queryable.Any();
 
 				}

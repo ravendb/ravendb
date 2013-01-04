@@ -9,7 +9,7 @@ using System.IO;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
 using System.Web;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 
 namespace Raven.Database.Server.Abstractions
@@ -82,7 +82,7 @@ namespace Raven.Database.Server.Abstractions
 			return this.GetRequestUrl();
 		}
 
-		public void FinalizeResonse()
+		public void FinalizeResponse()
 		{
 			
 		}
@@ -97,8 +97,8 @@ namespace Raven.Database.Server.Abstractions
 			context.Request.Filter = requestFilter(context.Request.Filter);
 		}
 
-		private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();
-		public void OutputSavedLogItems(Logger logger)
+		private readonly List<Action<ILog>> loggedMessages = new List<Action<ILog>>();
+		public void OutputSavedLogItems(ILog logger)
 		{
 			foreach (var loggedMessage in loggedMessages)
 			{
@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Abstractions
 			}
 		}
 
-		public void Log(Action<Logger> loggingAction)
+		public void Log(Action<ILog> loggingAction)
 		{
 			loggedMessages.Add(loggingAction);
 		}

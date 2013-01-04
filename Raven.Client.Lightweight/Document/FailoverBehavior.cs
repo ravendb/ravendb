@@ -23,7 +23,7 @@ namespace Raven.Client.Document
 		/// to the secondary server(s).
 		/// </summary>
 		/// <remarks>
-		/// Choosing this option requires that you'll have some way of propogating changes
+		/// Choosing this option requires that you'll have some way of propagating changes
 		/// made to the secondary server(s) to the primary node when the primary goes back
 		/// up. 
 		/// A typical strategy to handle this is to make sure that the replication is setup

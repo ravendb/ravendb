@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : LocalClientTest
+	public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : RavenTest
 	{
 		[Fact]
 		public void WillIndexAllWhenCreatingIndex()

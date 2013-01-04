@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -15,24 +16,20 @@ using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class AttachmentDeleteTrigger: AbstractDocumentStorageTest
+	public class AttachmentDeleteTrigger: RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public AttachmentDeleteTrigger()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				Container = new CompositionContainer(new TypeCatalog(
-					typeof(RefuseAttachmentDeleteTrigger)))
-			});
-
+			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (RefuseAttachmentDeleteTrigger))));
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

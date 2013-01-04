@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Tests.Bugs;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Suggestions
 {
-	public class SuggestionsLazy : LocalClientTest
+	public class SuggestionsLazy : RavenTest
 	{
 		[Fact]
 		public void UsingLinq()

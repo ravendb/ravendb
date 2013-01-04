@@ -13,7 +13,7 @@ namespace Raven.Database.Indexing
 	{
 		private readonly IEnumerator<T> inner;
 		private bool calledMoveNext;
-	    private bool enumerationCompleted;
+		private bool enumerationCompleted;
 		public StatefulEnumerableWrapper(IEnumerator<T> inner)
 		{
 			this.inner = inner;
@@ -33,7 +33,7 @@ namespace Raven.Database.Indexing
 
 		public IEnumerator<T> GetEnumerator()
 		{
-			return new StatefulbEnumeratorWrapper(inner, this);
+			return new StatefulEnumeratorWrapper(inner, this);
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -43,14 +43,14 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		#region Nested type: StatefulbEnumeratorWrapper
+		#region Nested type: StatefulEnumeratorWrapper
 
-		private class StatefulbEnumeratorWrapper : IEnumerator<T>
+		private class StatefulEnumeratorWrapper : IEnumerator<T>
 		{
 			private readonly IEnumerator<T> inner;
 			private readonly StatefulEnumerableWrapper<T> statefulEnumerableWrapper;
 
-			public StatefulbEnumeratorWrapper(IEnumerator<T> inner, StatefulEnumerableWrapper<T> statefulEnumerableWrapper)
+			public StatefulEnumeratorWrapper(IEnumerator<T> inner, StatefulEnumerableWrapper<T> statefulEnumerableWrapper)
 			{
 				this.inner = inner;
 				this.statefulEnumerableWrapper = statefulEnumerableWrapper;
@@ -60,22 +60,29 @@ namespace Raven.Database.Indexing
 
 			public void Dispose()
 			{
+				if (CurrentIndexingScope.Current != null)
+					CurrentIndexingScope.Current.Source = null;
 				inner.Dispose();
 			}
 
 			public bool MoveNext()
 			{
 				statefulEnumerableWrapper.calledMoveNext = true;
-			    var moveNext = inner.MoveNext();
+				var moveNext = inner.MoveNext();
 				if (moveNext == false)
 					statefulEnumerableWrapper.enumerationCompleted = true;
-			    return moveNext;
+
+				if (CurrentIndexingScope.Current != null)
+					CurrentIndexingScope.Current.Source = inner.Current;
+				return moveNext;
 			}
 
 			public void Reset()
 			{
-			    statefulEnumerableWrapper.enumerationCompleted = false;
-				statefulEnumerableWrapper.calledMoveNext = false; 
+				statefulEnumerableWrapper.enumerationCompleted = false;
+				statefulEnumerableWrapper.calledMoveNext = false;
+				if (CurrentIndexingScope.Current != null)
+					CurrentIndexingScope.Current.Source = null;
 				inner.Reset();
 			}
 

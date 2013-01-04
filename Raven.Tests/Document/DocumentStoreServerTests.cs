@@ -26,6 +26,8 @@ using Raven.Tests.Spatial;
 
 namespace Raven.Tests.Document
 {
+	using System.Collections.Generic;
+
 	public class DocumentStoreServerTests : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
@@ -79,9 +81,23 @@ namespace Raven.Tests.Document
 			                                                          		Indexes = {{x => x.Name, FieldIndexing.NotAnalyzed}}
 			                                                          	});
 			var indexDefinition = documentStore.DatabaseCommands.GetIndex("Companies/Name");
-			Assert.Equal(@"docs.Companies
-	.Select(c => new {Name = c.Name})", indexDefinition.Map);
+			Assert.Equal(@"docs.Companies.Select(c => new {
+    Name = c.Name
+})", indexDefinition.Map);
 			Assert.Equal(FieldIndexing.NotAnalyzed, indexDefinition.Indexes["Name"]);
+		}
+
+		[Fact]
+		public void Can_get_indexes()
+		{
+			documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
+			{
+				Map = companies => from c in companies
+								   select new { c.Name },
+				Indexes = { { x => x.Name, FieldIndexing.NotAnalyzed } }
+			});
+			var indexDefinitions = documentStore.DatabaseCommands.GetIndexes(0, 10);
+			Assert.NotNull(indexDefinitions.SingleOrDefault(d => d.Name == "Companies/Name"));
 		}
 
 		[Fact]
@@ -284,7 +300,7 @@ namespace Raven.Tests.Document
 			documentStore.DatabaseCommands.Query("Raven/DocumentsByEntityName", new IndexQuery
 			                                                                    	{
 			                                                                    		PageSize = 10,
-			                                                                    		Cutoff = SystemTime.Now.AddHours(-1)
+			                                                                    		Cutoff = SystemTime.UtcNow.AddHours(-1)
 			                                                                    	}, null);
 		}
 
@@ -360,7 +376,7 @@ namespace Raven.Tests.Document
 			documentStore.DatabaseCommands.PutIndex("my_index",
 			                                        new IndexDefinition
 			                                        	{
-			                                        		Map = "from doc in docs select new { doc.Language, doc.Type, Value = new{ Answers = 42, Paths = 7 }  }}",
+			                                        		Map = "from doc in docs select new { doc.Language, doc.Type, Value = new{ Answers = 42, Paths = 7 }  }",
 			                                        		Stores = {{"Value", FieldStorage.Yes},}
 			                                        	});
 
@@ -554,6 +570,18 @@ namespace Raven.Tests.Document
 			}
 		}
 
+		[Fact]
+		public void Can_get_documents()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new Company { Name = "Company A", Id = "1" });
+				session.Store(new Company { Name = "Company B", Id = "2" });
+				session.SaveChanges();
+			}
+			JsonDocument[] jsonDocuments = documentStore.DatabaseCommands.GetDocuments(0, 10, true);
+			Assert.Equal(2, jsonDocuments.Length);
+		}
 
 		[Fact]
 		public void Can_delete_document()
@@ -765,6 +793,7 @@ namespace Raven.Tests.Document
 
 					tx.Complete();
 				}
+
 				Assert.NotNull(session.Load<Company>(id));
 			}
 		}
@@ -924,27 +953,33 @@ namespace Raven.Tests.Document
 					.ToArray();
 
 				const double lat = 38.96939, lng = -77.386398;
-				const double radius = 6.0;
+				const double radiusInKm = 6.0 * 1.609344;
 
 				var events = session.Advanced.LuceneQuery<Event>("eventsByLatLng")
 					.WhereEquals("Tag", "Event")
-					.WithinRadiusOf(radius, lat, lng)
+					.WithinRadiusOf(radiusInKm, lat, lng)
 					.SortByDistance()
 					.WaitForNonStaleResults()
 					.ToArray();
 
+
+				var expected =
+					SpatialIndexTestHelper.GetEvents()
+						.Count(e => Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
+
+				Assert.Equal(expected, events.Length);
+
 				Assert.Equal(7, events.Length);
 
-				//TODO
-				//double previous = 0;
-				//foreach (var e in events)
-				//{
-				//    double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
-				//    Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
-				//    Assert.True(distance < radius);
-				//    Assert.True(distance >= previous);
-				//    previous = distance;
-				//}
+				double previous = 0;
+				foreach (var e in events)
+				{
+					double distance = Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude);
+					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
+					Assert.True(distance < radiusInKm);
+					Assert.True(distance >= previous);
+					previous = distance;
+				}
 			}
 		}
 
@@ -1018,11 +1053,13 @@ namespace Raven.Tests.Document
 			documentStore.DatabaseCommands.PutIndex("AvgAgeByLocation", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
 			                                                            	{
 			                                                            		Map = users => from user in users
-			                                                            		               select new {user.Location, user.Age},
+			                                                            		               select new {user.Location, AgeSum=  user.Age, AverageAge = user.Age, Count = 1},
 			                                                            		Reduce = results => from loc in results
 			                                                            		                    group loc by loc.Location
 			                                                            		                    into g
-			                                                            		                    select new {Location = g.Key, Age = g.Average(x => x.Age)},
+																									let count = g.Sum(x=>x.Count)
+																									let age = g.Sum(x=>x.AgeSum)
+			                                                            		                    select new {Location = g.Key, AverageAge = age/ count, Count = count, AgeSum = age },
 			                                                            		Indexes = {{x => x.Location, FieldIndexing.NotAnalyzed}}
 			                                                            	});
 
@@ -1050,7 +1087,7 @@ namespace Raven.Tests.Document
 					.Single();
 
 				Assert.Equal("Tel Aviv", single.Location);
-				Assert.Equal(26.5m, single.Age);
+				Assert.Equal(26.5m, single.AverageAge);
 			}
 		}
 
@@ -1061,8 +1098,8 @@ namespace Raven.Tests.Document
 			                                                  	{
 			                                                  		Map = users => from user in users
 			                                                  		               select new {user.Age},
-			                                                  		Indexes = {{x => x.Age, FieldIndexing.Analyzed}},
-			                                                  		Stores = {{x => x.Age, FieldStorage.Yes}}
+			                                                  		Indexes = {{x => x.AverageAge, FieldIndexing.Analyzed}},
+																	Stores = { { x => x.AverageAge, FieldStorage.Yes } }
 			                                                  	});
 
 			using (var session = documentStore.OpenSession())
@@ -1099,6 +1136,50 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
+		public void Can_get_correct_maximum_from_map_reduce_index_using_orderbydescending()
+		{
+			documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinitionBuilder<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
+			{
+				Map = users => from user in users
+								select new { user.Age },
+				Indexes = { { x => x.AverageAge, FieldIndexing.Analyzed } },
+				Stores = { { x => x.AverageAge, FieldStorage.Yes } }
+			});
+
+			using (var session = documentStore.OpenSession())
+			{
+
+				session.Store(new LinqIndexesFromClient.User
+				{
+					Age = 27,
+					Name = "Foo"
+				});
+
+				session.Store(new LinqIndexesFromClient.User
+				{
+					Age = 33,
+					Name = "Bar"
+				});
+
+				session.Store(new LinqIndexesFromClient.User
+				{
+					Age = 29,
+					Name = "Bar"
+				});
+
+				session.SaveChanges();
+
+				var user = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("MaxAge")
+					.OrderByDescending("Age")
+					.Take(1)
+					.WaitForNonStaleResults()
+					.Single();
+
+				Assert.Equal(33, user.Age);
+			}
+		}
+
+		[Fact]
 		public void Using_attachments()
 		{
 			var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
@@ -1119,11 +1200,48 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
+		public void Getting_attachment_metadata()
+		{
+			documentStore.DatabaseCommands.PutAttachment("sample", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+
+			var attachmentOnlyWithMetadata = documentStore.DatabaseCommands.HeadAttachment("sample");
+
+			Assert.Equal("World", attachmentOnlyWithMetadata.Metadata.Value<string>("Hello"));
+
+			var exception = Assert.Throws<InvalidOperationException>(() => attachmentOnlyWithMetadata.Data());
+
+			Assert.Equal("Cannot get attachment data because it was loaded using: HEAD", exception.Message);
+		}
+
+		[Fact]
+		public void Getting_headers_of_attachments_with_prefix()
+		{
+			documentStore.DatabaseCommands.PutAttachment("sample/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+			documentStore.DatabaseCommands.PutAttachment("example/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+			documentStore.DatabaseCommands.PutAttachment("sample/2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+
+			var attachmentHeaders = documentStore.DatabaseCommands.GetAttachmentHeadersStartingWith("sample", 0, 5).ToList();
+
+			Assert.Equal(2, attachmentHeaders.Count);
+
+			foreach (var attachment in attachmentHeaders)
+			{
+				Assert.True(attachment.Key.StartsWith("sample"));
+
+				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+				var exception = Assert.Throws<InvalidOperationException>(() => attachment.Data());
+
+				Assert.Equal("Cannot get attachment data from an attachment header", exception.Message);
+			}
+		}
+
+		[Fact]
 		//Fix for issue at http://groups.google.com/group/ravendb/browse_thread/thread/78f1ca6dbdd07e2b
 		//The issue only shows up in Server/Client mode, not in Embedded mode!!!
 		public void Using_attachments_can_properly_set_WebRequest_Headers()
 		{
-			var key = string.Format("{0}-{1}", "test", SystemTime.Now.ToFileTimeUtc());
+			var key = string.Format("{0}-{1}", "test", SystemTime.UtcNow.ToFileTimeUtc());
 			var metadata = new RavenJObject
 			               	{
 			               		{"owner", 5},

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Xunit;
 using Raven.Client.Linq;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Linq;
 namespace Raven.Tests.Linq
 {
 
-	public class DynamicQueriesWithStaticIndexes : LocalClientTest
+	public class DynamicQueriesWithStaticIndexes : RavenTest
 	{
 
 		[Fact]

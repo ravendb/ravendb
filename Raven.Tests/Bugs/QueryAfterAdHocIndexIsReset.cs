@@ -13,7 +13,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryAfterAdHocIndexIsReset : LocalClientTest
+	public class QueryAfterAdHocIndexIsReset : RavenTest
 	{
 		[Fact]
 		public void ShouldStillWork()

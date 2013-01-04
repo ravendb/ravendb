@@ -99,14 +99,16 @@ namespace Raven.Tests.MailingList.Thor
 
 				session.SaveChanges();
 
-				var query = session.Query<JoinedChildTransport, TransportsIndex>().Customize(x => x.WaitForNonStaleResultsAsOfNow())
+				var query = session.Query<JoinedChildTransport, TransportsIndex>()
+					.Customize(x => x.WaitForNonStaleResultsAsOfNow())
+					.OrderBy(x=>x.TransportId)
 					//                 .AsProjection<JoinedChildTransport>()
 					;
 
 				var transports = query.ToList();
 				Assert.Equal(4, transports.Count);
 
-				// The test below may have to change to accound for unpredictable order, but we never even get the correct number of hits
+				// The test below may have to change to account for unpredictable order, but we never even get the correct number of hits
 
 				// transports for B1
 				Assert.Equal("A1", transports[0].TransportId);

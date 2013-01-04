@@ -1,68 +1,56 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Windows.Data;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Messages;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
-	public class CollectionsModel : ViewModel, IHasPageTitle
+	public class CollectionsModel : PageViewModel, IHasPageTitle
 	{
-		private static string initialSelectedDatabaseName;
-		public static BindableCollection<CollectionModel> Collections { get; set; }
-		public static Observable<CollectionModel> SelectedCollection { get; set; }
+	    private const string CollectionsIndex = "Raven/DocumentsByEntityName";
+	    private string initialSelectedDatabaseName;
+		public BindableCollection<CollectionModel> Collections { get; set; }
+		public Observable<CollectionModel> SelectedCollection { get; set; }
 
-		private static WeakReference<Observable<DocumentsModel>> documentsForSelectedCollection;
-		public static Observable<DocumentsModel> DocumentsForSelectedCollection
+	    private CollectionDocumentsCollectionSource collectionSource; 
+		private DocumentsModel documentsForSelectedCollection;
+
+        public CollectionViewSource SortedCollectionsList
+        {
+            get; private set; }
+
+        public CollectionDocumentsCollectionSource CollectionSource
 		{
-			get
-			{
-				if (documentsForSelectedCollection == null || documentsForSelectedCollection.IsAlive == false)
-					documentsForSelectedCollection = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel> {Value = new DocumentsModel {CustomFetchingOfDocuments = GetFetchDocumentsMethod}});
-				return documentsForSelectedCollection.Target;
-			}
+            get
+            {
+                return collectionSource ??
+                       (collectionSource = new CollectionDocumentsCollectionSource {CollectionName = GetSelectedCollectionName()});
+            }
 		}
 
-		static CollectionsModel()
-		{
-			Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
-			SelectedCollection = new Observable<CollectionModel>();
+	    private string GetSelectedCollectionName()
+	    {
+	        return SelectedCollection.Value != null ? SelectedCollection.Value.Name  : "";
+	    }
 
-			SelectedCollection.PropertyChanged += (sender, args) =>
-			{
-				PutCollectionNameInTheUrl();
-				DocumentsForSelectedCollection.Value.ForceTimerTicked();
-			};
-		}
+	    public DocumentsModel DocumentsForSelectedCollection
+	    {
+	        get
+	        {
+	            if (documentsForSelectedCollection == null)
+                    documentsForSelectedCollection = new DocumentsModel(CollectionSource);
+	            return documentsForSelectedCollection;
+	        }
+	    }
 
-		private static Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
-		{
-			string name;
-			if (SelectedCollection.Value == null || string.IsNullOrWhiteSpace(name = SelectedCollection.Value.Name))
-				return Execute.EmptyResult<string>();
-
-			return ApplicationModel.DatabaseCommands
-				.QueryAsync("Raven/DocumentsByEntityName", new IndexQuery {Start = documentsModel.Pager.Skip, PageSize = documentsModel.Pager.PageSize, Query = "Tag:" + name}, new string[] {})
-				.ContinueOnSuccess(queryResult =>
-				                   	{
-				                   		var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results)
-				                   			.Select(x => new ViewableDocument(x))
-				                   			.ToArray();
-				                   		documentsModel.Documents.Match(documents);
-										if (DocumentsForSelectedCollection.Value.Pager.TotalResults.Value.HasValue == false || DocumentsForSelectedCollection.Value.Pager.TotalResults.Value.Value != queryResult.TotalResults)
-										{
-											DocumentsForSelectedCollection.Value.Pager.TotalResults.Value = queryResult.TotalResults;
-										}
-				                   	})
-				.CatchIgnore<InvalidOperationException>(() => ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error)));
-		}
-
-		private static void PutCollectionNameInTheUrl()
+		private void PutCollectionNameInTheUrl()
 		{
 			var urlParser = new UrlParser(UrlUtil.Url);
 			var collection = SelectedCollection.Value;
@@ -73,7 +61,6 @@ namespace Raven.Studio.Models
 			if (urlParser.GetQueryParam("name") != name)
 			{
 				urlParser.SetQueryParam("name", name);
-				urlParser.RemoveQueryParam("skip");
 				UrlUtil.Navigate(urlParser.BuildUrl());
 			}
 		}
@@ -81,43 +68,76 @@ namespace Raven.Studio.Models
 		public CollectionsModel()
 		{
 			ModelUrl = "/collections";
+
+            Collections = new BindableCollection<CollectionModel>(model => model.Name);
+            SelectedCollection = new Observable<CollectionModel>();
+
+            DocumentsForSelectedCollection.SetChangesObservable(d =>  d.IndexChanges
+                                 .Where(n =>n.Name.Equals(CollectionsIndex,StringComparison.InvariantCulture))
+                                 .Select(m => Unit.Default));
+
+		    DocumentsForSelectedCollection.DocumentNavigatorFactory =
+		        (id, index) =>
+		        DocumentNavigator.Create(id, index, CollectionsIndex,
+		                                 new IndexQuery() {Query = "Tag:" + GetSelectedCollectionName()});
+
+            SelectedCollection.PropertyChanged += (sender, args) =>
+            {
+                PutCollectionNameInTheUrl();
+                CollectionSource.CollectionName = GetSelectedCollectionName();
+
+                DocumentsForSelectedCollection.Context = "Collection/" + GetSelectedCollectionName();
+            };
+
+		    SortedCollectionsList = new CollectionViewSource()
+		    {
+		        Source = Collections,
+		        SortDescriptions =
+		        {
+		            new SortDescription("Count", ListSortDirection.Descending)
+		        }
+		    };
 		}
 
 		public override void LoadModelParameters(string parameters)
 		{
 			var urlParser = new UrlParser(parameters);
 			var name = urlParser.GetQueryParam("name");
-			if (DocumentsForSelectedCollection.Value != null)
-			{
-				DocumentsForSelectedCollection.Value.Pager.SetSkip(urlParser);
-				ForceTimerTicked();
-			}
 			initialSelectedDatabaseName = name;
 		}
 
-		public override Task TimerTickedAsync()
+		private void RefreshCollectionsList()
 		{
-			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
+			DatabaseCommands.GetTermsCount(CollectionsIndex, "Tag", "", 100)
 				.ContinueOnSuccess(collections =>
 				                   	{
-										var collectionModels = collections.OrderByDescending(x => x.Count)
+										var collectionModels = collections
 											.Where(x=>x.Count > 0)
 											.Select(col => new CollectionModel { Name = col.Name, Count = col.Count })
 											.ToArray();
 
-				                   		Collections.Match(collectionModels, AfterUpdate);
+				                   		Collections.Match(collectionModels, () => AfterUpdate(collections));
 				                   	})
-				.CatchIgnore<WebException>(() =>
+				.Catch(ex =>
 				                           	{
 				                           		var urlParser = new UrlParser(UrlUtil.Url);
 				                           		if (urlParser.RemoveQueryParam("name"))
 				                           			UrlUtil.Navigate(urlParser.BuildUrl());
-				                           		ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
+				                           		ApplicationModel.Current.AddErrorNotification(ex, "Unable to retrieve collections from server.");
 				                           	});
 		}
 
-		private void AfterUpdate()
+		private void AfterUpdate(NameAndCount[] collectionDocumentsCount)
 		{
+            // update documents count
+
+		    var nameToCount = collectionDocumentsCount.ToDictionary(i => i.Name, i => i.Count);
+		    var collections = Collections.OrderByDescending(model => model.Count).ToList();
+		    foreach (var collectionModel in Collections)
+		    {
+		        collectionModel.Count = nameToCount[collectionModel.Name];
+		    }
+
 			if (initialSelectedDatabaseName != null &&
 				(SelectedCollection.Value == null || SelectedCollection.Value.Name != initialSelectedDatabaseName || Collections.Contains(SelectedCollection.Value) == false))
 			{
@@ -126,6 +146,8 @@ namespace Raven.Studio.Models
 
 			if (SelectedCollection.Value == null)
 				SelectedCollection.Value = Collections.FirstOrDefault();
+
+            SortedCollectionsList.View.Refresh();
 		}
 
 		public string PageTitle
@@ -137,5 +159,32 @@ namespace Raven.Studio.Models
 				return "Collection: " + SelectedCollection.Value.Name;
 			}
 		}
+
+        protected override void OnViewLoaded()
+        {
+            var databaseChanged = Database.ObservePropertyChanged()
+                .Select(_ => Unit.Default)
+                .TakeUntil(Unloaded);
+
+            databaseChanged
+                .Do(_ => RefreshCollectionsList())
+                .Subscribe(_ => ObserveIndexChanges(databaseChanged));
+
+            ObserveIndexChanges(databaseChanged);
+            RefreshCollectionsList();
+        }
+
+	    private void ObserveIndexChanges(IObservable<Unit> databaseChanged)
+	    {
+            if (Database.Value != null)
+            {
+                Database.Value.IndexChanges
+                    .Where(n => n.Name.Equals(CollectionsIndex, StringComparison.InvariantCulture))
+                    .SampleResponsive(TimeSpan.FromSeconds(2))
+                    .TakeUntil(Unloaded.Merge(databaseChanged))
+                    .ObserveOnDispatcher()
+                    .Subscribe(__ => RefreshCollectionsList());
+            }
+	    }
 	}
 }

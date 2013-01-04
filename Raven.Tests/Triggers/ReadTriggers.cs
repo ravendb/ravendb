@@ -10,16 +10,13 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class ReadTriggers : AbstractDocumentStorageTest
+	public class ReadTriggers : RavenTest
 	{
 		private readonly DocumentDatabase db;
 
@@ -31,6 +28,7 @@ namespace Raven.Tests.Triggers
 				Container = new CompositionContainer(new TypeCatalog(
 					typeof(VetoReadsOnCapitalNamesTrigger),
 					typeof(HiddenDocumentsTrigger),
+					typeof(HideVirtuallyDeletedDocument),
 					typeof(UpperCaseNamesTrigger)))
 			});
 			db.PutIndex("ByName",
@@ -89,6 +87,40 @@ namespace Raven.Tests.Triggers
 		}
 
 		[Fact]
+		public void CanRemoveFilteredDocumentsFromIndexes()
+		{
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
+			db.SpinBackgroundWorkers();
+
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("ByName", new IndexQuery
+				{
+					Query = "name:abc",
+					PageSize = 10,
+					FieldsToFetch = new[] { "__document_id" }
+				});
+			} while (queryResult.IsStale);
+
+			Assert.Equal(1, queryResult.Results.Count);
+
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject { { "Deleted", true } }, null);
+
+			do
+			{
+				queryResult = db.Query("ByName", new IndexQuery
+				{
+					Query = "name:abC",
+					PageSize = 10,
+					FieldsToFetch = new[] { "__document_id" }
+				});
+			} while (queryResult.IsStale);
+
+			Assert.Equal(0, queryResult.Results.Count);
+		}
+
+		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger()
 		{
 			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
@@ -132,7 +164,7 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString(), null, new RavenJObject{{"name", "ayende"}}, new RavenJObject{{"hidden", i % 2 == 0}}, null);
+				db.Put(i.ToString(), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
 			}
 			db.SpinBackgroundWorkers();
 
@@ -154,7 +186,7 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString(), null, new RavenJObject{{"name", "ayende"}}, new RavenJObject{{"hidden", i % 2 == 0}}, null);
+				db.Put(i.ToString("0000"), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
 			}
 
 			db.SpinBackgroundWorkers();
@@ -163,7 +195,8 @@ namespace Raven.Tests.Triggers
 			{
 				queryResult = db.Query("ByName", new IndexQuery
 				{
-					PageSize = 3
+					PageSize = 3,
+					SortedFields = new[] { new SortedField("__document_id"), }
 				});
 			} while (queryResult.IsStale);
 
@@ -179,7 +212,7 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString(), null, new RavenJObject {{"name", "ayende"}}, new RavenJObject {{"hidden", i%2 == 0}}, null);
+				db.Put(i.ToString("000"), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
 			}
 
 			db.SpinBackgroundWorkers();
@@ -189,13 +222,15 @@ namespace Raven.Tests.Triggers
 				queryResult = db.Query("ByName", new IndexQuery
 				{
 					PageSize = 3,
+					SortedFields = new[] { new SortedField("__document_id"), }
 				});
 			} while (queryResult.IsStale);
 
 			queryResult = db.Query("ByName", new IndexQuery
 			{
 				PageSize = 3,
-				Start = queryResult.SkippedResults + queryResult.Results.Count
+				Start = queryResult.SkippedResults + queryResult.Results.Count,
+				SortedFields = new[] { new SortedField("__document_id"), }
 			});
 
 			Assert.Equal(3, queryResult.Results.Count);
@@ -271,6 +306,18 @@ namespace Raven.Tests.Triggers
 					return ReadVetoResult.Deny("Upper case characters in the 'name' property means the document is a secret!");
 				}
 				return ReadVetoResult.Allowed;
+			}
+		}
+
+		public class HideVirtuallyDeletedDocument : AbstractReadTrigger
+		{
+			public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+			{
+				if (operation != ReadOperation.Index)
+					return ReadVetoResult.Allowed;
+				if (metadata.ContainsKey("Deleted") == false)
+					return ReadVetoResult.Allowed;
+				return ReadVetoResult.Ignore;
 			}
 		}
 

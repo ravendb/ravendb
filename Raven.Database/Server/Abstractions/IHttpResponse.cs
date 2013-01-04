@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Specialized;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Raven.Database.Server.Abstractions
 {
@@ -19,8 +20,10 @@ namespace Raven.Database.Server.Abstractions
 		string ContentType { get; set; }
 		void Redirect(string url);
 		void Close();
-		void SetPublicCachability();
+		void SetPublicCacheability();
 		void WriteFile(string path);
 		NameValueCollection GetHeaders();
+
+		Task WriteAsync(string data);
 	}
 }

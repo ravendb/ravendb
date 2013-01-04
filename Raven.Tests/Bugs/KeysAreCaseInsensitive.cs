@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class KeysAreCaseInsensitive : LocalClientTest
+	public class KeysAreCaseInsensitive : RavenTest
 	{
 		[Fact]
 		public void WillNotGoToTheServerForLoadingDocumentWithSameIdDifferentCase()
@@ -38,7 +38,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanIndexIdWithDifferntCasing()
+		public void CanIndexIdWithDifferentCasing()
 		{
 			using (var s = NewDocumentStore())
 			{

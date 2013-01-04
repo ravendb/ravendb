@@ -5,14 +5,13 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Docs : RequestResponder
+	public class Docs : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -21,7 +20,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "GET", "POST" }; }
+			get { return new[] {"GET", "POST"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -47,16 +46,19 @@ namespace Raven.Database.Server.Responders
 						if (string.IsNullOrEmpty(startsWith))
 							context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize), context.GetEtagFromQueryString()));
 						else
-							context.WriteJson(Database.GetDocumentsWithIdStartingWith(startsWith, context.GetStart(),
-																					  context.GetPageSize(Database.Configuration.MaxPageSize)));
+							context.WriteJson(Database.GetDocumentsWithIdStartingWith(
+								startsWith,
+								context.Request.QueryString["matches"],
+								context.GetStart(),
+								context.GetPageSize(Database.Configuration.MaxPageSize)));
 					}
 					break;
 				case "POST":
 					var json = context.ReadJson();
-					var id = Database.Put(null, Guid.NewGuid(), json,
-										  context.Request.Headers.FilterHeaders(isServerDocument: true),
-										  GetRequestTransaction(context));
-					context.SetStatusToCreated("/docs/" + id);
+					var id = Database.Put(null, Guid.Empty, json,
+					                      context.Request.Headers.FilterHeaders(),
+					                      GetRequestTransaction(context));
+					context.SetStatusToCreated("/docs/" + Uri.EscapeUriString(id.Key));
 					context.WriteJson(id);
 					break;
 			}

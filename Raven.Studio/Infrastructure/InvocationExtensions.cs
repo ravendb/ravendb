@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Windows;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Extensions;
+using Raven.Abstractions.Util;
 using System.Threading.Tasks;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -13,9 +12,13 @@ namespace Raven.Studio.Infrastructure
 	{
 		public static Task ContinueOnSuccess<T>(this Task<T> parent, Action<T> action)
 		{
-			return parent.ContinueWith(task => action(task.Result));
+			return parent.ContinueWith(task =>
+			{
+				if(task.IsCanceled)
+					return;
+				action(task.Result);
+			});
 		}
-
 
 		public static Task<bool> ContinueWhenTrue(this Task<bool> parent, Action action)
 		{
@@ -35,19 +38,32 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task<TResult> ContinueOnSuccess<T, TResult>(this Task<T> parent, Func<T, TResult> action)
 		{
-			return parent.ContinueWith(task => action(task.Result));
+			return parent.ContinueWith(task =>
+			{
+				if (task.IsCanceled)
+				{
+					var tcs = new TaskCompletionSource<TResult>();
+					tcs.SetCanceled();
+					return tcs.Task;
+				}
+				return new CompletedTask<TResult>(action(task.Result));
+			}).Unwrap();
 		}
 
 		public static Task ContinueOnSuccess(this Task parent, Action action)
 		{
-			return parent.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return task;
-
-				return TaskEx.Run(action);
-			}).Unwrap();
+			return parent.ContinueWith(task => task.IsFaulted ? task : TaskEx.Run(action)).Unwrap();
 		}
+
+        public static Task ContinueOnUIThread(this Task parent, Action<Task> action)
+        {
+            return parent.ContinueWith(action, Schedulers.UIScheduler);
+        }
+
+        public static Task ContinueOnUIThread<T>(this Task<T> parent, Action<Task<T>> action)
+        {
+            return parent.ContinueWith(action, Schedulers.UIScheduler);
+        }
 
 		public static Task ContinueOnSuccessInTheUIThread(this Task parent, Action action)
 		{
@@ -61,13 +77,7 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task ContinueOnSuccess(this Task parent, Func<Task> action)
 		{
-			return parent.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return task;
-
-				return action();
-			}).Unwrap();
+			return parent.ContinueWith(task => task.IsFaulted ? task : action()).Unwrap();
 		}
 
 		public static Task Finally(this Task task, Action action)
@@ -94,7 +104,7 @@ namespace Raven.Studio.Infrastructure
 					return task;
 
 				var ex = task.Exception.ExtractSingleInnerException();
-				Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+                Execute.OnTheUI(() => ApplicationModel.Current.AddErrorNotification(ex, null, stackTrace))
 					.ContinueWith(_ => action(task.Exception));
 				return task;
 			}).Unwrap();
@@ -107,17 +117,28 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task Catch(this Task parent, Action<AggregateException> action)
 		{
+			return parent.Catch(e =>
+			{
+				action(e);
+				return false;
+			});
+		}
+
+		public static Task Catch(this Task parent, Func<AggregateException, bool> func)
+		{
 			var stackTrace = new StackTrace();
 			return parent.ContinueWith(task =>
 			{
-			    if (task.IsFaulted == false)
-			        return;
+				if (task.IsFaulted == false)
+					return;
 
-			    var ex = task.Exception.ExtractSingleInnerException();
-			    Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
-			        .ContinueWith(_ => action(task.Exception));
+				var ex = task.Exception.ExtractSingleInnerException();
+				Execute.OnTheUI(() =>
+				{
+					if(func(task.Exception) == false)
+						ApplicationModel.Current.AddErrorNotification(ex, null, stackTrace);
+				});
 			});
-
 		}
 
 		public static Task CatchIgnore<TException>(this Task parent, Action<TException> action) where TException : Exception
@@ -129,7 +150,7 @@ namespace Raven.Studio.Infrastructure
 
 											var ex = task.Exception.ExtractSingleInnerException() as TException;
 											if (ex == null)
-			                           			return task;
+                                                return Execute.EmptyResult<object>();
 
 											Execute.OnTheUI(() => action(ex));
 			                           		return Execute.EmptyResult<object>();
@@ -141,6 +162,11 @@ namespace Raven.Studio.Infrastructure
 		{
 			return parent.CatchIgnore<TException>(ex => action());
 		}
+
+        public static Task CatchIgnore(this Task parent)
+        {
+            return parent.CatchIgnore<Exception>(ex => { });
+        }
 
 		public static Task ProcessTasks(this IEnumerable<Task> tasks)
 		{

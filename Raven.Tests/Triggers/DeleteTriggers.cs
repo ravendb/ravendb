@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -12,24 +13,20 @@ using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class DeleteTriggers : AbstractDocumentStorageTest
+	public class DeleteTriggers : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public DeleteTriggers()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				Container = new CompositionContainer(new TypeCatalog(
-					typeof(CascadeDeleteTrigger))),
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-			});
+			store = NewDocumentStore( catalog: (new TypeCatalog(typeof (CascadeDeleteTrigger))));
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

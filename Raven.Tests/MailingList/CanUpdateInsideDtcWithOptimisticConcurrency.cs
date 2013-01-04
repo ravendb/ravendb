@@ -13,7 +13,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void ShouldWork()
 		{
-			using(var store = NewDocumentStore("esent"))
+			using(var store = NewDocumentStore())
 			{
 				using(var tx = new TransactionScope())
 				using (var s = store.OpenSession())
@@ -22,7 +22,6 @@ namespace Raven.Tests.MailingList
 					s.SaveChanges();
 					tx.Complete();
 				}
-
 
 				using (var tx = new TransactionScope())
 				using (var s = store.OpenSession())

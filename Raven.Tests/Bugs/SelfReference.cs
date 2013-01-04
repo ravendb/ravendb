@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SelfReference : LocalClientTest
+	public class SelfReference : RavenTest
 	{
 		[JsonObject(IsReference = true)] 
 		public class Foo

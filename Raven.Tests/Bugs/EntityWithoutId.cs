@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class EntityWithoutId : LocalClientTest
+	public class EntityWithoutId : RavenTest
 	{
 		[Fact]
 		public void CanBeSaved()

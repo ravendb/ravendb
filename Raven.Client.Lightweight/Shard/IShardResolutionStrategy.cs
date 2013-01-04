@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+using Raven.Abstractions.Data;
+
 namespace Raven.Client.Shard
 {
 	/// <summary>
@@ -11,7 +13,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		///  Generate a shard id for the specified entity
 		///  </summary>
-		string GenerateShardIdFor(object entity);
+		string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata);
 
 		/// <summary>
 		///  The shard id for the server that contains the metadata (such as the HiLo documents)

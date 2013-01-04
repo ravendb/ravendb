@@ -3,12 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5 && !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Shard
@@ -18,6 +18,9 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ParallelShardAccessStrategy : IShardAccessStrategy
 	{
+		public event ShardingErrorHandle<IDatabaseCommands> OnError;
+		public event ShardingErrorHandle<IAsyncDatabaseCommands> OnAsyncError;
+
 		/// <summary>
 		/// Applies the specified action to all shard sessions in parallel
 		/// </summary>
@@ -58,7 +61,44 @@ namespace Raven.Client.Shard
 			return returnedLists.Where((t, i) => valueSet[i]).ToArray();
 		}
 
-		public event ShardingErrorHandle OnError;
+		/// <summary>
+		/// Applies the specified action to all shard sessions in parallel
+		/// </summary>
+		public Task<T[]> ApplyAsync<T>(IList<IAsyncDatabaseCommands> commands, ShardRequestData request, Func<IAsyncDatabaseCommands, int, Task<T>> operation)
+		{
+			return Task.Factory.ContinueWhenAll(commands.Select(operation).ToArray(), tasks =>
+			{
+				var results = new List<T>(tasks.Length);
+				int index = 0;
+				var handledExceptions = new List<Exception>();
+				var unhandledExceptions = new List<Exception>();
+				foreach (var task in tasks)
+				{
+					try
+					{
+						results.Add(task.Result);
+					}
+					catch (Exception e)
+					{
+						var error = OnAsyncError;
+						if (error == null)
+							unhandledExceptions.Add(e);
+						else if (error(commands[index], request, e) == false)
+							unhandledExceptions.Add(e);
+						else
+							handledExceptions.Add(e);
+					}
+					index++;
+				}
+
+				if (unhandledExceptions.Any())
+					throw new AggregateException(unhandledExceptions);
+
+				if (handledExceptions.Count == tasks.Length)
+					throw new AggregateException(handledExceptions);
+
+				return results.ToArray();
+			});
+		}
 	}
 }
-#endif

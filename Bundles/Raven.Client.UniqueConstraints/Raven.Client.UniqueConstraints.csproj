@@ -18,7 +18,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;CLIENT</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -45,6 +45,9 @@
     </Compile>
     <Compile Include="..\Raven.Bundles.UniqueConstraints\Constants.cs">
       <Link>Constants.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Bundles.UniqueConstraints\Util.cs">
+      <Link>Util.cs</Link>
     </Compile>
     <Compile Include="UniqueConstraintAttribte.cs" />
     <Compile Include="UniqueConstraintExtensions.cs" />

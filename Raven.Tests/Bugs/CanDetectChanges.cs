@@ -10,7 +10,7 @@ using Raven.Client.Document;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanDetectChanges : LocalClientTest
+	public class CanDetectChanges : RavenTest
 	{
 		[Fact]
 		public void CanDetectChangesOnNewItem()

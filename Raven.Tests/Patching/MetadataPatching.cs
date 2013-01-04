@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Patching
 {
-	public class MetadataPatching : LocalClientTest
+	public class MetadataPatching : RavenTest
 	{
 		[Fact]
 		public void ChangeRavenEntityName()

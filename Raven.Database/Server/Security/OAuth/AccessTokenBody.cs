@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.Security.OAuth
 {
 	public class AccessTokenBody
 	{
 		public string UserId { get; set; }
-		public DatabaseAccess[] AuthorizedDatabases { get; set; }
+		public List<DatabaseAccess> AuthorizedDatabases { get; set; }
 		public double Issued { get; set; }
 
 		public bool IsExpired()
@@ -20,12 +22,18 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			if (AuthorizedDatabases == null)
 				return false;
-			var db = AuthorizedDatabases.FirstOrDefault(a => 
-				
-					string.Equals(a.TenantId,tenantId, StringComparison.OrdinalIgnoreCase) || 
-					string.Equals(a.TenantId, "*")
+			DatabaseAccess db;
+			if (string.Equals(tenantId, "<system>"))
+			{
+				db = AuthorizedDatabases.FirstOrDefault(access => string.Equals(access.TenantId, "<system>"));
+			}
+			else
+			{
+				db = AuthorizedDatabases.FirstOrDefault(a =>
+				                                        string.Equals(a.TenantId, tenantId, StringComparison.OrdinalIgnoreCase) ||
+				                                        string.Equals(a.TenantId, "*"));
+			}
 
-				);
 			if (db == null)
 				return false;
 
@@ -33,13 +41,6 @@ namespace Raven.Database.Server.Security.OAuth
 				return false;
 
 			return true;
-		}
-
-		public class DatabaseAccess
-		{
-			public bool Admin { get; set; }
-			public string TenantId { get; set; }
-			public bool ReadOnly { get; set; }
 		}
 	}
 

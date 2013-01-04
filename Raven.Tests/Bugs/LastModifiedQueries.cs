@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class LastModifiedQueries : LocalClientTest
+	public class LastModifiedQueries : RavenTest
 	{
 		[Fact]
 		public void LastModifiedIsQueryable()
@@ -51,9 +51,9 @@ namespace Raven.Tests.Bugs
 				{
 					user = session.Load<User>("users/1");
 					var ravenJObject = session.Advanced.GetMetadataFor(user);
-					var dateTime = ravenJObject.Value<DateTime>("Last-Modified").ToUniversalTime();
+					var dateTime = ravenJObject.Value<DateTime>("Last-Modified");
 					var results = session.Advanced.LuceneQuery<object>(new RavenDocumentsByEntityName().IndexName)
-						.WhereEquals("LastModified", DateTools.DateToString(dateTime, DateTools.Resolution.MILLISECOND))
+						.WhereEquals("LastModified", dateTime)
 						.WaitForNonStaleResults()
 						.ToArray();
 					Assert.Equal(1, results.Count());

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class AdHocProjections : LocalClientTest
+	public class AdHocProjections : RavenTest
 	{
 		[Fact]
 		public void Query_can_project_to_a_different_model()

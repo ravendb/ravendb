@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client;
 using Raven.Client.Linq;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Justin : LocalClientTest
+	public class Justin : RavenTest
 	{
 		[Fact]
 		public void ActualTest()

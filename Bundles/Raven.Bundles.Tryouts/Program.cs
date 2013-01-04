@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Raven.Bundles.Tryouts
 {
@@ -14,8 +11,12 @@ namespace Raven.Bundles.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			Console.WriteLine("starting...");
-			
+			for (int i = 0; i < 150; i++)
+			{
+				Console.Clear();
+				Console.WriteLine(i);
+				
+			}
 		}
 	}
 }

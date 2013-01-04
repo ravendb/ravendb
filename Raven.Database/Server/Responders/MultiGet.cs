@@ -6,16 +6,17 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using NLog;
 using Raven.Abstractions.Data;
 using System.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class MultiGet : RequestResponder, IDisposable
+	public class MultiGet : AbstractRequestResponder, IDisposable
 	{
 		public override string UrlPattern
 		{
@@ -40,7 +41,7 @@ namespace Raven.Database.Server.Responders
 				var results = new GetResponse[requests.Length];
 
 				ExecuteRequests(context, Settings, results, requests);
-				
+
 				context.WriteJson(results);
 			}
 			finally
@@ -51,7 +52,7 @@ namespace Raven.Database.Server.Responders
 
 		private void ExecuteRequests(
 			IHttpContext context,
-			InMemoryRavenConfiguration ravenHttpConfiguration, 
+			InMemoryRavenConfiguration ravenHttpConfiguration,
 			GetResponse[] results,
 			GetRequest[] requests)
 		{
@@ -103,15 +104,12 @@ namespace Raven.Database.Server.Responders
 
 			public GetResponse Complete()
 			{
-				if(getResponse.Result!=null)
+				if (getResponse.Result != null)
 					return getResponse;
 
 				Response.OutputStream.Position = 0;
-				getResponse.Result = new StreamReader(Response.OutputStream).ReadToEnd();
-				if (Response.StatusCode != 0)
-					getResponse.Status = Response.StatusCode;
-				else
-					getResponse.Status = 200;
+				getResponse.Result = RavenJToken.TryLoad(Response.OutputStream);
+				getResponse.Status = Response.StatusCode != 0 ? Response.StatusCode : 200;
 				return getResponse;
 			}
 
@@ -140,12 +138,12 @@ namespace Raven.Database.Server.Responders
 			public string GetRequestUrlForTenantSelection()
 			{
 				var requestUrl = this.GetRequestUrl();
-				if (string.IsNullOrEmpty(tenantId) || tenantId == Constants.DefaultDatabase)
+				if (string.IsNullOrEmpty(tenantId) || tenantId == Constants.SystemDatabase)
 					return requestUrl;
 				return "/databases/" + tenantId + requestUrl;
 			}
 
-			public void FinalizeResonse()
+			public void FinalizeResponse()
 			{
 				// nothing here
 			}
@@ -155,8 +153,8 @@ namespace Raven.Database.Server.Responders
 				// nothing here
 			}
 
-			private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();
-			public void OutputSavedLogItems(Logger logger)
+			private readonly List<Action<ILog>> loggedMessages = new List<Action<ILog>>();
+			public void OutputSavedLogItems(ILog logger)
 			{
 				foreach (var loggedMessage in loggedMessages)
 				{
@@ -164,7 +162,7 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-			public void Log(Action<Logger> loggingAction)
+			public void Log(Action<ILog> loggingAction)
 			{
 				loggedMessages.Add(loggingAction);
 			}
@@ -184,7 +182,7 @@ namespace Raven.Database.Server.Responders
 				foreach (string key in tempQueryString)
 				{
 					var values = tempQueryString.GetValues(key);
-					if(values == null)
+					if (values == null)
 						continue;
 					foreach (var value in values)
 					{
@@ -213,6 +211,11 @@ namespace Raven.Database.Server.Responders
 				get { return Stream.Null; }
 			}
 
+			public long ContentLength
+			{
+				get { return 0; }
+			}
+
 			public NameValueCollection QueryString { get; set; }
 
 			public string HttpMethod
@@ -230,6 +233,10 @@ namespace Raven.Database.Server.Responders
 			{
 				get;
 				set;
+			}
+			public Stream GetBufferLessInputStream()
+			{
+				return InputStream;
 			}
 		}
 
@@ -297,7 +304,7 @@ namespace Raven.Database.Server.Responders
 			{
 			}
 
-			public void SetPublicCachability()
+			public void SetPublicCacheability()
 			{
 				getResponse.Headers["Cache-Control"] = "Public";
 			}
@@ -311,6 +318,11 @@ namespace Raven.Database.Server.Responders
 			}
 
 			public NameValueCollection GetHeaders()
+			{
+				throw new NotSupportedException();
+			}
+
+			public Task WriteAsync(string data)
 			{
 				throw new NotSupportedException();
 			}

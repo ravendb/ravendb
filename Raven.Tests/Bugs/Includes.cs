@@ -3,26 +3,24 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Database.Indexing;
 using Raven.Server;
 using Raven.Tests.Bugs.TransformResults;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Includes : RemoteClientTest, IDisposable
+	public class Includes : RemoteClientTest
 	{
 		private readonly IDocumentStore store;
 		private readonly RavenDbServer server;
 
 		public Includes()
 		{
-			server = GetNewServer(8079, GetPath(DbName));
+			server = GetNewServer(8079, GetPath(DataDir));
 
 			store = new DocumentStore
 			{
@@ -30,14 +28,14 @@ namespace Raven.Tests.Bugs
 			}.Initialize();
 
 			store.DatabaseCommands.PutIndex("Orders/ByName",
-			                                new IndexDefinition
-			                                {
+											new IndexDefinition
+											{
 												Map = "from doc in docs.Orders select new { doc.Name }"
-			                                });
+											});
 
-			using(var session = store.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				
+
 				for (int i = 0; i < 15; i++)
 				{
 					var customer = new Customer
@@ -45,7 +43,7 @@ namespace Raven.Tests.Bugs
 						Email = "ayende@ayende.com",
 						Name = "Oren"
 					};
-					
+
 					session.Store(customer);
 
 					session.Store(new Order
@@ -87,7 +85,7 @@ namespace Raven.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var orders = session.Advanced.LuceneQuery<Order>()
-					.Include(x=>x.Customer.Id)
+					.Include(x => x.Customer.Id)
 					.WaitForNonStaleResults()
 					.WhereEquals("Name", "3")
 					.ToArray();
@@ -132,8 +130,8 @@ namespace Raven.Tests.Bugs
 			{
 				var views = session
 					.Query<Answer, Answers_ByAnswerEntity>()
-					.Customize(x => x.Include("Fppbar").WaitForNonStaleResults())
-					.Where(x => x.Id == answerId)
+					.Customize(x => x.Include("Foobar").WaitForNonStaleResults())
+					.Where(x => x.Id == answerId && x.UserId == "foo")
 					.ToArray();
 			}
 		}
@@ -203,8 +201,10 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanIncludeExtensionWithQuery() {
-			using (var session = store.OpenSession()) {
+		public void CanIncludeExtensionWithQuery()
+		{
+			using (var session = store.OpenSession())
+			{
 				var orders = session.Advanced
 					.LuceneQuery<Order>("Orders/ByName")
 					.WaitForNonStaleResults()

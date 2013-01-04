@@ -13,12 +13,12 @@ namespace Raven.Tests.Bugs.MapRedue
 		public String Id { get; set; }
 
 		/// <summary>
-		/// Date when documnet was "removed" (disabled)
+		/// Date when document was "removed" (disabled)
 		/// </summary>
 		public DateTime? DateRemoved { get; set; }
 
 		/// <summary>
-		/// Array containnig versions of document
+		/// Array containing versions of document
 		/// </summary>
 		public VersionedDocument[] Versions { get; set; }
 	}

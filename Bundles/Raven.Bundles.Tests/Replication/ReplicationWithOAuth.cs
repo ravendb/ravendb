@@ -1,11 +1,9 @@
 ﻿extern alias database;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.Net;
+using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Authentication;
 using Raven.Json.Linq;
+using Raven.Tests.Bundles.Replication;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Replication
@@ -14,22 +12,19 @@ namespace Raven.Bundles.Tests.Replication
 	{
 		protected override void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
 		{
-			serverConfiguration.AuthenticationMode = "oauth";
 			serverConfiguration.AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.None;
-
-			serverConfiguration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthenticationUser).Assembly));
 		}
+
 
 		protected override void ConfigureStore(Client.Document.DocumentStore documentStore)
 		{
-			documentStore.Credentials = new NetworkCredential("Ayende", "abc");
+			documentStore.ApiKey = "Ayende/abc";
 			base.ConfigureStore(documentStore);
 		}
 
 		protected override void SetupDestination(Abstractions.Replication.ReplicationDestination replicationDestination)
 		{
-			replicationDestination.Username = "Ayende";
-			replicationDestination.Password = "abc";
+			replicationDestination.ApiKey = "Ayende/abc";
 		}
 
 		[Fact]
@@ -40,23 +35,21 @@ namespace Raven.Bundles.Tests.Replication
 
 			foreach (var server in servers)
 			{
-				var writer = new StringWriter();
-				store1.Conventions.CreateSerializer().Serialize(writer, new AuthenticationUser
-				{
-					Name = "Ayende",
-					Id = "Raven/Users/Ayende",
-					AllowedDatabases = new[] {"*"}
-				}.SetPassword("abc"));
-
-				server.Database.Put("Raven/Users/Ayende", null, RavenJObject.Parse(writer.GetStringBuilder().ToString()), new RavenJObject(), null);
+				server.Database.Put("Raven/ApiKeys/Ayende", null, RavenJObject.FromObject(new ApiKeyDefinition
+					{
+						Databases = new List<DatabaseAccess> { new DatabaseAccess { TenantId = "*" }, new DatabaseAccess { TenantId = "<system>" }, },
+						Enabled = true,
+						Name = "Ayende",
+						Secret = "abc"
+					}), new RavenJObject(), null);
 			}
 
 			TellFirstInstanceToReplicateToSecondInstance();
 
-			using (var session = store1.OpenSession())
+			using (var session = store1.OpenAsyncSession())
 			{
 				session.Store(new Item());
-				session.SaveChanges();
+				session.SaveChangesAsync().Wait();
 			}
 
 			JsonDocument item = null;

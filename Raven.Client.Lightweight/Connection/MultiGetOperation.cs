@@ -1,8 +1,13 @@
 using System;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.Connection;
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Linq;
 using System.Net;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -67,14 +72,15 @@ namespace Raven.Client.Connection
 		{
 			if (allRequestsCanBeServedFromAggressiveCache) // can be fully served from aggressive cache
 			{
-				jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, new RequestResultArgs
+				jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, () => new RequestResultArgs
 				{
 					DurationMilliseconds = httpJsonRequest.CalculateDuration(),
 					Method = httpJsonRequest.webRequest.Method,
 					HttpResult = 0,
-					Status = RequestStatus.AggresivelyCached,
+					Status = RequestStatus.AggressivelyCached,
 					Result = "",
-					Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
+					Url = httpJsonRequest.webRequest.RequestUri.AbsolutePath + "?" + httpJsonRequest.webRequest.RequestUri.Query,
+					//TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
 				return true;
@@ -92,14 +98,14 @@ namespace Raven.Client.Connection
 				{
 					hasCachedRequests = true;
 
-					requestStatuses[i] = responses[i] == null ? RequestStatus.AggresivelyCached : RequestStatus.Cached;
+					requestStatuses[i] = responses[i] == null ? RequestStatus.AggressivelyCached : RequestStatus.Cached;
 					responses[i] = responses[i] ?? new GetResponse { Status = 0 };
 
 					foreach (string header in cachedData[i].Headers)
 					{
 						responses[i].Headers[header] = cachedData[i].Headers[header];
 					}
-					responses[i].Result = cachedData[i].Data;
+					responses[i].Result = cachedData[i].Data.CloneToken();
 					jsonRequestFactory.IncrementCachedRequests();
 				}
 				else

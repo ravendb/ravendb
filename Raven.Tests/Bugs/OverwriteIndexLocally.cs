@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OverwriteIndexLocally : LocalClientTest
+	public class OverwriteIndexLocally : RavenTest
 	{
 		[Fact]
 		public void CanOverwriteIndex()

@@ -3,20 +3,17 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
 using System.Threading.Tasks;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Client.Listeners;
 using Raven.Client.Util;
 
 namespace Raven.Client.Document.Async
@@ -26,18 +23,22 @@ namespace Raven.Client.Document.Async
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
-	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
+	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
+		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
-		public AsyncDocumentSession(DocumentStore documentStore,
-			IAsyncDatabaseCommands asyncDatabaseCommands,
-			DocumentSessionListeners listeners,
-			Guid id)
-			: base(documentStore, listeners, id)
+		public AsyncDocumentSession(string dbName, DocumentStore documentStore,
+		                            IAsyncDatabaseCommands asyncDatabaseCommands,
+		                            DocumentSessionListeners listeners,
+		                            Guid id)
+			: base(dbName, documentStore, listeners, id)
 		{
 			AsyncDatabaseCommands = asyncDatabaseCommands;
+			GenerateDocumentKeysOnStore = false;
+			asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, (key, entity, metadata) => key);
 		}
 
 		/// <summary>
@@ -52,7 +53,7 @@ namespace Raven.Client.Document.Async
 		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
 		{
 			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize)
-				.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
+			                            .ContinueWith(task => (IEnumerable<T>) task.Result.Select(TrackEntity<T>).ToList());
 		}
 
 		/// <summary>
@@ -62,9 +63,9 @@ namespace Raven.Client.Document.Async
 		{
 			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
-				null,
+			                                 null,
 #endif
-				AsyncDatabaseCommands, index, new string[0], listeners.QueryListeners);
+			                                 AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -79,9 +80,9 @@ namespace Raven.Client.Document.Async
 			}
 			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
-				null,
+			                                 null,
 #endif
-				AsyncDatabaseCommands, indexName, new string[0], listeners.QueryListeners);
+			                                 AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -115,14 +116,23 @@ namespace Raven.Client.Document.Async
 		}
 
 		/// <summary>
-		/// Loads the specified entities with the specified id after applying
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+		{
+			return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+		}
+
+		/// <summary>
+		/// Begins the async load operation, with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
 		/// <remarks>
 		/// This method allows you to call:
-		/// Load{Post}(1)
+		/// LoadAsync{Post}(1)
 		/// And that call will internally be translated to 
-		/// Load{Post}("posts/1");
+		/// LoadAsync{Post}("posts/1");
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
@@ -130,6 +140,42 @@ namespace Raven.Client.Document.Async
 		{
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
 			return LoadAsync<T>(documentKey);
+		}
+
+		/// <summary>
+		/// Begins the async multi-load operation, with the specified ids after applying
+		/// conventions on the provided ids to get the real document ids.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// LoadAsync{Post}(1,2,3)
+		/// And that call will internally be translated to 
+		/// LoadAsync{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public Task<T[]> LoadAsync<T>(params ValueType[] ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return LoadAsync<T>(documentKeys);
+		}
+
+		/// <summary>
+		/// Begins the async multi-load operation, with the specified ids after applying
+		/// conventions on the provided ids to get the real document ids.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// LoadAsync{Post}(new List&lt;int&gt;(){1,2,3})
+		/// And that call will internally be translated to 
+		/// LoadAsync{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids)
+		{
+			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+			return LoadAsync<T>(documentKeys);
 		}
 
 		/// <summary>
@@ -144,13 +190,12 @@ namespace Raven.Client.Document.Async
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
 				var tcs = new TaskCompletionSource<T>();
-				tcs.TrySetResult((T)entity);
+				tcs.TrySetResult((T) entity);
 				return tcs.Task;
 			}
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
 			return CompleteLoadAsync<T>(id, loadOperation);
-
 		}
 
 		private Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
@@ -159,14 +204,14 @@ namespace Raven.Client.Document.Async
 			using (loadOperation.EnterLoadContext())
 			{
 				return AsyncDatabaseCommands.GetAsync(id)
-					.ContinueWith(task =>
-					{
-						if (loadOperation.SetResult(task.Result) == false)
-							return Task.Factory.StartNew(() => loadOperation.Complete<T>());
+				                            .ContinueWith(task =>
+				                            {
+					                            if (loadOperation.SetResult(task.Result) == false)
+						                            return Task.Factory.StartNew(() => loadOperation.Complete<T>());
 
-						return CompleteLoadAsync<T>(id, loadOperation);
-					})
-					.Unwrap();
+					                            return CompleteLoadAsync<T>(id, loadOperation);
+				                            })
+				                            .Unwrap();
 			}
 		}
 
@@ -175,11 +220,15 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
-		public Task<T[]> LoadAsync<T>(string[] ids)
+		public Task<T[]> LoadAsync<T>(params string[] ids)
 		{
 			return LoadAsyncInternal<T>(ids, new string[0]);
 		}
 
+		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
+		{
+			return LoadAsyncInternal<T>(ids.ToArray(), new string[0]);
+		}
 
 		/// <summary>
 		/// Begins the async multi load operation
@@ -187,7 +236,7 @@ namespace Raven.Client.Document.Async
 		public Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes)
 		{
 			IncrementRequestCount();
-			var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids);
+			var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
 			return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
 		}
 
@@ -197,13 +246,13 @@ namespace Raven.Client.Document.Async
 			using (multiLoadOperation.EnterMultiLoadContext())
 			{
 				return AsyncDatabaseCommands.GetAsync(ids, includes)
-					.ContinueWith(t =>
-					{
-						if (multiLoadOperation.SetResult(t.Result) == false)
-							return Task.Factory.StartNew(() => multiLoadOperation.Complete<T>());
-						return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
-					})
-					.Unwrap();
+				                            .ContinueWith(t =>
+				                            {
+					                            if (multiLoadOperation.SetResult(t.Result) == false)
+						                            return Task.Factory.StartNew(() => multiLoadOperation.Complete<T>());
+					                            return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
+				                            })
+				                            .Unwrap();
 			}
 		}
 
@@ -213,14 +262,43 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task SaveChangesAsync()
 		{
-			var cachingScope = EntitiesToJsonCachingScope();
-			var data = PrepareForSaveChanges();
-			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-				.ContinueWith(task =>
-				{
-					UpdateBatchResults(task.Result, data);
-					cachingScope.Dispose();
-				});
+
+			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
+			                                 .ContinueWith(keysTask =>
+			                                 {
+				                                 keysTask.AssertNotFailed();
+
+												 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
+				                                 try
+				                                 {
+					                                 var data = PrepareForSaveChanges();
+													 if (data.Commands.Count == 0)
+													 {
+														 cachingScope.Dispose();
+														 return new CompletedTask();
+													 }
+
+													 IncrementRequestCount();
+
+					                                 return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
+					                                                             .ContinueWith(task =>
+					                                                             {
+						                                                             try
+						                                                             {
+							                                                             UpdateBatchResults(task.Result, data);
+						                                                             }
+						                                                             finally
+						                                                             {
+							                                                             cachingScope.Dispose();
+						                                                             }
+					                                                             });
+				                                 }
+				                                 catch
+				                                 {
+					                                 cachingScope.Dispose();
+					                                 throw;
+				                                 }
+			                                 }).Unwrap();
 		}
 
 		/// <summary>
@@ -286,9 +364,9 @@ namespace Raven.Client.Document.Async
 			return new RavenQueryInspector<T>(
 				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
 #if !SILVERLIGHT
-				null,
+				                          null,
 #endif
-			Advanced.AsyncDatabaseCommands),
+				                          AsyncDatabaseCommands),
 				ravenQueryStatistics,
 				indexName,
 				null,
@@ -296,7 +374,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 				null,
 #endif
-				Advanced.AsyncDatabaseCommands);
+				AsyncDatabaseCommands);
 		}
 
 		/// <summary>
@@ -314,6 +392,20 @@ namespace Raven.Client.Document.Async
 		{
 			return AsyncLuceneQuery<T>(indexName);
 		}
+
+		protected override string GenerateKey(object entity)
+		{
+			throw new NotSupportedException("Async session cannot generate keys synchronously");
+		}
+
+		protected override void RememberEntityForDocumentKeyGeneration(object entity)
+		{
+			asyncDocumentKeyGeneration.Add(entity);
+		}
+
+		protected override Task<string> GenerateKeyAsync(object entity)
+		{
+			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
+		}
 	}
 }
-#endif

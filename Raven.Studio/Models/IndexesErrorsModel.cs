@@ -4,7 +4,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class IndexesErrorsModel : ViewModel
+	public class IndexesErrorsModel : PageViewModel
 	{
 		private ServerError[] errors;
 		public ServerError[] Errors

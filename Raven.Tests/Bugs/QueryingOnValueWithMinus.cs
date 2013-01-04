@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingOnValueWithMinus : LocalClientTest
+	public class QueryingOnValueWithMinus : RavenTest
 	{
 		[Fact]
 		public void CanQueryOnValuesContainingMinus()

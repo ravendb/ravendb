@@ -3,7 +3,7 @@ using Raven.Client.Indexes;
 
 namespace Raven.Tests.Indexes
 {
-	public class AnalyzerResolution : LocalClientTest
+	public class AnalyzerResolution : RavenTest
 	{
 		public void can_resolve_internal_analyzer()
 		{

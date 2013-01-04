@@ -1,10 +1,11 @@
 ﻿using System.Linq;
 using System.Windows.Controls;
 using Raven.Studio.Infrastructure;
+using MenuItem = Raven.Studio.Infrastructure.ContextMenu.MenuItem;
 
 namespace Raven.Studio.Features.Collections
 {
-	public partial class CollectionsListView : View
+	public partial class CollectionsListView : PageView
 	{
 		public CollectionsListView()
 		{

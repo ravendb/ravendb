@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanUseNonStringsForId : LocalClientTest
+	public class CanUseNonStringsForId : RavenTest
 	{
 		[Fact]
 		public void CanStoreAndLoadEntityWithIntKey()

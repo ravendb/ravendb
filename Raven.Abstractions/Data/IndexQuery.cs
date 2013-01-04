@@ -82,15 +82,15 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <remarks>
 		/// Cutoff etag is used to check if the index has already process a document with the given
-		/// etag. Unlike Cutoff, which uses dates and is susceptible to clock syncronization issues between
-		/// machines, cutoff etag doesn't rely on both the server and client having a syncronized clock and 
+		/// etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between
+		/// machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and 
 		/// can work without it.
 		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this
 		/// etag belong to is actually considered for the results. 
 		/// What it does it guarantee that the document has been mapped, but not that the mapped values has been reduce. 
 		/// Since map/reduce queries, by their nature,tend to be far less susceptible to issues with staleness, this is 
 		/// considered to be an acceptable tradeoff.
-		/// If you need absolute no staleness with a map/reduce index, you will need to ensure syncronized clocks and 
+		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
 		/// use the Cutoff date option, instead.
 		/// </remarks>
 		public Guid? CutoffEtag { get; set; }
@@ -99,6 +99,15 @@ namespace Raven.Abstractions.Data
 		/// The default field to use when querying directly on the Lucene query
 		/// </summary>
 		public string DefaultField { get; set; }
+
+		/// <summary>
+		/// Changes the default operator mode we use for queries.
+		/// When set to Or a query such as 'Name:John Age:18' will be interpreted as:
+		///  Name:John OR Age:18
+		/// When set to And the query will be interpreted as:
+		///	 Name:John AND Age:18
+		/// </summary>
+		public QueryOperator DefaultOperator { get; set; }
 
 		/// <summary>
 		/// If set to true, RavenDB won't execute the transform results function
@@ -111,6 +120,11 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The skipped results.</value>
 		public Reference<int> SkippedResults { get; set; }
+
+		/// <summary>
+		/// Whatever we should get the raw index queries
+		/// </summary>
+		public bool DebugOptionGetIndexEntries { get; set; }
 
 		/// <summary>
 		/// Gets the index query URL.
@@ -132,15 +146,33 @@ namespace Raven.Abstractions.Data
 
 			AppendQueryString(path);
 
+
+
 			return path.ToString();
+		}
+
+        public string GetMinimalQueryString()
+        {
+            var sb = new StringBuilder();
+            AppendMinimalQueryString(sb);
+            return sb.ToString();
+        }
+
+
+		public string GetQueryString()
+		{
+			var sb = new StringBuilder();
+			AppendQueryString(sb);
+			return sb.ToString();
 		}
 
 		public void AppendQueryString(StringBuilder path)
 		{
-			path
-				.Append("?query=");
+			path.Append("?");
 
-			path.Append(Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")))
+			AppendMinimalQueryString(path);
+
+			path
 				.Append("&start=").Append(Start)
 				.Append("&pageSize=").Append(PageSize)
 				.Append("&aggregation=").Append(AggregationOperation);
@@ -149,11 +181,13 @@ namespace Raven.Abstractions.Data
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
-			if(string.IsNullOrEmpty(DefaultField) == false)
-			{
-				path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
-			}
 			
+			
+            if (SkipTransformResults)
+            {
+                path.Append("&skipTransformResults=true");
+            }
+
 			if (Cutoff != null)
 			{
 				var cutOffAsString =
@@ -164,8 +198,23 @@ namespace Raven.Abstractions.Data
 			{
 				path.Append("&cutOffEtag=").Append(CutoffEtag.Value.ToString());
 			}
-			var vars = GetCustomQueryStringVariables();
+			
 
+			if(DebugOptionGetIndexEntries)
+				path.Append("&debug=entries");
+		}
+
+		private void AppendMinimalQueryString(StringBuilder path)
+		{
+			path.Append("query=")
+				.Append(Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")));
+			if (string.IsNullOrEmpty(DefaultField) == false)
+			{
+				path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
+			}
+			if (DefaultOperator != QueryOperator.Or)
+				path.Append("&operator=AND");
+			var vars = GetCustomQueryStringVariables();
 			if (!string.IsNullOrEmpty(vars))
 			{
 				path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
@@ -185,5 +234,11 @@ namespace Raven.Abstractions.Data
 		{
 			return (IndexQuery)MemberwiseClone();
 		}
+	}
+
+	public enum QueryOperator
+	{
+		Or,
+		And
 	}
 }

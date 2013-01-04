@@ -5,14 +5,19 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 using System.Globalization;
 using System.Linq;
 using System.Net;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -30,28 +35,40 @@ namespace Raven.Client.Connection
 			var list = new List<JsonDocument>();
 			foreach (var doc in responses)
 			{
-				if(doc == null)
+				if (doc == null)
 				{
 					list.Add(null);
 					continue;
 				}
-				var metadata = (RavenJObject)doc["@metadata"];
+				var metadata = (RavenJObject) doc["@metadata"];
 				doc.Remove("@metadata");
 				var key = Extract(metadata, "@id", string.Empty);
-				var lastModified = Extract(metadata, Constants.LastModified, SystemTime.Now, (string d) => ConvertToUtcDate(d));
-				var etag = Extract(metadata, "@etag", Guid.Empty, (string g) => new Guid(g));
+
+				var lastModified = GetLastModified(metadata);
+
+				var etag = Extract(metadata, "@etag", Guid.Empty, (string g) => HttpExtensions.EtagHeaderToGuid(g));
 				var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
 				list.Add(new JsonDocument
-					{
-						Key = key,
-						LastModified = lastModified,
-						Etag = etag,
-						NonAuthoritativeInformation = nai,
-						Metadata = metadata.FilterHeaders(isServerDocument: false),
-						DataAsJson = doc,
-					});
+				{
+					Key = key,
+					LastModified = lastModified,
+					Etag = etag,
+					TempIndexScore = metadata == null ? null : metadata.Value<float?>("Temp-Index-Score"),
+					NonAuthoritativeInformation = nai,
+					Metadata = metadata.FilterHeaders(),
+					DataAsJson = doc,
+				});
 			}
 			return list;
+		}
+
+		private static DateTime GetLastModified(RavenJObject metadata)
+		{
+			if (metadata == null)
+				return SystemTime.UtcNow;
+			return metadata.ContainsKey(Constants.RavenLastModified) ?
+				       Extract(metadata, Constants.RavenLastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d)) :
+				       Extract(metadata, Constants.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
 		}
 
 		///<summary>
@@ -67,27 +84,28 @@ namespace Raven.Client.Connection
 		///</summary>
 		public static JsonDocument ToJsonDocument(this RavenJObject response)
 		{
-			return RavenJObjectsToJsonDocuments(new[] { response }).First();
+			return RavenJObjectsToJsonDocuments(new[] {response}).First();
 		}
 
-		static DateTime ConvertToUtcDate(string date)
+		private static DateTime ConvertToUtcDate(string date)
 		{
-			return DateTime.SpecifyKind( DateTime.ParseExact(date, new[]{"r","o"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
+			return DateTime.SpecifyKind(DateTime.ParseExact(date, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), DateTimeKind.Utc);
 		}
 
-		static T Extract<T>(RavenJObject metadata, string key, T defaultValue = default(T))
+		private static T Extract<T>(RavenJObject metadata, string key, T defaultValue = default(T))
 		{
 			return Extract<T, T>(metadata, key, defaultValue, t => t);
 		}
 
-		static TResult Extract<T, TResult>(RavenJObject metadata, string key, TResult defaultValue, Func<T, TResult> convert)
+		private static TResult Extract<T, TResult>(RavenJObject metadata, string key, TResult defaultValue, Func<T, TResult> convert)
 		{
 			if (metadata == null) return defaultValue;
 			if (!metadata.ContainsKey(key)) return defaultValue;
+			if (metadata[key].Type == JTokenType.Array) return defaultValue;
 
 			var value = metadata[key].Value<object>();
 
-			if(value is TResult)
+			if (value is TResult)
 				return (TResult) value;
 
 			return convert(metadata[key].Value<T>());
@@ -96,20 +114,19 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Translate a result for a query
 		/// </summary>
-		public static QueryResult ToQueryResult(RavenJObject json, string etagHeader)
+		public static QueryResult ToQueryResult(RavenJObject json, Guid etag)
 		{
 			var result = new QueryResult
-			             	{
-			             		IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-			             		IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-			             		IndexEtag = new Guid(etagHeader),
-			             		Results = ((RavenJArray) json["Results"]).Cast<RavenJObject>().ToList(),
-			             		Includes = ((RavenJArray) json["Includes"]).Cast<RavenJObject>().ToList(),
-			             		TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-			             		IndexName = json.Value<string>("IndexName"),
-			             		SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-			             	};
-
+			{
+				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+				IndexEtag = etag,
+				Results = ((RavenJArray) json["Results"]).Cast<RavenJObject>().ToList(),
+				Includes = ((RavenJArray) json["Includes"]).Cast<RavenJObject>().ToList(),
+				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+				IndexName = json.Value<string>("IndexName"),
+				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+			};
 
 			if (json.ContainsKey("NonAuthoritativeInformation"))
 				result.NonAuthoritativeInformation = Convert.ToBoolean(json["NonAuthoritativeInformation"].ToString());
@@ -121,32 +138,34 @@ namespace Raven.Client.Connection
 		/// Deserialize a request to a JsonDocument
 		/// </summary>
 		public static JsonDocument DeserializeJsonDocument(string key, RavenJToken requestJson,
-#if !SILVERLIGHT
-			NameValueCollection headers, 
-#else 
-			IDictionary<string, IList<string>> headers,
-#endif
-			HttpStatusCode statusCode)
+		                                                   NameValueCollection headers,
+		                                                   HttpStatusCode statusCode)
 		{
-			var jsonData = (RavenJObject)requestJson;
-			var meta = headers.FilterHeaders(isServerDocument: false);
-			
-#if !SILVERLIGHT
+			var jsonData = (RavenJObject) requestJson;
+			var meta = headers.FilterHeaders();
+
 			var etag = headers["ETag"];
-			var lastModified = headers[Constants.LastModified];
-#else
-			var etag = headers["ETag"].First();
-			var lastModified = headers[Constants.LastModified].First();
-#endif
+
 			return new JsonDocument
 			{
 				DataAsJson = jsonData,
 				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
-				Etag = new Guid(etag),
-				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
+				Etag = HttpExtensions.EtagHeaderToGuid(etag),
+				LastModified = GetLastModifiedDate(headers),
 				Metadata = meta
 			};
+		}
+
+		private static DateTime? GetLastModifiedDate(NameValueCollection headers)
+		{
+			var lastModified = headers.GetValues(Constants.RavenLastModified);
+			if(lastModified == null || lastModified.Length != 1)
+			{
+				var dt = DateTime.ParseExact(headers[Constants.LastModified], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+				return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+			}
+			return DateTime.ParseExact(lastModified[0], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 		}
 
 		/// <summary>
@@ -154,16 +173,16 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public static JsonDocumentMetadata DeserializeJsonDocumentMetadata(string key,
 #if !SILVERLIGHT
-			NameValueCollection headers,
+		                                                                   NameValueCollection headers,
 #else 
 			IDictionary<string, IList<string>> headers,
 #endif
-			HttpStatusCode statusCode)
+		                                                                   HttpStatusCode statusCode)
 		{
 			RavenJObject meta = null;
 			try
 			{
-				meta = headers.FilterHeaders(isServerDocument: false);
+				meta = headers.FilterHeaders();
 			}
 			catch (JsonReaderException jre)
 			{
@@ -171,17 +190,23 @@ namespace Raven.Client.Connection
 			}
 #if !SILVERLIGHT
 			var etag = headers["ETag"];
-			var lastModified = headers[Constants.LastModified];
+			string lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
 #else
 			var etag = headers["ETag"].First();
-			var lastModified = headers[Constants.LastModified].First();
+			IList<string> list;
+			string lastModified = headers.TryGetValue(Constants.RavenLastModified, out list) ? 
+				                      list.First() : 
+				                      headers[Constants.LastModified].First();
 #endif
+			var dateTime = DateTime.ParseExact(lastModified, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+
 			return new JsonDocumentMetadata
 			{
 				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
-				Etag = new Guid(etag),
-				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
+				Etag = HttpExtensions.EtagHeaderToGuid(etag),
+				LastModified = lastModifiedDate,
 				Metadata = meta
 			};
 		}

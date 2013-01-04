@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class DateRanges : LocalClientTest
+	public class DateRanges : RavenTest
 	{
 		[Fact]
 		public void CanQueryByDate()
@@ -38,7 +38,7 @@ namespace Raven.Tests.Bugs
 				using(var session = store.OpenSession())
 				{
 					var result = session.Advanced.LuceneQuery<Record>("Date")
-						.Where("Date:" + DateTools.DateToString(new DateTime(2001,1,1), DateTools.Resolution.MILLISECOND))
+						.WhereEquals("Date", new DateTime(2001, 1, 1))
 						.WaitForNonStaleResults()
 						.ToList();
 

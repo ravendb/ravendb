@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class QueryWithStaticIndexesAndCommonBaseClass : LocalClientTest
+	public class QueryWithStaticIndexesAndCommonBaseClass : RavenTest
 	{
 		[Fact]
 		public void CanCreateCorrectIndexForNestedObjectWithReferenceId()

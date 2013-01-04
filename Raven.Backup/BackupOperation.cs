@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Backup
 {
@@ -38,13 +40,28 @@ namespace Raven.Backup
 
 			try
 			{
-				Console.WriteLine(string.Format("Sending json {0} to {1}", json, ServerUrl));
+				Console.WriteLine("Sending json {0} to {1}", json, ServerUrl);
 
 				using (var resp = req.GetResponse())
 				using (var reader = new StreamReader(resp.GetResponseStream()))
 				{
 					var response = reader.ReadToEnd();
 					Console.WriteLine(response);
+				}
+			}
+			catch (WebException we)
+			{
+				var response = we.Response as HttpWebResponse;
+				if(response == null)
+				{
+					Console.WriteLine(we.Message);
+					return false;
+				}
+				Console.WriteLine(response.StatusCode + " " + response.StatusDescription);
+				using(var reader = new StreamReader(response.GetResponseStream()))
+				{
+					Console.WriteLine(reader.ReadToEnd());
+					return false;
 				}
 			}
 			catch (Exception exc)
@@ -81,16 +98,16 @@ namespace Raven.Backup
 			}
 
 			var res = from msg in doc["Messages"]
-			          select new
-			                 	{
-			                 		Message = msg.Value<string>("Message"),
-			                 		Timestamp = msg.Value<DateTime>("Timestamp"),
-			                 		Severity = msg.Value<int>("Severity")
-			                 	};
+					  select new
+								{
+									Message = msg.Value<string>("Message"),
+									Timestamp = msg.Value<DateTime>("Timestamp"),
+									Severity = msg.Value<string>("Severity")
+								};
 
 			foreach (var msg in res)
 			{
-				Console.WriteLine(string.Format("[{0}] {1}", msg.Timestamp, msg.Message));	
+				Console.WriteLine(string.Format("[{0}] {1}", msg.Timestamp, msg.Message));
 			}
 		}
 

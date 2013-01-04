@@ -1,18 +1,18 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="Ravendb_334.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RavenDB_334.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class Ravendb_334 : RavenTest
+	public class RavenDB_334 : RavenTest
 	{
 		public class Foo
 		{

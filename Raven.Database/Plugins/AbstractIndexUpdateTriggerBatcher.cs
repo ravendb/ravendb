@@ -34,5 +34,14 @@ namespace Raven.Database.Plugins
 		{
 			
 		}
+
+		/// <summary>
+		/// Notify the batcher that an error occured, and that it might want to NOT do any work during the Dispose phase.
+		/// </summary>
+		/// <param name="exception"></param>
+		public virtual void AnErrorOccured(Exception exception)
+		{
+			
+		}
 	}
 }

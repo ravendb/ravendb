@@ -11,7 +11,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Terms : RequestResponder
+	public class Terms : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -38,9 +38,9 @@ namespace Raven.Database.Server.Responders
 			var executeGetTermsQuery = Database.ExecuteGetTermsQuery(index, 
 			                                                         context.Request.QueryString["field"],
 			                                                         context.Request.QueryString["fromValue"],
-			                                                         context.GetPageSize(Database.Configuration.MaxPageSize)
+																	 context.GetPageSize(Database.Configuration.MaxPageSize)
 				);
-			context.Response.AddHeader("ETag", Database.GetIndexEtag(index, null).ToString());
+			context.WriteETag(Database.GetIndexEtag(index, null));
 			context.WriteJson(executeGetTermsQuery);
 		}
 	}

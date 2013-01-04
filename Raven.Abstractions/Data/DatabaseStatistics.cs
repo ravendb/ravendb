@@ -13,7 +13,7 @@ namespace Raven.Abstractions.Data
 		public Guid LastDocEtag { get; set; }
 		public Guid LastAttachmentEtag { get; set; }
 		public int CountOfIndexes { get; set; }
-
+		public int InMemoryIndexingQueueSize { get; set; }
 		public long ApproximateTaskCount { get; set; }
 
 		public long CountOfDocuments { get; set; }
@@ -23,6 +23,8 @@ namespace Raven.Abstractions.Data
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 		
 		public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }
+
+		public decimal DatabaseTransactionVersionSizeInMB { get; set; }
 
 		public IndexStats[] Indexes { get; set; }
 
@@ -37,6 +39,23 @@ namespace Raven.Abstractions.Data
 			public string Type { get; set; }
 			public string Name { get; set; }
 		}
+
+		public ActualIndexingBatchSize[] ActualIndexingBatchSize { get; set; }
+		public FutureBatchStats[] Prefetches { get; set; }
+	}
+
+	public class ActualIndexingBatchSize
+	{
+		public int Size { get; set; }
+		public DateTime Timestamp { get; set; }
+	}
+
+	public class FutureBatchStats
+	{
+		public DateTime Timestamp { get; set; }
+		public TimeSpan? Duration { get; set; }
+		public int? Size { get; set; }
+		public int Retries { get; set; }
 	}
 
 	public class ExtensionsLog

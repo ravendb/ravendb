@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NLog;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
+using Raven.Database.Server;
 using Raven.Database.Storage;
 using System.Linq;
-using Raven.Database.Tasks;
 using Task = Raven.Database.Tasks.Task;
 using Raven.Abstractions.Extensions;
 
@@ -15,76 +16,118 @@ namespace Raven.Database.Indexing
 	{
 		protected WorkContext context;
 		protected TaskScheduler scheduler;
-		protected static readonly Logger log = LogManager.GetCurrentClassLogger();
+		protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
 		protected int lastFlushedWorkCounter;
 		protected BaseBatchSizeAutoTuner autoTuner;
 
-		protected AbstractIndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
+		protected AbstractIndexingExecuter(WorkContext context)
 		{
-			this.transactionalStorage = transactionalStorage;
+			this.transactionalStorage = context.TransactionalStorage;
 			this.context = context;
-			this.scheduler = scheduler;
+			this.scheduler = context.TaskScheduler;
 		}
 
 		public void Execute()
 		{
-			var name = GetType().Name;
-			var workComment = "WORK BY " + name;
-
-			while (context.DoWork)
+			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
+			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
-				var foundWork = false;
-				try
+				LogContext.DatabaseName.Value = context.DatabaseName;
+				var name = GetType().Name;
+				var workComment = "WORK BY " + name;
+				while (context.RunIndexing)
 				{
-					foundWork = ExecuteIndexing();
-					while (context.DoWork) // we want to drain all of the pending tasks before the next run
+					bool foundWork;
+					try
 					{
-						if (ExecuteTasks() == false)
-							break;
-						foundWork = true;
-					}
+						foundWork = ExecuteIndexing();
+						while (context.RunIndexing) // we want to drain all of the pending tasks before the next run
+						{
+							if (ExecuteTasks() == false)
+								break;
+							foundWork = true;
+						}
 
-				}
-				catch (OutOfMemoryException oome)
-				{
-					foundWork = true;
-					HandleOutOfMemoryException(oome);
-				}
-				catch (AggregateException ae)
-				{
-					foundWork = true;
-					var oome = ae.ExtractSingleInnerException() as OutOfMemoryException;
-					if (oome == null)
-					{
-						log.ErrorException("Failed to execute indexing", ae);
 					}
-					else
+					catch (OutOfMemoryException oome)
 					{
+						foundWork = true;
 						HandleOutOfMemoryException(oome);
 					}
+					catch (AggregateException ae)
+					{
+						foundWork = true;
+						var actual = ae.ExtractSingleInnerException();
+						var oome = actual as OutOfMemoryException;
+						if (oome == null)
+						{
+							if (IsEsentOutOfMemory(actual))
+							{
+
+								autoTuner.OutOfMemoryExceptionHappened();
+							}
+							Log.ErrorException("Failed to execute indexing", ae);
+						}
+						else
+						{
+							HandleOutOfMemoryException(oome);
+						}
+					}
+					catch (OperationCanceledException)
+					{
+						Log.Info("Got rude cancellation of indexing as a result of shutdown, aborting current indexing run");
+						return;
+					}
+					catch (Exception e)
+					{
+						foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
+						Log.ErrorException("Failed to execute indexing", e);
+						if (IsEsentOutOfMemory(e))
+						{
+							autoTuner.OutOfMemoryExceptionHappened();
+						}
+					}
+					if (foundWork == false)
+					{
+						context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
+					}
+					else // notify the tasks executer that it has work to do
+					{
+						context.ShouldNotifyAboutWork(() => workComment);
+						context.NotifyAboutWork();
+					}
 				}
-				catch (Exception e)
-				{
-					foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
-					log.ErrorException("Failed to execute indexing", e);
-				}
-				if (foundWork == false)
-				{
-					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
-				}
-				else // notify the tasks executer that it has work to do
-				{
-					context.ShouldNotifyAboutWork(() => workComment);
-					context.NotifyAboutWork();
-				}
+				Dispose();
 			}
 		}
 
-		private void HandleOutOfMemoryException(OutOfMemoryException oome)
+		private bool IsEsentOutOfMemory(Exception actual)
 		{
-			log.WarnException(
+			var esentErrorException = actual as EsentErrorException;
+			if (esentErrorException == null)
+				return false;
+			switch (esentErrorException.Error)
+			{
+				case JET_err.OutOfMemory:
+				case JET_err.CurrencyStackOutOfMemory:
+				case JET_err.SPAvailExtCacheOutOfMemory:
+				case JET_err.VersionStoreOutOfMemory:
+				case JET_err.VersionStoreOutOfMemoryAndCleanupTimedOut:
+					return true;
+			}
+			return false;
+		}
+
+		protected virtual void Dispose()
+		{
+
+		}
+
+		private void HandleOutOfMemoryException(Exception oome)
+		{
+			Log.WarnException(
 				@"Failed to execute indexing because of an out of memory exception. Will force a full GC cycle and then become more conservative with regards to memory",
 				oome);
 
@@ -104,8 +147,12 @@ namespace Raven.Database.Indexing
 				if (task == null)
 					return;
 
-				log.Debug("Executing {0}", task);
+				context.UpdateFoundWork();
+
+				Log.Debug("Executing {0}", task);
 				foundWork = true;
+
+				context.CancellationToken.ThrowIfCancellationRequested();
 
 				try
 				{
@@ -113,7 +160,7 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
-					log.WarnException(
+					Log.WarnException(
 						string.Format("Task {0} has failed and was deleted without completing any work", task),
 						e);
 				}
@@ -143,7 +190,7 @@ namespace Raven.Database.Indexing
 					var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
 					if (failureRate.IsInvalidIndex)
 					{
-						log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+						Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
 									   indexesStat.Name,
 									   failureRate.FailureRate);
 						continue;
@@ -157,7 +204,10 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
-			using(context.IndexDefinitionStorage.CurrentlyIndexing())
+			context.UpdateFoundWork();
+			context.CancellationToken.ThrowIfCancellationRequested();
+
+			using (context.IndexDefinitionStorage.CurrentlyIndexing())
 				ExecuteIndexingWork(indexesToWorkOn);
 
 			return true;
@@ -170,42 +220,5 @@ namespace Raven.Database.Indexing
 		protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn);
 
 		protected abstract bool IsValidIndex(IndexStats indexesStat);
-
-		protected class ComparableByteArray : IComparable<ComparableByteArray>, IComparable
-		{
-			private readonly byte[] inner;
-
-			public ComparableByteArray(byte[] inner)
-			{
-				this.inner = inner;
-			}
-
-			public int CompareTo(ComparableByteArray other)
-			{
-				if (inner.Length != other.inner.Length)
-					return inner.Length - other.inner.Length;
-				for (int i = 0; i < inner.Length; i++)
-				{
-					if (inner[i] != other.inner[i])
-						return inner[i] - other.inner[i];
-				}
-				return 0;
-			}
-
-			public int CompareTo(object obj)
-			{
-				return CompareTo((ComparableByteArray)obj);
-			}
-
-			public Guid ToGuid()
-			{
-				return new Guid(inner);
-			}
-
-			public override string ToString()
-			{
-				return ToGuid().ToString();
-			}
-		}
 	}
 }

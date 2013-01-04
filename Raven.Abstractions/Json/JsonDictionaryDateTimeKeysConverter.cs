@@ -2,21 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Json
 {
 	public class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
 	{
-		readonly HashSet<Type> types;
-
 		private readonly MethodInfo genericWriteJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod("GenericWriteJson");
 		private readonly MethodInfo genericReadJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod("GenericReadJson");
-
-		public JsonDictionaryDateTimeKeysConverter(params Type[] types)
-		{
-			this.types = new HashSet<Type>(types);
-		}
 
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
@@ -41,7 +34,17 @@ namespace Raven.Abstractions.Json
 					writer.WritePropertyName(dateTime.ToString(Default.DateTimeFormatsToWrite + postFix, CultureInfo.InvariantCulture));
 				}
 				else if (key is DateTimeOffset)
-					writer.WritePropertyName(((DateTimeOffset)key).ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+				{
+					var dateTimeOffset = ((DateTimeOffset)key);
+					if (dateTimeOffset.Offset == TimeSpan.Zero)
+					{
+						writer.WriteValue(dateTimeOffset.UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z");
+					}
+					else
+					{
+						writer.WriteValue(dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+					}
+				}
 				else
 					throw new ArgumentException(string.Format("Not idea how to process argument: '{0}'", value));
 
@@ -122,7 +125,10 @@ namespace Raven.Abstractions.Json
 				return false;
 
 			var keyType = objectType.GetGenericArguments()[0];
-			return types.Contains(keyType);
+			return typeof(DateTime) == keyType ||
+				typeof(DateTimeOffset) == keyType ||
+				typeof(DateTimeOffset?) == keyType ||
+				typeof(DateTime?) == keyType;
 		}
 	}
 }

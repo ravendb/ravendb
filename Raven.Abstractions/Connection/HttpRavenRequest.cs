@@ -2,8 +2,8 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -17,7 +17,6 @@ namespace Raven.Abstractions.Connection
 		private readonly Action<RavenConnectionStringOptions, WebRequest> configureRequest;
 		private readonly Func<RavenConnectionStringOptions, WebResponse, bool> handleUnauthorizedResponse;
 		private readonly RavenConnectionStringOptions connectionStringOptions;
-		private readonly bool disableCompression;
 
 		private HttpWebRequest webRequest;
 
@@ -26,27 +25,29 @@ namespace Raven.Abstractions.Connection
 		private byte[] postedData;
 		private bool writeBson;
 
+		public long NumberOfBytesWrittenCompressed { get; private set; }
+		public long NumberOfBytesWrittenUncompressed { get; private set; }
+
 		public HttpWebRequest WebRequest
 		{
 			get { return webRequest ?? (webRequest = CreateRequest()); }
 			set { webRequest = value; }
 		}
 
-		public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, WebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, bool> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions, bool disableCompression)
+		public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, WebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, bool> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
 		{
 			this.url = url;
 			this.method = method;
 			this.configureRequest = configureRequest;
 			this.handleUnauthorizedResponse = handleUnauthorizedResponse;
 			this.connectionStringOptions = connectionStringOptions;
-			this.disableCompression = disableCompression;
 		}
 
 		private HttpWebRequest CreateRequest()
 		{
 			var request = (HttpWebRequest) System.Net.WebRequest.Create(url);
 			request.Method = method;
-			if ((method == "POST" || method == "PUT") && disableCompression == false)
+			if (method == "POST" || method == "PUT")
 				request.Headers["Content-Encoding"] = "gzip";
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";
@@ -64,19 +65,14 @@ namespace Raven.Abstractions.Connection
 		{
 			postedStream = streamToWrite;
 			using (var stream = WebRequest.GetRequestStream())
-			using(var commpressedStream = GetCommpressedStream(stream))
+			using(var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+			using(var commpressedStream = new GZipStream(countingStream, CompressionMode.Compress))
+			using (var countingStream2 = new CountingStream(commpressedStream, l => NumberOfBytesWrittenUncompressed = l))
 			{
-				streamToWrite.CopyTo(commpressedStream);
-				stream.Flush();
+				streamToWrite.CopyTo(countingStream2);
 				commpressedStream.Flush();
+				stream.Flush();
 			}
-		}
-
-		private  Stream GetCommpressedStream(Stream stream)
-		{
-			if (disableCompression)
-				return stream;
-			return new GZipStream(stream, CompressionMode.Compress);
 		}
 
 		public void Write(RavenJToken ravenJToken)
@@ -89,9 +85,11 @@ namespace Raven.Abstractions.Connection
 		{
 			postedData = data;
 			using (var stream = WebRequest.GetRequestStream())
-			using(var cmp = new GZipStream(stream, CompressionMode.Compress))
+			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+			using (var cmp = new GZipStream(countingStream, CompressionMode.Compress))
+			using (var countingStream2 = new CountingStream(cmp, l => NumberOfBytesWrittenUncompressed = l))
 			{
-				cmp.Write(data, 0, data.Length);
+				countingStream2.Write(data, 0, data.Length);
 				cmp.Flush();
 				stream.Flush();
 			}
@@ -107,20 +105,22 @@ namespace Raven.Abstractions.Connection
 		private void WriteToken(WebRequest httpWebRequest)
 		{
 			using (var stream = httpWebRequest.GetRequestStream())
-			using (var commpressedData = GetCommpressedStream(stream))
+			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+			using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
+			using (var countingStream2 = new CountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
 			{
 				if (writeBson)
 				{
-					postedToken.WriteTo(new BsonWriter(commpressedData));
+					postedToken.WriteTo(new BsonWriter(countingStream2));
 				}
 				else
 				{
-					var streamWriter = new StreamWriter(commpressedData);
+					var streamWriter = new StreamWriter(countingStream2);
 					postedToken.WriteTo(new JsonTextWriter(streamWriter));
 					streamWriter.Flush();
 				}
-				stream.Flush();
 				commpressedData.Flush();
+				stream.Flush();
 			}
 		}
 
@@ -193,7 +193,15 @@ namespace Raven.Abstractions.Connection
 						using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
 						{
 							var error = streamReader.ReadToEnd();
-							var ravenJObject = RavenJObject.Parse(error);
+							RavenJObject ravenJObject = null;
+							try
+							{
+								ravenJObject = RavenJObject.Parse(error);
+							}
+							catch { }
+
+							if (ravenJObject == null)
+								throw;
 							throw new WebException("Error: " + ravenJObject.Value<string>("Error"), e);
 						}
 					}
@@ -228,7 +236,7 @@ namespace Raven.Abstractions.Connection
 			{
 				postedStream.Position = 0;
 				using (var stream = newWebRequest.GetRequestStream())	
-				using (var compressedData = GetCommpressedStream(stream))
+				using (var compressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
 					postedStream.CopyTo(compressedData);
 					stream.Flush();

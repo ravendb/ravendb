@@ -1,6 +1,6 @@
 using System;
 using System.Globalization;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Json
 {
@@ -17,7 +17,10 @@ namespace Raven.Abstractions.Json
 				writer.WriteValue(dateTime.ToString(Default.DateTimeFormatsToWrite + postFix, CultureInfo.InvariantCulture));
 			}
 			else if (value is DateTimeOffset)
-				writer.WriteValue(((DateTimeOffset) value).ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+			{
+				var dateTimeOffset = ((DateTimeOffset) value);
+				writer.WriteValue(dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+			}
 			else
 				throw new ArgumentException(string.Format("Not idea how to process argument: '{0}'", value));
 		}
@@ -33,8 +36,6 @@ namespace Raven.Abstractions.Json
 					if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
 					                           DateTimeStyles.RoundtripKind, out time))
 					{
-						if (time.Kind == DateTimeKind.Unspecified)
-							return DateTime.SpecifyKind(time, DateTimeKind.Local);
 						if (s.EndsWith("+00:00"))
 							return time.ToUniversalTime();
 						return time;

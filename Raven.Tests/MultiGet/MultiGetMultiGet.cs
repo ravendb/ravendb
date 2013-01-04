@@ -8,7 +8,7 @@ namespace Raven.Tests.MultiGet
 	public class MultiGetMultiGet : RemoteClientTest
 	{
 		[Fact]
-		public void MulityGetShouldBehaveTheSameForLazyAndNotLazy()
+		public void MultiGetShouldBehaveTheSameForLazyAndNotLazy()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
@@ -25,7 +25,7 @@ namespace Raven.Tests.MultiGet
 		}
 
 		[Fact]
-		public void UnlessAccessedLazyOpertionsAreNoOp()
+		public void UnlessAccessedLazyOperationsAreNoOp()
 		{
 			using(GetNewServer())
 			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())

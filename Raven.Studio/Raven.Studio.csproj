@@ -32,8 +32,10 @@
     <LinkedServerProject>
     </LinkedServerProject>
     <Utf8Output>true</Utf8Output>
-    <ExpressionBlendVersion>4.0.20525.0</ExpressionBlendVersion>
+    <ExpressionBlendVersion>4.1.20402.0</ExpressionBlendVersion>
     <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <!-- This property group is only here to support building this project using the 
        MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
@@ -62,16 +64,34 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL" />
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=12.2.140.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
     </Reference>
+    <Reference Include="ActiproSoftware.Text.LLParser.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.LLParser.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight5">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
+    </Reference>
+    <Reference Include="Kent.Boogaart.HelperTrinity">
+      <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.4.0.0\lib\sl40\Kent.Boogaart.HelperTrinity.dll</HintPath>
+    </Reference>
+    <Reference Include="Kent.Boogaart.KBCsv">
+      <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\sl40\Kent.Boogaart.KBCsv.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -81,10 +101,7 @@
       <HintPath>..\SharedLibs\Silverlight\Expression\SL5\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\sl4\Newtonsoft.Json.dll</HintPath>
-    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations, Version=5.0.5.0, Culture=neutral, PublicKeyToken=ddd0da4d3e678217, processorArchitecture=MSIL" />
     <Reference Include="System.Reactive, Version=1.0.10621.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Rx-Main.1.0.11226\lib\SL4\System.Reactive.dll</HintPath>
     </Reference>
@@ -115,6 +132,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.Windows.Controls.Input.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Controls.Input.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Input.Toolkit.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows.Controls.Layout.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Layout.Toolkit.dll</HintPath>
     </Reference>
@@ -125,6 +146,7 @@
     <Reference Include="System.Windows.Controls.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Toolkit.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Data, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Interactivity">
       <HintPath>..\SharedLibs\Silverlight\System.Windows.Interactivity.dll</HintPath>
     </Reference>
@@ -136,23 +158,250 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Bundles\Raven.Bundles.Authorization\Model\AuthorizationRole.cs">
+      <Link>Features\Bundles\AuthorizationRole.cs</Link>
+    </Compile>
+    <Compile Include="..\Bundles\Raven.Bundles.Authorization\Model\AuthorizationUser.cs">
+      <Link>Features\Bundles\AuthorizationUser.cs</Link>
+    </Compile>
+    <Compile Include="..\Bundles\Raven.Bundles.Authorization\Model\IPermission.cs">
+      <Link>Features\Bundles\IPermission.cs</Link>
+    </Compile>
+    <Compile Include="..\Bundles\Raven.Bundles.Authorization\Model\OperationPermission.cs">
+      <Link>Features\Bundles\OperationPermission.cs</Link>
+    </Compile>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\ConflictsResolver.cs">
+      <Link>Infrastructure\ConflictsResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\Replication\Data\SourceReplicationInformation.cs">
+      <Link>Features\Bundles\SourceReplicationInformation.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\Versioning\Data\VersioningConfiguration.cs">
+      <Link>Features\Bundles\VersioningConfiguration.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Server\Security\Windows\WindowsAuthDocument.cs">
+      <Link>Features\Bundles\WindowsAuthDocument.cs</Link>
     </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
+    <Compile Include="Behaviors\BindColumnVisibility.cs" />
+    <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
+    <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
+    <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
+    <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
+    <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
+    <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
+    <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
+    <Compile Include="Behaviors\FadeTrimming.cs" />
+    <Compile Include="Behaviors\FocusElementAction.cs" />
+    <Compile Include="Behaviors\HighlightSyntaxErrorAction.cs" />
+    <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
+    <Compile Include="Behaviors\OpenDropDownAction.cs" />
+    <Compile Include="Behaviors\RowDefinitionVisibility.cs" />
+    <Compile Include="Behaviors\SelectAllAction.cs" />
+    <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
+    <Compile Include="Behaviors\ShowAutoCompleteDropDown.cs" />
+    <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\CsvImportCommand.cs" />
+    <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
+    <Compile Include="Commands\CreateSampleDataCommand.cs" />
+    <Compile Include="Commands\DeleteAllIndexesCommand.cs" />
+    <Compile Include="Commands\DeleteDatabaseCommand.cs" />
+    <Compile Include="Commands\ExportDocumentDetailsCommand.cs" />
+    <Compile Include="Commands\RestoreCommand.cs" />
+    <Compile Include="Commands\SaveSettingsCommand.cs" />
+    <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
+    <Compile Include="Commands\ItemSelectionCommand.cs" />
+    <Compile Include="Commands\StopIndexingCommand.cs" />
+    <Compile Include="Commands\StartIndexingCommand.cs" />
+    <Compile Include="Commands\CopyDocumentsToClipboardCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
+    <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
+    <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
+    <Compile Include="Controls\ProgressWindow.xaml.cs">
+      <DependentUpon>ProgressWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
+    <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
+    <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
+    <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
+    <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
+      <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Tasks\StartRestoreTask.cs" />
+    <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
+    <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
+    <Compile Include="Infrastructure\Converters\BundleNameToToolTipCoverter.cs" />
+    <Compile Include="Infrastructure\Converters\GetApiKeyDirectLink.cs" />
+    <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
+    <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
+    <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
+    <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
+    <Compile Include="Controls\BundlesSelect.xaml.cs">
+      <DependentUpon>BundlesSelect.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\BusynessIndicator.xaml.cs">
+      <DependentUpon>BusynessIndicator.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\DeleteDatabase.xaml.cs">
+      <DependentUpon>DeleteDatabase.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Editors\QuerySyntaxTextBlock.xaml.cs">
+      <DependentUpon>QuerySyntaxTextBlock.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\EncryptionSettings.xaml.cs">
+      <DependentUpon>EncryptionSettings.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\GoToDocumentControl.xaml.cs">
+      <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\NewDatabase.xaml.cs">
+      <DependentUpon>NewDatabase.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\QueryOptionsButton.xaml.cs">
+      <DependentUpon>QueryOptionsButton.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\RecentQueriesButton.xaml.cs">
+      <DependentUpon>RecentQueriesButton.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ShowEncryptionMessage.xaml.cs">
+      <DependentUpon>ShowEncryptionMessage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
+    <Compile Include="Controls\VirtualizingWrapPanel.cs" />
+    <Compile Include="Controls\Wizard.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
+    <Compile Include="Extensions\DoubleExtensions.cs" />
+    <Compile Include="Extensions\IObservableExtensions.cs" />
+    <Compile Include="Extensions\IsolatedStorageFileExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
-    <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
+    <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
+    <Compile Include="Features\Alerts\AlertProxy.cs" />
+    <Compile Include="Features\Alerts\AlertsView.xaml.cs">
+      <DependentUpon>AlertsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Input\InputModelWithSuggestion.cs" />
+    <Compile Include="Features\Input\InputWindowWithSuggestion.xaml.cs">
+      <DependentUpon>InputWindowWithSuggestion.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Input\SelectModel.cs" />
+    <Compile Include="Features\Input\SelectWindow.xaml.cs">
+      <DependentUpon>SelectWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Patch\PatchView.xaml.cs">
+      <DependentUpon>PatchView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\ApiKeysSettingSectionView.xaml.cs">
+      <DependentUpon>ApiKeysSettingSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\AuthorizationSettingSectionView.xaml.cs">
+      <DependentUpon>AuthorizationSettingSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\DatabaseSettingsSectionView.xaml.cs">
+      <DependentUpon>DatabaseSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\QuotasSettingsSectionView.xaml.cs">
+      <DependentUpon>QuotasSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\ReplicationsSettingsSectionView.xaml.cs">
+      <DependentUpon>ReplicationsSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\SettingsDialog.xaml.cs">
+      <DependentUpon>SettingsDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\SettingsPageView.xaml.cs">
+      <DependentUpon>SettingsPageView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\SettingsView.xaml.cs">
+      <DependentUpon>SettingsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
+    <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Documents\ColumnDefinition.cs" />
+    <Compile Include="Features\Documents\ColumnEditorViewModel.cs" />
+    <Compile Include="Features\Documents\ColumnModel.cs" />
+    <Compile Include="Features\Documents\ColumnsEditorDialog.xaml.cs">
+      <DependentUpon>ColumnsEditorDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\ColumnsEditorDialogViewModel.cs" />
+    <Compile Include="Features\Documents\ColumnSet.cs" />
+    <Compile Include="Features\Documents\ColumnsModel.cs" />
+    <Compile Include="Features\Documents\ColumnSuggester.cs" />
+    <Compile Include="Features\Documents\DocumentHelpers.cs" />
+    <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
+    <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
+    <Compile Include="Features\Documents\EditNeighboringDocumentCommand.cs" />
+    <Compile Include="Features\Documents\DocumentsView.xaml.cs">
+      <DependentUpon>DocumentsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\EditVirtualDocumentCommand.cs" />
+    <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
+    <Compile Include="Features\Documents\PriorityColumn.cs" />
+    <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
+    <Compile Include="Features\IndexStats\StatsView.xaml.cs">
+      <DependentUpon>StatsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\JsonEditor\DocumentReferencedIdManager.cs" />
+    <Compile Include="Features\JsonEditor\IJsonClassificationTypeProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonArrayNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonAstHelpers.cs" />
+    <Compile Include="Features\JsonEditor\JsonAstNodeId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonClassificationTypeProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonExampleTextProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonGrammar.cs" />
+    <Compile Include="Features\JsonEditor\JsonLexer.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonLexicalStateId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonObjectNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonOutliner.cs" />
+    <Compile Include="Features\JsonEditor\JsonOutliningSource.cs" />
+    <Compile Include="Features\JsonEditor\JsonParser.cs" />
+    <Compile Include="Features\JsonEditor\JsonPropertyValuePairNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonStringNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonSyntaxLanguage.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonSyntaxLanguageExtended.cs" />
+    <Compile Include="Features\JsonEditor\JsonTextFormatter.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenReader.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenTagger.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenTaggerProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\LinkTag.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagAdornmentManager.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagClickHandler.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagQuickInfoProvider.cs" />
+    <Compile Include="Features\JsonEditor\PropertyValueLinkTagger.cs" />
+    <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
+    <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Query\QueryHistoryManager.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
+    <Compile Include="Features\Tasks\CsvImportTask.cs" />
+    <Compile Include="Features\Query\QueryState.cs" />
+    <Compile Include="Features\Query\RecentQueriesDropDownView.xaml.cs">
+      <DependentUpon>RecentQueriesDropDownView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Query\RecentQueriesModel.cs" />
+    <Compile Include="Features\Query\SavedQuery.cs" />
+    <Compile Include="Features\Settings\VersioningSettingsView.xaml.cs">
+      <DependentUpon>VersioningSettingsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\WindowsAuthSettingSectionView.xaml.cs">
+      <DependentUpon>WindowsAuthSettingSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Stats\ReplicationStatisticsView.xaml.cs">
+      <DependentUpon>ReplicationStatisticsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Tasks\IndexingTask.cs" />
+    <Compile Include="Features\Tasks\SampleDataTask.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
@@ -160,23 +409,126 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Util\ErrorListWindow.xaml.cs">
+      <DependentUpon>ErrorListWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Impl\SplitButton\PopupButton.cs" />
+    <Compile Include="Impl\SplitButton\SplitButtonPopup.cs" />
+    <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
+    <Compile Include="Impl\SplitButton\MenuButton.cs" />
+    <Compile Include="Impl\SplitButton\SplitButton.cs" />
+    <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
+    <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
+    <Compile Include="Infrastructure\ArrayContainer.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToGridLengthConverter.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\IdStringToIdWithoutHeader.cs" />
+    <Compile Include="Infrastructure\Converters\StringListToStringConverter.cs" />
+    <Compile Include="Infrastructure\Converters\TrueWhenAnalyzedConverter.cs" />
+    <Compile Include="Infrastructure\Converters\VisibleWhenEqual.cs" />
+    <Compile Include="Infrastructure\Converters\DisableIfDefaultVersioning.cs" />
+    <Compile Include="Infrastructure\Converters\StringToBooleanConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
+    <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
+    <Compile Include="Infrastructure\Converters\EnumToVisibilityConverter.cs" />
+    <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringToSingleLineConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueToObjectConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueConversion.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueConversionCollection.cs" />
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
+    <Compile Include="Infrastructure\Converters\TrimmedStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
+    <Compile Include="Infrastructure\Converters\VisibleWhenDifferent.cs" />
+    <Compile Include="Infrastructure\Disposer.cs" />
+    <Compile Include="Infrastructure\DocumentsVirtualCollectionSourceBase.cs" />
+    <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
+    <Compile Include="Infrastructure\INotifyBusyness.cs" />
+    <Compile Include="Infrastructure\ItemsRealizedEventArgs.cs" />
+    <Compile Include="Infrastructure\MarkupExtensions\ResourceKeyBinding.cs" />
+    <Compile Include="Infrastructure\ParserDispatcherManager.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
+    <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
+    <Compile Include="Infrastructure\DeferredActionInvoker.cs" />
+    <Compile Include="Infrastructure\DialogView.cs" />
+    <Compile Include="Infrastructure\DialogViewModel.cs" />
+    <Compile Include="Infrastructure\FrameworkElementExtensions.cs" />
+    <Compile Include="Infrastructure\IEnquireAboutItemVisibility.cs" />
+    <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
+    <Compile Include="Infrastructure\ItemSelection.cs" />
+    <Compile Include="Infrastructure\ItemSelection`1.cs" />
+    <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
+    <Compile Include="Infrastructure\MarkupExtensions\StaticExtension.cs" />
+    <Compile Include="Infrastructure\MostRecentUsedList.cs" />
+    <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
+    <Compile Include="Infrastructure\RefreshMode.cs" />
+    <Compile Include="Infrastructure\Schedulers.cs" />
+    <Compile Include="Infrastructure\Settings.cs" />
+    <Compile Include="Infrastructure\SparseList.cs" />
+    <Compile Include="Infrastructure\Validation.cs" />
+    <Compile Include="Infrastructure\Validators\DataGridLengthAttribute.cs" />
+    <Compile Include="Infrastructure\Validators\IValidationSuppressible.cs" />
+    <Compile Include="Infrastructure\Validators\RequiredStringAttribute.cs" />
+    <Compile Include="Infrastructure\View.cs" />
+    <Compile Include="Infrastructure\ViewModel.cs" />
+    <Compile Include="Infrastructure\VirtualCollection.cs" />
+    <Compile Include="Infrastructure\VirtualCollectionSource.cs" />
+    <Compile Include="Infrastructure\VirtualItem.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeFromItemsControlBehavior.cs" />
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
+    <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
+    <Compile Include="Models\AlertsModel.cs" />
+    <Compile Include="Models\ApiKeysSectionModel.cs" />
+    <Compile Include="Models\ApplicationState.cs" />
+    <Compile Include="Models\AuthorizationSettingsSectionModel.cs" />
+    <Compile Include="Models\DatabaseSettingsSectionViewModel.cs" />
+    <Compile Include="Models\PatchModel.cs" />
+    <Compile Include="Models\QuotaSettingsSectionModel.cs" />
+    <Compile Include="Models\ReplicationSettingsSectionModel.cs" />
+    <Compile Include="Models\ReplicationStatisticsModel.cs" />
+    <Compile Include="Models\SettingsModel.cs" />
+    <Compile Include="Models\CreateSettingsModel.cs" />
+    <Compile Include="Models\DatabaseListItemModel.cs" />
+    <Compile Include="Models\DatabaseSelectionModel.cs" />
     <Compile Include="Models\DocumentSize.cs" />
+    <Compile Include="Models\DocumentViewStateStore.cs" />
+    <Compile Include="Models\IndexStatsModel.cs" />
+    <Compile Include="Models\QueryStateStore.cs" />
+    <Compile Include="Models\SettingsPageModel.cs" />
+    <Compile Include="Models\SettingsSectionModel.cs" />
+    <Compile Include="Models\StudioErrorListModel.cs" />
+    <Compile Include="Models\GoToDocumentModel.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
+    <Compile Include="Models\DocumentsModel.cs" />
+    <Compile Include="Models\PerDatabaseState.cs" />
+    <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
+    <Compile Include="Models\VersioningSettingsSectionModel.cs" />
+    <Compile Include="Views\Alerts.xaml.cs">
+      <DependentUpon>Alerts.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Patch.xaml.cs">
+      <DependentUpon>Patch.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ReplicationStatistics.xaml.cs">
+      <DependentUpon>ReplicationStatistics.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Settings.xaml.cs">
+      <DependentUpon>Settings.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\IndexStats.xaml.cs">
+      <DependentUpon>IndexStats.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
-    <Compile Include="Behaviors\ShowItemsBasedOnControlDimensions.cs" />
     <Compile Include="Behaviors\UpdateTextBindingOnPropertyChanged.cs" />
     <Compile Include="Behaviors\DoubleClickBehavior.cs" />
     <Compile Include="Behaviors\GoToStateAction.cs" />
@@ -201,7 +553,6 @@
     <Compile Include="Commands\PromoteToAutoIndexCommand.cs" />
     <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
-    <Compile Include="Controls\ListBoxMenu.cs" />
     <Compile Include="Controls\SearchControl.xaml.cs">
       <DependentUpon>SearchControl.xaml</DependentUpon>
     </Compile>
@@ -240,9 +591,6 @@
     </Compile>
     <Compile Include="Commands\DeleteDocumentCommand.cs" />
     <Compile Include="Commands\NavigateToCommand.cs" />
-    <Compile Include="Features\Documents\DocumentsView.xaml.cs">
-      <DependentUpon>DocumentsView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Util\MessageBoxWindow.xaml.cs">
       <DependentUpon>MessageBoxWindow.xaml</DependentUpon>
     </Compile>
@@ -302,10 +650,9 @@
     <Compile Include="Infrastructure\RxExtensions.cs" />
     <Compile Include="Infrastructure\UrlParser.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
-    <Compile Include="Infrastructure\ViewModel.cs" />
+    <Compile Include="Infrastructure\PageViewModel.cs" />
     <Compile Include="Models\AllDocumentsModel.cs" />
     <Compile Include="Models\DatabasesListModel.cs" />
-    <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
     <Compile Include="Infrastructure\ContextMenu\ContextMenu.cs" />
@@ -359,7 +706,7 @@
     <Compile Include="Infrastructure\Observable.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Infrastructure\View.cs">
+    <Compile Include="Infrastructure\PageView.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Models\ApplicationModel.cs" />
@@ -417,7 +764,179 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Assets\ComboBoxStyles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\NumericUpDown.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\PopupButton.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\ProgressBarStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\SplitButtonPopup.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\DataGridStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\SplitButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\TextBoxStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\TreeViewStyles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\Vectors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\WatermarkedTextBox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\BundlesSelect.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\BusynessIndicator.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\ChildWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\DeleteDatabase.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Editors\QuerySyntaxTextBlock.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\EncryptionSettings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\GoToDocumentControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\NewDatabase.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ProgressWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\QueryOptionsButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\RecentQueriesButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ShowEncryptionMessage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\Taggers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Alerts\AlertsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Input\InputWindowWithSuggestion.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Input\SelectWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Patch\PatchView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\ApiKeysSettingSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\AuthorizationSettingSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\DatabaseSettingsSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\QuotasSettingsSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\ReplicationsSettingsSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\SettingsDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\SettingsPageView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\SettingsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\ColumnsEditorDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\IndexStats\StatsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Query\RecentQueriesDropDownView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\VersioningSettingsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\WindowsAuthSettingSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Stats\ReplicationStatisticsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -426,6 +945,34 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Terms\TermsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Util\ErrorListWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Impl\SplitButton\Themes\generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Alerts.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Patch.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ReplicationStatistics.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Settings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\IndexStats.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -561,10 +1108,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Documents\DocumentsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Features\Input\ConfirmWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -616,43 +1159,91 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\RavenQuery.langdef" />
     <EmbeddedResource Include="Features\Logs\DefaultLogging.config" />
-    <None Include="app.config" />
+    <Resource Include="app.config" />
     <None Include="packages.config" />
     <None Include="Properties\AppManifest.xml" />
     <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Assets\Images\add_tiny.png" />
+    <Resource Include="Assets\Images\database_add_tiny.png" />
+    <Resource Include="Assets\Images\database_tiny.png" />
+    <Resource Include="Assets\Images\debug_tiny.png" />
+    <Resource Include="Assets\Images\document_add_tiny.png" />
+    <Resource Include="Assets\Images\document_tiny.png" />
+    <Resource Include="Assets\Images\edit_tiny.png" />
+    <Resource Include="Assets\Images\error_tiny.png" />
+    <Resource Include="Assets\Images\execute_query_tiny.png" />
+    <Resource Include="Assets\Images\index_add_tiny.png" />
+    <Resource Include="Assets\Images\index_query_tiny.png" />
+    <Resource Include="Assets\Images\index_small.png" />
+    <Resource Include="Assets\Images\index_tiny.png" />
+    <Resource Include="Assets\Images\info_tiny.png" />
+    <Resource Include="Assets\Images\navigateto_tiny.png" />
+    <Resource Include="Assets\Images\next_tiny.png" />
+    <Resource Include="Assets\Images\previous_tiny.png" />
+    <Resource Include="Assets\Images\reformatjson_tiny.png" />
+    <Resource Include="Assets\Images\refresh_tiny.png" />
+    <Resource Include="Assets\Images\remove_tiny.png" />
+    <Resource Include="Assets\Images\save_tiny.png" />
+    <Resource Include="Assets\Images\search_tiny.png" />
+    <Resource Include="Assets\Images\undo_tiny.png" />
+    <Resource Include="Assets\Images\warning_tiny.png" />
+    <Resource Include="Assets\Images\down_tiny.png" />
+    <Resource Include="Assets\Images\up_tiny.png" />
+    <Resource Include="Assets\Images\edit_columns_tiny.png" />
+    <Resource Include="Assets\Images\copy_to_clipboard_tiny.png" />
+    <Resource Include="Assets\Images\changeview_tiny.png" />
+    <Resource Include="Assets\Images\document_small.png" />
+    <Resource Include="Assets\Images\logs_small.png" />
+    <Resource Include="Assets\Images\tasks_small.png" />
+    <Resource Include="Assets\Images\error_medium.png" />
+    <Resource Include="Assets\Images\error_small.png" />
+    <Resource Include="Assets\Images\navigate_first_tiny.png" />
+    <Resource Include="Assets\Images\navigate_last_tiny.png" />
+    <Resource Include="Assets\Images\Collapse_tiny.png" />
+    <Resource Include="Assets\Images\index_showfields.png" />
+    <Resource Include="Assets\Images\index_skiptransform.png" />
+    <Resource Include="Assets\Images\VisitLink_Tiny.png" />
+    <Resource Include="Assets\Images\recent_queries_tiny.png" />
+    <Resource Include="Assets\Images\clear_history_tiny.png" />
+    <Resource Include="Assets\Images\pin_tiny.png" />
+    <Resource Include="Assets\Images\un_pin_tiny.png" />
+    <Resource Include="Assets\Images\backup_tiny.png" />
+    <Resource Include="Assets\Images\export_data_tiny.png" />
+    <Resource Include="Assets\Images\import_data_tiny.png" />
+    <Resource Include="Assets\Images\offline.png" />
+    <Resource Include="Assets\Images\online.png" />
+    <Resource Include="Assets\Images\database_system_tiny.png" />
+    <Resource Include="Assets\Images\index_delete_small.png" />
+    <Resource Include="Assets\Images\index_delete_tiny.png" />
+    <Resource Include="Assets\Images\Image_Settings.png" />
+    <Resource Include="Assets\Images\Image_Settings_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Check_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Observed_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Uncheck_Tiny.png" />
+    <Resource Include="Assets\Images\Image_NotObserved_Tiny.png" />
+    <Resource Include="Assets\Images\Image_DeleteObserved_Tiny.png" />
+    <Resource Include="Assets\Images\query_options_tiny.png" />
+    <Resource Include="Assets\Images\Image_Key_Add_Tiny.png" />
+    <Resource Include="Assets\Images\Image_Key_Tiny.png" />
+    <Resource Include="Assets\Images\delete_by_query.png" />
+    <Resource Include="Assets\Images\patch_small.png" />
+    <Resource Include="Assets\Images\execute_patch_tiny.png" />
+    <Resource Include="Assets\Images\whatif_tiny.png" />
+    <Resource Include="Assets\Images\restore_tiny.png" />
+    <Resource Include="Assets\Images\export_details_tiny.png" />
+    <Resource Include="Assets\Images\import_csv_tiny.png" />
+    <Content Include="Impl\SplitButton\Credits.txt" />
+    <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />
     <Resource Include="Assets\Images\BackgroundTextureBottom.png" />
-    <Resource Include="Assets\Images\document-index-icon.png" />
     <None Include="Assets\Images\ImageCredits.txt" />
     <Resource Include="Assets\Images\Save.png" />
-    <Resource Include="Assets\Images\Undo.png" />
-    <Resource Include="Assets\Images\add.png" />
-    <Resource Include="Assets\Images\Remove.png" />
-    <Resource Include="Assets\Images\Query.png" />
-    <Resource Include="Assets\Images\Edit.png" />
-    <Resource Include="Assets\Images\HtmlBalanceBracesHS.png" />
-    <Resource Include="Assets\Images\DeleteHS.png" />
     <Resource Include="Assets\Images\RefreshSmall.png" />
-    <Resource Include="Assets\Images\Shortcut.png" />
-    <Resource Include="Assets\Images\Debug.png" />
-    <Resource Include="Assets\Images\Info.png" />
-    <Resource Include="Assets\Images\Warning.png" />
-    <Resource Include="Assets\Images\Document.png" />
-    <Resource Include="Assets\Images\document_page_next.png" />
-    <Resource Include="Assets\Images\document_page_previous.png" />
-    <Resource Include="Assets\Images\database.png" />
     <Resource Include="Assets\Images\database_add.png" />
-    <Resource Include="Assets\Images\document_prepare.png" />
-    <Resource Include="Assets\Images\Error.png" />
-    <Resource Include="Assets\Images\document-new.png" />
-    <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
-    <Resource Include="Assets\Images\ExecuteQuery.png" />
-    <Resource Include="Assets\Images\ChangeView.png" />
-    <Resource Include="Assets\Images\Search.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
   </ItemGroup>
   <ItemGroup>
@@ -676,4 +1267,8 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy "$(TargetDir)$(TargetName).xap" "$(SolutionDir)\Raven.Database\Server\WebUI"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

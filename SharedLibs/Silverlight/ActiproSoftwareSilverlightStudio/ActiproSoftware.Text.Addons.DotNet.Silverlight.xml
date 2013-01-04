@@ -295,25 +295,7 @@
             Creates <c>C#</c> language <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> objects for a <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpContextFactory.CreateContext(ActiproSoftware.Text.TextSnapshotOffset,ActiproSoftware.Text.Languages.DotNet.DotNetContextKind)"><summary>
             Creates an <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> for the specified <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
-            </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which to create a context.</param><param name="kind">A <see cref="T:ActiproSoftware.Text.Languages.DotNet.DotNetContextKind" /> indicating the kind of context.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> that was created.</returns></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase"><summary>
-            Provides the abstract base class of a .NET language parser.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
-            Creates an <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> for the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
-            </summary><param name="request">The <see cref="T:ActiproSoftware.Text.Parsing.IParseRequest" /> that contains data about the requested parsing operation.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><returns>The <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
-            Initializes a new instance of the <c>DotNetParserBase</c> class.
-            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser"><summary>
-            Represents a parser for the <c>C#</c> language.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
-            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
-            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.InitializeParseData(ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
-            Initializes a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> using the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
-            </summary><param name="parseData">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> to initialize.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><remarks>
-            This method is called by default from the <see cref="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)" /> method.
-            </remarks></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.#ctor"><summary>
-            Initializes a new instance of the <c>CSharpParser</c> class.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
-            Initializes a new instance of the <c>CSharpParser</c> class.
-            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpExampleTextProvider"><summary>
+            </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which to create a context.</param><param name="kind">A <see cref="T:ActiproSoftware.Text.Languages.DotNet.DotNetContextKind" /> indicating the kind of context.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> that was created.</returns></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpExampleTextProvider"><summary>
             Represents a example text provider for the <c>C#</c> language.
             </summary><remarks>
             This type was generated by the Actipro Language Designer tool v10.2.530.0 (http://www.actiprosoftware.com).
@@ -375,7 +357,27 @@
             Gets the <c>DocumentationComment</c> lexical state ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpLexicalStateId.PreprocessorDirective"><summary>
             Gets the <c>PreprocessorDirective</c> lexical state ID.
-            </summary></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IAssembly"><summary>
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase"><summary>
+            Provides the abstract base class of a .NET language parser.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> for the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
+            </summary><param name="request">The <see cref="T:ActiproSoftware.Text.Parsing.IParseRequest" /> that contains data about the requested parsing operation.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><returns>The <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
+            Initializes a new instance of the <c>DotNetParserBase</c> class.
+            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser"><summary>
+            Represents a parser for the <c>C#</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
+            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.InitializeParseData(ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
+            Initializes a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> using the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
+            </summary><param name="parseData">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> to initialize.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><remarks>
+            This method is called by default from the <see cref="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)" /> method.
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.ParseExpression(System.String)"><summary>
+            Parses the specified expression text.
+            </summary><param name="text">The expression text to parse.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData" /> that contains the parse results.</returns></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.#ctor"><summary>
+            Initializes a new instance of the <c>CSharpParser</c> class.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
+            Initializes a new instance of the <c>CSharpParser</c> class.
+            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IAssembly"><summary>
             Provides the base requirements of an assembly.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.IAssembly.GetAssemblyName"><summary>
             Returns an <see cref="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IAssemblyName" /> that contains assembly name information.
@@ -444,7 +446,7 @@
             </summary><param name="request">The <see cref="T:ActiproSoftware.Text.Languages.DotNet.Resolution.IResolverRequest" /> to process.</param><returns>An <see cref="T:ActiproSoftware.Text.Languages.DotNet.Resolution.IResolverResultSet" /> containing the results.</returns></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpTokenId"><summary>
             Contains the token IDs for the <c>C#</c> language.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.540.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpTokenId.ContainsId(System.Int32)"><summary>
             Returns whether the specified ID value is valid for this token ID provider.
             </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is valid; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpTokenId.GetDescription(System.Int32)"><summary>
@@ -689,6 +691,10 @@
             Gets the <c>ContextualKeywordAscending</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpTokenId.ContextualKeywordAdd"><summary>
             Gets the <c>ContextualKeywordAdd</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpTokenId.ContextualKeywordAsync"><summary>
+            Gets the <c>ContextualKeywordAsync</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpTokenId.ContextualKeywordAwait"><summary>
+            Gets the <c>ContextualKeywordAwait</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpTokenId.ContextualKeywordBy"><summary>
             Gets the <c>ContextualKeywordBy</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpTokenId.ContextualKeywordDescending"><summary>
@@ -919,7 +925,7 @@
             </summary><value>The modifiers.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Argument"><summary>
             Represents an argument.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Argument.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Argument.#ctor"><summary>
@@ -937,7 +943,7 @@
             </summary><value>The name.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeDeclaration"><summary>
             Represents a type declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeDeclaration.Id"><summary>
@@ -957,7 +963,7 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeDeclarationKind" /> indicating the kind of type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ClassDeclaration"><summary>
             Represents a class declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ClassDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ClassDeclaration.IsStandardModule"><summary>
@@ -980,7 +986,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeMemberDeclaration"><summary>
             Represents a type member declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeMemberDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeMemberDeclaration.Id"><summary>
@@ -998,7 +1004,7 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeMemberDeclarationKind" /> indicating the kind of type member.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConstructorDeclaration"><summary>
             Represents a constructor declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConstructorDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConstructorDeclaration.Kind"><summary>
@@ -1022,7 +1028,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DelegateDeclaration"><summary>
             Represents a delegate declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DelegateDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DelegateDeclaration.Kind"><summary>
@@ -1042,7 +1048,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationDeclaration"><summary>
             Represents an enumeration declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationDeclaration.Kind"><summary>
@@ -1060,7 +1066,7 @@
             </summary><value>The member name.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationMemberDeclaration"><summary>
             Represents an enumeration member declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationMemberDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationMemberDeclaration.#ctor"><summary>
@@ -1076,7 +1082,7 @@
             </summary><value>The name.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EventDeclaration"><summary>
             Represents an event declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EventDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EventDeclaration.Kind"><summary>
@@ -1100,7 +1106,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression"><summary>
             Represents an expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression.FromQualifiedName(ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName)"><summary>
             Creates an AST <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression" /> from an <see cref="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName" />.
             </summary><param name="qualifiedName">The <see cref="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName" /> to examine.</param><returns>The AST <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression" /> that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression.FromQualifiedName(ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QualifiedName)"><summary>
@@ -1110,7 +1116,7 @@
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FieldDeclaration"><summary>
             Represents a field declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FieldDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FieldDeclaration.Kind"><summary>
@@ -1124,7 +1130,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedSizeBufferDeclaration"><summary>
             Represents a fixed size buffer declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedSizeBufferDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedSizeBufferDeclaration.Kind"><summary>
@@ -1138,7 +1144,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AccessorBody"><summary>
             Represents an accessor body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AccessorBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AccessorBody.Id"><summary>
@@ -1150,7 +1156,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AccessorDeclaration"><summary>
             Represents an accessor declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AccessorDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AccessorDeclaration.Id"><summary>
@@ -1172,7 +1178,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AddressOfExpression"><summary>
             Represents an address of expression (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AddressOfExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AddressOfExpression.Id"><summary>
@@ -1182,13 +1188,13 @@
             </summary><value>The child expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QueryOperator"><summary>
             Represents a query operator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QueryOperator.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AggregateQueryOperator"><summary>
             Represents an aggregate query operator (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AggregateQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AggregateQueryOperator.Id"><summary>
@@ -1204,12 +1210,14 @@
             </summary><value>The projection.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AnonymousMethodExpression"><summary>
             Represents an anonymous method expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AnonymousMethodExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AnonymousMethodExpression.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
-            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AnonymousMethodExpression.Parameters"><summary>
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AnonymousMethodExpression.Modifiers"><summary>
+            Gets or sets the modifiers.
+            </summary><value>The modifiers.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AnonymousMethodExpression.Parameters"><summary>
             Gets the parameters.
             </summary><value>The parameters.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AnonymousMethodExpression.HasParameters"><summary>
             Returns whether the <see cref="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AnonymousMethodExpression.Parameters" /> collection property contains at least one item.
@@ -1220,13 +1228,13 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Statement"><summary>
             Represents a statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Statement.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayEraseStatement"><summary>
             Represents an array erase statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayEraseStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayEraseStatement.Id"><summary>
@@ -1238,7 +1246,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayReallocateClause"><summary>
             Represents an array reallocate clause.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayReallocateClause.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayReallocateClause.Id"><summary>
@@ -1256,7 +1264,7 @@
             </summary><value>The variable name.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayReallocateStatement"><summary>
             Represents an array reallocate statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayReallocateStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ArrayReallocateStatement.Id"><summary>
@@ -1270,7 +1278,7 @@
             </summary><value>The preserve data.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AssignmentExpression"><summary>
             Represents an assignment expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AssignmentExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AssignmentExpression.Id"><summary>
@@ -1284,7 +1292,7 @@
             </summary><value>The right expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Attribute"><summary>
             Represents an attribute.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Attribute.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Attribute.Id"><summary>
@@ -1300,7 +1308,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AttributeArgument"><summary>
             Represents an attribute argument.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AttributeArgument.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AttributeArgument.Id"><summary>
@@ -1312,7 +1320,7 @@
             </summary><value>The name.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AttributeSection"><summary>
             Represents an attribute section.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AttributeSection.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AttributeSection.Id"><summary>
@@ -1321,10 +1329,20 @@
             Gets the attributes.
             </summary><value>The attributes.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AttributeSection.HasAttributes"><summary>
             Returns whether the <see cref="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AttributeSection.Attributes" /> collection property contains at least one item.
-            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BinaryOperatorExpression"><summary>
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AwaitExpression"><summary>
+            Represents an await expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AwaitExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AwaitExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.AwaitExpression.ChildExpression"><summary>
+            Gets or sets the child expression.
+            </summary><value>The child expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BinaryOperatorExpression"><summary>
             Represents a binary operator expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BinaryOperatorExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BinaryOperatorExpression.Id"><summary>
@@ -1338,7 +1356,7 @@
             </summary><value>The right expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BlockStatement"><summary>
             Represents a block statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BlockStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BlockStatement.Id"><summary>
@@ -1350,13 +1368,13 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BreakStatement"><summary>
             Represents a break statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.BreakStatement.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CastExpression"><summary>
             Represents a cast expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CastExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CastExpression.Id"><summary>
@@ -1368,7 +1386,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CatchClause"><summary>
             Represents a catch clause.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CatchClause.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CatchClause.Id"><summary>
@@ -1382,7 +1400,7 @@
             </summary><value>The variable declarator.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CheckedExpression"><summary>
             Represents a checked expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CheckedExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CheckedExpression.Id"><summary>
@@ -1392,7 +1410,7 @@
             </summary><value>The child expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CheckedStatement"><summary>
             Represents a checked statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CheckedStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CheckedStatement.Id"><summary>
@@ -1402,7 +1420,7 @@
             </summary><value>The child statement.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ClassBody"><summary>
             Represents a class body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ClassBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ClassBody.Id"><summary>
@@ -1414,7 +1432,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CompilationUnit"><summary>
             Represents a compilation unit.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CompilationUnit.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CompilationUnit.Id"><summary>
@@ -1426,7 +1444,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CompilationUnitOption"><summary>
             Represents a compilation unit option.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CompilationUnitOption.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.CompilationUnitOption.Name"><summary>
@@ -1436,7 +1454,7 @@
             </summary><value>The value.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConditionalExpression"><summary>
             Represents a conditional expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConditionalExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConditionalExpression.Id"><summary>
@@ -1450,7 +1468,7 @@
             </summary><value>The true expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConstructorBody"><summary>
             Represents a constructor body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConstructorBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ConstructorBody.Id"><summary>
@@ -1462,7 +1480,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ContinueStatement"><summary>
             Represents a continue statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ContinueStatement.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ContinueStatement.Kind"><summary>
@@ -1470,7 +1488,7 @@
             </summary><value>The kind.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DefaultValueExpression"><summary>
             Represents a default value expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DefaultValueExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DefaultValueExpression.Id"><summary>
@@ -1480,13 +1498,13 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DistinctQueryOperator"><summary>
             Represents a distinct query operator (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DistinctQueryOperator.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DocumentationComment"><summary>
             Represents a documentation comment.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DocumentationComment.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DocumentationComment.Text"><summary>
@@ -1494,7 +1512,7 @@
             </summary><value>The comment text.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DoStatement"><summary>
             Represents a do statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DoStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DoStatement.Id"><summary>
@@ -1506,7 +1524,7 @@
             </summary><value>The condition expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DotNetAstNodeId"><summary>
             Contains the AST node IDs for the <c>.NET</c> language.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DotNetAstNodeId.ContainsId(System.Int32)"><summary>
             Returns whether the specified ID value is valid for this AST node ID provider.
             </summary><param name="id">The AST node ID to examine.</param><returns><c>true</c> if the ID value is valid; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DotNetAstNodeId.GetDescription(System.Int32)"><summary>
@@ -1551,6 +1569,8 @@
             Gets the <c>BreakStatement</c> AST node ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DotNetAstNodeId.CastExpression"><summary>
             Gets the <c>CastExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DotNetAstNodeId.AwaitExpression"><summary>
+            Gets the <c>AwaitExpression</c> AST node ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DotNetAstNodeId.CatchClause"><summary>
             Gets the <c>CatchClause</c> AST node ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.DotNetAstNodeId.CheckedExpression"><summary>
@@ -1790,7 +1810,7 @@
             </summary></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ElseIfSection"><summary>
             Represents an else if section (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ElseIfSection.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ElseIfSection.Id"><summary>
@@ -1802,13 +1822,13 @@
             </summary><value>The statement.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EndStatement"><summary>
             Represents an end statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EndStatement.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationBody"><summary>
             Represents an enumeration body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EnumerationBody.Id"><summary>
@@ -1820,7 +1840,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EventBody"><summary>
             Represents an event body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EventBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.EventBody.Id"><summary>
@@ -1832,7 +1852,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExitStatement"><summary>
             Represents an exit statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExitStatement.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExitStatement.Kind"><summary>
@@ -1840,7 +1860,7 @@
             </summary><value>The kind.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExpressionStatement"><summary>
             Represents an expression statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExpressionStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExpressionStatement.Id"><summary>
@@ -1850,7 +1870,7 @@
             </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExternalAliasDirective"><summary>
             Represents an external alias directive.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExternalAliasDirective.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExternalAliasDirective.Alias"><summary>
@@ -1858,7 +1878,7 @@
             </summary><value>The alias.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExternalAliasDirectiveSection"><summary>
             Represents an external alias directive section.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExternalAliasDirectiveSection.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ExternalAliasDirectiveSection.Id"><summary>
@@ -1870,7 +1890,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedSizeBufferDeclarator"><summary>
             Represents a fixed size buffer declarator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedSizeBufferDeclarator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedSizeBufferDeclarator.Id"><summary>
@@ -1884,7 +1904,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedStatement"><summary>
             Represents a fixed statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FixedStatement.Id"><summary>
@@ -1898,7 +1918,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ForEachStatement"><summary>
             Represents a for each statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ForEachStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ForEachStatement.Id"><summary>
@@ -1912,7 +1932,7 @@
             </summary><value>The enumerable expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ForStatement"><summary>
             Represents a for statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ForStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ForStatement.Id"><summary>
@@ -1932,7 +1952,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FromQueryOperator"><summary>
             Represents a from query operator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FromQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.FromQueryOperator.Id"><summary>
@@ -1944,7 +1964,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.GoToStatement"><summary>
             Represents a go to statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.GoToStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.GoToStatement.Id"><summary>
@@ -1954,7 +1974,7 @@
             </summary><value>The label.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.GroupQueryOperator"><summary>
             Represents a group query operator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.GroupQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.GroupQueryOperator.Id"><summary>
@@ -1968,7 +1988,7 @@
             </summary><value>The source.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.IfStatement"><summary>
             Represents an if statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.IfStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.IfStatement.Id"><summary>
@@ -1986,7 +2006,7 @@
             </summary><value>The true statement.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InitializerExpression"><summary>
             Represents an initializer expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InitializerExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InitializerExpression.Id"><summary>
@@ -1998,13 +2018,13 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InstanceExpression"><summary>
             Represents an instance expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InstanceExpression.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceAccessorDeclaration"><summary>
             Represents an interface accessor declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceAccessorDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceAccessorDeclaration.Id"><summary>
@@ -2018,7 +2038,7 @@
             </summary><value>The kind.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceBody"><summary>
             Represents an interface body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceBody.Id"><summary>
@@ -2030,7 +2050,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceDeclaration"><summary>
             Represents an interface declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceDeclaration.Id"><summary>
@@ -2050,13 +2070,13 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeDeclarationKind" /> indicating the kind of type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceMemberDeclaration"><summary>
             Represents an interface member declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceMemberDeclaration.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceEventDeclaration"><summary>
             Represents an interface event declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceEventDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceEventDeclaration.Id"><summary>
@@ -2072,7 +2092,7 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeMemberDeclarationKind" /> indicating the kind of type member.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceMethodDeclaration"><summary>
             Represents an interface method declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceMethodDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfaceMethodDeclaration.Id"><summary>
@@ -2094,7 +2114,7 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeMemberDeclarationKind" /> indicating the kind of type member.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfacePropertyDeclaration"><summary>
             Represents an interface property declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfacePropertyDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InterfacePropertyDeclaration.Id"><summary>
@@ -2116,7 +2136,7 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeMemberDeclarationKind" /> indicating the kind of type member.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InvocationExpression"><summary>
             Represents an invocation expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InvocationExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.InvocationExpression.Id"><summary>
@@ -2130,7 +2150,7 @@
             </summary><value>The target expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.IsTypeOfExpression"><summary>
             Represents an is type of expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.IsTypeOfExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.IsTypeOfExpression.Id"><summary>
@@ -2142,7 +2162,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.JoinQueryOperator"><summary>
             Represents a join query operator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.JoinQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.JoinQueryOperator.Id"><summary>
@@ -2160,7 +2180,7 @@
             </summary><value>The right key expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LabeledStatement"><summary>
             Represents a labeled statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LabeledStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LabeledStatement.Id"><summary>
@@ -2172,12 +2192,14 @@
             </summary><value>The label.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LambdaExpression"><summary>
             Represents a lambda expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LambdaExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LambdaExpression.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
-            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LambdaExpression.Parameters"><summary>
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LambdaExpression.Modifiers"><summary>
+            Gets or sets the modifiers.
+            </summary><value>The modifiers.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LambdaExpression.Parameters"><summary>
             Gets the parameters.
             </summary><value>The parameters.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LambdaExpression.HasParameters"><summary>
             Returns whether the <see cref="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LambdaExpression.Parameters" /> collection property contains at least one item.
@@ -2188,7 +2210,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LetQueryOperator"><summary>
             Represents a let query operator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LetQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LetQueryOperator.Id"><summary>
@@ -2198,7 +2220,7 @@
             </summary><value>The projection.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LiteralExpression"><summary>
             Represents a literal expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LiteralExpression.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LiteralExpression.Kind"><summary>
@@ -2208,7 +2230,7 @@
             </summary><value>The string value.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LocalVariableDeclaration"><summary>
             Represents a local variable declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LocalVariableDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LocalVariableDeclaration.Id"><summary>
@@ -2220,7 +2242,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LockStatement"><summary>
             Represents a lock statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LockStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.LockStatement.Id"><summary>
@@ -2232,7 +2254,7 @@
             </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MemberAccess"><summary>
             Represents a member access.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MemberAccess.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MemberAccess.Id"><summary>
@@ -2248,7 +2270,7 @@
             </summary><value>The target expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MethodBody"><summary>
             Represents a method body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MethodBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MethodBody.Id"><summary>
@@ -2260,7 +2282,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MethodDeclaration"><summary>
             Represents a method declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MethodDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.MethodDeclaration.Id"><summary>
@@ -2292,7 +2314,7 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeMemberDeclarationKind" /> indicating the kind of type member.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.NamespaceBody"><summary>
             Represents a namespace body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.NamespaceBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.NamespaceBody.Id"><summary>
@@ -2304,7 +2326,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.NamespaceDeclaration"><summary>
             Represents a namespace declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.NamespaceDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.NamespaceDeclaration.Id"><summary>
@@ -2316,7 +2338,7 @@
             </summary><value>The name.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ObjectCreationExpression"><summary>
             Represents an object creation expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ObjectCreationExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ObjectCreationExpression.Id"><summary>
@@ -2332,7 +2354,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OperatorBody"><summary>
             Represents an operator body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OperatorBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OperatorBody.Id"><summary>
@@ -2344,7 +2366,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OperatorDeclaration"><summary>
             Represents an operator declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OperatorDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OperatorDeclaration.Id"><summary>
@@ -2364,7 +2386,7 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeMemberDeclarationKind" /> indicating the kind of type member.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OrderByQueryOperator"><summary>
             Represents an order by query operator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OrderByQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.OrderByQueryOperator.Id"><summary>
@@ -2376,7 +2398,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Ordering"><summary>
             Represents an ordering.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Ordering.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Ordering.Id"><summary>
@@ -2388,7 +2410,7 @@
             </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ParameterDeclaration"><summary>
             Represents a parameter declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ParameterDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ParameterDeclaration.Id"><summary>
@@ -2408,7 +2430,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ParenthesizedExpression"><summary>
             Represents a parenthesized expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ParenthesizedExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ParenthesizedExpression.Id"><summary>
@@ -2418,13 +2440,13 @@
             </summary><value>The child expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.PreprocessorDirective"><summary>
             Represents a preprocessor directive.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.PreprocessorDirective.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.PropertyBody"><summary>
             Represents a property body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.PropertyBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.PropertyBody.Id"><summary>
@@ -2436,7 +2458,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.PropertyDeclaration"><summary>
             Represents a property declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.PropertyDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.PropertyDeclaration.Id"><summary>
@@ -2483,7 +2505,7 @@
             </summary><value>The pointer level.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QualifiedName"><summary>
             Represents a qualified name.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QualifiedName.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QualifiedName.Clone"><summary>
@@ -2521,7 +2543,7 @@
             </summary><value>The string-based value for the AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QueryExpression"><summary>
             Represents a query expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QueryExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.QueryExpression.Id"><summary>
@@ -2533,7 +2555,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.RangeVariableDeclaration"><summary>
             Represents a range variable declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.RangeVariableDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.RangeVariableDeclaration.Id"><summary>
@@ -2545,7 +2567,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.RangeVariableDeclarator"><summary>
             Represents a range variable declarator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.RangeVariableDeclarator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.RangeVariableDeclarator.Id"><summary>
@@ -2559,13 +2581,13 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.RegionPreprocessorDirective"><summary>
             Represents a region preprocessor directive.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.RegionPreprocessorDirective.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ReturnStatement"><summary>
             Represents a return statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ReturnStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ReturnStatement.Id"><summary>
@@ -2575,7 +2597,7 @@
             </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ReturnTypeDeclaration"><summary>
             Represents a return type declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ReturnTypeDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ReturnTypeDeclaration.Id"><summary>
@@ -2589,7 +2611,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SelectQueryOperator"><summary>
             Represents a select query operator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SelectQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SelectQueryOperator.Id"><summary>
@@ -2610,7 +2632,7 @@
             </summary><value>The collection of optional generic type arguments for the identifier.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SimpleName"><summary>
             Represents a simple name.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SimpleName.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SimpleName.Clone"><summary>
@@ -2640,7 +2662,7 @@
             </summary><value>The string-based value for the AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SizeOfExpression"><summary>
             Represents a size of expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SizeOfExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SizeOfExpression.Id"><summary>
@@ -2650,7 +2672,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SkipQueryOperator"><summary>
             Represents a skip query operator (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SkipQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SkipQueryOperator.Id"><summary>
@@ -2660,7 +2682,7 @@
             </summary><value>The count expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SkipWhileQueryOperator"><summary>
             Represents a skip while query operator (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SkipWhileQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SkipWhileQueryOperator.Id"><summary>
@@ -2670,7 +2692,7 @@
             </summary><value>The condition expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StackAllocationInitializer"><summary>
             Represents a stack allocation initializer.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StackAllocationInitializer.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StackAllocationInitializer.Id"><summary>
@@ -2682,13 +2704,13 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StopStatement"><summary>
             Represents a stop statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StopStatement.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StructureBody"><summary>
             Represents a structure body.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StructureBody.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StructureBody.Id"><summary>
@@ -2700,7 +2722,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StructureDeclaration"><summary>
             Represents a structure declaration.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StructureDeclaration.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.StructureDeclaration.Id"><summary>
@@ -2720,7 +2742,7 @@
             </summary><value>A <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.TypeDeclarationKind" /> indicating the kind of type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SwitchSection"><summary>
             Represents a switch section.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SwitchSection.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SwitchSection.Id"><summary>
@@ -2736,7 +2758,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SwitchStatement"><summary>
             Represents a switch statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SwitchStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.SwitchStatement.Id"><summary>
@@ -2750,7 +2772,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TakeQueryOperator"><summary>
             Represents a take query operator (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TakeQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TakeQueryOperator.Id"><summary>
@@ -2760,7 +2782,7 @@
             </summary><value>The count expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TakeWhileQueryOperator"><summary>
             Represents a take while query operator (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TakeWhileQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TakeWhileQueryOperator.Id"><summary>
@@ -2770,7 +2792,7 @@
             </summary><value>The condition expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ThrowStatement"><summary>
             Represents a throw statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ThrowStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.ThrowStatement.Id"><summary>
@@ -2780,7 +2802,7 @@
             </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TryCastExpression"><summary>
             Represents a try cast expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TryCastExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TryCastExpression.Id"><summary>
@@ -2792,7 +2814,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TryStatement"><summary>
             Represents a try statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TryStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TryStatement.Id"><summary>
@@ -2808,7 +2830,7 @@
             </summary><value>The try block.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeOfExpression"><summary>
             Represents a type of expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeOfExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeOfExpression.Id"><summary>
@@ -2818,7 +2840,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeParameter"><summary>
             Represents a type parameter.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeParameter.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.TypeParameter.Id"><summary>
@@ -2844,7 +2866,7 @@
             </summary><value>The variance annotation.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnaryOperatorExpression"><summary>
             Represents an unary operator expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnaryOperatorExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnaryOperatorExpression.Id"><summary>
@@ -2856,7 +2878,7 @@
             </summary><value>The operator.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UncheckedExpression"><summary>
             Represents an unchecked expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UncheckedExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UncheckedExpression.Id"><summary>
@@ -2866,7 +2888,7 @@
             </summary><value>The child expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UncheckedStatement"><summary>
             Represents an unchecked statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UncheckedStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UncheckedStatement.Id"><summary>
@@ -2876,7 +2898,7 @@
             </summary><value>The child statement.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnsafeStatement"><summary>
             Represents an unsafe statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnsafeStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnsafeStatement.Id"><summary>
@@ -2886,7 +2908,7 @@
             </summary><value>The child statement.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorHandlerStatement"><summary>
             Represents an unstructured error handler statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorHandlerStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorHandlerStatement.Id"><summary>
@@ -2896,7 +2918,7 @@
             </summary><value>The label.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorResumeStatement"><summary>
             Represents an unstructured error resume statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorResumeStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorResumeStatement.Id"><summary>
@@ -2906,7 +2928,7 @@
             </summary><value>The label.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorThrowStatement"><summary>
             Represents an unstructured error throw statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorThrowStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UnstructuredErrorThrowStatement.Id"><summary>
@@ -2916,7 +2938,7 @@
             </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingDirective"><summary>
             Represents an using directive.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingDirective.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingDirective.Id"><summary>
@@ -2930,7 +2952,7 @@
             </summary><value>The xml namespace.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingDirectiveSection"><summary>
             Represents an using directive section.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingDirectiveSection.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingDirectiveSection.Id"><summary>
@@ -2942,7 +2964,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingStatement"><summary>
             Represents an using statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.UsingStatement.Id"><summary>
@@ -2954,7 +2976,7 @@
             </summary><value>The resource acquisition.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.VariableDeclarationExpression"><summary>
             Represents a variable declaration expression.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.VariableDeclarationExpression.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.VariableDeclarationExpression.Id"><summary>
@@ -2966,7 +2988,7 @@
             </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.VariableDeclarator"><summary>
             Represents a variable declarator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.VariableDeclarator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.VariableDeclarator.Id"><summary>
@@ -2982,7 +3004,7 @@
             </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WhereQueryOperator"><summary>
             Represents a where query operator.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WhereQueryOperator.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WhereQueryOperator.Id"><summary>
@@ -2992,7 +3014,7 @@
             </summary><value>The condition expression..</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WhileStatement"><summary>
             Represents a while statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WhileStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WhileStatement.Id"><summary>
@@ -3004,7 +3026,7 @@
             </summary><value>The condition expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WithStatement"><summary>
             Represents a with statement (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WithStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WithStatement.Id"><summary>
@@ -3016,13 +3038,13 @@
             </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WithTargetExpression"><summary>
             Represents a with target expression (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.WithTargetExpression.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.XmlNamespaceExpression"><summary>
             Represents a xml namespace expression (VB only).
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.XmlNamespaceExpression.Id"><summary>
             Gets the An integer value that identifies the type of AST node.
             </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.XmlNamespaceExpression.Alias"><summary>
@@ -3030,7 +3052,7 @@
             </summary><value>The alias.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.YieldStatement"><summary>
             Represents a yield statement.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.543.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.YieldStatement.GetChildrenEnumerator"><summary>
             Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
             </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.YieldStatement.Id"><summary>
@@ -3102,6 +3124,8 @@
             </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Modifiers.Abstract"><summary>
             Defines a class or member that must be inherited.
             Represents <c>MustOverride</c> and <c>MustInherit</c> in Visual Basic.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Modifiers.Async"><summary>
+            Specifies that the target procedure is asynchronously executed.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Modifiers.Default"><summary>
             Identifies a property as the default property of its class, structure, or interface.
             Used in Visual Basic only.
@@ -3110,6 +3134,9 @@
             </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Modifiers.Final"><summary>
             Defines a class or member that cannot be overridden (also known as <c>Sealed</c>).
             Represents <c>NotInheritable</c> and <c>NotOverridable</c> in Visual Basic.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Modifiers.Iterator"><summary>
+            Specifies that a property or procedure that contains an iterator.
+            Used in Visual Basic only.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.DotNet.Ast.Modifiers.Narrowing"><summary>
             Indicates that a conversion operator (CType) converts a class or structure to a type that might not be able to hold some of the possible values of the original class or structure.
             Used in Visual Basic only.
@@ -3375,7 +3402,9 @@
             Gets the <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which this context was created.
             </summary><value>The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which this context was created.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.IDotNetContext.TargetExpression"><summary>
             Gets the target AST <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression" /> for the context, if known.
-            </summary><value>The target AST <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression" /> for the context, if known.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData"><summary>
+            </summary><value>The target AST <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression" /> for the context, if known.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.IDotNetContext.TargetSnapshotOffset"><summary>
+            Gets the <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />, if known, against which to use as context for the resolver.
+            </summary><value>The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />, if known, against which to use as context for the resolver.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData"><summary>
             Provides the base requirements of an object that stores the results of a .NET language parsing operation.
             </summary><seealso cref="T:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParseData" /></member><member name="P:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData.PreprocessorDirectives"><summary>
             Gets the collection of preprocessor directives.
@@ -3598,6 +3627,9 @@
             </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsAdvanced"><summary>
             Gets whether the current member is decorated such that it should only be visible to advanced users within an editor.
             </summary><value><c>true</c> if the current member is decorated such that it should only be visible to advanced users within an editor; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsAsync"><summary>
+            Gets whether the current member is designated as having an asynchronous result.
+            </summary><value><c>true</c> if the current member is designated as having an asynchronous result; otherwise, <c>false</c>.
             </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsDefault"><summary>
             Gets whether the current member is the default member for the declaring type.
             </summary><value><c>true</c> if the current member is the default member for the declaring type; otherwise, <c>false</c>.
@@ -3616,6 +3648,9 @@
             </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsHidden"><summary>
             Gets whether the current member is decorated such that it should never be visible within an editor.
             </summary><value><c>true</c> if the current member is decorated such that it should never be visible within an editor; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsImplicitDefaultConstructor"><summary>
+            Gets whether the current member is an implicit default constructor.
+            </summary><value><c>true</c> if the current member is an implicit default constructor; otherwise, <c>false</c>.
             </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsLiteral"><summary>
             Gets whether the current member's value is written at compile time and cannot be changed.
             </summary><value><c>true</c> if the current member's value is written at compile time and cannot be changed; otherwise, <c>false</c>.
@@ -3858,10 +3893,7 @@
             Represents a qualified name.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.Implementation.QualifiedName.Clone"><summary>
             Returns a deep clone of the object.
-            </summary><returns>The object that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.Implementation.QualifiedName.Construct(ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName,System.Collections.Generic.IDictionary{System.String,ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName},System.Boolean)"><summary>
-            Returns whether the qualified name can be constructed using the specified type parameter mappings dictionary.
-            </summary><param name="qualifiedName">The <see cref="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName" /> to examine.</param><param name="mappings">The dictionary of type parameter names to type argument qualified names.</param><param name="isCaseSensitive">Whether the construction is occuring in a case-sensitive language.</param><returns><c>true</c> if the qualified name can be constructed using the specified type parameter mappings dictionary; otherwise, <c>false</c>.
-            </returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.Implementation.QualifiedName.Equals(System.Object)"><summary>
+            </summary><returns>The object that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.Implementation.QualifiedName.Equals(System.Object)"><summary>
             Determines whether the specified <c>Object</c> is equal to the current <c>Object</c>. 
             </summary><param name="obj">The <c>Object</c> to compare to the current <c>Object</c>.</param><returns><c>true</c> if the specified <c>Object</c> is equal to the current <c>Object</c>; 
             otherwise, <c>false</c>. 
@@ -4126,19 +4158,7 @@
             Creates <c>Visual Basic</c> language <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> objects for a <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBContextFactory.CreateContext(ActiproSoftware.Text.TextSnapshotOffset,ActiproSoftware.Text.Languages.DotNet.DotNetContextKind)"><summary>
             Creates an <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> for the specified <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
-            </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which to create a context.</param><param name="kind">A <see cref="T:ActiproSoftware.Text.Languages.DotNet.DotNetContextKind" /> indicating the kind of context.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> that was created.</returns></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBParser"><summary>
-            Represents a parser for the <c>Visual Basic</c> language.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
-            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
-            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.InitializeParseData(ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
-            Initializes a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> using the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
-            </summary><param name="parseData">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> to initialize.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><remarks>
-            This method is called by default from the <see cref="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)" /> method.
-            </remarks></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.#ctor"><summary>
-            Initializes a new instance of the <c>VBParser</c> class.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
-            Initializes a new instance of the <c>VBParser</c> class.
-            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBExampleTextProvider"><summary>
+            </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which to create a context.</param><param name="kind">A <see cref="T:ActiproSoftware.Text.Languages.DotNet.DotNetContextKind" /> indicating the kind of context.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> that was created.</returns></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBExampleTextProvider"><summary>
             Represents a example text provider for the <c>VB</c> language.
             </summary><remarks>
             This type was generated by the Actipro Language Designer tool v10.2.530.0 (http://www.actiprosoftware.com).
@@ -4198,7 +4218,21 @@
             Gets the <c>DocumentationComment</c> lexical state ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBLexicalStateId.PreprocessorDirective"><summary>
             Gets the <c>PreprocessorDirective</c> lexical state ID.
-            </summary></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBProjectAssembly"><summary>
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBParser"><summary>
+            Represents a parser for the <c>Visual Basic</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
+            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.InitializeParseData(ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
+            Initializes a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> using the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
+            </summary><param name="parseData">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> to initialize.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><remarks>
+            This method is called by default from the <see cref="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)" /> method.
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.ParseExpression(System.String)"><summary>
+            Parses the specified expression text.
+            </summary><param name="text">The expression text to parse.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData" /> that contains the parse results.</returns></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.#ctor"><summary>
+            Initializes a new instance of the <c>VBParser</c> class.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
+            Initializes a new instance of the <c>VBParser</c> class.
+            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBProjectAssembly"><summary>
             Represents a <c>Visual Basic</c> project (source code-based) assembly.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBProjectAssembly.#ctor(System.String)"><summary>
             Initializes a new instance of the <c>VBProjectAssembly</c> class.
@@ -4212,7 +4246,7 @@
             </summary><value>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.Resolution.IResolver" /> to use for this project assembly.</value></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId"><summary>
             Contains the token IDs for the <c>Visual Basic</c> language.
             </summary><remarks>
-            This type was generated by the Actipro Language Designer tool v11.1.540.0 (http://www.actiprosoftware.com).
+            This type was generated by the Actipro Language Designer tool v12.2.570.0 (http://www.actiprosoftware.com).
             </remarks></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContainsId(System.Int32)"><summary>
             Returns whether the specified ID value is valid for this token ID provider.
             </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is valid; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.GetDescription(System.Int32)"><summary>
@@ -4311,6 +4345,10 @@
             Gets the <c>ContextualKeywordAggregate</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordAscending"><summary>
             Gets the <c>ContextualKeywordAscending</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordAsync"><summary>
+            Gets the <c>ContextualKeywordAsync</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordAwait"><summary>
+            Gets the <c>ContextualKeywordAwait</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordBy"><summary>
             Gets the <c>ContextualKeywordBy</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordCustom"><summary>
@@ -4333,6 +4371,8 @@
             Gets the <c>ContextualKeywordIsFalse</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordIsTrue"><summary>
             Gets the <c>ContextualKeywordIsTrue</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordIterator"><summary>
+            Gets the <c>ContextualKeywordIterator</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordJoin"><summary>
             Gets the <c>ContextualKeywordJoin</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordMid"><summary>
@@ -4347,6 +4387,8 @@
             Gets the <c>ContextualKeywordTake</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordWhere"><summary>
             Gets the <c>ContextualKeywordWhere</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.ContextualKeywordYield"><summary>
+            Gets the <c>ContextualKeywordYield</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.KeywordAddHandler"><summary>
             Gets the <c>KeywordAddHandler</c> token ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBTokenId.KeywordAddressOf"><summary>

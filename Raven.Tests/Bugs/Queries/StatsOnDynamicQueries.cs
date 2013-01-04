@@ -1,10 +1,11 @@
+using Raven.Client;
 using Raven.Client.Linq;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class StatsOnDynamicQueries : LocalClientTest
+	public class StatsOnDynamicQueries : RavenTest
 	{
 		[Fact]
 		public void WillGiveStats()

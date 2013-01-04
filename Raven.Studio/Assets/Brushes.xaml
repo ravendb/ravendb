@@ -43,7 +43,10 @@
 					  Offset="1" />
 	</LinearGradientBrush>
 
-	<!-- general brushes -->
+    <Color x:Key="Color_TextBoxBorder">#C6BEBE</Color>
+    <SolidColorBrush x:Key="Brush_TextBoxBorder" Color="{StaticResource Color_TextBoxBorder}"/>
+    <SolidColorBrush x:Key="Brush_TextBoxFocusBorder" Color="#F2F2F2"/>
+    <!-- general brushes -->
 	<SolidColorBrush x:Key="DefaultScreenBackground"
 					 Color="White" />
 
@@ -84,7 +87,9 @@
 	<SolidColorBrush x:Key="ButtonBackgroundBrush"
 					 Color="#E6E6E6" />
 
-	<SolidColorBrush x:Key="SelectedItemHighlightBrush"
+    <Color x:Key="Brush_Button_PressedColor">#F9F2F4</Color>
+    
+    <SolidColorBrush x:Key="SelectedItemHighlightBrush"
 					 Color="#dcdcdc" />
 
 	<LinearGradientBrush x:Key="DividerBrush"
@@ -124,9 +129,15 @@
 
 	<Color x:Key="Color_Contrast">#FF9A002B</Color>
 	<SolidColorBrush x:Key="Brush_ContrastColor" Color="{StaticResource Color_Contrast}"/>
+
+    <SolidColorBrush x:Key="Brush_ToolbarBackground" Color="#FFE2D9D9"/>
+    <SolidColorBrush x:Key="Brush_SettingsToolbarBackground" Color="#FFE0DBDB"/>
+    <SolidColorBrush x:Key="Brush_HeaderBorder" Color="#FFEBE2E6"/>
+    
     <LinearGradientBrush x:Key="Brush_HeaderBackground"  EndPoint="0.5,1" StartPoint="0.5,0">
-        <GradientStop Color="#C5F7F7F7" Offset="0.049"/>
-        <GradientStop Color="#C1E8E8E8" Offset="0.74"/>
+        <GradientStop Color="#FFF4F0F1"/>
+        <GradientStop Color="#FFE7E4E5" Offset="0.286"/>
+        <GradientStop Color="#FFE6E4E5" Offset="0.815"/>
     </LinearGradientBrush>
 	
 	<LinearGradientBrush x:Key="Brush_SubtleBackground1" EndPoint="0.5,1" StartPoint="0.5,0">
@@ -138,4 +149,15 @@
 		<GradientStop Color="#FEFAFAFA"/>
 		<GradientStop Color="#FFF1F1F1" Offset="1"/>
 	</LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush_ErrorBackground" EndPoint="0.5,1" StartPoint="0.5,0">
+        <GradientStop Color="#D67171"/>
+        <GradientStop Color="#C25858" Offset="1"/>
+    </LinearGradientBrush>
+
+    <Color x:Key="Color_ItemSelected">#FFC4C4C4</Color>
+    <SolidColorBrush x:Key="Brush_ItemSelected" Color="{StaticResource Color_ItemSelected}"/>
+
+    <Color x:Key="Color_ControlBorder">#FFEAE7E4</Color>
+    <SolidColorBrush x:Key="Brush_ControlBorder" Color="{StaticResource Color_ControlBorder}"/>
 </ResourceDictionary>

@@ -4,7 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-using Newtonsoft.Json;
+using Raven.Client.Embedded;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
@@ -15,7 +16,7 @@ using Xunit;
 
 namespace Raven.Tests.Views
 {
-	public class MapReduce : AbstractDocumentStorageTest
+	public class MapReduce : RavenTest
 	{
 		private const string map =
 			@"from post in docs
@@ -33,22 +34,19 @@ select new {
   comments_length = g.Sum(x=>(int)x.comments_length)
   }";
 
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public MapReduce()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-			});
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
-			db.SpinBackgroundWorkers();
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

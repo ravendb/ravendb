@@ -1,4 +1,3 @@
-#if !NET_3_5
 using System;
 using Raven.Abstractions.Data;
 #if !SILVERLIGHT
@@ -10,7 +9,7 @@ namespace Raven.Client.Document.Batches
 {
 	public interface ILazyOperation
 	{
-		GetRequest CraeteRequest();
+		GetRequest CreateRequest();
 		object Result { get;  }
 		bool RequiresRetry { get; }
 		void HandleResponse(GetResponse response);
@@ -25,4 +24,3 @@ namespace Raven.Client.Document.Batches
 #endif
 	}
 }
-#endif

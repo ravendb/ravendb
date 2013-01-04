@@ -1,52 +1,55 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
+﻿using System;
+using System.Reactive;
+using System.Reactive.Subjects;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
-	public abstract class ViewModel : Model
-	{
-		public List<string> ModelUrlIgnoreList { get; private set; }
-		public string ModelUrl { get; set; }
-		public bool IsLoaded { get; private set; }
+    public class ViewModel : Model
+    {
+        private Subject<Unit> unloadedSubject;
 
-		public ViewModel()
+        public void NotifyViewLoaded()
+        {
+            if (!IsLoaded)
+            {
+                IsLoaded = true;
+                OnViewLoaded();
+            }
+        }
+
+        public void NotifyViewUnloaded()
+        {
+            if (IsLoaded)
+            {
+                if (unloadedSubject != null)
+                    unloadedSubject.OnNext(Unit.Default);
+
+                OnViewUnloaded();
+
+                IsLoaded = false;
+            }
+        }
+
+		protected virtual void OnViewUnloaded()
 		{
-			ModelUrlIgnoreList = new List<string>();
+			
 		}
 
-		public void LoadModel(string state)
+		protected virtual void OnViewLoaded()
 		{
-			IsLoaded = true;
-			if (string.IsNullOrWhiteSpace(state) == false &&
-				state.StartsWith(ModelUrl, StringComparison.InvariantCultureIgnoreCase) &&
-				ModelUrlIgnoreList.Any(state.StartsWith) == false)
-			{
-				LoadModelParameters(state.Substring(ModelUrl.Length));
-				ForceTimerTicked();
-			}
+	   
 		}
 
-		public virtual void LoadModelParameters(string parameters) { }
-
-		public override Task TimerTickedAsync()
+		protected IObservable<Unit> Unloaded
 		{
-			return IsLoaded ? LoadedTimerTickedAsync() : null;
+			get { return unloadedSubject ?? (unloadedSubject = new Subject<Unit>()); }
 		}
 
-		protected virtual Task LoadedTimerTickedAsync()
+		protected bool IsLoaded { get; private set; }
+		protected PerDatabaseState PerDatabaseState
 		{
-			return null;
-		}
-
-		public Observable<DatabaseModel> Database {get { return ApplicationModel.Database; }}
-
-		public IAsyncDatabaseCommands DatabaseCommands
-		{
-			get { return Database.Value.AsyncDatabaseCommands; }
+			get { return ApplicationModel.Current.State.Databases[ApplicationModel.Database.Value]; }
 		}
 	}
 }

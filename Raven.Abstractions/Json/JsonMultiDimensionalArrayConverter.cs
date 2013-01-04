@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using System.Collections;
 
 namespace Raven.Abstractions.Json
@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Json
 		/// <summary>
 		/// Reads the JSON representation of the object.
 		/// </summary>
-		/// <param name="reader">The <see cref="T:Newtonsoft.Json.JsonReader"/> to read from.</param>
+		/// <param name="reader">The <see cref="T:Raven.Imports.Newtonsoft.Json.JsonReader"/> to read from.</param>
 		/// <param name="objectType">Type of the object.</param>
 		/// <param name="existingValue">The existing value of object being read.</param>
 		/// <param name="serializer">The calling serializer.</param>
@@ -41,7 +41,7 @@ namespace Raven.Abstractions.Json
 			var arrayRank = objectType.GetArrayRank();
 
 			// Retrieve all the values from the Json
-			var arrayValues = ReadRank(reader, serializer);
+			var arrayValues = ReadRank(reader, serializer, arrayItemType);
 
 			// Determine the lengths of all ranks for the array
 			var rankLengthList = GetRankLengthList(arrayValues);
@@ -66,7 +66,7 @@ namespace Raven.Abstractions.Json
 		/// <summary>
 		/// Writes the JSON representation of the object.
 		/// </summary>
-		/// <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> to write to.</param>
+		/// <param name="writer">The <see cref="T:Raven.Imports.Newtonsoft.Json.JsonWriter"/> to write to.</param>
 		/// <param name="value">The value.</param>
 		/// <param name="serializer">The calling serializer.</param>
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -77,13 +77,15 @@ namespace Raven.Abstractions.Json
 
 
 		#region Helpers
+
 		/// <summary>
 		/// Read in all the values from the Json reader and populate a nested ArrayList
 		/// </summary>
 		/// <param name="reader">JsonReader to use</param>
 		/// <param name="serializer">JsonSerializer to use</param>
+		/// <param name="elementType">The element type</param>
 		/// <returns></returns>
-		private List<object> ReadRank(JsonReader reader, JsonSerializer serializer)
+		private List<object> ReadRank(JsonReader reader, JsonSerializer serializer, Type elementType)
 		{
 			var retVal = new List<object>();
 
@@ -94,9 +96,9 @@ namespace Raven.Abstractions.Json
 				// If another array is found, it is a new rank
 				// Otherwise, we have a value
 				if (reader.TokenType == JsonToken.StartArray)
-					retVal.Add(ReadRank(reader, serializer));
+					retVal.Add(ReadRank(reader, serializer, elementType));
 				else
-					retVal.Add(reader.Value);
+					retVal.Add(serializer.Deserialize(reader, elementType));
 
 				reader.Read();
 			}
@@ -145,7 +147,7 @@ namespace Raven.Abstractions.Json
 			var currentRankLength = rankLengthList[currentRank];
 			for (var i = 0; i < currentRankLength; i++)
 			{
-				// Assign currentIndex to the list of assignMentIndexes
+				// Assign currentIndex to the list of assignmentIndexes
 				myAssignToIndexList[myAssignToIndex] = i;
 
 				// If more ranks are found, process them

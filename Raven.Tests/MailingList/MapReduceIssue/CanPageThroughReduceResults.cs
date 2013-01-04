@@ -1,6 +1,7 @@
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Smuggler;
@@ -13,12 +14,12 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 		[Fact]
 		public void Test()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore {Url = "http://localhost:8079/"}.Initialize())
+			using(GetNewServer())
+			using (var store = new DocumentStore{Url = "http://localhost:8079/"}.Initialize())
 			{
-				using (var stream = typeof (CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))
+				using (var stream = typeof(CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))
 				{
-					new SmugglerApi(new RavenConnectionStringOptions {Url = store.Url}).ImportData(stream, new SmugglerOptions());
+					new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions {Url = store.Url}).ImportData(stream, new SmugglerOptions());
 				}
 
 				using (var session = store.OpenSession())

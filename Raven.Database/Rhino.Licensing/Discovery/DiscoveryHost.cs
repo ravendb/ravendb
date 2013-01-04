@@ -13,13 +13,14 @@ namespace Rhino.Licensing.Discovery
 	public class DiscoveryHost : IDisposable
 	{
 		private Socket socket;
-		readonly byte[] buffer = new byte[1024 * 4];
+		private readonly byte[] buffer = new byte[1024 * 4];
 
 		///<summary>
 		/// Starts listening to network notifications
 		///</summary>
 		public void Start()
 		{
+			IsStop = false;
 			socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
 			NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
@@ -60,6 +61,9 @@ namespace Rhino.Licensing.Discovery
 
 		private void Completed(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
 		{
+			if (IsStop)
+				return;
+
 			using (socketAsyncEventArgs)
 			{
 				try
@@ -135,5 +139,12 @@ namespace Rhino.Licensing.Discovery
 			if (socket != null)
 				socket.Dispose();
 		}
+
+		public void Stop()
+		{
+			IsStop = true;
+		}
+
+		protected bool IsStop { get; set; }
 	}
 }

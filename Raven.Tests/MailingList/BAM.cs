@@ -5,7 +5,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Tests.MailingList
 {
-	public class BAM : LocalClientTest
+	public class BAM : RavenTest
 	{
 		[Fact]
 		public void get_dbnames_test()
@@ -13,13 +13,13 @@ namespace Raven.Tests.MailingList
 			using (var server = GetNewServer())
 			using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
-				var dbNames = docStore.DatabaseCommands.GetDatabaseNames(25);
+				var dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
 
 				Assert.Empty(dbNames);
 
 				docStore.DatabaseCommands.EnsureDatabaseExists("test");
 
-				dbNames = docStore.DatabaseCommands.GetDatabaseNames(25);
+				dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
 
 				Assert.NotEmpty(dbNames);
 
@@ -58,7 +58,7 @@ namespace Raven.Tests.MailingList
 
 
 		[Fact]
-		public void Cannot_create_tenant_named_default()
+		public void Cannot_create_tenant_named_system()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore
@@ -66,9 +66,9 @@ namespace Raven.Tests.MailingList
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var throws = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.EnsureDatabaseExists("default"));
+				var throws = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.EnsureDatabaseExists("System"));
 
-				Assert.Contains(@"Cannot create a tenant database with the name 'default', that name is reserved for the actual default database", throws.Message);
+				Assert.Contains(@"Cannot create a tenant database with the name 'System', that name is reserved for the actual system database", throws.Message);
 		
 			}
 		}

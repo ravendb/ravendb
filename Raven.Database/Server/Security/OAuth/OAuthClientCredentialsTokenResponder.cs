@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Net;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
@@ -61,11 +63,11 @@ namespace Raven.Database.Server.Security.OAuth
 				return;
 			}
 
-			AccessTokenBody.DatabaseAccess[] authorizedDatabases;
-			if (!AuthenticateClient.Authenticate(ResourceStore, identity.Item1, identity.Item2, out authorizedDatabases))
+			List<DatabaseAccess> authorizedDatabases;
+			if (!AuthenticateClient.Authenticate(Database, identity.Item1, identity.Item2, out authorizedDatabases))
 			{
-				if ((ResourceStore == DefaultResourceStore ||
-				     !AuthenticateClient.Authenticate(DefaultResourceStore, identity.Item1, identity.Item2, out authorizedDatabases)))
+				if ((Database == SystemDatabase ||
+				     !AuthenticateClient.Authenticate(SystemDatabase, identity.Item1, identity.Item2, out authorizedDatabases)))
 				{
 					context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
 					context.Response.AddHeader("WWW-Authenticate", "Basic realm=\"Raven DB\"");
@@ -79,7 +81,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 			var userId = identity.Item1;
 
-			var token = AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
+			var token = AccessToken.Create(Settings.OAuthTokenKey, new AccessTokenBody
 			{
 				UserId = userId,
 				AuthorizedDatabases = authorizedDatabases

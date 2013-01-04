@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -12,11 +16,14 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class IndexDefinitionModel : ViewModel, IHasPageTitle
+	public class IndexDefinitionModel : PageViewModel, IHasPageTitle, IAutoCompleteSuggestionProvider
 	{
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
 		private string originalIndex;
+		private bool isNewIndex;
+		private bool hasUnsavedChanges;
+		public string OriginalName { get; private set; }
 
 		public IndexDefinitionModel()
 		{
@@ -26,16 +33,41 @@ namespace Raven.Studio.Models
 			{
 				new MapItem()
 			};
+
+			Maps.CollectionChanged += HandleChildCollectionChanged;
+
 			Fields = new BindableCollection<FieldProperties>(field => field.Name);
+			Fields.CollectionChanged += HandleChildCollectionChanged;
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => ErrorsCount);
 		}
 
+		private void HandleChildCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			MarkAsDirty();
+
+			if (e.Action == NotifyCollectionChangedAction.Add)
+			{
+				var newItem = e.NewItems[0] as INotifyPropertyChanged;
+				if (newItem != null)
+					newItem.PropertyChanged += HandleChildItemChanged;
+			}
+		}
+
+		private void HandleChildItemChanged(object sender, PropertyChangedEventArgs e)
+		{
+			MarkAsDirty();
+		}
+
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
 			index = indexDefinition;
-			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
+
+			if (index.Maps.Count == 0)
+				index.Maps.Add("");
+
+			Maps.Set(index.Maps.Select(x => new MapItem { Text = x }));
 
 			ShowReduce = Reduce != null;
 			ShowTransformResults = TransformResults != null;
@@ -45,7 +77,23 @@ namespace Raven.Studio.Models
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
 
+			RestoreDefaults(index);
+
+			hasUnsavedChanges = false;
+
 			OnEverythingChanged();
+		}
+
+		private void RestoreDefaults(IndexDefinition indexDefinition)
+		{
+			if (indexDefinition.IsMapReduce == false)
+				return;
+
+			foreach (var field in Fields)
+			{
+				if(indexDefinition.Stores.ContainsKey(field.Name) == false)
+					field.Storage = FieldStorage.Yes;
+			}
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -53,7 +101,11 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
-				Header = "Create an Index";
+				IsNewIndex = true;
+				Header = "New Index";
+
+				UpdateFromIndex(new IndexDefinition());
+
 				return;
 			}
 
@@ -61,21 +113,30 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(name))
 				HandleIndexNotFound(null);
 
-			Header = "Edit Index: " + name;
+			Header = name;
+			OriginalName = name;
+			IsNewIndex = false;
+
 			DatabaseCommands.GetIndexAsync(name)
-				.ContinueOnSuccessInTheUIThread(index1 =>
-				                   {
-				                   	if (index1 == null)
-				                   	{
-										HandleIndexNotFound(name);
-				                   		return;
-				                   	}
-									originalIndex = JsonConvert.SerializeObject(index);
-									UpdateFromIndex(index1);
-				                   }).Catch();
+				.ContinueOnUIThread(task =>
+										{
+											if (task.IsFaulted || task.Result == null)
+											{
+												HandleIndexNotFound(name);
+												return;
+											}
+											originalIndex = JsonConvert.SerializeObject(task.Result);
+											UpdateFromIndex(task.Result);
+										}).Catch();
 		}
 
-		public static void HandleIndexNotFound(string name)
+		public override bool CanLeavePage()
+		{
+		    return !hasUnsavedChanges || AskUser.Confirmation("Edit Index",
+		                                                      "There are unsaved changes to this index. Are you sure you want to continue?");
+		}
+
+	    public static void HandleIndexNotFound(string name)
 		{
 			if (string.IsNullOrWhiteSpace(name) == false)
 			{
@@ -124,22 +185,32 @@ namespace Raven.Studio.Models
 				var field = Fields.FirstOrDefault(f => f.Name == localItem.Key);
 				if (field == null)
 				{
-					field = FieldProperties.Defualt;
+					field = FieldProperties.Default;
 					field.Name = localItem.Key;
 					Fields.Add(field);
 				}
 				setter(field, localItem.Value);
 			}
-		}	
+		}
 
 		public string Name
 		{
 			get { return index.Name; }
 			set
 			{
-				index.Name = value;
-				OnPropertyChanged(() => Name);
+				if (index.Name != value)
+				{
+					MarkAsDirtyIfSignificant(index.Name, value);
+					index.Name = value;
+					OnPropertyChanged(() => Name);
+				}
 			}
+		}
+
+		private void MarkAsDirtyIfSignificant(string oldValue, string newValue)
+		{
+			if (!(string.IsNullOrEmpty(oldValue) && string.IsNullOrEmpty(newValue)))
+				MarkAsDirty();
 		}
 
 		//public string MapUrl
@@ -174,9 +245,41 @@ namespace Raven.Studio.Models
 			get { return index.Reduce; }
 			set
 			{
-				index.Reduce = value;
-				OnPropertyChanged(() => Reduce);
+				if (index.Reduce != value)
+				{
+					MarkAsDirtyIfSignificant(index.Reduce, value);
+					index.Reduce = value;
+					OnPropertyChanged(() => Reduce);
+					OnPropertyChanged(() => ReduceHeight);
+				}
 			}
+		}
+
+		public double ReduceHeight
+		{
+			get
+			{
+				return TextHeight(Reduce);
+			}
+		}
+
+		private double TextHeight(string text)
+		{
+			if (text == null)
+				return 100;
+			var len = text.Count(ch => ch == '\n');
+			if (len < 4)
+				return 100;
+			if (len < 8)
+				return 180;
+			if (len < 12)
+				return 230;
+			return 300;
+		}
+
+		private void MarkAsDirty()
+		{
+			hasUnsavedChanges = true;
 		}
 
 		private bool showTransformResults;
@@ -195,8 +298,21 @@ namespace Raven.Studio.Models
 			get { return index.TransformResults; }
 			set
 			{
-				index.TransformResults = value;
-				OnPropertyChanged(() => TransformResults);
+				if (index.TransformResults != value)
+				{
+					MarkAsDirtyIfSignificant(index.TransformResults, value);
+					index.TransformResults = value;
+					OnPropertyChanged(() => TransformResults);
+					OnPropertyChanged(() => TransformHeight);
+				}
+			}
+		}
+
+		public double TransformHeight
+		{
+			get
+			{
+				return TextHeight(TransformResults);
 			}
 		}
 
@@ -212,7 +328,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-#region Commands
+		#region Commands
 
 		public ICommand AddMap
 		{
@@ -246,7 +362,7 @@ namespace Raven.Studio.Models
 
 		public ICommand AddField
 		{
-			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Fields.Add(FieldProperties.Defualt)); }
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Fields.Add(FieldProperties.Default)); }
 		}
 
 		public ICommand RemoveField
@@ -321,6 +437,27 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
+				if (string.IsNullOrWhiteSpace(index.Name))
+				{
+					ApplicationModel.Current.AddNotification(new Notification("Index must have a name!", NotificationLevel.Error));
+					return;
+				}
+				if (index.Maps.All(item => string.IsNullOrWhiteSpace(item.Text)))
+				{
+					ApplicationModel.Current.AddNotification(new Notification("Index must have at least one map with data!", NotificationLevel.Error));
+					return;
+				}
+
+				if (index.IsNewIndex == false && index.OriginalName != index.Name)
+				{
+					if (AskUser.Confirmation("Can not rename and index",
+						                     "If you wish to save a new index with this new name press OK, to cancel the save command press Cancel") ==false)
+					{
+						ApplicationModel.Current.Notifications.Add(new Notification("Index Not Saved"));
+						return;
+					}
+				}
+
 				index.UpdateIndex();
 				if (index.Reduce == "")
 					index.Reduce = null;
@@ -330,15 +467,27 @@ namespace Raven.Studio.Models
 				var mapIndexes = (from mapItem in index.Maps where mapItem.Text == "" select index.Maps.IndexOf(mapItem)).ToList();
 				mapIndexes.Sort();
 
-				for (int i = mapIndexes.Count - 1; i >= 0; i++)
+				for (int i = mapIndexes.Count - 1; i >= 0; i--)
 				{
 					index.Maps.RemoveAt(mapIndexes[i]);
 				}
 
-					ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
+				ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
 				DatabaseCommands.PutIndexAsync(index.Name, index.index, true)
-					.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " saved")))
+					.ContinueOnSuccess(() =>
+										   {
+											   ApplicationModel.Current.AddNotification(
+												   new Notification("index " + index.Name + " saved"));
+											   index.hasUnsavedChanges = false;
+											   PutIndexNameInUrl(index.Name);
+										   })
 					.Catch();
+			}
+
+			private void PutIndexNameInUrl(string name)
+			{
+				if (index.IsNewIndex || index.Header != name)
+					UrlUtil.Navigate("/indexes/" + name, true);
 			}
 		}
 
@@ -370,7 +519,7 @@ namespace Raven.Studio.Models
 
 			public override bool CanExecute(object parameter)
 			{
-				return index != null && string.IsNullOrWhiteSpace(index.Name) == false;
+				return index != null && index.IsNewIndex == false;
 			}
 
 			public override void Execute(object parameter)
@@ -383,31 +532,136 @@ namespace Raven.Studio.Models
 			{
 				DatabaseCommands
 					.DeleteIndexAsync(index.Name)
-					.ContinueOnSuccessInTheUIThread(() =>
-					                                	{
-					                                		ApplicationModel.Current.AddNotification(
-					                                			new Notification("index " + index.Name + " successfully deleted"));
-					                                		UrlUtil.Navigate("/indexes");
-					                                	});
+					.ContinueOnUIThread(t =>
+														{
+															if (t.IsFaulted)
+															{
+																ApplicationModel.Current.AddErrorNotification(t.Exception, "index " + index.Name + " could not be deleted");
+															}
+															else
+															{
+																ApplicationModel.Current.AddInfoNotification("index " + index.Name + " successfully deleted");
+																UrlUtil.Navigate("/indexes");
+															}
+														});
 			}
 		}
 
 		#endregion Commands
 
-		public class MapItem
+		public class MapItem : NotifyPropertyChangedBase
 		{
-			public string Text { get; set; }
+			public MapItem()
+			{
+				text = string.Empty;
+			}
+			private string text;
+
+			public string Text
+			{
+				get { return text; }
+				set
+				{
+					if (text != value)
+					{
+						text = value;
+						OnPropertyChanged(() => Text);
+						OnPropertyChanged(() => TextHeight);
+					}
+				}
+			}
+
+			public double TextHeight
+			{
+				get
+				{
+					var len = text.Count(ch => ch == '\n');
+					if (len < 4)
+						return 100;
+					if (len < 8)
+						return 180;
+					if (len < 12)
+						return 230;
+					return 300;
+				}
+			}
 		}
 
-		public class FieldProperties
-		{
-			public string Name { get; set; }
-			public FieldStorage Storage { get; set; }
-			public FieldIndexing Indexing { get; set; }
-			public SortOptions Sort { get; set; }
-			public string Analyzer { get; set; }
 
-			public static FieldProperties Defualt
+
+		public class FieldProperties : NotifyPropertyChangedBase
+		{
+			private string name;
+			public string Name
+			{
+				get { return name; }
+				set
+				{
+					if (name != value)
+					{
+						name = value;
+						OnPropertyChanged(() => Name);
+					}
+				}
+			}
+
+			private FieldStorage storage;
+			public FieldStorage Storage
+			{
+				get { return storage; }
+				set
+				{
+					if (storage != value)
+					{
+						storage = value;
+						OnPropertyChanged(() => Storage);
+					}
+				}
+			}
+
+			private FieldIndexing indexing;
+			public FieldIndexing Indexing
+			{
+				get { return indexing; }
+				set
+				{
+					if (indexing != value)
+					{
+						indexing = value;
+						OnPropertyChanged(() => Indexing);
+					}
+				}
+			}
+
+			private SortOptions sort;
+			public SortOptions Sort
+			{
+				get { return sort; }
+				set
+				{
+					if (sort != value)
+					{
+						sort = value;
+						OnPropertyChanged(() => Sort);
+					}
+				}
+			}
+
+			private string analyzer;
+			public string Analyzer
+			{
+				get { return analyzer; }
+				set
+				{
+					if (analyzer != value)
+					{
+						analyzer = value;
+						OnPropertyChanged(() => Analyzer);
+					}
+				}
+			}
+
+			public static FieldProperties Default
 			{
 				get
 				{
@@ -425,6 +679,29 @@ namespace Raven.Studio.Models
 		public string PageTitle
 		{
 			get { return "Edit Index"; }
+		}
+
+		public bool IsNewIndex
+		{
+			get { return isNewIndex; }
+			set
+			{
+				isNewIndex = value;
+				OnPropertyChanged(() => IsNewIndex);
+			}
+		}
+		public Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			var list = new List<object>
+			{
+				"Raven.Database.Indexing.LowerCaseKeywordAnalyzer, Raven.Database",	
+				"Raven.Database.Indexing.LowerCaseWhitespaceAnalyzer, Raven.Database",
+				"Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.WhitespaceAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.StopAnalyzer, Lucene.Net",
+				"Lucene.Net.Analysis.SimpleAnalyzer, Lucene.Net",
+			};
+			return TaskEx.FromResult<IList<object>>(list);
 		}
 	}
 }

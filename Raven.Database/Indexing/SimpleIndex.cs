@@ -4,16 +4,20 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
-using Raven.Database.Config;
+using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -22,8 +26,8 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
-		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
-			: base(directory, name, indexDefinition, viewGenerator, configuration)
+		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
+			: base(directory, name, indexDefinition, viewGenerator, context)
 		{
 		}
 
@@ -32,88 +36,141 @@ namespace Raven.Database.Indexing
 			get { return false; }
 		}
 
-		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
+		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
-			Write(context, (indexWriter, analyzer, stats) =>
+			var sourceCount = 0;
+			var sw = Stopwatch.StartNew();
+			var start = SystemTime.UtcNow;
+			Write((indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
 					.Where(x => x != null)
 					.ToList();
-				var documentsWrapped = documents.Select((dynamic doc) =>
+				try
 				{
-					if(doc.__document_id == null)
-						throw new ArgumentException(string.Format("Cannot index something which doesn't have a document id, but got: '{0}'", doc));
-
-					count++;
-					string documentId = doc.__document_id.ToString();
-					if (processedKeys.Add(documentId) == false)
-						return doc;
-					batchers.ApplyAndIgnoreAllErrors(
-						exception =>
-						{
-							logIndexing.WarnException(
-								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-												   name, documentId),
-								exception);
-							context.AddError(name,
-											 documentId,
-											 exception.Message
-								);
-						},
-						trigger => trigger.OnIndexEntryDeleted(documentId));
-					indexWriter.DeleteDocuments(new Term(Constants.DocumentIdFieldName, documentId.ToLowerInvariant()));
-					return doc;
-				});
-				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
-				var luceneDoc = new Document();
-				var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.ANALYZED_NO_NORMS);
-				foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context, stats))
-				{
-					count++;
-
-					float boost;
-					var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
-
-					if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
+					var docIdTerm = new Term(Constants.DocumentIdFieldName);
+					var documentsWrapped = batch.Docs.Select((doc,i) =>
 					{
-						count += 1;
-						luceneDoc.GetFields().Clear();
-						luceneDoc.SetBoost(boost);
-						documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
-						luceneDoc.Add(documentIdField);
-						foreach (var field in indexingResult.Fields)
-						{
-							luceneDoc.Add(field);
-						}
+						Interlocked.Increment(ref sourceCount);
+						if (doc.__document_id == null)
+							throw new ArgumentException(
+								string.Format("Cannot index something which doesn't have a document id, but got: '{0}'", doc));
+
+						string documentId = doc.__document_id.ToString();
+						if (processedKeys.Add(documentId) == false)
+							return doc;
 						batchers.ApplyAndIgnoreAllErrors(
 							exception =>
 							{
 								logIndexing.WarnException(
-									string.Format( "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-													   name, indexingResult.NewDocId),
+									string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
+									              name, documentId),
 									exception);
 								context.AddError(name,
-												 indexingResult.NewDocId,
-												 exception.Message
+								                 documentId,
+								                 exception.Message
 									);
 							},
-							trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
-						LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
-						AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+							trigger => trigger.OnIndexEntryDeleted(documentId));
+						if (batch.SkipDeleteFromIndex[i] == false || 
+							context.ShouldRemoveFromIndex(documentId)) // maybe it is recently deleted?
+							indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
+				
+						return doc;
+					})
+						.Where(x => x is FilteredDocument == false)
+						.ToList();
+
+					var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
+					{
+						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
+						var luceneDoc = new Document();
+						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
+						                                Field.Index.NOT_ANALYZED_NO_NORMS);
+
+						using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
+						{
+							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
+							{
+								float boost;
+								var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
+
+								if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
+								{
+									Interlocked.Increment(ref count);
+									luceneDoc.GetFields().Clear();
+									luceneDoc.Boost = boost;
+									documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
+									luceneDoc.Add(documentIdField);
+									foreach (var field in indexingResult.Fields)
+									{
+										luceneDoc.Add(field);
+									}
+									batchers.ApplyAndIgnoreAllErrors(
+										exception =>
+										{
+											logIndexing.WarnException(
+												string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+															  name, indexingResult.NewDocId),
+												exception);
+											context.AddError(name,
+															 indexingResult.NewDocId,
+															 exception.Message
+												);
+										},
+										trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
+									LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
+									AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+								}
+
+								Interlocked.Increment(ref stats.IndexingSuccesses);
+							}
+						}
+					});
+
+					IDictionary<string, HashSet<string>> result;
+					while (allReferencedDocs.TryDequeue(out result))
+					{
+						foreach (var referencedDocument in result)
+						{
+							actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+						}
 					}
 
-					stats.IndexingSuccesses++;
 				}
-				batchers.ApplyAndIgnoreAllErrors(
-					e =>
-					{
-						logIndexing.WarnException("Failed to dispose on index update trigger", e);
-						context.AddError(name, null, e.Message);
-					},
-					x => x.Dispose());
-				return count;
+				catch(Exception e)
+				{
+					batchers.ApplyAndIgnoreAllErrors(
+						ex =>
+						{
+							logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
+							context.AddError(name, null, ex.Message);
+						},
+						x => x.AnErrorOccured(e));
+					throw;
+				}
+				finally
+				{
+					batchers.ApplyAndIgnoreAllErrors(
+						e =>
+						{
+							logIndexing.WarnException("Failed to dispose on index update trigger", e);
+							context.AddError(name, null, e.Message);
+						},
+						x => x.Dispose());
+				}
+				return sourceCount;
+			});
+			AddindexingPerformanceStat(new IndexingPerformanceStats
+			{
+				OutputCount = count,
+				InputCount = sourceCount,
+				Duration = sw.Elapsed,
+				Operation = "Index",
+				Started = start
 			});
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}
@@ -139,7 +196,7 @@ namespace Raven.Database.Indexing
 			{
 				foreach (var abstractField in indexingResult.Fields)
 				{
-					abstractField.SetOmitNorms(false);
+					abstractField.OmitNorms = false;
 				}
 			}
 
@@ -164,16 +221,13 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private readonly Dictionary<Type, PropertyDescriptorCollection> propertyDescriptorCache = new Dictionary<Type, PropertyDescriptorCollection>();
+		private readonly ConcurrentDictionary<Type, PropertyDescriptorCollection> propertyDescriptorCache = new ConcurrentDictionary<Type, PropertyDescriptorCollection>();
 
 		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc)
 		{
-		    PropertyDescriptorCollection properties;
 			Type type = doc.GetType();
-			if(propertyDescriptorCache.TryGetValue(type, out properties) == false)
-			{
-				propertyDescriptorCache[type] = properties = TypeDescriptor.GetProperties(doc);
-			}
+			PropertyDescriptorCollection properties =
+				propertyDescriptorCache.GetOrAdd(type, TypeDescriptor.GetProperties);
 			
 			var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
 			return new IndexingResult()
@@ -188,7 +242,7 @@ namespace Raven.Database.Indexing
 
 		public override void Remove(string[] keys, WorkContext context)
 		{
-			Write(context, (writer, analyzer,stats) =>
+			Write((writer, analyzer,stats) =>
 			{
 				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));

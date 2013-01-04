@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class ClientAccessPolicy : RequestResponder
+	public class ClientAccessPolicy : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -18,8 +18,8 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.Response.AddHeader("ETag", typeof (ClientAccessPolicy).FullName);
-			context.Response.SetPublicCachability();
+			context.WriteETag(typeof (ClientAccessPolicy).FullName);
+			context.Response.SetPublicCacheability();
 			context.Response.ContentType = "text/xml";
 			context.Write(@"<?xml version='1.0' encoding='utf-8'?>
 <access-policy>

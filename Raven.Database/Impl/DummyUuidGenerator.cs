@@ -10,7 +10,7 @@ namespace Raven.Database.Impl
 	public class DummyUuidGenerator : IUuidGenerator
 	{
 		private byte cur;
-		public Guid CreateSequentialUuid()
+		public Guid CreateSequentialUuid(UuidType type)
 		{
 			var bytes = new byte[16];
 			bytes[15] += ++cur;

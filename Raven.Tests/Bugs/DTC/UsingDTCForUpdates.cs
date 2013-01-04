@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.DTC
 {
-	public class UsingDTCForUpdates : LocalClientTest
+	public class UsingDTCForUpdates : RavenTest
 	{
 		[Fact]
 		public void can_update_a_doc_within_transaction_scope()
@@ -80,7 +80,7 @@ namespace Raven.Tests.Bugs.DTC
 
 					var stored = session.Load<Foo>(id1.ToString());
 
-					Assert.Equal(stored.Name, "Some other value");
+					Assert.Equal("Some other value", stored.Name);
 				}
 			}
 		}

@@ -4,7 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
-using Newtonsoft.Json;
+using Raven.Client.Embedded;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -14,25 +15,20 @@ using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class PutTriggers : AbstractDocumentStorageTest
+	public class PutTriggers : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public PutTriggers()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				Container = new CompositionContainer(new TypeCatalog(
-					typeof(VetoCapitalNamesPutTrigger),
-					typeof(AuditPutTrigger))),
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-			});
+			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (VetoCapitalNamesPutTrigger), typeof(AuditPutTrigger))));
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
@@ -50,14 +46,13 @@ namespace Raven.Tests.Triggers
 			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 			var actualString = db.Get("abc", null).DataAsJson.ToString(Formatting.None);
-			Assert.Contains(@"946684800000", actualString);
+			Assert.Contains("2010-02-13T18:26:48.5060000Z", actualString);
 		}
 
 		[Fact]
 		public void CannotPutDocumentWithUpperCaseNames()
 		{
-			Assert.Throws<OperationVetoedException>(
-				() => db.Put("abc", null, RavenJObject.Parse("{'name': 'ABC'}"), new RavenJObject(), null));
+			Assert.Throws<OperationVetoedException>(() => db.Put("abc", null, RavenJObject.Parse("{'name': 'ABC'}"), new RavenJObject(), null));
 		}
 	}
 }

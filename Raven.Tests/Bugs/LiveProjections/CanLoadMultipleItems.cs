@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.LiveProjections
 {
-	public class CanLoadMultipleItems : LocalClientTest
+	public class CanLoadMultipleItems : RavenTest
 	{
 		[Fact]
 		public void CanLoadMultipleItemsInTransformResults()

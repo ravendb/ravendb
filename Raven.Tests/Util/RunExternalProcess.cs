@@ -66,7 +66,7 @@ namespace Raven.Tests.Util
 
 					using (var session = store.OpenSession())
 					{
-						session.Advanced.DatabaseCommands.Batch(new[] {GetPutCommand()});
+						store.DatabaseCommands.Batch(new[] { GetPutCommand() });
 						session.SaveChanges();
 					}
 				}

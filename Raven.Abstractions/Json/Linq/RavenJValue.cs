@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -14,6 +15,7 @@ namespace Raven.Json.Linq
 	{
 		private JTokenType _valueType;
 		private object _value;
+		private bool isSnapshot;
 
 		/// <summary>
 		/// Gets the node type for this <see cref="RavenJToken"/>.
@@ -33,6 +35,9 @@ namespace Raven.Json.Linq
 			get { return _value; }
 			set
 			{
+				if (isSnapshot)
+					throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+
 				Type currentType = (_value != null) ? _value.GetType() : null;
 				Type newType = (value != null) ? value.GetType() : null;
 
@@ -125,7 +130,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public RavenJValue(Guid value)
-		  : this(value, JTokenType.String)
+			: this(value, JTokenType.String)
 		{
 		}
 
@@ -134,7 +139,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public RavenJValue(Uri value)
-		  : this(value, JTokenType.String)
+			: this(value, JTokenType.String)
 		{
 		}
 
@@ -143,7 +148,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public RavenJValue(TimeSpan value)
-		  : this(value, JTokenType.String)
+			: this(value, JTokenType.String)
 		{
 		}
 
@@ -280,7 +285,7 @@ namespace Raven.Json.Linq
 			JsonConverter matchingConverter;
 			if (_value != null && ((matchingConverter = GetMatchingConverter(converters, _value.GetType())) != null))
 			{
-				matchingConverter.WriteJson(writer, _value, new JsonSerializer());
+				matchingConverter.WriteJson(writer, _value, JsonExtensions.CreateDefaultJsonSerializer());
 				return;
 			}
 
@@ -290,6 +295,11 @@ namespace Raven.Json.Linq
 					writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
 					return;
 				case JTokenType.Float:
+					if (_value is decimal)
+					{
+						writer.WriteValue((decimal)_value);
+						return;
+					}
 					writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
 					return;
 				case JTokenType.String:
@@ -307,7 +317,7 @@ namespace Raven.Json.Linq
 						writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
 					return;
 				case JTokenType.Bytes:
-					writer.WriteValue((byte[]) _value);
+					writer.WriteValue((byte[])_value);
 					return;
 				case JTokenType.Guid:
 				case JTokenType.Uri:
@@ -361,14 +371,13 @@ namespace Raven.Json.Linq
 
 		public bool Equals(RavenJValue other)
 		{
+			if (Type == JTokenType.Null && other == null)
+				return true;
 			return other != null && ValuesEquals(this, other);
 		}
 
 		private static bool ValuesEquals(RavenJValue v1, RavenJValue v2)
 		{
-			if(v1 == v2 )
-				return true;
-
 			// HACK: This prevents ValuesEquals from being commutative, need to find a more elegant fix
 			// suggestion: if v1._valueType != v2._valueType and one of the value types is a string do a TryParse on the string v2._valueType
 			switch (v1._valueType)
@@ -457,7 +466,7 @@ namespace Raven.Json.Linq
 					string s1 = Convert.ToString(objA, CultureInfo.InvariantCulture);
 					string s2 = Convert.ToString(objB, CultureInfo.InvariantCulture);
 
-					return s1.CompareTo(s2);
+					return string.CompareOrdinal(s1, s2);
 				case JTokenType.Boolean:
 					bool b1 = Convert.ToBoolean(objA, CultureInfo.InvariantCulture);
 					bool b2 = Convert.ToBoolean(objB, CultureInfo.InvariantCulture);
@@ -496,14 +505,10 @@ namespace Raven.Json.Linq
 				case JTokenType.Guid:
 					if (!(objB is Guid))
 					{
-#if !NET_3_5
 						Guid guid;
-						if(Guid.TryParse((string) objB, out guid) == false)
+						if (Guid.TryParse((string)objB, out guid) == false)
 							throw new ArgumentException("Object must be of type Guid.");
 						objB = guid;
-#else
-						objB = new Guid((string)objB);
-#endif
 					}
 
 					Guid guid1 = (Guid)objA;
@@ -512,7 +517,7 @@ namespace Raven.Json.Linq
 					return guid1.CompareTo(guid2);
 				case JTokenType.Uri:
 					if (objB is string)
-						objB = new Uri((string) objB);
+						objB = new Uri((string)objB);
 
 					if (!(objB is Uri))
 						throw new ArgumentException("Object must be of type Uri.");
@@ -548,8 +553,16 @@ namespace Raven.Json.Linq
 
 		internal override bool DeepEquals(RavenJToken node)
 		{
+			if (Type == JTokenType.Null && node == null)
+				return true;
+
 			var other = node as RavenJValue;
-			return other != null && ValuesEquals(this, other);
+			if (other == null)
+				return false;
+			if (ReferenceEquals(other,this))
+				return true;
+
+			return ValuesEquals(this, other);
 		}
 
 		internal override int GetDeepHashCode()
@@ -613,8 +626,21 @@ namespace Raven.Json.Linq
 			var formattable = _value as IFormattable;
 			if (formattable != null)
 				return formattable.ToString(format, formatProvider);
-			
+
 			return _value.ToString();
+		}
+
+		public override void EnsureSnapshot()
+		{
+			isSnapshot = true;
+		}
+
+		public override RavenJToken CreateSnapshot()
+		{
+			if (!isSnapshot)
+				throw new InvalidOperationException("Cannot create snapshot without previously calling EnsureSnapShot");
+
+			return new RavenJValue(Value);
 		}
 
 		public static RavenJValue Null

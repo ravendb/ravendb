@@ -5,10 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
 
@@ -27,7 +28,7 @@ namespace Raven.Database.Backup
 		public event Action<string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
 		private readonly Dictionary<string, long> fileToSize = new Dictionary<string, long>();
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		private readonly string source;
 		private readonly string destination;
@@ -54,7 +55,7 @@ namespace Raven.Database.Backup
 		/// <summary>
 		/// The process for backing up a directory index is simple:
 		/// a) create hard links to all the files in the lucene directory in a temp director
-		///	   that gives us the current snapshot, and protect us from lucene's
+		///	   that gives us the current snapshot, and protect us from Lucene's
 		///    deleting files.
 		/// b) copy the hard links to the destination directory
 		/// c) delete the temp directory
@@ -117,21 +118,44 @@ namespace Raven.Database.Backup
 
 		public void Prepare()
 		{
-			var sourceFilesSnapshot = Directory.GetFiles(source);
-			foreach (var sourceFile in sourceFilesSnapshot)
+			string[] sourceFilesSnapshot;
+			try
 			{
+				sourceFilesSnapshot = Directory.GetFiles(source);
+			}
+			catch (Exception e)
+			{
+				logger.WarnException("Could not get directory files, maybe it was deleted", e);
+				return;
+			}
+			for (int index = 0; index < sourceFilesSnapshot.Length; index++)
+			{
+				var sourceFile = sourceFilesSnapshot[index];
 				if (Path.GetFileName(sourceFile) == "write.lock")
 					continue; // skip the Lucene lock file
-			   
-				var destFileName = Path.Combine(tempPath, Path.GetFileName(sourceFile));
-				CreateHardLink(
-					destFileName,
-					sourceFile,
-					IntPtr.Zero
-					);
 
-				var fileInfo = new FileInfo(destFileName);
-				fileToSize[fileInfo.FullName] = fileInfo.Length;
+				var destFileName = Path.Combine(tempPath, Path.GetFileName(sourceFile));
+				var success = CreateHardLink(destFileName, sourceFile, IntPtr.Zero);
+
+				if (success == false)
+				{
+					// 'The system cannot find the file specified' is explicitly ignored here
+					if (Marshal.GetLastWin32Error() != 0x80004005)
+						throw new Win32Exception();
+					sourceFilesSnapshot[index] = null;
+					continue;
+				}
+
+				try
+				{
+					var fileInfo = new FileInfo(destFileName);
+					fileToSize[fileInfo.FullName] = fileInfo.Length;
+				}
+				catch (IOException)
+				{
+					sourceFilesSnapshot[index] = null;
+					// something happened to this file, probably was removed somehow
+				}
 			}
 
 			// we have to do this outside the main loop because we mustn't
@@ -139,6 +163,8 @@ namespace Raven.Database.Backup
 			// of all the files
 			foreach (var sourceFile in sourceFilesSnapshot)
 			{
+				if(sourceFile == null)
+					continue;
 				Notify("Hard linked " + sourceFile, BackupStatus.BackupMessageSeverity.Informational);
 			}
 		}

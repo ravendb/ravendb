@@ -2,39 +2,32 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 
 namespace Raven.Client.Document.SessionOperations
 {
 	public class MultiLoadOperation
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		internal Func<IDisposable> disableAllCaching { get; set; }
 		private readonly string[] ids;
+		private readonly string[] includes;
 		bool firstRequest = true;
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
 
 		private Stopwatch sp;
 
-		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations,
-			Func<IDisposable> disableAllCaching)
-			: this(sessionOperations, disableAllCaching, null)
-		{
-
-		}
-
-		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations,
-			Func<IDisposable> disableAllCaching,
-			string[] ids)
+		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string[] ids, string[] includes)
 		{
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
 			this.ids = ids;
+			this.includes = includes;
 		}
 
 		public void LogOperation()
@@ -74,9 +67,19 @@ namespace Raven.Client.Document.SessionOperations
 			}
 
 
-			return SelectResults()
+			var finalResults = SelectResults()
 				.Select(document => document == null ? default(T) : sessionOperations.TrackEntity<T>(document))
 				.ToArray();
+
+			for (var i = 0; i < finalResults.Length; i++)
+			{
+				if(ReferenceEquals(finalResults[i], null))
+					sessionOperations.RegisterMissing(ids[i]);
+			}
+
+			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includes);
+
+			return finalResults;
 		}
 
 		private IEnumerable<JsonDocument> SelectResults()

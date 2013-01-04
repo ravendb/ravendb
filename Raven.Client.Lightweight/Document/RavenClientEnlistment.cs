@@ -9,7 +9,7 @@ using System.IO;
 using System.IO.IsolatedStorage;
 using System.Threading;
 using System.Transactions;
-using NLog;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Client.Document
 {
@@ -19,7 +19,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class RavenClientEnlistment : IEnlistmentNotification
 	{
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		private readonly ITransactionalDocumentSession session;
 		private readonly Action onTxComplete;
@@ -58,7 +58,7 @@ namespace Raven.Client.Document
 						file.Flush(true);
 					}
 					machineStoreForApplication.MoveFile(name + ".temp", name);
-			}
+				}
 			}
 			catch (Exception e)
 			{
@@ -83,7 +83,7 @@ namespace Raven.Client.Document
 				session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
-			}
+				}
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not commit distributed transaction", e);
@@ -115,8 +115,8 @@ namespace Raven.Client.Document
 
 		private void DeleteFile()
 		{
-			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
-			{
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				{
 				// docs says to retry: http://msdn.microsoft.com/en-us/library/system.io.isolatedstorage.isolatedstoragefile.deletefile%28v=vs.95%29.aspx
 				int retries = 10;
 				while(true)
@@ -125,9 +125,9 @@ namespace Raven.Client.Document
 						break;
 					try
 					{
-						machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
+					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
 						break;
-					}
+				}
 					catch (IsolatedStorageException)
 					{
 						retries -= 1;
@@ -138,7 +138,7 @@ namespace Raven.Client.Document
 						}
 						throw;
 					}
-				}
+			}
 			}
 		}
 
@@ -154,10 +154,10 @@ namespace Raven.Client.Document
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
-			}
+				}
 			catch (Exception e)
 			{
-				logger.ErrorException("Could not mark distriubted transaction as in doubt", e);
+				logger.ErrorException("Could not mark distributed transaction as in doubt", e);
 			}
 			enlistment.Done(); // what else can we do?
 		}

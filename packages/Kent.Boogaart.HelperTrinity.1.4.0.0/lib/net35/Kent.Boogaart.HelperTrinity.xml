@@ -1,0 +1,1047 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Kent.Boogaart.HelperTrinity</name>
+    </assembly>
+    <members>
+        <member name="T:Kent.Boogaart.HelperTrinity.ArgumentHelper">
+            <summary>
+            Provides helper methods for asserting arguments.
+            </summary>
+            <remarks>
+            <para>
+            This class provides helper methods for asserting the validity of arguments. It can be used to reduce the number of
+            laborious <c>if</c>, <c>throw</c> sequences in your code.
+            </para>
+            <para>
+            The <see cref="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertNotNull``1(``0,System.String)"/> methods can be used to ensure that arguments are not <see langword="null"/>. The
+            <see cref="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertNotNullOrEmpty(System.String,System.String)"/> overloads can be used to ensure that strings are not <see langword="null"/> or empty.
+            The <see cref="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertEnumMember``1(``0,System.String)"/> overloads can be used to assert the validity of enumeration arguments.
+            </para>
+            </remarks>
+            <example>
+            The following code ensures that the <c>name</c> argument is not <see langword="null"/>:
+            <code>
+            public void DisplayDetails(string name)
+            {
+            	ArgumentHelper.AssertNotNull(name, "name");
+            	//now we know that name is not null
+            	...
+            }
+            </code>
+            </example>
+            <example>
+            The following code ensures that the <c>name</c> argument is not <see langword="null"/> or an empty <c>string</c>:
+            <code>
+            public void DisplayDetails(string name)
+            {
+            	ArgumentHelper.AssertNotNullOrEmpty(name, "name", true);
+            	//now we know that name is not null and is not an empty string (or blank)
+            	...
+            }
+            </code>
+            </example>
+            <example>
+            The following code ensures that the <c>day</c> parameter is a valid member of its enumeration:
+            <code>
+            public void DisplayInformation(DayOfWeek day)
+            {
+            	ArgumentHelper.AssertEnumMember(day);
+            	//now we know that day is a valid member of DayOfWeek
+            	...
+            }
+            </code>
+            </example>
+            <example>
+            The following code ensures that the <c>day</c> parameter is either DayOfWeek.Monday or DayOfWeek.Thursday:
+            <code>
+            public void DisplayInformation(DayOfWeek day)
+            {
+            	ArgumentHelper.AssertEnumMember(day, DayOfWeek.Monday, DayOfWeek.Thursday);
+            	//now we know that day is either Monday or Thursday
+            	...
+            }
+            </code>
+            </example>
+            <example>
+            The following code ensures that the <c>bindingFlags</c> parameter is either BindingFlags.Public, BindingFlags.NonPublic
+            or both:
+            <code>
+            public void GetInformation(BindingFlags bindingFlags)
+            {
+            	ArgumentHelper.AssertEnumMember(bindingFlags, BindingFlags.Public, BindingFlags.NonPublic);
+            	//now we know that bindingFlags is either Public, NonPublic or both
+            	...
+            }
+            </code>
+            </example>
+            <example>
+            The following code ensures that the <c>bindingFlags</c> parameter is either BindingFlags.Public, BindingFlags.NonPublic,
+            both or neither (BindingFlags.None):
+            <code>
+            public void GetInformation(BindingFlags bindingFlags)
+            {
+            	ArgumentHelper.AssertEnumMember(bindingFlags, BindingFlags.Public, BindingFlags.NonPublic, BindingFlags.None);
+            	//now we know that bindingFlags is either Public, NonPublic, both or neither
+            	...
+            }
+            </code>
+            </example>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertNotNull``1(``0,System.String)">
+            <summary>
+			Ensures the specified argument is non-<see langword="null"/>. If it is, an <see cref="T:System.ArgumentNullException"/> is thrown.
+		</summary><typeparam name="T">
+			The type of the argument.
+		</typeparam><param name="arg">
+			The argument to check for <see langword="null"/>.
+		</param><param name="argName">
+			The name of the argument.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="arg"/> is <see langword="null"/>.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertNotNull``1(System.Nullable{``0},System.String)">
+            <summary>
+			Ensures the specified nullable value argument is non-<see langword="null"/>. If it is, an <see cref="T:System.ArgumentNullException"/> is thrown.
+		</summary><typeparam name="T">
+			The type of the nullable argument.
+		</typeparam><param name="arg">
+			The nullable argument.
+		</param><param name="argName">
+			The name of the argument.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="arg"/> is <see langword="null"/>.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertGenericArgumentNotNull``1(``0,System.String)">
+            <summary>
+			Ensures the specified argument is non-<see langword="null"/>. If it is, an <see cref="T:System.ArgumentNullException"/> is thrown.
+		</summary><remarks>
+			<para>
+				This method can be used instead of one of the <see cref="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertNotNull``1(``0,System.String)"/> overloads in the case where the argument
+				being checked is generic. It will ensure that <paramref name="arg"/> is not <see langword="null"/> if it is a
+				reference type or if it is an instance of <see cref="T:System.Nullable`1"/>.
+			</para>
+		</remarks><typeparam name="T">
+			The type of the argument.
+		</typeparam><param name="arg">
+			The argument.
+		</param><param name="argName">
+			The name of the argument.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="arg"/> is <see langword="null"/>.
+		</exception><example>
+			The following code ensures that the <c>name</c> argument is not <see langword="null"/> or an empty <c>string</c>:
+			<code>
+				public void SomeMethod&lt;T&gt;(T arg)
+				{
+						ArgumentHelper.AssertGenericArgumentNotNull(arg, "arg");
+						//now we know that arg is not null, regardless of whether it is a reference type or a Nullable type
+						...
+				}
+			</code>
+		</example>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertNotNull``1(System.Collections.Generic.IEnumerable{``0},System.String,System.Boolean)">
+            <summary>
+			Ensures the specified enumerable argument is non-<see langword="null"/>, optionally checking each item in it for
+			<see langword="null"/>. If any checked items are <see langword="null"/>, an exception is thrown.
+		</summary><remarks>
+			<para>
+				This method throws an <see cref="T:System.ArgumentNullException"/> if <paramref name="arg"/> is <see langword="null"/>. If
+				<paramref name="assertContentsNotNull"/> is <see langword="true"/> and one of the items in <paramref name="arg"/>
+				is found to be <see langword="null"/>, an <see cref="T:System.ArgumentException"/> is thrown.
+			</para>
+		</remarks><typeparam name="T">
+			The type of the items in the <paramref name="arg"/> enumeration.
+		</typeparam><param name="arg">
+			The argument to check for <see langword="null"/>.
+		</param><param name="argName">
+			The name of the argument.
+		</param><param name="assertContentsNotNull">
+			If <see langword="true"/>, each item inside the <paramref name="arg"/> enumeration is also checked for
+			<see langword="null"/>. If <see langword="false"/>, only <paramref name="arg"/> itself is checked for
+			<see langword="null"/>.
+		</param><exception cref="T:System.ArgumentException">
+			If <paramref name="assertContentsNotNull"/> is <see langword="true"/> and one of the items in <paramref name="arg"/>
+			is <see langword="null"/>.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertNotNullOrEmpty(System.String,System.String)">
+            <summary>
+			Ensures the specified argument is non-<see langword="null"/> and not an empty <c>string</c>. If it is, an
+			<see cref="T:System.ArgumentException"/> is thrown.
+		</summary><param name="arg">
+			The argument to check for <see langword="null"/> or an empty <c>string</c>.
+		</param><param name="argName">
+			The name of the argument.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertNotNullOrEmpty(System.String,System.String,System.Boolean)">
+            <summary>
+			Ensures the specified argument is non-<see langword="null"/> and not an empty <c>string</c>, optionally trimming
+			<paramref name="arg"/> first. If it is, an <see cref="T:System.ArgumentException"/> is thrown.
+		</summary><param name="arg">
+			The argument to check for <see langword="null"/> or an empty <c>string</c>.
+		</param><param name="argName">
+			The name of the argument.
+		</param><param name="trim">
+			If <see langword="true"/> and <paramref name="arg"/> is not <see langword="null"/> or an empty <c>string</c>, it is
+			trimmed and re-tested for being empty.
+		</param><exception cref="T:System.ArgumentException">
+			If <paramref name="arg"/> is <see langword="null"/> or an empty <c>string</c>, or if it is a blank <c>string</c> and
+			<paramref name="trim"/> is <see langword="true"/>.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertEnumMember``1(``0,System.String)">
+            <summary>
+			Ensures the specified enumeration argument is a valid member of the <typeparamref name="TEnum"/> enumeration. If it
+			is not, an <see cref="T:System.ArgumentException"/> is thrown.
+		</summary><remarks>
+			<para>
+				This method can be used to validate all publicly-supplied enumeration values. Without such an assertion, it is
+				possible to cast any <c>int</c> value to the enumeration type and pass it in.
+			</para>
+			<para>
+				This method works for both flags and non-flags enumerations. In the case of a flags enumeration, any combination of
+				values in the enumeration is accepted. In the case of a non-flags enumeration, <paramref name="enumValue"/> must
+				be equal to one of the values in the enumeration.
+			</para>
+			<para>
+				This method is generic and quite slow as a result. You should prefer using the
+				<see cref="!:AssertEnumMember&lt;TEnum&gt;(TEnum, TEnum[])"/> overload where possible. That overload is both faster and
+				safer. Faster because it does not incur reflection costs, and safer because you are able to specify the exact
+				values accepted by your method.
+			</para>
+		</remarks><typeparam name="TEnum">
+			The enumeration type.
+		</typeparam><param name="enumValue">
+			The value of the enumeration.
+		</param><param name="argName">
+			The name of the argument.
+		</param><exception cref="T:System.ArgumentException">
+			If <paramref name="enumValue"/> is not a valid member of the <typeparamref name="TEnum"/> enumeration.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ArgumentHelper.AssertEnumMember``1(``0,System.String,``0[])">
+            <summary>
+			Ensures the specified enumeration argument is included in the values specified by <paramref name="validValues"/>. If
+			it is not, an <see cref="T:System.ArgumentException"/> is thrown.
+		</summary><remarks>
+			<para>
+				This method can be used to ensure that an enumeration argument is valid for the context of the method. It works for
+				both flags and non-flags enumerations. For flags enumerations, <paramref name="enumValue"/> must be any combination
+				of values specified by <paramref name="validValues"/>. For non-flags enumerations, <paramref name="enumValue"/>
+				must be one of the values specified by <paramref name="validValues"/>.
+			</para>
+			<para>
+				This method is much faster than the <see cref="!:AssertEnumMember&lt;TEnum&gt;(TEnum)"/> overload. This is because it does
+				not use reflection to determine the values defined by the enumeration. For this reason you should prefer this method
+				when validating enumeration arguments.
+			</para>
+			<para>
+				Another reason why this method is prefered is because it allows you to explicitly specify the values that your code
+				handles. If you use the <see cref="!:AssertEnumMember&lt;TEnum&gt;(TEnum)"/> overload and a new value is later added to the
+				enumeration, the assertion will not fail but your code probably will.
+			</para>
+		</remarks><typeparam name="TEnum">
+			The enumeration type.
+		</typeparam><param name="enumValue">
+			The value of the enumeration.
+		</param><param name="argName">
+			The name of the argument.
+		</param><param name="validValues">
+			An array of all valid values.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="validValues"/> is <see langword="null"/>.
+		</exception><exception cref="T:System.ArgumentException">
+			If <paramref name="enumValue"/> is not present in <paramref name="validValues"/>, or (for flag enumerations) if
+			<paramref name="enumValue"/> is not some combination of values specified in <paramref name="validValues"/>.
+		</exception>
+        </member>
+        <member name="T:Kent.Boogaart.HelperTrinity.EventHelper">
+            <summary>
+            Provides helper methods for raising events.
+            </summary>
+            <remarks>
+            <para>
+            The <c>EventHelper</c> class provides methods that can be used to raise events. It avoids the need for explicitly
+            checking event sinks for <see langword="null"/> before raising the event.
+            </para>
+            </remarks>
+            <example>
+            The following example shows how a non-generic event can be raised:
+            <code>
+            public event EventHandler Changed;
+            
+            protected void OnChanged()
+            {
+            	EventHelper.Raise(Changed, this);
+            }
+            </code>
+            </example>
+            <example>
+            The following example shows how a non-generic event can be raised where the event type requires a specific
+            <c>EventArgs</c> subclass:
+            <code>
+            public event PropertyChangedEventHandler PropertyChanged;
+            
+            protected void OnPropertyChanged(PropertyChangedEventArgs e)
+            {
+            	EventHelper.Raise(PropertyChanged, this, e);
+            }
+            </code>
+            </example>
+            <example>
+            The following example shows how a generic event can be raised:
+            <code>
+            public event EventHandler&lt;EventArgs&gt; Changed;
+            
+            protected void OnChanged()
+            {
+            	EventHelper.Raise(Changed, this, EventArgs.Empty);
+            }
+            </code>
+            </example>
+            <example>
+            The following example shows how a generic event with custom event arguments can be raised:
+            <code>
+            public event EventHandler&lt;MyEventArgs&gt; MyEvent;
+            
+            protected void OnMyEvent(MyEventArgs e)
+            {
+            	EventHelper.Raise(MyEventArgs, this, e);
+            }
+            </code>
+            </example>
+            <example>
+            The following example raises a generic event, but does not create the event arguments unless there is at least one
+            handler for the event:
+            <code>
+            public event EventHandler&lt;MyEventArgs&gt; MyEvent;
+            
+            protected void OnMyEvent(int someData)
+            {
+            	EventHelper.Raise(MyEvent, this, delegate
+            	{
+            		return new MyEventArgs(someData);
+            	});
+            }
+            </code>
+            </example>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.EventHelper.BeginRaise(System.EventHandler,System.Object,System.AsyncCallback,System.Object)">
+            <summary>
+			Begins raising a non-generic event.
+		</summary><remarks>
+			This method begins raising the specified non-generic event and passes in <c>EventArgs.Empty</c> as the event arguments.
+		</remarks><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="callback">
+			A delegate to call once the event has been raised, or <see langword="null"/> if no delegate should be called.
+		</param><param name="asyncState">
+			Any additional information to pass to the <paramref name="callback"/>.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.EventHelper.Raise(System.EventHandler,System.Object)">
+            <summary>
+			Raises a non-generic event.
+		</summary><remarks>
+			This method raises the specified non-generic event and passes in <c>EventArgs.Empty</c> as the event arguments.
+		</remarks><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.EventHelper.BeginRaise(System.Delegate,System.Object,System.EventArgs,System.AsyncCallback,System.Object)">
+            <summary>
+			Begins raising a non-generic event.
+		</summary><remarks>
+			This method can be used to begin raising a non-generic event that needs a specific <see cref="T:System.EventArgs"/> subclass
+			as its second parameter. This method assumes that <paramref name="handler"/> points to a method that conforms to the
+			standard .NET event signature. That is, it takes an <see cref="T:System.Object"/> as its first parameter and an
+			<see cref="T:System.EventArgs"/> instance as its second.
+		</remarks><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="e">
+			The event arguments.
+		</param><param name="callback">
+			A delegate to call once the event has been raised, or <see langword="null"/> if no delegate should be called.
+		</param><param name="asyncState">
+			Any additional information to pass to the <paramref name="callback"/>.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.EventHelper.Raise(System.Delegate,System.Object,System.EventArgs)">
+            <summary>
+			Raises a non-generic event.
+		</summary><remarks>
+			This method can be used to raise a non-generic event that needs a specific <see cref="T:System.EventArgs"/> subclass as its
+			second parameter. This method assumes that <paramref name="handler"/> points to a method that conforms to the
+			standard .NET event signature. That is, it takes an <see cref="T:System.Object"/> as its first parameter and an
+			<see cref="T:System.EventArgs"/> instance as its second.
+		</remarks><param name="handler">
+			The event handler.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="e">
+			The arguments for the event.
+		</param><exception cref="!:TargetParameterCountException">
+			If <paramref name="handler"/> does not contain the correct number of arguments or contains arguments of the wrong
+			type or in the wrong order.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.EventHelper.BeginRaise``1(System.EventHandler{``0},System.Object,``0,System.AsyncCallback,System.Object)">
+            <summary>
+			Begins raising a generic event.
+		</summary><remarks>
+			This method begins raising a generic event, passing in the specified event arguments.
+		</remarks><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="e">
+			The event arguments.
+		</param><param name="callback">
+			A delegate to call once the event has been raised, or <see langword="null"/> if no delegate should be called.
+		</param><param name="asyncState">
+			Any additional information to pass to the <paramref name="callback"/>.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.EventHelper.Raise``1(System.EventHandler{``0},System.Object,``0)">
+            <summary>
+			Raises a generic event.
+		</summary><remarks>
+			This method raises a generic event, passing in the specified event arguments.
+		</remarks><typeparam name="T">
+			The event arguments type.
+		</typeparam><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="e">
+			The arguments for the event.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.EventHelper.BeginRaise``1(System.EventHandler{``0},System.Object,Kent.Boogaart.HelperTrinity.EventHelper.CreateEventArguments{``0},System.AsyncCallback,System.Object)">
+            <summary>
+			Begins raising a generic event.
+		</summary><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="createEventArguments">
+			The delegate to invoke if an event arguments instance is needed.
+		</param><param name="callback">
+			A delegate to call once the event has been raised, or <see langword="null"/> if no delegate should be called.
+		</param><param name="asyncState">
+			Any additional information to pass to the <paramref name="callback"/>.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.EventHelper.Raise``1(System.EventHandler{``0},System.Object,Kent.Boogaart.HelperTrinity.EventHelper.CreateEventArguments{``0})">
+            <summary>
+			Raises a generic event, but does not create the event arguments unless there is at least one handler for the event.
+		</summary><typeparam name="T">
+			The event arguments type.
+		</typeparam><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="createEventArguments">
+			The delegate to invoke if an event arguments instance is needed.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="createEventArguments"/> is <see langword="null"/>.
+		</exception>
+        </member>
+        <member name="T:Kent.Boogaart.HelperTrinity.EventHelper.CreateEventArguments`1">
+            <summary>
+            A handler used to create an event arguments instance for the
+            <see cref="M:Kent.Boogaart.HelperTrinity.EventHelper.Raise``1(System.EventHandler{``0},System.Object,Kent.Boogaart.HelperTrinity.EventHelper.CreateEventArguments{``0})"/> method.
+            </summary>
+            <remarks>
+            This delegate is invoked by the
+            <see cref="M:Kent.Boogaart.HelperTrinity.EventHelper.Raise``1(System.EventHandler{``0},System.Object,Kent.Boogaart.HelperTrinity.EventHelper.CreateEventArguments{``0})"/> method to create the
+            event arguments instance. The handler should create the instance and return it.
+            </remarks>
+            <typeparam name="T">
+            The event arguments type.
+            </typeparam>
+            <returns>
+            The event arguments instance.
+            </returns>
+        </member>
+        <member name="T:Kent.Boogaart.HelperTrinity.ExceptionHelper">
+            <summary>
+            Provides helper methods for raising exceptions.
+            </summary>
+            <remarks>
+            <para>
+            The <c>ExceptionHelper</c> class provides a centralised mechanism for throwing exceptions. This helps to keep exception
+            messages and types consistent.
+            </para>
+            <para>
+            Exception information is stored in an embedded resource called <c>ExceptionHelper.xml</c>, which must reside in the
+            <c>Properties</c> namespace for the assembly in which the for type is stored. For example, if the root namespace for
+            an assembly is <c>Company.Product</c> then the exception information must be stored in a resource called
+            <c>Company.Product.Properties.ExceptionHelper.xml</c>
+            </para>
+            <para>
+            The format for the exception information XML includes a grouping mechanism such that exception keys are scoped to the
+            type throwing the exception. Thus, different types can use the same exception key because they have different scopes in
+            the XML structure. An example of the format for the exception XML can be seen below.
+            </para>
+            <note type="implementation">
+            This class is designed to be efficient in the common case (ie. no exception thrown) but is quite inefficient if an
+            exception is actually thrown. This is not considered a problem, however, since an exception usually indicates that
+            execution cannot reliably continue.
+            </note>
+            </remarks>
+            <example>
+            The following example shows how an exception can thrown:
+            <code>
+            var exceptionHelper = new ExceptionHelper(typeof(Bar));
+            throw exceptionHelper.Resolve("myKey", "hello");
+            </code>
+            Assuming this code resides in a class called <c>Foo.Bar</c>, the XML configuration might look like this:
+            <code>
+            <![CDATA[
+            <?xml version="1.0" encoding="utf-8" ?> 
+            
+            <exceptionHelper>
+            	<exceptionGroup type="Foo.Bar">
+            		<exception key="myKey" type="System.NullReferenceException">
+            			Foo is null but I'll say '{0}' anyway.
+            		</exception>
+            	</exceptionGroup>
+            </exceptionHelper>
+            ]]>
+            </code>
+            With this configuration, a <see cref="T:System.NullReferenceException"/> will be thrown. The exception message will be
+            "Foo is null but I'll say 'hello' anyway.".
+            </example>
+            <example>
+            The following example shows how an exception can be conditionally thrown:
+            <code>
+            var exceptionHelper = new ExceptionHelper(typeof(Bar));
+            exceptionHelper.ResolveAndThrowIf(foo == null, "myKey", "hello");
+            </code>
+            Assuming this code resides in a class called <c>Foo.Bar</c>, the XML configuration might look like this:
+            <code>
+            <![CDATA[
+            <?xml version="1.0" encoding="utf-8" ?> 
+            
+            <exceptionHelper>
+            	<exceptionGroup type="Foo.Bar">
+            		<exception key="myKey" type="System.NullReferenceException">
+            			Foo is null but I'll say '{0}' anyway.
+            		</exception>
+            	</exceptionGroup>
+            </exceptionHelper>
+            ]]>
+            </code>
+            With this configuration, a <see cref="T:System.NullReferenceException"/> will be thrown if <c>foo</c> is <see langword="null"/>.
+            The exception message will be "Foo is null but I'll say 'hello' anyway.".
+            </example>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.#ctor(System.Type)">
+            <summary>
+            Initializes a new instance of the <c>ExceptionHelper</c> class.
+            </summary>
+            <param name="forType">
+            The type for which exceptions will be resolved.
+            </param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.Resolve(System.String,System.Object[])">
+            <summary>
+            Resolves an exception.
+            </summary>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="messageArgs">
+            Arguments to be substituted into the resolved exception's message.
+            </param>
+            <returns>
+            The resolved exception.
+            </returns>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.Resolve(System.String,System.Exception,System.Object[])">
+            <summary>
+            Resolves an exception.
+            </summary>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="innerException">
+            The inner exception of the resolved exception.
+            </param>
+            <param name="messageArgs">
+            Arguments to be substituted into the resolved exception's message.
+            </param>
+            <returns>
+            The resolved exception.
+            </returns>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.Resolve(System.String,System.Object[],System.Exception)">
+            <summary>
+            Resolves an exception.
+            </summary>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="constructorArgs">
+            Additional arguments for the resolved exception's constructor.
+            </param>
+            <param name="innerException">
+            The inner exception of the resolved exception.
+            </param>
+            <returns>
+            The resolved exception.
+            </returns>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.Resolve(System.String,System.Object[],System.Object[])">
+            <summary>
+            Resolves an exception.
+            </summary>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="constructorArgs">
+            Additional arguments for the resolved exception's constructor.
+            </param>
+            <param name="messageArgs">
+            Arguments to be substituted into the resolved exception's message.
+            </param>
+            <returns>
+            The resolved exception.
+            </returns>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.Resolve(System.String,System.Object[],System.Exception,System.Object[])">
+            <summary>
+            Resolves an exception.
+            </summary>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="constructorArgs">
+            Additional arguments for the resolved exception's constructor.
+            </param>
+            <param name="innerException">
+            The inner exception of the resolved exception.
+            </param>
+            <param name="messageArgs">
+            Arguments to be substituted into the resolved exception's message.
+            </param>
+            <returns>
+            The resolved exception.
+            </returns>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.ResolveAndThrowIf(System.Boolean,System.String,System.Object[])">
+            <summary>
+            Resolves and throws the specified exception if the given condition is met.
+            </summary>
+            <param name="condition">
+            The condition that determines whether the exception will be resolved and thrown.
+            </param>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="messageArgs">
+            Arguments to be substituted into the resolved exception's message.
+            </param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.ResolveAndThrowIf(System.Boolean,System.String,System.Exception,System.Object[])">
+            <summary>
+            Resolves and throws the specified exception if the given condition is met.
+            </summary>
+            <param name="condition">
+            The condition that determines whether the exception will be resolved and thrown.
+            </param>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="innerException">
+            The inner exception of the resolved exception.
+            </param>
+            <param name="messageArgs">
+            Arguments to be substituted into the resolved exception's message.
+            </param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.ResolveAndThrowIf(System.Boolean,System.String,System.Object[],System.Exception)">
+            <summary>
+            Resolves and throws the specified exception if the given condition is met.
+            </summary>
+            <param name="condition">
+            The condition that determines whether the exception will be resolved and thrown.
+            </param>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="constructorArgs">
+            Additional arguments for the resolved exception's constructor.
+            </param>
+            <param name="innerException">
+            The inner exception of the resolved exception.
+            </param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.ResolveAndThrowIf(System.Boolean,System.String,System.Object[],System.Object[])">
+            <summary>
+            Resolves and throws the specified exception if the given condition is met.
+            </summary>
+            <param name="condition">
+            The condition that determines whether the exception will be resolved and thrown.
+            </param>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="constructorArgs">
+            Additional arguments for the resolved exception's constructor.
+            </param>
+            <param name="messageArgs">
+            Arguments to be substituted into the resolved exception's message.
+            </param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.ExceptionHelper.ResolveAndThrowIf(System.Boolean,System.String,System.Object[],System.Exception,System.Object[])">
+            <summary>
+            Resolves and throws the specified exception if the given condition is met.
+            </summary>
+            <param name="condition">
+            The condition that determines whether the exception will be resolved and thrown.
+            </param>
+            <param name="exceptionKey">
+            The exception key.
+            </param>
+            <param name="constructorArgs">
+            Additional arguments for the resolved exception's constructor.
+            </param>
+            <param name="innerException">
+            The inner exception of the resolved exception.
+            </param>
+            <param name="messageArgs">
+            Arguments to be substituted into the resolved exception's message.
+            </param>
+        </member>
+        <member name="T:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions">
+            <summary>
+            Defines extension methods for the <see cref="T:Kent.Boogaart.HelperTrinity.ArgumentHelper"/> class.
+            </summary>
+            <remarks>
+            This class defines extensions methods for the <see cref="T:Kent.Boogaart.HelperTrinity.ArgumentHelper"/>. All extension methods simply delegate to the
+            appropriate member of the <see cref="T:Kent.Boogaart.HelperTrinity.ArgumentHelper"/> class.
+            </remarks>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertNotNull``1(``0,System.String)">
+            <summary>
+			Ensures the specified argument is non-<see langword="null"/>. If it is, an <see cref="T:System.ArgumentNullException"/> is thrown.
+		</summary><typeparam name="T">
+			The type of the argument.
+		</typeparam><param name="arg">
+			The argument to check for <see langword="null"/>.
+		</param><param name="argName">
+			The name of the argument.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="arg"/> is <see langword="null"/>.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertNotNull``1(System.Nullable{``0},System.String)">
+            <summary>
+			Ensures the specified nullable value argument is non-<see langword="null"/>. If it is, an <see cref="T:System.ArgumentNullException"/> is thrown.
+		</summary><typeparam name="T">
+			The type of the nullable argument.
+		</typeparam><param name="arg">
+			The nullable argument.
+		</param><param name="argName">
+			The name of the argument.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="arg"/> is <see langword="null"/>.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertGenericArgumentNotNull``1(``0,System.String)">
+            <summary>
+			Ensures the specified argument is non-<see langword="null"/>. If it is, an <see cref="T:System.ArgumentNullException"/> is thrown.
+		</summary><remarks>
+			<para>
+				This method can be used instead of one of the <see cref="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertNotNull``1(``0,System.String)"/> overloads in the case where the argument
+				being checked is generic. It will ensure that <paramref name="arg"/> is not <see langword="null"/> if it is a
+				reference type or if it is an instance of <see cref="T:System.Nullable`1"/>.
+			</para>
+		</remarks><typeparam name="T">
+			The type of the argument.
+		</typeparam><param name="arg">
+			The argument.
+		</param><param name="argName">
+			The name of the argument.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="arg"/> is <see langword="null"/>.
+		</exception><example>
+			The following code ensures that the <c>name</c> argument is not <see langword="null"/> or an empty <c>string</c>:
+			<code>
+				public void SomeMethod&lt;T&gt;(T arg)
+				{
+						ArgumentHelper.AssertGenericArgumentNotNull(arg, "arg");
+						//now we know that arg is not null, regardless of whether it is a reference type or a Nullable type
+						...
+				}
+			</code>
+		</example>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertNotNull``1(System.Collections.Generic.IEnumerable{``0},System.String,System.Boolean)">
+            <summary>
+			Ensures the specified enumerable argument is non-<see langword="null"/>, optionally checking each item in it for
+			<see langword="null"/>. If any checked items are <see langword="null"/>, an exception is thrown.
+		</summary><remarks>
+			<para>
+				This method throws an <see cref="T:System.ArgumentNullException"/> if <paramref name="arg"/> is <see langword="null"/>. If
+				<paramref name="assertContentsNotNull"/> is <see langword="true"/> and one of the items in <paramref name="arg"/>
+				is found to be <see langword="null"/>, an <see cref="T:System.ArgumentException"/> is thrown.
+			</para>
+		</remarks><typeparam name="T">
+			The type of the items in the <paramref name="arg"/> enumeration.
+		</typeparam><param name="arg">
+			The argument to check for <see langword="null"/>.
+		</param><param name="argName">
+			The name of the argument.
+		</param><param name="assertContentsNotNull">
+			If <see langword="true"/>, each item inside the <paramref name="arg"/> enumeration is also checked for
+			<see langword="null"/>. If <see langword="false"/>, only <paramref name="arg"/> itself is checked for
+			<see langword="null"/>.
+		</param><exception cref="T:System.ArgumentException">
+			If <paramref name="assertContentsNotNull"/> is <see langword="true"/> and one of the items in <paramref name="arg"/>
+			is <see langword="null"/>.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertNotNullOrEmpty(System.String,System.String)">
+            <summary>
+			Ensures the specified argument is non-<see langword="null"/> and not an empty <c>string</c>. If it is, an
+			<see cref="T:System.ArgumentException"/> is thrown.
+		</summary><param name="arg">
+			The argument to check for <see langword="null"/> or an empty <c>string</c>.
+		</param><param name="argName">
+			The name of the argument.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertNotNullOrEmpty(System.String,System.String,System.Boolean)">
+            <summary>
+			Ensures the specified argument is non-<see langword="null"/> and not an empty <c>string</c>, optionally trimming
+			<paramref name="arg"/> first. If it is, an <see cref="T:System.ArgumentException"/> is thrown.
+		</summary><param name="arg">
+			The argument to check for <see langword="null"/> or an empty <c>string</c>.
+		</param><param name="argName">
+			The name of the argument.
+		</param><param name="trim">
+			If <see langword="true"/> and <paramref name="arg"/> is not <see langword="null"/> or an empty <c>string</c>, it is
+			trimmed and re-tested for being empty.
+		</param><exception cref="T:System.ArgumentException">
+			If <paramref name="arg"/> is <see langword="null"/> or an empty <c>string</c>, or if it is a blank <c>string</c> and
+			<paramref name="trim"/> is <see langword="true"/>.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertEnumMember``1(``0,System.String)">
+            <summary>
+			Ensures the specified enumeration argument is a valid member of the <typeparamref name="TEnum"/> enumeration. If it
+			is not, an <see cref="T:System.ArgumentException"/> is thrown.
+		</summary><remarks>
+			<para>
+				This method can be used to validate all publicly-supplied enumeration values. Without such an assertion, it is
+				possible to cast any <c>int</c> value to the enumeration type and pass it in.
+			</para>
+			<para>
+				This method works for both flags and non-flags enumerations. In the case of a flags enumeration, any combination of
+				values in the enumeration is accepted. In the case of a non-flags enumeration, <paramref name="enumValue"/> must
+				be equal to one of the values in the enumeration.
+			</para>
+			<para>
+				This method is generic and quite slow as a result. You should prefer using the
+				<see cref="!:AssertEnumMember&lt;TEnum&gt;(TEnum, TEnum[])"/> overload where possible. That overload is both faster and
+				safer. Faster because it does not incur reflection costs, and safer because you are able to specify the exact
+				values accepted by your method.
+			</para>
+		</remarks><typeparam name="TEnum">
+			The enumeration type.
+		</typeparam><param name="enumValue">
+			The value of the enumeration.
+		</param><param name="argName">
+			The name of the argument.
+		</param><exception cref="T:System.ArgumentException">
+			If <paramref name="enumValue"/> is not a valid member of the <typeparamref name="TEnum"/> enumeration.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.ArgumentHelperExtensions.AssertEnumMember``1(``0,System.String,``0[])">
+            <summary>
+			Ensures the specified enumeration argument is included in the values specified by <paramref name="validValues"/>. If
+			it is not, an <see cref="T:System.ArgumentException"/> is thrown.
+		</summary><remarks>
+			<para>
+				This method can be used to ensure that an enumeration argument is valid for the context of the method. It works for
+				both flags and non-flags enumerations. For flags enumerations, <paramref name="enumValue"/> must be any combination
+				of values specified by <paramref name="validValues"/>. For non-flags enumerations, <paramref name="enumValue"/>
+				must be one of the values specified by <paramref name="validValues"/>.
+			</para>
+			<para>
+				This method is much faster than the <see cref="!:AssertEnumMember&lt;TEnum&gt;(TEnum)"/> overload. This is because it does
+				not use reflection to determine the values defined by the enumeration. For this reason you should prefer this method
+				when validating enumeration arguments.
+			</para>
+			<para>
+				Another reason why this method is prefered is because it allows you to explicitly specify the values that your code
+				handles. If you use the <see cref="!:AssertEnumMember&lt;TEnum&gt;(TEnum)"/> overload and a new value is later added to the
+				enumeration, the assertion will not fail but your code probably will.
+			</para>
+		</remarks><typeparam name="TEnum">
+			The enumeration type.
+		</typeparam><param name="enumValue">
+			The value of the enumeration.
+		</param><param name="argName">
+			The name of the argument.
+		</param><param name="validValues">
+			An array of all valid values.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="validValues"/> is <see langword="null"/>.
+		</exception><exception cref="T:System.ArgumentException">
+			If <paramref name="enumValue"/> is not present in <paramref name="validValues"/>, or (for flag enumerations) if
+			<paramref name="enumValue"/> is not some combination of values specified in <paramref name="validValues"/>.
+		</exception>
+        </member>
+        <member name="T:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions">
+            <summary>
+            Defines extension methods for the <see cref="T:Kent.Boogaart.HelperTrinity.EventHelper"/> class.
+            </summary>
+            <remarks>
+            This class defines extensions methods for the <see cref="T:Kent.Boogaart.HelperTrinity.EventHelper"/>. All extension methods simply delegate to the
+            appropriate member of the <see cref="T:Kent.Boogaart.HelperTrinity.EventHelper"/> class.
+            </remarks>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions.BeginRaise(System.EventHandler,System.Object,System.AsyncCallback,System.Object)">
+            <summary>
+			Begins raising a non-generic event.
+		</summary><remarks>
+			This method begins raising the specified non-generic event and passes in <c>EventArgs.Empty</c> as the event arguments.
+		</remarks><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="callback">
+			A delegate to call once the event has been raised, or <see langword="null"/> if no delegate should be called.
+		</param><param name="asyncState">
+			Any additional information to pass to the <paramref name="callback"/>.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions.Raise(System.EventHandler,System.Object)">
+            <summary>
+			Raises a non-generic event.
+		</summary><remarks>
+			This method raises the specified non-generic event and passes in <c>EventArgs.Empty</c> as the event arguments.
+		</remarks><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions.BeginRaise(System.Delegate,System.Object,System.EventArgs,System.AsyncCallback,System.Object)">
+            <summary>
+			Begins raising a non-generic event.
+		</summary><remarks>
+			This method can be used to begin raising a non-generic event that needs a specific <see cref="T:System.EventArgs"/> subclass
+			as its second parameter. This method assumes that <paramref name="handler"/> points to a method that conforms to the
+			standard .NET event signature. That is, it takes an <see cref="T:System.Object"/> as its first parameter and an
+			<see cref="T:System.EventArgs"/> instance as its second.
+		</remarks><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="e">
+			The event arguments.
+		</param><param name="callback">
+			A delegate to call once the event has been raised, or <see langword="null"/> if no delegate should be called.
+		</param><param name="asyncState">
+			Any additional information to pass to the <paramref name="callback"/>.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions.Raise(System.Delegate,System.Object,System.EventArgs)">
+            <summary>
+			Raises a non-generic event.
+		</summary><remarks>
+			This method can be used to raise a non-generic event that needs a specific <see cref="T:System.EventArgs"/> subclass as its
+			second parameter. This method assumes that <paramref name="handler"/> points to a method that conforms to the
+			standard .NET event signature. That is, it takes an <see cref="T:System.Object"/> as its first parameter and an
+			<see cref="T:System.EventArgs"/> instance as its second.
+		</remarks><param name="handler">
+			The event handler.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="e">
+			The arguments for the event.
+		</param><exception cref="!:TargetParameterCountException">
+			If <paramref name="handler"/> does not contain the correct number of arguments or contains arguments of the wrong
+			type or in the wrong order.
+		</exception>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions.BeginRaise``1(System.EventHandler{``0},System.Object,``0,System.AsyncCallback,System.Object)">
+            <summary>
+			Begins raising a generic event.
+		</summary><remarks>
+			This method begins raising a generic event, passing in the specified event arguments.
+		</remarks><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="e">
+			The event arguments.
+		</param><param name="callback">
+			A delegate to call once the event has been raised, or <see langword="null"/> if no delegate should be called.
+		</param><param name="asyncState">
+			Any additional information to pass to the <paramref name="callback"/>.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions.Raise``1(System.EventHandler{``0},System.Object,``0)">
+            <summary>
+			Raises a generic event.
+		</summary><remarks>
+			This method raises a generic event, passing in the specified event arguments.
+		</remarks><typeparam name="T">
+			The event arguments type.
+		</typeparam><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="e">
+			The arguments for the event.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions.BeginRaise``1(System.EventHandler{``0},System.Object,Kent.Boogaart.HelperTrinity.EventHelper.CreateEventArguments{``0},System.AsyncCallback,System.Object)">
+            <summary>
+			Begins raising a generic event.
+		</summary><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="createEventArguments">
+			The delegate to invoke if an event arguments instance is needed.
+		</param><param name="callback">
+			A delegate to call once the event has been raised, or <see langword="null"/> if no delegate should be called.
+		</param><param name="asyncState">
+			Any additional information to pass to the <paramref name="callback"/>.
+		</param>
+        </member>
+        <member name="M:Kent.Boogaart.HelperTrinity.Extensions.EventHelperExtensions.Raise``1(System.EventHandler{``0},System.Object,Kent.Boogaart.HelperTrinity.EventHelper.CreateEventArguments{``0})">
+            <summary>
+			Raises a generic event, but does not create the event arguments unless there is at least one handler for the event.
+		</summary><typeparam name="T">
+			The event arguments type.
+		</typeparam><param name="handler">
+			The event to be raised.
+		</param><param name="sender">
+			The sender of the event.
+		</param><param name="createEventArguments">
+			The delegate to invoke if an event arguments instance is needed.
+		</param><exception cref="T:System.ArgumentNullException">
+			If <paramref name="createEventArguments"/> is <see langword="null"/>.
+		</exception>
+        </member>
+    </members>
+</doc>

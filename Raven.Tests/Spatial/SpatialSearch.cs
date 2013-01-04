@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
@@ -9,14 +10,14 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Spatial
 {
-	public class SpatialSearch : LocalClientTest
+	public class SpatialSearch : RavenTest
 	{
 		private class SpatialIdx : AbstractIndexCreationTask<Event>
 		{
 			public SpatialIdx()
 			{
 				Map = docs => from e in docs
-							  select new {e.Capacity, e.Venue, e.Date, _ = SpatialIndex.Generate(e.Latitude, e.Longitude)};
+							  select new {e.Capacity, e.Venue, e.Date, _ = SpatialGenerate(e.Latitude, e.Longitude)};
 
 				Index(x => x.Venue, FieldIndexing.Analyzed);
 			}
@@ -58,7 +59,7 @@ namespace Raven.Tests.Spatial
 
 		[Theory]
 		[CriticalCultures]
-		public void Can_do_spatial_search_with_client_api2(CultureInfo cultureInfo)
+		public void Can_do_spatial_search_with_client_api3(CultureInfo cultureInfo)
 		{
 			using(new TemporaryCulture(cultureInfo))
 			using (var store = NewDocumentStore())
@@ -73,7 +74,27 @@ namespace Raven.Tests.Spatial
 						                	.WaitForNonStaleResultsAsOfNow()
 						);
 
-					Assert.Equal(" Lat: 38.9103 Lng: -77.3942 Radius: 5", matchingVenues.ToString());
+					Assert.Equal(" SpatialField: __spatial QueryShape: Circle(-77.394200 38.910300 d=5.000000) Relation: Within", matchingVenues.ToString());
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_do_spatial_search_with_client_api2()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new SpatialIdx().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					var matchingVenues = session.Query<Event, SpatialIdx>()
+						.Customize(x => x
+						                	.WithinRadiusOf(5, 38.9103000, -77.3942)
+						                	.WaitForNonStaleResultsAsOfNow()
+						);
+
+					Assert.Equal(" SpatialField: __spatial QueryShape: Circle(-77.394200 38.910300 d=5.000000) Relation: Within", matchingVenues.ToString());
 				}
 			}
 		}
@@ -113,8 +134,8 @@ namespace Raven.Tests.Spatial
 					for (int i = 0; i < events.Count; i++)
 					{
 						Assert.Equal(expectedOrder[i], events[i].Venue);
-					}
 				}
+			}
 
 				using (var session = store.OpenSession())
 				{
@@ -133,7 +154,7 @@ namespace Raven.Tests.Spatial
 					{
 						Assert.Equal(expectedOrder[i], events[i].Venue);
 					}
-				}
+		}
 			}
 		}
 

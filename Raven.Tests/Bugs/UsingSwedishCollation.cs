@@ -13,7 +13,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class UsingSwedishCollation : LocalClientTest
+	public class UsingSwedishCollation : RavenTest
 	{
 		[Fact]
 		public void Can_sort_according_to_swedish_sorting_rules()

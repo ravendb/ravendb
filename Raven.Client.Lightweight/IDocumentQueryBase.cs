@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 
@@ -139,25 +140,6 @@ If you really want to do in memory filtering on the data returned from the query
 		///   Matches exact value
 		/// </summary>
 		TSelf WhereEquals (WhereParams whereParams);
-
-		/// <summary>
-		///   Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		TSelf WhereContains(string fieldName, object value);
-
-		/// <summary>
-		///   Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		TSelf WhereContains(string fieldName, params object[] values);
-
-		/// <summary>
-		///   Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		TSelf WhereContains(string fieldName, IEnumerable<object> values);
-
 
 		/// <summary>
 		/// Check that the field has one of the specified value
@@ -329,10 +311,30 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name = "radius">The radius.</param>
+		/// <param name = "radius">The radius in KM.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
 		TSelf WithinRadiusOf(double radius, double latitude, double longitude);
+
+		/// <summary>
+		///   Filter matches to be inside the specified radius
+		/// </summary>
+		/// <param name="fieldName">The field name for the radius</param>
+		/// <param name = "radius">The radius in KM.</param>
+		/// <param name = "latitude">The latitude.</param>
+		/// <param name = "longitude">The longitude.</param>
+		TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+
+		/// <summary>
+		/// Filter matches based on a given shape - only documents with the shape defined in fieldName that
+		/// have a relation rel with the given shapeWKT will be returned
+		/// </summary>
+		/// <param name="fieldName">The name of the field containing the shape to use for filtering</param>
+		/// <param name="shapeWKT">The query shape</param>
+		/// <param name="rel">Spatial relation to check</param>
+		/// <param name="distanceErrorPct">The allowed error percentage</param>
+		/// <returns></returns>
+		TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025);
 
 		/// <summary>
 		///   Sorts the query results by distance.
@@ -354,6 +356,22 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
+
+		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "fields">The fields.</param>
+		TSelf OrderByDescending(params string[] fields);
+
+		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by descending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "propertySelectors">Property selectors for the fields.</param>
+		TSelf OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
 		/// <summary>
 		///   Instructs the query to wait for non stale results as of now.
@@ -399,10 +417,29 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
 
 		/// <summary>
+		///   Instructs the query to wait for non stale results as of the cutoff etag.
+		/// </summary>
+		/// <param name = "cutOffEtag">The cut off etag.</param>
+		/// <returns></returns>
+		TSelf WaitForNonStaleResultsAsOf(Guid cutOffEtag);
+
+		/// <summary>
+		///   Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+		/// </summary>
+		/// <param name = "cutOffEtag">The cut off etag.</param>
+		/// <param name = "waitTimeout">The wait timeout.</param>
+		TSelf WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout);
+
+		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.
 		///   This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>
 		TSelf WaitForNonStaleResults();
+
+		/// <summary>
+		/// Allows you to modify the index query before it is sent to the server
+		/// </summary>
+		TSelf BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution);
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
@@ -511,5 +548,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Select the default field to use for this query
 		/// </summary>
 		TSelf UsingDefaultField(string field);
+
+		/// <summary>
+		/// Select the default operator to use for this query
+		/// </summary>
+		TSelf UsingDefaultOperator(QueryOperator queryOperator);
 	}
 }

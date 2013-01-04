@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class TermsLocal : LocalClientTest
+	public class TermsLocal : RavenTest
 	{
 		[Fact]
 		public void CanGetTermsForIndex()

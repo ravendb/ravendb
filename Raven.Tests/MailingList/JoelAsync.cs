@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class JoelAsync : LocalClientTest
+	public class JoelAsync : RavenTest
 	{
 		public class Dummy
 		{

@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class ProjectionFromDynamicQuery : LocalClientTest
+	public class ProjectionFromDynamicQuery : RavenTest
 	{
 		[Fact]
 		public void ProjectNameFromDynamicQueryUsingLucene()
@@ -151,7 +151,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public class Person
+		private class Person
 		{
 			public string Name { get; set; }
 			public Address BillingAddress { get; set; }

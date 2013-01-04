@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class AccurateCount : LocalClientTest
+	public class AccurateCount : RavenTest
 	{
 		[Fact]
 		public void QueryableCountIsAccurate()
@@ -32,6 +32,8 @@ namespace Raven.Tests.Bugs
 					}
 					s.SaveChanges();
 				}
+
+				WaitForUserToContinueTheTest(store);
 
 				// wait for index
 				using (var s = store.OpenSession())

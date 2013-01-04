@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class CanIndexNestedObjects : LocalClientTest
+	public class CanIndexNestedObjects : RavenTest
 	{
 		public class NestedObject
 		{

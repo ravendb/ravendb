@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Transactions;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Abstractions.Extensions;
 
@@ -17,7 +17,7 @@ namespace Raven.Client.Document.DTC
 {
 	public class PendingTransactionRecovery
 	{
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
 		public void Execute(Guid myResourceManagerId, IDatabaseCommands commands)
 		{
