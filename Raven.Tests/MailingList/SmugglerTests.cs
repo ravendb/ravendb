@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
             {
                 var docId = string.Empty;
 
-                using (var documentStore = NewRemoteDocumentStore(true))
+                using (var documentStore = NewRemoteDocumentStore())
                 {
                     using (var session = documentStore.OpenSession())
                     {
@@ -37,7 +37,7 @@ namespace Raven.Tests.MailingList
                     smugglerApi.ExportData(options);
                 }
 
-                using (var documentStore = NewRemoteDocumentStore(true))
+                using (var documentStore = NewRemoteDocumentStore())
                 {
                     var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions() {Url = documentStore.Url});
                     smugglerApi.ImportData(options);
