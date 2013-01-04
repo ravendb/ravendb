@@ -529,7 +529,7 @@ namespace Raven.Storage.Esent
 
 				if (pht.UsingLazyCommit)
 				{
-					txMode = CommitTransactionGrbit.None;// even if the tx mode is configured lazy, we want a real flush here
+					txMode = CommitTransactionGrbit.WaitLastLevel0Commit;
 				}
 				return pht.Commit(txMode);
 			}

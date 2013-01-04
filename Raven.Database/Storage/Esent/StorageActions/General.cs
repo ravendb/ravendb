@@ -174,6 +174,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public Action Commit(CommitTransactionGrbit txMode)
 		{
+			if (txMode == CommitTransactionGrbit.WaitLastLevel0Commit)
+				transaction.Commit(CommitTransactionGrbit.LazyFlush);
+
 			transaction.Commit(txMode);
 
 			return OnStorageCommit;
