@@ -92,7 +92,9 @@ namespace Raven.Json.Linq
 
 				foreach (var key in LocalChanges.Keys)
 				{
-					if (LocalChanges[key] == DeletedMarker)
+					RavenJToken value;
+					if (LocalChanges.TryGetValue(key, out value) == false ||
+						value == DeletedMarker)
 						continue;
 					ret.Add(key);
 					++counter;
