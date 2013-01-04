@@ -107,10 +107,11 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
-				if (value is Enum)
+				var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
+				if (value is Enum || nonNullableType.IsEnum)
 				{
 					if (conventions.SaveEnumsAsIntegers == false)
-						return Enum.GetName(type, value);
+						return Enum.GetName(nonNullableType, value);
 					return Convert.ToInt32(value);
 				}
 				return value;
