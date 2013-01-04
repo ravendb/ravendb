@@ -110,6 +110,8 @@ namespace Raven.Client.Linq
 				var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
 				if (value is Enum || nonNullableType.IsEnum)
 				{
+					if (value == null)
+						return null;
 					if (conventions.SaveEnumsAsIntegers == false)
 						return Enum.GetName(nonNullableType, value);
 					return Convert.ToInt32(value);
