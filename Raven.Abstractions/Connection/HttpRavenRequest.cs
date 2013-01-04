@@ -138,7 +138,7 @@ namespace Raven.Abstractions.Connection
 			return result;
 		}
 
-		public void ExecuteRequest(Action<StreamReader> action)
+		public void ExecuteRequest(Action<TextReader> action)
 		{
 			SendRequestToServer(response =>
 			{
