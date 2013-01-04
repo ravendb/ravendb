@@ -107,6 +107,9 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
+				if (value is IEnumerable)
+					return value;
+
 				var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
 				if (value is Enum || nonNullableType.IsEnum)
 				{
