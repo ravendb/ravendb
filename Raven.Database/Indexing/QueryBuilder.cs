@@ -25,10 +25,10 @@ namespace Raven.Database.Indexing
 		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
-		private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.InvariantCultureIgnoreCase)
+		private static readonly Dictionary<string, Func<string, List<string>, PerFieldAnalyzerWrapper, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, PerFieldAnalyzerWrapper, Query>>(StringComparer.InvariantCultureIgnoreCase)
 		{
-			{"in", (field, args) => new TermsMatchQuery(field, args)},
-			{"emptyIn", (field, args) => new TermsMatchQuery(field, Enumerable.Empty<string>())}
+			{"in", (field, args, analyzer) => new TermsMatchQuery(field, args, analyzer)},
+			{"emptyIn", (field, args, analyzer) => new TermsMatchQuery(field, Enumerable.Empty<string>(), analyzer)}
 		};
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
@@ -52,7 +52,7 @@ namespace Raven.Database.Indexing
 				query = PreProcessSearchTerms(query);
 				query = PreProcessDateTerms(query, queryParser);
 				var generatedQuery = queryParser.Parse(query);
-				generatedQuery = HandleMethods(generatedQuery);
+				generatedQuery = HandleMethods(generatedQuery, analyzer);
 				return generatedQuery;
 			}
 			catch (ParseException pe)
@@ -64,24 +64,24 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static Query HandleMethods(Query query)
+		private static Query HandleMethods(Query query, PerFieldAnalyzerWrapper analyzer)
 		{
 			var termQuery = query as TermQuery;
 			if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
 			{
-				return HandleMethodsForQueryAndTerm(query, termQuery.Term);
+				return HandleMethodsForQueryAndTerm(query, termQuery.Term, analyzer);
 			}
 			var wildcardQuery = query as WildcardQuery;
 			if (wildcardQuery != null)
 			{
-				return HandleMethodsForQueryAndTerm(query, wildcardQuery.Term);
+				return HandleMethodsForQueryAndTerm(query, wildcardQuery.Term, analyzer);
 			}
 			var booleanQuery = query as BooleanQuery;
 			if (booleanQuery != null)
 			{
 				foreach (var c in booleanQuery.Clauses)
 				{
-					c.Query = HandleMethods(c.Query);
+					c.Query = HandleMethods(c.Query, analyzer);
 				}
 				if (booleanQuery.Clauses.Count == 0)
 					return booleanQuery;
@@ -110,9 +110,9 @@ namespace Raven.Database.Indexing
 
 		private static Regex unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
 
-		private static Query HandleMethodsForQueryAndTerm(Query query, Term term)
+		private static Query HandleMethodsForQueryAndTerm(Query query, Term term, PerFieldAnalyzerWrapper analyzer)
 		{
-			Func<string, List<string>, Query> value;
+			Func<string, List<string>, PerFieldAnalyzerWrapper, Query> value;
 			var indexOfFieldStart = term.Field.IndexOf('<');
 			var indexOfFieldEnd = term.Field.LastIndexOf('>');
 			if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)
@@ -130,7 +130,7 @@ namespace Raven.Database.Indexing
 					where string.IsNullOrWhiteSpace(part) == false
 					select part.Replace("`,`", ",")
 			);
-			return value(field, list);
+			return value(field, list, analyzer);
 		}
 
 		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
