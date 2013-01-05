@@ -64,7 +64,7 @@ namespace Raven.Tests.Bundles.Expiration
 		public void Can_add_entity_with_expiry_then_read_it_before_it_expires()
 		{
 			var company = new Company {Name = "Company Name"};
-			var expiry = DateTime.UtcNow.AddMinutes(5);
+			var expiry = SystemTime.UtcNow.AddMinutes(5);
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
