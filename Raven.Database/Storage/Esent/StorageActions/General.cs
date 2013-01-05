@@ -166,7 +166,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return;
 			}
 			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
-			if (eightyPrecentOfMax >= sizeInBytes || maybePulseCount % 15000 == 0)
+			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount % 15000 == 0)
 				PulseTransaction();
 		}
 
