@@ -3,10 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
@@ -24,6 +26,7 @@ namespace Raven.Client.Document
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
+		private readonly ServerClient client;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 		private readonly HttpJsonRequest httpJsonRequest;
 		private readonly BlockingCollection<RavenJObject> items;
@@ -32,6 +35,7 @@ namespace Raven.Client.Document
 
 		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client)
 		{
+			this.client = client;
 			items = new BlockingCollection<RavenJObject>(options.BatchSize*8);
 			string requestUrl = "/bulkInsert?";
 			if (options.CheckForUpdates)
@@ -99,7 +103,26 @@ namespace Raven.Client.Document
 				{
 					report("Finished writing all results to server");
 				}
-				httpJsonRequest.RawExecuteRequest();
+				long id;
+
+				using (var response = httpJsonRequest.RawExecuteRequest())
+				using(var stream = response.GetResponseStream())
+				using(var streamReader = new StreamReader(stream))
+				{
+					var result = RavenJObject.Load(new JsonTextReader(streamReader));
+					id = result.Value<long>("OperationId");
+				}
+
+				while (true)
+				{
+					var status = client.GetOperationStatus(id);
+					if (status == null)
+						break;
+					if (status.Value<bool>("Completed"))
+						break;
+					Thread.Sleep(500);
+				}
+
 				if (report != null)
 				{
 					report("Done writing to server");

@@ -813,11 +813,11 @@ namespace Raven.Client.Connection
 			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public void RawExecuteRequest()
+		public WebResponse RawExecuteRequest()
 		{
 			try
 			{
-				webRequest.GetResponse().Close();
+				return webRequest.GetResponse();
 			}
 			catch (WebException we)
 			{
