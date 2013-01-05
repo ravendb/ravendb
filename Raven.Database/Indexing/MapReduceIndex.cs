@@ -103,8 +103,6 @@ namespace Raven.Database.Indexing
 
 						var data = GetMappedData(doc);
 
-						logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
-
 						items.Add(new MapResultItem
 						{
 							Data = data,
@@ -123,6 +121,7 @@ namespace Raven.Database.Indexing
 				foreach (var referencedDocument in result)
 				{
 					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+					actions.General.MaybePulseTransaction();
 				}
 			}
 
