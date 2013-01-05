@@ -529,7 +529,7 @@ namespace Raven.Storage.Esent
 
 				if (pht.UsingLazyCommit)
 				{
-					txMode = CommitTransactionGrbit.WaitLastLevel0Commit;
+					txMode = CommitTransactionGrbit.None;
 				}
 				return pht.Commit(txMode);
 			}
