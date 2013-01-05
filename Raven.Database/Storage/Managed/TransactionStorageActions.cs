@@ -104,14 +104,13 @@ namespace Raven.Storage.Managed
 
 		public bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
 		{
-			var nonTxResult = storage.Documents.Read(new RavenJObject { { "key", key } });
+			var nonTxResult = storage.Documents.Read(new RavenJObject {{"key", key}});
 			if (nonTxResult == null)
 			{
-
 				if (etag != null && etag.Value != Guid.Empty)
 				{
 					throw new ConcurrencyException("DELETE attempted on document '" + key +
-												   "' using a non current etag")
+					                               "' using a non current etag")
 					{
 						ActualETag = Guid.Empty,
 						ExpectedETag = etag.Value
@@ -120,34 +119,31 @@ namespace Raven.Storage.Managed
 				return false;
 			}
 
-			var readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
+			var readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject {{"key", key}});
 			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
 			AssertValidEtag(key, nonTxResult, readResult, etag, "DELETE");
-
-			if (readResult != null)
-			{
-				var ravenJObject = ((RavenJObject)readResult.Key.CloneToken());
-				ravenJObject["txId"] = transactionInformation.Id.ToByteArray();
-				if (storage.Documents.UpdateKey(readResult.Key) == false)
-					throw new ConcurrencyException("DELETE attempted on document '" + key +
-												   "' that is currently being modified by another transaction");
-			}
+			
+			var ravenJObject = ((RavenJObject) nonTxResult.Key.CloneToken());
+			ravenJObject["txId"] = transactionInformation.Id.ToByteArray();
+			if (storage.Documents.UpdateKey(ravenJObject) == false)
+				throw new ConcurrencyException("DELETE attempted on document '" + key +
+				                               "' that is currently being modified by another transaction");
 
 			storage.Transactions.UpdateKey(new RavenJObject
-				{
-					{"txId", transactionInformation.Id.ToByteArray()},
-					{"timeout", SystemTime.UtcNow.Add(transactionInformation.Timeout)}
-				});
+			{
+				{"txId", transactionInformation.Id.ToByteArray()},
+				{"timeout", SystemTime.UtcNow.Add(transactionInformation.Timeout)}
+			});
 
 			var newEtag = generator.CreateSequentialUuid(UuidType.DocumentTransactions);
 			storage.DocumentsModifiedByTransactions.UpdateKey(new RavenJObject
-				{
-					{"key", key},
-					{"etag", newEtag.ToByteArray()},
-					{"modified", SystemTime.UtcNow},
-					{"deleted", true},
-					{"txId", transactionInformation.Id.ToByteArray()}
-				});
+			{
+				{"key", key},
+				{"etag", newEtag.ToByteArray()},
+				{"modified", SystemTime.UtcNow},
+				{"deleted", true},
+				{"txId", transactionInformation.Id.ToByteArray()}
+			});
 
 			return true;
 		}
