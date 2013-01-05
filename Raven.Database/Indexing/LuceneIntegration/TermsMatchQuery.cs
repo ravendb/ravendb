@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -28,7 +27,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			get { return field; }
 		}
 
-		public TermsMatchQuery(string field, IEnumerable<string> matches, PerFieldAnalyzerWrapper analyzer)
+		public TermsMatchQuery(string field, IEnumerable<string> matches, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			this.field = field;
 			this.matches = new List<string>();

@@ -25,18 +25,18 @@ namespace Raven.Database.Indexing
 		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
-		private static readonly Dictionary<string, Func<string, List<string>, PerFieldAnalyzerWrapper, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, PerFieldAnalyzerWrapper, Query>>(StringComparer.InvariantCultureIgnoreCase)
+		private static readonly Dictionary<string, Func<string, List<string>, RavenPerFieldAnalyzerWrapper, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, RavenPerFieldAnalyzerWrapper, Query>>(StringComparer.InvariantCultureIgnoreCase)
 		{
 			{"in", (field, args, analyzer) => new TermsMatchQuery(field, args, analyzer)},
 			{"emptyIn", (field, args, analyzer) => new TermsMatchQuery(field, Enumerable.Empty<string>(), analyzer)}
 		};
 
-		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
+		public static Query BuildQuery(string query, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			return BuildQuery(query, new IndexQuery(), analyzer);
 		}
 
-		public static Query BuildQuery(string query, IndexQuery indexQuery, PerFieldAnalyzerWrapper analyzer)
+		public static Query BuildQuery(string query, IndexQuery indexQuery, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			var originalQuery = query;
 			try
@@ -64,7 +64,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static Query HandleMethods(Query query, PerFieldAnalyzerWrapper analyzer)
+		private static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			var termQuery = query as TermQuery;
 			if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
@@ -110,9 +110,9 @@ namespace Raven.Database.Indexing
 
 		private static Regex unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
 
-		private static Query HandleMethodsForQueryAndTerm(Query query, Term term, PerFieldAnalyzerWrapper analyzer)
+		private static Query HandleMethodsForQueryAndTerm(Query query, Term term, RavenPerFieldAnalyzerWrapper analyzer)
 		{
-			Func<string, List<string>, PerFieldAnalyzerWrapper, Query> value;
+			Func<string, List<string>, RavenPerFieldAnalyzerWrapper, Query> value;
 			var indexOfFieldStart = term.Field.IndexOf('<');
 			var indexOfFieldEnd = term.Field.LastIndexOf('>');
 			if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)

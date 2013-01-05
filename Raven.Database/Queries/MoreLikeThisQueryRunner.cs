@@ -90,7 +90,7 @@ namespace Raven.Database.Queries
 				mlt.SetFieldNames(fieldNames);
 
 				var toDispose = new List<Action>();
-				PerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
+				RavenPerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
 				try
 				{
 					perFieldAnalyzerWrapper = index.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);

@@ -19,7 +19,7 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleQueryParser
 	{
-		static readonly PerFieldAnalyzerWrapper perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(new KeywordAnalyzer());
+		static readonly RavenPerFieldAnalyzerWrapper perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(new KeywordAnalyzer());
 
 		public static HashSet<string> GetFields(IndexQuery query)
 		{
