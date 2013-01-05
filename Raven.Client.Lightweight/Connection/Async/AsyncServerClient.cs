@@ -700,7 +700,8 @@ namespace Raven.Client.Connection.Async
 			return request.ExecuteWriteAsync(new RavenJObject
 				{
 					{"RestoreLocation", restoreLocation},
-					{"DatabaseLocation", databaseLocation}
+					{"DatabaseLocation", databaseLocation},
+					{"DatabaseName", name}
 				}.ToString(Formatting.None))
 				.ContinueWith(task =>
 				{
