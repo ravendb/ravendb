@@ -27,20 +27,10 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			get { return field; }
 		}
 
-		public TermsMatchQuery(string field, IEnumerable<string> matches, RavenPerFieldAnalyzerWrapper analyzer)
+		public TermsMatchQuery(string field, List<string> matches)
 		{
 			this.field = field;
-			this.matches = new List<string>();
-			foreach (var match in matches)
-			{
-				var tokenStream = analyzer.ReusableTokenStream(field, new StringReader(match));
-				while (tokenStream.IncrementToken())
-				{
-					var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
-					this.matches.Add(attribute.Term);
-				}
-			}
-
+			this.matches = matches;
 			this.matches.Sort(StringComparer.Ordinal);
 		}
 

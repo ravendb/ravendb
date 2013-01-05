@@ -25,10 +25,10 @@ namespace Raven.Database.Indexing
 		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
-		private static readonly Dictionary<string, Func<string, List<string>, RavenPerFieldAnalyzerWrapper, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, RavenPerFieldAnalyzerWrapper, Query>>(StringComparer.InvariantCultureIgnoreCase)
+		private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.InvariantCultureIgnoreCase)
 		{
-			{"in", (field, args, analyzer) => new TermsMatchQuery(field, args, analyzer)},
-			{"emptyIn", (field, args, analyzer) => new TermsMatchQuery(field, Enumerable.Empty<string>(), analyzer)}
+			{"in", (field, args) => new TermsMatchQuery(field, args)},
+			{"emptyIn", (field, args) => new TermsMatchQuery(field, args)}
 		};
 
 		public static Query BuildQuery(string query, RavenPerFieldAnalyzerWrapper analyzer)
@@ -69,12 +69,21 @@ namespace Raven.Database.Indexing
 			var termQuery = query as TermQuery;
 			if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
 			{
-				return HandleMethodsForQueryAndTerm(query, termQuery.Term, analyzer);
+				return HandleMethodsForQueryAndTerm(query, termQuery.Term);
+			}
+			var pharseQuery = query as PhraseQuery;
+			if (pharseQuery != null)
+			{
+				var terms = pharseQuery.GetTerms();
+				if (terms.All(x => x.Field.StartsWith("@")) == false ||
+				    terms.Select(x => x.Field).Distinct().Count() != 1)
+					return query;
+				return HandleMethodsForQueryAndTerm(query, terms);
 			}
 			var wildcardQuery = query as WildcardQuery;
 			if (wildcardQuery != null)
 			{
-				return HandleMethodsForQueryAndTerm(query, wildcardQuery.Term, analyzer);
+				return HandleMethodsForQueryAndTerm(query, wildcardQuery.Term);
 			}
 			var booleanQuery = query as BooleanQuery;
 			if (booleanQuery != null)
@@ -110,27 +119,50 @@ namespace Raven.Database.Indexing
 
 		private static Regex unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
 
-		private static Query HandleMethodsForQueryAndTerm(Query query, Term term, RavenPerFieldAnalyzerWrapper analyzer)
+		private static Query HandleMethodsForQueryAndTerm(Query query, Term term)
 		{
-			Func<string, List<string>, RavenPerFieldAnalyzerWrapper, Query> value;
-			var indexOfFieldStart = term.Field.IndexOf('<');
-			var indexOfFieldEnd = term.Field.LastIndexOf('>');
-			if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)
+			Func<string, List<string>, Query> value;
+			var field = term.Field;
+			if (TryHandlingMethodForQueryAndTerm(ref field, out value) == false) 
 				return query;
-			var method = term.Field.Substring(1, indexOfFieldStart - 1);
-			var field = term.Field.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
 
-			if (queryMethods.TryGetValue(method, out value) == false)
-			{
-				throw new InvalidOperationException("Method call " + term.Field + " is invalid.");
-			}
 			var parts = unescapedSplitter.Split(term.Text);
 			var list = new List<string>(
 					from part in parts
 					where string.IsNullOrWhiteSpace(part) == false
 					select part.Replace("`,`", ",")
 			);
-			return value(field, list, analyzer);
+			return value(field, list);
+		}
+
+		private static Query HandleMethodsForQueryAndTerm(Query query, Term[] terms)
+		{
+			Func<string, List<string>, Query> value;
+			var field = terms[0].Field;
+			if (TryHandlingMethodForQueryAndTerm(ref field, out value) == false)
+				return query;
+
+			return value(field, terms.Select(x=>x.Text).ToList());
+		}
+
+		private static bool TryHandlingMethodForQueryAndTerm(ref string field,
+			out Func<string, List<string>, Query> value)
+		{
+			value = null;
+			var indexOfFieldStart = field.IndexOf('<');
+			var indexOfFieldEnd = field.LastIndexOf('>');
+			if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)
+			{
+				return false;
+			}
+			var method = field.Substring(1, indexOfFieldStart - 1);
+			field = field.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
+
+			if (queryMethods.TryGetValue(method, out value) == false)
+			{
+				throw new InvalidOperationException("Method call " + field + " is invalid.");
+			}
+			return true;
 		}
 
 		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
