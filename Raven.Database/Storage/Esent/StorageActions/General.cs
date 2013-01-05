@@ -155,18 +155,19 @@ namespace Raven.Storage.Esent.StorageActions
 		private int maybePulseCount;
 		public void MaybePulseTransaction()
 		{
-			if (++maybePulseCount % 100 != 0)
+			if (++maybePulseCount % 1000 != 0)
 				return;
 
 			var sizeInBytes = transactionalStorage.GetDatabaseTransactionVersionSizeInBytes();
+			const int maxNumberOfCallsBeforePulsingIsForced = 50 * 1000;
 			if (sizeInBytes <= 0) // there has been an error
 			{
-				if (maybePulseCount % 15000 == 0)
+				if (maybePulseCount % maxNumberOfCallsBeforePulsingIsForced == 0)
 					PulseTransaction();
 				return;
 			}
 			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
-			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount % 15000 == 0)
+			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount % maxNumberOfCallsBeforePulsingIsForced == 0)
 				PulseTransaction();
 		}
 
