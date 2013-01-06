@@ -32,7 +32,9 @@ namespace Raven.Tests.MailingList
 						.Take(15).ToList();
 					RavenQueryStatistics stats;
 
-					var query = session.Query<User>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+					var query = session.Query<User>().Statistics(out stats)
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.FirstName == "Ayende");
 
 					var results = query.Take(8).Lazily();
 
@@ -65,7 +67,9 @@ namespace Raven.Tests.MailingList
 						.Take(15).ToList();
 					RavenQueryStatistics stats;
 
-					var query = session.Query<User>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+					var query = session.Query<User>().Statistics(out stats)
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.FirstName == "Ayende");
 
 					var results = query.Take(8).Lazily();
 
@@ -100,7 +104,9 @@ namespace Raven.Tests.MailingList
 						.Take(15).ToList();
 					RavenQueryStatistics stats;
 
-					var query = session.Query<User>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+					var query = session.Query<User>().Statistics(out stats)
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.FirstName == "Ayende");
 
 					var results = query.Take(8).ToList();
 
@@ -135,7 +141,9 @@ namespace Raven.Tests.MailingList
 
 					RavenQueryStatistics stats;
 
-					var query = session.Query<User, UserByFirstName>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+					var query = session.Query<User, UserByFirstName>().Statistics(out stats)
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.FirstName == "Ayende");
 
 					var results = query.Take(8).Lazily();
 
@@ -170,7 +178,9 @@ namespace Raven.Tests.MailingList
 
 					RavenQueryStatistics stats;
 
-					var query = session.Query<User, UserByFirstName>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+					var query = session.Query<User, UserByFirstName>().Statistics(out stats)
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.FirstName == "Ayende");
 
 					var results = query.Take(8).ToList();
 

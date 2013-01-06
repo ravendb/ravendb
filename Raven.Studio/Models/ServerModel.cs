@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Studio.Commands;
+using Raven.Studio.Impl;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Abstractions.Extensions;
@@ -115,13 +116,13 @@ namespace Raven.Studio.Models
 				                   	            }
 				                   	        });
 
-				                   		if (names.Length == 0 || (names.Length == 1 && names[0] == Constants.SystemDatabase))
+				                   		var url = new UrlParser(UrlUtil.Url);
+
+				                   		if (url.QueryParams.ContainsKey("database") == false && (names.Length == 0 || (names.Length == 1 && names[0] == Constants.SystemDatabase)))
 				                   			CreateNewDatabase = true;
 
 				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase)) 
 											return;
-
-				                   		var url = new UrlParser(UrlUtil.Url);
 
 										if (Settings.Instance.SelectedDatabase != null && names.Contains(Settings.Instance.SelectedDatabase))
 										{

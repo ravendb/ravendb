@@ -103,8 +103,6 @@ namespace Raven.Database.Indexing
 
 						var data = GetMappedData(doc);
 
-						logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
-
 						items.Add(new MapResultItem
 						{
 							Data = data,
@@ -123,15 +121,14 @@ namespace Raven.Database.Indexing
 				foreach (var referencedDocument in result)
 				{
 					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+					actions.General.MaybePulseTransaction();
 				}
 			}
 
-			int mapCount = 0;
 			foreach (var mapResultItem in items)
 			{
 				actions.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
-				if(mapCount++ % 50000 == 0)
-					actions.General.PulseTransaction();
+				actions.General.MaybePulseTransaction();
 			}
 
 			UpdateIndexingStats(context, stats);
@@ -431,8 +428,7 @@ namespace Raven.Database.Indexing
 									case 0:
 									case 1:
 										Actions.MapReduce.PutReducedResult(name, reduceKeyAsString, Level + 1, mappedResults.Key, mappedResults.Key / 1024, ToJsonDocument(doc));
-										if(count % 50000 == 0)
-											Actions.General.PulseTransaction();
+										Actions.General.MaybePulseTransaction();
 										break;
 									case 2:
 										WriteDocumentToIndex(doc, indexWriter, analyzer);

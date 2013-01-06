@@ -433,7 +433,7 @@ namespace Raven.Database.Indexing
 			CreateIndexWriter();
 		}
 
-		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
+		public RavenPerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
 		{
 			toDispose.Add(defaultAnalyzer.Close);
 
@@ -443,7 +443,7 @@ namespace Raven.Database.Indexing
 				defaultAnalyzer = IndexingExtensions.CreateAnalyzerInstance(Constants.AllFields, value);
 				toDispose.Add(defaultAnalyzer.Close);
 			}
-			var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
+			var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer);
 			foreach (var analyzer in indexDefinition.Analyzers)
 			{
 				Analyzer analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
@@ -1039,7 +1039,7 @@ namespace Raven.Database.Indexing
 				{
 					logQuerying.Debug("Issuing query on index {0} for: {1}", parent.name, query);
 					var toDispose = new List<Action>();
-					PerFieldAnalyzerWrapper searchAnalyzer = null;
+					RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
 					try
 					{
 						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
@@ -1062,7 +1062,7 @@ namespace Raven.Database.Indexing
 				return luceneQuery;
 			}
 
-			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, PerFieldAnalyzerWrapper analyzer)
+			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)
 			{
 				if (analyzer != null)
 					analyzer.Close();

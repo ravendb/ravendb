@@ -13,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Studio.Controls;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Settings;
+using Raven.Studio.Impl;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Studio.Models;

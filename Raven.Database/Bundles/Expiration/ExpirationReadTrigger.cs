@@ -28,12 +28,20 @@ namespace Raven.Bundles.Expiration
 			var property = metadata[RavenExpirationDate];
 			if (property == null)
 				return ReadVetoResult.Allowed;
-			var dateTime = property.Value<DateTime>();
-			if(dateTime > GetCurrentUtcDate())
+			DateTime dateTime;
+			try
+			{
+				dateTime = property.Value<DateTime>();
+			}
+			catch (FormatException)
+			{
+				// if we can't process the value, ignore it.
+				return ReadVetoResult.Allowed;
+			}
+			if(dateTime > SystemTime.UtcNow)
 				return ReadVetoResult.Allowed;
 			return ReadVetoResult.Ignore;
 		}
 
-		public static Func<DateTime> GetCurrentUtcDate = () => SystemTime.UtcNow;
 	}
 }

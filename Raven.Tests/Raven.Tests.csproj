@@ -259,6 +259,7 @@
     <Compile Include="Bugs\Orders.cs" />
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\IdProjection.cs" />
+    <Compile Include="Bugs\PrefetchingBug.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\CanIncludeValueType.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
@@ -589,6 +590,7 @@
     <Compile Include="MailingList\Nullables.cs" />
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
+    <Compile Include="MailingList\Oguzhntopcu.cs" />
     <Compile Include="MailingList\Pfeffer.cs" />
     <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
@@ -596,6 +598,7 @@
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
+    <Compile Include="MailingList\SmugglerTests.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
@@ -605,6 +608,7 @@
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
     <Compile Include="MailingList\Vitaliy.cs" />
+    <Compile Include="MailingList\WhereInTests.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />
     <Compile Include="MailingList\Zeitler.cs" />
     <Compile Include="NestedIndexing\CanIndexReferencedEntity.cs" />

@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -42,7 +43,7 @@ namespace Raven.Tests.Bundles.Expiration
 			ravenConfiguration.PostInit();
 			ravenDbServer = new RavenDbServer(
 				ravenConfiguration);
-			Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
+			SystemTime.UtcDateTime = () => DateTime.UtcNow;
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -52,6 +53,8 @@ namespace Raven.Tests.Bundles.Expiration
 
 		public void Dispose()
 		{
+			SystemTime.UtcDateTime = null;
+
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
 			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
@@ -61,7 +64,7 @@ namespace Raven.Tests.Bundles.Expiration
 		public void Can_add_entity_with_expiry_then_read_it_before_it_expires()
 		{
 			var company = new Company {Name = "Company Name"};
-			var expiry = DateTime.UtcNow.AddMinutes(5);
+			var expiry = SystemTime.UtcNow.AddMinutes(5);
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -91,7 +94,7 @@ namespace Raven.Tests.Bundles.Expiration
 				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
 				session.SaveChanges();
 			}
-			Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
+			SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 		   
 			using (var session = documentStore.OpenSession())
 			{
@@ -119,7 +122,7 @@ namespace Raven.Tests.Bundles.Expiration
 					.WaitForNonStaleResults()
 					.ToList();
 			}
-			Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
+			SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
 			using (var session = documentStore.OpenSession())
 			{

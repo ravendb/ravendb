@@ -546,6 +546,13 @@ namespace Raven.Client.Connection
 			get { return webRequest.ContentType; }
 			set { webRequest.ContentType = value; }
 		}
+		public TimeSpan Timeout
+		{
+			set
+			{
+				webRequest.Timeout = (int)value.TotalMilliseconds;
+			}
+		}
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
@@ -806,11 +813,11 @@ namespace Raven.Client.Connection
 			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public void RawExecuteRequest()
+		public WebResponse RawExecuteRequest()
 		{
 			try
 			{
-				webRequest.GetResponse().Close();
+				return webRequest.GetResponse();
 			}
 			catch (WebException we)
 			{
