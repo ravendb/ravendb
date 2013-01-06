@@ -76,6 +76,21 @@ select new {
 		    Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
 		}
 
+		[Fact]
+		public void DoesNotOverReduce() 
+		{
+			db.Configuration.MaxNumberOfItemsToReduceInSingleBatch = 512;
+			for (int i = 0; i < 1024; i++) {
+				db.Put("docs/" + i, null, RavenJObject.Parse("{blog_id: " + i + ", comments: [{},{},{}]}"), new RavenJObject(), null);
+			}
+
+			var q = GetUnstableQueryResult("blog_id:3");
+			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""3""}", q.Results[0].ToString(Formatting.None));
+
+			var index = db.Statistics.Indexes[0];
+			Assert.Equal(index.IndexingAttempts, index.ReduceIndexingAttempts);
+		}
+
 	    private QueryResult GetUnstableQueryResult(string query)
 	    {
 	        int count = 0;

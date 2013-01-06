@@ -208,7 +208,10 @@ namespace Raven.Database.Indexing
 							loadData: false
 						).ToList();
 
-				foreach (var reduceKey in keysToReduce)
+				// Only look at the scheduled batch for this run, not the entire set of pending reductions.
+				var batchKeys = scheduledItems.Select(x => x.ReduceKey).ToArray();
+
+				foreach (var reduceKey in batchKeys)
 				{
 					var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, reduceKey);
 
@@ -236,14 +239,14 @@ namespace Raven.Database.Indexing
 
 				var mappedResults = actions.MapReduce.GetMappedResults(
 						index.IndexName, 
-						keysToReduce, 
+						batchKeys, 
 						loadData: true
 					).ToList();
 
 				result.count += mappedResults.Count;
 				result.size += mappedResults.Sum(x => x.Size);
 
-				var reduceKeys = new HashSet<string>(keysToReduce);
+				var reduceKeys = new HashSet<string>(batchKeys);
 
 				mappedResults.ApplyIfNotNull(x => x.Bucket = 0);
 
