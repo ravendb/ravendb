@@ -565,12 +565,18 @@ namespace Raven.Database
 		public void RaiseNotifications(DocumentChangeNotification obj)
 		{
 			TransportState.Send(obj);
+			var onDocumentChange = OnDocumentChange;
+			if (onDocumentChange != null)
+				onDocumentChange(this, obj);
+
 		}
 
 		public void RaiseNotifications(IndexChangeNotification obj)
 		{
 			TransportState.Send(obj);
 		}
+
+		public event EventHandler<DocumentChangeNotification> OnDocumentChange;
 
 		public void RunIdleOperations()
 		{
