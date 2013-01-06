@@ -203,7 +203,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, int take, bool loadData, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, List<object> itemsToDelete)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
 
@@ -226,7 +226,7 @@ namespace Raven.Storage.Esent.StorageActions
 				OptimizedIndexReader reader;
 				if (itemsToDelete.Count == 0)
 				{
-					itemsToDelete.Add(reader = new OptimizedIndexReader(take));
+					itemsToDelete.Add(reader = new OptimizedIndexReader());
 				}
 				else
 				{
@@ -257,16 +257,12 @@ namespace Raven.Storage.Esent.StorageActions
 					{
 						foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
 						{
-							take--;
 							yield return mappedResultInfo;
 						}
 					}
 
 					reader.Add(session, ScheduledReductions);
-				} while (Api.TryMoveNext(session, ScheduledReductions) && take > 0);
-
-				if (take <= 0)
-					break;
+				} while (Api.TryMoveNext(session, ScheduledReductions));
 			}
 		}
 
@@ -654,7 +650,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, ReducedResults) && take > 0);
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int limitOfItemsToReduceInSingleStep)
+		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int take, int limitOfItemsToReduceInSingleStep)
 		{
 			var allKeysToReduce = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -676,7 +672,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 				allKeysToReduce.Add(reduceKey);
 
-			} while (Api.TryMoveNext(session, ScheduledReductions));
+			} while (Api.TryMoveNext(session, ScheduledReductions) && allKeysToReduce.Count < take);
 
 			foreach (var reduceKey in allKeysToReduce)
 			{

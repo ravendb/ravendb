@@ -35,7 +35,9 @@ namespace Raven.Database.Indexing
 			IList<ReduceTypePerKey> mappedResultsInfo = null;
 			transactionalStorage.Batch(actions =>
 			{
-				mappedResultsInfo = actions.MapReduce.GetReduceTypesPerKeys(indexToWorkOn.IndexName, context.NumberOfItemsToExecuteReduceInSingleStep).ToList();
+				mappedResultsInfo = actions.MapReduce.GetReduceTypesPerKeys(indexToWorkOn.IndexName, 
+					context.CurrentNumberOfItemsToReduceInSingleBatch,
+					context.NumberOfItemsToExecuteReduceInSingleStep).ToList();
 			});
 
 			var singleStepReduceKeys = mappedResultsInfo.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).Select(x => x.ReduceKey).ToArray();
@@ -117,7 +119,6 @@ namespace Raven.Database.Indexing
 
 					var persistedResults = actions.MapReduce.GetItemsToReduce
 						(
-							take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 							level: level,
 							reduceKeys: keysToReduce,
 							index: index.IndexName,
@@ -200,7 +201,6 @@ namespace Raven.Database.Indexing
 			{
 				var scheduledItems = actions.MapReduce.GetItemsToReduce
 						(
-							take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 							level: 0,
 							reduceKeys: keysToReduce,
 							index: index.IndexName,
@@ -209,9 +209,9 @@ namespace Raven.Database.Indexing
 						).ToList();
 
 				// Only look at the scheduled batch for this run, not the entire set of pending reductions.
-				var batchKeys = scheduledItems.Select(x => x.ReduceKey).ToArray();
+				//var batchKeys = scheduledItems.Select(x => x.ReduceKey).ToArray();
 
-				foreach (var reduceKey in batchKeys)
+				foreach (var reduceKey in keysToReduce)
 				{
 					var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, reduceKey);
 
@@ -238,15 +238,15 @@ namespace Raven.Database.Indexing
 				}
 
 				var mappedResults = actions.MapReduce.GetMappedResults(
-						index.IndexName, 
-						batchKeys, 
+						index.IndexName,
+						keysToReduce, 
 						loadData: true
 					).ToList();
 
 				result.count += mappedResults.Count;
 				result.size += mappedResults.Sum(x => x.Size);
 
-				var reduceKeys = new HashSet<string>(batchKeys);
+				var reduceKeys = new HashSet<string>(keysToReduce);
 
 				mappedResults.ApplyIfNotNull(x => x.Bucket = 0);
 

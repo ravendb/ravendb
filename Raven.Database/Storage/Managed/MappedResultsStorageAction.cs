@@ -142,7 +142,7 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, int take, bool loadData, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, List<object> itemsToDelete)
 		{
 			var seen = new HashSet<Tuple<string, int>>();
 
@@ -176,17 +176,11 @@ namespace Raven.Storage.Managed
 					{
 						foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
 						{
-							take--;
 							yield return mappedResultInfo;
 						}
 					}
 					itemsToDelete.Add(result);
-					if (take <= 0)
-						break;
 				}
-
-				if (take <= 0)
-					break;
 			}
 		}
 
@@ -332,7 +326,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int limitOfItemsToReduceInSingleStep)
+		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int take, int limitOfItemsToReduceInSingleStep)
 		{
 			var allKeysToReduce = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -341,7 +335,8 @@ namespace Raven.Storage.Managed
 				{"view", indexName},
 				{"level", 0}
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
-								x.Value<int>("level") == 0))
+								x.Value<int>("level") == 0)
+								.Take(take))
 			{
 				allKeysToReduce.Add(reduction.Value<string>("reduceKey"));
 			}

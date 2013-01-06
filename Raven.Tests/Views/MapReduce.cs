@@ -85,6 +85,7 @@ select new {
 			}
 
 			var q = GetUnstableQueryResult("blog_id:3");
+			Assert.False(q.IsStale);
 			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""3""}", q.Results[0].ToString(Formatting.None));
 
 			var index = db.Statistics.Indexes[0];
