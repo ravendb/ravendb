@@ -191,6 +191,12 @@ namespace Raven.Abstractions.Data
 			return etag.ToString();
 		}
 
+		public static implicit operator Etag(string s)
+		{
+			return Parse(s);
+		}
+
+
 		public Etag HashWith(Etag other)
 		{
 			byte[] etagBytes = other.ToBytes().Concat(ToBytes()).ToArray();
