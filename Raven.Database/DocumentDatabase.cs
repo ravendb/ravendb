@@ -46,6 +46,7 @@ using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using BitConverter = System.BitConverter;
 using Index = Raven.Database.Indexing.Index;
+using Task = System.Threading.Tasks.Task;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
@@ -92,6 +93,15 @@ namespace Raven.Database
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
 		private readonly List<IDisposable> toDispose = new List<IDisposable>();
+
+		private long pendingTaskCounter;
+		private ConcurrentDictionary<long, PendingTaskAndState> pendingTasks = new ConcurrentDictionary<long, PendingTaskAndState>();
+
+		private class PendingTaskAndState
+		{
+			public Task Task;
+			public RavenJToken State;
+		}
 
 		/// <summary>
 		/// The name of the database.
@@ -449,6 +459,16 @@ namespace Raven.Database
 				}
 			});
 
+
+			exceptionAggregator.Execute(() =>
+			{
+				foreach (var shouldDispose in pendingTasks)
+				{
+					exceptionAggregator.Execute(shouldDispose.Value.Task.Wait);
+				}
+				pendingTasks.Clear();
+			});
+
 			exceptionAggregator.Execute(() =>
 			{
 				if (indexingBackgroundTask != null)
@@ -561,11 +581,29 @@ namespace Raven.Database
 					return;
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
+				ClearCompletedPendingTasks();
 			}
 			finally
 			{
 				if (tryEnter)
 					Monitor.Exit(idleLocker);
+			}
+		}
+
+		private void ClearCompletedPendingTasks()
+		{
+			foreach (var taskAndState in pendingTasks)
+			{
+				var task = taskAndState.Value.Task;
+				if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
+				{
+					PendingTaskAndState value;
+					pendingTasks.TryRemove(taskAndState.Key, out value);
+				}
+				if (task.Exception != null)
+				{
+					log.InfoException("Failed to execute background task " + taskAndState.Key, task.Exception);
+				}
 			}
 		}
 
@@ -1710,6 +1748,11 @@ namespace Raven.Database
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
+				if (!string.IsNullOrWhiteSpace(databaseLocation))
+				{
+					configuration.DataDirectory = databaseLocation;
+				}
+
 				transactionalStorage.Restore(backupLocation, databaseLocation, output, defrag);
 			}
 		}
@@ -1917,14 +1960,13 @@ namespace Raven.Database
 			var documents = 0;
 			TransactionalStorage.Batch(accessor =>
 			{
-
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertStarted
 				});
-				accessor.General.UseLazyCommit();
 				foreach (var docs in docBatches)
 				{
+					WorkContext.CancellationToken.ThrowIfCancellationRequested();
 					lock (putSerialLock)
 					{
                         var inserts = 0;
@@ -1979,6 +2021,23 @@ namespace Raven.Database
 			recentTouches.TryGetValue(key, out info);
 			return info;
 		}
-	}
 
+		public void AddTask(Task task, RavenJToken state, out long id)
+		{
+			var localId = id = Interlocked.Increment(ref pendingTaskCounter);
+			pendingTasks.TryAdd(localId, new PendingTaskAndState
+			{
+				Task = task,
+				State = state
+			});
+		}
+
+		public RavenJToken GetTaskState(long id)
+		{
+			PendingTaskAndState value;
+			if (pendingTasks.TryGetValue(id, out value))
+				return value.State;
+			return null;
+		}
+	}
 }

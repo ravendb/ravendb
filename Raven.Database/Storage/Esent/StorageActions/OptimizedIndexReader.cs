@@ -125,6 +125,11 @@ namespace Raven.Storage.Esent.StorageActions
 
 	public class OptimizedIndexReader : OptimizedIndexReader<object>
 	{
+		public OptimizedIndexReader() : base(128)
+		{
+			
+		}
+
 		public OptimizedIndexReader(int size) : base( size)
 		{
 		}

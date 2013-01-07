@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -195,7 +196,8 @@ namespace Raven.Smuggler
 			foreach (var doc in batch)
 			{
 				var metadata = doc.Value<RavenJObject>("@metadata");
-				doc.Remove("@metadata");
+
+			    doc.Remove("@metadata");
 				commands.Add(new RavenJObject
 								{
 									{"Method", "PUT"},

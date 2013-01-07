@@ -133,20 +133,28 @@ task Test -depends Compile {
 	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
 	Write-Host "xUnit location: $xUnit"
 	
+	$global:failedTest = $false
+
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			&"$xUnit" "$build_dir\$_"
+			exec { &"$xUnit" "$build_dir\$_" }
+			if($LastExitCode -ne 0) {
+				$global:failedTest = $true
+			}
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
 			&"$xUnit" "$build_dir\$_"
+			if($LastExitCode -ne 0) {
+				$global:failedTest = $true
+			}
 		}
 	}
 	
-	if ($LastExitCode -ne 0) {
+	if ($hasFailingTests) {
 		$global:failedTest = true
 		write-host "We have a failing test!!!!!..........!!!!!.........!!!!!" -BackgroundColor Red -ForegroundColor Yellow		
 	}

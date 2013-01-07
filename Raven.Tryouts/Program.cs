@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Tests.Indexes;
 using Raven.Tests.MailingList;
 
 namespace BulkStressTest
@@ -13,14 +14,14 @@ namespace BulkStressTest
 	class Program
 	{
 		private const string DbName = "BulkStressTestDb";
-		static void Main(string[] args)
+		static void Main()
 		{
 			for (int i = 0; i < 1000; i++)
 			{
 				Console.WriteLine(i);
-				using(var x= new CanSearchLazily())
+				using (var x = new MapReduceIndexOnLargeDataSet())
 				{
-					x.CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex();
+					x.WillNotProduceAnyErrors();
 				}
 			}
 

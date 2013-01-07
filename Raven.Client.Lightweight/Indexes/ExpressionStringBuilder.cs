@@ -780,9 +780,14 @@ namespace Raven.Client.Indexes
 					Out(s);
 					return node;
 				}
-				Out('"');
-				Out(node.Value.ToString());
-				Out('"');
+				if (convention.SaveEnumsAsIntegers)
+					Out((Convert.ToInt32(node.Value)).ToString());
+				else
+				{
+					Out('"');
+					Out(node.Value.ToString());
+					Out('"');
+				}
 				return node;
 			}
 			if (node.Value is decimal)

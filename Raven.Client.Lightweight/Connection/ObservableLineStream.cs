@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
@@ -103,8 +104,13 @@ namespace Raven.Client.Connection
 											// explicitly ignoring this
 										}
 										var aggregateException = task.Exception;
-										if (aggregateException.ExtractSingleInnerException() is ObjectDisposedException)
+										var exception = aggregateException.ExtractSingleInnerException();
+										if (exception is ObjectDisposedException)
 											return; // this isn't an error
+										var we = exception as WebException;
+										if (we != null && we.Status == WebExceptionStatus.RequestCanceled)
+											return; // not an error, actually
+
 										foreach (var subscriber in subscribers)
 										{
 											subscriber.OnError(aggregateException);

@@ -80,7 +80,7 @@ namespace Raven.Storage.Esent
 
 			RecoverFromFailedCompact(database);
 
-			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
+			new TransactionalStorageConfigurator(configuration, this).LimitSystemCache();
 
 			uniquePrefix = Interlocked.Increment(ref instanceCounter) + "-" + Base62Util.Base62Random();
 			Api.JetCreateInstance(out instance, uniquePrefix + "-" + database);
@@ -148,7 +148,7 @@ namespace Raven.Storage.Esent
 
 		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
-			new RestoreOperation(backupLocation, databaseLocation, output, defrag).Execute();
+			new RestoreOperation(backupLocation, configuration, output, defrag).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()
@@ -171,23 +171,27 @@ namespace Raven.Storage.Esent
 			return SystemParameters.CacheSize * SystemParameters.DatabasePageSize;
 		}
 
+		private long getDatabaseTransactionVersionSizeInBytesErrorValue;
 		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
-		private string uniquePrefix;
+		private readonly string uniquePrefix;
 
 		public long GetDatabaseTransactionVersionSizeInBytes()
 		{
+			if (getDatabaseTransactionVersionSizeInBytesErrorValue != 0)
+				return getDatabaseTransactionVersionSizeInBytesErrorValue;
+
 			try
 			{
 				const string categoryName = "Database ==> Instances";
 				if (PerformanceCounterCategory.Exists(categoryName) == false)
-					return -1;
+					return getDatabaseTransactionVersionSizeInBytesErrorValue  = -1;
 				var category = new PerformanceCounterCategory(categoryName);
 				var instances = category.GetInstanceNames();
 				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith(uniquePrefix));
 				const string counterName = "Version Buckets Allocated";
 				if (ravenInstance == null || !category.CounterExists(counterName))
 				{
-					return -2;
+					return getDatabaseTransactionVersionSizeInBytesErrorValue = -2;
 				}
 				using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
 				{
@@ -202,7 +206,7 @@ namespace Raven.Storage.Esent
 					reportedGetDatabaseTransactionCacheSizeInBytesError = true;
 					log.WarnException("Failed to get Version Buckets Allocated value, this error will only be reported once.", e);
 				}
-				return -3;
+				return getDatabaseTransactionVersionSizeInBytesErrorValue = -3;
 			}
 		}
 
@@ -253,7 +257,7 @@ namespace Raven.Storage.Esent
 			Api.JetCreateInstance(out compactInstance, ravenConfiguration.DataDirectory + Guid.NewGuid());
 			try
 			{
-				new TransactionalStorageConfigurator(ravenConfiguration)
+				new TransactionalStorageConfigurator(ravenConfiguration, this)
 					.ConfigureInstance(compactInstance, ravenConfiguration.DataDirectory);
 				Api.JetInit(ref compactInstance);
 				using (var session = new Session(compactInstance))
@@ -317,7 +321,7 @@ namespace Raven.Storage.Esent
 				DocumentCodecs = documentCodecs;
 				generator = uuidGenerator;
 
-				InstanceParameters instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
+				InstanceParameters instanceParameters = new TransactionalStorageConfigurator(configuration, this).ConfigureInstance(instance, path);
 
 				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 					instanceParameters.Recovery = false;
@@ -349,6 +353,8 @@ namespace Raven.Storage.Esent
 		}
 
 		protected OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
+
+		public long MaxVerPagesValueInBytes { get; set; }
 
 		private void SetIdFromDb()
 		{
@@ -416,7 +422,7 @@ namespace Raven.Storage.Esent
 								recoverInstance.Init();
 								using (var recoverSession = new Session(recoverInstance))
 								{
-									new TransactionalStorageConfigurator(configuration).ConfigureInstance(recoverInstance.JetInstance, path);
+									new TransactionalStorageConfigurator(configuration, this).ConfigureInstance(recoverInstance.JetInstance, path);
 									Api.JetAttachDatabase(recoverSession, database,
 														  AttachDatabaseGrbit.DeleteCorruptIndexes);
 									Api.JetDetachDatabase(recoverSession, database);
@@ -523,7 +529,7 @@ namespace Raven.Storage.Esent
 
 				if (pht.UsingLazyCommit)
 				{
-					txMode = CommitTransactionGrbit.WaitLastLevel0Commit;
+					txMode = CommitTransactionGrbit.None;
 				}
 				return pht.Commit(txMode);
 			}

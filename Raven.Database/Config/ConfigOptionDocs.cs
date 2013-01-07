@@ -23,8 +23,7 @@ namespace Raven.Database.Config
 			{"Raven/AnonymousAccess", "string", "Get,All,None", "Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users. Default: Get."},
 			{"Raven/OAuthTokenServer", "string", null, "The url clients should use for authenticating when using OAuth mode. Default: http://RavenDB-Server-Url/OAuth/AccessToken - the internal OAuth server"},
 			{"Raven/OAuthTokenCertificate", "string", null, "The base 64 to the OAuth key use to communicate with the server. Default: none. If no key is specified, one will be automatically created."},
-			{"Raven/Authorization/Windows/RequiredGroups", "string", null, "Limit the users that can authenticate to RavenDB to only users in the specified groups. Multiple groups can be specified, separated by a semi column (;)."},
-			{"Raven/Authorization/Windows/RequiredUsers", "string", null,  "Limit the users that can authenticate to RavenDB to only the specified users. Multiple users can be specified, separated by a semi column (;)."},
+
 			// Network
 			{"Raven/HostName", "string", null, "The hostname to bind the embedded http server to, if we want to bind to a specific hostname, rather than all. Default: none."},
 			{"Raven/Port", "int", "1 - 65,536, *", "The port to bind the embedded http server. Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward."},

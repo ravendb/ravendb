@@ -184,6 +184,10 @@ namespace Raven.Abstractions.Smuggler
 				ModifyBatchSize(options, currentProcessingTime);
 
 				var final = documents.Where(options.MatchFilters).ToList();
+
+                if (options.ShouldExcludeExpired)
+                    final = documents.Where(options.ExcludeExpired).ToList();
+
 				final.ForEach(item => item.WriteTo(jsonWriter));
 				totalCount += final.Count;
 

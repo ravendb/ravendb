@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -206,7 +207,7 @@ namespace Raven.Database.Server
 					Memory = new
 					{
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
-						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(false)),
+						ManagedMemorySizeInMB = ConvertBytesToMBs(GetCurrentManagedMemorySize()),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
 						Databases = allDbs.Select(db => new
 						{
@@ -246,6 +247,19 @@ namespace Raven.Database.Server
 			using (var p = Process.GetCurrentProcess())
 				return p.PrivateMemorySize64;
 		}
+
+		private static long GetCurrentManagedMemorySize()
+		{
+			var safelyGetPerformanceCounter = PerformanceCountersUtils.SafelyGetPerformanceCounter(
+				".NET CLR Memory", "# Total committed Bytes", CurrentProcessName.Value);
+			return safelyGetPerformanceCounter ?? GC.GetTotalMemory(false);
+		}
+
+		private static readonly Lazy<string> CurrentProcessName = new Lazy<string>(() =>
+		{
+			using (var p = Process.GetCurrentProcess())
+				return p.ProcessName;
+		});
 
 		public void Dispose()
 		{

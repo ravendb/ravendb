@@ -280,13 +280,11 @@ Configuration options:
 				var ravenConfiguration = new RavenConfiguration();
 				if (File.Exists(Path.Combine(backupLocation, "Raven.ravendb")))
 				{
-					ravenConfiguration.DefaultStorageTypeName =
-						"Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
 				else if (Directory.Exists(Path.Combine(backupLocation, "new")))
 				{
-					ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
-
+					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 				}
 				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, Console.WriteLine, defrag);
 			}

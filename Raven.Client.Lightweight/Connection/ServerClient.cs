@@ -1710,6 +1710,24 @@ namespace Raven.Client.Connection
 		{
 			Dispose();
 		}
+
+		public RavenJToken GetOperationStatus(long id)
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, url + "/operation/status?id" + id, "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+			try
+			{
+				return request.ReadResponseJson();
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+					throw;
+				return null;
+			}
+		}
 	}
 }
 #endif

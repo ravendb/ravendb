@@ -700,7 +700,8 @@ namespace Raven.Client.Connection.Async
 			return request.ExecuteWriteAsync(new RavenJObject
 				{
 					{"RestoreLocation", restoreLocation},
-					{"DatabaseLocation", databaseLocation}
+					{"DatabaseLocation", databaseLocation},
+					{"DatabaseName", name}
 				}.ToString(Formatting.None))
 				.ContinueWith(task =>
 				{
@@ -1199,25 +1200,6 @@ namespace Raven.Client.Connection.Async
 		public IDisposable DisableAllCaching()
 		{
 			return jsonRequestFactory.DisableAllCaching();
-		}
-
-		/// <summary>
-		/// Ensures that the silverlight startup tasks have run
-		/// </summary>
-		public Task EnsureSilverlightStartUpAsync()
-		{
-#if !SILVERLIGHT
-			throw new NotSupportedException("Only applicable in silverlight");
-#else
-			return ExecuteWithReplication("GET", url =>
-			{
-				return url
-					.SilverlightEnsuresStartup()
-					.NoCache()
-					.ToJsonRequest(this, credentials, convention)
-					.ReadResponseBytesAsync();
-			});
-#endif
 		}
 
 		///<summary>

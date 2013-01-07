@@ -43,11 +43,6 @@ namespace Raven.Client.Connection
 			return start > 0 ? databases + "&start=" + start : databases;
 		}
 
-		public static string SilverlightEnsuresStartup(this string url)
-		{
-			return url + "/silverlight/ensureStartup";
-		}
-
 		public static string Terms(this string url, string index, string field, string fromValue, int pageSize)
 		{
 			return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
