@@ -148,7 +148,12 @@ namespace Raven.Storage.Esent
 
 		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
-			new RestoreOperation(backupLocation, databaseLocation, output, defrag).Execute();
+			if (!string.IsNullOrWhiteSpace(databaseLocation))
+			{
+				configuration.DataDirectory = databaseLocation;
+			}
+
+			new RestoreOperation(backupLocation, configuration, output, defrag).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()
