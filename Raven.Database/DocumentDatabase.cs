@@ -1748,6 +1748,11 @@ namespace Raven.Database
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
+				if (!string.IsNullOrWhiteSpace(databaseLocation))
+				{
+					configuration.DataDirectory = databaseLocation;
+				}
+
 				transactionalStorage.Restore(backupLocation, databaseLocation, output, defrag);
 			}
 		}
