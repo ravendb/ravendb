@@ -81,8 +81,9 @@ namespace Raven.Database.Indexing
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 			using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 			{
-				var mapResults = RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats);
-				foreach (var mappedResultFromDocument in GroupByDocumentId(context, mapResults))
+				var mapResults =
+					RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats).ToList();
+				foreach (var mappedResultFromDocument in mapResults.GroupBy(GetDocumentId))
 				{
 					var dynamicResults = mappedResultFromDocument.Select(x => (object)new DynamicJsonObject(RavenJObject.FromObject(x, jsonSerializer))).ToList();
 					foreach (
@@ -142,71 +143,6 @@ namespace Raven.Database.Indexing
 				Started = start
 			});
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
-		}
-
-		// we don't use the usual GroupBy, because that isn't streaming
-		// we rely on the fact that all values from the same docs are always outputed at 
-		// the same time, so we can take advantage of this fact
-		private IEnumerable<IGrouping<object, dynamic>> GroupByDocumentId(WorkContext context, IEnumerable<object> docs)
-		{
-			var enumerator = docs.GetEnumerator();
-			if (enumerator.MoveNext() == false)
-				yield break;
-
-			while (true)
-			{
-				object documentId;
-				try
-				{
-					documentId = GetDocumentId(enumerator.Current);
-				}
-				catch (Exception e)
-				{
-					context.AddError(name, null, e.Message);
-					if (enumerator.MoveNext() == false)
-						yield break;
-					continue;
-				}
-				var groupByDocumentId = new Grouping(documentId, enumerator);
-				yield return groupByDocumentId;
-				if (groupByDocumentId.Done)
-					break;
-			}
-		}
-
-		private class Grouping : IGrouping<object, object>
-		{
-			private readonly IEnumerator enumerator;
-			private bool newKeyFound;
-			public bool Done { get; private set; }
-
-			public IEnumerator<object> GetEnumerator()
-			{
-				if (newKeyFound || Done)
-					yield break;
-				yield return enumerator.Current;
-
-				if (enumerator.MoveNext() == false)
-					Done = true;
-
-				var documentId = GetDocumentId(enumerator.Current);
-
-				if (Equals(documentId, Key) == false)
-					newKeyFound = true;
-			}
-
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
-			}
-
-			public object Key { get; private set; }
-
-			public Grouping(object key, IEnumerator enumerator)
-			{
-				this.enumerator = enumerator;
-				Key = key;
-			}
 		}
 
 		private RavenJObject GetMappedData(object doc)
