@@ -181,6 +181,7 @@
     <Compile Include="Bundles\SpellChecker\SuggestWord.cs" />
     <Compile Include="Bundles\SpellChecker\SuggestWordQueue.cs" />
     <Compile Include="Bundles\SpellChecker\TRStringDistance.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationTask.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
     <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
