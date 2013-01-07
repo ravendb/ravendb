@@ -339,8 +339,18 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public class ItemToReplicate
 		{
+			private RavenJObject columns;
 			public string PkName { get; set; }
-			public RavenJObject Columns { get; set; }
+			public JsObject Data { get; set; }
+			public RavenJObject Columns
+			{
+				get
+				{
+					if (columns == null)
+						columns = ScriptedJsonPatcher.ToRavenJObject(Data);
+					return columns;
+				}
+			}
 		}
 
 		private class SqlReplicationScriptedJsonPatcher : ScriptedJsonPatcher
@@ -364,7 +374,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					dictionary.GetOrAdd(table).Add(new ItemToReplicate
 					{
 						PkName = pkName,
-						Columns = ToRavenJObject(cols)
+						Data = cols
 					})));
 			}
 

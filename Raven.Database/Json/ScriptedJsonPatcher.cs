@@ -134,7 +134,7 @@ namespace Raven.Database.Json
 			return ToRavenJObject(jsObject);
 		}
 
-		public RavenJObject ToRavenJObject(JsObject jsObject)
+		public static RavenJObject ToRavenJObject(JsObject jsObject)
 		{
 			var rjo = new RavenJObject();
 			foreach (var key in jsObject.GetKeys())
@@ -154,7 +154,7 @@ namespace Raven.Database.Json
 			return rjo;
 		}
 
-		private RavenJToken ToRavenJToken(JsInstance v)
+		private static RavenJToken ToRavenJToken(JsInstance v)
 		{
 			switch (v.Class)
 			{
