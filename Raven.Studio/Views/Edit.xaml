@@ -292,7 +292,7 @@
                                 </StackPanel>
                             </Button.Content>
                         </Button>
-                    </StackPanel>
+					</StackPanel>
 
                     <Border HorizontalAlignment="Center"
                             Visibility="{Binding CanNavigate, Converter={StaticResource BooleanToVisibility}}"
@@ -537,7 +537,8 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
@@ -568,7 +569,13 @@
                                Grid.Row="4"
                                Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-					<Border Grid.Row="5" 
+					<Border Grid.Row="5" Visibility="{Binding HasExpiration, Converter={StaticResource BooleanToVisibility}}">
+						<StackPanel>
+							<sdk:DatePicker/>
+							<toolkit:TimePicker/>
+						</StackPanel>
+					</Border>
+					<Border Grid.Row="6" 
 							Visibility="{Binding Recent.Count, Converter={StaticResource HiddenWhenEmpty}}">
 						<StackPanel>
 							<TextBlock Text="Recent Documents"
@@ -591,7 +598,7 @@
 							</ItemsControl>
 						</StackPanel>
 					</Border>
-                    <Border Grid.Row="6"
+                    <Border Grid.Row="7"
                             Visibility="{Binding References.Count, Converter={StaticResource HiddenWhenEmpty}}">
                         <StackPanel>
                             <TextBlock Text="References"
@@ -615,7 +622,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Row="7"
+                    <Border Grid.Row="8"
                             Visibility="{Binding Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
                         <StackPanel>
                             <TextBlock Text="Related"
