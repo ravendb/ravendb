@@ -98,6 +98,33 @@ namespace Raven.Studio.Models
 			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			DocumentSections = new List<DocumentSection> { dataSection, metaDataSection };
 			CurrentSection = dataSection;
+			
+			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+			ApplicationModel.Current.Server.Value.DocumentStore
+			                .AsyncDatabaseCommands
+			                .ForDefaultDatabase()
+			                .CreateRequest("/admin/databases/" + databaseName, "GET")
+			                .ReadResponseJsonAsync()
+			                .ContinueOnSuccessInTheUIThread(doc =>
+			                {
+				                if (doc == null)
+					                return;
+
+				                var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions
+				                                                       .CreateSerializer()
+				                                                       .Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
+
+				                string activeBundles;
+				                databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
+
+				                if (activeBundles == null) 
+									return;
+				                if (activeBundles.Contains("Expiration"))
+				                {
+					                hasExpiration = true;
+									OnPropertyChanged(() => HasExpiration);
+				                }
+			                });
 
 			References = new BindableCollection<LinkModel>(model => model.Title);
 			Related = new BindableCollection<LinkModel>(model => model.Title);
@@ -234,6 +261,12 @@ namespace Raven.Studio.Models
 				StoreOutliningMode();
 				ApplyOutliningMode();
 			}
+		}
+
+		private bool hasExpiration;
+		public bool HasExpiration
+		{
+			get { return hasExpiration; }
 		}
 
 		private void StoreOutliningMode()
