@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
@@ -23,7 +24,6 @@ namespace Raven.Studio.Models
 		private string buildNumber;
 		private Observable<bool> isConnected;
 
-
 		public DocumentConvention Conventions
 		{
 			get { return documentStore.Conventions; }
@@ -44,6 +44,7 @@ namespace Raven.Studio.Models
 		{
 			Url = url;
             Databases = new BindableCollection<string>(name => name);
+			RecentDocuments = new Dictionary<string, QueueModel<string>>();
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
 		    IsConnected = new Observable<bool>{Value = true};
@@ -231,6 +232,8 @@ namespace Raven.Studio.Models
 				})
 				.Catch();
 		}
+
+		public Dictionary<string, QueueModel<string>> RecentDocuments { get; set; } 
 
 		public Observable<LicensingStatus> License { get; private set; }
 		public Observable<bool> IsConnected
