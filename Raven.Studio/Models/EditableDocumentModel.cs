@@ -86,7 +86,7 @@ namespace Raven.Studio.Models
 						                  document.OutliningMode = OutliningMode.Automatic;
 						                  document.OutliningManager.EnsureCollapsed();
 					                  }
-				                  },
+				                  }
 			                  }).AsReadOnly();
 		}
 
@@ -97,6 +97,7 @@ namespace Raven.Studio.Models
 			dataSection = new DocumentSection{ Name = "Data", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			DocumentSections = new List<DocumentSection> { dataSection, metaDataSection };
+			EnableExpiration = new Observable<bool>();
 			CurrentSection = dataSection;
 			
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
@@ -194,7 +195,7 @@ namespace Raven.Studio.Models
 			document.Value = new JsonDocument
 			                 {
 				                 DataAsJson = { { "Name", "..." } },
-				                 Etag = Guid.Empty
+				                 Etag = Etag.Empty
 			                 };
 		}
 
@@ -263,12 +264,25 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		public Observable<bool> EnableExpiration { get; set; } 
+
 		private bool hasExpiration;
 		public bool HasExpiration
 		{
 			get { return hasExpiration; }
 		}
 
+		public bool TimeChanged { get; set; }
+		private DateTime expireAt;
+		public DateTime ExpireAt
+		{
+			get { return expireAt; }
+			set 
+			{ 
+				expireAt = value;
+				TimeChanged = true;
+			}
+		}
 		private void StoreOutliningMode()
 		{
 			Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
@@ -358,8 +372,7 @@ namespace Raven.Studio.Models
 							var expiration = result.Document.Metadata["Raven-Expiration-Date"];
 							if (expiration != null)
 							{
-								ExpireAt = DateTime.Parse(expiration.ToString());
-								EnableExpiration.Value = true;
+								var timeTest = DateTime.Parse(expiration.ToString());
 							}
 							else
 							{
@@ -943,7 +956,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public Guid? Etag
+		public Etag Etag
 		{
 			get { return document.Value.Etag; }
 			set
@@ -981,7 +994,7 @@ namespace Raven.Studio.Models
 					.OrderBy(x => x.Key)
 					.Concat(new[]
 					        {
-						        new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : null),
+						        new KeyValuePair<string, string>("ETag", Etag != null ? Etag.ToString() : null),
 						        new KeyValuePair<string, string>("Last-Modified", GetMetadataLastModifiedString())
 					        })
 					.Where(x => x.Value != null);
@@ -1223,13 +1236,13 @@ namespace Raven.Studio.Models
 						}
 						else
 						{
-							metadata[Constants.RavenEntityName] = parentModel.ExpireAt;
+							metadata[Constants.RavenEntityName] = entityName;
 						}
 					}
 
 					if (parentModel.EnableExpiration.Value)
 					{
-						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+						metadata["Raven-Expiration-Date"] = new RavenJValue(parentModel.ExpireAt);
 					}
 				}
 				catch (Exception ex)
@@ -1241,9 +1254,9 @@ namespace Raven.Studio.Models
 				parentModel.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddInfoNotification("Saving document " + parentModel.Key + " ...");
 
-				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) || parentModel.ResolvingConflict
+				Etag etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) || parentModel.ResolvingConflict
 					             ? parentModel.Etag
-					             : Guid.Empty;
+					             : Etag.Empty;
 
 				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 				                .ContinueOnSuccess(result =>

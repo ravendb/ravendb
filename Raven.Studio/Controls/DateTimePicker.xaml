@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Raven.Studio.Controls.DateTimePicker"
+<UserControl x:Class="Raven.Studio.Controls.DateTimePicker"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -10,15 +10,15 @@
 
 	<Grid x:Name="LayoutRoot"
         Background="White">
-		<sdk:DatePicker Height="26"
-			HorizontalAlignment="Left"
+		<sdk:DatePicker Height="23"
+                    HorizontalAlignment="Left"
                     Name="DatePicker"
-                    VerticalAlignment="Center"
+                    VerticalAlignment="Top"
                     Width="120" />
-		<toolkit:TimePicker Height="24"
-			HorizontalAlignment="Left"
+		<toolkit:TimePicker Height="22"
+                        HorizontalAlignment="Left"
                         Margin="126,0,0,0"
                         Name="TimePicker"
-                        VerticalAlignment="Center" />
+                        VerticalAlignment="Top" />
 	</Grid>
 </UserControl>
