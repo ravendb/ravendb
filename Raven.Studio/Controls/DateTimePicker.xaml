@@ -10,15 +10,15 @@
 
 	<Grid x:Name="LayoutRoot"
         Background="White">
-		<sdk:DatePicker Height="23"
-                    HorizontalAlignment="Left"
+		<sdk:DatePicker Height="26"
+			HorizontalAlignment="Left"
                     Name="DatePicker"
-                    VerticalAlignment="Top"
+                    VerticalAlignment="Center"
                     Width="120" />
-		<toolkit:TimePicker Height="22"
-                        HorizontalAlignment="Left"
+		<toolkit:TimePicker Height="24"
+			HorizontalAlignment="Left"
                         Margin="126,0,0,0"
                         Name="TimePicker"
-                        VerticalAlignment="Top" />
+                        VerticalAlignment="Center" />
 	</Grid>
 </UserControl>
