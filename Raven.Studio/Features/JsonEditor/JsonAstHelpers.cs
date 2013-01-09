@@ -12,7 +12,10 @@ namespace Raven.Studio.Features.JsonEditor
             var nodeQueue = new Queue<IAstNode>();
 
             var rootNode = GetRootAstNode(codeDocument);
-            AddChildren(nodeQueue, rootNode);
+	        foreach (var astNode in rootNode.Children)
+	        {
+		        nodeQueue.Enqueue(astNode);
+	        }
 
             while (nodeQueue.Count > 0)
             {
@@ -45,7 +48,7 @@ namespace Raven.Studio.Features.JsonEditor
             }
         }
 
-        private static JsonObjectNode GetRootAstNode(ICodeDocument document)
+        private static IAstNode GetRootAstNode(ICodeDocument document)
         {
             var parseData = document.ParseData as ILLParseData;
             if (parseData == null)
@@ -53,8 +56,7 @@ namespace Raven.Studio.Features.JsonEditor
                 return null;
             }
 
-            var node = parseData.Ast as JsonObjectNode;
-            return node;
+			return parseData.Ast;
         }
     }
 }
