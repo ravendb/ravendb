@@ -86,7 +86,7 @@ namespace Raven.Studio.Models
 						                  document.OutliningMode = OutliningMode.Automatic;
 						                  document.OutliningManager.EnsureCollapsed();
 					                  }
-				                  },
+				                  }
 			                  }).AsReadOnly();
 		}
 
@@ -97,6 +97,7 @@ namespace Raven.Studio.Models
 			dataSection = new DocumentSection{ Name = "Data", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			DocumentSections = new List<DocumentSection> { dataSection, metaDataSection };
+			EnableExpiration = new Observable<bool>();
 			CurrentSection = dataSection;
 			
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
@@ -263,12 +264,25 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		public Observable<bool> EnableExpiration { get; set; } 
+
 		private bool hasExpiration;
 		public bool HasExpiration
 		{
 			get { return hasExpiration; }
 		}
 
+		public bool TimeChanged { get; set; }
+		private DateTime expireAt;
+		public DateTime ExpireAt
+		{
+			get { return expireAt; }
+			set 
+			{ 
+				expireAt = value;
+				TimeChanged = true;
+			}
+		}
 		private void StoreOutliningMode()
 		{
 			Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
@@ -353,6 +367,18 @@ namespace Raven.Studio.Models
 						result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
 						LocalId = result.Document.Key;
 						SetCurrentDocumentKey(result.Document.Key);
+						if (HasExpiration)
+						{
+							var expiration = result.Document.Metadata["Raven-Expiration-Date"];
+							if (expiration != null)
+							{
+								var timeTest = DateTime.Parse(expiration.ToString());
+							}
+							else
+							{
+								ExpireAt = DateTime.Now;
+							}
+						}
 					}
 
 					urlForFirst = result.UrlForFirst;
@@ -1212,6 +1238,11 @@ namespace Raven.Studio.Models
 						{
 							metadata[Constants.RavenEntityName] = entityName;
 						}
+					}
+
+					if (parentModel.EnableExpiration.Value)
+					{
+						metadata["Raven-Expiration-Date"] = new RavenJValue(parentModel.ExpireAt);
 					}
 				}
 				catch (Exception ex)

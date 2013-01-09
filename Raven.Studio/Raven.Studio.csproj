@@ -255,6 +255,9 @@
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
+    <Compile Include="Controls\DateTimePicker.xaml.cs">
+      <DependentUpon>DateTimePicker.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
@@ -847,6 +850,10 @@
     <Page Include="Assets\ChildWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\DateTimePicker.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\DeleteDatabase.xaml">
       <SubType>Designer</SubType>
