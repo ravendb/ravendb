@@ -372,7 +372,8 @@ namespace Raven.Studio.Models
 							var expiration = result.Document.Metadata["Raven-Expiration-Date"];
 							if (expiration != null)
 							{
-								var timeTest = DateTime.Parse(expiration.ToString());
+								ExpireAt = DateTime.Parse(expiration.ToString());
+								EnableExpiration.Value = true;
 							}
 							else
 							{
@@ -1236,13 +1237,13 @@ namespace Raven.Studio.Models
 						}
 						else
 						{
-							metadata[Constants.RavenEntityName] = entityName;
+							metadata[Constants.RavenEntityName] = parentModel.ExpireAt;
 						}
 					}
 
 					if (parentModel.EnableExpiration.Value)
 					{
-						metadata["Raven-Expiration-Date"] = new RavenJValue(parentModel.ExpireAt);
+						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
 					}
 				}
 				catch (Exception ex)
