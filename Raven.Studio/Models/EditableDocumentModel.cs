@@ -320,6 +320,19 @@ namespace Raven.Studio.Models
 						result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
 						LocalId = result.Document.Key;
 						SetCurrentDocumentKey(result.Document.Key);
+						if (HasExpiration)
+						{
+							var expiration = result.Document.Metadata["Raven-Expiration-Date"];
+							if (expiration != null)
+							{
+								ExpireAt = DateTime.Parse(expiration.ToString());
+								EnableExpiration.Value = true;
+							}
+							else
+							{
+								ExpireAt = DateTime.Now;
+							}
+						}
 					}
 
 					urlForFirst = result.UrlForFirst;
@@ -1177,8 +1190,13 @@ namespace Raven.Studio.Models
 						}
 						else
 						{
-							metadata[Constants.RavenEntityName] = entityName;
+							metadata[Constants.RavenEntityName] = parentModel.ExpireAt;
 						}
+					}
+
+					if (parentModel.EnableExpiration.Value)
+					{
+						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
 					}
 				}
 				catch (Exception ex)
