@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -57,23 +58,24 @@ namespace Raven.Studio.Models
 
 					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
-			        string activeBundles;
-			        databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
+					string activeBundlesSetting;
+					databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundlesSetting);
 
-			        if (activeBundles != null)
-			        {
-				        if (activeBundles.Contains("Quotas"))
-					        Settings.Sections.Add(new QuotaSettingsSectionModel());
+					if (activeBundlesSetting != null)
+					{
+						var activeBundles = activeBundlesSetting.Split(';').ToList();
+						if (activeBundles.Contains("Quotas", StringComparer.OrdinalIgnoreCase))
+							Settings.Sections.Add(new QuotaSettingsSectionModel());
 
-				        if (activeBundles.Contains("Replication"))
-					        Settings.Sections.Add(new ReplicationSettingsSectionModel());
+						if (activeBundles.Contains("Replication", StringComparer.OrdinalIgnoreCase))
+							Settings.Sections.Add(new ReplicationSettingsSectionModel());
 
-				        if (activeBundles.Contains("Versioning"))
-					        Settings.Sections.Add(new VersioningSettingsSectionModel());
+						if (activeBundles.Contains("Versioning", StringComparer.OrdinalIgnoreCase))
+							Settings.Sections.Add(new VersioningSettingsSectionModel());
 
-				        if (activeBundles.Contains("Authorization"))
-					        Settings.Sections.Add(new AuthorizationSettingsSectionModel());
-			        }
+						if (activeBundles.Contains("Authorization", StringComparer.OrdinalIgnoreCase))
+							Settings.Sections.Add(new AuthorizationSettingsSectionModel());
+					}
 
 			        foreach (var settingsSectionModel in Settings.Sections)
 			        {
