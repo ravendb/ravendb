@@ -109,10 +109,10 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				return DatabaseDocument != null && 
-					   DatabaseDocument.Value.Settings != null && 
-					   DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
-					   DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Contains("Replication");
+				return DatabaseDocument != null &&
+				       DatabaseDocument.Value.Settings != null &&
+				       DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
+				       DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Split(';').Contains("Replication", StringComparer.OrdinalIgnoreCase);
 			}
 		}
 
