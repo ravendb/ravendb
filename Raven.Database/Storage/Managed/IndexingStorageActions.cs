@@ -129,7 +129,7 @@ namespace Raven.Storage.Managed
 			var indexStats = GetCurrentIndex(index);
 			indexStats["reduce_attempts"] = indexStats.Value<int>("reduce_attempts") + stats.ReduceAttempts;
 			indexStats["reduce_successes"] = indexStats.Value<int>("reduce_successes") + stats.ReduceSuccesses;
-			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceSuccesses;
+			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceErrors;
 			storage.IndexingStats.UpdateKey(indexStats);
 
 		}
