@@ -1,35 +1,53 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-*.cs     text eol=crlf
-*.xml    text eol=crlf
-*.XML    text eol=crlf
-*.xsd    text eol=crlf
-*.ps1    text eol=crlf
-*.config     text eol=crlf
-*.sln    text eol=crlf
-*.csproj text eol=crlf
-*.vbproj text eol=crlf
-*.fsproj text eol=crlf
-*.dbproj text eol=crlf
-
 
 # Custom for Visual Studio
-*.cs     diff=csharp
-*.sln    merge=union
-*.csproj merge=union
-*.vbproj merge=union
-*.fsproj merge=union
-*.dbproj merge=union
+*.cs       text diff=csharp eol=crlf
+*.sln      text merge=union eol=crlf
+*.csproj   text merge=union
+*.vbproj   text merge=union
+*.fsproj   text merge=union
+*.dbproj   text merge=union
+*.ascx     text
+*.cmd      text
+*.coffee   text
+*.config   text eol=crlf
+*.css      text
+*.scss     text
+*.cshtml   text
+*.htm      text
+*.html     text
+*.js       text
+*.ts       text
+*.msbuild  text
+*.resx     text merge=union
+*.ruleset  text
+*.Stylecop text
+*.targets  text
+*.tt       text
+*.txt      text
+*.vb       text
+*.vbhtml   text
+*.xml      text eol=crlf
+*.xunit    text
+
+*.bmp binary
+*.gif binary
+*.ico binary
+*.jpg binary
+*.png binary
+
+
 
 # Standard to msysgit
-*.doc	 diff=astextplain
-*.DOC	 diff=astextplain
-*.docx diff=astextplain
-*.DOCX diff=astextplain
-*.dot  diff=astextplain
-*.DOT  diff=astextplain
-*.pdf  diff=astextplain
-*.PDF	 diff=astextplain
-*.rtf	 diff=astextplain
-*.RTF	 diff=astextplain
+*.doc	diff=astextplain
+*.DOC	diff=astextplain
+*.docx  diff=astextplain
+*.DOCX  diff=astextplain
+*.dot   diff=astextplain
+*.DOT   diff=astextplain
+*.pdf   diff=astextplain
+*.PDF	diff=astextplain
+*.rtf	diff=astextplain
+*.RTF	diff=astextplain

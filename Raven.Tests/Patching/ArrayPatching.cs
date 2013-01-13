@@ -171,7 +171,7 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
-		public void CanAddServeralItemsToSeveralDifferentPartsAtTheSameTime()
+		public void CanAddSeveralItemsToSeveralDifferentPartsAtTheSameTime()
 		{
 			var patchedDoc = new JsonPatcher(doc).Apply(
 				new[]

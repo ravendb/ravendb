@@ -214,6 +214,10 @@ namespace Raven.Server
 		{
 			user = user ?? WindowsIdentity.GetCurrent().Name;
 			PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(user);
+
+			var actionToTake = user.StartsWith("IIS") ? "restart IIS service" : "log in the user again";
+
+			Console.Write("User {0} has been added to Performance Monitoring Users group. Please {1} to take an effect.", user, actionToTake);
 		}
 
 		private static void ProtectConfiguration(string file)
@@ -276,13 +280,11 @@ Configuration options:
 				var ravenConfiguration = new RavenConfiguration();
 				if (File.Exists(Path.Combine(backupLocation, "Raven.ravendb")))
 				{
-					ravenConfiguration.DefaultStorageTypeName =
-						"Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
 				else if (Directory.Exists(Path.Combine(backupLocation, "new")))
 				{
-					ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
-
+					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 				}
 				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, Console.WriteLine, defrag);
 			}
@@ -348,7 +350,7 @@ Configuration options:
 			}
 		}
 
-		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool lauchBrowser)
+		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser)
 		{
 			var sp = Stopwatch.StartNew();
 			using (var server = new RavenDbServer(ravenConfiguration))
@@ -369,7 +371,7 @@ Configuration options:
 					server.Database.TransactionalStorage.FriendlyName);
 				Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
 
-				if (lauchBrowser)
+				if (launchBrowser)
 				{
 					try
 					{

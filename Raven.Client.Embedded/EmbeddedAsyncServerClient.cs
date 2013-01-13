@@ -172,11 +172,6 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<string[]>(databaseCommands.GetTerms(index, field, fromValue, pageSize).ToArray());
 		}
 
-		public Task EnsureSilverlightStartUpAsync()
-		{
-			throw new NotSupportedException("Method to be removed from IAsyncDatabaseCommands (RavenDB-761)");
-		}
-
 		public IDisposable DisableAllCaching()
 		{
 			return databaseCommands.DisableAllCaching();

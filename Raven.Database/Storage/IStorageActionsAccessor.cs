@@ -20,10 +20,10 @@ namespace Raven.Database.Storage
 		IIndexingStorageActions Indexing { get; }
 		IGeneralStorageActions General { get; }
 		IMappedResultsStorageAction MapReduce { get; }
-		event Action OnCommit;
+		event Action OnStorageCommit;
 		bool IsWriteConflict(Exception exception);
 		T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.Task;
-		void AfterCommit(JsonDocument doc, Action<JsonDocument[]> afterCommit);
+		void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit);
 	}
 
 }

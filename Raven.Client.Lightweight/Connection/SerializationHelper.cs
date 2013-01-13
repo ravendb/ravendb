@@ -17,6 +17,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -100,6 +101,7 @@ namespace Raven.Client.Connection
 		{
 			if (metadata == null) return defaultValue;
 			if (!metadata.ContainsKey(key)) return defaultValue;
+			if (metadata[key].Type == JTokenType.Array) return defaultValue;
 
 			var value = metadata[key].Value<object>();
 
@@ -143,9 +145,6 @@ namespace Raven.Client.Connection
 			var meta = headers.FilterHeaders();
 
 			var etag = headers["ETag"];
-			var lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
-			var dateTime = DateTime.ParseExact(lastModified, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 
 			return new JsonDocument
 			{
@@ -153,9 +152,20 @@ namespace Raven.Client.Connection
 				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = HttpExtensions.EtagHeaderToGuid(etag),
-				LastModified = lastModifiedDate,
+				LastModified = GetLastModifiedDate(headers),
 				Metadata = meta
 			};
+		}
+
+		private static DateTime? GetLastModifiedDate(NameValueCollection headers)
+		{
+			var lastModified = headers.GetValues(Constants.RavenLastModified);
+			if(lastModified == null || lastModified.Length != 1)
+			{
+				var dt = DateTime.ParseExact(headers[Constants.LastModified], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+				return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+			}
+			return DateTime.ParseExact(lastModified[0], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 		}
 
 		/// <summary>

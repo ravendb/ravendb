@@ -60,6 +60,12 @@ namespace Raven.Tests.MailingList
 				{
 					session.Advanced.AllowNonAuthoritativeInformation = false;
 					RavenQueryStatistics statistics;
+					Assert.Null(session
+							.Query<Cart>()
+							.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+							.FirstOrDefault(c => c.Email == testDocument.Email));
+
+					// we force a wait here, because there is no way to wait for NonAuthoritativeInformation on a count
 
 					var actualCount = session
 						.Query<Cart>()

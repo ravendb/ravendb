@@ -44,7 +44,6 @@ namespace Raven.Bundles.Tests.Expiration
 			};
 			ravenConfiguration.PostInit();
 			ravenDbServer = new RavenDbServer(ravenConfiguration);
-			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"

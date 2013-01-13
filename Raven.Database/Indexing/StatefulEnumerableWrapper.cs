@@ -33,7 +33,7 @@ namespace Raven.Database.Indexing
 
 		public IEnumerator<T> GetEnumerator()
 		{
-			return new StatefulbEnumeratorWrapper(inner, this);
+			return new StatefulEnumeratorWrapper(inner, this);
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -43,14 +43,14 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		#region Nested type: StatefulbEnumeratorWrapper
+		#region Nested type: StatefulEnumeratorWrapper
 
-		private class StatefulbEnumeratorWrapper : IEnumerator<T>
+		private class StatefulEnumeratorWrapper : IEnumerator<T>
 		{
 			private readonly IEnumerator<T> inner;
 			private readonly StatefulEnumerableWrapper<T> statefulEnumerableWrapper;
 
-			public StatefulbEnumeratorWrapper(IEnumerator<T> inner, StatefulEnumerableWrapper<T> statefulEnumerableWrapper)
+			public StatefulEnumeratorWrapper(IEnumerator<T> inner, StatefulEnumerableWrapper<T> statefulEnumerableWrapper)
 			{
 				this.inner = inner;
 				this.statefulEnumerableWrapper = statefulEnumerableWrapper;

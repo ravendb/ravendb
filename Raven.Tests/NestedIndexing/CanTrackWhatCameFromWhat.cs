@@ -42,7 +42,7 @@ select new
 		}
 
 		[Fact]
-		public void CrossRefrencing()
+		public void CrossReferencing()
 		{
 			using (IDocumentSession session = store.OpenSession())
 			{

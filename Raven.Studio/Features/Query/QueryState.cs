@@ -32,9 +32,9 @@ namespace Raven.Studio.Features.Query
             return CreateQueryStateHash(IndexName, Query, IsSpatialQuery, Latitude, Longitude, Radius);
         }
 
-        public static string CreateQueryStateHash(string indexName, string query, bool isSpatial, double? latitude, double? longtitude, double? radius)
+        public static string CreateQueryStateHash(string indexName, string query, bool isSpatial, double? latitude, double? longitude, double? radius)
         {
-            var spatialString = isSpatial ? string.Format("{0}{1}{2}", latitude, longtitude, radius) : "";
+            var spatialString = isSpatial ? string.Format("{0}{1}{2}", latitude, longitude, radius) : "";
             return MD5Core.GetHashString(indexName + query + spatialString);
         }
     }

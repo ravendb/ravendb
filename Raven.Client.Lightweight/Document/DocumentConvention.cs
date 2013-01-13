@@ -191,8 +191,8 @@ namespace Raven.Client.Document
 
 		/// <summary>
 		/// Whatever to allow queries on document id.
-		/// By default, queries on id are disabled, because it is far more efficent
-		/// to do a Load() than a Query() if you alred know the id.
+		/// By default, queries on id are disabled, because it is far more efficient
+		/// to do a Load() than a Query() if you already know the id.
 		/// This is NOT recommended and provided for backward compatibility purposes only.
 		/// </summary>
 		public bool AllowQueriesOnId { get; set; }
@@ -277,6 +277,12 @@ namespace Raven.Client.Document
 			{
 				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
+
+			if (listOfRegisteredIdConventionsAsync.Any(x => x.Item1.IsAssignableFrom(type)))
+			{
+				throw new InvalidOperationException("Id covention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
+			}
+
 			return DocumentKeyGenerator(dbName, databaseCommands, entity);
 		}
 #endif
@@ -289,6 +295,14 @@ namespace Raven.Client.Document
 			{
 				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
+
+#if !SILVERLIGHT
+			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
+			{
+				throw new InvalidOperationException("Id covention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
+			}
+#endif
+
 			return AsyncDocumentKeyGenerator(dbName, databaseCommands, entity);
 		}
 
@@ -417,11 +431,18 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention RegisterIdConvention<TEntity>(Func<string, IDatabaseCommands, TEntity, string> func)
 		{
+			var type = typeof(TEntity);
+			var entryToRemove = listOfRegisteredIdConventions.FirstOrDefault(x => x.Item1 == type);
+			if (entryToRemove != null)
+			{
+				listOfRegisteredIdConventions.Remove(entryToRemove);
+			}
+
 			int index;
 			for (index = 0; index < listOfRegisteredIdConventions.Count; index++)
 			{
 				var entry = listOfRegisteredIdConventions[index];
-				if (entry.Item1.IsAssignableFrom(typeof(TEntity)))
+				if (entry.Item1.IsAssignableFrom(type))
 				{
 					break;
 				}
@@ -440,11 +461,18 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<string, IAsyncDatabaseCommands, TEntity, Task<string>> func)
 		{
+			var type = typeof(TEntity);
+			var entryToRemove = listOfRegisteredIdConventionsAsync.FirstOrDefault(x => x.Item1 == type);
+			if (entryToRemove != null)
+			{
+				listOfRegisteredIdConventionsAsync.Remove(entryToRemove);
+			}
+
 			int index;
 			for (index = 0; index < listOfRegisteredIdConventionsAsync.Count; index++)
 			{
 				var entry = listOfRegisteredIdConventionsAsync[index];
-				if (entry.Item1.IsAssignableFrom(typeof(TEntity)))
+				if (entry.Item1.IsAssignableFrom(type))
 				{
 					break;
 				}

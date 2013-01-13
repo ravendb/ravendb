@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -406,6 +407,14 @@ namespace Raven.Client.Linq
 			return info.Type;
 		}
 
+		private static readonly Regex castingRemover = new Regex(@"(?<!\\)[\(\)]",
+#if SILVERLIGHT
+				RegexOptions.None
+#else
+				RegexOptions.Compiled
+#endif
+			);
+
 		/// <summary>
 		/// Gets member info for the specified expression and the path to that expression
 		/// </summary>
@@ -425,7 +434,7 @@ namespace Raven.Client.Linq
 
 			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 			result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
-			result.Path = result.Path.Replace("(", "").Replace(")", ""); // removing cast remains
+			result.Path = castingRemover.Replace(result.Path, ""); // removing cast remains
 
 			if (expression.NodeType == ExpressionType.ArrayLength)
 				result.Path += ".Length";

@@ -225,7 +225,7 @@
     <Compile Include="Changes\TaskObservable.cs" />
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\LastEtagHolder.cs" />
-    <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
+    <Compile Include="Util\ObjectReferenceEqualityComparer.cs" />
     <Compile Include="Util\SimpleCache.cs" />
     <Compile Include="Util\Types.cs" />
     <Compile Include="WhereEqualsParams.cs" />

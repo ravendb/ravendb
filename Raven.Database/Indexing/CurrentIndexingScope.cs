@@ -8,9 +8,8 @@ namespace Raven.Database.Indexing
 {
 	public class CurrentIndexingScope : IDisposable
 	{
-		private readonly string view;
-		private readonly IStorageActionsAccessor actions;
 		private readonly Func<string, dynamic> loadDocument;
+		private readonly Action<IDictionary<string, HashSet<string>>> onDispose;
 		[ThreadStatic]
 		private static CurrentIndexingScope current;
 
@@ -20,11 +19,12 @@ namespace Raven.Database.Indexing
 			set { current = value; }
 		}
 
-		public CurrentIndexingScope(string view, IStorageActionsAccessor actions, Func<string, dynamic> loadDocument)
+		public CurrentIndexingScope(
+			Func<string, dynamic> loadDocument,
+			Action<IDictionary<string,HashSet<string>>> onDispose)
 		{
-			this.view = view;
-			this.actions = actions;
 			this.loadDocument = loadDocument;
+			this.onDispose = onDispose;
 		}
 
 		public dynamic Source { get; set; }
@@ -59,10 +59,7 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			foreach (var referencedDocument in ReferencedDocuments)
-			{
-				actions.Indexing.UpdateDocumentReferences(view, referencedDocument.Key, referencedDocument.Value);
-			}
+			onDispose(ReferencedDocuments);
 			current = null;
 		}
 	}

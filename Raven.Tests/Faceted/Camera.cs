@@ -18,7 +18,7 @@ namespace Raven.Tests.Faceted
 
 		public int Zoom { get; set; }
 		public decimal Megapixels { get; set; }
-		public bool ImageStabiliser { get; set; }
+		public bool ImageStabilizer { get; set; }
 		public List<String> AdvancedFeatures { get; set; }
 
 		public override string ToString()
@@ -64,7 +64,7 @@ namespace Raven.Tests.Faceted
 				   Math.Abs(Cost - other.Cost) < smallValue &&
 				   Zoom == other.Zoom &&
 				   Math.Abs(Megapixels - other.Megapixels) < smallValue &&
-				   ImageStabiliser == other.ImageStabiliser;
+				   ImageStabilizer == other.ImageStabilizer;
 		}
 
 		public override int GetHashCode()

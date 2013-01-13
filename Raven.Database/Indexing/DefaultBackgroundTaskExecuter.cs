@@ -159,5 +159,30 @@ namespace Raven.Database.Indexing
 				yield return source.Skip(i).Take(size).ToList();
 			}
 		}
+
+		public void ExecuteAllInterleaved<T>(WorkContext context, IList<T> result, Action<T> action)
+		{
+			if (result.Count == 0)
+				return;
+
+			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
+			{
+				var tasks = new Task[result.Count];
+				for (int i = 0; i < result.Count; i++)
+				{
+					var index = result[i];
+					var indexToWorkOn = index;
+
+					var task = new Task(() => action(indexToWorkOn));
+					tasks[i] = task.ContinueWith(_ => semaphoreSlim.Release());
+
+					semaphoreSlim.Wait();
+
+					task.Start(context.Database.BackgroundTaskScheduler);
+				}
+
+				Task.WaitAll(tasks);
+			}
+		}
 	}
 }

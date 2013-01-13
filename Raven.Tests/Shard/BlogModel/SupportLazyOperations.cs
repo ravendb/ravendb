@@ -55,7 +55,7 @@ namespace Raven.Tests.Shard.BlogModel
 		}
 
 		[Fact]
-		public void UnlessAccessedLazyOpertionsAreNoOp()
+		public void UnlessAccessedLazyOperationsAreNoOp()
 		{
 			using (var session = ShardedDocumentStore.OpenSession())
 			{

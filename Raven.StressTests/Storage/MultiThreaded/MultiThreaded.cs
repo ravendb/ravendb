@@ -13,47 +13,33 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Tests;
 using Xunit;
 
 namespace Raven.StressTests.Storage.MultiThreaded
 {
-	public abstract class MultiThreaded : IDisposable
+	public abstract class MultiThreaded : RavenTest
 	{
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 		protected DocumentDatabase DocumentDatabase;
 		private readonly ConcurrentQueue<GetDocumentState> getDocumentsState = new ConcurrentQueue<GetDocumentState>();
 
 		private volatile bool run = true;
-		private static readonly string DataDirectory = typeof(MultiThreaded).FullName + "-Data";
 		
 		private Guid lastEtagSeen = Guid.Empty;
 		private readonly object Lock = new object();
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			DocumentDatabase.Dispose();
-			lock (Lock)
-			{
-				IOExtensions.DeleteDirectory(DataDirectory);
-			}
-		}
-
-		protected void SetupDatabaseMunin(bool runInMemory)
-		{
-			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
-			                                        {
-			                                        	DataDirectory = DataDirectory,
-														RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
-			                                        	RunInMemory = runInMemory,
-														DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName,
-			                                        });
+			base.Dispose();
 		}
 
 		protected void SetupDatabaseEsent(bool runInUnreliableMode)
 		{
 			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDirectory,
+				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInUnreliableMode,
 				DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName,
 			});
@@ -90,7 +76,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 			var task = Task.Factory.StartNew(StartGetDocumentOnBackground);
 			var count = SetupData();
 
-			var final = new Guid("00000000-0000-0100-0000-" + count.ToString("X12"));
+			var final = new Guid("00000001-0000-0100-0000-" + count.ToString("X12"));
 			while (lastEtagSeen != final)
 			{
 				Thread.Sleep(10);
@@ -145,20 +131,6 @@ namespace Raven.StressTests.Storage.MultiThreaded
 		public void WhenUsingEsentInUnreliableMode()
 		{
 			SetupDatabaseEsent(true);
-			ShouldGetEverything();
-		}
-
-		[Fact]
-		public void WhenUsingMuninOnDisk()
-		{
-			SetupDatabaseMunin(false);
-			ShouldGetEverything();
-		}
-
-		[Fact]
-		public void WhenUsingMuninInMemory()
-		{
-			SetupDatabaseMunin(true);
 			ShouldGetEverything();
 		}
 	}

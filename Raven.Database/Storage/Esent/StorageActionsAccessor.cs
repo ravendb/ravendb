@@ -78,10 +78,10 @@ namespace Raven.Storage.Esent
 			get { return inner; }
 		}
 
-		public event Action OnCommit
+		public event Action OnStorageCommit
 		{
-			add { inner.OnCommit += value; }
-			remove { inner.OnCommit -= value; }
+			add { inner.OnStorageCommit += value; }
+			remove { inner.OnStorageCommit -= value; }
 		}
 
 		public bool IsWriteConflict(Exception exception)
@@ -114,13 +114,13 @@ namespace Raven.Storage.Esent
 
 		private Action<JsonDocument[]> afterCommitAction;
 		private List<JsonDocument> docsForCommit;
-		public void AfterCommit(JsonDocument doc, Action<JsonDocument[]> afterCommit)
+		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit)
 		{
 			afterCommitAction = afterCommit;
 			if(docsForCommit == null)
 			{
 				docsForCommit = new List<JsonDocument>();
-				inner.OnCommit += () => afterCommitAction(docsForCommit.ToArray());
+				inner.OnStorageCommit += () => afterCommitAction(docsForCommit.ToArray());
 			}
 			docsForCommit.Add(doc);
 		}

@@ -77,14 +77,14 @@ namespace Raven.Client.Silverlight.MissingFromSilverlight
 			if (null == input)
 				throw new System.ArgumentNullException("input", "Unable to calculate hash over null input data");
 
-			//Intitial values defined in RFC 1321
+			//Initial values defined in RFC 1321
 			ABCDStruct abcd = new ABCDStruct();
 			abcd.A = 0x67452301;
 			abcd.B = 0xefcdab89;
 			abcd.C = 0x98badcfe;
 			abcd.D = 0x10325476;
 
-			//We pass in the input array by block, the final block of data must be handled specialy for padding & length embeding
+			//We pass in the input array by block, the final block of data must be handled specially for padding & length embedding
 			int startIndex = 0;
 			while (startIndex <= input.Length - 64)
 			{
@@ -112,7 +112,7 @@ namespace Raven.Client.Silverlight.MissingFromSilverlight
 				Array.Copy(length, 0, working, 56, 8);
 				GetHashBlock(working, ref ABCD, 0);
 			}
-			else  //We need an aditional chunk to store the length
+			else  //We need an additional chunk to store the length
 			{
 				GetHashBlock(working, ref ABCD, 0);
 				//Create an entirely new chunk due to the 0-assigned trick mentioned above, to avoid an extra function call clearing the array
@@ -248,7 +248,7 @@ namespace Raven.Client.Silverlight.MissingFromSilverlight
 		}
 
 		// Implementation of left rotate
-		// s is an int instead of a uint becuase the CLR requires the argument passed to >>/<< is of 
+		// s is an int instead of a uint because the CLR requires the argument passed to >>/<< is of 
 		// type int. Doing the demoting inside this function would add overhead.
 		private static uint LSR(uint i, int s)
 		{

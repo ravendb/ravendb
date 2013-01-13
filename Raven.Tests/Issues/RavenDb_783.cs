@@ -15,7 +15,7 @@ namespace Raven.Tests.Issues
 	/// <remarks>
 	/// Similar to RavenDB_644
 	/// </remarks>
-	public class RavenDb_783 : RavenTest
+	public class RavenDB_783 : RavenTest
 	{
 		public class Item
 		{

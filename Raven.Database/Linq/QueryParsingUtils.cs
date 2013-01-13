@@ -121,7 +121,7 @@ namespace Raven.Database.Linq
 					throw new InvalidOperationException(
 						"Variable initializer must be a select query expression returning an anonymous object");
 
-				variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
+				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
@@ -172,7 +172,7 @@ namespace Raven.Database.Linq
 				if (lambdaExpression == null)
 					throw new InvalidOperationException("Variable initializer select must have a lambda expression");
 
-				variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
+				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
@@ -199,8 +199,8 @@ namespace Raven.Database.Linq
 		{
 			query = query.Replace("new() {", "new {").Replace("new () {", "new {"); ;
 			if (query.EndsWith(";"))
-				return "var q = " + query;
-			return "var q = " + query + ";";
+				return "var qD1266A5B_A4BE_4108_BA29_79920DBC1308 = " + query;
+			return "var qD1266A5B_A4BE_4108_BA29_79920DBC1308 = " + query + ";";
 		}
 
 		public static INode GetAnonymousCreateExpression(INode expression)

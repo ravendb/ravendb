@@ -533,7 +533,7 @@
             <ScrollViewer Grid.Column="1"
                           Grid.Row="2"
                           Margin="5"
-                          Style="{StaticResource Style_ScrollViewer_Unintrusive}" TextOptions.TextHintingMode="Animated">
+                          Style="{StaticResource Style_ScrollViewer_Unobtrusive}" TextOptions.TextHintingMode="Animated">
                 <Grid x:Name="details">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

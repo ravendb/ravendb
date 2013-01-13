@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Client.UniqueConstraints
 {
@@ -33,11 +34,11 @@ namespace Raven.Client.UniqueConstraints
 
 			var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
 			               Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value);
-			var constraintDoc = session.Include<ConstraintDocument>(x => x.RelatedId).Load(uniqueId);
+			var constraintDoc = session.Include("RelatedId").Load<RavenJObject>(uniqueId);
 			if (constraintDoc == null)
 				return default(T);
 
-			var id = constraintDoc.RelatedId;
+			var id = constraintDoc.Value<string>("RelatedId");
 			return string.IsNullOrEmpty(id) ? default(T) : session.Load<T>(id);
 		}
 

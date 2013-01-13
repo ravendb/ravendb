@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs
 				DoTest("ProperCase", "value", 30);
 			}
 		}
-		public class Sesion
+		public class Session
 		{
 
 			public String Id { get; set; }
@@ -57,7 +57,7 @@ namespace Raven.Tests.Bugs
 				using (var session = database.OpenSession())
 				{
 
-					var s = new Sesion {Id = id, Name = "Sesion " + id, Description = "Desc " + id};
+					var s = new Session {Id = id, Name = "Session " + id, Description = "Desc " + id};
 					session.Store(s);
 					var metadata = session.Advanced.GetMetadataFor(s);
 					metadata[propertyName] = propertyValue;
@@ -70,7 +70,7 @@ namespace Raven.Tests.Bugs
 				{
 					using (var session = database.OpenSession())
 					{
-						var s = session.Load<Sesion>(id);
+						var s = session.Load<Session>(id);
 						var metadata = session.Advanced.GetMetadataFor(s);
 						metadata[propertyName] = propertyValue; // same property name, same value
 						session.SaveChanges();
@@ -80,7 +80,7 @@ namespace Raven.Tests.Bugs
 				//read metadata, and print it 
 				using (var session = database.OpenSession())
 				{
-					Sesion s = session.Load<Sesion>(id);
+					Session s = session.Load<Session>(id);
 					var metadata = session.Advanced.GetMetadataFor(s);
 					Console.WriteLine(metadata);
 					Assert.Equal(JTokenType.String, metadata[propertyName].Type);

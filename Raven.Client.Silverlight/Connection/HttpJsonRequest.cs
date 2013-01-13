@@ -73,6 +73,11 @@ namespace Raven.Client.Silverlight.Connection
 
 		private static Task noopWaitForTask = new CompletedTask();
 
+
+		public TimeSpan Timeout
+		{
+			set { } // can't set timeout in Silverlight
+		}
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -143,7 +148,7 @@ namespace Raven.Client.Silverlight.Connection
 
 			if(webResponse.StatusCode == HttpStatusCode.Forbidden)
 			{
-				HandleForbbidenResponseAsync(webResponse);
+				HandleForbiddenResponseAsync(webResponse);
 				task.AssertNotFailed();
 			}
 
@@ -165,12 +170,12 @@ namespace Raven.Client.Silverlight.Connection
 				.Unwrap();
 		}
 
-		private void HandleForbbidenResponseAsync(HttpWebResponse forbbidenResponse)
+		private void HandleForbiddenResponseAsync(HttpWebResponse forbiddenResponse)
 		{
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
 
-			conventions.HandleForbiddenResponseAsync(forbbidenResponse);
+			conventions.HandleForbiddenResponseAsync(forbiddenResponse);
 		}
 
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
@@ -420,7 +425,7 @@ namespace Raven.Client.Silverlight.Connection
 
 					   if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
 					   {
-						   HandleForbbidenResponseAsync(httpWebResponse);
+						   HandleForbiddenResponseAsync(httpWebResponse);
 						   return task;
 					   }
 

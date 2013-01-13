@@ -57,8 +57,8 @@ namespace Raven.Tests.MailingList
 
 			public WithDynamicIndex()
 			{
-				Map = conteiners =>
-					  from container in conteiners
+				Map = containers =>
+					  from container in containers
 					  from item in container.Items
 					  select new
 					  {
@@ -76,7 +76,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void CanSortDynamicaly()
+		public void CanSortDynamically()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -115,7 +115,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void CanSortDynamicaly_Desc()
+		public void CanSortDynamically_Desc()
 		{
 			using (var Store = NewDocumentStore())
 			{

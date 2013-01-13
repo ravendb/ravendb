@@ -111,7 +111,7 @@ namespace Raven.Client.Connection
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
-					Status = RequestStatus.AggresivelyCached,
+					Status = RequestStatus.AggressivelyCached,
 					Result = cachedResponse.ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
@@ -208,7 +208,7 @@ namespace Raven.Client.Connection
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
-					Status = RequestStatus.AggresivelyCached,
+					Status = RequestStatus.AggressivelyCached,
 					Result = result.ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
@@ -239,7 +239,7 @@ namespace Raven.Client.Connection
 
 					if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
 					{
-						HandleForbbidenResponse(httpWebResponse);
+						HandleForbiddenResponse(httpWebResponse);
 						throw;
 					}
 					if (HandleUnauthorizedResponse(httpWebResponse) == false)
@@ -261,12 +261,12 @@ namespace Raven.Client.Connection
 			return true;
 		}
 
-		private void HandleForbbidenResponse(HttpWebResponse forbbidenResponse)
+		private void HandleForbiddenResponse(HttpWebResponse forbiddenResponse)
 		{
 			if (conventions.HandleForbiddenResponse == null)
 				return;
 
-			conventions.HandleForbiddenResponse(forbbidenResponse);
+			conventions.HandleForbiddenResponse(forbiddenResponse);
 		}
 
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
@@ -282,12 +282,12 @@ namespace Raven.Client.Connection
 			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest(unauthorizedResponseAsync.Result));
 		}
 
-		private void HandleForbiddenResponseAsync(HttpWebResponse forbbidenResponse)
+		private void HandleForbiddenResponseAsync(HttpWebResponse forbiddenResponse)
 		{
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
 
-			conventions.HandleForbiddenResponseAsync(forbbidenResponse);
+			conventions.HandleForbiddenResponseAsync(forbiddenResponse);
 		}
 
 		private void RecreateWebRequest(Action<HttpWebRequest> action)
@@ -545,6 +545,13 @@ namespace Raven.Client.Connection
 		{
 			get { return webRequest.ContentType; }
 			set { webRequest.ContentType = value; }
+		}
+		public TimeSpan Timeout
+		{
+			set
+			{
+				webRequest.Timeout = (int)value.TotalMilliseconds;
+			}
 		}
 
 		private void WriteMetadata(RavenJObject metadata)
@@ -806,11 +813,11 @@ namespace Raven.Client.Connection
 			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public void RawExecuteRequest()
+		public WebResponse RawExecuteRequest()
 		{
 			try
 			{
-				webRequest.GetResponse().Close();
+				return webRequest.GetResponse();
 			}
 			catch (WebException we)
 			{

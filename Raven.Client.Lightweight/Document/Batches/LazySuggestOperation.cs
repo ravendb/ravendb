@@ -19,7 +19,7 @@ namespace Raven.Client.Document.Batches
 			this.suggestionQuery = suggestionQuery;
 		}
 
-		public GetRequest CraeteRequest()
+		public GetRequest CreateRequest()
 		{
 			return new GetRequest
 			{

@@ -12,7 +12,7 @@ namespace Raven.Tests.Faceted
 	{
 		private static readonly List<string> Features = new List<string> 
 					{ 
-						"Image Stabiliser", 
+						"Image Stabilizer", 
 						"Tripod",
 						"Low Light Compatible",
 						"Fixed Lens",
@@ -54,7 +54,7 @@ namespace Raven.Tests.Faceted
 					Cost = (int)(decimal)((random.NextDouble() * 900.0) + 100.0),    //100.0 to 1000.0
 					Zoom = (int)(random.NextDouble() * 12) + 2,                 //2.0 to 12.0
 					Megapixels = (decimal)((random.NextDouble() * 10.0) + 1.0), //1.0 to 11.0
-					ImageStabiliser = random.NextDouble() > 0.6,
+					ImageStabilizer = random.NextDouble() > 0.6,
 					AdvancedFeatures = new List<string> { "??" }
 				});
 			}

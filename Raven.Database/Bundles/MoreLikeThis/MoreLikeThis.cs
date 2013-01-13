@@ -73,7 +73,7 @@ namespace Similarity.Net
 	/// 
 	/// This class has lots of options to try to make it efficient and flexible.
 	/// See the body of {@link #main Main()} below in the source for real code, or
-	/// if you want pseudo code, the simpliest possible usage is as follows. The bold
+	/// if you want pseudo code, the simplest possible usage is as follows. The bold
 	/// fragment is specific to this class.
 	/// 
 	/// <code><pre>
@@ -95,7 +95,7 @@ namespace Similarity.Net
 	/// <ol>
 	/// <li> do your normal, Lucene setup for searching,</li>
 	/// <li> create a MoreLikeThis,</li>
-	/// <li> get the text of the doc you want to find similaries to</li>
+	/// <li> get the text of the doc you want to find similarities to</li>
 	/// <li> then call one of the Like() calls to generate a similarity query</li>
 	/// <li> call the searcher to find the similar docs</li>
 	/// </ol>
@@ -118,12 +118,12 @@ namespace Similarity.Net
 	/// </ul> 
 	/// <pre>
 	/// Changes: Mark Harwood 29/02/04
-	/// Some bugfixing, some refactoring, some optimisation.
+	/// Some bugfixing, some refactoring, some optimization.
 	/// - bugfix: retrieveTerms(int docNum) was not working for indexes without a termvector -added missing code
 	/// - bugfix: No significant terms being created for fields with a termvector - because 
-	/// was only counting one occurence per term/field pair in calculations(ie not including frequency info from TermVector) 
+	/// was only counting one occurrence per term/field pair in calculations(ie not including frequency info from TermVector) 
 	/// - refactor: moved common code into isNoiseWord()
-	/// - optimise: when no termvector support available - used maxNumTermsParsed to limit amount of tokenization
+	/// - optimize: when no termvector support available - used maxNumTermsParsed to limit amount of tokenization
 	/// </pre>
 	/// </summary>
 	/// <author>  David Spencer
@@ -213,7 +213,7 @@ namespace Similarity.Net
 		/// <summary> Analyzer that will be used to parse the doc.</summary>
 		private Analyzer analyzer = DEFAULT_ANALYZER;
 
-		/// <summary> Ignore words less freqent that this.</summary>
+		/// <summary> Ignore words less frequent that this.</summary>
 		private int minTermFreq = DEFAULT_MIN_TERM_FREQ;
 
 		/// <summary> Ignore words which do not occur in at least this many docs.</summary>

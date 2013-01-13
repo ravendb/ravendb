@@ -13,7 +13,7 @@ namespace Raven.Tests.Storage
 	public class Tasks : RavenTest
 	{
 		[Fact]
-		public void CanCheckForExistanceOfTasks()
+		public void CanCheckForExistenceOfTasks()
 		{
 			using (var tx = NewTransactionalStorage())
 			{
@@ -25,7 +25,7 @@ namespace Raven.Tests.Storage
 		}
 
 		[Fact]
-		public void CanCheckForExistanceOfTasksAfterTaskWasRemoved()
+		public void CanCheckForExistenceOfTasksAfterTaskWasRemoved()
 		{
 			using (var tx = NewTransactionalStorage())
 			{
@@ -41,7 +41,7 @@ namespace Raven.Tests.Storage
 
 
 		[Fact]
-		public void CanCheckForExistanceOfTasksWithCutOffs()
+		public void CanCheckForExistenceOfTasksWithCutOffs()
 		{
 			using (var tx = NewTransactionalStorage())
 			{

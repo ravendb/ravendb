@@ -96,7 +96,7 @@ namespace Raven.Studio.Features.Documents
         {
             private readonly int indentSize;
             private int linesWritten;
-            private int charctersOnCurrentLine;
+            private int charactersOnCurrentLine;
             private StringWriter sw;
             private int indent;
             private bool needsIndent;
@@ -114,14 +114,14 @@ namespace Raven.Studio.Features.Documents
 
             public int CharactersOnCurrentLine
             {
-                get { return charctersOnCurrentLine; }
+                get { return charactersOnCurrentLine; }
             }
 
             public void Write(string value)
             {
                 WriteIndentIfNeeded();
 
-                charctersOnCurrentLine += value.Length;
+                charactersOnCurrentLine += value.Length;
                 sw.Write(value);
             }
 
@@ -140,7 +140,7 @@ namespace Raven.Studio.Features.Documents
 
                 sw.WriteLine(value);
                 linesWritten++;
-                charctersOnCurrentLine = 0;
+                charactersOnCurrentLine = 0;
                 needsIndent = true;
             }
 

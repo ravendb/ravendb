@@ -6,7 +6,7 @@ namespace Raven.Tests.Bugs.Vlko
 	public class QueryWithMultipleWhere : RavenTest
 	{
 		[Fact]
-		public void ShouldGenerateProperPrecedance()
+		public void ShouldGenerateProperPrecedence()
 		{
 			using(var store = NewDocumentStore())
 			{

@@ -13,6 +13,10 @@ namespace Raven.Client.Document
 		private readonly IDatabaseCommands databaseCommands;
 		private readonly EntityToJson entityToJson;
 
+		public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
+
+		public event BeforeEntityInsert OnBeforeEntityInsert = delegate { }; 
+
 		public event Action<string>  Report
 		{
 			add { operation.Report += value; }
@@ -50,6 +54,9 @@ namespace Raven.Client.Document
 				metadata.Add(Constants.RavenEntityName, tag);
 
 			var data = entityToJson.ConvertEntityToJson(id, entity, metadata);
+
+			OnBeforeEntityInsert(id, data, metadata);
+
 			operation.Write(id, metadata, data);
 		}
 

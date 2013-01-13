@@ -33,7 +33,7 @@ namespace Raven.Tests
 			for (int i = 0; i < 5; i++)
 			{
 				last = Etag.Increment(last, 1);
-				prefetchingBehavior.AfterCommit(new[]
+				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
 				{
 					new JsonDocument
 					{
@@ -53,7 +53,7 @@ namespace Raven.Tests
 			for (int i = 0; i < 5; i++)
 			{
 				last = Etag.Increment(last, 1);
-				prefetchingBehavior.AfterCommit(new[]
+				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
 				{
 					new JsonDocument
 					{
@@ -66,7 +66,7 @@ namespace Raven.Tests
 			for (int i = 0; i < 5; i++)
 			{
 				last = Etag.Increment(last, 1);
-				prefetchingBehavior.AfterCommit(new[]
+				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
 				{
 					new JsonDocument
 					{

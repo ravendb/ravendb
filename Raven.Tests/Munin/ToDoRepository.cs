@@ -15,7 +15,7 @@ namespace Raven.Munin.Tests
 		{
 			database = new Database(source);
 			todos = database.Add(new Table("todo"));
-			database.Initialze();
+			database.Initialize();
 		}
 
 		public Guid Save(ToDo todo)

@@ -9,8 +9,8 @@ namespace Raven.Bundles.Versioning.Data
 	{
 		/// <summary>
 		/// Id can be in the following format:
-		/// 1. Raven/Versioning/{Raven-Entity-Name} - When using this format, the impacted documetns are just documents with the corresponing Raven-Entity-Name metadata.
-		/// 2. Raven/Versioning/DefaultConfiguration - This is a global configuration, which impacts just documents that don't have a specifc Raven/Versioning/{Raven-Entity-Name} corresponed to them.
+		/// 1. Raven/Versioning/{Raven-Entity-Name} - When using this format, the impacted documents are just documents with the corresponding Raven-Entity-Name metadata.
+		/// 2. Raven/Versioning/DefaultConfiguration - This is a global configuration, which impacts just documents that don't have a specific Raven/Versioning/{Raven-Entity-Name} corresponding to them.
 		/// </summary>
 		public string Id { get; set; }
 		public int MaxRevisions { get; set; }

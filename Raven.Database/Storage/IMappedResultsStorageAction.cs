@@ -17,7 +17,6 @@ namespace Raven.Database.Storage
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
-		IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take);
 
 		IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take);
 
@@ -25,15 +24,15 @@ namespace Raven.Database.Storage
 		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take);
 
 		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets);
-		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, int take, bool loadData, List<object> itemsToDelete);
+		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, List<object> itemsToDelete);
 		ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete);
 		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
-		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int limitOfItemsToReduceInSingleStep);
+		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int take, int limitOfItemsToReduceInSingleStep);
 		void UpdatePerformedReduceType(string indexName, string reduceKey, ReduceType performedReduceType);
 		ReduceType GetLastPerformedReduceType(string indexName, string reduceKey);
 		IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey);
-		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData, int take);
+		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData);
 	}
 
 	public class ReduceKeyAndBucket

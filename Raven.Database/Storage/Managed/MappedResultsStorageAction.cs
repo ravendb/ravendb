@@ -100,56 +100,16 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take)
-		{
-			var mappedResultInfos = storage.MappedResults["ByViewAndEtagDesc"]
-				// the index is sorted view ascending and then etag descending
-				// we index before this index, then backward toward the last one.
-				.SkipBefore(new RavenJObject { { "view", indexName }, { "etag", lastReducedEtag.ToByteArray() } })
-				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), indexName))
-				.Select(key =>
-				{
-
-					var mappedResultInfo = new MappedResultInfo
-					{
-						ReduceKey = key.Value<string>("reduceKey"),
-						Etag = new Guid(key.Value<byte[]>("etag")),
-						Timestamp = key.Value<DateTime>("timestamp")
-					};
-
-					var readResult = storage.MappedResults.Read(key);
-					if (readResult != null)
-					{
-						mappedResultInfo.Size = readResult.Size;
-						if (loadData)
-							mappedResultInfo.Data = LoadMappedResult(readResult);
-					}
-
-					return mappedResultInfo;
-				});
-
-			var results = new Dictionary<string, MappedResultInfo>();
-
-			foreach (var mappedResultInfo in mappedResultInfos)
-			{
-				results[mappedResultInfo.ReduceKey] = mappedResultInfo;
-				if (results.Count == take)
-					break;
-			}
-
-			return results.Values;
-		}
-
 		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
 		{
-			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)
+			foreach (var reduceKeysAndBucket in reduceKeysAndBuckets)
 			{
 				var etag = generator.CreateSequentialUuid(UuidType.ScheduledReductions).ToByteArray();
 				storage.ScheduleReductions.UpdateKey(new RavenJObject
 					{
 						{"view", view},
-						{"reduceKey", reduceKeysAndBukcet.ReduceKey},
-						{"bucket", reduceKeysAndBukcet.Bucket},
+						{"reduceKey", reduceKeysAndBucket.ReduceKey},
+						{"bucket", reduceKeysAndBucket.Bucket},
 						{"level", level},
 						{"etag", etag},
 						{"timestamp", SystemTime.UtcNow}
@@ -182,7 +142,7 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, int take, bool loadData, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, List<object> itemsToDelete)
 		{
 			var seen = new HashSet<Tuple<string, int>>();
 
@@ -216,17 +176,11 @@ namespace Raven.Storage.Managed
 					{
 						foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
 						{
-							take--;
 							yield return mappedResultInfo;
 						}
 					}
 					itemsToDelete.Add(result);
-					if (take <= 0)
-						break;
 				}
-
-				if (take <= 0)
-					break;
 			}
 		}
 
@@ -372,7 +326,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int limitOfItemsToReduceInSingleStep)
+		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int take, int limitOfItemsToReduceInSingleStep)
 		{
 			var allKeysToReduce = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -381,7 +335,8 @@ namespace Raven.Storage.Managed
 				{"view", indexName},
 				{"level", 0}
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
-								x.Value<int>("level") == 0))
+								x.Value<int>("level") == 0)
+								.Take(take))
 			{
 				allKeysToReduce.Add(reduction.Value<string>("reduceKey"));
 			}
@@ -443,7 +398,7 @@ namespace Raven.Storage.Managed
 				.Distinct();
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData, int take)
+		public IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData)
 		{
 			foreach (var reduceKey in keysToReduce)
 			{
@@ -459,11 +414,6 @@ namespace Raven.Storage.Managed
 						 StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("reduceKey"), key)))
 				{
 					var readResult = storage.MappedResults.Read(item);
-
-					if (--take < 0)
-					{
-						yield break;
-					}
 
 					yield return new MappedResultInfo
 					{

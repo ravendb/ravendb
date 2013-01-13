@@ -61,7 +61,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanHandkeCasts()
+		public void CanHandleCasts()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = indexedUsers.Where(x => ((Dog)x.Animal).Color == "black");
@@ -355,7 +355,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanUnderstandSimpleContainsInExpresssion1()
+		public void CanUnderstandSimpleContainsInExpression1()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
@@ -367,7 +367,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanUnderstandSimpleContainsInExpresssion2()
+		public void CanUnderstandSimpleContainsInExpression2()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
@@ -379,7 +379,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanUnderstandSimpleStartsWithInExpresssion1()
+		public void CanUnderstandSimpleStartsWithInExpression1()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
@@ -392,7 +392,7 @@ namespace Raven.Tests.Linq
 
 
 		[Fact]
-		public void CanUnderstandSimpleStartsWithInExpresssion2()
+		public void CanUnderstandSimpleStartsWithInExpression2()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from indexedUser in indexedUsers
@@ -445,7 +445,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void WithNoBracesOperatorPrecedenceIsHonoured()
+		public void WithNoBracesOperatorPrecedenceIsHonored()
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from user in indexedUsers

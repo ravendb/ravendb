@@ -21,6 +21,7 @@ namespace Raven.Abstractions.Smuggler
 			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
 			LastAttachmentEtag = LastDocsEtag = Guid.Empty;
+		    ShouldExcludeExpired = false;
 		}
 
 		/// <summary>
@@ -79,7 +80,42 @@ namespace Raven.Abstractions.Smuggler
 			}
 			return true;
 		}
+
+        /// <summary>
+        /// Should we exclude any documents which have already expired by checking the expiration meta property created by the expiration bundle
+        /// </summary>
+        public bool ShouldExcludeExpired { get; set; }
+
+        public virtual bool ExcludeExpired(RavenJToken item)
+        {
+            var metadata= item.Value<RavenJObject>("@metadata");
+
+            const string RavenExpirationDate = "Raven-Expiration-Date";
+
+            // check for expired documents and exclude them if expired
+	        if (metadata == null)
+	        {
+		        return false;
+	        }
+	        var property = metadata[RavenExpirationDate];
+	        if (property == null)
+		        return false;
+
+	        DateTime dateTime;
+	        try
+	        {
+		        dateTime = property.Value<DateTime>();
+	        }
+	        catch (FormatException)
+	        {
+		        return false;
+	        }
+
+	        return dateTime >= SystemTime.UtcNow;
+        }
 	}
+
+
 
 	[Flags]
 	public enum ItemType

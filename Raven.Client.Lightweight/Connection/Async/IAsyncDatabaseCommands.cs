@@ -203,11 +203,6 @@ namespace Raven.Client.Connection.Async
 		Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize);
 
 		/// <summary>
-		/// Ensures that the silverlight startup tasks have run
-		/// </summary>
-		Task EnsureSilverlightStartUpAsync();
-
-		/// <summary>
 		/// Disable all caching within the given scope
 		/// </summary>
 		IDisposable DisableAllCaching();

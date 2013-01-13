@@ -157,11 +157,11 @@
 		</Border>
 
 
-		<ProgressBar Visibility="{Binding InProccess.Value, Converter={StaticResource BooleanToVisibility}}"
+		<ProgressBar Visibility="{Binding InProcess.Value, Converter={StaticResource BooleanToVisibility}}"
 					 Height="25"
 					 Width="200"
 					 Margin="5"
-					 IsIndeterminate="{Binding InProccess.Value}"
+					 IsIndeterminate="{Binding InProcess.Value}"
 					 HorizontalAlignment="Left"
 					 Grid.Row="2"/>
 		<Grid Grid.Row="3">

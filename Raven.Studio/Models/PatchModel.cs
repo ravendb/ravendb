@@ -56,7 +56,7 @@ namespace Raven.Studio.Models
         public PatchModel()
         {
             Values = new ObservableCollection<PatchValue>();
-			InProccess = new Observable<bool>();
+			InProcess = new Observable<bool>();
 
             OriginalDoc = new EditorDocument
             {
@@ -374,7 +374,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public Observable<bool> InProccess { get; private set; }
+		public Observable<bool> InProcess { get; private set; }
 
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
@@ -712,12 +712,12 @@ namespace Raven.Studio.Models
 					break;
 			}
 
-			patchModel.InProccess.Value = true;
+			patchModel.InProcess.Value = true;
 
 			ApplicationModel.Database.Value.AsyncDatabaseCommands.BatchAsync(commands)
 				.ContinueOnSuccessInTheUIThread(batch => patchModel.NewDoc.SetText(batch[0].AdditionalData.ToString()))
 				.ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
-				.Finally(() => patchModel.InProccess.Value = false);
+				.Finally(() => patchModel.InProcess.Value = false);
 
 		    patchModel.ShowBeforeAndAfterPrompt = false;
 			patchModel.ShowAfterPrompt = false;
@@ -744,7 +744,7 @@ namespace Raven.Studio.Models
 					if (values == null)
 						return;
                     var request = new ScriptedPatchRequest { Script = patchModel.Script.CurrentSnapshot.Text, Values = values};
-					patchModel.InProccess.Value = true;
+					patchModel.InProcess.Value = true;
 
                     switch (patchModel.PatchOn)
                     {
@@ -766,7 +766,7 @@ namespace Raven.Studio.Models
 						                          patchModel.NewDoc.SetText("");
 						                          patchModel.ShowAfterPrompt = true;
 					                          }))
-			                    .Finally(() => patchModel.InProccess.Value = false);
+			                    .Finally(() => patchModel.InProcess.Value = false);
                             break;
 
                         case PatchOnOptions.Collection:
@@ -774,7 +774,7 @@ namespace Raven.Studio.Models
                                                                                                 new IndexQuery { Query = "Tag:" + patchModel.SelectedItem }, request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
                                                                                                  .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
-																								 .Finally(() => patchModel.InProccess.Value = false);
+																								 .Finally(() => patchModel.InProcess.Value = false);
                             break;
 
                         case PatchOnOptions.Index:
@@ -782,7 +782,7 @@ namespace Raven.Studio.Models
                                                                                                 request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
                                                                                                  .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
-																								 .Finally(() => patchModel.InProccess.Value = false);
+																								 .Finally(() => patchModel.InProcess.Value = false);
                             break;
                     }
 

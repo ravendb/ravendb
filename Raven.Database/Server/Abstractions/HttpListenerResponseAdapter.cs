@@ -130,7 +130,7 @@ namespace Raven.Database.Server.Abstractions
 			}
 		}
 
-		public void SetPublicCachability()
+		public void SetPublicCacheability()
 		{
 			response.Headers["Cache-Control"] = "Public";
 		}

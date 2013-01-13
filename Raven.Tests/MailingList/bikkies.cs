@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
 					foreach (var activityVm in activityVms)
 					{
 						Assert.NotNull(activityVm.CatId);
-						Assert.NotNull(activityVm.CategoryColour);
+						Assert.NotNull(activityVm.CategoryColor);
 						Assert.NotNull(activityVm.CategoryName);
 					}
 				}
@@ -43,7 +43,7 @@ namespace Raven.Tests.MailingList
 			public string Id { get; set; }
 			public string Name { get; set; }
 			public string CategoryName { get; set; }
-			public string CategoryColour { get; set; }
+			public string CategoryColor { get; set; }
 			public string CatId { get; set; }
 
 		}
@@ -56,13 +56,13 @@ namespace Raven.Tests.MailingList
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
-			public string Colour { get; set; }
+			public string Color { get; set; }
 		}
 
 		private static void BuildData(IDocumentStore ds)
 		{
-			var c = new Category() { Colour = "Green", Name = "Work-Based Learning" };
-			var c2 = new Category() { Colour = "Red", Name = "Research" };
+			var c = new Category() { Color = "Green", Name = "Work-Based Learning" };
+			var c2 = new Category() { Color = "Red", Name = "Research" };
 
 
 			using (var session = ds.OpenSession())
@@ -97,7 +97,7 @@ namespace Raven.Tests.MailingList
 														   a2.Name,
 														   CatId = a2.Category.Id,
 														   CategoryName = c.Name,
-														   CategoryColour = c.Colour
+														   CategoryColor = c.Color
 													   };
 
 

@@ -30,8 +30,8 @@ namespace Raven.Tests.MailingList
 			public string Type { get; set; }
 		}
 
-		// Favourite POCO
-		public class FavouriteTest
+		// Favorite POCO
+		public class FavoriteTest
 		{
 			public string AudioId { get; set; }
 			public DateTimeOffset DateTime { get; set; }
@@ -51,7 +51,7 @@ namespace Raven.Tests.MailingList
 				// projected statistics
 				public int WeeksDownloads { get; set; }
 				public int WeeksPlays { get; set; }
-				public int WeeksFavourites { get; set; }
+				public int WeeksFavorites { get; set; }
 				public string WeekNumber { get; set; }
 			}
 
@@ -66,18 +66,18 @@ namespace Raven.Tests.MailingList
 
 														 WeeksDownloads = counter.Type == "Download" ? 1 : 0,
 														 WeeksPlays = counter.Type == "Play" ? 1 : 0,
-														 WeeksFavourites = 0,
+														 WeeksFavorites = 0,
 														 WeekNumber = counter.DateTime.Year + "-" + counter.DateTime.DayOfYear / 7
 													 });
 
-				// total favourites
-				AddMap<FavouriteTest>(favs => from fav in favs
+				// total favorites
+				AddMap<FavoriteTest>(favs => from fav in favs
 											  select new
 											  {
 												  fav.AudioId,
 												  WeeksDownloads = 0,
 												  WeeksPlays = 0,
-												  WeeksFavourites = 1,
+												  WeeksFavorites = 1,
 												  WeekNumber = fav.DateTime.Year + "-" + fav.DateTime.DayOfYear / 7
 											  });
 
@@ -90,7 +90,7 @@ namespace Raven.Tests.MailingList
 											g.Key.WeekNumber,
 											WeeksDownloads = g.Sum(x => x.WeeksDownloads),
 											WeeksPlays = g.Sum(x => x.WeeksPlays),
-											WeeksFavourites = g.Sum(x => x.WeeksFavourites)
+											WeeksFavorites = g.Sum(x => x.WeeksFavorites)
 										};
 			}
 		}
@@ -149,8 +149,8 @@ namespace Raven.Tests.MailingList
 					// 2 downloads
 					session.Store(new AudioCounterTest() {AudioId = "audios/1", DateTime = DateTimeOffset.Now, Type = "Download"});
 					session.Store(new AudioCounterTest() {AudioId = "audios/1", DateTime = DateTimeOffset.Now, Type = "Download"});
-					// 1 favourite
-					session.Store(new FavouriteTest() {AudioId = "audios/1", DateTime = DateTimeOffset.Now});
+					// 1 favorite
+					session.Store(new FavoriteTest() {AudioId = "audios/1", DateTime = DateTimeOffset.Now});
 
 					// stats for audio 2
 					// 2 plays
@@ -158,7 +158,7 @@ namespace Raven.Tests.MailingList
 					session.Store(new AudioCounterTest() {AudioId = "audios/2", DateTime = DateTimeOffset.Now, Type = "Play"});
 					// 1 downloads
 					session.Store(new AudioCounterTest() {AudioId = "audios/2", DateTime = DateTimeOffset.Now, Type = "Download"});
-					// 0 favourites
+					// 0 favorites
 
 
 					// stats for audio 3
@@ -166,7 +166,7 @@ namespace Raven.Tests.MailingList
 					session.Store(new AudioCounterTest() {AudioId = "audios/3", DateTime = DateTimeOffset.Now, Type = "Play"});
 					// 1 downloads
 					session.Store(new AudioCounterTest() {AudioId = "audios/3", DateTime = DateTimeOffset.Now, Type = "Download"});
-					// 0 favourites
+					// 0 favorites
 
 					session.SaveChanges();
 				}
@@ -188,17 +188,17 @@ namespace Raven.Tests.MailingList
 
 					Assert.Equal(3, results[0].Stats.WeeksPlays); // correct
 					Assert.Equal(2, results[0].Stats.WeeksDownloads); // correct
-					Assert.Equal(1, results[0].Stats.WeeksFavourites); // correct
+					Assert.Equal(1, results[0].Stats.WeeksFavorites); // correct
 					Assert.Equal("Audio 1", results[0].Audio.Name); // returns null
 
 					Assert.Equal(2, results[1].Stats.WeeksPlays);
 					Assert.Equal(1, results[1].Stats.WeeksDownloads);
-					Assert.Equal(0, results[1].Stats.WeeksFavourites);
+					Assert.Equal(0, results[1].Stats.WeeksFavorites);
 					Assert.Equal("Audio 2", results[1].Audio.Name);
 
 					Assert.Equal(1, results[2].Stats.WeeksPlays);
 					Assert.Equal(1, results[2].Stats.WeeksDownloads);
-					Assert.Equal(0, results[2].Stats.WeeksFavourites);
+					Assert.Equal(0, results[2].Stats.WeeksFavorites);
 					Assert.Equal("Audio 3", results[2].Audio.Name);
 
 				}

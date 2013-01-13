@@ -216,7 +216,7 @@ namespace Raven.Studio.Features.Patch
 
                 if (token.Key == "Identifier" && indexValue == null)
                 {
-                    // substitue 0 for the name of the variable to give us 
+                    // substitute 0 for the name of the variable to give us 
                     // the best chance of matching something when we look up the path in a document
                     indexValue = "0";
                 }

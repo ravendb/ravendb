@@ -76,9 +76,13 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public bool IsReduceStale(string name)
 		{
-			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view");
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
 			Api.MakeKey(session, ScheduledReductions, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			return Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekEQ);
+			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
+				return false;
+			var view = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"],
+			                           Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
+			return string.Equals(view, name, StringComparison.InvariantCultureIgnoreCase);
 		}
 
 		public bool IsMapStale(string name)
@@ -160,31 +164,5 @@ namespace Raven.Storage.Esent.StorageActions
 
 			return Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value;
 		}
-
-
-		public Guid? GetMostRecentReducedEtag(string name)
-		{
-			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
-			Api.MakeKey(session, MappedResults, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if(Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false) // find the next greater view
-				return null;
-
-			// did we find the last item on the view?
-			if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode) == name)
-				return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
-
-			// maybe we are at another view?
-			if (Api.TryMovePrevious(session, MappedResults) == false) // move one step back, now we are at the highest etag for this view, maybe
-				return null;
-
-			//could't find the name in the table 
-			if(Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"],Encoding.Unicode) != name)
-				return null;
-
-			return new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"]));
-		}
-
-		
-
 	}
 }

@@ -102,7 +102,7 @@ namespace Raven.Tests.Issues
 
 				using (var session = documentStore.OpenSession())
 				{
-					// now the reduce will be done in single step (what's importatnt existing reduce results should be removed)
+					// now the reduce will be done in single step (what's important existing reduce results should be removed)
 					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>()
 										 .Customize(x => x.WaitForNonStaleResults()).ToList();
 

@@ -338,7 +338,7 @@ namespace Raven.Tests.Silverlight
 						.ToListAsync();
 					yield return query;
 
-					//NOTE: it seems that the fields from the projection are not proprogated to the query,
+					//NOTE: it seems that the fields from the projection are not propagated to the query,
 					//		 this manifests as a problem casting the type, because (since it does see the projected fields)
 					//		 it assumes that the must be the original entity (i.e., Company)
 

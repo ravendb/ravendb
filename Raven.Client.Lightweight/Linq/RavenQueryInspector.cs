@@ -225,8 +225,8 @@ namespace Raven.Client.Linq
 			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 			if (isAsync)
 			{
-				var luceneQueryasync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-				return ((IRavenQueryInspector)luceneQueryasync).GetLastEqualityTerm(true);
+				var luceneQueryAsync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
+				return ((IRavenQueryInspector)luceneQueryAsync).GetLastEqualityTerm(true);
 			}
 
 			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);

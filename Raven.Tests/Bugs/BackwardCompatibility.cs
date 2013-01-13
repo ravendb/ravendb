@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 				                           RavenJObject.FromObject(new {Name = "Ayende", Email = "ayende@ayende.com"}),
 				                           new RavenJObject());
 
-				store.RegisterListener(new BackwardCompatibilityListner());
+				store.RegisterListener(new BackwardCompatibilityListener());
 
 				using(var session = store.OpenSession())
 				{
@@ -37,7 +37,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public class BackwardCompatibilityListner : IDocumentConversionListener
+		public class BackwardCompatibilityListener : IDocumentConversionListener
 		{
 			readonly ConcurrentDictionary<Type, HashSet<string>> typePropertiesCache = new ConcurrentDictionary<Type, HashSet<string>>();
 			readonly ConditionalWeakTable<object, Dictionary<string, RavenJToken>> missingProps = new ConditionalWeakTable<object, Dictionary<string, RavenJToken>>();

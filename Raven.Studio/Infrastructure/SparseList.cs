@@ -21,8 +21,8 @@ namespace Raven.Studio.Infrastructure
             _allocatedPages = new PageList(_pageSize);
         }
 
-        /// <remarks>This method is optimised for sequential access. I.e. it performs
-        /// best when getting and setting indicies in the same locality</remarks>
+        /// <remarks>This method is optimized for sequential access. I.e. it performs
+        /// best when getting and setting indexes in the same locality</remarks>
         public T this[int index]
         {
             get

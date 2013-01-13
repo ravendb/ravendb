@@ -35,7 +35,7 @@ $(document).ready(function () {
         ExecuteLinqQuery();
     });
 
-    $('#executeGetByDoumentId').button({
+    $('#executeGetByDocumentId').button({
         icons: { primary: 'ui-icon-circle-triangle-e' }
     }).click(function () {
         EditDocument($('#txtDocumentId').val());

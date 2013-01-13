@@ -46,6 +46,7 @@ using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using BitConverter = System.BitConverter;
 using Index = Raven.Database.Indexing.Index;
+using Task = System.Threading.Tasks.Task;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
@@ -92,6 +93,15 @@ namespace Raven.Database
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
 		private readonly List<IDisposable> toDispose = new List<IDisposable>();
+
+		private long pendingTaskCounter;
+		private ConcurrentDictionary<long, PendingTaskAndState> pendingTasks = new ConcurrentDictionary<long, PendingTaskAndState>();
+
+		private class PendingTaskAndState
+		{
+			public Task Task;
+			public RavenJToken State;
+		}
 
 		/// <summary>
 		/// The name of the database.
@@ -235,7 +245,7 @@ namespace Raven.Database
 		private void CompleteWorkContextSetup()
 		{
 			workContext.IndexStorage = IndexStorage;
-			workContext.TransactionaStorage = TransactionalStorage;
+			workContext.TransactionalStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
 			workContext.Init(Name);
@@ -302,7 +312,7 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			using(LogManager.OpenMappedContext("datbase", Name ?? Constants.SystemDatabase))
+			using(LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
 				LogContext.DatabaseName.Value = Name;
@@ -325,10 +335,10 @@ namespace Raven.Database
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
 					ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
-					InMemoryIndexingQueueSize = indexingExecuter.GetInMemoryIndexingQueueSize(),
+					InMemoryIndexingQueueSize = indexingExecuter.PrefetchingBehavior.InMemoryIndexingQueueSize,
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
-					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionaStorage.GetDatabaseTransactionVersionSizeInBytes()),
+					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
@@ -449,6 +459,16 @@ namespace Raven.Database
 				}
 			});
 
+
+			exceptionAggregator.Execute(() =>
+			{
+				foreach (var shouldDispose in pendingTasks)
+				{
+					exceptionAggregator.Execute(shouldDispose.Value.Task.Wait);
+				}
+				pendingTasks.Clear();
+			});
+
 			exceptionAggregator.Execute(() =>
 			{
 				if (indexingBackgroundTask != null)
@@ -561,11 +581,29 @@ namespace Raven.Database
 					return;
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
+				ClearCompletedPendingTasks();
 			}
 			finally
 			{
 				if (tryEnter)
 					Monitor.Exit(idleLocker);
+			}
+		}
+
+		private void ClearCompletedPendingTasks()
+		{
+			foreach (var taskAndState in pendingTasks)
+			{
+				var task = taskAndState.Value.Task;
+				if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
+				{
+					PendingTaskAndState value;
+					pendingTasks.TryRemove(taskAndState.Key, out value);
+				}
+				if (task.Exception != null)
+				{
+					log.InfoException("Failed to execute background task " + taskAndState.Key, task.Exception);
+				}
 			}
 		}
 
@@ -644,7 +682,7 @@ namespace Raven.Database
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
-						actions.AfterCommit(new JsonDocument
+						actions.AfterStorageCommitBeforeWorkNotifications(new JsonDocument
 						{
 							Metadata = metadata,
 							Key = key,
@@ -652,10 +690,10 @@ namespace Raven.Database
 							Etag = newEtag,
 							LastModified = addDocumentResult.SavedAt,
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
-						}, indexingExecuter.AfterCommit);
+						}, indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications);
 
 						TransactionalStorage
-							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+							.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 							{
 								PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
 								RaiseNotifications(new DocumentChangeNotification
@@ -864,12 +902,12 @@ namespace Raven.Database
 								task.Keys.Add(key);
 							}
 						    if (deletedETag != null)
-						        indexingExecuter.AfterDelete(key, deletedETag.Value);
+						        indexingExecuter.PrefetchingBehavior.AfterDelete(key, deletedETag.Value);
 							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 						}
 
 						TransactionalStorage
-							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+							.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 							{
 								DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
 								RaiseNotifications(new DocumentChangeNotification
@@ -1027,7 +1065,7 @@ namespace Raven.Database
 
 			workContext.ClearErrorsFor(name);
 
-			TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() => RaiseNotifications(new IndexChangeNotification
+			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
 			{
 				Name = name,
 				Type = IndexChangeTypes.IndexAdded,
@@ -1177,7 +1215,7 @@ namespace Raven.Database
 							workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
 						});
 
-						TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() => RaiseNotifications(new IndexChangeNotification
+						TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
 						{
 							Name = name,
 							Type = IndexChangeTypes.IndexRemoved,
@@ -1367,7 +1405,7 @@ namespace Raven.Database
 				});
 
 				TransactionalStorage
-					.ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
+					.ExecuteImmediatelyOrRegisterForSynchronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
 				return newEtag;
 			}
 			finally
@@ -1396,7 +1434,7 @@ namespace Raven.Database
 			});
 
 			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(
+				.ExecuteImmediatelyOrRegisterForSynchronization(
 					() => AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name)));
 
 		}
@@ -1710,6 +1748,11 @@ namespace Raven.Database
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
+				if (!string.IsNullOrWhiteSpace(databaseLocation))
+				{
+					configuration.DataDirectory = databaseLocation;
+				}
+
 				transactionalStorage.Restore(backupLocation, databaseLocation, output, defrag);
 			}
 		}
@@ -1861,7 +1904,11 @@ namespace Raven.Database
 			{
 				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
+				var indexStats = accessor.Indexing.GetIndexStats(indexName);
+				if(indexStats != null)
+				{
+					lastReducedEtag = indexStats.LastReducedEtag;
+				}
 				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
 
@@ -1913,14 +1960,13 @@ namespace Raven.Database
 			var documents = 0;
 			TransactionalStorage.Batch(accessor =>
 			{
-
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertStarted
 				});
-				accessor.General.UseLazyCommit();
 				foreach (var docs in docBatches)
 				{
+					WorkContext.CancellationToken.ThrowIfCancellationRequested();
 					lock (putSerialLock)
 					{
                         var inserts = 0;
@@ -1975,6 +2021,23 @@ namespace Raven.Database
 			recentTouches.TryGetValue(key, out info);
 			return info;
 		}
-	}
 
+		public void AddTask(Task task, RavenJToken state, out long id)
+		{
+			var localId = id = Interlocked.Increment(ref pendingTaskCounter);
+			pendingTasks.TryAdd(localId, new PendingTaskAndState
+			{
+				Task = task,
+				State = state
+			});
+		}
+
+		public RavenJToken GetTaskState(long id)
+		{
+			PendingTaskAndState value;
+			if (pendingTasks.TryGetValue(id, out value))
+				return value.State;
+			return null;
+		}
+	}
 }

@@ -35,7 +35,9 @@ namespace Raven.Database.Indexing
 			IList<ReduceTypePerKey> mappedResultsInfo = null;
 			transactionalStorage.Batch(actions =>
 			{
-				mappedResultsInfo = actions.MapReduce.GetReduceTypesPerKeys(indexToWorkOn.IndexName, context.NumberOfItemsToExecuteReduceInSingleStep).ToList();
+				mappedResultsInfo = actions.MapReduce.GetReduceTypesPerKeys(indexToWorkOn.IndexName, 
+					context.CurrentNumberOfItemsToReduceInSingleBatch,
+					context.NumberOfItemsToExecuteReduceInSingleStep).ToList();
 			});
 
 			var singleStepReduceKeys = mappedResultsInfo.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).Select(x => x.ReduceKey).ToArray();
@@ -117,7 +119,6 @@ namespace Raven.Database.Indexing
 
 					var persistedResults = actions.MapReduce.GetItemsToReduce
 						(
-							take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 							level: level,
 							reduceKeys: keysToReduce,
 							index: index.IndexName,
@@ -195,18 +196,20 @@ namespace Raven.Database.Indexing
 			var result = new ReduceResultStats();
 			var needToMoveToSingleStep = new HashSet<string>();
 
-			Log.Debug(() => string.Format("Executing single step reduciong for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
+			Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
 			transactionalStorage.Batch(actions =>
 			{
 				var scheduledItems = actions.MapReduce.GetItemsToReduce
 						(
-							take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 							level: 0,
 							reduceKeys: keysToReduce,
 							index: index.IndexName,
 							itemsToDelete: itemsToDelete,
 							loadData: false
 						).ToList();
+
+				// Only look at the scheduled batch for this run, not the entire set of pending reductions.
+				//var batchKeys = scheduledItems.Select(x => x.ReduceKey).ToArray();
 
 				foreach (var reduceKey in keysToReduce)
 				{
@@ -235,10 +238,9 @@ namespace Raven.Database.Indexing
 				}
 
 				var mappedResults = actions.MapReduce.GetMappedResults(
-						index.IndexName, 
+						index.IndexName,
 						keysToReduce, 
-						loadData: true,
-						take: context.CurrentNumberOfItemsToReduceInSingleBatch
+						loadData: true
 					).ToList();
 
 				result.count += mappedResults.Count;
@@ -300,7 +302,8 @@ namespace Raven.Database.Indexing
 
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, l) => HandleReduceForIndex(indexToWorkOn));
+			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn, 
+				HandleReduceForIndex);
 		}
 
 		protected override bool IsValidIndex(IndexStats indexesStat)

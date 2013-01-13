@@ -14,7 +14,7 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
 		private void ConfigureLogger(NLog.LogLevel nlogLogLevel)
 		{
-			NLogLogManager.ProviderIsAvailabileOverride = true;
+			NLogLogManager.ProviderIsAvailableOverride = true;
 			var config = new LoggingConfiguration();
 			target = new MemoryTarget();
 			target.Layout = "${level:uppercase=true}|${message}|${exception}";

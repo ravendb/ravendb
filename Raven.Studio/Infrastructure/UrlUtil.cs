@@ -54,8 +54,8 @@ namespace Raven.Studio.Infrastructure
 		private static void OpenUrlOnANewTab(string url)
 		{
 			var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
-			var fregmentIndex = hostUrl.IndexOf('#');
-			var host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex) : hostUrl;
+			var fragmentIndex = hostUrl.IndexOf('#');
+			var host = fragmentIndex != -1 ? hostUrl.Substring(0, fragmentIndex) : hostUrl;
 
 			HtmlPage.Window.Navigate(new Uri(host + "#" + url, UriKind.Absolute), "_blank");
 		}
