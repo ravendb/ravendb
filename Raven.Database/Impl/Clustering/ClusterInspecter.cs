@@ -127,7 +127,12 @@ namespace Raven.Database.Impl.Clustering
 
 						executableOfService = Path.GetFileNameWithoutExtension(executableOfService.Trim('"'));
 
-						var currentExecutable = Path.GetFileNameWithoutExtension(Assembly.GetEntryAssembly().Location);
+						var entryAssembly = Assembly.GetEntryAssembly();
+
+						if (entryAssembly == null)
+							return 0;
+
+						var currentExecutable = Path.GetFileNameWithoutExtension(entryAssembly.Location);
 
 						if (currentExecutable == executableOfService)
 						{
