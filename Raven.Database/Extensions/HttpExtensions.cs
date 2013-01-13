@@ -216,7 +216,7 @@ namespace Raven.Database.Extensions
 						}
 						else
 						{
-							var value = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+							var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None));
 							context.Response.AddHeader(header.Key, value);
 						}
 						break;
@@ -247,10 +247,10 @@ namespace Raven.Database.Extensions
 			return obj.ToString();
 		}
 
-		private static string StripQuotesIfNeeded(string str)
+		private static string UnescapeStringIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
-				return str.Substring(1, str.Length - 2);
+				return Regex.Unescape(str.Substring(1, str.Length - 2));
 			return str;
 		}
 
