@@ -565,12 +565,18 @@ namespace Raven.Database
 		public void RaiseNotifications(DocumentChangeNotification obj)
 		{
 			TransportState.Send(obj);
+			var onDocumentChange = OnDocumentChange;
+			if (onDocumentChange != null)
+				onDocumentChange(this, obj);
+
 		}
 
 		public void RaiseNotifications(IndexChangeNotification obj)
 		{
 			TransportState.Send(obj);
 		}
+
+		public event EventHandler<DocumentChangeNotification> OnDocumentChange;
 
 		public void RunIdleOperations()
 		{
@@ -1549,12 +1555,7 @@ namespace Raven.Database
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
 				jsonDoc =>
 				{
-					scriptedJsonPatcher = new ScriptedJsonPatcher(
-						loadDocument: id =>
-										{
-											var jsonDocument = Get(id, transactionInformation);
-											return jsonDocument == null ? null : jsonDocument.ToJson();
-										});
+					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
 				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
