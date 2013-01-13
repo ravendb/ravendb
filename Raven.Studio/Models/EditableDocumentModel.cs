@@ -98,6 +98,8 @@ namespace Raven.Studio.Models
 			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			DocumentSections = new List<DocumentSection> { dataSection, metaDataSection };
 			EnableExpiration = new Observable<bool>();
+			ExpireAt = new Observable<DateTime>();
+			ExpireAt.PropertyChanged += (sender, args) => TimeChanged = true;
 			CurrentSection = dataSection;
 			
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
@@ -273,16 +275,7 @@ namespace Raven.Studio.Models
 		}
 
 		public bool TimeChanged { get; set; }
-		private DateTime expireAt;
-		public DateTime ExpireAt
-		{
-			get { return expireAt; }
-			set 
-			{ 
-				expireAt = value;
-				TimeChanged = true;
-			}
-		}
+		public Observable<DateTime> ExpireAt { get; set; }
 		private void StoreOutliningMode()
 		{
 			Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
@@ -372,12 +365,12 @@ namespace Raven.Studio.Models
 							var expiration = result.Document.Metadata["Raven-Expiration-Date"];
 							if (expiration != null)
 							{
-								ExpireAt = DateTime.Parse(expiration.ToString());
+								ExpireAt.Value = DateTime.Parse(expiration.ToString());
 								EnableExpiration.Value = true;
 							}
 							else
 							{
-								ExpireAt = DateTime.Now;
+								ExpireAt.Value = DateTime.Now;
 							}
 						}
 					}
@@ -1237,13 +1230,17 @@ namespace Raven.Studio.Models
 						}
 						else
 						{
-							metadata[Constants.RavenEntityName] = parentModel.ExpireAt;
+							metadata[Constants.RavenEntityName] = parentModel.ExpireAt.Value;
 						}
 					}
 
 					if (parentModel.EnableExpiration.Value)
 					{
-						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+					}
+					else if (metadata.ContainsKey("Raven-Expiration-Date"))
+					{
+						metadata.Remove("Raven-Expiration-Date");
 					}
 				}
 				catch (Exception ex)
