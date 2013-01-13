@@ -7,6 +7,7 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -62,16 +63,21 @@ namespace Raven.Studio.Models
 
 			        if (activeBundles != null)
 			        {
-				        if (activeBundles.Contains("Quotas"))
+						var bundles = activeBundles.Split(';').ToList();
+
+				        if (bundles.Contains("Quotas"))
 					        Settings.Sections.Add(new QuotaSettingsSectionModel());
 
-				        if (activeBundles.Contains("Replication"))
+				        if (bundles.Contains("Replication"))
 					        Settings.Sections.Add(new ReplicationSettingsSectionModel());
 
-				        if (activeBundles.Contains("Versioning"))
+						if(bundles.Contains("SqlReplication"))
+							Settings.Sections.Add(new SqlReplicationSettingsSectionModel());
+
+				        if (bundles.Contains("Versioning"))
 					        Settings.Sections.Add(new VersioningSettingsSectionModel());
 
-				        if (activeBundles.Contains("Authorization"))
+				        if (bundles.Contains("Authorization"))
 					        Settings.Sections.Add(new AuthorizationSettingsSectionModel());
 			        }
 
