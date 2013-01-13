@@ -33,12 +33,6 @@ namespace Raven.StressTests.Races
 		}
 
 		[Fact]
-		public void IndexingEachFieldInEachDocumentSeparetedly()
-		{
-			Run<IndexingEachFieldInEachDocumentSeparately>(x => x.ForIndexing(), 500);
-		}
-
-		[Fact]
 		public void ConcurrentlyOpenedTenantsUsingEsent()
 		{
 			Run<ConcurrentlyOpenedTenantsUsingEsent>(x => x.CanConcurrentlyPutDocsToDifferentTenants(), 10);
