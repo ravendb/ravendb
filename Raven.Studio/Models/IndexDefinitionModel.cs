@@ -28,6 +28,8 @@ namespace Raven.Studio.Models
 		public IndexDefinitionModel()
 		{
 			ModelUrl = "/indexes/";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
+
 			index = new IndexDefinition();
 			Maps = new BindableCollection<MapItem>(x => x.Text)
 			{

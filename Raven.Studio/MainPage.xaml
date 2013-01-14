@@ -301,7 +301,6 @@
 											  MappedUri="/Views/{pageName}.xaml" />
 						<sdk:UriMapping Uri="/settings"
 											  MappedUri="/Views/bundles.xaml" />
-						
 					</sdk:UriMapper>
 				</sdk:Frame.UriMapper>
 			</sdk:Frame>
@@ -342,7 +341,14 @@
                                  Command="{StaticResource NavigateToCommand}"
                                  CommandParameter="/replicationStatistics"
                                  Style="{StaticResource HyperlinkButton_FooterLinks}"/>
-			
+
+					<HyperlinkButton toolkit:DockPanel.Dock="Left"
+									 Visibility="{Binding Path=Server.Value.RawUrl, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"
+									 Content="{Binding Path=Server.Value.RawUrl, StringFormat='Raw Url : {0\}'}"
+									 Command="{StaticResource NavigateToExternalUrlCommand}"
+									 CommandParameter="{Binding Path=Server.Value.RawUrl}"
+									 Style="{StaticResource HyperlinkButton_FooterLinks}"/>
+
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">
 					<Databases:LicenseView Margin="0,0,15,0"

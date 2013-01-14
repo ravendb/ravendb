@@ -19,6 +19,9 @@ namespace Raven.Studio.Models
 		public StatisticsModel()
 		{
 			ModelUrl = "/statistics";
+			ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+																	   "/stats";
 		    Breadcrumb = "Documents";
 			Statistics = new Dictionary<string, StatInfo>();
 			StatisticsToView = new Dictionary<string, StatInfo>();

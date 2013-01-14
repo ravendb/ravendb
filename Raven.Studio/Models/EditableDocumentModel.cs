@@ -93,6 +93,7 @@ namespace Raven.Studio.Models
 		public EditableDocumentModel()
 		{
 			ModelUrl = "/edit";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
 
 			dataSection = new DocumentSection{ Name = "Data", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
@@ -355,6 +356,9 @@ namespace Raven.Studio.Models
 					else
 					{
 						var recentQueue = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.RecentDocuments;
+						ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+						                                               ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+						                                               "/docs/" + result.Document.Key;
 						recentQueue.Add(result.Document.Key);
 						Mode = DocumentMode.DocumentWithId;
 						result.Document.Key = Uri.UnescapeDataString(result.Document.Key);

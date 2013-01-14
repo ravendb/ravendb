@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Studio.Commands;
@@ -18,9 +19,8 @@ namespace Raven.Studio.Models
 			changeDatabase = new ChangeDatabaseCommand();
 			ApplicationModel.Current.Server.Value.Databases.CollectionChanged += (sender, args) => OnPropertyChanged(() => Databases);
 			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => OnPropertyChanged(() => SelectedDatabase);
+			ApplicationModel.Current.Server.Value.RawUrl = ApplicationModel.Current.Server.Value.Url + "/databases";
 		}
-
-	
 
 		private bool showSystem = false;
 		public IEnumerable<string> Databases
