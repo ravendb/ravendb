@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void WhenUsingEmbadded()
+		public void WhenUsingEmbedded()
 		{
 			using (var documentStore = NewDocumentStore())
 			{

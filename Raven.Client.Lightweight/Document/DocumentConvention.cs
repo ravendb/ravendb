@@ -41,12 +41,11 @@ namespace Raven.Client.Document
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
 #if !SILVERLIGHT
-		private Dictionary<Type, Func<IDatabaseCommands, object, string>> typesToRegisteredIdConventions =
-			new Dictionary<Type, Func<IDatabaseCommands, object, string>>();
+		private readonly IList<Tuple<Type, Func<string, IDatabaseCommands, object, string>>> listOfRegisteredIdConventions =
+			new List<Tuple<Type, Func<string, IDatabaseCommands, object, string>>>();
 #endif
-
-		private Dictionary<Type, Func<IAsyncDatabaseCommands, object, Task<string>>> typesToAsyncRegisteredIdConventions =
-			new Dictionary<Type, Func<IAsyncDatabaseCommands, object, Task<string>>>();
+		private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
+			new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
@@ -87,7 +86,7 @@ namespace Raven.Client.Document
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
-			ReplicationInformerFactory = url=> new ReplicationInformer(this);
+			ReplicationInformerFactory = url => new ReplicationInformer(this);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 		}
@@ -192,8 +191,8 @@ namespace Raven.Client.Document
 
 		/// <summary>
 		/// Whatever to allow queries on document id.
-		/// By default, queries on id are disabled, because it is far more efficent
-		/// to do a Load() than a Query() if you alred know the id.
+		/// By default, queries on id are disabled, because it is far more efficient
+		/// to do a Load() than a Query() if you already know the id.
 		/// This is NOT recommended and provided for backward compatibility purposes only.
 		/// </summary>
 		public bool AllowQueriesOnId { get; set; }
@@ -270,27 +269,41 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-		public string GenerateDocumentKey(IDatabaseCommands databaseCommands,object entity)
+		public string GenerateDocumentKey(string dbName, IDatabaseCommands databaseCommands, object entity)
 		{
 			var type = entity.GetType();
-			foreach (var typeToRegisteredIdConvention in typesToRegisteredIdConventions
-				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Key.IsAssignableFrom(type)))
+			foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventions
+				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
 			{
-				return typeToRegisteredIdConvention.Value(databaseCommands, entity);
+				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
-			return DocumentKeyGenerator(databaseCommands,entity);
+
+			if (listOfRegisteredIdConventionsAsync.Any(x => x.Item1.IsAssignableFrom(type)))
+			{
+				throw new InvalidOperationException("Id covention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
+			}
+
+			return DocumentKeyGenerator(dbName, databaseCommands, entity);
 		}
 #endif
-	
-		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands,object entity)
+
+		public Task<string> GenerateDocumentKeyAsync(string dbName, IAsyncDatabaseCommands databaseCommands, object entity)
 		{
 			var type = entity.GetType();
-			foreach (var typeToRegisteredIdConvention in typesToAsyncRegisteredIdConventions
-				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Key.IsAssignableFrom(type)))
+			foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventionsAsync
+				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
 			{
-				return typeToRegisteredIdConvention.Value(databaseCommands, entity);
+				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
-			return AsyncDocumentKeyGenerator(databaseCommands,entity);
+
+#if !SILVERLIGHT
+			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
+			{
+				throw new InvalidOperationException("Id covention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
+			}
+#endif
+
+			return AsyncDocumentKeyGenerator(dbName, databaseCommands, entity);
 		}
 
 		/// <summary>
@@ -397,14 +410,14 @@ namespace Raven.Client.Document
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
-		public Func<IDatabaseCommands,object, string> DocumentKeyGenerator { get; set; }
+		public Func<string, IDatabaseCommands, object, string> DocumentKeyGenerator { get; set; }
 #endif
-	
+
 		/// <summary>
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
-		public Func<IAsyncDatabaseCommands,object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
+		public Func<string, IAsyncDatabaseCommands, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
 
 		/// <summary>
 		/// Instruct RavenDB to parallel Multi Get processing 
@@ -416,9 +429,28 @@ namespace Raven.Client.Document
 		/// Register an id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
 		/// </summary>
-		public DocumentConvention RegisterIdConvention<TEntity>(Func<IDatabaseCommands,TEntity, string> func)
+		public DocumentConvention RegisterIdConvention<TEntity>(Func<string, IDatabaseCommands, TEntity, string> func)
 		{
-			typesToRegisteredIdConventions[typeof(TEntity)] = (commands, o) => func(commands, (TEntity)o);
+			var type = typeof(TEntity);
+			var entryToRemove = listOfRegisteredIdConventions.FirstOrDefault(x => x.Item1 == type);
+			if (entryToRemove != null)
+			{
+				listOfRegisteredIdConventions.Remove(entryToRemove);
+			}
+
+			int index;
+			for (index = 0; index < listOfRegisteredIdConventions.Count; index++)
+			{
+				var entry = listOfRegisteredIdConventions[index];
+				if (entry.Item1.IsAssignableFrom(type))
+				{
+					break;
+				}
+			}
+
+			var item = new Tuple<Type, Func<string, IDatabaseCommands, object, string>>(typeof(TEntity), (dbName, commands, o) => func(dbName, commands, (TEntity)o));
+			listOfRegisteredIdConventions.Insert(index, item);
+
 			return this;
 		}
 #endif
@@ -427,9 +459,28 @@ namespace Raven.Client.Document
 		/// Register an async id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
 		/// </summary>
-		public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<IAsyncDatabaseCommands, TEntity, Task<string>> func)
+		public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<string, IAsyncDatabaseCommands, TEntity, Task<string>> func)
 		{
-			typesToAsyncRegisteredIdConventions[typeof (TEntity)] = (commands, o) => func(commands, (TEntity) o);
+			var type = typeof(TEntity);
+			var entryToRemove = listOfRegisteredIdConventionsAsync.FirstOrDefault(x => x.Item1 == type);
+			if (entryToRemove != null)
+			{
+				listOfRegisteredIdConventionsAsync.Remove(entryToRemove);
+			}
+
+			int index;
+			for (index = 0; index < listOfRegisteredIdConventionsAsync.Count; index++)
+			{
+				var entry = listOfRegisteredIdConventionsAsync[index];
+				if (entry.Item1.IsAssignableFrom(type))
+				{
+					break;
+				}
+			}
+
+			var item = new Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>(typeof(TEntity), (dbName, commands, o) => func(dbName, commands, (TEntity)o));
+			listOfRegisteredIdConventionsAsync.Insert(index, item);
+
 			return this;
 		}
 

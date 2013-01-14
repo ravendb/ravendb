@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -140,6 +141,7 @@ namespace Raven.Database.Indexing
 					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
 				}, (item, _, index) =>
 				{
+					using(LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
 					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 					{
 						LogContext.DatabaseName.Value = context.DatabaseName;
@@ -155,6 +157,31 @@ namespace Raven.Database.Indexing
 			for (int i = 0; i < source.Count; i += size)
 			{
 				yield return source.Skip(i).Take(size).ToList();
+			}
+		}
+
+		public void ExecuteAllInterleaved<T>(WorkContext context, IList<T> result, Action<T> action)
+		{
+			if (result.Count == 0)
+				return;
+
+			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
+			{
+				var tasks = new Task[result.Count];
+				for (int i = 0; i < result.Count; i++)
+				{
+					var index = result[i];
+					var indexToWorkOn = index;
+
+					var task = new Task(() => action(indexToWorkOn));
+					tasks[i] = task.ContinueWith(_ => semaphoreSlim.Release());
+
+					semaphoreSlim.Wait();
+
+					task.Start(context.Database.BackgroundTaskScheduler);
+				}
+
+				Task.WaitAll(tasks);
 			}
 		}
 	}

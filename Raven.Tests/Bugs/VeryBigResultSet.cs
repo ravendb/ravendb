@@ -1,6 +1,7 @@
 using System;
-using Xunit;
+using System.Collections.Generic;
 using System.Linq;
+using Xunit;
 
 namespace Raven.Tests.Bugs
 {
@@ -15,7 +16,7 @@ namespace Raven.Tests.Bugs
 				{
 					for (int i = 0; i < 15000; i++)
 					{
-						session.Store(new User { });
+						session.Store(new User {});
 					}
 					session.SaveChanges();
 				}
@@ -25,12 +26,40 @@ namespace Raven.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var users = session.Query<User>()
-						.Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
-						.Take(20000)
-						.ToArray();
-					Assert.Equal(15000, users.Length);
+					                   .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
+					                   .Take(20000)
+					                   .ToArray();
+
+					try
+					{
+						Assert.Equal(15000, users.Length);
+					}
+					catch (Exception)
+					{
+						PrintMissedDocuments(users);
+						throw;
+					}
 				}
 			}
+		}
+
+		private static void PrintMissedDocuments(User[] users)
+		{
+			var missed = new List<int>();
+			for (int i = 0; i < 15000; i++)
+			{
+				if (users.Any(user => user.Id == i + 1) == false)
+				{
+					missed.Add(i + 1);
+				}
+			}
+			Console.WriteLine("Missed documents: ");
+			Console.WriteLine(string.Join(", ", missed));
+		}
+
+		private class User
+		{
+			public int Id { get; set; }
 		}
 	}
 }

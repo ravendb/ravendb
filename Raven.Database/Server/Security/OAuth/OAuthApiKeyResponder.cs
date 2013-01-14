@@ -131,24 +131,8 @@ namespace Raven.Database.Server.Security.OAuth
 				{ OAuthHelper.Keys.Challenge, OAuthServerHelper.EncryptSymmetric(OAuthHelper.DictionaryToString(challengeData)) }
 			};
 
-			context.SetStatusToUnauthorized();
+			context.SetStatusToPreconditionFailed();
 			context.Response.AddHeader("WWW-Authenticate", OAuthHelper.Keys.WWWAuthenticateHeaderKey + " " + OAuthHelper.DictionaryToString(responseData));
-		}
-
-		private AccessToken GetAccessTokenFromApiKey(string apiKeyName)
-		{
-			return AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
-			{
-				UserId = apiKeyName,
-				AuthorizedDatabases = new List<DatabaseAccess>
-				{
-					new DatabaseAccess
-					{
-						TenantId = "*",
-
-					},
-				}
-			});
 		}
 
 		private Tuple<string,AccessToken> GetApiKeySecret(string apiKeyName)
@@ -161,7 +145,7 @@ namespace Raven.Database.Server.Security.OAuth
 			if(apiKeyDefinition.Enabled == false)
 				return null;
 
-			return Tuple.Create(apiKeyDefinition.Secret, AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
+			return Tuple.Create(apiKeyDefinition.Secret, AccessToken.Create(Settings.OAuthTokenKey, new AccessTokenBody
 			{
 				UserId = apiKeyName,
 				AuthorizedDatabases = apiKeyDefinition.Databases

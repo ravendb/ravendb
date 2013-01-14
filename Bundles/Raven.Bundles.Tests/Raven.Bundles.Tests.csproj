@@ -65,6 +65,7 @@
       <Link>UniqueConstraints\Util.cs</Link>
     </Compile>
     <Compile Include="Authorization\AuthorizationTest.cs" />
+    <Compile Include="Authorization\Bugs\Bowes.cs" />
     <Compile Include="Authorization\Bugs\DeanWard.cs" />
     <Compile Include="Authorization\Bugs\fampinheiro.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
@@ -81,10 +82,12 @@
     <Compile Include="Company.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
     <Compile Include="IndexedProperties\IndexedProperties.cs" />
+    <Compile Include="IndexReplication\Bugs\Micro.cs" />
     <Compile Include="IndexReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Replication\ReplicationDestinationDisabled.cs" />
     <Compile Include="Replication\ReplicationWithOAuth.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Concurrency.cs" />
     <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy.cs" />

@@ -10,7 +10,7 @@ namespace Raven.Database.Server.Security.OAuth
 {
 	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		public override bool Authorize(IHttpContext ctx)
+		public bool Authorize(IHttpContext ctx, bool hasApiKey)
 		{
 			var httpRequest = ctx.Request;
 
@@ -26,13 +26,14 @@ namespace Raven.Database.Server.Security.OAuth
 			{
 				if (allowUnauthenticatedUsers)
 					return true;
-				WriteAuthorizationChallenge(ctx, 401, "invalid_request", "The access token is required");
+
+				WriteAuthorizationChallenge(ctx, hasApiKey ? 412 : 401, "invalid_request", "The access token is required");
 				
 				return false;
 			}
 
 			AccessTokenBody tokenBody;
-			if (!AccessToken.TryParseBody(Settings.OAuthTokenCertificate, token, out tokenBody))
+			if (!AccessToken.TryParseBody(Settings.OAuthTokenKey, token, out tokenBody))
 			{
 				if (allowUnauthenticatedUsers)
 					return true;

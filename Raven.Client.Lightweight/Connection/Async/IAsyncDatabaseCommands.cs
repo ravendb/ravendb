@@ -24,7 +24,7 @@ namespace Raven.Client.Connection.Async
 	public interface IAsyncDatabaseCommands : IDisposable, IHoldProfilingInformation
 	{
 		/// <summary>
-		/// Gets or sets the operations headers.
+		/// Gets the operations headers.
 		/// </summary>
 		/// <value>The operations headers.</value>
 		IDictionary<string, string> OperationsHeaders { get; }
@@ -201,11 +201,6 @@ namespace Raven.Client.Connection.Async
 		///</summary>
 		///<returns></returns>
 		Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize);
-
-		/// <summary>
-		/// Ensures that the silverlight startup tasks have run
-		/// </summary>
-		Task EnsureSilverlightStartUpAsync();
 
 		/// <summary>
 		/// Disable all caching within the given scope

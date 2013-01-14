@@ -18,11 +18,11 @@ namespace Raven.Database.Indexing
 		public readonly List<bool> SkipDeleteFromIndex;
 		public DateTime? DateTime;
 
-		public void Add(JsonDocument doc, object asJson)
+		public void Add(JsonDocument doc, object asJson, bool skipDeleteFromIndex)
 		{
 			Ids.Add(doc.Key);
 			Docs.Add(asJson);
-			SkipDeleteFromIndex.Add(doc.SkipDeleteFromIndex);
+            SkipDeleteFromIndex.Add(skipDeleteFromIndex);
 		}
 	}
 }

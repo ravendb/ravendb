@@ -14,7 +14,6 @@ using Raven.Server;
 using Raven.Tests.Bugs;
 using Raven.Tests.Util;
 using Xunit;
-using Transaction = System.Transactions.Transaction;
 
 namespace Raven.Tests.Document
 {

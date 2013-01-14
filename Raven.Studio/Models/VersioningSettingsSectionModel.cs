@@ -27,7 +27,7 @@ namespace Raven.Studio.Models
 		}
 
 
-        public VersioningConfiguration SeletedVersioning { get; set; }
+        public VersioningConfiguration SelectedVersioning { get; set; }
 		public bool IsCreation { get; set; }
 
         public ObservableCollection<VersioningConfiguration> OriginalVersioningConfigurations { get; set; }
@@ -57,7 +57,7 @@ namespace Raven.Studio.Models
             if (versioning == null)
                 return;
             VersioningConfigurations.Remove(versioning);
-            SeletedVersioning = null;
+            SelectedVersioning = null;
         }
 
         public override void LoadFor(DatabaseDocument databaseDocument)

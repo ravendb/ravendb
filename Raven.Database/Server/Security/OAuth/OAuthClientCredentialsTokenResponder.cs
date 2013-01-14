@@ -81,7 +81,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 			var userId = identity.Item1;
 
-			var token = AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
+			var token = AccessToken.Create(Settings.OAuthTokenKey, new AccessTokenBody
 			{
 				UserId = userId,
 				AuthorizedDatabases = authorizedDatabases

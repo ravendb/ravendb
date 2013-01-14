@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
 
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentQueue<ActualIndexingBatchSize> lastActualIndexingBatchSize = new ConcurrentQueue<ActualIndexingBatchSize>();
+		private readonly SizeLimitedConcurrentSet<ActualIndexingBatchSize> lastActualIndexingBatchSize = new SizeLimitedConcurrentSet<ActualIndexingBatchSize>(25);
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
@@ -40,7 +40,6 @@ namespace Raven.Database.Indexing
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 		public string DatabaseName { get; set; }
-		public Dictionary<string,string> CountersNames = new Dictionary<string, string>();
 
 		public DateTime LastWorkTime { get; private set; }
 
@@ -65,7 +64,7 @@ namespace Raven.Database.Indexing
 		public TaskScheduler TaskScheduler { get; set; }
 		public IndexDefinitionStorage IndexDefinitionStorage { get; set; }
 
-		public ITransactionalStorage TransactionaStorage { get; set; }
+		public ITransactionalStorage TransactionalStorage { get; set; }
 
 		public ServerError[] Errors
 		{
@@ -249,7 +248,7 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-				if(useCounters == false)
+				if (useCounters == false)
 					return -1;
 				return (int)ConcurrentRequestsCounter.NextValue();
 			}
@@ -301,102 +300,55 @@ namespace Raven.Database.Indexing
 				ConcurrentRequestsCounter.Decrement();
 			}
 		}
-		private void CreatePreformanceCounters(string name)
+
+		private void SetupPerformanceCounter(string name)
 		{
-			var categoryName = "RavenDB 2.0: " + name;
-			DocsPerSecCounter = new PerformanceCounter
+			const string categoryName = "RavenDB 2.0";
+			var instances = new Dictionary<string, PerformanceCounterType>
 			{
-				CategoryName = categoryName,
-				CounterName = "# docs / sec",
-				MachineName = ".",
-				ReadOnly = false
+				{"# docs / sec", PerformanceCounterType.RateOfCountsPerSecond32},
+				{"# docs indexed / sec", PerformanceCounterType.RateOfCountsPerSecond32}, 
+				{"# docs reduced / sec", PerformanceCounterType.RateOfCountsPerSecond32},
+				{"# req / sec", PerformanceCounterType.RateOfCountsPerSecond32}, 
+				{"# of concurrent requests", PerformanceCounterType.NumberOfItems32}
 			};
 
-			IndexedPerSecCounter = new PerformanceCounter
+			if (IsValidCategory(categoryName, instances) == false)
 			{
-				CategoryName = categoryName,
-				CounterName = "# docs indexed / sec",
-				MachineName = ".",
-				ReadOnly = false
-			};
+				var counterCreationDataCollection = new CounterCreationDataCollection();
+				foreach (var instance in instances)
+				{
+					counterCreationDataCollection.Add(new CounterCreationData
+					{
+						CounterName = instance.Key,
+						CounterType = instance.Value
+					});
+				}
 
-			ReducedPerSecCounter = new PerformanceCounter
-			{
-				CategoryName = categoryName,
-				CounterName = "# docs reduced / sec",
-				MachineName = ".",
-				ReadOnly = false
-			};
+				PerformanceCounterCategory.Create(categoryName, "RavenDB Performance Counters", PerformanceCounterCategoryType.MultiInstance, counterCreationDataCollection);
+				PerformanceCounter.CloseSharedResources(); // http://blog.dezfowler.com/2007/08/net-performance-counter-problems.html
+			}
 
-			RequestsPerSecCounter = new PerformanceCounter
-			{
-				CategoryName = categoryName,
-				CounterName = "# req / sec",
-				MachineName = ".",
-				ReadOnly = false
-			};
-
-			ConcurrentRequestsCounter = new PerformanceCounter
-			{
-				CategoryName = categoryName,
-				CounterName = "# of concurrent requests",
-				MachineName = ".",
-				ReadOnly = false
-			};
-
+			DocsPerSecCounter = new PerformanceCounter(categoryName, "# docs / sec", name, false);
+			IndexedPerSecCounter = new PerformanceCounter(categoryName, "# docs indexed / sec", name, false);
+			ReducedPerSecCounter = new PerformanceCounter(categoryName, "# docs reduced / sec", name, false);
+			RequestsPerSecCounter = new PerformanceCounter(categoryName, "# req / sec", name, false);
+			ConcurrentRequestsCounter = new PerformanceCounter(categoryName, "# of concurrent requests", name, false);
 		}
 
-		private void SetupPreformanceCounter(string name)
+		private bool IsValidCategory(string categoryName, Dictionary<string, PerformanceCounterType> instances)
 		{
-			if (PerformanceCounterCategory.Exists("RavenDB 2.0: " + name))
-				return;
-
-			var counters = new CounterCreationDataCollection();
-
-			var docsPerSecond = new CounterCreationData
+			if (PerformanceCounterCategory.Exists(categoryName) == false)
+				return false;
+			foreach (var performanceCounterType in instances)
 			{
-				CounterName = "# docs / sec",
-				CounterHelp = "Number of documents added per second",
-				CounterType = PerformanceCounterType.RateOfCountsPerSecond32
-			};
-			counters.Add(docsPerSecond);
-
-			var indexedPerSecond = new CounterCreationData
-			{
-				CounterName = "# docs indexed / sec",
-				CounterHelp = "Number of documents indexed per second",
-				CounterType = PerformanceCounterType.RateOfCountsPerSecond32
-			};
-			counters.Add(indexedPerSecond);
-
-			var reducesPerSecond = new CounterCreationData
-			{
-				CounterName = "# docs reduced / sec",
-				CounterHelp = "Number of documents reduced per second",
-				CounterType = PerformanceCounterType.RateOfCountsPerSecond32
-			};
-			counters.Add(reducesPerSecond);
-
-			var requestsPerSecond = new CounterCreationData
-			{
-				CounterName = "# req / sec",
-				CounterHelp = "Number of http requests per second",
-				CounterType = PerformanceCounterType.RateOfCountsPerSecond32
-			};
-			counters.Add(requestsPerSecond);
-
-			var concurrentRequests = new CounterCreationData
-			{
-				CounterName = "# of concurrent requests",
-				CounterHelp = "Number of http requests per second",
-				CounterType = PerformanceCounterType.NumberOfItems32
-			};
-			counters.Add(concurrentRequests);
-
-			// create new category with the counters above
-
-			PerformanceCounterCategory.Create("RavenDB 2.0: " + name,
-											  "RevenDB category", PerformanceCounterCategoryType.Unknown, counters);
+				if (PerformanceCounterCategory.CounterExists(performanceCounterType.Key, categoryName) == false)
+				{
+					PerformanceCounterCategory.Delete(categoryName);
+					return false;
+				}
+			}
+			return true;
 		}
 
 		public void Init(string name)
@@ -407,13 +359,10 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-
 			name = name ?? Constants.SystemDatabase;
 			try
 			{
-				SetupPreformanceCounterName(name);
-				SetupPreformanceCounter(CountersNames[name]);
-				CreatePreformanceCounters(CountersNames[name]);
+				SetupPerformanceCounter(GetPerformanceCounterName(name));
 			}
 			catch (UnauthorizedAccessException e)
 			{
@@ -429,40 +378,19 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void SetupPreformanceCounterName(string name)
+		private string GetPerformanceCounterName(string name)
 		{
-			//For databases that has a long name
-			if (CountersNames.ContainsKey(name))
-				return;
-
-			string result = name;
 			//dealing with names who are very long (there is a limit of 80 chars for counter name)
-			if (result.Length > 60)
-			{
-				result = name.Remove(59);
-				int counter = 1;
-				while (PerformanceCounterCategory.Exists("RavenDB 2.0: " + result + counter))
-				{
-					counter++;
-				}
-				result = result + counter;
-			}
-
-			CountersNames.Add(name,result);
+			return name.Length > 70 ? name.Remove(70) : name;
 		}
 
 		public void ReportIndexingActualBatchSize(int size)
 		{
-			lastActualIndexingBatchSize.Enqueue(new ActualIndexingBatchSize
+			lastActualIndexingBatchSize.Add(new ActualIndexingBatchSize
 			{
 				Size = size,
 				Timestamp = SystemTime.UtcNow
 			});
-			if (lastActualIndexingBatchSize.Count > 25)
-			{
-				ActualIndexingBatchSize tuple;
-				lastActualIndexingBatchSize.TryDequeue(out tuple);
-			}
 		}
 
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats
@@ -470,10 +398,12 @@ namespace Raven.Database.Indexing
 			get { return futureBatchStats; }
 		}
 
-		public ConcurrentQueue<ActualIndexingBatchSize> LastActualIndexingBatchSize
+		public SizeLimitedConcurrentSet<ActualIndexingBatchSize> LastActualIndexingBatchSize
 		{
 			get { return lastActualIndexingBatchSize; }
 		}
+
+		public DocumentDatabase Database { get; set; }
 
 		public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{

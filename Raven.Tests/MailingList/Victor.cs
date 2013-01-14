@@ -38,7 +38,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void CanSortDynamicaly()
+		public void CanSortDynamically()
 		{
 			using (var store = NewDocumentStore())
 			{

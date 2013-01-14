@@ -563,6 +563,7 @@
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
     <Compile Include="Data\HighlightedField.cs" />
+    <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
@@ -655,6 +656,7 @@
     <Compile Include="Logging\LogLevel.cs" />
     <Compile Include="Logging\LogManager.cs" />
     <Compile Include="Logging\LogProviders\Log4NetLogManager.cs" />
+    <Compile Include="Logging\LogProviders\LogManagerBase.cs" />
     <Compile Include="Logging\LogProviders\NLogLogManager.cs" />
     <Compile Include="MEF\IPartMetadata.cs" />
     <Compile Include="MEF\OrderedPartCollection.cs" />
@@ -689,12 +691,14 @@
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
+    <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
     <Compile Include="Util\Etag.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
+    <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
   </ItemGroup>
   <ItemGroup>

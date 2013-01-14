@@ -13,7 +13,6 @@ namespace Raven.Munin
 {
 	public abstract class AbstractPersistentSource : IPersistentSource
 	{
-		private readonly StreamsPool pool;
 		private volatile IList<PersistentDictionaryState> globalStates = new List<PersistentDictionaryState>();
 
 		private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
@@ -25,11 +24,6 @@ namespace Raven.Munin
 		{
 			get { return currentStates.Value; }
 			set { currentStates.Value = value; }
-			}
-
-		protected AbstractPersistentSource()
-		{
-			pool = new StreamsPool(CreateClonedStreamForReadOnlyPurposes);
 		}
 
 		public bool CreatedNew
@@ -43,10 +37,10 @@ namespace Raven.Munin
 			get
 			{
 				var persistentDictionaryStates = CurrentStates;
-				if(persistentDictionaryStates == null)
+				if (persistentDictionaryStates == null)
 					return globalStates;
 				return persistentDictionaryStates;
-		}
+			}
 		}
 
 		protected abstract Stream CreateClonedStreamForReadOnlyPurposes();
@@ -56,17 +50,16 @@ namespace Raven.Munin
 			if (disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
 
-				Stream stream;
-				using (pool.Use(out stream))
-					return readOnlyAction(stream);
-			}
+			using (var stream = CreateClonedStreamForReadOnlyPurposes())
+				return readOnlyAction(stream);
+		}
 
 		public T Read<T>(Func<T> readOnlyAction)
 		{
-			if(disposed)
+			if (disposed)
 				throw new ObjectDisposedException("Cannot access persistent source after it was disposed");
-				return readOnlyAction();
-			}
+			return readOnlyAction();
+		}
 
 
 		public void Write(Action<Stream> readWriteAction)
@@ -84,10 +77,10 @@ namespace Raven.Munin
 					{
 						CurrentStates = new List<PersistentDictionaryState>(
 							globalStates.Select(x => new PersistentDictionaryState(x.Comparer)
-							                         {
-								                         KeyToFilePositionInFiles = x.KeyToFilePositionInFiles,
-								                         SecondaryIndicesState = x.SecondaryIndicesState.ToList()
-							                         }));
+													 {
+														 KeyToFilePositionInFiles = x.KeyToFilePositionInFiles,
+														 SecondaryIndicesState = x.SecondaryIndicesState.ToList()
+													 }));
 					}
 
 					readWriteAction(Log);
@@ -97,7 +90,6 @@ namespace Raven.Munin
 				{
 					if (success)
 					{
-						pool.Clear();
 						globalStates = CurrentStates;
 					}
 					CurrentStates = null;
@@ -112,11 +104,6 @@ namespace Raven.Munin
 		public abstract void FlushLog();
 		public abstract RemoteManagedStorageState CreateRemoteAppDomainState();
 
-		public void ClearPool()
-		{
-			pool.Clear();
-		}
-
 		public abstract void EnsureCapacity(int value);
 
 		public void BeginTx()
@@ -124,7 +111,7 @@ namespace Raven.Munin
 			lock (this)
 			{
 				CurrentStates = globalStates;
-			}	
+			}
 		}
 
 		public void CompleteTx()
@@ -134,7 +121,6 @@ namespace Raven.Munin
 
 		public virtual void Dispose()
 		{
-			pool.Dispose();
 			currentStates.Dispose();
 			disposed = true;
 		}

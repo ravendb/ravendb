@@ -76,7 +76,7 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
-			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 			                                                                            Database.RaiseNotifications(new DocumentChangeNotification
 			                                                                            {
 			                                                                            	Id = id,
@@ -167,7 +167,7 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
-			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 																						Database.RaiseNotifications(new DocumentChangeNotification
 																						{
 																							Id = id,

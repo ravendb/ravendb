@@ -49,7 +49,7 @@ namespace Raven.Bundles.Authorization
 			}
 			IEnumerable<IPermission> permissions =
 				from permission in documentAuthorization.Permissions // permissions for user / role directly on document
-				where DocumentPermisionMatchesUser(permission, user, userId)
+				where DocumentPermissionMatchesUser(permission, user, userId)
 				where OperationMatches(permission.Operation, operation)
 				select permission;
 
@@ -139,7 +139,7 @@ namespace Raven.Bundles.Authorization
 			logger(sb.ToString());
 		}
 
-		private static bool DocumentPermisionMatchesUser(DocumentPermission permission, AuthorizationUser user, string userId)
+		private static bool DocumentPermissionMatchesUser(DocumentPermission permission, AuthorizationUser user, string userId)
 		{
 			if (permission.User != null)
 				return string.Equals(permission.User, userId, StringComparison.InvariantCultureIgnoreCase);

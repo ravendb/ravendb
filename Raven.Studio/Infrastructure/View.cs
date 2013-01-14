@@ -11,10 +11,10 @@ namespace Raven.Studio.Infrastructure
         {
             Loaded += HandleLoaded;
             Unloaded += HandleUnloaded;
-            DataContextChanged += HandleDataContectChanged;
+            DataContextChanged += HandleDataContextChanged;
         }
 
-        private void HandleDataContectChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void HandleDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (isLoaded)
             {

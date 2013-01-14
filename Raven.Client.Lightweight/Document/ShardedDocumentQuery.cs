@@ -113,11 +113,21 @@ namespace Raven.Client.Document
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				rootTypes = {typeof(T)},
+				beforeQueryExecutionAction = beforeQueryExecutionAction,
+				afterQueryExecutedCallback = afterQueryExecutedCallback,
+				defaultField = defaultField,
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
-				highlighterPostTags = highlighterPostTags
+				highlighterPostTags = highlighterPostTags,
+				distanceErrorPct = distanceErrorPct,
+				isSpatialQuery = isSpatialQuery,
+				negate = negate,
+				queryShape = queryShape,
+				spatialFieldName = spatialFieldName,
+				spatialRelation = spatialRelation,
+				databaseCommands = databaseCommands,
+				indexQuery = indexQuery,
 			};
-			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
 		}
 

@@ -42,6 +42,8 @@ namespace Raven.Client.Document
 		protected SpatialRelation spatialRelation;
 		protected double distanceErrorPct;
 		private readonly LinqPathProvider linqPathProvider;
+		protected Action<IndexQuery> beforeQueryExecutionAction;
+
 		protected readonly HashSet<Type> rootTypes = new HashSet<Type>
 		{
 			typeof (T)
@@ -460,6 +462,10 @@ namespace Raven.Client.Document
 		{
 			var query = queryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);
+
+			if(beforeQueryExecutionAction != null)
+				beforeQueryExecutionAction(indexQuery);
+
 			return new QueryOperation(theSession,
 									  indexName,
 									  indexQuery,
@@ -625,6 +631,12 @@ namespace Raven.Client.Document
 		public void RandomOrdering(string seed)
 		{
 			AddOrder(Constants.RandomFieldName + ";" + seed, false);
+		}
+
+		public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
+		{
+			beforeQueryExecutionAction += action;
+			return this;
 		}
 
 		public IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer)
@@ -1556,16 +1568,16 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private static Task TaskDelay(int dueTimeMilliseconds)
 		{
-			var taskComplectionSource = new TaskCompletionSource<object>();
+			var taskCompletionSource = new TaskCompletionSource<object>();
 			var cancellationTokenRegistration = new CancellationTokenRegistration();
 			var timer = new Timer(o =>
 			{
 				cancellationTokenRegistration.Dispose();
 				((Timer)o).Dispose();
-				taskComplectionSource.TrySetResult(null);
+				taskCompletionSource.TrySetResult(null);
 			});
 			timer.Change(dueTimeMilliseconds, -1);
-			return taskComplectionSource.Task;
+			return taskCompletionSource.Task;
 		}
 
 		/// <summary>
@@ -1845,7 +1857,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 		public void Intersect()
 		{
-			queryText.Append(Constants.IntersectSeperator);
+			queryText.Append(Constants.IntersectSeparator);
 		}
 
 		public void AddRootType(Type type)

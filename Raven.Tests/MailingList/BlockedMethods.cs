@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void CannotUseEnvionment()
+		public void CannotUseEnvironment()
 		{
 			Assert.Throws<SecurityException>(() => Compile(
 				"from doc in docs  select new { doc.Now , die = ((Func<int>)(()=>{ System.Environment.Exit(1); return 1; }))()}"));

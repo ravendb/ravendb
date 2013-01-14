@@ -33,6 +33,11 @@ namespace Raven.Database.Server.Abstractions
 			get { return request.Headers; }
 		}
 
+		public Stream GetBufferLessInputStream()
+		{
+			return request.GetBufferlessInputStream();
+		}
+
 		public Stream InputStream
 		{
 			get { return request.InputStream; }

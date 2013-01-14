@@ -9,6 +9,6 @@ namespace Raven.Database.Plugins
 	{
 		public abstract Analyzer GenerateAnalyzerForIndexing(string indexName, Document document, Analyzer previousAnalyzer);
 
-		public abstract Analyzer GenerateAnalzyerForQuerying(string indexName, string query, Analyzer previousAnalyzer);
+		public abstract Analyzer GenerateAnalyzerForQuerying(string indexName, string query, Analyzer previousAnalyzer);
 	}
 }

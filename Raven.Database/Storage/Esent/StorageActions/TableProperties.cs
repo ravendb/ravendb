@@ -123,5 +123,11 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			get { return reduceKeysStatus ?? (reduceKeysStatus = new Table(session, dbid, "reduce_keys_status", OpenTableGrbit.None)); }
 		}
+
+		private Table indexedDocumentsReferences;
+		protected Table IndexedDocumentsReferences
+		{
+			get { return indexedDocumentsReferences ?? (indexedDocumentsReferences = new Table(session, dbid, "indexed_documents_references", OpenTableGrbit.None)); }
+		}
 	}
 }

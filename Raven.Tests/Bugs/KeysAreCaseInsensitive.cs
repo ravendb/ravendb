@@ -38,7 +38,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanIndexIdWithDifferntCasing()
+		public void CanIndexIdWithDifferentCasing()
 		{
 			using (var s = NewDocumentStore())
 			{

@@ -110,7 +110,6 @@ namespace Raven.Tests.Helpers
 			{
 				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
 			};
-
 			store.AfterDispose += (sender, args) =>
 			{
 				ravenDbServer.Dispose();
@@ -273,9 +272,9 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-		protected void WaitForUserToContinueTheTest()
+		protected void WaitForUserToContinueTheTest(bool debug = true)
 		{
-			if (Debugger.IsAttached == false)
+			if (debug && Debugger.IsAttached == false)
 				return;
 
 			using (var documentStore = new DocumentStore
@@ -292,7 +291,7 @@ namespace Raven.Tests.Helpers
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
 			}
 		}
 
@@ -325,6 +324,20 @@ namespace Raven.Tests.Helpers
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
 			ClearDatabaseDirectory();
+		}
+
+		protected static void PrintServerErrors(ServerError[] serverErrors)
+		{
+			if (serverErrors.Any())
+			{
+				Console.WriteLine("Server errors count: " + serverErrors.Count());
+				foreach (var serverError in serverErrors)
+				{
+					Console.WriteLine("Server error: " + serverError.ToString());
+				}
+			}
+			else
+				Console.WriteLine("No server errors");
 		}
 	}
 }

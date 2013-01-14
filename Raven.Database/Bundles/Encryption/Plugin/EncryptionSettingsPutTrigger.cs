@@ -20,7 +20,7 @@ namespace Raven.Bundles.Encryption.Plugin
 		{
 			if (key == Constants.InDatabaseKeyVerificationDocumentName)
 			{
-				if (Database == null) // we haven't been intialized yet
+				if (Database == null) // we haven't been initialized yet
 					return VetoResult.Allowed;
 
 				if (Database.Get(key, null) != null)

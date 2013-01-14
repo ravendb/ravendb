@@ -10,6 +10,7 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -44,7 +45,7 @@ namespace Raven.Storage.Managed
 			{
 				data.WriteTo(stream);
 			}
-			var byteArray = generator.CreateSequentialUuid().ToByteArray();
+			var byteArray = generator.CreateSequentialUuid(UuidType.MappedResults).ToByteArray();
 			var key = new RavenJObject
 			{
 				{"view", view},
@@ -56,7 +57,7 @@ namespace Raven.Storage.Managed
 			};
 			storage.MappedResults.Put(key, ms.ToArray());
 
-			IncrementReduceKeyCounter(view, reduceKey);
+			IncrementReduceKeyCounter(view, reduceKey, 1);
 		}
 
 		private RavenJObject LoadMappedResult(Table.ReadResult readResult)
@@ -84,7 +85,7 @@ namespace Raven.Storage.Managed
 				var reduceKey = key.Value<string>("reduceKey");
 				removed.Add(new ReduceKeyAndBucket(key.Value<int>("bucket"), reduceKey));
 
-				DecrementReduceKeyCounter(view, reduceKey);
+				IncrementReduceKeyCounter(view, reduceKey, -1);
 			}
 		}
 
@@ -95,60 +96,20 @@ namespace Raven.Storage.Managed
 			{
 				storage.MappedResults.Remove(key);
 
-				DecrementReduceKeyCounter(view, key.Value<string>("reduceKey"));
+				IncrementReduceKeyCounter(view, key.Value<string>("reduceKey"), -1);
 			}
-		}
-
-		public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take)
-		{
-			var mappedResultInfos = storage.MappedResults["ByViewAndEtagDesc"]
-				// the index is sorted view ascending and then etag descending
-				// we index before this index, then backward toward the last one.
-				.SkipBefore(new RavenJObject { { "view", indexName }, { "etag", lastReducedEtag.ToByteArray() } })
-				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), indexName))
-				.Select(key =>
-				{
-
-					var mappedResultInfo = new MappedResultInfo
-					{
-						ReduceKey = key.Value<string>("reduceKey"),
-						Etag = new Guid(key.Value<byte[]>("etag")),
-						Timestamp = key.Value<DateTime>("timestamp")
-					};
-
-					var readResult = storage.MappedResults.Read(key);
-					if (readResult != null)
-					{
-						mappedResultInfo.Size = readResult.Size;
-						if (loadData)
-							mappedResultInfo.Data = LoadMappedResult(readResult);
-					}
-
-					return mappedResultInfo;
-				});
-
-			var results = new Dictionary<string, MappedResultInfo>();
-
-			foreach (var mappedResultInfo in mappedResultInfos)
-			{
-				results[mappedResultInfo.ReduceKey] = mappedResultInfo;
-				if (results.Count == take)
-					break;
-			}
-
-			return results.Values;
 		}
 
 		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
 		{
-			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)
+			foreach (var reduceKeysAndBucket in reduceKeysAndBuckets)
 			{
-				var etag = generator.CreateSequentialUuid().ToByteArray();
+				var etag = generator.CreateSequentialUuid(UuidType.ScheduledReductions).ToByteArray();
 				storage.ScheduleReductions.UpdateKey(new RavenJObject
 					{
 						{"view", view},
-						{"reduceKey", reduceKeysAndBukcet.ReduceKey},
-						{"bucket", reduceKeysAndBukcet.Bucket},
+						{"reduceKey", reduceKeysAndBucket.ReduceKey},
+						{"bucket", reduceKeysAndBucket.Bucket},
 						{"level", level},
 						{"etag", etag},
 						{"timestamp", SystemTime.UtcNow}
@@ -181,7 +142,7 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, int take, bool loadData, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, List<object> itemsToDelete)
 		{
 			var seen = new HashSet<Tuple<string, int>>();
 
@@ -215,17 +176,11 @@ namespace Raven.Storage.Managed
 					{
 						foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
 						{
-							take--;
 							yield return mappedResultInfo;
 						}
 					}
 					itemsToDelete.Add(result);
-					if (take <= 0)
-						break;
 				}
-
-				if (take <= 0)
-					break;
 			}
 		}
 
@@ -338,7 +293,7 @@ namespace Raven.Storage.Managed
 				data.WriteTo(stream);
 			}
 
-			var etag = generator.CreateSequentialUuid().ToByteArray();
+			var etag = generator.CreateSequentialUuid(UuidType.ReduceResults).ToByteArray();
 
 			storage.ReduceResults.Put(new RavenJObject
 			{
@@ -371,7 +326,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int limitOfItemsToReduceInSingleStep)
+		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int take, int limitOfItemsToReduceInSingleStep)
 		{
 			var allKeysToReduce = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -380,7 +335,8 @@ namespace Raven.Storage.Managed
 				{"view", indexName},
 				{"level", 0}
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
-								x.Value<int>("level") == 0))
+								x.Value<int>("level") == 0)
+								.Take(take))
 			{
 				allKeysToReduce.Add(reduction.Value<string>("reduceKey"));
 			}
@@ -404,7 +360,16 @@ namespace Raven.Storage.Managed
 			var readResult = storage.ReduceKeys.Read(new RavenJObject { { "view", indexName }, { "reduceKey", reduceKey } });
 
 			if (readResult == null)
-				throw new ArgumentException(string.Format("There is no reduce key '{0}' for index '{1}'", reduceKey, indexName));
+			{
+				storage.ReduceKeys.Put(new RavenJObject
+				{
+					                       {"view", indexName},
+					                       {"reduceKey", reduceKey},
+					                       {"reduceType", (int) reduceType},
+					                       {"mappedItemsCount", 0}
+				                       }, null);
+				return;
+			}
 
 			var key = (RavenJObject)readResult.Key.CloneToken();
 			key["reduceType"] = (int)reduceType;
@@ -433,7 +398,7 @@ namespace Raven.Storage.Managed
 				.Distinct();
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData, int take)
+		public IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData)
 		{
 			foreach (var reduceKey in keysToReduce)
 			{
@@ -449,11 +414,6 @@ namespace Raven.Storage.Managed
 						 StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("reduceKey"), key)))
 				{
 					var readResult = storage.MappedResults.Read(item);
-
-					if (--take < 0)
-					{
-						yield break;
-					}
 
 					yield return new MappedResultInfo
 					{
@@ -548,46 +508,49 @@ namespace Raven.Storage.Managed
 				});
 		}
 
-		private void IncrementReduceKeyCounter(string view, string reduceKey)
+		Dictionary<Tuple<string, string>, int> reduceKeyChanges;
+		private void IncrementReduceKeyCounter(string view, string reduceKey, int val)
+		{
+			if (reduceKeyChanges == null)
+			{
+				reduceKeyChanges = new Dictionary<Tuple<string, string>, int>();
+			}
+
+			var key = Tuple.Create(view, reduceKey);
+			reduceKeyChanges[key] = reduceKeyChanges.GetOrAdd(key) + val;
+		}
+
+		private void UpdateReduceKeyCounter(string view, string reduceKey, int value)
 		{
 			var readResult = storage.ReduceKeys.Read(new RavenJObject { { "view", view }, { "reduceKey", reduceKey } });
 
 			if (readResult == null)
 			{
+				if (value <= 0)
+					return;
 				storage.ReduceKeys.Put(new RavenJObject()
 				                       {
 					                       {"view", view},
 					                       {"reduceKey", reduceKey},
 					                       {"reduceType", (int) ReduceType.None},
-					                       {"mappedItemsCount", 1}
+					                       {"mappedItemsCount", value}
 				                       }, null);
+				return;
 			}
-			else
-			{
-				var rkey = (RavenJObject)readResult.Key.CloneToken();
-				rkey["mappedItemsCount"] = rkey.Value<int>("mappedItemsCount") + 1;
-				storage.ReduceKeys.UpdateKey(rkey);
-			}
-		}
-
-		private void DecrementReduceKeyCounter(string view, string reduceKey)
-		{
-			var readResult = storage.ReduceKeys.Read(new RavenJObject { { "view", view }, { "reduceKey", reduceKey } });
-
-			if (readResult == null)
-				throw new ArgumentException(string.Format("There is no reduce key '{0}' for index '{1}'", reduceKey, view));
 
 			var rkey = (RavenJObject)readResult.Key.CloneToken();
 
-			var decrementedValue = rkey.Value<int>("mappedItemsCount") - 1;
+			var decrementedValue = rkey.Value<int>("mappedItemsCount") + value;
 
-			if (decrementedValue < 0)
+			if (decrementedValue > 0)
 			{
-				decrementedValue = 0;
+				rkey["mappedItemsCount"] = decrementedValue;
+				storage.ReduceKeys.UpdateKey(rkey);
 			}
-
-			rkey["mappedItemsCount"] = decrementedValue;
-			storage.ReduceKeys.UpdateKey(rkey);
+			else
+			{
+				storage.ReduceKeys.Remove(rkey);
+			}
 		}
 
 		private int GetNumberOfMappedItemsPerReduceKey(string view, string reduceKey)
@@ -598,6 +561,17 @@ namespace Raven.Storage.Managed
 				return 0;
 
 			return readResult.Key.Value<int>("mappedItemsCount");
+		}
+
+		public void PreCommit()
+		{
+			if (reduceKeyChanges == null)
+				return;
+
+			foreach (var reduceKeyChange in reduceKeyChanges)
+			{
+				UpdateReduceKeyCounter(reduceKeyChange.Key.Item1, reduceKeyChange.Key.Item2, reduceKeyChange.Value);
+			}
 		}
 	}
 }

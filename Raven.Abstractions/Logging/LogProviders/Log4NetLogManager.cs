@@ -1,61 +1,77 @@
+using System;
+using System.Linq;
+using System.Reflection;
+
 namespace Raven.Abstractions.Logging.LogProviders
 {
-	using System;
-	using System.Linq;
-	using System.Linq.Expressions;
-	using System.Reflection;
-
-	public class Log4NetLogManager : ILogManager
+	public class Log4NetLogManager : LogManagerBase
 	{
-		private readonly Func<string, object> getLoggerByNameDelegate;
-		private static bool providerIsAvailabileOverride = true;
-		private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerType, true); 
+		private static bool providerIsAvailableOverride = true;
+		private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerTypeStatic, true);
 
 		public Log4NetLogManager()
+			: base(logger => new Log4NetLogger(logger))
 		{
 			if (!IsLoggerAvailable())
 			{
 				throw new InvalidOperationException("log4net.LogManager not found");
 			}
-			getLoggerByNameDelegate = GetGetLoggerMethodCall();
 		}
 
-		public static bool ProviderIsAvailabileOverride
+		public static bool ProviderIsAvailableOverride
 		{
-			get { return providerIsAvailabileOverride; }
-			set { providerIsAvailabileOverride = value; }
-		}
-
-		public ILog GetLogger(string name)
-		{
-			return new Log4NetLogger(getLoggerByNameDelegate(name));
+			get { return providerIsAvailableOverride; }
+			set { providerIsAvailableOverride = value; }
 		}
 
 		public static bool IsLoggerAvailable()
 		{
-			return ProviderIsAvailabileOverride && LazyGetLogManagerType.Value != null;
+			return ProviderIsAvailableOverride && LazyGetLogManagerType.Value != null;
 		}
 
-		private static Type GetLogManagerType()
+		protected override Type GetLogManagerType()
+		{
+			return GetLogManagerTypeStatic();
+		}
+
+		protected static Type GetLogManagerTypeStatic()
 		{
 #if !SL_4
-			Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-			Assembly nlogAssembly = assemblies.FirstOrDefault(assembly => assembly.FullName.StartsWith("log4net,"));
-			return nlogAssembly != null ? nlogAssembly.GetType("log4net.LogManager") : Type.GetType("log4net.LogManager, log4net");
+			Assembly log4NetAssembly = GetLog4NetAssembly();
+			return log4NetAssembly != null
+				       ? log4NetAssembly.GetType("log4net.LogManager")
+				       : Type.GetType("log4net.LogManager, log4net");
 #else
-			return Type.GetType("NLog.LogManager, log4net");
+			return Type.GetType("log4net.LogManager, log4net");
 #endif
 		}
 
-		private static Func<string, object> GetGetLoggerMethodCall()
+		protected override Type GetNdcType()
 		{
-			Type logManagerType = GetLogManagerType();
-			MethodInfo method = logManagerType.GetMethod("GetLogger", new[] {typeof(string)});
-			ParameterExpression resultValue;
-			ParameterExpression keyParam = Expression.Parameter(typeof(string), "key");
-			MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {resultValue = keyParam});
-			return Expression.Lambda<Func<string, object>>(methodCall, new[] {resultValue}).Compile();
+#if !SL_4
+			Assembly log4NetAssembly = GetLog4NetAssembly();
+			return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.NDC") : Type.GetType("log4net.NDC, log4net");
+#else
+			return Type.GetType("log4net.NDC, log4net");
+#endif
 		}
+
+		protected override Type GetMdcType()
+		{
+#if !SL_4
+			Assembly log4NetAssembly = GetLog4NetAssembly();
+			return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.MDC") : Type.GetType("log4net.MDC, log4net");
+#else
+			return Type.GetType("log4net.MDC, log4net");
+#endif
+		}
+
+#if !SL_4
+		private static Assembly GetLog4NetAssembly()
+		{
+			return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.FullName.StartsWith("log4net,"));
+		}
+#endif
 
 		public class Log4NetLogger : ILog
 		{
@@ -107,8 +123,9 @@ namespace Raven.Abstractions.Logging.LogProviders
 					default:
 						if (logger.IsDebugEnabled)
 						{
-							logger.Debug(messageFunc()); // Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
-						} 
+							logger.Debug(messageFunc());
+								// Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
+						}
 						break;
 				}
 			}

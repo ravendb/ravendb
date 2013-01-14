@@ -43,7 +43,7 @@ namespace Raven.Abstractions.Connection
 			return BytesToString(hash);
 		}
 
-		public static string EncryptAssymetric(Tuple<byte[], byte[]> parameters, string data)
+		public static string EncryptAsymmetric(byte[] exponent, byte[] modulus, string data)
 		{
 			var bytes = Encoding.UTF8.GetBytes(data);
 			var results = new List<byte>();
@@ -56,7 +56,7 @@ namespace Raven.Abstractions.Connection
 				aesKeyGen.GenerateKey();
 				aesKeyGen.GenerateIV();
 
-				results.AddRange(AddEncryptedKeyAndIv(parameters, aesKeyGen));
+				results.AddRange(AddEncryptedKeyAndIv(exponent, modulus, aesKeyGen));
 
 				using (var encryptor = aesKeyGen.CreateEncryptor())
 				{
@@ -69,26 +69,26 @@ namespace Raven.Abstractions.Connection
 		}
 
 #if !SILVERLIGHT
-		private static byte[] AddEncryptedKeyAndIv(Tuple<byte[], byte[]> parameters, AesManaged aesKeyGen)
+		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
 		{
 			using (var rsa = new RSACryptoServiceProvider())
 			{
 				rsa.ImportParameters(new RSAParameters
 				{
-					Exponent = parameters.Item1,
-					Modulus = parameters.Item2
+					Exponent = exponent,
+					Modulus = modulus
 				});
 				return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray(), true);
 			}
 		}
 #else
-		private static byte[] AddEncryptedKeyAndIv(Tuple<byte[], byte[]> parameters, AesManaged aesKeyGen)
+		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
 		{
 			var rsa = new RSA.RSACrypto();
 			rsa.ImportParameters(new RSA.RSAParameters
 			{
-				E = parameters.Item1,
-				N = parameters.Item2
+				E = exponent,
+				N = modulus
 			});
 			return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray());
 		}

@@ -15,26 +15,35 @@ namespace Raven.Bundles.Replication.Responders
 		public override string UrlPattern
 		{
 			get { return "^/admin/replication/purge-tombstones$"; }
-	
+
 		}
 		public override void RespondToAdmin(IHttpContext context)
 		{
-			var etagStr = context.Request.QueryString["etag"];
-			Guid etag;
-			if(Guid.TryParse(etagStr, out etag) == false)
+			var docEtagStr = context.Request.QueryString["docEtag"];
+			Guid docEtag;
+			var attachmentEtagStr = context.Request.QueryString["attachmentEtag"];
+			Guid attachmentEtag;
+			if (Guid.TryParse(docEtagStr, out docEtag) == false & // intentionally so, we want to eval both sides
+				Guid.TryParse(attachmentEtagStr, out attachmentEtag) == false)
 			{
 				context.SetStatusToBadRequest();
 				context.WriteJson(new
 				{
-					Error = "The query string variable 'etag' must be set to a valid guid"
+					Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid guid"
 				});
 				return;
 			}
 
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				accessor.Lists.RemoveAllBefore(Constants.RavenReplicationDocsTombstones, etag);
-				accessor.Lists.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones, etag);
+				if(docEtag != Guid.Empty)
+				{
+					accessor.Lists.RemoveAllBefore(Constants.RavenReplicationDocsTombstones, docEtag);
+				}
+				if(attachmentEtag != Guid.Empty)
+				{
+					accessor.Lists.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones, attachmentEtag);
+				}
 			});
 		}
 	}

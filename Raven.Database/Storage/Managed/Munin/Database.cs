@@ -41,7 +41,7 @@ namespace Raven.Munin
 
 		const int version = 1;
 
-		public void Initialze()
+		public void Initialize()
 		{
 			persistentSource.Write(log =>
 			{
@@ -318,8 +318,6 @@ namespace Raven.Munin
 				}
 
 				WriteCommands(cmds, tempLog);
-
-				persistentSource.ClearPool();
 
 				persistentSource.ReplaceAtomically(tempLog);
 

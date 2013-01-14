@@ -13,7 +13,7 @@ namespace Raven.Abstractions.Data
 		public Guid LastDocEtag { get; set; }
 		public Guid LastAttachmentEtag { get; set; }
 		public int CountOfIndexes { get; set; }
-
+		public int InMemoryIndexingQueueSize { get; set; }
 		public long ApproximateTaskCount { get; set; }
 
 		public long CountOfDocuments { get; set; }

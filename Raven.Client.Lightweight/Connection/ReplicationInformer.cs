@@ -188,7 +188,7 @@ namespace Raven.Client.Connection
 			}
 
 
-			if (currentRequest % GetCheckReptitionRate(failureCounter.Value) == 0)
+			if (currentRequest % GetCheckRepetitionRate(failureCounter.Value) == 0)
 			{
 				failureCounter.LastCheck = SystemTime.UtcNow;
 				return true;
@@ -203,7 +203,7 @@ namespace Raven.Client.Connection
 			return false;
 		}
 
-		private int GetCheckReptitionRate(long value)
+		private int GetCheckRepetitionRate(long value)
 		{
 			if (value < 2)
 				return (int)value;
@@ -246,7 +246,7 @@ namespace Raven.Client.Connection
 #if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
 #else
-			// need to compensate for 3.5 not having concnurrent dic.
+			// need to compensate for 3.5 not having concurrent dic.
 
 			FailureCounter value;
 			if (failureCounts.TryGetValue(operationUrl, out value) == false)

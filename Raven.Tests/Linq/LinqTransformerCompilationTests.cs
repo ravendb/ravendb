@@ -132,7 +132,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void Can_compile_map_reudce_using_linq_methods()
+		public void Can_compile_map_reduce_using_linq_methods()
 		{
 			var viewGenerator = new DynamicViewCompiler("test", new IndexDefinition
 			{

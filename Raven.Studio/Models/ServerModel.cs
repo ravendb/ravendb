@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Studio.Commands;
+using Raven.Studio.Impl;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Abstractions.Extensions;
@@ -21,7 +22,6 @@ namespace Raven.Studio.Models
 		private string[] defaultDatabase;
 
 		private string buildNumber;
-		private bool singleTenant;
 		private Observable<bool> isConnected;
 
 
@@ -72,7 +72,7 @@ namespace Raven.Studio.Models
 			// already gives the user a clear warning about the dangers of sending passwords in the clear. I think that 
 			// this is sufficient warning and we don't require an additional step, so we can disable this check safely.
 			documentStore.JsonRequestFactory.
-				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
+				EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				true;
 
 			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
@@ -86,7 +86,7 @@ namespace Raven.Studio.Models
 			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 
 			DisplayBuildNumber();
-			DisplyaLicenseStatus();
+			DisplayLicenseStatus();
 		    TimerTickedAsync();
 		}
 
@@ -94,12 +94,6 @@ namespace Raven.Studio.Models
 		private static bool firstTick = true;
 		public override Task TimerTickedAsync()
 		{
-			if (singleTenant)
-				return null;
-
-            //if (SelectedDatabase.Value.HasReplication)
-            //    SelectedDatabase.Value.UpdateReplicationOnlineStatus();
-
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>
 				                   	{
@@ -122,13 +116,13 @@ namespace Raven.Studio.Models
 				                   	            }
 				                   	        });
 
-				                   		if (names.Length == 0 || (names.Length == 1 && names[0] == Constants.SystemDatabase))
+				                   		var url = new UrlParser(UrlUtil.Url);
+
+				                   		if (url.QueryParams.ContainsKey("database") == false && (names.Length == 0 || (names.Length == 1 && names[0] == Constants.SystemDatabase)))
 				                   			CreateNewDatabase = true;
 
 				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase)) 
 											return;
-
-				                   		var url = new UrlParser(UrlUtil.Url);
 
 										if (Settings.Instance.SelectedDatabase != null && names.Contains(Settings.Instance.SelectedDatabase))
 										{
@@ -143,11 +137,6 @@ namespace Raven.Studio.Models
 										}
 				                   	})
 				.Catch();
-		}
-
-		public bool SingleTenant
-		{
-			get { return singleTenant; }
 		}
 
 	    public IDocumentStore DocumentStore
@@ -191,8 +180,6 @@ namespace Raven.Studio.Models
 				&& (SelectedDatabase.Value.Name == databaseName || (SelectedDatabase.Value.Name == Constants.SystemDatabase && databaseName == null)))
                 return;
 
-            singleTenant = urlParser.GetQueryParam("api-key") != null;
-
             if (SelectedDatabase.Value != null)
                 SelectedDatabase.Value.Dispose();
 
@@ -233,7 +220,7 @@ namespace Raven.Studio.Models
 				.Catch();
 		}
 
-		private void DisplyaLicenseStatus()
+		private void DisplayLicenseStatus()
 		{
 			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatusAsync()
 				.ContinueOnSuccessInTheUIThread(x =>

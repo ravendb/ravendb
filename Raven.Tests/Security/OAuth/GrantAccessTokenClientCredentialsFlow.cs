@@ -37,7 +37,6 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			ravenConfiguration.OAuthTokenCertificate = CertGenerator.GenerateNewCertificate("RavenDB.Test");
 			ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
 		}
 
@@ -94,7 +93,7 @@ namespace Raven.Tests.Security.OAuth
 				AccessTokenBody body;
 
 				Assert.NotEmpty(token);
-				Assert.True(AccessToken.TryParseBody(server.Database.Configuration.OAuthTokenCertificate, token, out body));
+				Assert.True(AccessToken.TryParseBody(server.Database.Configuration.OAuthTokenKey, token, out body));
 				Assert.False(body.IsExpired());
 			}
 

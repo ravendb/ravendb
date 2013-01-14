@@ -36,7 +36,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
 				using (var session = store.OpenSession())
 				{
 					SetKeys();
-					var application = PopulateApplicaiton();
+					var application = PopulateApplication();
 					var entries = PopulateLogEntries();
 
 					session.Store(application);
@@ -62,7 +62,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
 				using (var session = store.OpenSession())
 				{
 					SetKeys();
-					var application = PopulateApplicaiton();
+					var application = PopulateApplication();
 					var entries = PopulateLogEntries();
 
 					session.Store(application);
@@ -85,7 +85,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
 			_privateKey = Guid.Parse("0bf04dd0-f8a2-4921-a441-1035fcc1d106");
 		}
 
-		private Application PopulateApplicaiton()
+		private Application PopulateApplication()
 		{
 			return new Application
 			{

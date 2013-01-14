@@ -123,7 +123,7 @@ No one may perform operation Company/Bid on companies/1
 		}
 
 		[Fact]
-		public void DocumentWithoutPermissionWillBeFilteredOutSiltently()
+		public void DocumentWithoutPermissionWillBeFilteredOutSilently()
 		{
 			var company = new Company
 			{

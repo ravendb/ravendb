@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Database.Indexing;
 using Raven.Database.Server;
 
@@ -276,7 +277,7 @@ namespace Raven.Database.Data
 		{
 			foreach (var dynamicSortInfo in sortDescriptors)
 			{
-				dynamicSortInfo.Field = ReplaceIndavlidCharactersForFields(dynamicSortInfo.Field);
+				dynamicSortInfo.Field = ReplaceInvalidCharactersForFields(dynamicSortInfo.Field);
 			}
 		}
 
@@ -287,7 +288,7 @@ namespace Raven.Database.Data
 			{
 				GroupByItems = query.GroupBy.Select(x => new DynamicQueryMappingItem
 				{
-					From = x,
+					From = EscapeParentheses(x),
 					To = x.Replace(".", "").Replace(",", ""),
 					QueryFrom = x
 				}).ToArray();
@@ -303,8 +304,8 @@ namespace Raven.Database.Data
 				Items = fields.Select(x => new DynamicQueryMappingItem
 				{
 					From = x.Item1,
-					To = ReplaceIndavlidCharactersForFields(x.Item2),
-					QueryFrom = x.Item2
+					To = ReplaceInvalidCharactersForFields(x.Item2),
+					QueryFrom = EscapeParentheses(x.Item2)
 				}).OrderByDescending(x => x.QueryFrom.Length).ToArray();
 				if (GroupByItems != null && DynamicAggregation)
 				{
@@ -317,7 +318,12 @@ namespace Raven.Database.Data
 			}
 		}
 
-		public static string ReplaceIndavlidCharactersForFields(string field)
+		private string EscapeParentheses(string str)
+		{
+			return str.Replace("(", @"\(").Replace(")", @"\)");
+		}
+
+		public static string ReplaceInvalidCharactersForFields(string field)
 		{
 			return replaceInvalidCharacterForFields.Replace(field, "_");
 		}

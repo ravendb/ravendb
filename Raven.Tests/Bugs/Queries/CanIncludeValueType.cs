@@ -82,7 +82,7 @@ namespace Raven.Tests.Bugs.Queries
 		}
 
 		[Fact]
-		public void WillFailWhenUsingIncludeOnValueTypeWithoutSpecifingTheIncludeObjectType()
+		public void WillFailWhenUsingIncludeOnValueTypeWithoutSpecifyingTheIncludeObjectType()
 		{
 			using (var session = store.OpenSession())
 			{

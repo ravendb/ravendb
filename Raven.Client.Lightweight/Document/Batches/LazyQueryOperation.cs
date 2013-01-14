@@ -26,7 +26,7 @@ namespace Raven.Client.Document.Batches
 			this.includes = includes;
 		}
 
-		public GetRequest CraeteRequest()
+		public GetRequest CreateRequest()
 		{
 			var stringBuilder = new StringBuilder();
 			queryOperation.IndexQuery.AppendQueryString(stringBuilder);

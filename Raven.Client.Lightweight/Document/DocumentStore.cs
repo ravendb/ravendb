@@ -100,7 +100,7 @@ namespace Raven.Client.Document
 
 #endif
 
-		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
+		protected Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
@@ -320,7 +320,7 @@ namespace Raven.Client.Document
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new DocumentSession(this, listeners, sessionId,
+				var session = new DocumentSession(options.Database, this, listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
 					{
 						DatabaseName = options.Database ?? DefaultDatabase
@@ -375,25 +375,25 @@ namespace Raven.Client.Document
 #endif
 			try
 			{
-				InitializeInternal();
-
 				InitializeSecurity();
+
+				InitializeInternal();
 
 #if !SILVERLIGHT
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
-					var generator = new MultiTypeHiLoKeyGenerator(32);
-					Conventions.DocumentKeyGenerator = (databaseCommands, entity) => generator.GenerateDocumentKey(databaseCommands, Conventions, entity);
+					var generator = new MultiDatabaseHiLoGenerator(32);
+					Conventions.DocumentKeyGenerator = (dbName, databaseCommands, entity) => generator.GenerateDocumentKey(dbName, databaseCommands, Conventions, entity);
 				}
 #endif
 
 				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
 				{
 #if !SILVERLIGHT
-					var generator = new AsyncMultiTypeHiLoKeyGenerator(32);
-					Conventions.AsyncDocumentKeyGenerator = (commands, entity) => generator.GenerateDocumentKeyAsync(commands, Conventions, entity);
+					var generator = new AsyncMultiDatabaseHiLoKeyGenerator(32);
+					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(dbName, commands, Conventions, entity);
 #else
-					Conventions.AsyncDocumentKeyGenerator = (commands, entity) =>
+					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) =>
 					{
 						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
 						if (typeTagName == null)
@@ -470,14 +470,15 @@ namespace Raven.Client.Document
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
 
-				if (string.IsNullOrEmpty(oauthSource) == false)
+				if (string.IsNullOrEmpty(oauthSource) == false &&
+					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
 					return basicAuthenticator.HandleOAuthResponse(oauthSource);
 				}
 
 				if (ApiKey == null)
 				{
-					AssertUnuthorizedCredentialSupportWindowsAuth(response);
+					AssertUnauthorizedCredentialSupportWindowsAuth(response);
 
 					return null;
 				}
@@ -485,6 +486,7 @@ namespace Raven.Client.Document
 
 				return securedAuthenticator.DoOAuthRequest(oauthSource);
 			};
+#endif
 
 			Conventions.HandleForbiddenResponseAsync = forbiddenResponse =>
 			{
@@ -496,20 +498,20 @@ namespace Raven.Client.Document
 
 				return null;
 			};
-#endif
 
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
 
-				if (string.IsNullOrEmpty(oauthSource) == false)
+				if (string.IsNullOrEmpty(oauthSource) == false &&
+					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
 					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource);
 				}
 
 				if (ApiKey == null)
 				{
-					AssertUnuthorizedCredentialSupportWindowsAuth(unauthorizedResponse);
+					AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse);
 					return null;
 				}
 				oauthSource = Url + "/OAuth/API-Key";
@@ -517,19 +519,9 @@ namespace Raven.Client.Document
 				return securedAuthenticator.DoOAuthRequestAsync(oauthSource);
 			};
 
-			Conventions.HandleForbiddenResponseAsync = forbiddenResponse =>
-					{
-						if (ApiKey == null)
-						{
-							AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse);
-							return null;
-						}
-
-						return null;
-					};
 		}
 
-		private void AssertUnuthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
+		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
 		{
 			if (Credentials == null) 
 				return;
@@ -542,7 +534,7 @@ namespace Raven.Client.Document
 				// we are trying to do windows auth, but we didn't get the windows auth headers
 				throw new SecurityException(
 					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
-					+ " but either worng credentials where entered or the specified server does not support Windows authentication." +
+					+ " but either wrong credentials where entered or the specified server does not support Windows authentication." +
 					Environment.NewLine +
 					"If you are running inside IIS, make sure to enable Windows authentication.");
 			}
@@ -719,7 +711,7 @@ namespace Raven.Client.Document
 #endif
 		}
 
-		private IAsyncDocumentSession OpenAsyncSessionInternal(IAsyncDatabaseCommands asyncDatabaseCommands)
+		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			AssertInitialized();
 			EnsureNotClosed();
@@ -731,7 +723,7 @@ namespace Raven.Client.Document
 				if (AsyncDatabaseCommands == null)
 					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-				var session = new AsyncDocumentSession(this, asyncDatabaseCommands, listeners, sessionId);
+				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId);
 				AfterSessionCreated(session);
 				return session;
 			}
@@ -764,7 +756,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-			return OpenAsyncSessionInternal(SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+			return OpenAsyncSessionInternal(options.Database,SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>
@@ -780,5 +772,11 @@ namespace Raven.Client.Document
 #endif
 
 
+#if !SILVERLIGHT
+		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
+		{
+			return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions());
+		}
+#endif
 	}
 }

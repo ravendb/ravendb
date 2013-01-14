@@ -22,7 +22,7 @@ namespace Raven.Munin.Tests.Bugs
 			var database = new Database(persistentSource);
 			var tableOne = database.Add(new Table("Test1"));
 			var tableTwo = database.Add(new Table("Test2"));
-			database.Initialze();
+			database.Initialize();
 
 			try
 			{

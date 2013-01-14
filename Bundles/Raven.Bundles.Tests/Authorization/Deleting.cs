@@ -80,7 +80,7 @@ namespace Raven.Bundles.Tests.Authorization
 			using (var s = store.OpenSession())
 			{
 				s.SecureFor(UserId, "Company/Rename");
-				company.Name = "Stampading Rhinos";
+				company.Name = "Stampeding Rhinos";
 				s.Store(company);
 
 				Assert.DoesNotThrow(() => store.DatabaseCommands.Delete(company.Id, null));

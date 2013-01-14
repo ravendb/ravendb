@@ -51,7 +51,7 @@ namespace Raven.Tests.Document
 			using (var store = NewDocumentStore())
 			{
 				var mk = new MultiTypeHiLoKeyGenerator(5);
-				store.Conventions.DocumentKeyGenerator = (cmd, o) => mk.GenerateDocumentKey(cmd, store.Conventions, o);
+				store.Conventions.DocumentKeyGenerator = (dbName, cmd, o) => mk.GenerateDocumentKey(cmd, store.Conventions, o);
 
 				
 				using (var session = store.OpenSession())
@@ -66,7 +66,7 @@ namespace Raven.Tests.Document
 				}
 
 				mk = new MultiTypeHiLoKeyGenerator(5);
-				store.Conventions.DocumentKeyGenerator = (cmd, o) => mk.GenerateDocumentKey(cmd, store.Conventions, o);
+				store.Conventions.DocumentKeyGenerator = (dbName, cmd, o) => mk.GenerateDocumentKey(cmd, store.Conventions, o);
 
 				using (var session = store.OpenSession())
 				{
@@ -117,7 +117,7 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Conventions.DocumentKeyGenerator = (c, f)=> null;
+				store.Conventions.DocumentKeyGenerator = (dbName, c, f)=> null;
 
 				using (var session = store.OpenSession())
 				{
@@ -134,7 +134,7 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Conventions.DocumentKeyGenerator = (c,f) => null;
+				store.Conventions.DocumentKeyGenerator = (dbName, c,f) => null;
 
 				using (var session = store.OpenSession())
 				{

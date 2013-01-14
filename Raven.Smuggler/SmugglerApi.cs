@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -111,7 +112,8 @@ namespace Raven.Smuggler
 				if (attachmentInfo.Length == 0)
 				{
 					var databaseStatistics = GetStats();
-					if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+					var lastEtagComparable = new ComparableByteArray(lastEtag);
+					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
 						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
@@ -194,7 +196,8 @@ namespace Raven.Smuggler
 			foreach (var doc in batch)
 			{
 				var metadata = doc.Value<RavenJObject>("@metadata");
-				doc.Remove("@metadata");
+
+			    doc.Remove("@metadata");
 				commands.Add(new RavenJObject
 								{
 									{"Method", "PUT"},

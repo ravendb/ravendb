@@ -333,7 +333,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="fieldName">The name of the field containing the shape to use for filtering</param>
 		/// <param name="shapeWKT">The query shape</param>
 		/// <param name="rel">Spatial relation to check</param>
-		/// <param name="distanceErrorPct">The allowed error precentage</param>
+		/// <param name="distanceErrorPct">The allowed error percentage</param>
 		/// <returns></returns>
 		TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025);
 
@@ -508,6 +508,11 @@ If you really want to do in memory filtering on the data returned from the query
 		///   This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>
 		TSelf WaitForNonStaleResults();
+
+		/// <summary>
+		/// Allows you to modify the index query before it is sent to the server
+		/// </summary>
+		TSelf BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution);
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.

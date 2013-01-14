@@ -184,8 +184,8 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 															   },
 															   new string[0]);
 
-				//Because the "test" index has a field set to Analyzed (and the default is Non-Analysed), 
-				//it should NOT be considered a match by the query optimiser!
+				//Because the "test" index has a field set to Analyzed (and the default is Non-Analyzed), 
+				//it should NOT be considered a match by the query optimizer!
 				Assert.NotEqual("test", queryResult.IndexName);
 
 				queryResult = store.DatabaseCommands.Query("dynamic",

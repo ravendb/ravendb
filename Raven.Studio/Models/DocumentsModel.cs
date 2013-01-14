@@ -86,6 +86,12 @@ namespace Raven.Studio.Models
 
         private void HandleItemsRealized(object sender, ItemsRealizedEventArgs e)
         {
+            if (e.StartingIndex >= Documents.Count)
+            {
+                // the collection must have been reset since the event was raised
+                return;
+            }
+
             var viewableDocument = Documents[e.StartingIndex].Item;
             
             // collection may have been reset (and hence the item cleared) since the event was raised, thus the null check
@@ -93,7 +99,7 @@ namespace Raven.Studio.Models
                 DocumentsHaveId = !string.IsNullOrEmpty(viewableDocument.Id);
 
             // When a view is refreshed, items can be realized in different orders (depending on the order the query responses come back from the db)
-            // So to stabilise the column set, we keep a list of 60 most recently used documents, and then sort them in index order. 
+            // So to stabilize the column set, we keep a list of 60 most recently used documents, and then sort them in index order. 
             mostRecentDocuments.AddRange(Enumerable.Range(e.StartingIndex, e.Count).Select(i => Documents[i]));
 
             if (Columns.Source == ColumnsSource.Automatic)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WouldBeIndexedProperly()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -29,6 +30,7 @@ namespace Raven.Tests.Bugs
 
 				var tasks = new List<Task>();
 				const int expectedCount = 5000;
+				var ids = new ConcurrentQueue<string>();
 				for (int i = 0; i < expectedCount; i++)
 				{
 					tasks.Add(Task.Factory.StartNew(() =>
@@ -37,11 +39,13 @@ namespace Raven.Tests.Bugs
 						{
 							// Promote the transaction
 
-							System.Transactions.Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id, new DummyEnlistmentNotification(), EnlistmentOptions.None);
+							Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id, new DummyEnlistmentNotification(), EnlistmentOptions.None);
 
 							using (var session = store.OpenSession())
 							{
-								session.Store(new TestDocument());
+								var testDocument = new TestDocument();
+								session.Store(testDocument);
+								ids.Enqueue(session.Advanced.GetDocumentId(testDocument));
 								session.SaveChanges();
 							}
 
@@ -50,7 +54,14 @@ namespace Raven.Tests.Bugs
 					}));
 				}
 				Task.WaitAll(tasks.ToArray());
-
+				foreach (var id in ids)
+				{
+					using(var session = store.OpenSession())
+					{
+						session.Advanced.AllowNonAuthoritativeInformation = false;
+						Assert.NotNull(session.Load<TestDocument>(id));
+					}
+				}
 				using (var session = store.OpenSession())
 				{
 					var items = session.Query<TestDocument>()
@@ -61,11 +72,11 @@ namespace Raven.Tests.Bugs
 					var missing = new List<int>();
 					for (int i = 0; i < 5000; i++)
 					{
-						if(items.Any(x=>x.Id == i+1) == false)
+						if (items.Any(x => x.Id == i + 1) == false)
 							missing.Add(i);
 					}
 
-
+					WaitForUserToContinueTheTest(store);
 					Assert.Equal(expectedCount, items.Count);
 				}
 			}
@@ -75,7 +86,7 @@ namespace Raven.Tests.Bugs
 		{
 			public static readonly Guid Id = Guid.NewGuid();
 
-		    public bool WasCommitted { get; set; }
+			public bool WasCommitted { get; set; }
 			public void Prepare(PreparingEnlistment preparingEnlistment)
 			{
 				preparingEnlistment.Prepared();
@@ -83,7 +94,7 @@ namespace Raven.Tests.Bugs
 
 			public void Commit(Enlistment enlistment)
 			{
-			    WasCommitted = true;
+				WasCommitted = true;
 				enlistment.Done();
 			}
 

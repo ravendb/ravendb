@@ -553,19 +553,18 @@ namespace Raven.Client.Connection.Async
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", url =>
-		{
-
-			var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
-			if (metadataOnly)
-				requestUri += "&metadata-only=true";
-			return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
-				.AddOperationHeaders(OperationsHeaders))
-					.ReadResponseJsonAsync()
-					.ContinueWith(task => ((RavenJArray)task.Result)
-											.Cast<RavenJObject>()
-											.ToJsonDocuments()
-											.ToArray());
-		});
+			{
+				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+				if (metadataOnly)
+					requestUri += "&metadata-only=true";
+				return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+						.ReadResponseJsonAsync()
+						.ContinueWith(task => ((RavenJArray)task.Result)
+												.Cast<RavenJObject>()
+												.ToJsonDocuments()
+												.ToArray());
+			});
 		}
 
 		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
@@ -576,7 +575,6 @@ namespace Raven.Client.Connection.Async
 
 		private Task UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
 		{
-
 			return ExecuteWithReplication(method, operationUrl =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
@@ -594,25 +592,25 @@ namespace Raven.Client.Connection.Async
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
 		{
 			return ExecuteWithReplication("GET", operationUrl =>
-		{
-			var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
-			Uri.EscapeUriString(index),
-			Uri.EscapeDataString(facetSetupDoc),
-			Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
+			{
+				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+				Uri.EscapeUriString(index),
+				Uri.EscapeDataString(facetSetupDoc),
+				Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders));
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
 
-			request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task =>
-				{
-					var json = (RavenJObject)task.Result;
-					return json.JsonDeserialization<FacetResults>();
-				});
-		});
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var json = (RavenJObject)task.Result;
+						return json.JsonDeserialization<FacetResults>();
+					});
+			});
 		}
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
@@ -702,7 +700,8 @@ namespace Raven.Client.Connection.Async
 			return request.ExecuteWriteAsync(new RavenJObject
 				{
 					{"RestoreLocation", restoreLocation},
-					{"DatabaseLocation", databaseLocation}
+					{"DatabaseLocation", databaseLocation},
+					{"DatabaseName", name}
 				}.ToString(Formatting.None))
 				.ContinueWith(task =>
 				{
@@ -1201,25 +1200,6 @@ namespace Raven.Client.Connection.Async
 		public IDisposable DisableAllCaching()
 		{
 			return jsonRequestFactory.DisableAllCaching();
-		}
-
-		/// <summary>
-		/// Ensures that the silverlight startup tasks have run
-		/// </summary>
-		public Task EnsureSilverlightStartUpAsync()
-		{
-#if !SILVERLIGHT
-			throw new NotSupportedException("Only applicable in silverlight");
-#else
-			return ExecuteWithReplication("GET", url =>
-			{
-				return url
-					.SilverlightEnsuresStartup()
-					.NoCache()
-					.ToJsonRequest(this, credentials, convention)
-					.ReadResponseBytesAsync();
-			});
-#endif
 		}
 
 		///<summary>

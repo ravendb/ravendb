@@ -18,7 +18,7 @@ namespace Raven.Database.Queries
 				var entitName = index == "dynamic" ? null : index.Remove(0, "dynamic/".Length);
 				index = self.FindDynamicIndexName(entitName, new IndexQuery
 				{
-					Query = suggestionQuery.Field + ":" + QouteIfNeeded(suggestionQuery.Term)
+					Query = suggestionQuery.Field + ":" + QuoteIfNeeded(suggestionQuery.Term)
 				});
 				if(string.IsNullOrEmpty(index))
 					throw new InvalidOperationException("Could find no index for the specified query, suggestions will not create a dynamic index, and cannot suggest without an index. Did you forget to query before calling Suggest?");
@@ -27,7 +27,7 @@ namespace Raven.Database.Queries
 			return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
 		}
 
-		private static string QouteIfNeeded(string term)
+		private static string QuoteIfNeeded(string term)
 		{
 			if (term.Any(char.IsWhiteSpace))
 				return '"' + term + '"';

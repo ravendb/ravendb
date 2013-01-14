@@ -69,7 +69,7 @@ namespace Raven.Studio.Models
 		        .SampleResponsive(TimeSpan.FromSeconds(2))
 		        .Subscribe(_ => RefreshStatistics());
 
-			databaseChanges.ConnectionStatusCahnged += (sender, args) =>
+			databaseChanges.ConnectionStatusChanged += (sender, args) =>
 			{
 				ApplicationModel.Current.Server.Value.SetConnected(((IDatabaseChanges)sender).Connected);
 				UpdateStatus();
@@ -109,10 +109,10 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				return DatabaseDocument != null && 
-					   DatabaseDocument.Value.Settings != null && 
-					   DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
-					   DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Contains("Replication");
+				return DatabaseDocument != null &&
+				       DatabaseDocument.Value.Settings != null &&
+				       DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
+				       DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Split(';').Contains("Replication", StringComparer.OrdinalIgnoreCase);
 			}
 		}
 

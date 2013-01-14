@@ -143,7 +143,7 @@ namespace Raven.Database.Server.Responders
 				return "/databases/" + tenantId + requestUrl;
 			}
 
-			public void FinalizeResonse()
+			public void FinalizeResponse()
 			{
 				// nothing here
 			}
@@ -234,6 +234,10 @@ namespace Raven.Database.Server.Responders
 				get;
 				set;
 			}
+			public Stream GetBufferLessInputStream()
+			{
+				return InputStream;
+			}
 		}
 
 		public void Dispose()
@@ -300,7 +304,7 @@ namespace Raven.Database.Server.Responders
 			{
 			}
 
-			public void SetPublicCachability()
+			public void SetPublicCacheability()
 			{
 				getResponse.Headers["Cache-Control"] = "Public";
 			}

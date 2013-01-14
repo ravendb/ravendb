@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+#if SILVERLIGHT
+using System.Net.Browser;
+#endif
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using System.Linq;
@@ -13,24 +16,41 @@ namespace Raven.Client.Document.OAuth
 {
 	public class SecuredAuthenticator : AbstractAuthenticator
 	{
-		private string apiKey;
-		private string currentOauthToken;
+		private readonly string apiKey;
 
 		public SecuredAuthenticator(string apiKey)
 		{
 			this.apiKey = apiKey;
 		}
 
+		public override void ConfigureRequest(object sender, Connection.WebRequestEventArgs e)
+		{
+			if (CurrentOauthToken != null)
+			{
+				base.ConfigureRequest(sender, e);
+				return;
+			}
+			if (apiKey != null)
+			{
+				e.Request.Headers["Has-Api-Key"] = "true";
+			}
+		}
+
 		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
 		{
+#if !SILVERLIGHT
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
+#else
+			var authRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(oauthSource));
+#endif
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
 			authRequest.Method = "POST";
 
 			if (!string.IsNullOrEmpty(serverRSAExponent) && !string.IsNullOrEmpty(serverRSAModulus) && !string.IsNullOrEmpty(challenge))
 			{
-				var parameters = Tuple.Create(OAuthHelper.ParseBytes(serverRSAExponent), OAuthHelper.ParseBytes(serverRSAModulus));
+				var exponent = OAuthHelper.ParseBytes(serverRSAExponent);
+				var modulus = OAuthHelper.ParseBytes(serverRSAModulus);
 
 				var apiKeyParts = apiKey.Split(new[] { '/' }, StringSplitOptions.None);
 
@@ -52,7 +72,7 @@ namespace Raven.Client.Document.OAuth
 					{OAuthHelper.Keys.RSAModulus, serverRSAModulus},
 					{
 						OAuthHelper.Keys.EncryptedData,
-						OAuthHelper.EncryptAssymetric(parameters, OAuthHelper.DictionaryToString(new Dictionary<string, string>
+						OAuthHelper.EncryptAsymmetric(exponent, modulus, OAuthHelper.DictionaryToString(new Dictionary<string, string>
 						{
 							{OAuthHelper.Keys.APIKeyName, apiKeyName},
 							{OAuthHelper.Keys.Challenge, challenge},
@@ -104,8 +124,8 @@ namespace Raven.Client.Document.OAuth
 					using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
 					using (var reader = new StreamReader(stream))
 					{
-						currentOauthToken = "Bearer " + reader.ReadToEnd();
-						return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", currentOauthToken));
+						CurrentOauthToken = "Bearer " + reader.ReadToEnd();
+						return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken));
 					}
 				}
 				catch (WebException ex)
@@ -115,7 +135,7 @@ namespace Raven.Client.Document.OAuth
 						throw;
 
 					var authResponse = ex.Response as HttpWebResponse;
-					if (authResponse == null || authResponse.StatusCode != HttpStatusCode.Unauthorized)
+					if (authResponse == null || authResponse.StatusCode != HttpStatusCode.PreconditionFailed)
 						throw;
 
 					var header = authResponse.Headers[HttpResponseHeader.WwwAuthenticate];
@@ -138,10 +158,10 @@ namespace Raven.Client.Document.OAuth
 		}
 #endif
 
-public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
-{
-	return DoOAuthRequestAsync(oauthSource, null, null, null, 0);
-}
+		public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
+		{
+			return DoOAuthRequestAsync(oauthSource, null, null, null, 0);
+		}
 
 		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
 		{
@@ -178,10 +198,10 @@ public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
 							using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
 							using (var reader = new StreamReader(stream))
 							{
-								currentOauthToken = "Bearer " + reader.ReadToEnd();
+								CurrentOauthToken = "Bearer " + reader.ReadToEnd();
 								return
 									CompletedTask.With(
-										(Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", currentOauthToken)));
+										(Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken)));
 							}
 						}
 						catch (AggregateException ae)
@@ -195,7 +215,7 @@ public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
 
 
 							var authResponse = ex.Response as HttpWebResponse;
-							if (authResponse == null || authResponse.StatusCode != HttpStatusCode.Unauthorized)
+							if (authResponse == null || authResponse.StatusCode != HttpStatusCode.PreconditionFailed)
 								throw;
 
 							var header = authResponse.Headers["Www-Authenticate"];
@@ -215,6 +235,6 @@ public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
 						}
 					}).Unwrap();
 			}).Unwrap();
-		} 
+		}
 	}
 }

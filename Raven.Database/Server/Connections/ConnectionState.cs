@@ -59,16 +59,19 @@ namespace Raven.Database.Server.Connections
 				return;
 			}
 
-			if (matchingDocuments.Contains(documentChangeNotification.Id))
+			if (documentChangeNotification.Id != null)
 			{
-				Enqueue(value);
-				return;
+				if (matchingDocuments.Contains(documentChangeNotification.Id))
+				{
+					Enqueue(value);
+					return;
+				}
+
+				var hasPrefix = matchingDocumentPrefixes.Any(
+						x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
+				if (hasPrefix == false)
+					return;
 			}
-
-			var hasPrefix = matchingDocumentPrefixes.Any(x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
-			if (hasPrefix == false)
-				return;
-
 			Enqueue(value);
 		}
 

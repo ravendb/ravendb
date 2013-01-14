@@ -82,7 +82,8 @@ namespace Raven.Tests.MailingList
 					Assert.Equal(2, modifiedDocuments.Count);
 					Assert.Equal(user1.InternalId, modifiedDocuments[0].InternalId);
 
-					Assert.Equal(lastModified.ToUniversalTime().ToString("yyyy-MM-dd hh:mm:ss"), modifiedDocuments[0].LastModified.ToString("yyyy-MM-dd hh:mm:ss"));
+					Assert.Equal(lastModified.ToString("yyyy-MM-dd hh:mm:ss"), modifiedDocuments[0].LastModified.ToString("yyyy-MM-dd hh:mm:ss"));
+
 				}
 			}
 		} 

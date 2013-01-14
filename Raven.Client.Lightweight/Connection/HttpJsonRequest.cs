@@ -51,7 +51,7 @@ namespace Raven.Client.Connection
 		public object Headers;
 		private Stream postedStream;
 		private bool writeCalled;
-		public static readonly string ClientVersion = typeof (HttpJsonRequest).Assembly.GetName().Version.ToString();
+		public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
 
 		private string primaryUrl;
 
@@ -78,9 +78,9 @@ namespace Raven.Client.Connection
 			webRequest.UseDefaultCredentials = true;
 			webRequest.Credentials = requestParams.Credentials;
 			webRequest.Method = requestParams.Method;
-			if (factory.DisableRequestCompression == false)
+			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
-				if(requestParams.Method == "POST" || requestParams.Method == "PUT" ||
+				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
 					requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
 					webRequest.Headers["Content-Encoding"] = "gzip";
 
@@ -106,12 +106,12 @@ namespace Raven.Client.Connection
 			{
 				var tcs = new TaskCompletionSource<RavenJToken>();
 				var cachedResponse = factory.GetCachedResponse(this);
-				factory.InvokeLogRequest(owner, ()=> new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
-					Status = RequestStatus.AggresivelyCached,
+					Status = RequestStatus.AggressivelyCached,
 					Result = cachedResponse.ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
@@ -134,10 +134,14 @@ namespace Raven.Client.Connection
 						return task;// effectively throw
 
 					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+					if (httpWebResponse == null ||
+						(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+						 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+						 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
+
 						return task; // effectively throw
 
-					if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+					if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
 					{
 						HandleForbiddenResponseAsync(httpWebResponse);
 						return task;
@@ -172,7 +176,7 @@ namespace Raven.Client.Connection
 					}
 				});
 		}
-		
+
 		public void ExecuteRequest()
 		{
 			ReadResponseJson();
@@ -204,7 +208,7 @@ namespace Raven.Client.Connection
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
-					Status = RequestStatus.AggresivelyCached,
+					Status = RequestStatus.AggressivelyCached,
 					Result = result.ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
@@ -228,13 +232,14 @@ namespace Raven.Client.Connection
 
 					var httpWebResponse = e.Response as HttpWebResponse;
 					if (httpWebResponse == null ||
-					    (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
-					     httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+						(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+						 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+						 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 						throw;
 
 					if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
 					{
-						HandleForbbidenResponse(httpWebResponse);
+						HandleForbiddenResponse(httpWebResponse);
 						throw;
 					}
 					if (HandleUnauthorizedResponse(httpWebResponse) == false)
@@ -256,12 +261,12 @@ namespace Raven.Client.Connection
 			return true;
 		}
 
-		private void HandleForbbidenResponse(HttpWebResponse forbbidenResponse)
+		private void HandleForbiddenResponse(HttpWebResponse forbiddenResponse)
 		{
 			if (conventions.HandleForbiddenResponse == null)
 				return;
 
-			conventions.HandleForbiddenResponse(forbbidenResponse);
+			conventions.HandleForbiddenResponse(forbiddenResponse);
 		}
 
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
@@ -277,12 +282,12 @@ namespace Raven.Client.Connection
 			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest(unauthorizedResponseAsync.Result));
 		}
 
-		private void HandleForbiddenResponseAsync(HttpWebResponse forbbidenResponse)
+		private void HandleForbiddenResponseAsync(HttpWebResponse forbiddenResponse)
 		{
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
 
-			conventions.HandleForbiddenResponseAsync(forbbidenResponse);
+			conventions.HandleForbiddenResponseAsync(forbiddenResponse);
 		}
 
 		private void RecreateWebRequest(Action<HttpWebRequest> action)
@@ -367,7 +372,7 @@ namespace Raven.Client.Connection
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
-					HttpResult = (int) ResponseStatusCode,
+					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
 					Result = (data ?? "").ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
@@ -441,7 +446,7 @@ namespace Raven.Client.Connection
 					PostedData = postedData
 				});
 
-				if(string.IsNullOrWhiteSpace(readToEnd))
+				if (string.IsNullOrWhiteSpace(readToEnd))
 					return null;// throws
 
 				RavenJObject ravenJObject;
@@ -491,7 +496,7 @@ namespace Raven.Client.Connection
 		{
 			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
 				return this;
-			if(replicationInformer.GetFailureCount(thePrimaryUrl) <=0)
+			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
 				return this; // not because of failover, no need to do this.
 
 			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
@@ -509,7 +514,7 @@ namespace Raven.Client.Connection
 		private static string ToRemoteUrl(string primaryUrl)
 		{
 			var uriBuilder = new UriBuilder(primaryUrl);
-			if(uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
+			if (uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
 				uriBuilder.Host = Environment.MachineName;
 			return uriBuilder.Uri.ToString();
 		}
@@ -540,6 +545,13 @@ namespace Raven.Client.Connection
 		{
 			get { return webRequest.ContentType; }
 			set { webRequest.ContentType = value; }
+		}
+		public TimeSpan Timeout
+		{
+			set
+			{
+				webRequest.Timeout = (int)value.TotalMilliseconds;
+			}
 		}
 
 		private void WriteMetadata(RavenJObject metadata)
@@ -716,20 +728,20 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public Task<IObservable<string>>  ServerPullAsync(int retries = 0)
+		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
 			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
 				.ContinueWith(task =>
-				              	{
-				              		var stream = task.Result.GetResponseStreamWithHttpDecompression();
-				              		var observableLineStream = new ObservableLineStream(stream, () =>
-				              		                                                            	{
-				              		                                                            		webRequest.Abort();
+								{
+									var stream = task.Result.GetResponseStreamWithHttpDecompression();
+									var observableLineStream = new ObservableLineStream(stream, () =>
+																									{
+																										webRequest.Abort();
 																										task.Result.Close();
-				              		                                                            	});
+																									});
 									observableLineStream.Start();
-				              		return (IObservable<string>)observableLineStream;
-				              	})
+									return (IObservable<string>)observableLineStream;
+								})
 				.ContinueWith(task =>
 				{
 					var webException = task.Exception.ExtractSingleInnerException() as WebException;
@@ -737,10 +749,13 @@ namespace Raven.Client.Connection
 						return task;// effectively throw
 
 					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse == null || (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && httpWebResponse.StatusCode != HttpStatusCode.Forbidden))
+					if (httpWebResponse == null ||
+						(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+						 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+						 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 						return task; // effectively throw
 
-					if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+					if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
 					{
 						HandleForbiddenResponseAsync(httpWebResponse);
 						return task;
@@ -790,6 +805,41 @@ namespace Raven.Client.Connection
 		public Task WriteAsync(string serializeObject)
 		{
 			return Task.Factory.FromAsync(BeginWrite, EndWrite, serializeObject, null);
+		}
+
+		public Task<Stream> GetRawRequestStream()
+		{
+			webRequest.SendChunked = true;
+			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
+		}
+
+		public WebResponse RawExecuteRequest()
+		{
+			try
+			{
+				return webRequest.GetResponse();
+			}
+			catch (WebException we)
+			{
+				var httpWebResponse = we.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				var sb = new StringBuilder()
+					.Append(httpWebResponse.StatusCode)
+					.Append(" ")
+					.Append(httpWebResponse.StatusDescription)
+					.AppendLine();
+
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						sb.AppendLine(line);
+					}
+				}
+				throw new InvalidOperationException(sb.ToString(), we);
+			}
 		}
 	}
 }

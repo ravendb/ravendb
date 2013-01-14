@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -51,7 +52,7 @@ namespace Raven.Database.Server
 		private const int MaxConcurrentRequests = 192;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
-		readonly AbstractRequestAuthorizer requestAuthorizer;
+		readonly MixedModeRequestAuthorizer requestAuthorizer;
 
 		private readonly IBufferPool bufferPool = new BufferPool(BufferPoolStream.MaxBufferSize * 512, BufferPoolStream.MaxBufferSize);
 
@@ -98,17 +99,17 @@ namespace Raven.Database.Server
 
 		// concurrent requests
 		// we set 1/4 aside for handling background tasks
-		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
+		private readonly SemaphoreSlim concurrentRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
 		private Timer serverTimer;
 		private int physicalRequestsCount;
 
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
-		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+		private readonly TimeSpan frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 		private bool disposed;
 
 		public bool HasPendingRequests
 		{
-			get { return concurretRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
+			get { return concurrentRequestSemaphore.CurrentCount != MaxConcurrentRequests; }
 		}
 
 		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
@@ -134,9 +135,9 @@ namespace Raven.Database.Server
 			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
 				val = 900;
 			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(val);
-			if (int.TryParse(configuration.Settings["Raven/Tenants/FrequnecyToCheckForIdleDatabases"], out val) == false)
+			if (int.TryParse(configuration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
 				val = 60;
-			frequnecyToCheckForIdleDatabases = TimeSpan.FromSeconds(val);
+			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(val);
 
 			configuration.Container.SatisfyImportsOnce(this);
 
@@ -152,7 +153,7 @@ namespace Raven.Database.Server
 			}
 		}
 
-		public AbstractRequestAuthorizer RequestAuthorizer
+		public MixedModeRequestAuthorizer RequestAuthorizer
 		{
 			get { return requestAuthorizer; }
 		}
@@ -206,7 +207,7 @@ namespace Raven.Database.Server
 					Memory = new
 					{
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
-						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(false)),
+						ManagedMemorySizeInMB = ConvertBytesToMBs(GetCurrentManagedMemorySize()),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
 						Databases = allDbs.Select(db => new
 						{
@@ -246,6 +247,19 @@ namespace Raven.Database.Server
 			using (var p = Process.GetCurrentProcess())
 				return p.PrivateMemorySize64;
 		}
+
+		private static long GetCurrentManagedMemorySize()
+		{
+			var safelyGetPerformanceCounter = PerformanceCountersUtils.SafelyGetPerformanceCounter(
+				".NET CLR Memory", "# Total committed Bytes", CurrentProcessName.Value);
+			return safelyGetPerformanceCounter ?? GC.GetTotalMemory(false);
+		}
+
+		private static readonly Lazy<string> CurrentProcessName = new Lazy<string>(() =>
+		{
+			using (var p = Process.GetCurrentProcess())
+				return p.ProcessName;
+		});
 
 		public void Dispose()
 		{
@@ -289,7 +303,7 @@ namespace Raven.Database.Server
 									}
 									catch (Exception e)
 									{
-										logger.WarnException("Failure in deferred disosal of a database", e);
+										logger.WarnException("Failure in deferred disposal of a database", e);
 									}
 								});
 							}
@@ -339,7 +353,7 @@ namespace Raven.Database.Server
 		public void Init()
 		{
 			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
-			serverTimer = new Timer(IdleOperations, null, frequnecyToCheckForIdleDatabases, frequnecyToCheckForIdleDatabases);
+			serverTimer = new Timer(IdleOperations, null, frequencyToCheckForIdleDatabases, frequencyToCheckForIdleDatabases);
 		}
 
 		private void IdleOperations(object state)
@@ -449,7 +463,7 @@ namespace Raven.Database.Server
 				return;
 			}
 
-			if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
 			{
 				HandleTooBusyError(ctx);
 				return;
@@ -464,7 +478,7 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				concurretRequestSemaphore.Release();
+				concurrentRequestSemaphore.Release();
 			}
 		}
 
@@ -635,7 +649,7 @@ namespace Raven.Database.Server
 				logger.WarnException("Could not gather information to log request stats", e);
 			}
 
-			ctx.FinalizeResonse();
+			ctx.FinalizeResponse();
 
 			if (ravenUiRequest || logHttpRequestStatsParam == null || sw == null)
 				return;
@@ -834,7 +848,7 @@ namespace Raven.Database.Server
 						var sp = Stopwatch.StartNew();
 						requestResponder.ReplicationAwareRespond(ctx);
 						sp.Stop();
-						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,# ms", CultureInfo.InvariantCulture));
+						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0 ms", CultureInfo.InvariantCulture));
 						return requestResponder.IsUserInterfaceRequest;
 					}
 				}
@@ -867,6 +881,8 @@ namespace Raven.Database.Server
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			CurrentOperationContext.User.Value = null;
 			LogContext.DatabaseName.Value = CurrentDatabase.Name;
+			var disposable = LogManager.OpenMappedContext("database", CurrentDatabase.Name ?? Constants.SystemDatabase);
+			CurrentOperationContext.RequestDisposables.Value.Add(disposable);
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
@@ -880,6 +896,11 @@ namespace Raven.Database.Server
 				CurrentOperationContext.Headers.Value = new NameValueCollection();
 				CurrentOperationContext.User.Value = null;
 				LogContext.DatabaseName.Value = null;
+				foreach (var disposable in CurrentOperationContext.RequestDisposables.Value)
+				{
+					disposable.Dispose();
+				}
+				CurrentOperationContext.RequestDisposables.Value.Clear();
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
 			}

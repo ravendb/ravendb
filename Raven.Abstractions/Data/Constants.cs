@@ -22,6 +22,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
+		public const string RavenLastModified = "Raven-Last-Modified";
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string DefaultSpatialFieldName = "__spatial";
@@ -35,7 +36,7 @@ namespace Raven.Abstractions.Data
 		public const string EmptyString = "EMPTY_STRING";
 		public const string DocumentIdFieldName = "__document_id";
 		public const string ReduceKeyFieldName = "__reduce_key";
-		public const string IntersectSeperator = " INTERSECT ";
+		public const string IntersectSeparator = " INTERSECT ";
 		public const string RavenClrType = "Raven-Clr-Type";
 		public const string RavenEntityName = "Raven-Entity-Name";
 		public const string RavenReadOnly = "Raven-Read-Only";

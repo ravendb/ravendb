@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -50,12 +51,13 @@ namespace Raven.Storage.Managed
 				.Take(take);
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null, Guid? untilEtag = null)
 		{
 			var docs = storage.Documents["ByEtag"].SkipAfter(new RavenJObject { { "etag", etag.ToByteArray() } })
 				.Select(result => DocumentByKey(result.Value<string>("key"), null))
 				.Take(take);
 			long totalSize = 0;
+			int count = 0;
 			foreach (var doc in docs)
 			{
 				totalSize += doc.SerializedSizeOnDisk;
@@ -64,14 +66,20 @@ namespace Raven.Storage.Managed
 					yield return doc;
 					yield break;
 				}
+				if (untilEtag != null && count > 0)
+				{
+					if (Etag.IsGreaterThanOrEqual(doc.Etag.Value, untilEtag.Value))
+						yield break;
+				}
+				count++;
 				yield return doc;
 			}
 		}
 
 		public Guid GetBestNextDocumentEtag(Guid etag)
 		{
-			var match = storage.Documents["ByEtag"].SkipTo(new RavenJObject {{"etag", etag.ToByteArray()}})
-			                                      .FirstOrDefault();
+			var match = storage.Documents["ByEtag"].SkipAfter(new RavenJObject { { "etag", etag.ToByteArray() } })
+												  .FirstOrDefault();
 			if (match == null)
 				return etag;
 			return new Guid(match.Value<byte[]>("etag"));
@@ -246,6 +254,63 @@ namespace Raven.Storage.Managed
 			return AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, metadata);
 		}
 
+		public void TouchDocument(string key, out Guid? preTouchEtag, out Guid? afterTouchEtag)
+		{
+			var documentByKey = DocumentByKey(key, null);
+			if (documentByKey == null)
+			{
+				preTouchEtag = null;
+				afterTouchEtag = null;
+				return;
+			}
+			var addDocumentResult = AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, documentByKey.Metadata);
+			preTouchEtag = documentByKey.Etag;
+			afterTouchEtag = addDocumentResult.Etag;
+		}
+
+		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+		{
+			var ms = new MemoryStream();
+
+			metadata.WriteTo(ms);
+
+			using (var stream = documentCodecs.Aggregate<Lazy<AbstractDocumentCodec>, Stream>(ms,
+				(dataStream, codec) => codec.Value.Encode(key, data, metadata, dataStream)))
+			{
+				data.WriteTo(stream);
+				stream.Flush();
+			}
+
+			var isUpdate = storage.Documents.Read(new RavenJObject { { "key", key } }) != null;
+
+			if (isUpdate && checkForUpdates == false)
+				throw new InvalidOperationException("Cannot insert document " + key + " because it already exists");
+
+			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);
+			var savedAt = SystemTime.UtcNow;
+			storage.Documents.Put(new RavenJObject
+			 {
+				 {"key", key},
+				 {"etag", newEtag.ToByteArray()},
+				 {"modified", savedAt},
+				 {"id", GetNextDocumentId()},
+				 {"entityName", metadata.Value<string>(Constants.RavenEntityName)}
+			 }, ms.ToArray());
+
+			 IncrementDocumentCount(1);
+			return new AddDocumentResult
+			{
+				Etag = newEtag,
+				SavedAt = savedAt,
+				Updated = isUpdate
+			};
+		}
+
+		public void IncrementDocumentCount(int value)
+		{
+			// nothing to do here
+		}
+
 		public AddDocumentResult AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)
 		{
 			var existingEtag = AssertValidEtag(key, etag, "PUT", null);
@@ -263,7 +328,7 @@ namespace Raven.Storage.Managed
 
 			var isUpdate = storage.Documents.Read(new RavenJObject { { "key", key } }) != null;
 
-			var newEtag = generator.CreateSequentialUuid();
+			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);
 			var savedAt = SystemTime.UtcNow;
 			storage.Documents.Put(new RavenJObject
 			 {

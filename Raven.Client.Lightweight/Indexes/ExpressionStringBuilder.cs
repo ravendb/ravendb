@@ -82,7 +82,7 @@ namespace Raven.Client.Indexes
 			}
 			else
 			{
-				Out("UnamedLabel_" + GetLabelId(target));
+				Out("UnnamedLabel_" + GetLabelId(target));
 			}
 		}
 
@@ -224,7 +224,7 @@ namespace Raven.Client.Indexes
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
-				// only translate from the root type or deriatives
+				// only translate from the root type or derivatives
 				(queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
 				// only translate from the root alias
 				(queryRootName == null || (
@@ -780,9 +780,14 @@ namespace Raven.Client.Indexes
 					Out(s);
 					return node;
 				}
-				Out('"');
-				Out(node.Value.ToString());
-				Out('"');
+				if (convention.SaveEnumsAsIntegers)
+					Out((Convert.ToInt32(node.Value)).ToString());
+				else
+				{
+					Out('"');
+					Out(node.Value.ToString());
+					Out('"');
+				}
 				return node;
 			}
 			if (node.Value is decimal)
@@ -1227,6 +1232,20 @@ namespace Raven.Client.Indexes
 		{
 			Out(assignment.Member.Name);
 			Out(" = ");
+			var constantExpression = assignment.Expression as ConstantExpression;
+			if (constantExpression != null && constantExpression.Value == null)
+			{
+				var memberType = GetMemberType(assignment.Member);
+				if (ShouldConvert(memberType))
+				{
+					Visit(Expression.Convert(assignment.Expression, memberType));
+				}
+				else
+				{
+					Out("(object)null");
+				}
+				return assignment;
+			}
 			Visit(assignment.Expression);
 			return assignment;
 		}
@@ -1595,9 +1614,13 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.NewArrayInit:
 					Out("new ");
-					if (!CheckIfAnonymousType(node.Type.GetElementType()))
+					if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
 					{
 						Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
+					}
+					else if (node.Expressions.Count == 0)
+					{
+						Out("object");
 					}
 					Out("[]");
 					VisitExpressions('{', node.Expressions, '}');

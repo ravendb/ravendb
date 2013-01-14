@@ -10,7 +10,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using Raven.Abstractions.Json;
 using Raven.Client.Listeners;
 using Raven.Imports.Newtonsoft.Json;
@@ -151,11 +150,12 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		public HttpJsonRequest CreateRequest(string method, string requestUrl)
+		public HttpJsonRequest CreateRequest(string method, string requestUrl, bool disableRequestCompression = false)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
@@ -303,6 +303,21 @@ namespace Raven.Client.Connection
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentException("Key cannot be null or empty", argName);
+		}
+
+		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
+		{
+			return ExecuteWithReplication("GET", url =>
+			{
+				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+				if (metadataOnly)
+					requestUri += "&metadata-only=true";
+				RavenJToken result = jsonRequestFactory
+					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+					.ReadResponseJson();
+				return ((RavenJArray)result).Cast<RavenJObject>().ToJsonDocuments().ToArray();
+			});
 		}
 
 		/// <summary>
@@ -663,6 +678,23 @@ namespace Raven.Client.Connection
 		public string[] GetIndexNames(int start, int pageSize)
 		{
 			return ExecuteWithReplication("GET", u => DirectGetIndexNames(start, pageSize, u));
+		}
+
+		public IndexDefinition[] GetIndexes(int start, int pageSize)
+		{
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var url2 = (operationUrl + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+				var result = request.ReadResponseJson();
+				var json = ((RavenJArray)result);
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+						return json
+							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+							.ToArray();
+			});
 		}
 
 		/// <summary>
@@ -1170,6 +1202,14 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		{
+			return new RemoteBulkInsertOperation(options, this);
+		}
+
+		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		public void ForceReadFromMaster()
@@ -1669,6 +1709,24 @@ namespace Raven.Client.Connection
 		~ServerClient()
 		{
 			Dispose();
+		}
+
+		public RavenJToken GetOperationStatus(long id)
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, url + "/operation/status?id" + id, "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+			try
+			{
+				return request.ReadResponseJson();
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+					throw;
+				return null;
+			}
 		}
 	}
 }

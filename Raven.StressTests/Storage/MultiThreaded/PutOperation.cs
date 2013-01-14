@@ -32,7 +32,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 				}
 			}
 
-			return 10 * 7;
+			return 10*7;
 		}
 	}
 
@@ -50,7 +50,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 				}
 			}
 
-			return 1000 * 50;
+			return 1000*50;
 		}
 	}
 }

@@ -88,6 +88,19 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
+		public void Can_get_indexes()
+		{
+			documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
+			{
+				Map = companies => from c in companies
+								   select new { c.Name },
+				Indexes = { { x => x.Name, FieldIndexing.NotAnalyzed } }
+			});
+			var indexDefinitions = documentStore.DatabaseCommands.GetIndexes(0, 10);
+			Assert.NotNull(indexDefinitions.SingleOrDefault(d => d.Name == "Companies/Name"));
+		}
+
+		[Fact]
 		public void Can_delete_by_index()
 		{
 			var entity = new Company {Name = "Company"};
@@ -557,6 +570,18 @@ namespace Raven.Tests.Document
 			}
 		}
 
+		[Fact]
+		public void Can_get_documents()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new Company { Name = "Company A", Id = "1" });
+				session.Store(new Company { Name = "Company B", Id = "2" });
+				session.SaveChanges();
+			}
+			JsonDocument[] jsonDocuments = documentStore.DatabaseCommands.GetDocuments(0, 10, true);
+			Assert.Equal(2, jsonDocuments.Length);
+		}
 
 		[Fact]
 		public void Can_delete_document()

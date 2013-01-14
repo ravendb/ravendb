@@ -19,6 +19,10 @@
 			},
 
 			loadSessionData: function (sessionIdList) {
+				if (sessionIdList.length == 0) {
+					return;
+				}
+				
 				var sessionCollection = this.sessions;
 				$.get(this.sessionUrl, { id: sessionIdList }, function (sessions) {
 					sessionCollection.add(sessions);

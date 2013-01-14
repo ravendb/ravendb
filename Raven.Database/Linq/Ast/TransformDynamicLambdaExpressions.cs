@@ -83,6 +83,11 @@ namespace Raven.Database.Linq.Ast
 			AstNode node = lambdaExpression;
 			if(invocationExpression.Arguments.Count > 0 && invocationExpression.Arguments.ElementAt(0) == lambdaExpression)// first one, select the collection
 			{
+				string type;
+				if (ShouldSkipCastingToDynamicEnumerable(lambdaExpression.Body, out type))
+				{
+					return node;
+				}
 				// need to enter a cast for (IEnumerable<dynamic>) on the end of the lambda body
 				var selectManyExpression = new LambdaExpression
 				{
@@ -97,9 +102,43 @@ namespace Raven.Database.Linq.Ast
 			}
 			else if (invocationExpression.Arguments.Count > 1 && invocationExpression.Arguments.ElementAt(1) == lambdaExpression)// first one, select the collection
 			{
+				var parentLambda = invocationExpression.Arguments.ElementAt(0) as LambdaExpression;
+				if (parentLambda != null)
+				{
+					string type;
+					if (ShouldSkipCastingToDynamicEnumerable(parentLambda.Body, out type))
+					{
+						return new CastExpression(new SimpleType("Func<dynamic, " + type + ", dynamic>"), parenthesizedlambdaExpression.Clone());
+					}
+				}
 				node = new CastExpression(new SimpleType("Func<dynamic, dynamic, dynamic>"), parenthesizedlambdaExpression.Clone());
 			}
 			return node;
+		}
+
+		private static bool ShouldSkipCastingToDynamicEnumerable(AstNode body, out string type)
+		{
+			type = null;
+
+			var invocationExpression = body as InvocationExpression;
+			if (invocationExpression == null)
+				return false;
+			var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
+			if (memberReferenceExpression == null)
+				return false;
+
+			if (memberReferenceExpression.MemberName != "Range")
+				return false;
+
+			type = "int";
+
+			var identifierExpression = memberReferenceExpression.Target as IdentifierExpression;
+			if (identifierExpression != null)
+				return identifierExpression.Identifier == "Enumerable";
+
+			var targetReferenceExpression = memberReferenceExpression.Target as MemberReferenceExpression;
+
+			return targetReferenceExpression.MemberName == "Enumerable";
 		}
 
 		private static AstNode ModifyLambdaForMinMax(LambdaExpression lambdaExpression,

@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Security.Windows
 								: new List<WindowsAuthData>();
 		}
 
-		public override bool Authorize(IHttpContext ctx)
+		public bool Authorize(IHttpContext ctx)
 		{
 			Action onRejectingRequest;
 			var databaseName = database().Name ?? Constants.SystemDatabase;

@@ -12,9 +12,10 @@ properties {
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Release"
+	$global:failedTest = $false
 	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), "Jint.Raven.???",
-				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", "BouncyCastle.Crypto.???", 
+				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", 
 				"ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???" ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -24,7 +25,7 @@ properties {
 	$web_files = @("..\DefaultConfigs\web.config" )
 	
 	$server_files = @( "Raven.Server.???", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
-					 "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",  "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", 
+					 "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",  "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", 
 					"Esent.Interop.???", "Jint.Raven.???","Raven.Abstractions.???", "Raven.Database.???" ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -120,7 +121,6 @@ task Compile -depends Init {
 }
 
 task FullStorageTest {
-	
 	$global:full_storage_test = $true
 }
 
@@ -131,23 +131,33 @@ task Test -depends Compile {
 	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
-	Write-Host "xUnit location: $xUnit\tools\xunit.console.clr4.exe"
+	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
+	Write-Host "xUnit location: $xUnit"
 	
+	$global:failedTest = $false
+
 	$test_prjs | ForEach-Object { 
-		if($global:full_storage_test ) {
-			$env:raventest_storage_engine = 'munin';
-			Write-Host "Testing $build_dir\$_ (munin)"
-			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
-			
+		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
-			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
+			exec { &"$xUnit" "$build_dir\$_" }
+			if($LastExitCode -ne 0) {
+				$global:failedTest = $true
+			}
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
+			&"$xUnit" "$build_dir\$_"
+			if($LastExitCode -ne 0) {
+				$global:failedTest = $true
+			}
 		}
+	}
+	
+	if ($hasFailingTests) {
+		$global:failedTest = true
+		write-host "We have a failing test!!!!!..........!!!!!.........!!!!!" -BackgroundColor Red -ForegroundColor Yellow		
 	}
 }
 
@@ -155,10 +165,21 @@ task StressTest -depends Compile {
 	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
+	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
 	
 	@("Raven.StressTests.dll") | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
-		exec { &"$xUnit\tools\xunit.console.clr4.exe" "$build_dir\$_" }
+		
+		if($global:full_storage_test) {
+			$env:raventest_storage_engine = 'esent';
+			Write-Host "Testing $build_dir\$_ (esent)"
+			&"$xUnit" "$build_dir\$_"
+		}
+		else {
+			$env:raventest_storage_engine = $null;
+			Write-Host "Testing $build_dir\$_ (default)"
+			&"$xUnit" "$build_dir\$_"
+		}
 	}
 }
 
@@ -178,7 +199,7 @@ task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
-		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
+		& ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
 	}
 	finally
 	{
@@ -205,27 +226,33 @@ task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
 task Release -depends RunTests,DoRelease
 
 task CopySamples {
-	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
-			   "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", `
-			   "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", `
-			   "Raven.Sample.MultiTenancy", "Raven.Sample.Suggestions", `
-			   "Raven.Sample.LiveProjections", "Raven.Sample.FullTextSearch")
-	$exclude = @("bin", "obj", "Data", "Plugins")
+	Remove-Item "$build_dir\Output\Samples\" -recurse -force -ErrorAction SilentlyContinue 
+
+	Copy-Item "$base_dir\.nuget\" "$build_dir\Output\Samples\.nuget" -recurse -force
+	Copy-Item "$base_dir\CommonAssemblyInfo.cs" "$build_dir\Output\Samples\CommonAssemblyInfo.cs" -force
+	Copy-Item "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
+	Copy-Item $base_dir\Raven.VisualHost "$build_dir\Output\Samples\Raven.VisualHost" -recurse -force
 	
+	$samples =  Get-ChildItem $base_dir\Samples | Where-Object { $_.PsIsContainer }
+	$samples = $samples
 	foreach ($sample in $samples) {
-	  echo $sample 
-	  
-	  Delete-Sample-Data-For-Release "$base_dir\Samples\$sample"
-	  
-	  cp "$base_dir\Samples\$sample" "$build_dir\Output\Samples" -recurse -force
-	  
-	  Delete-Sample-Data-For-Release "$build_dir\Output\Samples\$sample" 
+		Write-Output $sample
+		Copy-Item "$base_dir\Samples\$sample" "$build_dir\Output\Samples\$sample" -recurse -force
+		
+		Remove-Item "$sample_dir\bin" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\obj" -force -recurse -ErrorAction SilentlyContinue
+
+		Remove-Item "$sample_dir\Servers\Shard1\Data" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\Data" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard1\Plugins" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\Plugins" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard1\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue 
 	}
 	
-	cp "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
-	cp "$base_dir\Samples\Samples.ps1" "$build_dir\Output\Samples" -force
-	  
-	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.Samples.PrepareForRelease\Raven.Samples.PrepareForRelease.csproj" /p:OutDir="$buildartifacts_dir\" }
+	exec { &"$build_dir\Raven.Samples.PrepareForRelease.exe" "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
 }
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
@@ -440,7 +467,7 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
 	New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
-	@("BouncyCastle.Crypto.???", "Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
+	@("Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 		"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",	"NewtonSoft.Json.???", "NLog.???", "Jint.Raven.???",
 		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server\tools }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
@@ -523,8 +550,14 @@ task CreateNugetPackages -depends Compile {
 }
 
 TaskTearDown {
+	if ($global:failedTest)
+	{
+		write-host "Again... We have a failing test!!!!! Now that you know about it, you can take care of that." -BackgroundColor Red -ForegroundColor Yellow		
+	}
+	
 	if ($LastExitCode -ne 0) {
-		write-host "TaskTearDown detected an error. Build failed."
+		write-host "TaskTearDown detected an error. Build failed." -BackgroundColor Red -ForegroundColor Yellow
+		write-host "Yes, something was failed!!!!!!!!!!!!!!!!!!!!!" -BackgroundColor Red -ForegroundColor Yellow
 		# throw "TaskTearDown detected an error. Build failed."
 		exit 1
 	}

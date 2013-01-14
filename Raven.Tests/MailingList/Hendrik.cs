@@ -11,7 +11,6 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
 using Xunit;
-using Transaction = System.Transactions.Transaction;
 
 namespace Raven.Tests.MailingList
 {
@@ -58,11 +57,11 @@ namespace Raven.Tests.MailingList
 
 				barrier.SignalAndWait();
 
-				Assert.True(CanReadLocation(documentStore, id, forceDistributedTrasaction: true));
+				Assert.True(CanReadLocation(documentStore, id, forceDistributedTransaction: true));
 
 				barrier.SignalAndWait();
 				task.Wait();
-				Assert.True(CanReadLocation(documentStore, id, forceDistributedTrasaction: true));
+				Assert.True(CanReadLocation(documentStore, id, forceDistributedTransaction: true));
 			}
 		}
 
@@ -104,18 +103,18 @@ namespace Raven.Tests.MailingList
 
 				barrier.SignalAndWait();
 
-				Assert.True(CanReadLocation(documentStore, id, forceDistributedTrasaction: false));
+				Assert.True(CanReadLocation(documentStore, id, forceDistributedTransaction: false));
 
 				barrier.SignalAndWait();
-				Assert.True(CanReadLocation(documentStore, id, forceDistributedTrasaction: false));
+				Assert.True(CanReadLocation(documentStore, id, forceDistributedTransaction: false));
 			}
 		}
 
-		private bool CanReadLocation(IDocumentStore documentStore, Guid locationId, bool forceDistributedTrasaction)
+		private bool CanReadLocation(IDocumentStore documentStore, Guid locationId, bool forceDistributedTransaction)
 		{
 			using (var tx = new TransactionScope())
 			{
-				if (forceDistributedTrasaction) ForceDistributedTransaction();
+				if (forceDistributedTransaction) ForceDistributedTransaction();
 
 				using (var session = documentStore.OpenSession())
 				{

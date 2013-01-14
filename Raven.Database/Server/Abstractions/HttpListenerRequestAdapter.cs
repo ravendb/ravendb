@@ -59,5 +59,10 @@ namespace Raven.Database.Server.Abstractions
 		}
 
 	    public string RawUrl { get;  set; }
+
+		public Stream GetBufferLessInputStream()
+		{
+			return request.InputStream;
+		}
 	}
 }

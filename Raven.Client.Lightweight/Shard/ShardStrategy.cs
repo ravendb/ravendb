@@ -122,7 +122,7 @@ namespace Raven.Client.Shard
 		{
 			var defaultShardResolutionStrategy = ShardResolutionStrategy as DefaultShardResolutionStrategy;
 			if (defaultShardResolutionStrategy == null)
-				throw new NotSupportedException("ShardingOn<T> is only supported if ShardResulotionStrategy is DefaultShardResolutionStrategy");
+				throw new NotSupportedException("ShardingOn<T> is only supported if ShardResolutionStrategy is DefaultShardResolutionStrategy");
 
 			var identityProperty = Conventions.GetIdentityProperty(typeof(TEntity));
 			if (identityProperty == null)
@@ -165,7 +165,7 @@ namespace Raven.Client.Shard
 		{
 			var defaultShardResolutionStrategy = ShardResolutionStrategy as DefaultShardResolutionStrategy;
 			if (defaultShardResolutionStrategy == null)
-				throw new NotSupportedException("ShardingOn<T> is only supported if ShardResulotionStrategy is DefaultShardResolutionStrategy");
+				throw new NotSupportedException("ShardingOn<T> is only supported if ShardResolutionStrategy is DefaultShardResolutionStrategy");
 
 			defaultShardResolutionStrategy.ShardingOn(shardingProperty, translator);
 			return this;
@@ -183,7 +183,7 @@ namespace Raven.Client.Shard
 		{
 			var defaultShardResolutionStrategy = ShardResolutionStrategy as DefaultShardResolutionStrategy;
 			if (defaultShardResolutionStrategy == null)
-				throw new NotSupportedException("ShardingOn<T> is only supported if ShardResulotionStrategy is DefaultShardResolutionStrategy");
+				throw new NotSupportedException("ShardingOn<T> is only supported if ShardResolutionStrategy is DefaultShardResolutionStrategy");
 
 			defaultShardResolutionStrategy.ShardingOn(shardingProperty, valueTranslator, queryTranslator);
 			return this;

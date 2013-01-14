@@ -91,7 +91,7 @@ namespace Raven.Tests.MailingList
 				v1.Campaigns.Add(new Campaign { Id = 2, Title = "Industrial Campaign 2", Active = true });
 				session.Store(v1);
 
-				var v2 = new Vacancy { Category = "Commerical" };
+				var v2 = new Vacancy { Category = "Commercial" };
 				v2.Campaigns.Add(new Campaign { Id = 1, Title = "Commercial Campaign 1", Active = true });
 				session.Store(v2);
 

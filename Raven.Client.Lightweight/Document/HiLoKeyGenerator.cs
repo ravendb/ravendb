@@ -69,7 +69,7 @@ namespace Raven.Client.Document
 		{
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
-				IncreaseCapacityIfRequired();
+				ModifyCapacityIfRequired();
 				while (true)
 				{
 					try

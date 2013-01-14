@@ -454,7 +454,7 @@
                     <ListBox  Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding AuthorizationUsers}"
 										 SelectedItem="{Binding SeletedUser, Mode=TwoWay}"
-										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Autorization}"
+										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Authorization}"
 										 ItemTemplate="{StaticResource AuthorizationUserTemplate}"
 										 ScrollViewer.VerticalScrollBarVisibility="Auto">
                     </ListBox>
@@ -484,7 +484,7 @@
                     <ListBox  Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding AuthorizationRoles}"
 										 SelectedItem="{Binding SeletedRole, Mode=TwoWay}"
-										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Autorization}"
+										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Authorization}"
 										 ItemTemplate="{StaticResource AuthorizationRoleTemplate}"
 										 ScrollViewer.VerticalScrollBarVisibility="Auto">
                     </ListBox>

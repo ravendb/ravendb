@@ -23,8 +23,8 @@ namespace Rhino.Licensing
 
 		private static DateTime GetTransmitTimestamp(byte[] sntpData)
 		{
-			var milliSeconds = GetMilliSeconds(sntpData, 40);
-			return ComputeDate(milliSeconds);
+			var milliseconds = GetMilliseconds(sntpData, 40);
+			return ComputeDate(milliseconds);
 		}
 
 		private static DateTime ComputeDate(ulong milliseconds)
@@ -32,7 +32,7 @@ namespace Rhino.Licensing
 			return new DateTime(1900, 1, 1).Add(TimeSpan.FromMilliseconds(milliseconds));
 		}
 
-		private static ulong GetMilliSeconds(byte[] sntpData, byte offset)
+		private static ulong GetMilliseconds(byte[] sntpData, byte offset)
 		{
 			ulong intpart = 0, fractpart = 0;
 

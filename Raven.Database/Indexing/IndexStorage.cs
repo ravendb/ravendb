@@ -88,8 +88,8 @@ namespace Raven.Database.Indexing
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
 
-				BackgroundTaskExecuter.Instance.ExecuteAll(documentDatabase.WorkContext, 
-					indexDefinitionStorage.IndexNames, (indexName, _) => OpenIndexOnStartup(indexName));
+				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext, 
+					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
 			}
 			catch
 			{
@@ -116,7 +116,7 @@ namespace Raven.Database.Indexing
 				{
 					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
-					LoadExistingSuggesionsExtentions(indexName, indexImplementation);
+					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
 						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
@@ -157,7 +157,7 @@ namespace Raven.Database.Indexing
 			indexes.TryAdd(indexName, indexImplementation);
 		}
 
-		private void LoadExistingSuggesionsExtentions(string indexName, Index indexImplementation)
+		private void LoadExistingSuggestionsExtentions(string indexName, Index indexImplementation)
 		{
 			var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
 			if (!Directory.Exists(suggestionsForIndex))
@@ -417,7 +417,7 @@ namespace Raven.Database.Indexing
 			}
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
-			if (query.Query != null && query.Query.Contains(Constants.IntersectSeperator))
+			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery();
 			return indexQueryOperation.Query();
 		}
@@ -488,7 +488,7 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
-				value.IndexDocuments(viewGenerator, batch, context, actions, minimumTimestamp);
+				value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,
@@ -558,8 +558,6 @@ namespace Raven.Database.Indexing
 					continue;
 
 				value.Flush();
-				// We remove this call because it is very expensive one and the Lucene team recommend avoiding it.
-				//value.MergeSegments(); // noop if previously merged
 			}
 
 			documentDatabase.TransactionalStorage.Batch(accessor =>
@@ -574,7 +572,7 @@ namespace Raven.Database.Indexing
 					accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
 					{
 						{"LastQueryTime", lastQueryTime}
-					});
+					}, UuidType.Indexing);
 
 					if (lastQueryTime > maxDate)
 						maxDate = lastQueryTime;
@@ -635,6 +633,12 @@ namespace Raven.Database.Indexing
 		{
 			Parallel.ForEach(indexes.Values, index => 
 				index.Backup(directory, path, incrementalTag));
+		}
+
+		public void MergeAllIndexes()
+		{
+			Parallel.ForEach(indexes.Values, index =>
+			                                 index.MergeSegments());
 		}
 	}
 }

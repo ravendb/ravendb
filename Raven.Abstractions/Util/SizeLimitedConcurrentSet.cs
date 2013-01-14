@@ -5,12 +5,10 @@ namespace Raven.Database.Util
 {
 	public class SizeLimitedConcurrentSet<T>
 	{
-		private readonly ConcurrentDictionary<T, object> dic =
-			new ConcurrentDictionary<T, object>();
+		private readonly ConcurrentDictionary<T, object> dic;
 		private readonly ConcurrentQueue<T> queue = new ConcurrentQueue<T>();
 
 		private readonly int size;
-		private readonly IEqualityComparer<T> equalityComparer;
 
 		public SizeLimitedConcurrentSet(int size = 100)
 			: this(size, EqualityComparer<T>.Default)
@@ -21,7 +19,7 @@ namespace Raven.Database.Util
 		public SizeLimitedConcurrentSet(int size, IEqualityComparer<T> equalityComparer)
 		{
 			this.size = size;
-			this.equalityComparer = equalityComparer;
+			dic = new ConcurrentDictionary<T, object>(equalityComparer);
 		}
 
 		public bool Add(T item)
@@ -51,6 +49,11 @@ namespace Raven.Database.Util
 		public bool Contains(T item)
 		{
 			return dic.ContainsKey(item);
+		}
+
+		public T[] ToArray()
+		{
+			return queue.ToArray();
 		}
 	}
 }

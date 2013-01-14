@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 #endif
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
@@ -113,7 +114,7 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession()
 		{
-			return OpenAsyncSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands));
+			return OpenAsyncSessionInternal(null, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands));
 		}
 
 		/// <summary>
@@ -122,15 +123,15 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
-			return OpenAsyncSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(databaseName)));
+			return OpenAsyncSessionInternal(databaseName, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(databaseName)));
 		}
 
-		private IAsyncDocumentSession OpenAsyncSessionInternal(Dictionary<string, IAsyncDatabaseCommands> shardDbCommands)
+		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName,Dictionary<string, IAsyncDatabaseCommands> shardDbCommands)
 		{
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			var session = new AsyncShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shardDbCommands);
+			var session = new AsyncShardedDocumentSession(dbName, this, listeners, sessionId, ShardStrategy, shardDbCommands);
 			AfterSessionCreated(session);
 			return session;
 		}
@@ -220,7 +221,7 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shardDbCommands)
+			var session = new ShardedDocumentSession(database, this, listeners, sessionId, ShardStrategy, shardDbCommands)
 				{
 					DatabaseName = database
 				};
@@ -257,6 +258,13 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
+#if !SILVERLIGHT
+		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
+		{
+			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions());
+		}
+#endif
+
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>
@@ -269,14 +277,14 @@ namespace Raven.Client.Shard
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new ShardedHiloKeyGenerator(this, 32);
-					Conventions.DocumentKeyGenerator = (commands, entity) => generator.GenerateDocumentKey(commands, Conventions, entity);
+					Conventions.DocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKey(commands, Conventions, entity);
 				}
 
 				if (Conventions.AsyncDocumentKeyGenerator == null)
 				{
 #if !SILVERLIGHT
 					var generator = new AsyncShardedHiloKeyGenerator(this, 32);
-					Conventions.AsyncDocumentKeyGenerator = (commands, entity) => generator.GenerateDocumentKeyAsync(commands, Conventions, entity);
+					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(commands, Conventions, entity);
 #else
 					Conventions.AsyncDocumentKeyGenerator = entity =>
 					{

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Bundles.Encryption.Streams
 {	/// <summary>
-	/// Converst a struct to a byte array and back.
+	/// Converts a struct to a byte array and back.
 	/// </summary>
 	public static class StructConverter
 	{

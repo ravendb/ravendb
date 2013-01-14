@@ -57,9 +57,11 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Changes\EmbeddableDatabaseChanges.cs" />
-    <Compile Include="Changes\EmbeddableObserableWithTask.cs" />
+    <Compile Include="Changes\EmbeddableObservableWithTask.cs" />
     <Compile Include="Changes\FilteringObservableWithTask.cs" />
     <Compile Include="EmbeddableDocumentStore.cs" />
+    <Compile Include="EmbeddedAsyncServerClient.cs" />
+    <Compile Include="EmbeddedBulkInsertOperation.cs" />
     <Compile Include="EmbeddedDatabaseCommands.cs" />
   </ItemGroup>
   <ItemGroup>

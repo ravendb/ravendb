@@ -13,6 +13,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -49,6 +50,17 @@ namespace Raven.Client.Connection
 		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
 		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
+
+		/// <summary>
+		/// Get documents from server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Puts the document in the database with the specified key
@@ -126,6 +138,13 @@ namespace Raven.Client.Connection
 		string[] GetIndexNames(int start, int pageSize);
 
 		/// <summary>
+		/// Gets the indexes from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		IndexDefinition[] GetIndexes(int start, int pageSize);
+
+		/// <summary>
 		/// Resets the specified index
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -175,7 +194,7 @@ namespace Raven.Client.Connection
 		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite);
 
 		/// <summary>
-		/// Queries the specified index in the Raven flavoured Lucene query syntax
+		/// Queries the specified index in the Raven flavored Lucene query syntax
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
@@ -384,6 +403,11 @@ namespace Raven.Client.Connection
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		void ForceReadFromMaster();
+
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
 	}
 }
 #endif

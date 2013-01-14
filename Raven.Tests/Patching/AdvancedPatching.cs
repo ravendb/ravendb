@@ -203,7 +203,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			var doc = RavenJObject.FromObject(test);
 			Assert.Throws<JintException>(
 				() =>
-				new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "this.Id = 'Somethi" }));
+				new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "this.Id = 'Something" }));
 		}
 
 		[Fact]

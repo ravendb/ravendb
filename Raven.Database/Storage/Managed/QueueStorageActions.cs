@@ -29,7 +29,7 @@ namespace Raven.Storage.Managed
 			storage.Queues.Put(new RavenJObject
 			{
 				{"name", name},
-				{"id", generator.CreateSequentialUuid().ToByteArray()},
+				{"id", generator.CreateSequentialUuid(UuidType.Queue).ToByteArray()},
 				{"reads", 0}
 			}, data);
 		}

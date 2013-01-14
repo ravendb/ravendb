@@ -83,7 +83,7 @@ namespace Raven.Studio.Infrastructure
 			Loaded += HandleLoaded;
 		    Unloaded += HandleUnloaded;
 
-		    DataContextChanged += HandleDataContectChanged;
+		    DataContextChanged += HandleDataContextChanged;
 		}
 
         protected override void OnNavigatedTo(System.Windows.Navigation.NavigationEventArgs e)
@@ -102,7 +102,7 @@ namespace Raven.Studio.Infrastructure
                 e.Cancel = !(((DataContext as IObservable).Value) as PageViewModel).CanLeavePage();
         }
 
-        private void HandleDataContectChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void HandleDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (isLoaded)
             {

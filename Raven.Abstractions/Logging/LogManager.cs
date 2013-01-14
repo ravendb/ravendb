@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging.LogProviders;
 
 namespace Raven.Abstractions.Logging
@@ -28,7 +29,7 @@ namespace Raven.Abstractions.Logging
 		private static ILogManager currentLogManager;
 		public static ILogManager CurrentLogManager
 		{
-			get { return currentLogManager ?? (currentLogManager = ResolveExtenalLogManager()); }
+			get { return currentLogManager ?? (currentLogManager = ResolveExternalLogManager()); }
 			set { currentLogManager = value; }
 		}
 
@@ -48,7 +49,7 @@ namespace Raven.Abstractions.Logging
 			return new LoggerExecutionWrapper(log, name, targets.ToArray());
 		}
 
-		private static ILogManager ResolveExtenalLogManager()
+		private static ILogManager ResolveExternalLogManager()
 		{
 			if (NLogLogManager.IsLoggerAvailable())
 			{
@@ -83,6 +84,18 @@ namespace Raven.Abstractions.Logging
 			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
 				where TException : Exception
 			{}
+		}
+
+		public static IDisposable OpenNestedConext(string context)
+		{
+			ILogManager logManager = CurrentLogManager;
+			return logManager == null ? new DisposableAction(() =>{}) : logManager.OpenNestedConext(context);
+		}
+
+		public static IDisposable OpenMappedContext(string key, string value)
+		{
+			ILogManager logManager = CurrentLogManager;
+			return logManager == null ? new DisposableAction(() => {}) : logManager.OpenMappedContext(key, value);
 		}
 	}
 

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using System.Linq;
@@ -25,10 +27,11 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			get { return field; }
 		}
 
-		public TermsMatchQuery(string field, IEnumerable<string> matches)
+		public TermsMatchQuery(string field, List<string> matches)
 		{
 			this.field = field;
-			this.matches = matches.OrderBy(s => s, StringComparer.Ordinal).ToList();
+			this.matches = matches;
+			this.matches.Sort(StringComparer.Ordinal);
 		}
 
 		public override string ToString(string fld)
@@ -62,6 +65,8 @@ namespace Raven.Database.Indexing.LuceneIntegration
 
 			private void MoveToCurrentTerm()
 			{
+				if (actualEnum != null)
+					actualEnum.Dispose();
 				SetEnum(reader.Terms(new Term(termsMatchQuery.field, termsMatchQuery.matches[pos])));
 				movedEnum = true;
 			}
@@ -79,7 +84,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 					{
 						movedEnum = false;
 						var term = actualEnum.Term;
-						if (TermCompare(term) == false)
+						if (CompareTermAndMoveToNext(term, move: true) == false)
 							continue;
 						currentTerm = term;
 						return true;
@@ -90,6 +95,11 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			}
 
 			protected override bool TermCompare(Term term)
+			{
+				return CompareTermAndMoveToNext(term, move: false);
+			}
+
+			private bool CompareTermAndMoveToNext(Term term, bool move)
 			{
 				if (term.Field != termsMatchQuery.field)
 				{
@@ -110,8 +120,8 @@ namespace Raven.Database.Indexing.LuceneIntegration
 						break;
 					}
 					pos++;
-				}	
-				if (last > 0)
+				}
+				if (last > 0 && move)
 				{
 					MoveToCurrentTerm();
 					return false;

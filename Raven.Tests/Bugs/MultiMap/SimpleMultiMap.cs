@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs.MultiMap
 		}
 
 		[Fact]
-		public void CanQueryUsingMutliMap()
+		public void CanQueryUsingMultiMap()
 		{
 			using (var store = NewDocumentStore())
 			{

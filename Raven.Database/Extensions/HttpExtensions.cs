@@ -96,7 +96,7 @@ namespace Raven.Database.Extensions
 
 		public static void WriteJson(this IHttpContext context, RavenJToken obj)
 		{
-			if(context.Request.HttpMethod == "HEAD")
+			if (context.Request.HttpMethod == "HEAD")
 				return;
 
 			bool minimal;
@@ -116,7 +116,7 @@ namespace Raven.Database.Extensions
 
 			}
 
-			if(minimal)
+			if (minimal)
 			{
 				obj = MinimizeToken(obj);
 			}
@@ -142,21 +142,21 @@ namespace Raven.Database.Extensions
 					var array = new RavenJArray();
 					foreach (var item in ((RavenJArray)obj))
 					{
-						array.Add(MinimizeToken(item, depth+1));
+						array.Add(MinimizeToken(item, depth + 1));
 					}
 					return array;
 				case JTokenType.Object:
-					var ravenJObject = ((RavenJObject) obj);
+					var ravenJObject = ((RavenJObject)obj);
 					if (ravenJObject.ContainsKey(Constants.Metadata) == false)
 					{
 						// this might be a wrapper object, let check for first level arrays
-						if(depth == 0)
+						if (depth == 0)
 						{
 							var newRootObj = new RavenJObject();
 
 							foreach (var prop in ravenJObject)
 							{
-								newRootObj[prop.Key] = prop.Value.Type == JTokenType.Array ? 
+								newRootObj[prop.Key] = prop.Value.Type == JTokenType.Array ?
 									MinimizeToken(prop.Value, depth + 1) :
 									prop.Value;
 							}
@@ -201,14 +201,24 @@ namespace Raven.Database.Extensions
 				if (header.Key.StartsWith("@"))
 					continue;
 
-				var value = GetHeaderValue(header.Value);
 				switch (header.Key)
 				{
 					case "Content-Type":
-						context.Response.ContentType = value;
+						context.Response.ContentType = header.Value.Value<string>();
 						break;
 					default:
-						context.Response.AddHeader(header.Key, value);
+						if (header.Value.Type == JTokenType.Date)
+						{
+							var rfc1123 = GetDateString(header.Value, "r");
+							var iso8601 = GetDateString(header.Value, "o");
+							context.Response.AddHeader(header.Key, rfc1123);
+							context.Response.AddHeader("Raven-" + header.Key, iso8601);
+						}
+						else
+						{
+							var value = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+							context.Response.AddHeader(header.Key, value);
+						}
 						break;
 				}
 			}
@@ -220,14 +230,21 @@ namespace Raven.Database.Extensions
 			context.WriteETag(etag);
 		}
 
-		private static string GetHeaderValue(RavenJToken header)
+		private static string GetDateString(RavenJToken token, string format)
 		{
-			if (header.Type == JTokenType.Date)
-			{
-				return header.Value<DateTime>().ToString("r");
-			}
+			var value = token as RavenJValue;
+			if (value == null)
+				return token.ToString();
 
-			return StripQuotesIfNeeded(header.ToString(Formatting.None));
+			var obj = value.Value;
+
+			if (obj is DateTime)
+				return ((DateTime) obj).ToString(format);
+
+			if (obj is DateTimeOffset)
+				return ((DateTimeOffset) obj).ToString(format);
+
+			return obj.ToString();
 		}
 
 		private static string StripQuotesIfNeeded(string str)
@@ -279,6 +296,12 @@ namespace Raven.Database.Extensions
 		{
 			context.Response.StatusCode = 400;
 			context.Response.StatusDescription = "Bad Request";
+		}
+
+		public static void SetStatusToPreconditionFailed(this IHttpContext context)
+		{
+			context.Response.StatusCode = 412;
+			context.Response.StatusDescription = "Precondition Failed";
 		}
 
 		public static void SetStatusToUnauthorized(this IHttpContext context)
@@ -339,7 +362,7 @@ namespace Raven.Database.Extensions
 			if (self.RawUrl.StartsWith(token, StringComparison.InvariantCultureIgnoreCase))
 			{
 				self.RawUrl = self.RawUrl.Substring(token.Length);
-				if(string.IsNullOrEmpty(self.RawUrl))
+				if (string.IsNullOrEmpty(self.RawUrl))
 				{
 					self.RawUrl = "/";
 				}
@@ -350,6 +373,20 @@ namespace Raven.Database.Extensions
 		{
 			bool result;
 			bool.TryParse(context.Request.QueryString["skipTransformResults"], out result);
+			return result;
+		}
+
+		public static bool GetCheckForUpdates(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["checkForUpdates"], out result);
+			return result;
+		}
+
+		public static bool GetCheckReferencesInIndexes(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["checkReferencesInIndexes"], out result);
 			return result;
 		}
 

@@ -72,7 +72,7 @@ namespace Raven.Bundles.Encryption.Streams
 					var header = StructConverter.ConvertBitsToStruct<EncryptedFile.Header>(headerBytes);
 
 					if (header.MagicNumber != EncryptedFile.DefaultMagicNumber)
-						throw new InvalidDataException("The magic number in the file doesn't match the expected magic number for encypted files. Perhaps this file isn't encrypted?");
+						throw new InvalidDataException("The magic number in the file doesn't match the expected magic number for encrypted files. Perhaps this file isn't encrypted?");
 
 					return header;
 				}

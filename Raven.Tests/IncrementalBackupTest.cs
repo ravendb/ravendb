@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Diagnostics;
+using System;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -34,7 +34,13 @@ namespace Raven.Tests
 				{
 					session.Store(new User {Name = "Fitzchak"});
 					session.SaveChanges();
-				}
+                }
+                if (store.DocumentDatabase.TransactionalStorage.FriendlyName == "Munin")
+                {
+                    var exception = Assert.Throws<InvalidOperationException>(() => store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument()));
+                    Assert.Contains("Backup operation is not supported when running in memory. ", exception.Message);
+                    return;
+                }
 				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 

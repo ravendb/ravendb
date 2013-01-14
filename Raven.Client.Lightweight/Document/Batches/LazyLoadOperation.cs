@@ -21,7 +21,7 @@ namespace Raven.Client.Document.Batches
 			this.loadOperation = loadOperation;
 		}
 
-		public GetRequest CraeteRequest()
+		public GetRequest CreateRequest()
 		{
 			return new GetRequest
 			{

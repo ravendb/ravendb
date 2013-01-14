@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
+using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -67,7 +68,7 @@ namespace Raven.Bundles.Replication.Triggers
 			};
 			deletedHistory.Value = null;
 			Database.TransactionalStorage.Batch(accessor =>
-				accessor.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, key, metadata));
+				accessor.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, key, metadata, UuidType.Attachments));
 		
 		}
 

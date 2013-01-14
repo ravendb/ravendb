@@ -36,7 +36,7 @@ namespace Raven.Tests.Spatial
 			base.Dispose();
 		}
 
-		// same test as in Spatial.Net test cartisian
+		// same test as in Spatial.Net test cartesian
 		[Fact]
 		public void CanPerformSpatialSearch()
 		{

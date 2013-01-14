@@ -19,5 +19,6 @@ namespace Raven.Database.Server.Abstractions
 		string HttpMethod { get; }
 		Uri Url { get; set; }
 		string RawUrl { get; set; }
+		Stream GetBufferLessInputStream();
 	}
 }

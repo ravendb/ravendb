@@ -34,7 +34,7 @@ namespace Raven.Database.Linq.Ast
 		{
 			new ForbiddenMethod(
 				names: new[] { "Now", "UtcNow" },
-				typeAliases: new[] { "DateTime", "System.DateTime", "DateTimeOffset", "System.DateTimeOffset" },
+				typeAliases: new[] { "DateTime", "System.DateTime", "DateTimeOffset", "System.DateTimeOffset", "SystemTime", "Abstractions.SystemTime", "Raven.Abstractions.SystemTime" },
 				error: @"Cannot use {0} during a map or reduce phase.
 The map or reduce functions must be referentially transparent, that is, for the same set of values, they always return the same results.
 Using {0} invalidate that premise, and is not allowed"),
@@ -55,7 +55,7 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			if (SimplifyLetExpression(queryLetClause.Expression) is LambdaExpression)
 			{
 				var text = QueryParsingUtils.ToText(queryLetClause);
-				throw new SecurityException("Let expression cannot contain labmda expressions, but got: " + text);
+				throw new SecurityException("Let expression cannot contain lambda expressions, but got: " + text);
 			}
 
 			return base.VisitQueryLetClause(queryLetClause, data);

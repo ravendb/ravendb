@@ -20,6 +20,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Bundles.Replication;
@@ -271,7 +272,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				firstTimeFoundNoReplicationDocument = false;
 				log.Warn(
-					"Replication bundle is installed, but there is no destination in 'Raven/Replication/Destinations'.\r\nRepliaction results in NO-OP");
+					"Replication bundle is installed, but there is no destination in 'Raven/Replication/Destinations'.\r\nReplication results in NO-OP");
 			}
 		}
 
@@ -618,8 +619,8 @@ namespace Raven.Bundles.Replication.Tasks
 					result.LastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 					while (true)
 					{
-						docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 100, 1024*1024*10)
-							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, 100)
+						docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024*1024*25)
+							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, 1024)
 								        .Select(x => new JsonDocument
 								        {
 									        Etag = x.Etag,
@@ -631,8 +632,19 @@ namespace Raven.Bundles.Replication.Tasks
 							.ToList();
 
 						filteredDocsToReplicate =
-							docsToReplicate.Where(document => destination.FilterDocuments(destinationId, document.Key, document.Metadata)).
-								ToList();
+							docsToReplicate
+								.Where(document =>
+								{
+									var info = docDb.GetRecentTouchesFor(document.Key);
+									if(info != null)
+									{
+										if (Etag.IsGreaterThan(info.PreTouchEtag, result.LastEtag) == false)
+											return false;
+									}
+	
+									return destination.FilterDocuments(destinationId, document.Key, document.Metadata);
+								})
+								.ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
 						result.CountOfFilteredDocumentsWhichAreSystemDocuments += docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));

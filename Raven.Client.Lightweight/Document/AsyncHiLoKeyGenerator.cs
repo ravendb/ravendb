@@ -97,7 +97,7 @@ namespace Raven.Client.Document
 
 		private Task<RangeValue> GetNextRangeAsync(IAsyncDatabaseCommands databaseCommands)
 		{
-			IncreaseCapacityIfRequired();
+			ModifyCapacityIfRequired();
 
 			return GetNextMaxAsyncInner(databaseCommands);
 		}

@@ -6,16 +6,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -28,10 +23,13 @@ namespace Raven.Database.Indexing
 {
 	public class IndexingExecuter : AbstractIndexingExecuter
 	{
+		readonly PrefetchingBehavior prefetchingBehavior;
+
 		public IndexingExecuter(WorkContext context)
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
+			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
@@ -54,50 +52,12 @@ namespace Raven.Database.Indexing
 			return new IndexToWorkOn
 			{
 				IndexName = indexesStat.Name,
-				LastIndexedEtag = indexesStat.LastIndexedEtag
+				LastIndexedEtag = indexesStat.LastIndexedEtag,
 			};
 		}
 
-		[DebuggerDisplay("{DebugDisplay}")]
-		private class FutureIndexBatch
-		{
-			public Guid StartingEtag;
-			public Task<JsonResults> Task;
-			public int Age;
-
-			public string DebugDisplay
-			{
-				get
-				{
-					if (Task.IsCompleted == false)
-						return "Etag: " + StartingEtag + ", Age: " + Age + " Results: Pending";
-
-					return "Etag: " + StartingEtag + ", Age: " + Age + " Results: " + Task.Result.Results.Length.ToString("#,#");
-				}
-			}
-		}
-
-		public class JsonResults
-		{
-			public JsonDocument[] Results;
-			public bool LoadedFromDisk;
-
-			public override string ToString()
-			{
-				if (Results == null)
-					return "0";
-				return Results.Length.ToString("#,#", CultureInfo.InvariantCulture);
-			}
-		}
-
-		private int currentIndexingAge;
-
-		private readonly ConcurrentSet<FutureIndexBatch> futureIndexBatches = new ConcurrentSet<FutureIndexBatch>();
-
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			var indexingAge = Interlocked.Increment(ref currentIndexingAge);
-
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
@@ -106,37 +66,27 @@ namespace Raven.Database.Indexing
 
 			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
-			JsonResults jsonDocs = null;
+			List<JsonDocument> jsonDocs = null;
+			var lastEtag = Guid.Empty;
 			try
 			{
-				jsonDocs = GetJsonDocuments(lastIndexedGuidForAllIndexes);
+				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedGuidForAllIndexes);
 
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-							  jsonDocs.Results.Length, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Results.Select(x => x.Key)));
+							  jsonDocs.Count, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
 				}
 
-				context.ReportIndexingActualBatchSize(jsonDocs.Results.Length);
+				context.ReportIndexingActualBatchSize(jsonDocs.Count);
 				context.CancellationToken.ThrowIfCancellationRequested();
 
-				MaybeAddFutureBatch(jsonDocs, indexingAge);
+				if (jsonDocs.Count <= 0)
+					return;
 
-				if (jsonDocs.Results.Length > 0)
-				{
-					context.IndexedPerSecIncreaseBy(jsonDocs.Results.Length);
-					var result = FilterIndexes(indexesToWorkOn, jsonDocs.Results).ToList();
-					indexesToWorkOn = result.Select(x => x.Item1).ToList();
-					var sw = Stopwatch.StartNew();
-					BackgroundTaskExecuter.Instance.ExecuteAll(context, result, (indexToWorkOn, _) =>
-					{
-						var index = indexToWorkOn.Item1;
-						var docs = indexToWorkOn.Item2;
-
-						transactionalStorage.Batch(actions => IndexDocuments(actions, index.IndexName, docs));
-					});
-					indexingDuration = sw.Elapsed;
-				}
+				var sw = Stopwatch.StartNew();
+				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+				indexingDuration = sw.Elapsed;
 			}
 			catch (OperationCanceledException)
 			{
@@ -144,299 +94,176 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				if (operationCancelled == false && jsonDocs != null && jsonDocs.Results.Length > 0)
+				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 				{
-					var lastByEtag = GetHighestEtag(jsonDocs.Results);
-					var lastModified = lastByEtag.LastModified.Value;
-					var lastEtag = lastByEtag.Etag.Value;
-
-					if (Log.IsDebugEnabled)
-					{
-						Log.Debug("Aftering indexing {0} documents, the new last etag for is: {1} for {2}",
-								  jsonDocs.Results.Length,
-								  lastEtag,
-								  string.Join(", ", indexesToWorkOn.Select(x => x.IndexName))
-							);
-					}
-
-					// whatever we succeeded in indexing or not, we have to update this
-					// because otherwise we keep trying to re-index failed documents
-					transactionalStorage.Batch(actions =>
-					{
-						foreach (var indexToWorkOn in indexesToWorkOn)
-						{
-							actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
-						}
-					});
-
-					CleanupDocumentsToRemove(lastEtag);
-					UpdateAutoThrottler(jsonDocs.Results, indexingDuration);
+					prefetchingBehavior.CleanupDocumentsToRemove(lastEtag);
+					UpdateAutoThrottler(jsonDocs, indexingDuration);
 				}
 
-				// make sure that we don't have too much "future cache" items
-				foreach (var source in futureIndexBatches.Where(x => (indexingAge - x.Age) > 25).ToList())
-				{
-					ObserveDiscardedTask(source);
-					futureIndexBatches.TryRemove(source);
-				}
+				prefetchingBehavior.BatchProcessingComplete();
 			}
 		}
 
-		private void UpdateAutoThrottler(JsonDocument[] jsonDocs, TimeSpan indexingDuration)
+		private Guid DoActualIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
 		{
-			var futureLen = futureIndexBatches.Sum(x =>
-			{
-				if (x.Task.IsCompleted)
-				{
-					var jsonResults = x.Task.Result;
-					return jsonResults.LoadedFromDisk ? jsonResults.Results.Length : 0;
-				}
-				return autoTuner.NumberOfItemsToIndexInSingleBatch / 15;
-			});
+			var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(jsonDocs);
+			var lastModified = lastByEtag.LastModified.Value;
+			var lastEtag = lastByEtag.Etag.Value;
 
-			var futureSize = futureIndexBatches.Sum(x =>
-			{
-				if (x.Task.IsCompleted)
-				{
-					var jsonResults = x.Task.Result;
-					return jsonResults.LoadedFromDisk ? jsonResults.Results.Sum(s => s.SerializedSizeOnDisk) : 0;
-				}
-				return autoTuner.NumberOfItemsToIndexInSingleBatch * 256;
+			context.IndexedPerSecIncreaseBy(jsonDocs.Count);
+			var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 
-			});
-			autoTuner.AutoThrottleBatchSize(jsonDocs.Length + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
+			ExecuteAllInterleaved(result, index => HandleIndexingFor(index, lastEtag, lastModified));
+
+			return lastEtag;
 		}
 
-		public JsonResults GetJsonDocuments(Guid lastIndexedGuidForAllIndexes)
+		SemaphoreSlim indexingSemaphore;
+		private ManualResetEventSlim indexingCompletedEvent;
+		readonly ConcurrentSet<System.Threading.Tasks.Task> pendingTasks = new ConcurrentSet<System.Threading.Tasks.Task>();
+
+		private void ExecuteAllInterleaved(IList<IndexingBatchForIndex> result, Action<IndexingBatchForIndex> action)
 		{
-			var futureResults = GetFutureJsonDocuments(lastIndexedGuidForAllIndexes);
-			if (futureResults != null)
-				return futureResults;
-			return GetJsonDocsFromDisk(lastIndexedGuidForAllIndexes);
+			if (result.Count == 0)
+				return;
+
+			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
+
+			SortResultsMixedAccordingToTimePerDoc(result);
+
+			var totalIndexingTime = Stopwatch.StartNew();
+			var tasks = new System.Threading.Tasks.Task[result.Count];
+			for (int i = 0; i < result.Count; i++)
+			{
+				var index = result[i];
+				var indexToWorkOn = index;
+
+				var sp = Stopwatch.StartNew();
+				var task = new System.Threading.Tasks.Task(() => action(indexToWorkOn));
+				indexToWorkOn.Index.CurrentMapIndexingTask = tasks[i] = task.ContinueWith(_ =>
+				{
+					try
+					{
+						sp.Stop();
+						indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
+						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
+						indexToWorkOn.Index.CurrentMapIndexingTask = null;
+					}
+					finally 
+					{
+						indexingSemaphore.Release();
+						indexingCompletedEvent.Set();
+					}
+					
+				});
+
+				indexingSemaphore.Wait();
+
+				task.Start(context.Database.BackgroundTaskScheduler);
+			}
+
+			// we only get here AFTER we finished scheduling all the indexes
+			// we wait until we have at least parallel / 2 spots opened (for the _next_ indexing batch) or 8, if we are 
+			// running on Enterprise / high end systems
+			int minIndexingSpots = Math.Min((maxNumberOfParallelIndexTasks / 2), 8);
+			while (indexingSemaphore.CurrentCount < minIndexingSpots)
+			{
+				indexingCompletedEvent.Reset();
+				indexingCompletedEvent.Wait();
+			}
+
+			// now we have the chance to start a new indexing batch with the old items, but we still
+			// want to wait for a bit to _avoid_ creating multiple batches if we can possibly avoid it.
+			// We will wait for 3/4 the time we waited so far, and a min of 15 seconds
+			var timeToWait = Math.Max((int)(totalIndexingTime.ElapsedMilliseconds / 4) * 3, 15000);
+			var totalWaitTime = Stopwatch.StartNew();
+			while (indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks)
+			{
+				int timeout = timeToWait - (int) totalWaitTime.ElapsedMilliseconds;
+				if (timeout <= 0)
+					break;
+				indexingCompletedEvent.Reset();
+				indexingCompletedEvent.Wait(timeout);
+			}
+			if (Log.IsDebugEnabled == false)
+				return;
+
+			var creatingNewBatch = indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks;
+			if (creatingNewBatch == false)
+				return;
+
+			var slowIndexes = result.Where(x =>
+			{
+				var currentMapIndexingTask = x.Index.CurrentMapIndexingTask;
+				return currentMapIndexingTask != null && !currentMapIndexingTask.IsCompleted;
+			})
+				.Select(x => x.IndexName)
+				.ToArray();
+			Log.Debug("Indexing is now split because there are {0:#,#} slow indexes [{1}], memory usage may increase, and those indexing may experience longer stale times (but other indexes will be faster)",
+					 slowIndexes.Length,
+					 string.Join(", ", slowIndexes));
 		}
 
-		private JsonResults GetFutureJsonDocuments(Guid lastIndexedGuidForAllIndexes)
+		private static void SortResultsMixedAccordingToTimePerDoc(IList<IndexingBatchForIndex> result)
 		{
-			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
-				return null;
-			var nextDocEtag = GetNextDocEtag(lastIndexedGuidForAllIndexes);
-			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextDocEtag);
-			if (nextBatch == null)
-				return null;
+			var orderedBy = result.OrderBy(x => x.Index.TimePerDoc).ToArray();
+			int startPos = 0, endPos = orderedBy.Length;
+			int resultPos = 0;
+			while (startPos < endPos)
+			{
+				result[resultPos++] = orderedBy[startPos++];
+				if (resultPos + 1 < result.Count)
+					result[resultPos++] = orderedBy[--endPos];
+			}
+		}
 
-			if (System.Threading.Tasks.Task.CurrentId == nextBatch.Task.Id)
-				return null;
+		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Guid lastEtag, DateTime lastModified)
+		{
 			try
 			{
-				futureIndexBatches.TryRemove(nextBatch);
-				if (nextBatch.Task.IsCompleted == false)
-				{
-					if (nextBatch.Task.Wait(Timeout.Infinite) == false)
-						return null;
-				}
-				var timeToWait = 500;
-
-				var items = new List<JsonResults>
-				{
-					nextBatch.Task.Result
-				};
-				while (true)
-				{
-					nextDocEtag = GetNextDocEtag(GetNextHighestEtag(nextBatch.Task.Result.Results));
-					nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextDocEtag);
-					if (nextBatch == null)
-					{
-						break;
-					}
-					futureIndexBatches.TryRemove(nextBatch);
-					timeToWait /= 2;
-					if (nextBatch.Task.Wait(timeToWait) == false)
-						break;
-
-					items.Add(nextBatch.Task.Result);
-				}
-
-				if (items.Count == 1)
-					return items[0];
-
-				// a single doc may appear multiple times, if it was updated
-				// while we were fetching things, so we have several versions
-				// of the same doc loaded, this will make sure that we will only 
-				// take one of them.
-				return new JsonResults
-				{
-					Results = items.SelectMany(x => x.Results)
-						.GroupBy(x => x.Key)
-						.Select(g => g.OrderBy(x => x.Etag).First())
-						.ToArray(),
-					LoadedFromDisk = items.Aggregate(false, (prev, results) => prev | results.LoadedFromDisk)
-				};
+				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex.IndexName, batchForIndex.Batch));
 			}
 			catch (Exception e)
 			{
-				Log.WarnException("Error when getting next batch value asyncronously, will try in sync manner", e);
-				return null;
+				Log.Warn("Failed to index " + batchForIndex.IndexName, e);
+			}
+			finally
+			{
+				if (Log.IsDebugEnabled)
+				{
+					Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
+							  batchForIndex.Batch.Docs.Count,
+							  lastEtag,
+							  batchForIndex.IndexName);
+				}
+
+				transactionalStorage.Batch(actions =>
+					// whatever we succeeded in indexing or not, we have to update this
+					// because otherwise we keep trying to re-index failed documents
+										   actions.Indexing.UpdateLastIndexed(batchForIndex.IndexName, lastEtag, lastModified));
 			}
 		}
 
-		private Guid GetNextDocEtag(Guid highestEtag)
+		private void UpdateAutoThrottler(List<JsonDocument> jsonDocs, TimeSpan indexingDuration)
 		{
-			Guid nextDocEtag = highestEtag;
-			context.TransactionaStorage.Batch(
-				accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(highestEtag); });
-			return nextDocEtag;
+			int futureLen;
+			int futureSize;
+			prefetchingBehavior.GetFutureStats(autoTuner.NumberOfItemsToIndexInSingleBatch, out futureLen, out futureSize);
+			autoTuner.AutoThrottleBatchSize(jsonDocs.Count + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 		}
 
-
-		private void MaybeAddFutureBatch(JsonResults past, int indexingAge)
+		public class IndexingBatchForIndex
 		{
-			if (context.Configuration.DisableDocumentPreFetchingForIndexing || context.RunIndexing == false)
-				return;
-			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
-				return;
-			if (past.Results.Length == 0 || past.LoadedFromDisk == false)
-				return;
-			if (futureIndexBatches.Count > 5) // we limit the number of future calls we do
-			{
-				var alreadyLoaded = futureIndexBatches.Sum(x =>
-				{
-					if (x.Task.IsCompleted)
-						return x.Task.Result.Results.Length;
-					return 0;
-				});
+			public string IndexName { get; set; }
 
-				if (alreadyLoaded > autoTuner.NumberOfItemsToIndexInSingleBatch)
-					return;
-			}
+			public Index Index { get; set; }
 
-			// ensure we don't do TOO much future cachings
-			if (MemoryStatistics.AvailableMemory < 
-				context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
-				return;
+			public Guid LastIndexedEtag { get; set; }
 
-			// we loaded the maximum amount, there are probably more items to read now.
-			var nextEtag = GetNextDocEtag(GetNextHighestEtag(past.Results));
-
-			var nextBatch = futureIndexBatches.FirstOrDefault(x => x.StartingEtag == nextEtag);
-
-			if (nextBatch != null)
-				return;
-
-			var futureBatchStat = new FutureBatchStats
-			{
-				Timestamp = SystemTime.UtcNow,
-			};
-			var sp = Stopwatch.StartNew();
-			context.AddFutureBatch(futureBatchStat);
-			futureIndexBatches.Add(new FutureIndexBatch
-			{
-				StartingEtag = nextEtag,
-				Age = indexingAge,
-				Task = System.Threading.Tasks.Task.Factory.StartNew(() =>
-				{
-					JsonResults jsonDocuments = null;
-					int localWork = workCounter;
-					while (context.RunIndexing)
-					{
-						jsonDocuments = GetJsonDocuments(nextEtag);
-						if (jsonDocuments.Results.Length > 0)
-							break;
-
-						futureBatchStat.Retries++;
-
-						context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching");
-					}
-					futureBatchStat.Duration = sp.Elapsed;
-					futureBatchStat.Size = jsonDocuments == null ? 0 : jsonDocuments.Results.Length;
-					if(jsonDocuments != null)
-					{
-						MaybeAddFutureBatch(jsonDocuments, indexingAge);
-					}
-					return jsonDocuments;
-				})
-			});
+			public IndexingBatch Batch { get; set; }
 		}
 
-		private static Guid GetNextHighestEtag(JsonDocument[] past)
-		{
-			JsonDocument jsonDocument = GetHighestEtag(past);
-			if(jsonDocument == null)
-				return Guid.Empty;
-			return jsonDocument.Etag ?? Guid.Empty;
-		}
-
-
-		private static JsonDocument GetHighestEtag(JsonDocument[] past)
-		{
-			var highest = new ComparableByteArray(Guid.Empty);
-			JsonDocument highestDoc = null;
-			for (int i = past.Length - 1; i >= 0; i--)
-			{
-				var etag = past[i].Etag.Value;
-				if (highest.CompareTo(etag) > 0)
-				{
-					continue;
-				}
-				highest = new ComparableByteArray(etag);
-				highestDoc = past[i];
-			}
-			return highestDoc;
-		}
-
-		private void CleanupDocumentsToRemove(Guid lastIndexedEtag)
-		{
-			var highest = new ComparableByteArray(lastIndexedEtag);
-
-			documentsToRemove.RemoveWhere(x => x.Etag == null || highest.CompareTo(x.Etag.Value) >= 0);
-		}
-
-		private static System.Threading.Tasks.Task ObserveDiscardedTask(FutureIndexBatch source)
-		{
-			return source.Task.ContinueWith(task =>
-			{
-				if (task.Exception != null)
-				{
-					Log.WarnException("Error happened on discarded future work batch", task.Exception);
-				}
-				else
-				{
-					Log.Warn("WASTE: Discarding future work item without using it, to reduce memory usage");
-				}
-			});
-		}
-
-		protected override void Dispose()
-		{
-			System.Threading.Tasks.Task.WaitAll(futureIndexBatches.Select(ObserveDiscardedTask).ToArray());
-			futureIndexBatches.Clear();
-		}
-
-		private JsonResults GetJsonDocsFromDisk(Guid lastIndexed)
-		{
-			JsonDocument[] jsonDocs = null;
-			transactionalStorage.Batch(actions =>
-			{
-				jsonDocs = actions.Documents
-					.GetDocumentsAfter(
-						lastIndexed,
-						autoTuner.NumberOfItemsToIndexInSingleBatch,
-						autoTuner.MaximumSizeAllowedToFetchFromStorage)
-					.Where(x => x != null)
-					.Select(doc =>
-					{
-						DocumentRetriever.EnsureIdInMetadata(doc);
-						return doc;
-					})
-					.ToArray();
-			});
-			return new JsonResults
-			{
-				Results = jsonDocs,
-				LoadedFromDisk = true
-			};
-		}
-
-		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
+		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
 		{
 			var last = jsonDocs.Last();
 
@@ -467,13 +294,13 @@ namespace Raven.Database.Indexing
 
 			Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
-			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
+			var results = new IndexingBatchForIndex[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
-				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
-				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)
+				var indexLastIndexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
+				if (indexLastIndexEtag.CompareTo(lastIndexedEtag) >= 0)
 					return;
 
 				var indexName = indexToWorkOn.IndexName;
@@ -485,7 +312,7 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
-					if (FilterDocuments(item.Doc))
+					if (prefetchingBehavior.FilterDocuments(item.Doc))
 						continue;
 
 					// did we already indexed this document in this index?
@@ -493,7 +320,7 @@ namespace Raven.Database.Indexing
 					if (etag == null)
 						continue;
 
-					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
+					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
 						continue;
 
 
@@ -504,20 +331,20 @@ namespace Raven.Database.Indexing
 						continue;
 					}
 
-					batch.Add(item.Doc, item.Json);
+					batch.Add(item.Doc, item.Json, prefetchingBehavior.ShouldSkipDeleteFromIndex(item.Doc));
 
 					if (batch.DateTime == null)
 						batch.DateTime = item.Doc.LastModified;
 					else
 						batch.DateTime = batch.DateTime > item.Doc.LastModified
-											? item.Doc.LastModified
-											: batch.DateTime;
+											 ? item.Doc.LastModified
+											 : batch.DateTime;
 				}
 
 				if (batch.Docs.Count == 0)
 				{
 					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
-						lastEtag, lastModified);
+							  lastEtag, lastModified);
 					// we use it this way to batch all the updates together
 					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
 					return;
@@ -526,7 +353,13 @@ namespace Raven.Database.Indexing
 				{
 					Log.Debug("Going to index {0} documents in {1}: ({2})", batch.Ids.Count, indexToWorkOn, string.Join(", ", batch.Ids));
 				}
-				results[i] = Tuple.Create(indexToWorkOn, batch);
+				results[i] = new IndexingBatchForIndex
+				{
+					Batch = batch,
+					IndexName = indexToWorkOn.IndexName,
+					Index = indexToWorkOn.Index,
+					LastIndexedEtag = indexToWorkOn.LastIndexedEtag
+				};
 
 			});
 
@@ -577,104 +410,36 @@ namespace Raven.Database.Indexing
 			{
 				if (actions.IsWriteConflict(e))
 					return;
-				Log.WarnException(
-					string.Format("Failed to index documents for index: {0}", index),
-					e);
+				Log.WarnException(string.Format("Failed to index documents for index: {0}", index), e);
 			}
 		}
 
-		public void AfterCommit(JsonDocument[] docs)
+		public PrefetchingBehavior PrefetchingBehavior
 		{
-			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
-				return;
-
-			if (futureIndexBatches.Count > 512 || // this is optimization, and we need to make sure we don't overuse memory
-				docs.Length == 0)
-				return;
-			
-			foreach (var doc in docs)
-			{
-				DocumentRetriever.EnsureIdInMetadata(doc);
-			}
-
-			
-			futureIndexBatches.Add(new FutureIndexBatch
-			{
-				StartingEtag = GetLowestEtag(docs),
-				Task = new CompletedTask<JsonResults>(new JsonResults
-				{
-					Results = docs,
-					LoadedFromDisk = false
-				}),
-				Age = Interlocked.Increment(ref currentIndexingAge)
-			});
+			get { return prefetchingBehavior; }
 		}
 
-		private static Guid GetLowestEtag(JsonDocument[] past)
+		protected override void Dispose()
 		{
-			var lowest = new ComparableByteArray(past[0].Etag.Value);
-			for (int i = 1; i < past.Length; i++)
+			var exceptionAggregator = new ExceptionAggregator(Log, "Could not dispose of IndexingExecuter");
+			foreach (var pendingTask in pendingTasks)
 			{
-				var etag = past[i].Etag.Value;
-				if (lowest.CompareTo(etag) < 0)
-				{
-					continue;
-				}
-				lowest = new ComparableByteArray(etag);
+				exceptionAggregator.Execute(pendingTask.Wait);
 			}
-			return lowest.ToGuid();
+			pendingTasks.Clear();
+			exceptionAggregator.Execute(indexingCompletedEvent.Dispose);
+			exceptionAggregator.Execute(indexingSemaphore.Dispose);
+			exceptionAggregator.ThrowIfNeeded();
+
+			indexingCompletedEvent = null;
+			indexingSemaphore = null;
 		}
 
-		private readonly ConcurrentSet<DocumentToRemove> documentsToRemove = new ConcurrentSet<DocumentToRemove>();
-
-		private bool FilterDocuments(JsonDocument document)
+		protected override void Init()
 		{
-			var documentToRemove = new DocumentToRemove(document.Key, document.Etag);
-
-			return documentsToRemove.TryRemove(documentToRemove);
-		}
-
-		internal class DocumentToRemove
-		{
-			public DocumentToRemove(string key, Guid? etag)
-			{
-				Key = key;
-				Etag = etag;
-			}
-
-			public string Key { get; set; }
-
-			public Guid? Etag { get; set; }
-
-
-			protected bool Equals(DocumentToRemove other)
-			{
-				return string.Equals(Key, other.Key) && Etag.Equals(other.Etag);
-			}
-
-			public override bool Equals(object obj)
-			{
-				if (ReferenceEquals(null, obj)) return false;
-				if (ReferenceEquals(this, obj)) return true;
-				return Equals((DocumentToRemove) obj);
-			}
-
-			public override int GetHashCode()
-			{
-				unchecked
-				{
-					int hashCode = (Key != null ? Key.GetHashCode() : 0);
-					hashCode = (hashCode*397) ^ Etag.GetHashCode();
-					return hashCode;
-				}
-			}
-		}
-
-		
-
-		public void AfterDelete(string key, Guid? lastDocumentEtag)
-		{
-			documentsToRemove.Add(new DocumentToRemove(key, lastDocumentEtag));
+			indexingSemaphore = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks);
+			indexingCompletedEvent = new ManualResetEventSlim(false);
+			base.Init();
 		}
 	}
 }

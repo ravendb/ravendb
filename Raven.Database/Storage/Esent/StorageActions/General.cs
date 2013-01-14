@@ -24,7 +24,7 @@ namespace Raven.Storage.Esent.StorageActions
 	[CLSCompliant(false)]
 	public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions
 	{
-		public event Action OnCommit = delegate { };
+		public event Action OnStorageCommit = delegate { };
 		private readonly TableColumnsCache tableColumnsCache;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 		private readonly IUuidGenerator uuidGenerator;
@@ -35,6 +35,7 @@ namespace Raven.Storage.Esent.StorageActions
 		protected static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		protected readonly Session session;
 		private Transaction transaction;
+		private bool useLazyCommit;
 
 		public JET_DBID Dbid
 		{
@@ -75,8 +76,6 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-
-
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
@@ -88,6 +87,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 			if (reduceKeysStatus != null)
 				reduceKeysStatus.Dispose();
+
+			if (indexedDocumentsReferences != null)
+				indexedDocumentsReferences.Dispose();
 
 			if (reducedResults != null)
 				reducedResults.Dispose();
@@ -136,21 +138,46 @@ namespace Raven.Storage.Esent.StorageActions
 
 			if (session != null)
 				session.Dispose();
+		}
 
+		public void UseLazyCommit()
+		{
+			UsingLazyCommit = true;
 		}
 
 		public void PulseTransaction()
 		{
 			transaction.Commit(CommitTransactionGrbit.LazyFlush);
-			transaction.Dispose();
-			transaction = new Transaction(session);
+			UseLazyCommit();
+			transaction.Begin();
 		}
+
+		private int maybePulseCount;
+		public void MaybePulseTransaction()
+		{
+			if (++maybePulseCount % 1000 != 0)
+				return;
+
+			var sizeInBytes = transactionalStorage.GetDatabaseTransactionVersionSizeInBytes();
+			const int maxNumberOfCallsBeforePulsingIsForced = 50 * 1000;
+			if (sizeInBytes <= 0) // there has been an error
+			{
+				if (maybePulseCount % maxNumberOfCallsBeforePulsingIsForced == 0)
+					PulseTransaction();
+				return;
+			}
+			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
+			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount % maxNumberOfCallsBeforePulsingIsForced == 0)
+				PulseTransaction();
+		}
+
+		public bool UsingLazyCommit { get; set; }
 
 		public Action Commit(CommitTransactionGrbit txMode)
 		{
 			transaction.Commit(txMode);
-			
-			return OnCommit;
+
+			return OnStorageCommit;
 		}
 
 
@@ -319,8 +346,6 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 		}
-
-
 	}
 
 

@@ -24,15 +24,17 @@ namespace Raven.Database.Indexing
 
 		protected AbstractIndexingExecuter(WorkContext context)
 		{
-			this.transactionalStorage = context.TransactionaStorage;
+			this.transactionalStorage = context.TransactionalStorage;
 			this.context = context;
 			this.scheduler = context.TaskScheduler;
 		}
 
 		public void Execute()
 		{
+			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
+				Init();
 				LogContext.DatabaseName.Value = context.DatabaseName;
 				var name = GetType().Name;
 				var workComment = "WORK BY " + name;
@@ -76,7 +78,7 @@ namespace Raven.Database.Indexing
 					}
 					catch (OperationCanceledException)
 					{
-						Log.Info("Got rude cancelation of indexing as a result of shutdown, aborting current indexing run");
+						Log.Info("Got rude cancellation of indexing as a result of shutdown, aborting current indexing run");
 						return;
 					}
 					catch (Exception e)
@@ -119,10 +121,9 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		protected virtual void Dispose()
-		{
+		protected virtual void Dispose() { }
 
-		}
+		protected virtual void Init(){}
 
 		private void HandleOutOfMemoryException(Exception oome)
 		{
@@ -196,7 +197,13 @@ namespace Raven.Database.Indexing
 					}
 					if (IsIndexStale(indexesStat, actions) == false)
 						continue;
-					indexesToWorkOn.Add(GetIndexToWorkOn(indexesStat));
+					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
+					var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
+					if(index == null ||  // not there
+						index.CurrentMapIndexingTask != null)  // busy doing indexing work already, not relevant for this batch
+						continue;
+					indexToWorkOn.Index = index;
+					indexesToWorkOn.Add(indexToWorkOn);
 				}
 			});
 

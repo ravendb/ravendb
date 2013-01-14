@@ -82,7 +82,7 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Whatever this document can be skipped from delete
-		/// Only relevant during indexin phases, and not available on the client
+		/// Only relevant during indexing phases, and not available on the client
 		/// </summary>
 		public bool SkipDeleteFromIndex;
 

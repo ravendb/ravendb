@@ -67,7 +67,7 @@ namespace Raven.Bundles.Replication.Responders
 						var metadata = document.Value<RavenJObject>("@metadata");
 						if (metadata[Constants.RavenReplicationSource] == null)
 						{
-							// not sure why, old document from when the user didn't have replciation
+							// not sure why, old document from when the user didn't have replication
 							// that we suddenly decided to replicate, choose the source for that
 							metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
 						}
