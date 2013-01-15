@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Raven.Tests.Indexes;
 using Raven.Tests.MailingList;
 
@@ -16,14 +17,10 @@ namespace BulkStressTest
 		private const string DbName = "BulkStressTestDb";
 		static void Main()
 		{
-			for (int i = 0; i < 1000; i++)
+			Raven.Server.Program.DumpToCsv(new RavenConfiguration
 			{
-				Console.WriteLine(i);
-				using (var x = new MapReduceIndexOnLargeDataSet())
-				{
-					x.WillNotProduceAnyErrors();
-				}
-			}
+				DataDirectory = @"C:\Work\ravendb-2.0\Raven.Server\bin\Debug\Data\Databases\Second"
+			});
 
 			//const int numberOfItems = 100000000;
 			//BulkInsert(numberOfItems, IndexInfo.IndexBefore);

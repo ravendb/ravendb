@@ -173,6 +173,16 @@ namespace Raven.Storage.Managed
 				.Distinct(StringComparer.InvariantCultureIgnoreCase);
 		}
 
+		public int GetCountOfDocumentsReferencing(string key)
+		{
+			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject {{"ref", key}})
+			                                          .TakeWhile(
+				                                          x =>
+				                                          key.Equals(x.Value<string>("ref"),
+				                                                     StringComparison.CurrentCultureIgnoreCase))
+			                                          .Count();
+		}
+
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
 			return storage.DocumentReferences["ByKey"].SkipTo(new RavenJObject { { "ref", key } })

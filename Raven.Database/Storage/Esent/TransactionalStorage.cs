@@ -305,6 +305,23 @@ namespace Raven.Storage.Esent
 			return newId;
 		}
 
+		public void DumpAllStorageTables()
+		{
+			Batch(accessor =>
+			{
+				var session = current.Value.Inner.Session;
+				var jetDbid = current.Value.Inner.Dbid;
+				foreach (var tableName in Api.GetTableNames(session, jetDbid))
+				{
+					using (var table = new Table(session, jetDbid, tableName, OpenTableGrbit.ReadOnly))
+					using(var file = new FileStream(tableName+"-table.csv",FileMode.Create,FileAccess.ReadWrite,FileShare.None))
+					{
+						EsentUtil.DumpTable(session, table, file);
+					}
+				}
+			});
+		}
+
 		public void ClearCaches()
 		{
 			var cacheSizeMax = SystemParameters.CacheSizeMax;

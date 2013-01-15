@@ -20,6 +20,10 @@ namespace Raven.Storage.Esent
 	public class StorageActionsAccessor : IStorageActionsAccessor
 	{
 		private readonly DocumentStorageActions inner;
+		public DocumentStorageActions Inner
+		{
+			get { return inner; }
+		}
 
 		private readonly DateTime createdAt = SystemTime.UtcNow;
 		[CLSCompliant(false)]
