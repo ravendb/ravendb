@@ -70,7 +70,7 @@ namespace Raven.Abstractions.Data
 			if (ReferenceEquals(other, null))
 				return -1;
 			var sub = restarts - other.restarts;
-			if (Math.Abs(sub) > 4000)
+			if (Math.Abs(sub) > 0)
 				return sub > 0 ? 1 : -1;
 			sub = changes - other.changes;
 			if (sub != 0)
