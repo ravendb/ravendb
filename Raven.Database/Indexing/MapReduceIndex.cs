@@ -211,8 +211,9 @@ namespace Raven.Database.Indexing
 				foreach (var key in keys)
 				{
 					actions.MapReduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
-					actions.MapReduce.UpdateRemovedMapReduceStats(name, reduceKeyAndBuckets);
 				}
+
+				actions.MapReduce.UpdateRemovedMapReduceStats(name, reduceKeyAndBuckets);
 				actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBuckets);
 			});
 			Write((writer, analyzer, stats) =>
