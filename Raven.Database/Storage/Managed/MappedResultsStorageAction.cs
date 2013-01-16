@@ -85,7 +85,14 @@ namespace Raven.Storage.Managed
 				var reduceKey = key.Value<string>("reduceKey");
 				removed.Add(new ReduceKeyAndBucket(key.Value<int>("bucket"), reduceKey));
 
-				IncrementReduceKeyCounter(view, reduceKey, -1);
+			}
+		}
+
+		public void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed)
+		{
+			foreach (var reduceKeyAndBucket in removed)
+			{
+				IncrementReduceKeyCounter(view, reduceKeyAndBucket.ReduceKey, -1);
 			}
 		}
 

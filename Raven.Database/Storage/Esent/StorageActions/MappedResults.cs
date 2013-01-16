@@ -458,10 +458,13 @@ namespace Raven.Storage.Esent.StorageActions
 				removed.Add(new ReduceKeyAndBucket(bucket, reduceKey));
 				Api.JetDelete(session, MappedResults);
 			} while (Api.TryMoveNext(session, MappedResults));
+		}
 
-			foreach (var reduceKey in removed.Select(x => x.ReduceKey))
+		public void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed)
+		{
+			foreach (var keyAndBucket in removed)
 			{
-				DecrementReduceKeyCounter(view, reduceKey);
+				DecrementReduceKeyCounter(view, keyAndBucket.ReduceKey);
 			}
 		}
 

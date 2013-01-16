@@ -81,8 +81,14 @@ namespace Raven.Database.Indexing
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 			using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 			{
-				var mapResults =
-					RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats).ToList();
+				var mapResults = RobustEnumerationIndex(
+						documentsWrapped.GetEnumerator(), 
+						viewGenerator.MapDefinitions, 
+						actions, 
+						stats)
+					.ToList();
+				actions.MapReduce.UpdateRemovedMapReduceStats(name, changed);
+
 				foreach (var mappedResultFromDocument in mapResults.GroupBy(GetDocumentId))
 				{
 					var dynamicResults = mappedResultFromDocument.Select(x => (object)new DynamicJsonObject(RavenJObject.FromObject(x, jsonSerializer))).ToList();
