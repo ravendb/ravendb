@@ -254,6 +254,7 @@
     <Compile Include="Bugs\NestedProjection.cs" />
     <Compile Include="Bugs\NestedTransactions.cs" />
     <Compile Include="Bugs\NGramSearch.cs" />
+    <Compile Include="Bugs\NotUpdatedReduceKeyStatsIssue.cs" />
     <Compile Include="Bugs\OfflineConcurrency.cs" />
     <Compile Include="Bugs\OptimizedSimpleQueries.cs" />
     <Compile Include="Bugs\Orders.cs" />
