@@ -10,7 +10,8 @@ namespace Raven.Client.Changes
 	{
 		private readonly Action onZero;
 		private readonly Task task;
-		private int value = 1;
+		private int value = 0;
+	    private volatile bool isDisposed = false;
 		private readonly ConcurrentSet<Task<IDisposable>> toDispose = new ConcurrentSet<Task<IDisposable>>();
 		public Task Task
 		{
@@ -38,7 +39,7 @@ namespace Raven.Client.Changes
 
 		public void Add(Task<IDisposable> disposableTask)
 		{
-			if (value == 0)
+			if (isDisposed)
 			{
 				disposableTask.ContinueWith(_ => { using (_.Result) { } });
 				return;
@@ -48,6 +49,7 @@ namespace Raven.Client.Changes
 
 		public void Dispose()
 		{
+		    isDisposed = true;
 			foreach (var disposableTask in toDispose)
 			{
 				disposableTask.ContinueWith(_ => { using (_.Result) { } });
