@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Extensions;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -78,6 +80,34 @@ namespace Raven.Studio.Commands
 						}
 						
 						session.Store(document);
+						session.SaveChangesAsync().Catch();
+					})
+					.Catch();
+			}
+
+			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
+			if (sqlReplicationSettings != null)
+			{
+				session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+					.ContinueOnSuccessInTheUIThread(documents =>
+					{
+						sqlReplicationSettings.UpdateIds();
+						if (documents != null)
+						{
+							foreach (var sqlReplicationConfig in documents)
+							{
+								if (sqlReplicationSettings.SqlReplicationConfigs.All(config => config.Id != sqlReplicationConfig.Id))
+								{
+									session.Delete(sqlReplicationConfig);
+								}
+							}
+						}
+
+						foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
+						{
+							session.Store(sqlReplicationConfig);
+						}
+
 						session.SaveChangesAsync().Catch();
 					})
 					.Catch();

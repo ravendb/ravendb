@@ -438,37 +438,4 @@ namespace Raven.Database.Bundles.SqlReplication
 			return sqlReplicationConfigs;
 		}
 	}
-
-	public class SqlReplicationConfig
-	{
-		public string Id { get; set; }
-
-		public string Name { get; set; }
-
-		public string RavenEntityName { get; set; }
-		public string Script { get; set; }
-		public string FactoryName { get; set; }
-
-		public string ConnectionString { get; set; }
-
-		public string ConnectionStringName { get; set; }
-		public string ConnectionStringSettingName { get; set; }
-	}
-
-	public class LastReplicatedEtag
-	{
-		public string Name { get; set; }
-		public Guid LastDocEtag { get; set; }
-	}
-
-	public class SqlReplicationStatus
-	{
-		public string Id { get; set; }
-		public List<LastReplicatedEtag> LastReplicatedEtags { get; set; }
-
-		public SqlReplicationStatus()
-		{
-			LastReplicatedEtags = new List<LastReplicatedEtag>();
-		}
-	}
 }

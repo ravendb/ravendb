@@ -1047,6 +1047,15 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\LastReplicatedEtag.cs">
+      <Link>Imports\SqlReplication\LastReplicatedEtag.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationConfig.cs">
+      <Link>Imports\SqlReplication\SqlReplicationConfig.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationStatus.cs">
+      <Link>Imports\SqlReplication\SqlReplicationStatus.cs</Link>
+    </Compile>
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />

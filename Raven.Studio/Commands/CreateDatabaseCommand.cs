@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -10,6 +11,7 @@ using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client;
 using Raven.Client.Extensions;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Studio.Controls;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Settings;
@@ -41,7 +43,11 @@ namespace Raven.Studio.Commands
 							var bundlesSettings = new List<ChildWindow>();
 							if (newDatabase.Encryption.IsChecked == true)
 								bundlesSettings.Add(new EncryptionSettings());
-                            if (newDatabase.Quotas.IsChecked == true || newDatabase.Replication.IsChecked == true || newDatabase.Versioning.IsChecked == true || newDatabase.Authorization.IsChecked == true)
+                            if (newDatabase.Quotas.IsChecked == true || 
+								newDatabase.Replication.IsChecked == true || 
+								newDatabase.Versioning.IsChecked == true || 
+								newDatabase.Authorization.IsChecked == true || 
+								newDatabase.SqlReplication.IsChecked == true)
 							{
 								bundlesModel = ConfigureSettingsModel(newDatabase);
 
@@ -124,6 +130,10 @@ namespace Raven.Studio.Commands
 	            AddSection(bundlesModel,
 	                       new ReplicationSettingsSectionModel() {ReplicationDestinations = {new ReplicationDestination()}});
 	        }
+			if (newDatabase.SqlReplication.IsChecked == true)
+			{
+				AddSection(bundlesModel, new SqlReplicationSettingsSectionModel{SqlReplicationConfigs = new ObservableCollection<SqlReplicationConfig>()});
+			}
 	        if (newDatabase.Versioning.IsChecked == true)
 	        {
 	            AddSection(bundlesModel, new VersioningSettingsSectionModel(true)
@@ -204,6 +214,18 @@ namespace Raven.Studio.Commands
 				
 				session.Store(replicationDocument);
 			}
+
+			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
+			if (sqlReplicationSettings != null)
+			{
+				sqlReplicationSettings.UpdateIds();
+
+				foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
+				{
+					session.Store(sqlReplicationConfig);
+				}
+			}
+
 
 			var authorizationSection = settingsModel.GetSection<AuthorizationSettingsSectionModel>();
 			if (authorizationSection != null)

@@ -159,6 +159,9 @@ namespace Raven.Studio.Models
 
 				indexName = value;
 				DocumentsResult.Context = "Index/" + indexName;
+				ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+																	   "/indexes/" + indexName;
 				OnPropertyChanged(() => IndexName);
 			}
 		}
@@ -345,8 +348,9 @@ namespace Raven.Studio.Models
 	    public QueryModel()
 		{
 			ModelUrl = "/query";
-
-            queryDocument = new EditorDocument()
+			ApplicationModel.Current.Server.Value.RawUrl = null;
+            
+			queryDocument = new EditorDocument()
             {
                 Language = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef")
             };
@@ -384,6 +388,7 @@ namespace Raven.Studio.Models
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
+
 		}
 
 		Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");

@@ -1,0 +1,140 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Settings.SqlReplicationsSettingsSectionView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:Replication="clr-namespace:Raven.Database.Bundles.SqlReplication;assembly=Raven.Client.Silverlight"
+             xmlns:toolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+             mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400">
+
+	<UserControl.Resources>
+		<DataTemplate x:Key="ReplicationItemTemplate" DataType="Replication:SqlReplicationConfig">
+			<Grid Margin="8,4,4,4" x:Name="grid">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="130" />
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="20" />
+				</Grid.ColumnDefinitions>
+
+				<Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right"
+                        Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteReplication}" 
+                        CommandParameter="{Binding}" VerticalAlignment="Top"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Remove this replication configuration">
+					<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+				</Button>
+
+				<Grid Grid.Row="0" Grid.ColumnSpan="2">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="150" />
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
+
+					<TextBlock Grid.Row="0" 
+							   Text="Name: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="0" 
+							 Grid.Column="1" 
+							 Text="{Binding Name, Mode=TwoWay}" 
+							 Margin="5" />
+
+					<TextBlock Grid.Row="1" 
+							   Text="Raven Entity Name: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" 
+							 Grid.Column="1" 
+							 Text="{Binding RavenEntityName, Mode=TwoWay}" 
+							 Margin="5"/>
+
+					<TextBlock Grid.Row="2" 
+							   Text="Factory Name: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="2" 
+							 Grid.Column="1" 
+							 Text="{Binding FactoryName, Mode=TwoWay}" 
+							 Margin="5"/>
+
+					<TextBlock Grid.Row="3" 
+							   Text="Connection String: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="3" 
+							 Grid.Column="1" 
+							 Text="{Binding ConnectionString, Mode=TwoWay}" 
+							 Margin="5"/>
+
+					<TextBlock Grid.Row="4" 
+							   Text="Connection String Name: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="4" 
+							 Grid.Column="1" 
+							 Text="{Binding ConnectionStringName, Mode=TwoWay}" 
+							 Margin="5"/>
+
+					<TextBlock Grid.Row="5" 
+							   Text="Connection String&#13;Setting Name: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="5" 
+							 Grid.Column="1" 
+							 Text="{Binding ConnectionStringSettingName, Mode=TwoWay}" 
+							 Margin="5"/>
+
+					<TextBlock Grid.Row="6" 
+							   Text="Script: " 
+							   VerticalAlignment="Center"/>
+					<TextBox Grid.Row="7" 
+							 Grid.ColumnSpan="2" 
+							 MinHeight="100"
+							 MaxHeight="300"
+							 AcceptsReturn="True"
+							 Text="{Binding Script, Mode=TwoWay}"/>
+				</Grid>
+			</Grid>
+		</DataTemplate>
+	</UserControl.Resources>
+
+	<Grid x:Name="LayoutRoot">
+		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
+			<toolkit:HeaderedContentControl.Header>
+				<StackPanel Orientation="Horizontal"
+                            Margin="0,4,4,4"
+                            VerticalAlignment="Center">
+
+					<Button Command="{Binding AddReplication}"
+                            Style="{StaticResource Style_Button_MouseOverChrome}"
+                            ToolTipService.ToolTip="Add Sql Replication">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{StaticResource Image_Add_Tiny}"
+									   Stretch="None"/>
+								<TextBlock Text="Add Replication" Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+				</StackPanel>
+			</toolkit:HeaderedContentControl.Header>
+			<ListBox Style="{StaticResource Databases_FluidList}"
+                         ItemsSource="{Binding SqlReplicationConfigs}"
+                         SelectedItem="{Binding SelectedReplication, Mode=TwoWay}"
+                         ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
+                         ItemTemplate="{StaticResource ReplicationItemTemplate}"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+				<i:Interaction.Behaviors>
+					<Behaviors:SelectItemOnRightClick />
+				</i:Interaction.Behaviors>
+			</ListBox>
+		</toolkit:HeaderedContentControl>
+	</Grid>
+</UserControl>

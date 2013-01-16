@@ -227,6 +227,9 @@
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
+    <Compile Include="Controls\DateTimePicker.xaml.cs">
+      <DependentUpon>DateTimePicker.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
@@ -237,6 +240,9 @@
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
       <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Settings\SqlReplicationsSettingsSectionView.xaml.cs">
+      <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
@@ -245,6 +251,8 @@
     <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
+    <Compile Include="Models\QueueModel.cs" />
+    <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BundlesSelect.xaml.cs">
       <DependentUpon>BundlesSelect.xaml</DependentUpon>
@@ -820,6 +828,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Controls\DateTimePicker.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\DeleteDatabase.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -925,6 +937,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Query\RecentQueriesDropDownView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\SqlReplicationsSettingsSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -8,6 +7,7 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -58,24 +58,28 @@ namespace Raven.Studio.Models
 
 					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
-					string activeBundlesSetting;
-					databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundlesSetting);
+			        string activeBundles;
+			        databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
 
-					if (activeBundlesSetting != null)
-					{
-						var activeBundles = activeBundlesSetting.Split(';').ToList();
-						if (activeBundles.Contains("Quotas", StringComparer.OrdinalIgnoreCase))
-							Settings.Sections.Add(new QuotaSettingsSectionModel());
+			        if (activeBundles != null)
+			        {
+						var bundles = activeBundles.Split(';').ToList();
 
-						if (activeBundles.Contains("Replication", StringComparer.OrdinalIgnoreCase))
-							Settings.Sections.Add(new ReplicationSettingsSectionModel());
+				        if (bundles.Contains("Quotas"))
+					        Settings.Sections.Add(new QuotaSettingsSectionModel());
 
-						if (activeBundles.Contains("Versioning", StringComparer.OrdinalIgnoreCase))
-							Settings.Sections.Add(new VersioningSettingsSectionModel());
+				        if (bundles.Contains("Replication"))
+					        Settings.Sections.Add(new ReplicationSettingsSectionModel());
 
-						if (activeBundles.Contains("Authorization", StringComparer.OrdinalIgnoreCase))
-							Settings.Sections.Add(new AuthorizationSettingsSectionModel());
-					}
+						if(bundles.Contains("SqlReplication"))
+							Settings.Sections.Add(new SqlReplicationSettingsSectionModel());
+
+				        if (bundles.Contains("Versioning"))
+					        Settings.Sections.Add(new VersioningSettingsSectionModel());
+
+				        if (bundles.Contains("Authorization"))
+					        Settings.Sections.Add(new AuthorizationSettingsSectionModel());
+			        }
 
 			        foreach (var settingsSectionModel in Settings.Sections)
 			        {
