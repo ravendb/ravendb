@@ -412,7 +412,7 @@ namespace Raven.Client.Document
 
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)
 				{
-					DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+					DatabaseCommands.ForSystemDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 				}
 #endif
 

@@ -215,9 +215,9 @@ namespace Raven.Client.Embedded
 			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database));
 		}
 
-		public IAsyncDatabaseCommands ForDefaultDatabase()
+		public IAsyncDatabaseCommands ForSystemDatabase()
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForDefaultDatabase());
+			return new EmbeddedAsyncServerClient(databaseCommands.ForSystemDatabase());
 		}
 
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)

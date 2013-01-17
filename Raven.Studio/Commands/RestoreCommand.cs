@@ -34,7 +34,7 @@ namespace Raven.Studio.Commands
 
 		private void UpdateStatus()
 		{
-			DatabaseCommands.ForDefaultDatabase().GetAsync("Raven/Restore/Status").ContinueOnSuccessInTheUIThread(doc =>
+			DatabaseCommands.ForSystemDatabase().GetAsync("Raven/Restore/Status").ContinueOnSuccessInTheUIThread(doc =>
 			{
 				var status = doc.DataAsJson["restoreStatus"].Values().Select(token => token.ToString()).ToList();
 				startRestoreTask.Output.Clear();

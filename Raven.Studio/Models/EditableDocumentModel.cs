@@ -106,7 +106,7 @@ namespace Raven.Studio.Models
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 			ApplicationModel.Current.Server.Value.DocumentStore
 			                .AsyncDatabaseCommands
-			                .ForDefaultDatabase()
+							.ForSystemDatabase()
 			                .CreateRequest("/admin/databases/" + databaseName, "GET")
 			                .ReadResponseJsonAsync()
 			                .ContinueOnSuccessInTheUIThread(doc =>
@@ -451,7 +451,7 @@ namespace Raven.Studio.Models
 		{
 			ApplicationModel.Current.Server.Value.DocumentStore
 			                .AsyncDatabaseCommands
-			                .ForDefaultDatabase()
+							.ForSystemDatabase()
 			                .CreateRequest("/admin/databases/" + database, "GET")
 			                .ReadResponseJsonAsync()
 			                .ContinueOnSuccessInTheUIThread(result =>
@@ -1202,7 +1202,7 @@ namespace Raven.Studio.Models
 
 				var req = ApplicationModel.Current.Server.Value.DocumentStore
 				                          .AsyncDatabaseCommands
-				                          .ForDefaultDatabase()
+										  .ForSystemDatabase()
 				                          .CreateRequest("/admin/databases/" + ApplicationModel.Database.Value.Name, "PUT");
 
 				req
