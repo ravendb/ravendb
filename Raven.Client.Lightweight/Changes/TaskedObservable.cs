@@ -26,6 +26,7 @@ namespace Raven.Client.Changes
 
 		public IDisposable Subscribe(IObserver<T> observer)
 		{
+            localConnectionState.Inc();
 			subscribers.TryAdd(observer);
 			return new DisposableAction(() =>
 			{
