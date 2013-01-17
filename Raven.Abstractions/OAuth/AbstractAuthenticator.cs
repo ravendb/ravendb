@@ -1,8 +1,8 @@
 using System;
 using System.Net;
-using Raven.Client.Connection;
+using Raven.Abstractions.Connection;
 
-namespace Raven.Client.Document.OAuth
+namespace Raven.Abstractions.OAuth
 {
 	public abstract class AbstractAuthenticator
 	{

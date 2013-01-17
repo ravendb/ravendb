@@ -558,6 +558,7 @@
     <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />
     <Compile Include="Connection\OAuthHelper.cs" />
+    <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
@@ -625,6 +626,7 @@
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
+    <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />
     <Compile Include="Json\ConflictsResolver.cs" />
     <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
@@ -680,6 +682,8 @@
     <Compile Include="MEF\PartMetadata.cs" />
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
+    <Compile Include="OAuth\AbstractAuthenticator.cs" />
+    <Compile Include="OAuth\SecuredAuthenticator.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />

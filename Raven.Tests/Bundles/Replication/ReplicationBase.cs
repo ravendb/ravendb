@@ -12,6 +12,7 @@ using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -65,11 +66,18 @@ namespace Raven.Tests.Bundles.Replication
 			documentStore.Initialize();
 
 			stores.Add(documentStore);
+
+			ConfigureDatbase(ravenDbServer.Database);
 			return documentStore;
 		}
 
 		protected virtual void ConfigureServer(Raven.Database.Config.RavenConfiguration serverConfiguration)
 		{
+		}
+
+		protected virtual void ConfigureDatbase(DocumentDatabase database)
+		{
+			
 		}
 
 		protected virtual void ConfigureStore(DocumentStore documentStore)

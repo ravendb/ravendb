@@ -12,6 +12,7 @@ using System.Security;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
