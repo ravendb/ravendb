@@ -80,7 +80,10 @@ namespace Raven.Database.Extensions
 				SortedFields = context.Request.QueryString.GetValues("sort")
 					.EmptyIfNull()
 					.Select(x => new SortedField(x))
-					.ToArray()
+					.ToArray(),
+				HighlightedFields = context.GetHighlightedFields().ToArray(),
+				HighlighterPreTags = context.Request.QueryString.GetValues("preTags"),
+				HighlighterPostTags = context.Request.QueryString.GetValues("postTags")
 			};
 
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;

@@ -35,6 +35,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
+using Lucene.Net.Search.Vectorhighlight;
 
 namespace Raven.Database.Indexing
 {
@@ -827,15 +828,68 @@ namespace Raven.Database.Indexing
 							indexQuery.TotalSize.Value = search.TotalHits;
 							adjustStart = false;
 
+							FastVectorHighlighter highlighter = null;
+							FieldQuery fieldQuery = null;
+
+							if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
+							{
+								highlighter = new FastVectorHighlighter(
+									FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
+									FastVectorHighlighter.DEFAULT_FIELD_MATCH,
+									new SimpleFragListBuilder(),
+									new SimpleFragmentsBuilder(
+										indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
+											? indexQuery.HighlighterPreTags
+											: BaseFragmentsBuilder.COLORED_PRE_TAGS,
+										indexQuery.HighlighterPostTags != null && indexQuery.HighlighterPostTags.Any()
+											? indexQuery.HighlighterPostTags
+											: BaseFragmentsBuilder.COLORED_POST_TAGS));
+
+								fieldQuery = highlighter.GetFieldQuery(luceneQuery);
+							}
+
 							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
-								Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+								var scoreDoc = search.ScoreDocs[i];
+								var document = indexSearcher.Doc(scoreDoc.Doc);
+								var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc.Score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
 									skippedResultsInCurrentLoop++;
 									continue;
+								}
+
+								if (highlighter != null)
+								{
+									var highlightings =
+										from highlightedField in this.indexQuery.HighlightedFields
+										select new
+										{
+											highlightedField.Field,
+											highlightedField.FragmentsField,
+											Fragments = highlighter.GetBestFragments(
+												fieldQuery,
+												indexSearcher.IndexReader,
+												scoreDoc.Doc,
+												highlightedField.Field,
+												highlightedField.FragmentLength,
+												highlightedField.FragmentCount)
+										}
+										into fieldHighlitings
+										where fieldHighlitings.Fragments != null &&
+											  fieldHighlitings.Fragments.Length > 0
+										select fieldHighlitings;
+
+									if (fieldsToFetch.IsProjection || parent.IsMapReduce)
+									{
+										foreach (var highlighting in highlightings)
+											if (!string.IsNullOrEmpty(highlighting.FragmentsField))
+												indexQueryResult.Projection[highlighting.FragmentsField]
+													= new RavenJArray(highlighting.Fragments);
+									} else
+										indexQueryResult.Highligtings = highlightings
+											.ToDictionary(x => x.Field, x => x.Fragments);
 								}
 
 								returnedResults++;

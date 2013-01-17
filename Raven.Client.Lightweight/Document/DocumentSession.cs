@@ -364,8 +364,9 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands, null);
-			return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, indexName, null, this, DatabaseCommands, null);
+			var highlightings = new RavenQueryHighlightings();
+			var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, DatabaseCommands, null);
+			return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, DatabaseCommands, null);
 		}
 
 		/// <summary>

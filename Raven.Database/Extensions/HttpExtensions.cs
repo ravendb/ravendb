@@ -476,6 +476,26 @@ namespace Raven.Database.Extensions
 			return radius;
 		}
 
+		public static IEnumerable<HighlightedField> GetHighlightedFields(this IHttpContext context)
+		{
+			var highlightedFieldStrings = context.Request.QueryString.GetValues("highlight").EmptyIfNull();
+			var fields = new HashSet<string>();
+
+			foreach (var highlightedFieldString in highlightedFieldStrings)
+			{
+				HighlightedField highlightedField;
+				if (HighlightedField.TryParse(highlightedFieldString, out highlightedField))
+				{
+					if (!fields.Add(highlightedField.Field))
+						throw new BadRequestException("Duplicate highlighted field has found: " + highlightedField.Field);
+
+					yield return highlightedField;
+				} else
+					throw new BadRequestException(
+						"Could not parse hightlight query parameter as field highlight options");
+			}
+		}
+
 		public static Guid? GetEtagFromQueryString(this IHttpContext context)
 		{
 			var etagAsString = context.Request.QueryString["etag"];
