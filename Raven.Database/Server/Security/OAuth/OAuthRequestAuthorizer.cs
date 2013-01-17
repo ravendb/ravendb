@@ -157,5 +157,10 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			return tokenBody.AuthorizedDatabases.Select(access => access.TenantId).ToList();
 		}
+
+		public AccessTokenBody TokenBody
+		{
+			get { return tokenBody; }
+		}
 	}
 }

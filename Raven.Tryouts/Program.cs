@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
@@ -17,10 +18,15 @@ namespace BulkStressTest
 		private const string DbName = "BulkStressTestDb";
 		static void Main()
 		{
-			Raven.Server.Program.DumpToCsv(new RavenConfiguration
+			using (var store = new DocumentStore
 			{
-				DataDirectory = @"C:\Work\ravendb-2.0\Raven.Server\bin\Debug\Data\Databases\Second"
-			});
+				Url = "http://localhost:8080"
+			})
+			{
+				store.Initialize();
+				var readResponseJson = ((ServerClient) store.DatabaseCommands).CreateRequest("GET", "/debug/user-info").ReadResponseJson();
+				Console.WriteLine(readResponseJson);
+			}
 
 			//const int numberOfItems = 100000000;
 			//BulkInsert(numberOfItems, IndexInfo.IndexBefore);
