@@ -240,6 +240,8 @@
     <Compile Include="Bugs\Matthew.cs" />
     <Compile Include="Bugs\MetadataBugs.cs" />
     <Compile Include="Bugs\MetadataIssues.cs" />
+    <Compile Include="Bugs\Metadata\EscapeQuotesLocal.cs" />
+    <Compile Include="Bugs\Metadata\EscapeQuotesRemote.cs" />
     <Compile Include="Bugs\Metadata\Querying.cs" />
     <Compile Include="Bugs\MoreLikeThisTrack.cs" />
     <Compile Include="Bugs\MultiMapSearch\AccountSearch.cs" />
