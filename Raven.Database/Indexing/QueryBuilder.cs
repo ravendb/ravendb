@@ -21,9 +21,11 @@ namespace Raven.Database.Indexing
 {
 	public static class QueryBuilder
 	{
-		static readonly Regex untokenizedQuery = new Regex(@"([\w\d<>_]+?):[\s\(]*(\[\[.+?\]\])|,\s*(\[\[.+?\]\])\s*[,\)]", RegexOptions.Compiled);
-		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
-		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
+		private const string FieldRegexVal = @"([@\w\d<>_]+?):"; 
+		static readonly Regex fieldQuery = new Regex(FieldRegexVal, RegexOptions.Compiled);
+		static readonly Regex untokenizedQuery = new Regex( FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
+		static readonly Regex searchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
+		static readonly Regex dateQuery = new Regex(FieldRegexVal + @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
 		private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.InvariantCultureIgnoreCase)
 		{
@@ -241,6 +243,7 @@ namespace Raven.Database.Indexing
 				return query;
 
 			var sb = new StringBuilder(query);
+			MatchCollection fieldMatches = null;
 
 			// process in reverse order to leverage match string indexes
 			for (var i = untokenizedMatches.Count; i > 0; i--)
@@ -250,13 +253,22 @@ namespace Raven.Database.Indexing
 				// specify that term for this field should not be tokenized
 				var value = match.Groups[2].Value;
 				var term = match.Groups[2];
+				string name = match.Groups[1].Value;
 				if (string.IsNullOrEmpty(value))
 				{
 					value = match.Groups[3].Value;
 					term = match.Groups[3];
+					if(fieldMatches == null)
+						fieldMatches = fieldQuery.Matches(query);
+
+					var lastField = fieldMatches.Cast<Match>().LastOrDefault(x => x.Index <= term.Index);
+					if (lastField != null)
+					{
+						name = lastField.Groups[1].Value;
+					}
 				}
 				var rawTerm = value.Substring(2, value.Length - 4);
-				queryParser.SetUntokenized(match.Groups[1].Value, Unescape(rawTerm));
+				queryParser.SetUntokenized(name, Unescape(rawTerm));
 
 
 				// introduce " " around the term
