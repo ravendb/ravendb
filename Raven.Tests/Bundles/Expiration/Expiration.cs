@@ -86,7 +86,7 @@ namespace Raven.Tests.Bundles.Expiration
 				}
 				catch (Exception e)
 				{
-					throw new IOException("Could not convert " + expirationDate, e);
+					throw new IOException("Could not convert " + expirationDate + " " + expirationDate.Type, e);
 				}
 				Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
 				Assert.Equal(expiry, expirationDate);
