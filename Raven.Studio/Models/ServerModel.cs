@@ -34,9 +34,14 @@ namespace Raven.Studio.Models
 			{
 				if (string.IsNullOrWhiteSpace(value))
 					rawUrl = null;
-				else 
-					rawUrl = Url + "/" + value; 
-				
+				else
+				{
+					if(Url.EndsWith("/"))
+						rawUrl = Url + value;
+					else
+						rawUrl = Url + "/" + value;
+				}
+
 				OnPropertyChanged(() => RawUrl);
 			}
 		}
