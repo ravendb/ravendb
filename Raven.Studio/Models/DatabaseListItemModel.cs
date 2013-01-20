@@ -19,7 +19,7 @@ namespace Raven.Studio.Models
             var documentStore = ApplicationModel.Current.Server.Value.DocumentStore;
 
             asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
-                                ? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+								? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
                                 : documentStore.AsyncDatabaseCommands.ForDatabase(name);
         }
 

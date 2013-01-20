@@ -26,7 +26,7 @@ namespace Raven.Studio.Models
 			DatabaseSuggestionProvider = new DatabaseSuggestionProvider();
 			WindowsAuthName = new WindowsAuthName();
 
-			ApplicationModel.DatabaseCommands.ForDefaultDatabase()
+			ApplicationModel.DatabaseCommands.ForSystemDatabase()
 				.GetAsync("Raven/Authorization/WindowsSettings")
 				.ContinueOnSuccessInTheUIThread(doc =>
 				{

@@ -17,7 +17,7 @@ namespace Raven.Studio.Models
             IsS3Selected = new Observable<bool>();
 			ShowPeriodicBackup = new Observable<bool>();
 
-			var req = ApplicationModel.DatabaseCommands.ForDefaultDatabase().CreateRequest("/license/status", "GET");
+			var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/license/status", "GET");
 
 			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{

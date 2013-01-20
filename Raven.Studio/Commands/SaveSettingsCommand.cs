@@ -240,7 +240,7 @@ namespace Raven.Studio.Commands
 
 			foreach (var apiKeyDefinition in apiKeysToDelete)
 			{
-				ApplicationModel.DatabaseCommands.ForDefaultDatabase().DeleteDocumentAsync(apiKeyDefinition.Id);
+				ApplicationModel.DatabaseCommands.ForSystemDatabase().DeleteDocumentAsync(apiKeyDefinition.Id);
 			}
 
 			foreach (var apiKeyDefinition in apiKeysModel.ApiKeys)

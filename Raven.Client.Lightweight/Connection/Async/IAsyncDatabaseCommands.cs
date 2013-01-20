@@ -153,7 +153,7 @@ namespace Raven.Client.Connection.Async
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
 		/// with the default database
 		/// </summary>
-		IAsyncDatabaseCommands ForDefaultDatabase();
+		IAsyncDatabaseCommands ForSystemDatabase();
 
 		/// <summary>
 		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials

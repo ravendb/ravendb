@@ -28,7 +28,7 @@ namespace Raven.Client.Extensions
 		/// </remarks>
 		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForDefaultDatabase() as ServerClient;
+			var serverClient = self.ForSystemDatabase() as ServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Multiple databases are not supported in the embedded API currently");
 
@@ -52,7 +52,7 @@ namespace Raven.Client.Extensions
 
 		public static void CreateDatabase(this IDatabaseCommands self, DatabaseDocument databaseDocument)
 		{
-			var serverClient = self.ForDefaultDatabase() as ServerClient;
+			var serverClient = self.ForSystemDatabase() as ServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
@@ -74,7 +74,7 @@ namespace Raven.Client.Extensions
 		///</summary>
 		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
@@ -103,7 +103,7 @@ namespace Raven.Client.Extensions
 
 		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
@@ -122,7 +122,7 @@ namespace Raven.Client.Extensions
 		///</summary>
 		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
@@ -135,7 +135,7 @@ namespace Raven.Client.Extensions
 					if (get.Result != null)
 						return get;
 
-					var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
+					var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(name), "PUT");
 					req.Write(doc.ToString(Formatting.Indented));
 					return req.ExecuteRequestAsync();
 				})
@@ -152,7 +152,7 @@ namespace Raven.Client.Extensions
 
 		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
@@ -162,7 +162,7 @@ namespace Raven.Client.Extensions
 			var doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
 
-			var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
+			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
 			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
 		}
 

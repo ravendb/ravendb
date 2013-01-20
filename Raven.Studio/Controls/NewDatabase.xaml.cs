@@ -22,7 +22,7 @@ namespace Raven.Studio.Controls
 		{
 			LicensingStatus = new Observable<LicensingStatus>();
 			InitializeComponent();
-			var req = ApplicationModel.DatabaseCommands.ForDefaultDatabase().CreateRequest("/license/status", "GET");
+			var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/license/status", "GET");
 
 			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{

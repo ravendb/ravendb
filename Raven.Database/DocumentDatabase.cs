@@ -1553,7 +1553,7 @@ namespace Raven.Database
 		{
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-				jsonDoc =>
+				(jsonDoc,size) =>
 				{
 					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
@@ -1566,12 +1566,12 @@ namespace Raven.Database
 
 			if (docId == null)
 				throw new ArgumentNullException("docId");
-			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc => new JsonPatcher(jsonDoc).Apply(patchDoc), debugMode);
+			return ApplyPatchInternal(docId, etag, transactionInformation, (jsonDoc, size) => new JsonPatcher(jsonDoc).Apply(patchDoc), debugMode);
 		}
 
 		private PatchResultData ApplyPatchInternal(string docId, Guid? etag,
 												TransactionInformation transactionInformation,
-												Func<RavenJObject, RavenJObject> patcher, bool debugMode)
+												Func<RavenJObject, int, RavenJObject> patcher, bool debugMode)
 		{
 			if (docId == null) throw new ArgumentNullException("docId");
 			docId = docId.Trim();
@@ -1602,7 +1602,7 @@ namespace Raven.Database
 					}
 					else
 					{
-						var jsonDoc = patcher(doc.ToJson());
+						var jsonDoc = patcher(doc.ToJson(), doc.SerializedSizeOnDisk);
 						if (debugMode)
 						{
 							result.Document = jsonDoc;

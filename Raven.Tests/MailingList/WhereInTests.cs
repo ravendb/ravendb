@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.MailingList
@@ -27,10 +28,11 @@ namespace Raven.Tests.MailingList
 				using (var session = documentStore.OpenSession())
 				{
 					var query = session.Advanced.LuceneQuery<Person, PersonsNotAnalyzed>().WhereIn(p => p.Name, names);
-					Assert.Equal(2, query.ToList().Count()); // Expected 2 but was 0
+					Assert.Equal(2, query.ToList().Count());
 				}
 			}
 		}
+
 		[Fact]
 		public void WhereIn_using_index_analyzed()
 		{
@@ -49,7 +51,7 @@ namespace Raven.Tests.MailingList
 				using (var session = documentStore.OpenSession())
 				{
 					var query = session.Advanced.LuceneQuery<Person, PersonsAnalyzed>().WhereIn(p => p.Name, names);
-					Assert.Equal(2, query.ToList().Count()); // Expected 2 but was 1 ("PersonTwo")
+					Assert.Equal(2, query.ToList().Count());
 				}
 			}
 		}
@@ -71,10 +73,77 @@ namespace Raven.Tests.MailingList
 				using (var session = documentStore.OpenSession())
 				{
 					var query = session.Advanced.LuceneQuery<Person>().WhereIn(p => p.Name, names);
-					Assert.Equal(2, query.ToList().Count()); // Success
+					Assert.Equal(2, query.ToList().Count());
 				}
 			}
 		}
+
+        [Fact]
+        public void Where_In_using_query_index_notAnalyzed()
+        {
+            using (IDocumentStore documentStore = NewDocumentStore())
+            {
+                new PersonsNotAnalyzed().Execute(documentStore);
+
+                string[] names = { "Person One", "PersonTwo" };
+
+                StoreObjects(new List<Person>
+				{
+					new Person {Name = names[0]},
+					new Person {Name = names[1]}
+				}, documentStore);
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var query = session.Query<Person, PersonsNotAnalyzed>().Where(p => p.Name.In(names));
+                    Assert.Equal(2, query.Count());
+                }
+            }
+        }
+
+        [Fact]
+        public void Where_In_using_query_index_analyzed()
+        {
+            using (IDocumentStore documentStore = NewDocumentStore())
+            {
+                new PersonsAnalyzed().Execute(documentStore);
+
+                string[] names = { "Person One", "PersonTwo" };
+
+                StoreObjects(new List<Person>
+				{
+					new Person {Name = names[0]},
+					new Person {Name = names[1]}
+				}, documentStore);
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var query = session.Query<Person, PersonsAnalyzed>().Where(p => p.Name.In(names));
+                    Assert.Equal(2, query.Count());
+                }
+            }
+        }
+
+        [Fact]
+        public void Where_In_using_query()
+        {
+            using (IDocumentStore documentStore = NewDocumentStore())
+            {
+                string[] names = { "Person One", "PersonTwo" };
+
+                StoreObjects(new List<Person>
+				{
+					new Person {Name = names[0]},
+					new Person {Name = names[1]}
+				}, documentStore);
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var query = session.Query<Person>().Where(p => p.Name.In(names));
+                    Assert.Equal(2, query.Count());
+                }
+            }
+        }
 
 		private void StoreObjects<T>(IEnumerable<T> objects, IDocumentStore documentStore)
 		{

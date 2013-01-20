@@ -54,7 +54,7 @@ namespace Raven.Client.Document.DTC
 
 							var dbCmds = string.IsNullOrEmpty(db) == false ? 
 								commands.ForDatabase(db) : 
-								commands.ForDefaultDatabase();
+								commands.ForSystemDatabase();
 
 							TransactionManager.Reenlist(resourceManagerId, stream.ReadData(), new InternalEnlistment(dbCmds, txId));
 							resourceManagersRequiringRecovery.Add(resourceManagerId);

@@ -125,7 +125,7 @@ namespace Raven.Studio.Models
 
 				                   	    ApplicationModel.Current.Server.Value.DocumentStore
 				                   	        .AsyncDatabaseCommands
-				                   	        .ForDefaultDatabase()
+											.ForSystemDatabase()
 				                   	        .GetAsync("Raven/StudioConfig")
 				                   	        .ContinueOnSuccessInTheUIThread(doc =>
 				                   	        {

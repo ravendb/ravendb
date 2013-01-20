@@ -383,7 +383,7 @@ namespace Raven.Client.Connection.Async
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
 		/// with the root database. Useful if the database has works against a tenant database.
 		/// </summary>
-		public IAsyncDatabaseCommands ForDefaultDatabase()
+		public IAsyncDatabaseCommands ForSystemDatabase()
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == url)

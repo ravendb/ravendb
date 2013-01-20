@@ -19,7 +19,7 @@ namespace Raven.Studio.Models
 
             documentStore = ApplicationModel.Current.Server.Value.DocumentStore;
             asyncDatabaseCommands = Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
-                                            ? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+											? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
                                             : documentStore.AsyncDatabaseCommands.ForDatabase(Name);
 
 			UpdateReplicationOnlineStatus();

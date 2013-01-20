@@ -238,6 +238,11 @@ namespace Raven.Storage.Managed
 			return newId;
 		}
 
+		public void DumpAllStorageTables()
+		{
+			throw new NotSupportedException("Not valid for munin");
+		}
+
 		public void ClearCaches()
 		{
 			// don't do anything here

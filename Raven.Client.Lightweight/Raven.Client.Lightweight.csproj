@@ -46,6 +46,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
@@ -87,7 +88,6 @@
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Connection\SerializationHelper.cs" />
     <Compile Include="Connection\ServerClient.cs" />
-    <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Converters\GuidConverter.cs" />
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />
@@ -101,10 +101,8 @@
     <Compile Include="Document\GenerateEntityIdOnTheClient.cs" />
     <Compile Include="Document\EntityToJson.cs" />
     <Compile Include="Document\MultiDatabaseHiLoGenerator.cs" />
-    <Compile Include="Document\RemoteBulkInsertOperation.cs" />
-    <Compile Include="Document\OAuth\AbstractAuthenticator.cs" />
     <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
-    <Compile Include="Document\OAuth\SecuredAuthenticator.cs" />
+    <Compile Include="Document\RemoteBulkInsertOperation.cs" />
     <Compile Include="Document\BulkInsertOperation.cs" />
     <Compile Include="Exceptions\ServerRequestError.cs" />
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
