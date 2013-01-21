@@ -61,7 +61,8 @@ namespace Raven.Abstractions.Data
 		{
 			if (ReferenceEquals(other, null))
 				return false;
-			return other.changes == changes && other.restarts == restarts;
+			return CompareTo(other) == 0;
+			//return other.changes == changes && other.restarts == restarts;
 		}
 
 		public int CompareTo(Etag other)
@@ -69,7 +70,7 @@ namespace Raven.Abstractions.Data
 			if (ReferenceEquals(other, null))
 				return -1;
 			var sub = restarts - other.restarts;
-			if (sub != 0)
+			if (Math.Abs(sub) > 0)
 				return sub > 0 ? 1 : -1;
 			sub = changes - other.changes;
 			if (sub != 0)
