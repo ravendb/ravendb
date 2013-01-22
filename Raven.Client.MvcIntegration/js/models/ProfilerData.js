@@ -19,6 +19,10 @@
 			},
 
 			loadSessionData: function (sessionIdList) {
+				if (sessionIdList.length == 0) {
+					return;
+				}
+				
 				var sessionCollection = this.sessions;
 				$.get(this.sessionUrl, { id: sessionIdList }, function (sessions) {
 					sessionCollection.add(sessions);
@@ -49,6 +53,9 @@
 
 			handleResponse: function (event, xhrRequest) {
 				var headerIds = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
+				if (!headerIds) {
+					return;
+				}
 				this.loadSessionData(headerIds.split(', '));
 			},
 
