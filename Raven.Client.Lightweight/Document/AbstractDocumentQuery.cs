@@ -326,7 +326,7 @@ namespace Raven.Client.Document
 			highlightedFields = other.highlightedFields;
 			highlighterPreTags = other.highlighterPreTags;
 			highlighterPostTags = other.highlighterPostTags;
-
+			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
 
