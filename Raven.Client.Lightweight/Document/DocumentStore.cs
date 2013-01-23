@@ -407,7 +407,7 @@ namespace Raven.Client.Document
 
 				initialized = true;
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MONO
 				RecoverPendingTransactions();
 
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)

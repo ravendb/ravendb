@@ -423,7 +423,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         {
 #if (NETFX_CORE || SILVERLIGHT || PORTABLE)
           _fullyTrusted = false;
-#elif !(NET20 || NET35)
+#elif !(NET20 || NET35 || MONO)
           AppDomain appDomain = AppDomain.CurrentDomain;
 
           _fullyTrusted = appDomain.IsHomogenous && appDomain.IsFullyTrusted;

@@ -56,7 +56,7 @@ namespace Raven.Client.Util
 					failedToGetAvailablePhysicalMemory = true;
 					return -1;
 				}
-#if __MonoCS__
+#if __MonoCS__ || MONO
 				throw new PlatformNotSupportedException("This build can only run on Mono");
 #else
 				try

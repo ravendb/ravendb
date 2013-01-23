@@ -58,7 +58,9 @@ namespace Raven.Abstractions.Connection
 							// explicitly ignoring this
 							break;
 						case "Host":
+#if !MONO
 							dest.Host = src.Host;
+#endif
 							break;
 						case "If-Modified-Since":
 							dest.IfModifiedSince = src.IfModifiedSince;
