@@ -32,6 +32,8 @@ namespace Raven.Client.Extensions
 			if (serverClient == null)
 				throw new InvalidOperationException("Multiple databases are not supported in the embedded API currently");
 
+			serverClient.ForceReadFromMaster();
+
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
 			try
@@ -78,6 +80,8 @@ namespace Raven.Client.Extensions
 			if (serverClient == null)
 				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
+			serverClient.ForceReadFromMaster();
+			
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
 
@@ -128,6 +132,8 @@ namespace Raven.Client.Extensions
 
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
+
+			serverClient.ForceReadFromMaster();
 
 			return serverClient.GetAsync(docId)
 				.ContinueWith(get =>
