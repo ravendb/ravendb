@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using GoogleCode.Data;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -20,12 +24,40 @@ namespace BulkStressTest
 		{
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8080",
+				DefaultDatabase = "test"
 			})
 			{
 				store.Initialize();
-				var readResponseJson = ((ServerClient) store.DatabaseCommands).CreateRequest("GET", "/debug/user-info").ReadResponseJson();
-				Console.WriteLine(readResponseJson);
+				new Projects_Search().Execute(store);
+				var q = "\"lego mindstorm\"";
+
+				using(var session = store.OpenSession())
+				{
+					var prjs = session.Query<Projects_Search.Result, Projects_Search>()
+						.Customize(x=>x.Highlight("Query", 128, 1, "Results"))
+						.Search(x => x.Query, q)
+						.Take(5)
+						.OfType<Project>()
+						.Select(x=> new
+						{
+							x.Name,
+							Results = (string[])null
+						})
+						.ToList();
+
+					var sb = new StringBuilder().AppendLine("<ul>");
+
+					foreach (var project in prjs)
+					{
+						sb.AppendFormat("<li>{0} - {1}</li>", project.Name, string.Join(" || ", project.Results)).AppendLine();
+					}
+					var s = sb
+						.AppendLine("</ul>")
+						.ToString();
+
+					Console.WriteLine(s);
+				}
 			}
 
 			//const int numberOfItems = 100000000;
@@ -39,22 +71,22 @@ namespace BulkStressTest
 		private static void BulkInsert(int numberOfItems, IndexInfo useIndexes, BulkInsertOptions bulkInsertOptions = null)
 		{
 			Console.WriteLine("Starting Bulk insert for {0:#,#}", numberOfItems);
-		    switch (useIndexes)
-		    {
-		            case IndexInfo.DontIndex:
-		            Console.WriteLine("Not using indexes");
-                    break;
-		            case IndexInfo.IndexAfter:
-		            Console.WriteLine("Put indexes after all items are Added");
-                    break;
-                    case IndexInfo.IndexBefore:
-		            Console.WriteLine("Put indexes before all items are added");
-                    break;
-                    case IndexInfo.AlreadyAdded:
-                    Console.WriteLine("Indexes Already Added");
-                    break;
-            }
-		    
+			switch (useIndexes)
+			{
+				case IndexInfo.DontIndex:
+					Console.WriteLine("Not using indexes");
+					break;
+				case IndexInfo.IndexAfter:
+					Console.WriteLine("Put indexes after all items are Added");
+					break;
+				case IndexInfo.IndexBefore:
+					Console.WriteLine("Put indexes before all items are added");
+					break;
+				case IndexInfo.AlreadyAdded:
+					Console.WriteLine("Indexes Already Added");
+					break;
+			}
+
 			if (bulkInsertOptions != null && bulkInsertOptions.CheckForUpdates)
 				Console.WriteLine("Using check for updates");
 			else
@@ -95,7 +127,7 @@ namespace BulkStressTest
 				int count = 0;
 				bulkInsert.Report += s =>
 										 {
-											 if(count ++ % 10 == 0)
+											 if (count++ % 10 == 0)
 											 {
 												 Console.Write("\r" + s);
 											 }
@@ -104,8 +136,8 @@ namespace BulkStressTest
 												 //stopWatch.Stop();
 												 Console.WriteLine("Operation took: " + stopWatch.Elapsed);
 
-                                                 if(useIndexes == IndexInfo.IndexAfter)
-                                                     AddIndexesToDatabase(store);
+												 if (useIndexes == IndexInfo.IndexAfter)
+													 AddIndexesToDatabase(store);
 
 												 if (useIndexes != IndexInfo.DontIndex)
 												 {
@@ -139,13 +171,13 @@ namespace BulkStressTest
 		}
 	}
 
-    public enum IndexInfo
-    {
-        DontIndex,
-        IndexBefore,
-        IndexAfter,
-        AlreadyAdded
-    }
+	public enum IndexInfo
+	{
+		DontIndex,
+		IndexBefore,
+		IndexAfter,
+		AlreadyAdded
+	}
 
 	public class BlogPost
 	{
@@ -256,17 +288,17 @@ namespace BulkStressTest
 		public BlogPost_Search()
 		{
 			Map = blogposts => from blogpost in blogposts
-			                   select new
-				                          {
-					                          Query = new object[]
+							   select new
+										  {
+											  Query = new object[]
 						                                  {
 							                                  blogpost.Author,
 							                                  blogpost.Category,
 							                                  blogpost.Content,
 							                                  blogpost.Comments.Select(comment => comment.Title)
 						                                  },
-					                          LastPaymentDate = blogpost.Comments.Last().At
-				                          };
+											  LastPaymentDate = blogpost.Comments.Last().At
+										  };
 		}
 	}
 
@@ -276,6 +308,73 @@ namespace BulkStressTest
 		{
 			Map = posts => from post in posts
 						   select new { post.Title };
+		}
+	}
+}
+
+namespace GoogleCode.Data
+{
+	public class Project
+	{
+		public string Name { get; set; }
+		public string CodeLicense { get; set; }
+		public string CodeUrl { get; set; }
+		public string ContentLicense { get; set; }
+		public string ContentUrl { get; set; }
+		public string Summary { get; set; }
+		public string Description { get; set; }
+		public List<string> Labels { get; set; }
+		public List<Blog> Blogs { get; set; }
+		public List<Person> People { get; set; }
+		public List<Link> Links { get; set; }
+		public List<Group> Groups { get; set; }
+	}
+
+	public class Blog
+	{
+		public string Title { get; set; }
+		public string Link { get; set; }
+	}
+
+	public class Group
+	{
+		public string Name { get; set; }
+		public string Url { get; set; }
+	}
+
+	public class Person
+	{
+		public string Name { get; set; }
+		public string UserId { get; set; }
+		public string Role { get; set; }
+	}
+
+	public class Link
+	{
+		public string Title { get; set; }
+		public string Url { get; set; }
+	}
+
+	public class Projects_Search : AbstractIndexCreationTask<Project, Projects_Search.Result>
+	{
+		public class Result
+		{
+			public string Query { get; set; }
+		}
+
+		public Projects_Search()
+		{
+			Map = projects =>
+				  from p in projects
+				  select new
+				  {
+					  Query = new[]
+				      {
+					      p.Summary
+				      }
+				  };
+			Store(x => x.Query, FieldStorage.Yes);
+			Index(x=>x.Query, FieldIndexing.Analyzed);
 		}
 	}
 }
