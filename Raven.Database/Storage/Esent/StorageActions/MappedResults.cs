@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -838,6 +839,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void FlushMapReduceUpdates()
 		{
 			if (reduceKeyChanges == null)
