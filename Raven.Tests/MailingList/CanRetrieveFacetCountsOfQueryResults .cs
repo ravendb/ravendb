@@ -103,11 +103,10 @@ namespace Raven.Tests.MailingList
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .Customize(x => x.WithinRadiusOf(radius: 10, latitude: 52.156161, longitude: 1.602483))
                         .Where(x => x.Bedrooms == 2);
-                    var partialFacetResults = query
+                    var theQuery = query
                         .Customize(customization => customization.WaitForNonStaleResults())
-                        .ToFacets("facets/AttributeFacets");
-                    var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
-                        .Customize(customization => customization.WaitForNonStaleResults())
+                        .ToList();
+					var theFacets = query
                         .ToFacets("facets/AttributeFacets");
 
 					Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
