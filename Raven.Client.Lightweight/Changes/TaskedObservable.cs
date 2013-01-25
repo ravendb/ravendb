@@ -19,10 +19,14 @@ namespace Raven.Client.Changes
 		{
 			this.localConnectionState = localConnectionState;
 			this.filter = filter;
-			Task = localConnectionState.Task;
+			Task = localConnectionState.Task.ContinueWith(task =>
+			{
+				task.AssertNotFailed();
+				return (IObservable<T>)this;
+			});
 		}
 
-		public Task Task { get; private set; }
+		public Task<IObservable<T>>  Task { get; private set; }
 
 		public IDisposable Subscribe(IObserver<T> observer)
 		{

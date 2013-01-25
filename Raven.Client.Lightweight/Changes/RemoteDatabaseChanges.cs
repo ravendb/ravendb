@@ -50,7 +50,12 @@ namespace Raven.Client.Changes
 			this.replicationInformer = replicationInformer;
 			this.onDispose = onDispose;
 			Task = EstablishConnection()
-				.ObserveException();
+				.ObserveException()
+				.ContinueWith(task =>
+				{
+					task.AssertNotFailed();
+					return (IDatabaseChanges)this;
+				});
 		}
 
 		private Task EstablishConnection()
@@ -115,7 +120,7 @@ namespace Raven.Client.Changes
 
 		public bool Connected { get; private set; }
 		public event EventHandler ConnectionStatusChanged = delegate { }; 
-		public Task Task { get; private set; }
+		public Task<IDatabaseChanges> Task { get; private set; }
 
 		private Task AfterConnection(Func<Task> action)
 		{
