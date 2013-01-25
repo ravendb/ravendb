@@ -361,14 +361,15 @@ namespace Raven.Client.Document.Async
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-
+			var highlightings = new RavenQueryHighlightings();
 			return new RavenQueryInspector<T>(
-				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
+				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings,
 #if !SILVERLIGHT
 				                          null,
 #endif
 				                          AsyncDatabaseCommands),
 				ravenQueryStatistics,
+				highlightings,
 				indexName,
 				null,
 				this,

@@ -643,6 +643,9 @@
     <Compile Include="..\Raven.Abstractions\Data\GetResponse.cs">
       <Link>Imports\Data\GetResponse.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\HighlightedField.cs">
+      <Link>Imports\Data\HighlightedField.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
       <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
     </Compile>
@@ -964,6 +967,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\TaskExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FieldHighlightings.cs">
+      <Link>Imports\FieldHighlightings.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
       <Link>Imports\IAsyncDocumentQuery.cs</Link>
     </Compile>
@@ -1020,6 +1026,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\SearchOptions.cs">
       <Link>Imports\PublicExtensions\SearchOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\RavenQueryHighlightings.cs">
+      <Link>Imports\RavenQueryHighlightings.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
       <Link>Imports\RavenQueryStatistics.cs</Link>

@@ -151,7 +151,28 @@ namespace Raven.Database.Queries
 						if (indexDefinition == null)
 							return false;
 
-						if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
+					    if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
+					    {
+					        var nonHighlightableFields = indexQuery
+					            .HighlightedFields
+					            .Where(x =>
+					                   !indexDefinition.Stores.ContainsKey(x.Field) ||
+					                   indexDefinition.Stores[x.Field] != FieldStorage.Yes ||
+					                   !indexDefinition.Indexes.ContainsKey(x.Field) ||
+					                   indexDefinition.Indexes[x.Field] != FieldIndexing.Analyzed)
+					            .Select(x => x.Field)
+					            .ToArray();
+
+					        if (nonHighlightableFields.Any())
+					        {
+					            explain(indexName,
+					                () => "The following fields could not be highlighted because are not stored and not analysed: " +
+					                      string.Join(", ", nonHighlightableFields));
+					            return false;
+					        }
+					    }
+
+					    if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
 						{
 							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { });
 

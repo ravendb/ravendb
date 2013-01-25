@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SerializationHelper.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -116,7 +116,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public static QueryResult ToQueryResult(RavenJObject json, Guid etag)
 		{
-			var result = new QueryResult
+		    var result = new QueryResult
 			{
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
@@ -126,6 +126,8 @@ namespace Raven.Client.Connection
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 				IndexName = json.Value<string>("IndexName"),
 				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+				Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
+		            .JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>()
 			};
 
 			if (json.ContainsKey("NonAuthoritativeInformation"))

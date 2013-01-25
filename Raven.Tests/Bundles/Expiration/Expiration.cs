@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -86,6 +87,9 @@ namespace Raven.Tests.Bundles.Expiration
 				}
 				catch (Exception e)
 				{
+					Debugger.Launch();
+					var x = expirationDate.Value<DateTime>();
+					Console.WriteLine(x);
 					throw new IOException("Could not convert " + expirationDate + " " + expirationDate.Type, e);
 				}
 				Assert.Equal(DateTimeKind.Utc, dateTime.Kind);

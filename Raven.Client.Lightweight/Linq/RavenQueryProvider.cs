@@ -28,6 +28,7 @@ namespace Raven.Client.Linq
 		private readonly string indexName;
 		private readonly IDocumentQueryGenerator queryGenerator;
 		private readonly RavenQueryStatistics ravenQueryStatistics;
+		private readonly RavenQueryHighlightings highlightings;
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
@@ -39,7 +40,8 @@ namespace Raven.Client.Linq
 		public RavenQueryProvider(
 			IDocumentQueryGenerator queryGenerator,
 			string indexName,
-			RavenQueryStatistics ravenQueryStatistics
+			RavenQueryStatistics ravenQueryStatistics,
+			RavenQueryHighlightings highlightings
 #if !SILVERLIGHT
 , IDatabaseCommands databaseCommands
 #endif
@@ -52,6 +54,7 @@ namespace Raven.Client.Linq
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
 			this.ravenQueryStatistics = ravenQueryStatistics;
+			this.highlightings = highlightings;
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
@@ -106,7 +109,7 @@ namespace Raven.Client.Linq
 			if (typeof(T) == typeof(S))
 				return this;
 
-			var ravenQueryProvider = new RavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics
+			var ravenQueryProvider = new RavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics, highlightings
 #if !SILVERLIGHT
 				, databaseCommands
 #endif
@@ -130,11 +133,11 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
+			return new RavenQueryInspector<S>(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
 #if !SILVERLIGHT
-			                                  , databaseCommands
+											  , databaseCommands
 #endif
-			                                  , asyncDatabaseCommands);
+											  , asyncDatabaseCommands);
 		}
 
 		IQueryable IQueryProvider.CreateQuery(Expression expression)
@@ -145,7 +148,7 @@ namespace Raven.Client.Linq
 				var makeGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
 				var args = new object[]
 				{
-					this, ravenQueryStatistics, indexName, expression, queryGenerator
+					this, ravenQueryStatistics, highlightings, indexName, expression, queryGenerator
 #if !SILVERLIGHT
 					, databaseCommands
 #endif

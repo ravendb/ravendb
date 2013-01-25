@@ -105,6 +105,7 @@
     <Compile Include="Document\RemoteBulkInsertOperation.cs" />
     <Compile Include="Document\BulkInsertOperation.cs" />
     <Compile Include="Exceptions\ServerRequestError.cs" />
+    <Compile Include="FieldHighlightings.cs" />
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
@@ -198,6 +199,7 @@
     <Compile Include="Linq\RavenQueryInspector.cs" />
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
+    <Compile Include="RavenQueryHighlightings.cs" />
     <Compile Include="RavenQueryStatistics.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="Shard\BaseShardedDocumentSession.cs" />

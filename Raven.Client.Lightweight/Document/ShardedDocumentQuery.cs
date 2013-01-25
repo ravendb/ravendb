@@ -116,6 +116,9 @@ namespace Raven.Client.Document
 				beforeQueryExecutionAction = beforeQueryExecutionAction,
 				afterQueryExecutedCallback = afterQueryExecutedCallback,
 				defaultField = defaultField,
+				highlightedFields = new List<HighlightedField>(highlightedFields),
+				highlighterPreTags = highlighterPreTags,
+				highlighterPostTags = highlighterPostTags,
 				distanceErrorPct = distanceErrorPct,
 				isSpatialQuery = isSpatialQuery,
 				negate = negate,
@@ -162,9 +165,9 @@ namespace Raven.Client.Document
 			AssertNoDuplicateIdsInResults(shardQueryOperations);
 
 			var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery,
-			                                                        shardQueryOperations.Select(x => x.CurrentQueryResults)
-			                                                        	.Where(x => x != null)
-			                                                        	.ToList());
+																	shardQueryOperations.Select(x => x.CurrentQueryResults)
+																		.Where(x => x != null)
+																		.ToList());
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];

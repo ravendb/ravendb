@@ -53,6 +53,9 @@
 
 			handleResponse: function (event, xhrRequest) {
 				var headerIds = xhrRequest.getResponseHeader('X-RavenDb-Profiling-Id');
+				if (!headerIds) {
+					return;
+				}
 				this.loadSessionData(headerIds.split(', '));
 			},
 

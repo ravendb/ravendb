@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Connection.Async;
@@ -22,6 +23,7 @@ namespace Raven.Client.Linq
 		private readonly Expression expression;
 		private readonly IRavenQueryProvider provider;
 		private readonly RavenQueryStatistics queryStats;
+		private readonly RavenQueryHighlightings highlightings;
 		private readonly string indexName;
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
@@ -35,6 +37,7 @@ namespace Raven.Client.Linq
 		public RavenQueryInspector(
 			IRavenQueryProvider provider, 
 			RavenQueryStatistics queryStats,
+			RavenQueryHighlightings highlightings,
 			string indexName,
 			Expression expression,
 			InMemoryDocumentSessionOperations session
@@ -50,17 +53,22 @@ namespace Raven.Client.Linq
 			}
 			this.provider = provider.For<T>();
 			this.queryStats = queryStats;
+			this.highlightings = highlightings;
 			this.indexName = indexName;
 			this.session = session;
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
-			this.provider.AfterQueryExecuted(queryStats.UpdateQueryStats);
+			this.provider.AfterQueryExecuted(this.AfterQueryExecuted);
 			this.expression = expression ?? Expression.Constant(this);
 		}
 
-		
+		private void AfterQueryExecuted(QueryResult queryResult)
+		{
+			this.queryStats.UpdateQueryStats(queryResult);
+			this.highlightings.Update(queryResult);
+		}
 
 		#region IOrderedQueryable<T> Members
 
