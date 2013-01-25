@@ -187,10 +187,15 @@ namespace Raven.Abstractions.Data
 
 			AppendMinimalQueryString(path);
 
-			path
-				.Append("&start=").Append(Start)
-				.Append("&pageSize=").Append(PageSize)
-				.Append("&aggregation=").Append(AggregationOperation);
+			if (Start != 0)
+				path.Append("&start=").Append(Start);
+
+			path.Append("&pageSize=").Append(PageSize);
+			
+
+			if(AggregationOperation != AggregationOperation.None)
+				path.Append("&aggregation=").Append(AggregationOperation);
+
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			GroupBy.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
