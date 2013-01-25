@@ -43,11 +43,7 @@ namespace Raven.Studio.Commands
 							var bundlesSettings = new List<ChildWindow>();
 							if (newDatabase.Encryption.IsChecked == true)
 								bundlesSettings.Add(new EncryptionSettings());
-                            if (newDatabase.Quotas.IsChecked == true || 
-								newDatabase.Replication.IsChecked == true || 
-								newDatabase.Versioning.IsChecked == true || 
-								newDatabase.Authorization.IsChecked == true || 
-								newDatabase.SqlReplication.IsChecked == true)
+                            if (newDatabase.Quotas.IsChecked == true || newDatabase.Versioning.IsChecked == true)
 							{
 								bundlesModel = ConfigureSettingsModel(newDatabase);
 
@@ -125,15 +121,6 @@ namespace Raven.Studio.Commands
 	                WarnDocs = 8000,
 	            });
 	        }
-	        if (newDatabase.Replication.IsChecked == true)
-	        {
-	            AddSection(bundlesModel,
-	                       new ReplicationSettingsSectionModel() {ReplicationDestinations = {new ReplicationDestination()}});
-	        }
-			if (newDatabase.SqlReplication.IsChecked == true)
-			{
-				AddSection(bundlesModel, new SqlReplicationSettingsSectionModel{SqlReplicationConfigs = new ObservableCollection<SqlReplicationConfig>()});
-			}
 	        if (newDatabase.Versioning.IsChecked == true)
 	        {
 	            AddSection(bundlesModel, new VersioningSettingsSectionModel(true)
@@ -149,10 +136,6 @@ namespace Raven.Studio.Commands
 	                }
 	            });
 	        }
-            if(newDatabase.Authorization.IsChecked == true)
-            {
-                AddSection(bundlesModel, new AuthorizationSettingsSectionModel());
-            }
 	        return bundlesModel;
 	    }
 
