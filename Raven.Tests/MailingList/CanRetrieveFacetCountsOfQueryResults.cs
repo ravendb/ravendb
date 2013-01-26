@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -97,20 +98,33 @@ namespace Raven.Tests.MailingList
                 new AccItems_Spatial().Execute(store);
                 new AccItems_Attributes().Execute(store);
 
+				WaitForIndexing(store);
+
 				using (var session = store.OpenSession())
 				{
-                    var query = session.Query<AccItem, AccItems_Spatial>()
-                        .Customize(customization => customization.WaitForNonStaleResults())
-                        .Customize(x => x.WithinRadiusOf(radius: 10, latitude: 52.156161, longitude: 1.602483))
-                        .Where(x => x.Bedrooms == 2);
-                    var theQuery = query
-                        .Customize(customization => customization.WaitForNonStaleResults())
-                        .ToList();
-					var theFacets = query
-                        .ToFacets("facets/AttributeFacets");
+					var query = session.Query<AccItem, AccItems_Spatial>()
+					                   .Customize(customization => customization.WaitForNonStaleResults())
+					                   .Customize(x => x.WithinRadiusOf(radius: 10, latitude: 52.156161, longitude: 1.602483))
+					                   .Where(x => x.Bedrooms == 2);
+					var partialFacetResults = query
+						.ToFacets("facets/AttributeFacets");
+					var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
+					                              .ToFacets("facets/AttributeFacets");
 
 					Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
 
+					var partialGardenFacet =
+						partialFacetResults.Results["Attributes"].Values.First(
+							x => x.Range.Contains("hasgarden"));
+					Assert.Equal(2, partialGardenFacet.Hits);
+
+					var fullGardenFacet =
+						fullFacetResults.Results["Attributes"].Values.First(
+							x => x.Range.Contains("hasgarden"));
+					Assert.Equal(3, fullGardenFacet.Hits);
+
+
+					Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
 				}
 			}
 		}
