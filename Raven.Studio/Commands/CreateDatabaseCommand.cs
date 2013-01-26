@@ -155,7 +155,8 @@ namespace Raven.Studio.Commands
 			if (encryptionData != null)
 			{
 				settings[Constants.EncryptionKeySetting] = encryptionData.EncryptionKey.Text;
-				switch (encryptionData.EncryptionAlgorithm.SelectedValue.ToString())
+				var content = ((ComboBoxItem) encryptionData.EncryptionAlgorithm.SelectedValue).Content;
+				switch (content.ToString())
 				{
 					case "DESC":
 						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
@@ -169,6 +170,8 @@ namespace Raven.Studio.Commands
 					case "Triple DESC":
 						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
 						break;
+					default:
+						throw new ArgumentException("Could not understand encryption type: " + content);
 				}
 
 				settings[Constants.EncryptIndexes] = (encryptionData.EncryptIndexes.IsChecked ?? true).ToString();
