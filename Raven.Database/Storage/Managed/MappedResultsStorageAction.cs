@@ -448,7 +448,7 @@ namespace Raven.Storage.Managed
 				.Take(take);
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int take)
+		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int start, int take)
 		{
 			var results = storage.MappedResults["ByViewReduceKeyAndBucket"].SkipTo(new RavenJObject
 			{
@@ -456,6 +456,7 @@ namespace Raven.Storage.Managed
 				{"reduceKey", key},
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
 							  string.Equals(key, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase))
+				.Skip(start)
 				.Take(take);
 
 			return from result in results
@@ -474,7 +475,7 @@ namespace Raven.Storage.Managed
 					   };
 		}
 
-		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take)
+		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take)
 		{
 			var results = storage.ReduceResults["ByViewReduceKeyLevelAndBucket"].SkipTo(new RavenJObject
 			{
@@ -484,6 +485,7 @@ namespace Raven.Storage.Managed
 			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
 							  string.Equals(key, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase) &&
 							  level == x.Value<int>("level"))
+				.Skip(start)
 				.Take(take);
 
 			return from result in results

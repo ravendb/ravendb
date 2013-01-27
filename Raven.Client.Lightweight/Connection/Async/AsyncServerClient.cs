@@ -486,12 +486,13 @@ namespace Raven.Client.Connection.Async
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
+			var uniqueIds = new HashSet<string>(keys);
 			HttpJsonRequest request;
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load > 128 items are going to be rare
-			if (keys.Length < 128)
+			if (uniqueIds.Sum(x => x.Length) < 1024)
 			{
-				path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
+				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + x).ToArray());
 				request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
 																							 convention)
@@ -507,7 +508,7 @@ namespace Raven.Client.Connection.Async
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", credentials,
 																						 convention)
 															 .AddOperationHeaders(OperationsHeaders));
-			return request.WriteAsync(new RavenJArray(keys).ToString(Formatting.None))
+			return request.WriteAsync(new RavenJArray(uniqueIds).ToString(Formatting.None))
 				.ContinueWith(writeTask => request.ReadResponseJsonAsync())
 				.Unwrap()
 				.ContinueWith(task => CompleteMultiGetAsync(opUrl, keys, includes, task))

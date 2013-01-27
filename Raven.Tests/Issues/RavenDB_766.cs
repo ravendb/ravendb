@@ -37,10 +37,10 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetMappedResultsForDebug("a", "a", 10);
+					var results = accessor.MapReduce.GetMappedResultsForDebug("a", "a",0 , 10);
 					Assert.Equal(0, results.Count());
 
-					results = accessor.MapReduce.GetMappedResultsForDebug("b", "b", 10);
+					results = accessor.MapReduce.GetMappedResultsForDebug("b", "b",0 , 10);
 					Assert.Equal(2, results.Count());
 				});
 			}
@@ -68,10 +68,10 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetReducedResultsForDebug("a", "a", 1, 10);
+					var results = accessor.MapReduce.GetReducedResultsForDebug("a", "a", 1,0 , 10);
 					Assert.Equal(0, results.Count());
 
-					results = accessor.MapReduce.GetReducedResultsForDebug("b", "b", 1, 10);
+					results = accessor.MapReduce.GetReducedResultsForDebug("b", "b", 1,0 , 10);
 					Assert.Equal(2, results.Count());
 				});
 			}

@@ -299,7 +299,7 @@ namespace Raven.Database.Server.Responders
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MapReduce.GetMappedResultsForDebug(index, key, context.GetPageSize(Settings.MaxPageSize))
+				mappedResult = accessor.MapReduce.GetMappedResultsForDebug(index, key, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
 					.ToList();
 			});
 			context.WriteJson(new
@@ -341,7 +341,7 @@ namespace Raven.Database.Server.Responders
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MapReduce.GetReducedResultsForDebug(index, key, level, context.GetPageSize(Settings.MaxPageSize))
+				mappedResult = accessor.MapReduce.GetReducedResultsForDebug(index, key, level, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
 					.ToList();
 			});
 			context.WriteJson(new

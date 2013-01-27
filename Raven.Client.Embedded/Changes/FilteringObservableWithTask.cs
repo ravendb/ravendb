@@ -20,7 +20,7 @@ namespace Raven.Client.Embedded.Changes
 			return inner.Subscribe(new ErrorHidingFilteringObserver(observer, filter));
 		}
 
-		public Task Task
+		public Task<IObservable<T>>  Task
 		{
 			get { return inner.Task; }
 		}
