@@ -1,8 +1,10 @@
 using System.IO;
 using System;
+using System.Linq;
 using System.Management;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace Raven.Database.Impl.Clustering
 {
@@ -170,12 +172,22 @@ namespace Raven.Database.Impl.Clustering
 			{
 				var managementObjectCollection = managementObjectSearcher.Get();
 
-				foreach (ManagementObject managementObject in managementObjectCollection)
-				{
-					return managementObject.GetPropertyValue("PathName").ToString();
-				}
-				return null;
+				return (
+							from ManagementObject managementObject in managementObjectCollection 
+							select managementObject.GetPropertyValue("PathName").ToString()
+							into executableOfService 
+							select ParseExePath(executableOfService)
+						).FirstOrDefault();
 			}
+		}
+
+		static Regex cmdLineParser = new Regex(@"^(""(?<path>[^""]*)""|(?<path>[^""]+))(\s+|$)",
+			RegexOptions.Compiled);
+
+		public static string ParseExePath(string executableOfService)
+		{
+			var match = cmdLineParser.Match(executableOfService);
+			return match.Success == false ? executableOfService : match.Groups["path"].Captures[0].Value;
 		}
 	}
 }
