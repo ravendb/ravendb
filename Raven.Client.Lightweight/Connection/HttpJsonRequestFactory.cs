@@ -191,7 +191,7 @@ namespace Raven.Client.Connection
 				return;
 
 			var clone = data.CloneToken();
-			clone.EnsureSnapshot();
+			clone.EnsureCannotBeChangeAndEnableSnapshotting();
 			cache.Set(url, new CachedRequest
 			{
 				Data = clone,

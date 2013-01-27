@@ -144,7 +144,12 @@ namespace Raven.Json.Linq
 			if (parentSnapshot == null || !parentSnapshot.TryGetValue(key, out unsafeVal) || unsafeVal == DeletedMarker)
 				return false;
 
-		    value = unsafeVal;
+			if (IsSnapshot == false && unsafeVal != null)
+			{
+				if (unsafeVal.IsSnapshot == false)
+					unsafeVal.EnsureCannotBeChangeAndEnableSnapshotting();
+				LocalChanges[key] =  value = unsafeVal.CreateSnapshot();
+			}
 
 			return true;
 		}
