@@ -118,11 +118,18 @@ namespace Raven.Client.Silverlight.Connection
 			return ReadResponseStringAsync();
 		}
 
+		private bool requestSendToServer;
+
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
 		private Task<string> ReadResponseStringAsync()
 		{
+			if (requestSendToServer)
+				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
+
+			requestSendToServer = true;
+
 			return WaitForTask.ContinueWith(_ => webRequest
 													.GetResponseAsync()
 													.ConvertSecurityExceptionToServerNotFound()
