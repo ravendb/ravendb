@@ -71,9 +71,9 @@ namespace Raven.Database.Impl
 				return;
 
 			var documentClone = ((RavenJObject)doc.CloneToken());
-			documentClone.EnsureSnapshot();
+			documentClone.EnsureCannotBeChangeAndEnableSnapshotting();
 			var metadataClone = ((RavenJObject)metadata.CloneToken());
-			metadataClone.EnsureSnapshot();
+			metadataClone.EnsureCannotBeChangeAndEnableSnapshotting();
 			try
 			{
 				cachedSerializedDocuments.Set("Doc/" + key + "/" + etag, new CachedDocument

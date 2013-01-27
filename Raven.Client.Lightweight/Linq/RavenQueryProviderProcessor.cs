@@ -1351,7 +1351,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				if (!changed)
 					continue;
-				safeToModify.EnsureSnapshot();
+				safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
 				queryResult.Results[index] = safeToModify;
 			}
 		}
