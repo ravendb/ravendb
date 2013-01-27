@@ -140,6 +140,13 @@ namespace Raven.Client.Linq
 			return fields + luceneQuery;
 		}
 
+		public IndexQuery GetIndexQuery()
+		{
+			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
+			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+			return luceneQuery.GetIndexQuery();
+		}
+
 		/// <summary>
 		/// Returns a <see cref="System.String"/> that represents this instance.
 		/// </summary>

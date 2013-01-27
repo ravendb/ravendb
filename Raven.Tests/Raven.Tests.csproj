@@ -566,6 +566,7 @@
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults.cs" />
+    <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />

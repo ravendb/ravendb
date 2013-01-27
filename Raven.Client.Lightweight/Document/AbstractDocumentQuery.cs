@@ -460,8 +460,7 @@ namespace Raven.Client.Document
 
 		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
-			var query = queryText.ToString();
-			var indexQuery = GenerateIndexQuery(query);
+			var indexQuery = GetIndexQuery();
 
 			if(beforeQueryExecutionAction != null)
 				beforeQueryExecutionAction(indexQuery);
@@ -476,6 +475,13 @@ namespace Raven.Client.Document
 									  timeout,
 									  transformResultsFunc,
 									  includes);
+		}
+
+		public IndexQuery GetIndexQuery()
+		{
+			var query = queryText.ToString();
+			var indexQuery = GenerateIndexQuery(query);
+			return indexQuery;
 		}
 
 #if !SILVERLIGHT

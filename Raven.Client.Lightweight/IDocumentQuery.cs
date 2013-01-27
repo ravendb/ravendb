@@ -56,5 +56,10 @@ namespace Raven.Client
 		/// Also provide a function to execute when the value is evaluated
 		/// </summary>
 		Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
+
+		/// <summary>
+		/// Create the index query object for this query
+		/// </summary>
+		IndexQuery GetIndexQuery();
 	}
 }
