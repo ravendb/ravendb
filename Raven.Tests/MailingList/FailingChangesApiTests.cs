@@ -12,7 +12,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void Should_get_independent_notification_subscriptions()
 		{
-			using (var store = NewRemoteDocumentStore(true))
+			using (var store = NewRemoteDocumentStore())
 			{
 				using (IDocumentSession session = store.OpenSession())
 				{
