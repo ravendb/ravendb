@@ -1250,6 +1250,7 @@ namespace Raven.Database
 						Thread.Sleep(100);
 					}
 				}
+				workContext.ClearErrorsFor(name);
 			}
 		}
 
