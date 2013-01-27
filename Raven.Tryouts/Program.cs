@@ -22,50 +22,12 @@ namespace BulkStressTest
 		private const string DbName = "BulkStressTestDb";
 		static void Main()
 		{
-			using (var store = new DocumentStore
+			Console.WriteLine("start");
+			foreach (var process in Process.GetProcessesByName("fiddler"))
 			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "test"
-			})
-			{
-				store.Initialize();
-				new Projects_Search().Execute(store);
-				var q = "\"lego mindstorm\"";
-
-				using(var session = store.OpenSession())
-				{
-					var prjs = session.Query<Projects_Search.Result, Projects_Search>()
-						.Customize(x=>x.Highlight("Query", 128, 1, "Results"))
-						.Search(x => x.Query, q)
-						.Take(5)
-						.OfType<Project>()
-						.Select(x=> new
-						{
-							x.Name,
-							Results = (string[])null
-						})
-						.ToList();
-
-					var sb = new StringBuilder().AppendLine("<ul>");
-
-					foreach (var project in prjs)
-					{
-						sb.AppendFormat("<li>{0} - {1}</li>", project.Name, string.Join(" || ", project.Results)).AppendLine();
-					}
-					var s = sb
-						.AppendLine("</ul>")
-						.ToString();
-
-					Console.WriteLine(s);
-				}
+				Console.WriteLine(process.ProcessName);
 			}
-
-			//const int numberOfItems = 100000000;
-			//BulkInsert(numberOfItems, IndexInfo.IndexBefore);
-
-			//Console.ReadLine();
-			////Uncomment to check updates
-			////	BulkInsert(numberOfItems, IndexInfo.AlreadyAdded, new BulkInsertOptions { CheckForUpdates = true });
+			Console.WriteLine("end");
 		}
 
 		private static void BulkInsert(int numberOfItems, IndexInfo useIndexes, BulkInsertOptions bulkInsertOptions = null)

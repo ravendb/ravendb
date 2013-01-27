@@ -108,7 +108,7 @@ namespace Raven.Tests.Helpers
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
-				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
+				Url = GetServerUrl(fiddler)
 			};
 			store.AfterDispose += (sender, args) =>
 			{
@@ -117,6 +117,16 @@ namespace Raven.Tests.Helpers
 			};
 			ModifyStore(store);
 			return store.Initialize();
+		}
+
+		private static string GetServerUrl(bool fiddler)
+		{
+			if (fiddler)
+			{
+				if (Process.GetProcessesByName("fiddler").Any())
+					return "http://localhost.fiddler:8079";
+			}
+			return "http://localhost:8079";
 		}
 
 		public static string GetDefaultStorageType(string requestedStorage = null)
