@@ -138,7 +138,6 @@ namespace Raven.Database.Json
 
 		protected virtual void RemoveEngineCustomizations(JintEngine jintEngine)
 		{
-			throw new NotImplementedException();
 		}
 
 		protected virtual RavenJObject ConvertReturnValue(JsObject jsObject)
