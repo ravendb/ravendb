@@ -149,7 +149,7 @@ namespace Raven.Tests.Helpers
 				Port = port,
 				DataDirectory = dataDirectory,
 				RunInMemory = runInMemory,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
+				AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 			};
 
 			ModifyConfiguration(ravenConfiguration);
@@ -217,9 +217,12 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store)
+		public static void WaitForIndexing(IDocumentStore store, string db = null)
 		{
-			while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
+			var databaseCommands = store.DatabaseCommands;
+			if (db != null)
+				databaseCommands = databaseCommands.ForDatabase(db);
+			while (databaseCommands.GetStatistics().StaleIndexes.Length > 0)
 			{
 				Thread.Sleep(100);
 			}
