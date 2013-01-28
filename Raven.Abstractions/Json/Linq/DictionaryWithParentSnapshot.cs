@@ -107,16 +107,22 @@ namespace Raven.Json.Linq
 
 			RavenJToken parentToken = null;
 
-			bool parentHasIt = parentSnapshot == null ||
+			bool parentHasIt = parentSnapshot != null &&
 							   parentSnapshot.TryGetValue(key, out parentToken);
 
 			RavenJToken token;
 			if (LocalChanges.TryGetValue(key, out token) == false)
 			{
 				if (parentHasIt && parentToken != DeletedMarker)
+				{
+					LocalChanges[key] = DeletedMarker; 
 					count -= 1;
+					return true;
+				}
 				return false;
 			}
+			if (token == DeletedMarker)
+				return false;
 			count -= 1;
 			LocalChanges[key] = DeletedMarker;
 			return true;
