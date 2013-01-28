@@ -20,7 +20,7 @@ namespace Raven.Json.Linq
 		{
 			get
 			{
-				if(localChanges == null)
+				if (localChanges == null)
 					localChanges = new Dictionary<string, RavenJToken>(comparer);
 				return localChanges;
 			}
@@ -47,7 +47,7 @@ namespace Raven.Json.Linq
 			if (ContainsKey(key))
 				throw new ArgumentException(string.Format("An item with the same key has already been added: '{0}'", key));
 
-			count = -1;
+			count = +1;
 			LocalChanges[key] = value; // we can't use Add, because LocalChanges may contain a DeletedMarker
 		}
 
@@ -110,22 +110,27 @@ namespace Raven.Json.Linq
 			if (IsSnapshot)
 				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
 
-			count = -1;
+			RavenJToken parentToken = null;
+
+			bool parentHasIt = parentSnapshot == null ||
+							   parentSnapshot.TryGetValue(key, out parentToken);
+
 			RavenJToken token;
-			if (!LocalChanges.TryGetValue(key, out token))
+			if (LocalChanges.TryGetValue(key, out token) == false)
 			{
-				bool parentHasIt = parentSnapshot == null || parentSnapshot.TryGetValue(key, out token);
 				if (parentHasIt == false)
 					return false;
 
-				if (token == DeletedMarker)
+				if (parentToken == DeletedMarker)
 					return false;
-
-				LocalChanges[key] = DeletedMarker;
+			}
+			LocalChanges[key] = DeletedMarker;
+			if (parentHasIt)
+			{
+				count = -1;
 				return true;
 			}
-
-			return LocalChanges.Remove(key);
+			return false;
 		}
 
 		public bool TryGetValue(string key, out RavenJToken value)
@@ -141,19 +146,18 @@ namespace Raven.Json.Linq
 				return true;
 			}
 
-			if (parentSnapshot == null || !parentSnapshot.TryGetValue(key, out unsafeVal) || unsafeVal == DeletedMarker)
+			if (parentSnapshot == null ||
+				!parentSnapshot.TryGetValue(key, out unsafeVal) ||
+				unsafeVal == DeletedMarker)
 				return false;
 
 			if (IsSnapshot == false && unsafeVal != null)
 			{
-				if (unsafeVal.IsSnapshot == false)
+				if (unsafeVal.IsSnapshot == false && unsafeVal.Type != JTokenType.Object)
 					unsafeVal.EnsureCannotBeChangeAndEnableSnapshotting();
-				LocalChanges[key] =  value = unsafeVal.CreateSnapshot();
 			}
-			else
-			{
-				value = unsafeVal;
-			}
+
+			value = unsafeVal;
 
 			return true;
 		}
@@ -183,7 +187,7 @@ namespace Raven.Json.Linq
 			set
 			{
 				count = -1;
-				if(IsSnapshot)
+				if (IsSnapshot)
 					throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
 				LocalChanges[key] = value;
 			}
@@ -193,22 +197,22 @@ namespace Raven.Json.Linq
 
 		public IEnumerator<KeyValuePair<string, RavenJToken>> GetEnumerator()
 		{
-			if(parentSnapshot != null)
+			if (parentSnapshot != null)
 			{
 				foreach (var item in parentSnapshot)
 				{
-					if(LocalChanges.ContainsKey(item.Key))
+					if (LocalChanges.ContainsKey(item.Key))
 						continue;
 					yield return item;
 				}
 			}
-		    foreach (var localChange in LocalChanges)
-		    {
-				if(localChange.Value == DeletedMarker)
+			foreach (var localChange in LocalChanges)
+			{
+				if (localChange.Value == DeletedMarker)
 					continue;
-		        yield return localChange;
-		    }
-		    
+				yield return localChange;
+			}
+
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -238,7 +242,7 @@ namespace Raven.Json.Linq
 
 		public void CopyTo(KeyValuePair<string, RavenJToken>[] array, int arrayIndex)
 		{
-			if(parentSnapshot != null)
+			if (parentSnapshot != null)
 			{
 				parentSnapshot.CopyTo(array, arrayIndex);
 				arrayIndex += parentSnapshot.Count;
@@ -266,7 +270,7 @@ namespace Raven.Json.Linq
 
 		public DictionaryWithParentSnapshot CreateSnapshot()
 		{
-			if(IsSnapshot == false)
+			if (IsSnapshot == false)
 				throw new InvalidOperationException("Cannot create snapshot without previously calling EnsureSnapShot");
 			return new DictionaryWithParentSnapshot(this);
 		}
