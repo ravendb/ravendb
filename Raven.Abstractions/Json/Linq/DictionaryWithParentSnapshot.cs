@@ -113,14 +113,12 @@ namespace Raven.Json.Linq
 			RavenJToken token;
 			if (LocalChanges.TryGetValue(key, out token) == false)
 			{
-				if (parentHasIt == false)
-					return false;
-
-				if (parentToken == DeletedMarker)
-					return false;
+				if (parentHasIt && parentToken != DeletedMarker)
+					count -= 1;
+				return false;
 			}
-			LocalChanges[key] = DeletedMarker;
 			count -= 1;
+			LocalChanges[key] = DeletedMarker;
 			return true;
 		}
 
