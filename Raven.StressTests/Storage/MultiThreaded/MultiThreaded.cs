@@ -77,7 +77,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 			var task = Task.Factory.StartNew(StartGetDocumentOnBackground);
 			var count = SetupData();
 
-			var final = Etag.Parse("01000000-0000-0100-0000-" + count.ToString("X12"));
+			var final = Etag.Empty.Setup(UuidType.Documents, 1).IncrementBy(count);
 			while (lastEtagSeen != final)
 			{
 				Thread.Sleep(10);

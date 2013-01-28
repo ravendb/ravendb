@@ -221,6 +221,11 @@ namespace Raven.Storage.Esent
 			return e.Error == JET_err.InvalidInstance;
 		}
 
+		void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
+		{
+			Compact(cfg);
+		}
+
 		private static void RecoverFromFailedCompact(string file)
 		{
 			string renamedFile = file + ".RenameOp";
@@ -240,7 +245,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public void Compact(InMemoryRavenConfiguration ravenConfiguration)
+		public static void Compact(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			var src = Path.Combine(ravenConfiguration.DataDirectory, "Data");
 			var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Data.Compact");

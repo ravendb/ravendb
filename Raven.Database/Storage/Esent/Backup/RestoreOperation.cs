@@ -67,7 +67,11 @@ namespace Raven.Storage.Esent.Backup
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
-				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
+				var config = new InMemoryRavenConfiguration
+					{
+						DataDirectory = databaseLocation
+					};
+					new TransactionalStorageConfigurator(config).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
@@ -81,7 +85,7 @@ namespace Raven.Storage.Esent.Backup
 
 				if (defrag)
 				{
-					DefragmentDatabase(instance, dataFilePath);
+					TransactionalStorage.Compact(config);
 				}
 			}
 			catch(Exception)
@@ -171,43 +175,6 @@ namespace Raven.Storage.Esent.Backup
 					var justFile = Path.GetFileName(file);
 					File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
 				}
-			}
-		}
-
-		private void DefragmentDatabase(JET_INSTANCE instance, string dataFilePath)
-		{
-			JET_SESID sessionId = JET_SESID.Nil;
-			JET_DBID dbId = JET_DBID.Nil;
-
-			Api.JetInit(ref instance);
-
-			int passes = 1;
-			int seconds = 60;
-
-			defragmentationCompleted = false;
-
-			try
-			{
-				Api.JetBeginSession(instance, out sessionId, null, null);
-
-				Api.JetAttachDatabase(sessionId, dataFilePath, AttachDatabaseGrbit.None);
-				Api.JetOpenDatabase(sessionId, dataFilePath, null, out dbId, OpenDatabaseGrbit.None);
-
-				Api.JetDefragment2(sessionId, dbId, null, ref passes, ref seconds, DefragmentationStatusCallback, DefragGrbit.BatchStart);
-
-				output("Defragmentation started.");
-				Console.WriteLine("Defragmentation started.");
-
-				WaitForDefragmentationToComplete();
-
-				output("Defragmentation finished.");
-				Console.WriteLine("Defragmentation finished.");
-			}
-			finally
-			{
-				Api.JetCloseDatabase(sessionId, dbId, CloseDatabaseGrbit.None);
-				Api.JetDetachDatabase(sessionId, dataFilePath);
-				Api.JetEndSession(sessionId, EndSessionGrbit.None);
 			}
 		}
 

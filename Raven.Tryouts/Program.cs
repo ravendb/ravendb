@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
@@ -13,23 +14,23 @@ namespace BulkStressTest
 	class Program
 	{
 		private const string DbName = "BulkStressTestDb";
+		[STAThread]
 		static void Main(string[] args)
 		{
-			for (int i = 0; i < 1000; i++)
+			for (int i = 0; i < 10; i++)
 			{
 				Console.WriteLine(i);
-				using(var x= new CanSearchLazily())
-				{
-					x.CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex();
-				}
+				using (var dataSetIndexTests = new DataSetIndexTests())
+					dataSetIndexTests.can_execute_query_default();
+
 			}
+		}
 
-			//const int numberOfItems = 100000000;
-			//BulkInsert(numberOfItems, IndexInfo.IndexBefore);
+		private static JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+		{
+			Console.WriteLine(snp + " " + snt);
 
-			//Console.ReadLine();
-			////Uncomment to check updates
-			////	BulkInsert(numberOfItems, IndexInfo.AlreadyAdded, new BulkInsertOptions { CheckForUpdates = true });
+			return JET_err.Success;
 		}
 
 		private static void BulkInsert(int numberOfItems, IndexInfo useIndexes, BulkInsertOptions bulkInsertOptions = null)

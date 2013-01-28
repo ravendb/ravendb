@@ -176,6 +176,15 @@ namespace Raven.Abstractions.Data
 			}
 		}
 
+		public Etag Setup(UuidType type, long restartsNum)
+		{
+			return new Etag
+				{
+					restarts = ((long)type << 56) | restartsNum,
+					changes = changes
+				};
+		}
+
 		public Etag IncrementBy(int amount)
 		{
 			return new Etag
