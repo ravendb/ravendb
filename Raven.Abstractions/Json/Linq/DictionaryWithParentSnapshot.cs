@@ -12,7 +12,7 @@ namespace Raven.Json.Linq
 		private static readonly RavenJToken DeletedMarker = new RavenJValue("*DeletedMarker*", JTokenType.Null);
 
 		private readonly DictionaryWithParentSnapshot parentSnapshot;
-		private int count = -1;
+		private int count;
 		private IDictionary<string, RavenJToken> localChanges;
 		private string snapshotMsg;
 
@@ -47,7 +47,7 @@ namespace Raven.Json.Linq
 			if (ContainsKey(key))
 				throw new ArgumentException(string.Format("An item with the same key has already been added: '{0}'", key));
 
-			count = +1;
+			count += 1;
 			LocalChanges[key] = value; // we can't use Add, because LocalChanges may contain a DeletedMarker
 		}
 
@@ -71,13 +71,11 @@ namespace Raven.Json.Linq
 				{
 					if (parentSnapshot != null)
 					{
-						if (count == -1) count = parentSnapshot.count;
 						return parentSnapshot.Keys;
 					}
 					return new HashSet<string>();
 				}
 
-				int counter = 0;
 				ICollection<string> ret = new HashSet<string>();
 				if (parentSnapshot != null)
 				{
@@ -86,7 +84,6 @@ namespace Raven.Json.Linq
 						if (LocalChanges.ContainsKey(key))
 							continue;
 						ret.Add(key);
-						++counter;
 					}
 				}
 
@@ -97,10 +94,8 @@ namespace Raven.Json.Linq
 						value == DeletedMarker)
 						continue;
 					ret.Add(key);
-					++counter;
 				}
 
-				count = counter;
 				return ret;
 			}
 		}
@@ -125,12 +120,8 @@ namespace Raven.Json.Linq
 					return false;
 			}
 			LocalChanges[key] = DeletedMarker;
-			if (parentHasIt)
-			{
-				count = -1;
-				return true;
-			}
-			return false;
+			count -= 1;
+			return true;
 		}
 
 		public bool TryGetValue(string key, out RavenJToken value)
@@ -186,10 +177,12 @@ namespace Raven.Json.Linq
 			}
 			set
 			{
-				count = -1;
 				if (IsSnapshot)
 					throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+				var isInsert = ContainsKey(key) == false;
 				LocalChanges[key] = value;
+				if (isInsert)
+					count += 1;
 			}
 		}
 
@@ -257,7 +250,12 @@ namespace Raven.Json.Linq
 
 		public int Count
 		{
-			get { return (count >= 0) ? count : Keys.Count; }
+			get
+			{
+				if (parentSnapshot != null)
+					return count + parentSnapshot.Count;
+				return count;
+			}
 		}
 
 		public bool IsReadOnly
