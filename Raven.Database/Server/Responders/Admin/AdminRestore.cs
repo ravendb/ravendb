@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Responders.Admin
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 
 			var restoreStatus = new List<string>();
-
+			SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, new TransactionInformation());
 			DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
 			                         msg =>
 			                         {

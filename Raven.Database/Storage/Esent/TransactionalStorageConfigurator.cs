@@ -63,6 +63,9 @@ namespace Raven.Storage.Esent
 				AlternateDatabaseRecoveryDirectory = path
 			};
 
+			const int JET_paramEnableIndexCleanup = 54;
+			Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param)JET_paramEnableIndexCleanup, 1, null);				
+
 			return instanceParameters;
 		}
 

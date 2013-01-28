@@ -84,7 +84,7 @@ namespace Raven.Storage.Esent.Backup
 
 			bool hideTerminationException = false;
 			JET_INSTANCE instance;
-			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
+			TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
 				new TransactionalStorageConfigurator(configuration, null).ConfigureInstance(instance, databaseLocation);
@@ -93,7 +93,9 @@ namespace Raven.Storage.Esent.Backup
 					new FileInfo(
 						Path.Combine(
 							new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
-				
+
+				TransactionalStorage.DisableIndexChecking(instance);
+
 				if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
 				{
 					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
@@ -101,7 +103,7 @@ namespace Raven.Storage.Esent.Backup
 
 				if (defrag)
 				{
-					DefragmentDatabase(instance, dataFilePath);
+					TransactionalStorage.Compact(configuration);
 				}
 			}
 			catch(Exception)
@@ -189,63 +191,6 @@ namespace Raven.Storage.Esent.Backup
 					File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
 				}
 			}
-		}
-
-		private void DefragmentDatabase(JET_INSTANCE instance, string dataFilePath)
-		{
-			JET_SESID sessionId = JET_SESID.Nil;
-			JET_DBID dbId = JET_DBID.Nil;
-
-			Api.JetInit(ref instance);
-
-			int passes = 1;
-			int seconds = 60;
-
-			defragmentationCompleted = false;
-
-			try
-			{
-				Api.JetBeginSession(instance, out sessionId, null, null);
-
-				Api.JetAttachDatabase(sessionId, dataFilePath, AttachDatabaseGrbit.None);
-				Api.JetOpenDatabase(sessionId, dataFilePath, null, out dbId, OpenDatabaseGrbit.None);
-
-				Api.JetDefragment2(sessionId, dbId, null, ref passes, ref seconds, DefragmentationStatusCallback, DefragGrbit.BatchStart);
-
-				output("Defragmentation started.");
-				Console.WriteLine("Defragmentation started.");
-
-				WaitForDefragmentationToComplete();
-
-				output("Defragmentation finished.");
-				Console.WriteLine("Defragmentation finished.");
-			}
-			finally
-			{
-				Api.JetCloseDatabase(sessionId, dbId, CloseDatabaseGrbit.None);
-				Api.JetDetachDatabase(sessionId, dataFilePath);
-				Api.JetEndSession(sessionId, EndSessionGrbit.None);
-			}
-		}
-
-		private JET_err DefragmentationStatusCallback(JET_SESID sesid, JET_DBID dbId, JET_TABLEID tableId, JET_cbtyp cbtyp, object data1, object data2, IntPtr ptr1, IntPtr ptr2)
-		{
-			defragmentationCompleted = cbtyp == JET_cbtyp.OnlineDefragCompleted;
-
-			return JET_err.Success;
-		}
-
-		private void WaitForDefragmentationToComplete()
-		{
-			while (!defragmentationCompleted)
-			{
-				output(".");
-				Console.Write(".");
-
-				Thread.Sleep(TimeSpan.FromSeconds(1));
-			}
-
-			Console.WriteLine();
 		}
 
 		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
