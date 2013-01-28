@@ -362,7 +362,6 @@ more responsive application.
 		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata)
 		{
 			document.Remove("@metadata");
-
 			object entity;
 			if (entitiesByKey.TryGetValue(key, out entity) == false)
 			{
