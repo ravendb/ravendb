@@ -9,7 +9,10 @@ using System.Web;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Tasks;
+using Raven.Json.Linq;
 using SpellChecker.Net.Search.Spell;
+using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Queries
 {
@@ -53,6 +56,7 @@ namespace Raven.Database.Queries
 
 
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					database,
 					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
 					indexReader,
 					GetStringDistance(suggestionQuery.Distance),
@@ -61,8 +65,12 @@ namespace Raven.Database.Queries
 
 				database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 
-				suggestionQueryIndexExtension.Init(indexReader);
+				long _;
+				var task = Task.Factory.StartNew(() => suggestionQueryIndexExtension.Init(indexReader));
+				database.AddTask(task, new RavenJObject(), out _);
 
+				// wait for a bit for the suggestions to complete, but not too much (avoid IIS resets)
+				task.Wait(15000, database.WorkContext.CancellationToken);
 
 				return suggestionQueryIndexExtension.Query(suggestionQuery, indexReader);
 			}

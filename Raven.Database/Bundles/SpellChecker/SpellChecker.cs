@@ -17,6 +17,7 @@
 
 
 using System.Collections.Generic;
+using System.Threading;
 
 namespace SpellChecker.Net.Search.Spell
 {
@@ -394,7 +395,7 @@ namespace SpellChecker.Net.Search.Spell
 		/// <param name="ramMB">the max amount or memory in MB to use</param>
 		/// <throws>  IOException </throws>
 		/// <throws>AlreadyClosedException if the Spellchecker is already closed</throws>
-		public virtual void IndexDictionary(IDictionary dict, int mergeFactor, int ramMB)
+		public virtual void IndexDictionary(IDictionary dict, int mergeFactor, int ramMB, CancellationToken token)
 		{
 			lock (modifyCurrentIndexLock)
 			{
@@ -407,6 +408,8 @@ namespace SpellChecker.Net.Search.Spell
 				System.Collections.IEnumerator iter = dict.GetWordsIterator();
 				while (iter.MoveNext())
 				{
+					token.ThrowIfCancellationRequested();
+
 					System.String word = (System.String)iter.Current;
 
 					int len = word.Length;
@@ -438,9 +441,9 @@ namespace SpellChecker.Net.Search.Spell
 		/// Indexes the data from the given <see cref="IDictionary"/>.
 		/// </summary>
 		/// <param name="dict">dict the dictionary to index</param>
-		public void IndexDictionary(IDictionary dict)
+		public void IndexDictionary(IDictionary dict, CancellationToken token)
 		{
-			IndexDictionary(dict, 300, 10);
+			IndexDictionary(dict, 300, 10, token);
 		}
 
 		private int GetMin(int l)

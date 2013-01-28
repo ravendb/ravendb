@@ -15,6 +15,7 @@ namespace Raven.Database.Queries
 {
 	public class SuggestionQueryIndexExtension : IIndexExtension
 	{
+		private readonly DocumentDatabase database;
 		private readonly string key;
 		private readonly string field;
 		private readonly Directory directory;
@@ -22,12 +23,14 @@ namespace Raven.Database.Queries
 
 		[CLSCompliant(false)]
 		public SuggestionQueryIndexExtension(
+			DocumentDatabase database,
 			string key,
 			IndexReader reader,
 			StringDistance distance, 
 			string field, 
 			float accuracy)
 		{
+			this.database = database;
 			this.key = key;
 			this.field = field;
 			
@@ -46,7 +49,7 @@ namespace Raven.Database.Queries
 
 		public void Init(IndexReader reader)
 		{
-			spellChecker.IndexDictionary(new LuceneDictionary(reader, field));
+			spellChecker.IndexDictionary(new LuceneDictionary(reader, field), database.WorkContext.CancellationToken);
 		}
 
 		public SuggestionQueryResult Query(SuggestionQuery suggestionQuery, IndexReader indexReader)
@@ -96,7 +99,7 @@ namespace Raven.Database.Queries
 
 		public void OnDocumentsIndexed(IEnumerable<Document> documents)
 		{
-			spellChecker.IndexDictionary(new EnumerableDictionary(documents, field));
+			spellChecker.IndexDictionary(new EnumerableDictionary(documents, field), database.WorkContext.CancellationToken);
 		}
 
 		public class EnumerableDictionary : SpellChecker.Net.Search.Spell.IDictionary
