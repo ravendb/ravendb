@@ -107,8 +107,8 @@ namespace Raven.Bundles.Replication.Triggers
 
 		private void HandleAttachment(Attachment document)
 		{
-			deletedHistory.Value = document.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
-									   new RavenJArray();
+			var existingHistory = document.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory);
+			deletedHistory.Value = existingHistory != null ? new RavenJArray(existingHistory) : new RavenJArray();
 
 			deletedHistory.Value.Add(
 					new RavenJObject
