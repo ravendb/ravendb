@@ -38,7 +38,8 @@ namespace Raven.Bundles.Replication.Triggers
 				var documentMetadata = GetDocumentMetadata(key);
 				if (documentMetadata != null)
 				{
-					var history = documentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+					var existingHistory = documentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory);
+					var history = (existingHistory != null) ? new RavenJArray(existingHistory) : new RavenJArray();
 					metadata[Constants.RavenReplicationHistory] = history;
 
 					if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 
