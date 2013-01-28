@@ -35,6 +35,7 @@ namespace Raven.Database.Bundles.SqlReplication
 	[ExportMetadata("Bundle", "sqlReplication")]
 	public class SqlReplicationTask : IStartupTask
 	{
+		private const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public event Action AfterReplicationCompleted = delegate { };
@@ -77,7 +78,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private SqlReplicationStatus GetReplicationStatus()
 		{
-			var jsonDocument = Database.Get("Raven/SqlReplication/Status", null);
+			var jsonDocument = Database.Get(RavenSqlreplicationStatus, null);
 			return jsonDocument == null
 				                    ? new SqlReplicationStatus()
 				                    : jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
@@ -112,7 +113,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 
 				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag.Value);
-				if (documents.Count == 0)
+				if (documents.Count == 0 || 
+					documents.Count == 1 && RavenSqlreplicationStatus.Equals(documents[0].Key, StringComparison.InvariantCultureIgnoreCase)) // ignore changes just for this doc, since we just wrote it
 				{
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
@@ -167,14 +169,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 
 				    var obj = RavenJObject.FromObject(localReplicationStatus);
-					var putResult = Database.Put("Raven/SqlReplication/Status", null, obj, new RavenJObject(), null);
-					foreach (var lre in localReplicationStatus.LastReplicatedEtags)
-					{
-						if(Etag.GetDifference(lre.LastDocEtag, putResult.ETag) == -1)
-						{// we are at the latest except the change _we_ just made, we can ignore that
-							lre.LastDocEtag = putResult.ETag;
-						}
-					}
+					Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
 				}
 				finally
 				{
@@ -223,6 +218,8 @@ namespace Raven.Database.Bundles.SqlReplication
 					log.WarnException("Could not process SQL Replication script for " + cfg.Name +", skipping this document", e);
 				}
 			}
+			if (dictionary.Count == 0)
+				return true;
 			try
 			{
 				WriteToRelationalDatabase(cfg, providerFactory, dictionary);
@@ -270,7 +267,7 @@ namespace Raven.Database.Bundles.SqlReplication
 								var dbParameter = cmd.CreateParameter();
 								dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, itemToReplicate.PkName);
 								cmd.Parameters.Add(dbParameter);
-								dbParameter.Value = itemToReplicate.Columns.Value<object>(itemToReplicate.PkName);
+								dbParameter.Value = itemToReplicate.Columns.Value<object>(itemToReplicate.PkName) ?? DBNull.Value;
 								cmd.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}",
 								                                commandBuilder.QuoteIdentifier(kvp.Key),
 								                                commandBuilder.QuoteIdentifier(itemToReplicate.PkName),
@@ -417,18 +414,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public class ItemToReplicate
 		{
-			private RavenJObject columns;
 			public string PkName { get; set; }
-			public JsObject Data { get; set; }
-			public RavenJObject Columns
-			{
-				get
-				{
-					if (columns == null)
-						columns = ScriptedJsonPatcher.ToRavenJObject(Data);
-					return columns;
-				}
-			}
+			public RavenJObject Columns { get; set; }
 		}
 
 		private class SqlReplicationScriptedJsonPatcher : ScriptedJsonPatcher
@@ -445,15 +432,24 @@ namespace Raven.Database.Bundles.SqlReplication
 				this.docId = docId;
 			}
 
+			protected override void RemoveEngineCustomizations(JintEngine jintEngine)
+			{
+				jintEngine.RemoveParameter("documentId");
+				jintEngine.RemoveParameter("sqlReplicate");
+			}
+
 			protected override void CustomizeEngine(JintEngine jintEngine)
 			{
 				jintEngine.SetParameter("documentId", docId);
 				jintEngine.SetFunction("sqlReplicate", (Action<string, string, JsObject>)((table, pkName, cols) =>
-					dictionary.GetOrAdd(table).Add(new ItemToReplicate
+				{
+					var itemToReplicates = dictionary.GetOrAdd(table);
+					itemToReplicates.Add(new ItemToReplicate
 					{
 						PkName = pkName,
-						Data = cols
-					})));
+						Columns = ToRavenJObject(cols)
+					});
+				}));
 			}
 
 			protected override RavenJObject ConvertReturnValue(JsObject jsObject)

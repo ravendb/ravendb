@@ -84,6 +84,8 @@ namespace Raven.Database.Json
 			loadDocumentStatic = loadDocument;
 			try
 			{
+				CustomizeEngine(jintEngine);
+				
 				foreach (var kvp in patch.Values)
 				{
 					if (kvp.Value is RavenJToken)
@@ -108,6 +110,7 @@ namespace Raven.Database.Json
 				{
 					jintEngine.RemoveParameter(kvp.Key);
 				}
+				RemoveEngineCustomizations(jintEngine);
 				OutputLog(jintEngine);
 
 				scriptsCache.CheckinScript(patch, jintEngine);
@@ -131,6 +134,11 @@ namespace Raven.Database.Json
 			{
 				loadDocumentStatic = null;
 			}
+		}
+
+		protected virtual void RemoveEngineCustomizations(JintEngine jintEngine)
+		{
+			throw new NotImplementedException();
 		}
 
 		protected virtual RavenJObject ConvertReturnValue(JsObject jsObject)
@@ -299,8 +307,6 @@ function ExecutePatchScript(docInner){{
 				return ToJsObject(jintEngine.Global, loadedDoc);
 			})));
 
-			CustomizeEngine(jintEngine);
-
 			jintEngine.Run(wrapperScript);
 
 			return jintEngine;
@@ -311,7 +317,7 @@ function ExecutePatchScript(docInner){{
 			jintEngine.Run(GetFromResources(ravenDatabaseJsonMapJs));
 		}
 
-		protected virtual  void CustomizeEngine(JintEngine jintEngine)
+		protected virtual void CustomizeEngine(JintEngine jintEngine)
 		{
 		}
 
