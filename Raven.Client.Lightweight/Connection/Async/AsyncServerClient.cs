@@ -699,18 +699,11 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 			return request.ExecuteWriteAsync(new RavenJObject
-				{
-					{"RestoreLocation", restoreLocation},
-					{"DatabaseLocation", databaseLocation},
-					{"DatabaseName", name}
-				}.ToString(Formatting.None))
-				.ContinueWith(task =>
-				{
-					if (task.Exception != null)
-						return task;
-
-					return request.ExecuteRequestAsync();
-				}).Unwrap();
+			{
+				{"RestoreLocation", restoreLocation},
+				{"DatabaseLocation", databaseLocation},
+				{"DatabaseName", name}
+			}.ToString(Formatting.None));
 		}
 
 		public Task StartIndexingAsync()
