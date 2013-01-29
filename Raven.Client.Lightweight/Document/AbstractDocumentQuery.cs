@@ -95,6 +95,7 @@ namespace Raven.Client.Document
 		/// The query listeners for this query
 		/// </summary>
 		protected readonly IDocumentQueryListener[] queryListeners;
+		protected readonly bool isMapReduce;
 		/// <summary>
 		/// The session for this query
 		/// </summary>
@@ -250,8 +251,9 @@ namespace Raven.Client.Document
 									 string indexName,
 									 string[] fieldsToFetch,
 									 string[] projectionFields,
-									 IDocumentQueryListener[] queryListeners)
-			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners)
+									 IDocumentQueryListener[] queryListeners,
+									 bool isMapReduce)
+			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
 #endif
@@ -267,7 +269,8 @@ namespace Raven.Client.Document
 									 string indexName,
 									 string [] fieldsToFetch,
 									 string[] projectionFields,
-									 IDocumentQueryListener[] queryListeners)
+									 IDocumentQueryListener[] queryListeners, 
+									 bool isMapReduce)
 		{
 #if !SILVERLIGHT
 			this.theDatabaseCommands = databaseCommands;
@@ -275,6 +278,7 @@ namespace Raven.Client.Document
 			this.projectionFields = projectionFields;
 			this.fieldsToFetch = fieldsToFetch;
 			this.queryListeners = queryListeners;
+			this.isMapReduce = isMapReduce;
 			this.indexName = indexName;
 			this.theSession = theSession;
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
@@ -965,7 +969,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private string EnsureValidFieldName(WhereParams whereParams)
 		{
-			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
+			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath || isMapReduce)
 				return whereParams.FieldName;
 
 			foreach (var rootType in rootTypes)

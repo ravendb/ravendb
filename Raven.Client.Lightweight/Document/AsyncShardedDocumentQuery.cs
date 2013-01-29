@@ -54,12 +54,12 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
-		public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+		public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
 			: base(session
 #if !SILVERLIGHT
 , null
 #endif
-, null, indexName, fieldsToFetch, projectionFields, queryListeners)
+, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 			this.getShardsToOperateOn = getShardsToOperateOn;
 			this.shardStrategy = shardStrategy;
@@ -93,7 +93,8 @@ namespace Raven.Client.Document
 				indexName,
 				fields,
 				projections,
-				queryListeners)
+				queryListeners,
+				isMapReduce)
 			{
 				pageSize = pageSize,
 				queryText = new StringBuilder(queryText.ToString()),

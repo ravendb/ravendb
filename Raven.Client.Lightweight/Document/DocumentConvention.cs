@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
+using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Abstractions;
@@ -317,6 +318,17 @@ namespace Raven.Client.Document
 			var currentIdPropertyCache = idPropertyCache;
 			if (currentIdPropertyCache.TryGetValue(type, out info))
 				return info;
+
+			// we want to ignore nested entities from index creation tasks
+			if(type.IsNested && type.DeclaringType != null && 
+				typeof(AbstractIndexCreationTask).IsAssignableFrom(type.DeclaringType))
+			{
+				idPropertyCache = new Dictionary<Type, PropertyInfo>(currentIdPropertyCache)
+				{
+					{type, null}
+				};
+				return null;
+			}
 
 			var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
 

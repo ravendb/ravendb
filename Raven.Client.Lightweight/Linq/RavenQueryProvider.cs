@@ -33,6 +33,7 @@ namespace Raven.Client.Linq
 		private readonly IDatabaseCommands databaseCommands;
 #endif
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private readonly bool isMapReduce;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -45,7 +46,8 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 , IDatabaseCommands databaseCommands
 #endif
-, IAsyncDatabaseCommands asyncDatabaseCommands
+, IAsyncDatabaseCommands asyncDatabaseCommands,
+			bool isMapReduce
 )
 		{
 			FieldsToFetch = new HashSet<string>();
@@ -59,6 +61,7 @@ namespace Raven.Client.Linq
 			this.databaseCommands = databaseCommands;
 #endif
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
+			this.isMapReduce = isMapReduce;
 		}
 
 		/// <summary>
@@ -113,7 +116,8 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 				, databaseCommands
 #endif
-				, asyncDatabaseCommands
+				, asyncDatabaseCommands,
+				isMapReduce
 			);
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
@@ -137,7 +141,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 											  , databaseCommands
 #endif
-											  , asyncDatabaseCommands);
+											  , asyncDatabaseCommands, isMapReduce);
 		}
 
 		IQueryable IQueryProvider.CreateQuery(Expression expression)
@@ -254,7 +258,8 @@ namespace Raven.Client.Linq
 		{
 			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName,
 				FieldsToFetch, 
-				FieldsToRename);
+				FieldsToRename,
+				isMapReduce);
 		}
 
 		/// <summary>

@@ -24,12 +24,12 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			IDatabaseCommands databaseCommands,
 #endif
-			IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+			IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool  isMapReduce)
 			: base(session, 
 #if !SILVERLIGHT
 			databaseCommands, 
 #endif
-			asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners)
+			asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
 
@@ -711,7 +711,8 @@ namespace Raven.Client.Document
 																		 theDatabaseCommands,
 #endif
 																		 theAsyncDatabaseCommands,
-																		 indexName, fields, projections, queryListeners)
+																		 indexName, fields, projections, queryListeners,
+																		 isMapReduce)
 										{
 											pageSize = pageSize,
 											queryText = new StringBuilder(queryText.ToString()),

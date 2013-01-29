@@ -60,13 +60,13 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
-		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index)
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
 		{
 			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
 			                                 null,
 #endif
-			                                 AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners);
+			                                 AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners, isMapReduce);
 		}
 
 		/// <summary>
@@ -83,7 +83,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 			                                 null,
 #endif
-			                                 AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners);
+			                                 AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners, false);
 		}
 
 		/// <summary>
@@ -355,10 +355,11 @@ namespace Raven.Client.Document.Async
 
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
-			return Query<T>(new TIndexCreator().IndexName);
+			var indexCreator = new TIndexCreator();
+			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
 		}
 
-		public IRavenQueryable<T> Query<T>(string indexName)
+		public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
@@ -367,7 +368,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 				                          null,
 #endif
-				                          AsyncDatabaseCommands),
+				                          AsyncDatabaseCommands, isMapReduce),
 				ravenQueryStatistics,
 				highlightings,
 				indexName,
@@ -376,13 +377,14 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 				null,
 #endif
-				AsyncDatabaseCommands);
+				AsyncDatabaseCommands,
+				isMapReduce);
 		}
 
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
 		{
 			throw new NotSupportedException("You can't get a sync query from async session");
 		}
@@ -390,9 +392,9 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
-		public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName)
+		public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return AsyncLuceneQuery<T>(indexName);
+			return AsyncLuceneQuery<T>(indexName, isMapReduce);
 		}
 
 		protected override string GenerateKey(object entity)
