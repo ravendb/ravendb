@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 using Jint.Native;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -278,13 +279,14 @@ namespace Raven.Database.Json
 
 		private JintEngine CreateEngine(ScriptedPatchRequest patch)
 		{
+			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
 			var wrapperScript = String.Format(@"
 function ExecutePatchScript(docInner){{
   (function(doc){{
-	{0}{1}
+	{0}
   }}).apply(docInner);
 }};
-", patch.Script, patch.Script.EndsWith(";") ? String.Empty : ";");
+", scriptWithProperLines);
 
 			var jintEngine = new JintEngine()
 				.AllowClr(false)
@@ -309,6 +311,21 @@ function ExecutePatchScript(docInner){{
 			jintEngine.Run(wrapperScript);
 
 			return jintEngine;
+		}
+
+		private static string NormalizeLineEnding(string script)
+		{
+			var sb = new StringBuilder();
+			using (var reader = new StringReader(script))
+			{
+				while (true)
+				{
+					var line = reader.ReadLine();
+					if (line == null)
+						return sb.ToString();
+					sb.AppendLine(line);
+				}
+			}
 		}
 
 		private static void AddScript(JintEngine jintEngine, string ravenDatabaseJsonMapJs)

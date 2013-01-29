@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
@@ -14,23 +16,22 @@ namespace BulkStressTest
 		{
 			//Repro();
 
-			var sntpClient = new SntpClient(new[]
-			{
-				"time.nist.gov",
-				"time-nw.nist.gov",
-				"time-a.nist.gov",
-				"time-b.nist.gov",
-				"time-a.timefreq.bldrdoc.gov",
-				"time-b.timefreq.bldrdoc.gov",
-				"time-c.timefreq.bldrdoc.gov",
-				"utcnist.colorado.edu",
-				"nist1.datum.com",
-				"nist1.dc.certifiedtime.com",
-				"nist1.nyc.certifiedtime.com",
-			});
+			var normalizeLineEnding = NormalizeLineEnding("test\rtest\ntest\r\ntest");
+		}
 
-			Console.WriteLine(sntpClient.GetDateAsync().Result);
-			Console.ReadLine();
+		private static string NormalizeLineEnding(string script)
+		{
+			var sb = new StringBuilder();
+			using (var reader = new StringReader(script))
+			{
+				while (true)
+				{
+					var line = reader.ReadLine();
+					if (line == null)
+						return sb.ToString();
+					sb.AppendLine(line);
+				}
+			}
 		}
 
 		private static void Repro()
