@@ -100,9 +100,9 @@ namespace Raven.Database.Indexing
 						needToMoveToMultiStep.Add(localReduceKey);
 
 					if (lastPerformedReduceType != ReduceType.SingleStep)
-						return;
+						continue;
 					// we exceeded the limit of items to reduce in single step
-					// now we need to scheduce reductions at level 0 for all map results with given reduce key
+					// now we need to schedule reductions at level 0 for all map results with given reduce key
 					var mappedItems = actions.MapReduce.GetMappedBuckets(index.IndexName, localReduceKey).ToList();
 					actions.MapReduce.ScheduleReductions(index.IndexName, 0,
 					                                     mappedItems.Select(x => new ReduceKeyAndBucket(x, localReduceKey)));
