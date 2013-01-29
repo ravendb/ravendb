@@ -2557,7 +2557,7 @@
 		<Setter Property="VerticalContentAlignment" Value="Stretch"/>
 		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 		<Setter Property="Padding" Value="10"/>
-		<Setter Property="Width" Value="420"/>
+		<Setter Property="MinWidth" Value="100"/>
 		<Setter Property="MinHeight" Value="60"/>
 		<Setter Property="Template">
 			<Setter.Value>
