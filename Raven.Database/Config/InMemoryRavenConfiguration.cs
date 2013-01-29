@@ -20,6 +20,7 @@ using System.Web;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
+using Raven.Database.Plugins;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.Storage;
@@ -202,7 +203,7 @@ namespace Raven.Database.Config
 			RedirectStudioUrl = Settings["Raven/RedirectStudioUrl"];
 
 			DisableDocumentPreFetchingForIndexing = GetConfigurationValue<bool>("Raven/DisableDocumentPreFetchingForIndexing") ??
-			                                        false;
+													false;
 
 			// Misc settings
 			WebDir = Settings["Raven/WebDir"] ?? GetDefaultWebDir();
@@ -233,21 +234,28 @@ namespace Raven.Database.Config
 				container.Dispose();
 			container = null;
 
-			var bundlesFilteredCatalog = Catalog.Catalogs.OfType<BundlesFilteredCatalog>().FirstOrDefault();
-			if (bundlesFilteredCatalog != null)
-			{
-				bundlesFilteredCatalog.Bundles = bundles;
-				return;
-			}
-
-			var catalog =
-				Catalog.Catalogs.Count == 1
-					? Catalog.Catalogs.First()
-					: new AggregateCatalog(Catalog.Catalogs);
+			var catalog = GetUnfilteredCatalogs(Catalog.Catalogs);
 
 			Catalog.Catalogs.Clear();
 
 			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
+
+			var exportedValues = Container.GetExportedValues<IStartupTask>().ToArray();
+		}
+
+		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
+		{
+			if (catalogs.Count != 1) 
+				return new AggregateCatalog(catalogs.Select(GetUnfilteredCatalog));
+			return GetUnfilteredCatalog(catalogs.First());
+		}
+
+		private static ComposablePartCatalog GetUnfilteredCatalog(ComposablePartCatalog x)
+		{
+			var filteredCatalog = x as BundlesFilteredCatalog;
+			if (filteredCatalog != null)
+				return GetUnfilteredCatalog(filteredCatalog.CatalogToFilter);
+			return x;
 		}
 
 		public TaskScheduler CustomTaskScheduler { get; set; }
@@ -433,7 +441,7 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				if(MemoryStatistics.MaxParallelismSet)
+				if (MemoryStatistics.MaxParallelismSet)
 					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
 				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
 			}
@@ -643,11 +651,16 @@ namespace Raven.Database.Config
 			{
 				ResetContainer();
 				// remove old directory catalog
-				foreach (
-					var directoryCatalogToRemove in
-						Catalog.Catalogs.OfType<DirectoryCatalog>().Where(c => c.Path == pluginsDirectory).ToArray())
+				var matchingCatalogs = Catalog.Catalogs.OfType<DirectoryCatalog>()
+					.Concat(Catalog.Catalogs.OfType<FilteredCatalog>()
+								.Select(x => x.CatalogToFilter as DirectoryCatalog)
+								.Where(x => x != null)
+					)
+					.Where(c => c.Path == pluginsDirectory)
+					.ToArray();
+				foreach (var cat in matchingCatalogs)
 				{
-					Catalog.Catalogs.Remove(directoryCatalogToRemove);
+					Catalog.Catalogs.Remove(cat);
 				}
 
 				pluginsDirectory = value.ToFullPath();
