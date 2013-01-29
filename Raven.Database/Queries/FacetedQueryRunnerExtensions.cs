@@ -11,10 +11,16 @@ namespace Raven.Database.Queries
 {
 	public static class FacetedQueryRunnerExtensions
 	{
-		public static FacetResults ExecuteGetTermsQuery(this DocumentDatabase self,
-			string index, IndexQuery query, string facetSetupDoc)
+    public static FacetResults ExecuteGetTermsQuery( this DocumentDatabase self,
+      string index, IndexQuery query, string facetSetupDoc )
 		{
-			return new FacetedQueryRunner(self).GetFacets(index, query, facetSetupDoc);
-		}
+      return self.ExecuteGetTermsQuery( index, query, facetSetupDoc, 0, null );
+    }
+
+    public static FacetResults ExecuteGetTermsQuery( this DocumentDatabase self,
+    string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize )
+		{
+      return new FacetedQueryRunner( self ).GetFacets( index, query, facetSetupDoc, start, pageSize );
+    }
 	}
 }

@@ -704,10 +704,22 @@ namespace Raven.Client.Embedded
 		/// <param name="query"></param>
 		/// <param name="facetSetupDoc"></param>
 		/// <returns></returns>
-		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc)
-		{
+		public FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc ) {
+			return GetFacets( index, query, facetSetupDoc, 0, null );
+		}
+
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		/// <param name="index"></param>
+		/// <param name="query"></param>
+		/// <param name="facetSetupDoc"></param>
+		/// <param name="start"></param>
+		/// <param name="pageSize"></param>
+		/// <returns></returns>
+		public FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize ) {
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.ExecuteGetTermsQuery(index, query, facetSetupDoc);
+			return database.ExecuteGetTermsQuery( index, query, facetSetupDoc, start, pageSize );
 		}
 
 		/// <summary>

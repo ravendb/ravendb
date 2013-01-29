@@ -27,6 +27,8 @@ namespace Raven.Database.Server.Responders
 
 			var facetSetupDoc = context.GetFacetSetupDocFromHttpContext();
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			var facetStart = context.GetFacetStartFromHttpContext();
+			var facetPageSize = context.GetFacetPageSizeFromHttpContext();
 
 			var jsonDocument = Database.Get(facetSetupDoc, null);
 			if(jsonDocument == null)
@@ -44,7 +46,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 			context.WriteETag(etag);
-			context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facetSetupDoc));
+			context.WriteJson( Database.ExecuteGetTermsQuery( index, indexQuery, facetSetupDoc, facetStart, facetPageSize ) );
 		}
 
 		private Guid GetFacetsEtag(JsonDocument jsonDocument, string index)

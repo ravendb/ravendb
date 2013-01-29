@@ -233,7 +233,20 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
-		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
+		/// <param name="index">Name of the index.</param>
+		/// <param name="query">Query to build facet results.</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document.</param>
+		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc );
+
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		/// <param name="index">Name of the index.</param>
+		/// <param name="query">Query to build facet results.</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document.</param>
+		/// <param name="start">Start index for paging.</param>
+		/// <param name="pageSize">Paging PageSize. Overrides Facet.MaxResults if set.</param>
+		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize );
 
 		/// <summary>
 		/// Gets the Logs

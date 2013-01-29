@@ -590,29 +590,36 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
-		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
-		{
-			return ExecuteWithReplication("GET", operationUrl =>
-			{
-				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
-				Uri.EscapeUriString(index),
-				Uri.EscapeDataString(facetSetupDoc),
-				Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
+		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc ) {
+			return GetFacetsAsync( index, query, facetSetupDoc, 0, null );
+		}
+
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize ) {
+			return ExecuteWithReplication( "GET", operationUrl => {
+				var requestUri = operationUrl + string.Format( "/facets/{0}?facetDoc={1}&query={2}&facetStart={3}&facetPageSize={4}",
+				Uri.EscapeUriString( index ),
+				Uri.EscapeDataString( facetSetupDoc ),
+				Uri.EscapeUriString( Uri.EscapeDataString( query.Query ) ),
+				start,
+				pageSize );
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
-						.AddOperationHeaders(OperationsHeaders));
+					new CreateHttpJsonRequestParams( this, requestUri.NoCache(), "GET", credentials, convention )
+						.AddOperationHeaders( OperationsHeaders ) );
 
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders( url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges );
 
 				return request.ReadResponseJsonAsync()
-					.ContinueWith(task =>
-					{
-						var json = (RavenJObject)task.Result;
+					.ContinueWith( task => {
+						var json = ( RavenJObject )task.Result;
 						return json.JsonDeserialization<FacetResults>();
-					});
-			});
+					} );
+			} );
 		}
+
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{

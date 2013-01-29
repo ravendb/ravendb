@@ -57,7 +57,17 @@ namespace Raven.Database.Extensions
 			return context.Request.QueryString["facetDoc"] ?? "";
 		}
 
-		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
+		public static int GetFacetStartFromHttpContext( this IHttpContext context ) {
+			int start;
+			return int.TryParse( context.Request.QueryString[ "facetStart" ], out start ) ? start : 0;
+		}
+
+		public static int? GetFacetPageSizeFromHttpContext( this IHttpContext context ) {
+			int pageSize;
+			return int.TryParse( context.Request.QueryString[ "facetPageSize" ], out pageSize ) ? pageSize : new int?();
+		}
+
+		public static IndexQuery GetIndexQueryFromHttpContext( this IHttpContext context, int maxPageSize )
 		{
 			var query = new IndexQuery
 			{

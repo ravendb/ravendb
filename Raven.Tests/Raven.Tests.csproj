@@ -502,6 +502,7 @@
     <Compile Include="Bundles\SqlReplication\CanReplicate.cs" />
     <Compile Include="Bundles\SqlReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
+    <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\RavenDB741.cs" />
