@@ -2,11 +2,16 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 
 namespace Rhino.Licensing
 {
 	public class SntpClient
 	{
+		private ILog log = LogManager.GetCurrentClassLogger();
+
 		private const byte SntpDataLength = 48;
 		private readonly string[] hosts;
 		private int index = -1;
@@ -48,145 +53,82 @@ namespace Rhino.Licensing
 			return milliseconds;
 		}
 
-		public void BeginGetDate(Action<DateTime> getTime, Action failure)
+		public Task<DateTime> GetDateAsync()
 		{
-			index += 1;
+			index++;
 			if (hosts.Length <= index)
 			{
-				failure();
-				return;
+				throw new InvalidOperationException(
+					"After trying out all the hosts, was unable to find anyone that could tell us what the time is");
 			}
-			try
-			{
-				var host = hosts[index];
-				var state = new State(null, null, getTime, failure);
-				var result = Dns.BeginGetHostAddresses(host, EndGetHostAddress, state);
-				RegisterWaitForTimeout(state, result);
-			}
-			catch (Exception)
-			{
-				// retry, recursion stops at the end of the hosts
-				BeginGetDate(getTime, failure);
-			}
-		}
-
-		private void EndGetHostAddress(IAsyncResult asyncResult)
-		{
-			var state = (State)asyncResult.AsyncState;
-			try
-			{
-				var addresses = Dns.EndGetHostAddresses(asyncResult);
-				var endPoint = new IPEndPoint(addresses[0], 123);
-
-				var socket = new UdpClient();
-				socket.Connect(endPoint);
-				socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 500);
-				socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 500);
-				var sntpData = new byte[SntpDataLength];
-				sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
-
-				var newState = new State(socket, endPoint, state.GetTime, state.Failure);
-				var result = socket.BeginSend(sntpData, sntpData.Length, EndSend, newState);
-				RegisterWaitForTimeout(newState, result);
-			}
-			catch (Exception)
-			{
-				// retry, recursion stops at the end of the hosts
-				BeginGetDate(state.GetTime, state.Failure);
-
-			}
-		}
-
-		private void RegisterWaitForTimeout(State newState, IAsyncResult result)
-		{
-			if (result != null)
-				ThreadPool.RegisterWaitForSingleObject(result.AsyncWaitHandle, MaybeOperationTimeout, newState, 500, true);
-		}
-
-		private void MaybeOperationTimeout(object state, bool timedOut)
-		{
-			if (timedOut == false)
-				return;
-
-			var theState = (State)state;
-			try
-			{
-				theState.Socket.Close();
-			}
-			catch (Exception)
-			{
-				// retry, recursion stops at the end of the hosts
-				BeginGetDate(theState.GetTime, theState.Failure);
-			}
-		}
-
-		private void EndSend(IAsyncResult ar)
-		{
-			var state = (State)ar.AsyncState;
-			try
-			{
-				state.Socket.EndSend(ar);
-				var result = state.Socket.BeginReceive(EndReceive, state);
-				RegisterWaitForTimeout(state, result);
-			}
-			catch
-			{
-				state.Socket.Close();
-				BeginGetDate(state.GetTime, state.Failure);
-			}
-		}
-
-		private void EndReceive(IAsyncResult ar)
-		{
-			var state = (State)ar.AsyncState;
-			try
-			{
-				var endPoint = state.EndPoint;
-				var sntpData = state.Socket.EndReceive(ar, ref endPoint);
-				if (IsResponseValid(sntpData) == false)
+			var host = hosts[index];
+			return Task.Factory.FromAsync<IPAddress[]>((callback, state) => Dns.BeginGetHostAddresses(host, callback, state),
+												Dns.EndGetHostAddresses, host)
+				.ContinueWith(hostTask =>
 				{
-					state.Failure();
-					return;
-				}
-				var transmitTimestamp = GetTransmitTimestamp(sntpData);
-				state.GetTime(transmitTimestamp);
-			}
-			catch
-			{
-				BeginGetDate(state.GetTime, state.Failure);
-			}
-			finally
-			{
-				state.Socket.Close();
-			}
+					if (hostTask.IsFaulted)
+					{
+						log.DebugException("Could not get time from: " + host, hostTask.Exception);
+						return GetDateAsync();
+					}
+					var endPoint = new IPEndPoint(hostTask.Result[0], 123);
+
+
+					var socket = new UdpClient();
+					socket.Connect(endPoint);
+					socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 500);
+					socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 500);
+					var sntpData = new byte[SntpDataLength];
+					sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
+					return Task.Factory.FromAsync<int>(
+						(callback, state) => socket.BeginSend(sntpData, sntpData.Length, callback, state),
+						socket.EndSend, null)
+							   .ContinueWith(sendTask =>
+							   {
+								   if (sendTask.IsFaulted)
+								   {
+									   try
+									   {
+										   socket.Close();
+									   }
+									   catch (Exception)
+									   {
+									   }
+									   log.DebugException("Could not send time request to : " + host, sendTask.Exception);
+									   return GetDateAsync();
+								   }
+
+								   return Task.Factory.FromAsync<byte[]>(socket.BeginReceive, (ar) => socket.EndReceive(ar, ref endPoint), null)
+								              .ContinueWith(receiveTask =>
+								              {
+									              if (receiveTask.IsFaulted)
+									              {
+										              try
+										              {
+											              socket.Close();
+										              }
+										              catch (Exception)
+										              {
+										              }
+										              log.DebugException("Could not get time response from: " + host, receiveTask.Exception);
+										              return GetDateAsync();
+									              }
+									              var result = receiveTask.Result;
+									              if (IsResponseValid(result) == false)
+									              {
+										              log.Debug("Did not get valid time information from " + host);
+										              return GetDateAsync();
+									              }
+									              var transmitTimestamp = GetTransmitTimestamp(result);
+									              return new CompletedTask<DateTime>(transmitTimestamp);
+								              }).Unwrap();
+							   }).Unwrap();
+				}).Unwrap();
 		}
 
 		private bool IsResponseValid(byte[] sntpData)
 		{
 			return sntpData.Length >= SntpDataLength && GetIsServerMode(sntpData);
 		}
-
-		#region Nested type: State
-
-		public class State
-		{
-			public State(UdpClient socket, IPEndPoint endPoint, Action<DateTime> getTime, Action failure)
-			{
-				Socket = socket;
-				EndPoint = endPoint;
-				GetTime = getTime;
-				Failure = failure;
-			}
-
-			public UdpClient Socket { get; private set; }
-
-			public Action<DateTime> GetTime { get; private set; }
-
-			public Action Failure { get; private set; }
-
-			public IPEndPoint EndPoint { get; private set; }
-		}
-
-		#endregion
 	}
 }

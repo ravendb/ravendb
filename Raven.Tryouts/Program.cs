@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Rhino.Licensing;
 
 namespace BulkStressTest
 {
@@ -13,8 +14,15 @@ namespace BulkStressTest
 		{
 			//Repro();
 
-			
-
+			var sntpClient = new SntpClient(AbstractLicenseValidator.TimeServers);
+			sntpClient.BeginGetDate(time =>
+			{
+				Console.WriteLine(time);
+			},() =>
+			{
+				Console.WriteLine("Could not get time");
+			});
+			Console.ReadLine();
 		}
 
 		private static void Repro()
