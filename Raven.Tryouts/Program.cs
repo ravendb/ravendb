@@ -10,18 +10,26 @@ namespace BulkStressTest
 {
 	class Program
 	{
-		static void Main()
+		private static void Main()
 		{
 			//Repro();
 
-			var sntpClient = new SntpClient(AbstractLicenseValidator.TimeServers);
-			sntpClient.BeginGetDate(time =>
+			var sntpClient = new SntpClient(new[]
 			{
-				Console.WriteLine(time);
-			},() =>
-			{
-				Console.WriteLine("Could not get time");
+				"time.nist.gov",
+				"time-nw.nist.gov",
+				"time-a.nist.gov",
+				"time-b.nist.gov",
+				"time-a.timefreq.bldrdoc.gov",
+				"time-b.timefreq.bldrdoc.gov",
+				"time-c.timefreq.bldrdoc.gov",
+				"utcnist.colorado.edu",
+				"nist1.datum.com",
+				"nist1.dc.certifiedtime.com",
+				"nist1.nyc.certifiedtime.com",
 			});
+
+			Console.WriteLine(sntpClient.GetDateAsync().Result);
 			Console.ReadLine();
 		}
 
