@@ -627,8 +627,53 @@ namespace Raven.Client.Document
 		{
 			return Interlocked.Increment(ref requestCount);
 		}
+
+		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
+
+		private readonly List<Tuple<Type,TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters	 = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
+
+		public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
+		{
+			TryConvertValueForQueryDelegate<object> actual = (string name, object value, QueryValueConvertionType convertionType, out string strValue) =>
+			{
+				if(value is T)
+					return converter(name, (T)value, convertionType, out strValue);
+				strValue = null;
+				return false;
+			};
+
+			int index;
+			for (index = 0; index < listOfQueryValueConverters.Count; index++)
+			{
+				var entry = listOfQueryValueConverters[index];
+				if (entry.Item1.IsAssignableFrom(typeof(T)))
+				{
+					break;
+				}
+			}
+
+			listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
+		}
+
+
+
+		public bool TryConvertValueForQuery(string fieldName, object value, QueryValueConvertionType convertionType, out string strValue)
+		{
+			foreach (var queryValueConverterTuple in listOfQueryValueConverters
+					.Where(tuple => tuple.Item1.IsInstanceOfType(value)))
+			{
+				return queryValueConverterTuple.Item2(fieldName, value, convertionType, out strValue);
+			}
+			strValue = null;
+			return false;
+		}
 	}
 
+	public enum QueryValueConvertionType
+	{
+		Equality,
+		Range
+	}
 
 	/// <summary>
 	/// The consistency options for all queries, fore more details about the consistency options, see:
