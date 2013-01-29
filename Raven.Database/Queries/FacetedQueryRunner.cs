@@ -19,14 +19,16 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public FacetResults GetFacets( string index, IndexQuery indexQuery, string facetSetupDoc ) {
-			return GetFacets( index, indexQuery, facetSetupDoc, 0, null );
+		public FacetResults GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc)
+		{
+			return GetFacets(index, indexQuery, facetSetupDoc, 0, null);
 		}
 
-		public FacetResults GetFacets( string index, IndexQuery indexQuery, string facetSetupDoc, int start, int? pageSize ) {
-			var facetSetup = database.Get( facetSetupDoc, null );
-			if( facetSetup == null )
-				throw new InvalidOperationException( "Could not find facets document: " + facetSetupDoc );
+		public FacetResults GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc, int start, int? pageSize)
+		{
+			var facetSetup = database.Get(facetSetupDoc, null);
+			if (facetSetup == null)
+				throw new InvalidOperationException("Could not find facets document: " + facetSetupDoc);
 
 			var facets = facetSetup.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
 
@@ -34,28 +36,32 @@ namespace Raven.Database.Queries
 			var defaultFacets = new Dictionary<string, Facet>();
 			var rangeFacets = new Dictionary<string, List<ParsedRange>>();
 
-			foreach( var facet in facets ) {
-				switch( facet.Mode ) {
+			foreach (var facet in facets)
+			{
+				switch (facet.Mode)
+				{
 					case FacetMode.Default:
 						//Remember the facet, so we can run them all under one query
-						defaultFacets[ facet.Name ] = facet;
-						results.Results[ facet.Name ] = new FacetResult();
+						defaultFacets[facet.Name] = facet;
+						results.Results[facet.Name] = new FacetResult();
 						break;
 					case FacetMode.Ranges:
-						rangeFacets[ facet.Name ] = facet.Ranges.Select( range => ParseRange( facet.Name, range ) ).ToList();
-						results.Results[ facet.Name ] = new FacetResult {
-							Values = facet.Ranges.Select( range => new FacetValue {
+						rangeFacets[facet.Name] = facet.Ranges.Select(range => ParseRange(facet.Name, range)).ToList();
+						results.Results[facet.Name] = new FacetResult
+						{
+							Values = facet.Ranges.Select(range => new FacetValue
+							{
 								Range = range,
-							} ).ToList()
+							}).ToList()
 						};
 
 						break;
 					default:
-						throw new ArgumentException( string.Format( "Could not understand '{0}'", facet.Mode ) );
+						throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
 				}
 			}
 
-			new QueryForFacets( database, index, defaultFacets, rangeFacets, indexQuery, results, start, pageSize ).Execute();
+			new QueryForFacets(database, index, defaultFacets, rangeFacets, indexQuery, results, start, pageSize).Execute();
 
 			return results;
 		}
@@ -184,7 +190,7 @@ namespace Raven.Database.Queries
 				 IndexQuery indexQuery,
 				 FacetResults results,
 				 int start,
-				 int? pageSize )
+				 int? pageSize)
 			{
 				Database = database;
 				Index = index;
@@ -257,8 +263,8 @@ namespace Raven.Database.Queries
 					var values = new List<FacetValue>();
 					List<string> allTerms;
 
-					int maxResults = Math.Min( PageSize ?? facet.MaxResults ?? Database.Configuration.MaxPageSize, Database.Configuration.MaxPageSize );
-					var groups = facetsByName.GetOrDefault( facet.Name );
+					int maxResults = Math.Min(PageSize ?? facet.MaxResults ?? Database.Configuration.MaxPageSize, Database.Configuration.MaxPageSize);
+					var groups = facetsByName.GetOrDefault(facet.Name);
 
 					if (groups == null)
 						continue;
@@ -275,28 +281,31 @@ namespace Raven.Database.Queries
 							allTerms = new List<string>(groups.OrderBy(x => x.Value).ThenBy(x => x.Key).Select(x => x.Key));
 							break;
 						case FacetTermSortMode.HitsDesc:
-							allTerms = new List<string>(groups.OrderByDescending(x => x.Value).ThenBy(x=>x.Key).Select(x => x.Key));
+							allTerms = new List<string>(groups.OrderByDescending(x => x.Value).ThenBy(x => x.Key).Select(x => x.Key));
 							break;
 						default:
 							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
 					}
 
-					foreach( var term in allTerms.Skip( Start ).TakeWhile( term => values.Count < maxResults ) ) {
-						values.Add( new FacetValue {
-							Hits = groups.GetOrDefault( term ),
+					foreach (var term in allTerms.Skip(Start).TakeWhile(term => values.Count < maxResults))
+					{
+						values.Add(new FacetValue
+						{
+							Hits = groups.GetOrDefault(term),
 							Range = term
-						} );
+						});
 					}
 
-					var previousHits = allTerms.Take( Start ).Sum( allTerm => groups.GetOrDefault( allTerm ) );
-					Results.Results[ facet.Name ] = new FacetResult {
+					var previousHits = allTerms.Take(Start).Sum(allTerm => groups.GetOrDefault(allTerm));
+					Results.Results[facet.Name] = new FacetResult
+					{
 						Values = values,
-						RemainingTermsCount = allTerms.Count - ( Start + values.Count ),
-						RemainingHits = groups.Values.Sum() - ( previousHits + values.Sum( x => x.Hits ) ),
+						RemainingTermsCount = allTerms.Count - (Start + values.Count),
+						RemainingHits = groups.Values.Sum() - (previousHits + values.Sum(x => x.Hits)),
 					};
 
-					if( facet.InclueRemainingTerms )
-						Results.Results[ facet.Name ].RemainingTerms = allTerms.Skip( Start + values.Count ).ToList();
+					if (facet.InclueRemainingTerms)
+						Results.Results[facet.Name].RemainingTerms = allTerms.Skip(Start + values.Count).ToList();
 				}
 			}
 
