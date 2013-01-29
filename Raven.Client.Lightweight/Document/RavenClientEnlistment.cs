@@ -49,7 +49,7 @@ namespace Raven.Client.Document
 				{
 					var name = TransactionRecoveryInformationFileName;
 					using (var file = machineStoreForApplication.CreateFile(name + ".temp"))
-					using(var writer = new BinaryWriter(file))
+					using (var writer = new BinaryWriter(file))
 					{
 						writer.Write(session.ResourceManagerId.ToString());
 						writer.Write(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction).ToString());
@@ -83,7 +83,7 @@ namespace Raven.Client.Document
 				session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
-				}
+			}
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not commit distributed transaction", e);
@@ -115,30 +115,30 @@ namespace Raven.Client.Document
 
 		private void DeleteFile()
 		{
-				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
-				{
+			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+			{
 				// docs says to retry: http://msdn.microsoft.com/en-us/library/system.io.isolatedstorage.isolatedstoragefile.deletefile%28v=vs.95%29.aspx
 				int retries = 10;
-				while(true)
+				while (true)
 				{
 					if (machineStoreForApplication.FileExists(TransactionRecoveryInformationFileName) == false)
 						break;
 					try
 					{
-					machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
+						machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
 						break;
-				}
+					}
 					catch (IsolatedStorageException)
 					{
 						retries -= 1;
-						if(retries > 0 )
+						if (retries > 0)
 						{
 							Thread.Sleep(100);
 							continue;
 						}
 						throw;
 					}
-			}
+				}
 			}
 		}
 
@@ -154,7 +154,7 @@ namespace Raven.Client.Document
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
-				}
+			}
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not mark distributed transaction as in doubt", e);

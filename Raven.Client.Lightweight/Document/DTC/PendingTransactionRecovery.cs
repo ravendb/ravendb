@@ -22,8 +22,10 @@ namespace Raven.Client.Document.DTC
 		public void Execute(Guid myResourceManagerId, IDatabaseCommands commands)
 		{
 			var resourceManagersRequiringRecovery = new HashSet<Guid>();
-			using (var store = IsolatedStorageFile.GetMachineStoreForDomain())
+			using (var store = TryGetMachineStoreForDomain())
 			{
+				if (store == null)
+					return;
 				var filesToDelete = new List<string>();
 				foreach (var file in store.GetFileNames("*.recovery-information"))
 				{
@@ -94,6 +96,18 @@ namespace Raven.Client.Document.DTC
 				}
 				if (errors.Count > 0)
 					throw new AggregateException(errors);
+			}
+		}
+
+		private static IsolatedStorageFile TryGetMachineStoreForDomain()
+		{
+			try
+			{
+				return IsolatedStorageFile.GetMachineStoreForDomain();
+			}
+			catch (IsolatedStorageException)
+			{
+				return null; // may be because we can't get the domain, at any rate, we can't work with it, so not even going to try
 			}
 		}
 
