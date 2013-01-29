@@ -28,7 +28,7 @@ namespace Rhino.Licensing
 		/// <summary>
 		/// Standard Time servers
 		/// </summary>
-		public static readonly string[] TimeServers = new[]
+		protected readonly string[] TimeServers = new[]
 		{
 			"time.nist.gov",
 			"time-nw.nist.gov",
@@ -41,7 +41,6 @@ namespace Rhino.Licensing
 			"nist1.datum.com",
 			"nist1.dc.certifiedtime.com",
 			"nist1.nyc.certifiedtime.com",
-			"nist1.sjc.certifiedtime.com"
 		};
 
 		private readonly string licenseServerUrl;
