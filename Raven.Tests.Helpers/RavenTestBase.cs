@@ -222,10 +222,7 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			while (databaseCommands.GetStatistics().StaleIndexes.Length > 0)
-			{
-				Thread.Sleep(100);
-			}
+			SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0);
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
