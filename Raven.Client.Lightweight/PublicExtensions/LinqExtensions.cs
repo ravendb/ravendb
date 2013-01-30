@@ -266,6 +266,15 @@ namespace Raven.Client
 				.ContinueWith(task => task.Result.Item2);
 		}
 
+
+		/// <summary>
+		/// Returns whatever the query has any results asynchronously
+		/// </summary>
+		public static Task<bool> AnyAsync<T>(this IQueryable<T> source)
+		{
+			return source.CountAsync().ContinueWith(x => x.Result > 0);
+		}
+
 		/// <summary>
 		/// Returns the total count of results for a query asynchronously. 
 		/// </summary>
