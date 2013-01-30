@@ -209,7 +209,7 @@ namespace Raven.Database.Linq
 						maxTreeLevel = 9; // about 2 meters, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
 						break;
 					case SpatialSearchStrategy.QuadPrefixTree:
-						maxTreeLevel = 12; // the default max
+						maxTreeLevel = 9; // about 1 meter, should be good enough
 						break;
 					default:
 						throw new ArgumentOutOfRangeException("spatialSearchStrategy");
