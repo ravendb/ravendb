@@ -38,7 +38,7 @@ namespace Raven.Client.Linq
 			{
 				if(callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
 				{
-					if(callExpression.Arguments.Count != 0)
+					if(callExpression.Arguments.Count != 1)
 						throw new ArgumentException("Invalid computation: " + callExpression +
 											". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
 			
