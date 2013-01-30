@@ -492,12 +492,12 @@ namespace Raven.Client.Shard
 
 		#region Queries
 
-		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName)
+		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return LuceneQuery<T>(indexName);
+			return LuceneQuery<T>(indexName, isMapReduce);
 		}
 
-		protected override IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName)
+		protected override IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce = false)
 		{
 			throw new NotSupportedException("The synchronous sharded document store doesn't support async operations");
 		}
@@ -508,10 +508,10 @@ namespace Raven.Client.Shard
 			return LuceneQuery<T>(indexName);
 		}
 
-		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
+		public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
 		{
 			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null,
-			                                   listeners.QueryListeners);
+			                                   listeners.QueryListeners, isMapReduce);
 		}
 
 		public IDocumentQuery<T> LuceneQuery<T>()

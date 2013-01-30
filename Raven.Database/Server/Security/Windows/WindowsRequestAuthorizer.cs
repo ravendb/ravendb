@@ -73,7 +73,7 @@ namespace Raven.Database.Server.Security.Windows
 				CurrentOperationContext.User.Value = ctx.User;
 
 				// admins always go through
-				if (user.Principal.IsAdministrator())
+				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
 					return true;
 			}
 
@@ -82,6 +82,7 @@ namespace Raven.Database.Server.Security.Windows
 			bool isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
 			switch (server.SystemConfiguration.AnonymousUserAccessMode)
 			{
+				case AnonymousUserAccessMode.Admin:
 				case AnonymousUserAccessMode.All:
 					return true; // if we have, doesn't matter if we have / don't have the user
 				case AnonymousUserAccessMode.Get:

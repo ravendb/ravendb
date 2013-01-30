@@ -27,6 +27,11 @@ namespace Raven.Client.Indexes
 			AnalyzersStrings = new Dictionary<string, string>();
 		}
 
+		public override bool IsMapReduce
+		{
+			get { return Reduce != null; }
+		}
+
 		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
 		{
 			if (Reduce == null)

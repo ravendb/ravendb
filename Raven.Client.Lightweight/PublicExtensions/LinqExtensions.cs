@@ -56,9 +56,9 @@ namespace Raven.Client
 		public static FacetResults ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var query = ravenQueryInspector.ToString();
+			var query = ravenQueryInspector.GetIndexQuery();
 
-			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, query, facetDoc);
 		}
 #endif
 

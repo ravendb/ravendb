@@ -22,7 +22,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
-		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index);
+		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce = false);
 
 		/// <summary>
 		/// Dynamically query RavenDB using Lucene syntax

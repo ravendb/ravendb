@@ -8,6 +8,10 @@ namespace Raven.Client.Indexes
 	///</summary>
 	public class RavenDocumentsByEntityName : AbstractIndexCreationTask
 	{
+		public override bool IsMapReduce
+		{
+			get { return false; }
+		}
 		/// <summary>
 		/// Return the actual index name
 		/// </summary>

@@ -108,7 +108,7 @@ namespace Raven.Tests.Helpers
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
-				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
+				Url = GetServerUrl(fiddler)
 			};
 			store.AfterDispose += (sender, args) =>
 			{
@@ -117,6 +117,16 @@ namespace Raven.Tests.Helpers
 			};
 			ModifyStore(store);
 			return store.Initialize();
+		}
+
+		private static string GetServerUrl(bool fiddler)
+		{
+			if (fiddler)
+			{
+				if (Process.GetProcessesByName("fiddler").Any())
+					return "http://localhost.fiddler:8079";
+			}
+			return "http://localhost:8079";
 		}
 
 		public static string GetDefaultStorageType(string requestedStorage = null)
@@ -139,7 +149,7 @@ namespace Raven.Tests.Helpers
 				Port = port,
 				DataDirectory = dataDirectory,
 				RunInMemory = runInMemory,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
+				AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 			};
 
 			ModifyConfiguration(ravenConfiguration);
@@ -207,12 +217,12 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store)
+		public static void WaitForIndexing(IDocumentStore store, string db = null)
 		{
-			while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
-			{
-				Thread.Sleep(100);
-			}
+			var databaseCommands = store.DatabaseCommands;
+			if (db != null)
+				databaseCommands = databaseCommands.ForDatabase(db);
+			SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0);
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)

@@ -69,7 +69,7 @@ namespace Raven.Client.Document
 
 			if (CachedJsonDocs != null)
 			{
-				jObject.EnsureSnapshot();
+				jObject.EnsureCannotBeChangeAndEnableSnapshotting();
 				CachedJsonDocs[entity] = jObject;
 				return (RavenJObject)jObject.CreateSnapshot();
 			}

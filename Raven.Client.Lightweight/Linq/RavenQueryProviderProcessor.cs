@@ -67,13 +67,15 @@ namespace Raven.Client.Linq
 			Action<QueryResult> afterQueryExecuted,
 			string indexName,
 			HashSet<string> fieldsToFetch,
-			Dictionary<string, string> fieldsTRename)
+			Dictionary<string, string> fieldsTRename,
+			bool isMapReduce)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
 			newExpressionType = typeof (T);
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
+			this.isMapReduce = isMapReduce;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
 			linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
@@ -1065,6 +1067,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		}
 
 		private bool insideSelect;
+		private readonly bool isMapReduce;
 
 		private void VisitSelect(Expression operand)
 		{
@@ -1249,7 +1252,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		/// <value>The lucene query.</value>
 		public IDocumentQuery<T> GetLuceneQueryFor(Expression expression)
 		{
-			var q = queryGenerator.Query<T>(indexName);
+			var q = queryGenerator.Query<T>(indexName, isMapReduce);
 
 			luceneQuery = (IAbstractDocumentQuery<T>) q;
 
@@ -1267,7 +1270,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		/// <value>The lucene query.</value>
 		public IAsyncDocumentQuery<T> GetAsyncLuceneQueryFor(Expression expression)
 		{
-			var asyncLuceneQuery = queryGenerator.AsyncQuery<T>(indexName);
+			var asyncLuceneQuery = queryGenerator.AsyncQuery<T>(indexName, isMapReduce);
 			luceneQuery = (IAbstractDocumentQuery<T>) asyncLuceneQuery;
 			VisitExpression(expression);
 
@@ -1351,7 +1354,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				if (!changed)
 					continue;
-				safeToModify.EnsureSnapshot();
+				safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
 				queryResult.Results[index] = safeToModify;
 			}
 		}

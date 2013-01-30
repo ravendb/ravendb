@@ -447,6 +447,10 @@ namespace Raven.Database.Extensions
 			var etagAsString = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			if (etagAsString != null)
 			{
+				// etags are usually quoted
+				if (etagAsString.StartsWith("\"") && etagAsString.EndsWith("\""))
+					etagAsString = etagAsString.Substring(1, etagAsString.Length - 2);
+
 				Guid result;
 				if (Guid.TryParse(etagAsString, out result))
 					return result;

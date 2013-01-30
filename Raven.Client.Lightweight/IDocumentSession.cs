@@ -99,7 +99,8 @@ namespace Raven.Client
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <param name="indexName">Name of the index.</param>
-		IRavenQueryable<T> Query<T>(string indexName);
+		/// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
+		IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false);
 
 		/// <summary>
 		/// Dynamically queries RavenDB using LINQ

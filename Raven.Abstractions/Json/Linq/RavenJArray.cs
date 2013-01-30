@@ -94,6 +94,11 @@ namespace Raven.Json.Linq
 			return CloneTokenImpl(new RavenJArray());
 		}
 
+		public override bool IsSnapshot
+		{
+			get { return isSnapshot; }
+		}
+
 		public int Length { get { return Items.Count; } }
 
 		private List<RavenJToken> Items { get; set; }
@@ -258,7 +263,7 @@ namespace Raven.Json.Linq
 			Add(token);
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			isSnapshot = true;
 		}

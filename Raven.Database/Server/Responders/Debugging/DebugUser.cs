@@ -31,7 +31,8 @@ namespace Raven.Database.Server.Responders.Debugging
 			{
 				context.WriteJson(new
 				{
-					Remark = "Using anonymous user"
+					Remark = "Using anonymous user",
+					AnonymousAreAdmins = server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
 				});
 				return;
 			}
@@ -42,7 +43,7 @@ namespace Raven.Database.Server.Responders.Debugging
 				{
 					Remark = "Using windows auth",
 					User = windowsPrincipal.Identity.Name,
-					IsAdmin = windowsPrincipal.IsAdministrator()
+					IsAdmin = windowsPrincipal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode)
 				});
 				return;
 			}
@@ -54,7 +55,7 @@ namespace Raven.Database.Server.Responders.Debugging
 				{
 					Remark = "Using windows auth",
 					User = principalWithDatabaseAccess.Identity.Name,
-					IsAdmin = principalWithDatabaseAccess.IsAdministrator(),
+					IsAdmin = principalWithDatabaseAccess.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode),
 					principalWithDatabaseAccess.AdminDatabases,
 					principalWithDatabaseAccess.ReadOnlyDatabases,
 					principalWithDatabaseAccess.ReadWriteDatabases,
@@ -69,7 +70,7 @@ namespace Raven.Database.Server.Responders.Debugging
 				{
 					Remark = "Using OAuth",
 					User = oAuthPrincipal.Name,
-					IsAdmin = oAuthPrincipal.IsAdministrator(),
+					IsAdmin = oAuthPrincipal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode),
 					oAuthPrincipal.TokenBody,
 				});
 				return;

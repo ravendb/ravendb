@@ -42,6 +42,8 @@ namespace Raven.Client.Indexes
 			return enumerable.Take(indexQuery.PageSize);
 		}
 
+		public virtual bool IsMapReduce { get { return false; } }
+
 		/// <summary>
 		/// Gets the name of the index.
 		/// </summary>
@@ -401,6 +403,11 @@ namespace Raven.Client.Indexes
 				Stores = Stores,
 				StoresStrings = StoresStrings
 			}.ToIndexDefinition(Conventions);
+		}
+
+		public override bool IsMapReduce
+		{
+			get { return Reduce != null; }
 		}
 
 		/// <summary>

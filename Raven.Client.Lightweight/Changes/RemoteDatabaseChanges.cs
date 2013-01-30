@@ -34,7 +34,6 @@ namespace Raven.Client.Changes
 		private readonly ReplicationInformer replicationInformer;
 		private readonly Action onDispose;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
-		private IDisposable connection;
 
 		private static int connectionCounter;
 		private readonly string id;
@@ -159,24 +158,7 @@ namespace Raven.Client.Changes
 			counter.OnIndexChangeNotification += taskedObservable.Send;
 			counter.OnError = taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() =>
-															{
-																try
-																{
-																	connection.Dispose();
-																}
-																catch (Exception)
-																{
-																	// nothing to do here
-																}
-															});
-			});
-
-			counter.Add(disposableTask);
+		
 			return taskedObservable;
 
 		}
@@ -227,13 +209,6 @@ namespace Raven.Client.Changes
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError = taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() => connection.Dispose());
-			});
-			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
@@ -262,13 +237,6 @@ namespace Raven.Client.Changes
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError = taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() => connection.Dispose());
-			});
-			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
@@ -298,13 +266,6 @@ namespace Raven.Client.Changes
 			counter.OnIndexChangeNotification += taskedObservable.Send;
 			counter.OnError = taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() => connection.Dispose());
-			});
-			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
@@ -334,13 +295,6 @@ namespace Raven.Client.Changes
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() => connection.Dispose());
-			});
-			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
@@ -354,6 +308,7 @@ namespace Raven.Client.Changes
 		}
 
 		private volatile bool disposed;
+		private IDisposable connection;
 
 		public Task DisposeAsync()
 		{
@@ -361,14 +316,6 @@ namespace Raven.Client.Changes
 				return new CompletedTask();
 			disposed = true;
 			onDispose();
-			foreach (var keyValuePair in counters)
-			{
-				keyValuePair.Value.Dispose();
-			}
-			if (connection == null)
-			{
-				return new CompletedTask();
-			}
 
 			return Send("disconnect", null).
 				ContinueWith(_ =>

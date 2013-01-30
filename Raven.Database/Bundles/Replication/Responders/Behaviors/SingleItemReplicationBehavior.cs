@@ -53,20 +53,12 @@ namespace Raven.Bundles.Replication.Responders
 			                                && existingMetadata[Constants.RavenDeleteMarker].Value<bool>();
 
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
-				existingDocumentIsDeleted == false &&
 				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))		// this update is direct child of the existing doc, so we are fine with overwriting this
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
-				AddWithoutConflict(id, existingEtag, metadata, incoming);
-				return;
-			}
 
-			if (existingDocumentIsInConflict == false &&				// if the current document is not in conflict, we can continue without having to keep conflict semantics
-				existingDocumentIsDeleted &&
-				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))	// this update is direct child of the existing doc, so we are fine with overwriting this
-			{
-				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
-				AddWithoutConflict(id, null, metadata, incoming);
+				var etag = existingDocumentIsDeleted == false ? existingEtag : (Guid?)null;
+				AddWithoutConflict(id, etag, metadata, incoming);
 				return;
 			}
 

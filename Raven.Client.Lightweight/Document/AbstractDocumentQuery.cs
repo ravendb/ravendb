@@ -95,6 +95,7 @@ namespace Raven.Client.Document
 		/// The query listeners for this query
 		/// </summary>
 		protected readonly IDocumentQueryListener[] queryListeners;
+		protected readonly bool isMapReduce;
 		/// <summary>
 		/// The session for this query
 		/// </summary>
@@ -250,8 +251,9 @@ namespace Raven.Client.Document
 									 string indexName,
 									 string[] fieldsToFetch,
 									 string[] projectionFields,
-									 IDocumentQueryListener[] queryListeners)
-			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners)
+									 IDocumentQueryListener[] queryListeners,
+									 bool isMapReduce)
+			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
 #endif
@@ -267,7 +269,8 @@ namespace Raven.Client.Document
 									 string indexName,
 									 string [] fieldsToFetch,
 									 string[] projectionFields,
-									 IDocumentQueryListener[] queryListeners)
+									 IDocumentQueryListener[] queryListeners, 
+									 bool isMapReduce)
 		{
 #if !SILVERLIGHT
 			this.theDatabaseCommands = databaseCommands;
@@ -275,6 +278,7 @@ namespace Raven.Client.Document
 			this.projectionFields = projectionFields;
 			this.fieldsToFetch = fieldsToFetch;
 			this.queryListeners = queryListeners;
+			this.isMapReduce = isMapReduce;
 			this.indexName = indexName;
 			this.theSession = theSession;
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
@@ -460,8 +464,7 @@ namespace Raven.Client.Document
 
 		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
-			var query = queryText.ToString();
-			var indexQuery = GenerateIndexQuery(query);
+			var indexQuery = GetIndexQuery();
 
 			if(beforeQueryExecutionAction != null)
 				beforeQueryExecutionAction(indexQuery);
@@ -476,6 +479,13 @@ namespace Raven.Client.Document
 									  timeout,
 									  transformResultsFunc,
 									  includes);
+		}
+
+		public IndexQuery GetIndexQuery()
+		{
+			var query = queryText.ToString();
+			var indexQuery = GenerateIndexQuery(query);
+			return indexQuery;
 		}
 
 #if !SILVERLIGHT
@@ -959,7 +969,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private string EnsureValidFieldName(WhereParams whereParams)
 		{
-			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
+			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath || isMapReduce)
 				return whereParams.FieldName;
 
 			foreach (var rootType in rootTypes)
@@ -1715,15 +1725,24 @@ If you really want to do in memory filtering on the data returned from the query
 				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, 
 					whereParams.FieldTypeForIdentifier ?? typeof(T), false);
 			}
+			var strValue = whereParams.Value as string;
+			if (strValue != null)
+			{
+				strValue = RavenQuery.Escape(strValue, 
+						whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
-			if (whereParams.Value is string || whereParams.Value is ValueType)
+				return whereParams.IsAnalyzed ? strValue : String.Concat("[[", strValue, "]]");
+			}
+
+			if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Equality, out strValue))
+				return strValue;
+
+			if (whereParams.Value is ValueType)
 			{
 				var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
 												whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
-				if (whereParams.Value is string == false)
-					return escaped;
-				return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+				return escaped;
 			}
 
 			var result = GetImplicitStringConvertion(whereParams.Value.GetType());
@@ -1814,8 +1833,14 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((double)whereParams.Value);
 			if (whereParams.Value is float)
 				return NumberUtil.NumberToString((float)whereParams.Value);
-		   if(whereParams.Value is string)
+			if(whereParams.Value is string)
 				return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+
+			string strVal;
+			if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Range,
+			                                        out strVal))
+				return strVal;
+
 			if(whereParams.Value is ValueType)
 				return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
 										 false, true);

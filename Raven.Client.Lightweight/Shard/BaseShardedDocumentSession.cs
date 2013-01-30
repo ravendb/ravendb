@@ -237,13 +237,13 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <param name="indexName">Name of the index.</param>
-		/// <returns></returns>
-		public IRavenQueryable<T> Query<T>(string indexName)
+		/// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
+		public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
-			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null);
+			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null, isMapReduce);
+			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null, isMapReduce);
 		}
 
 		/// <summary>
@@ -273,28 +273,28 @@ namespace Raven.Client.Shard
 			{
 				Conventions = Conventions
 			};
-			return Query<T>(indexCreator.IndexName)
+			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce)
 				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.Query
 		/// </summary>
-		protected abstract IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName);
+		protected abstract IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce);
 
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorQuery<T>(indexName);
+			return IDocumentQueryGeneratorQuery<T>(indexName, isMapReduce);
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.AsyncQuery
 		/// </summary>
-		protected abstract IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName);
+		protected abstract IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce);
 
-		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
+		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorAsyncQuery<T>(indexName);
+			return IDocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
 		}
 
 		#endregion

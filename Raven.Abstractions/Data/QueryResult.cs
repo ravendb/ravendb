@@ -100,11 +100,11 @@ namespace Raven.Abstractions.Data
 		{
 			foreach (var result in Results)
 			{
-				result.EnsureSnapshot();
+				result.EnsureCannotBeChangeAndEnableSnapshotting();
 			}
 			foreach (var result in Includes)
 			{
-				result.EnsureSnapshot();
+				result.EnsureCannotBeChangeAndEnableSnapshotting();
 			}
 		}
 

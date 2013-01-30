@@ -33,11 +33,13 @@ namespace Raven.Database.Server.Security.Windows
 			if (NeverSecret.Urls.Contains(request.Url.AbsolutePath))
 				return AuthenticationSchemes.Anonymous;
 					
-			if (IsAdminRequest.IsMatch(request.RawUrl))
+			if (IsAdminRequest.IsMatch(request.RawUrl) && 
+				configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
 				return AuthenticationSchemes.IntegratedWindowsAuthentication;
 
 			switch (configuration.AnonymousUserAccessMode)
 			{
+				case AnonymousUserAccessMode.Admin:
 				case AnonymousUserAccessMode.All:
 					return AuthenticationSchemes.Anonymous;
 				case AnonymousUserAccessMode.Get:

@@ -9,7 +9,7 @@ namespace Raven.Tests.MailingList
 
 	public class FailingChangesApiTests : RavenTest
 	{
-		[Fact(Skip =  "Currently failing, still figuring out why")]
+		[Fact]
 		public void Should_get_independent_notification_subscriptions()
 		{
 			using (var store = NewRemoteDocumentStore())
@@ -41,8 +41,6 @@ namespace Raven.Tests.MailingList
 				Assert.NotNull(notification1);
 
 				subscription1.Dispose();
-
-				//Thread.Sleep(10000);
 
 				DocumentChangeNotification notification2 = null;
 				var resetEvent2 = new ManualResetEvent(false);
