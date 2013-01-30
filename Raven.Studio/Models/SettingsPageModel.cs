@@ -40,7 +40,7 @@ namespace Raven.Studio.Models
 
 	        ApplicationModel.Current.Server.Value.DocumentStore
 		        .AsyncDatabaseCommands
-		        .ForDefaultDatabase()
+				.ForSystemDatabase()
 		        .CreateRequest("/admin/databases/" + databaseName, "GET")
 		        .ReadResponseJsonAsync()
 		        .ContinueOnSuccessInTheUIThread(doc =>

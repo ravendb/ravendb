@@ -131,6 +131,7 @@ namespace Raven.Database.Indexing
 
 			SortResultsMixedAccordingToTimePerDoc(result);
 
+			int isSlowIndex = 0;
 			var totalIndexingTime = Stopwatch.StartNew();
 			var tasks = new System.Threading.Tasks.Task[result.Count];
 			for (int i = 0; i < result.Count; i++)
@@ -153,6 +154,12 @@ namespace Raven.Database.Indexing
 					{
 						indexingSemaphore.Release();
 						indexingCompletedEvent.Set();
+						if (Thread.VolatileRead(ref isSlowIndex) != 0)
+						{
+							// we now need to notify the engine that the slow index(es) is done, and we need to resume its indexing
+							context.ShouldNotifyAboutWork(() => "Slow Index Completed Indexing Batch");
+							context.NotifyAboutWork();
+						}
 					}
 					
 				});
@@ -168,8 +175,8 @@ namespace Raven.Database.Indexing
 			int minIndexingSpots = Math.Min((maxNumberOfParallelIndexTasks / 2), 8);
 			while (indexingSemaphore.CurrentCount < minIndexingSpots)
 			{
-				indexingCompletedEvent.Reset();
 				indexingCompletedEvent.Wait();
+				indexingCompletedEvent.Reset();
 			}
 
 			// now we have the chance to start a new indexing batch with the old items, but we still
@@ -185,6 +192,8 @@ namespace Raven.Database.Indexing
 				indexingCompletedEvent.Reset();
 				indexingCompletedEvent.Wait(timeout);
 			}
+			Interlocked.Increment(ref isSlowIndex);
+
 			if (Log.IsDebugEnabled == false)
 				return;
 

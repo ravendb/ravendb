@@ -308,7 +308,7 @@ namespace Raven.Client.Connection
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
 		/// with the default database
 		/// </summary>
-		IDatabaseCommands ForDefaultDatabase();
+		IDatabaseCommands ForSystemDatabase();
 
 		/// <summary>
 		/// Returns a list of suggestions based on the specified suggestion query

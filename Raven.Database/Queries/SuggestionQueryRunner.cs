@@ -58,9 +58,11 @@ namespace Raven.Database.Queries
 					GetStringDistance(suggestionQuery.Distance),
 					suggestionQuery.Field,
 					suggestionQuery.Accuracy);
-				suggestionQueryIndexExtension.Init(indexReader);
 
 				database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
+
+				suggestionQueryIndexExtension.Init(indexReader);
+
 
 				return suggestionQueryIndexExtension.Query(suggestionQuery, indexReader);
 			}

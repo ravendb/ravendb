@@ -70,6 +70,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\Microsoft.CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="mscorlib" />
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\sl4\NLog.dll</HintPath>
@@ -642,6 +643,9 @@
     <Compile Include="..\Raven.Abstractions\Data\GetResponse.cs">
       <Link>Imports\Data\GetResponse.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\HighlightedField.cs">
+      <Link>Imports\Data\HighlightedField.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
       <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
     </Compile>
@@ -677,6 +681,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
       <Link>Imports\Extensions\ListExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
+      <Link>Imports\Extensions\Absdtractions\TaskExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptions.cs">
       <Link>Imports\Indexing\SpatialOptions.cs</Link>
@@ -779,6 +786,12 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
       <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\AbstractAuthenticator.cs">
+      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\SecuredAuthenticator.cs">
+      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
@@ -924,15 +937,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\IAsyncLoaderWithInclude.cs">
       <Link>Imports\Document\IAsyncLoaderWithInclude.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\AbstractAuthenticator.cs">
-      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\BasicAuthenticator.cs">
-      <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\SecuredAuthenticator.cs">
-      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
       <Link>Imports\Document\OpenSessionOptions.cs</Link>
     </Compile>
@@ -962,6 +966,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\TaskExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FieldHighlightings.cs">
+      <Link>Imports\FieldHighlightings.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
       <Link>Imports\IAsyncDocumentQuery.cs</Link>
@@ -1020,6 +1027,9 @@
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\SearchOptions.cs">
       <Link>Imports\PublicExtensions\SearchOptions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\RavenQueryHighlightings.cs">
+      <Link>Imports\RavenQueryHighlightings.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
       <Link>Imports\RavenQueryStatistics.cs</Link>
     </Compile>
@@ -1059,6 +1069,8 @@
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
+    <Compile Include="Imports\Connection\WebRequestEventArgs.cs" />
+    <Compile Include="Imports\Document\OAuth\BasicAuthenticator.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
@@ -1270,9 +1282,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\ServerClient.cs">
       <Link>Imports\Connection\ServerClient.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\WebRequestEventArgs.cs">
-      <Link>Imports\Connection\WebRequestEventArgs.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Converters\GuidConverter.cs">
       <Link>Imports\Converters\GuidConverter.cs</Link>
     </Compile>
@@ -1430,6 +1439,7 @@
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <ProjectExtensions>

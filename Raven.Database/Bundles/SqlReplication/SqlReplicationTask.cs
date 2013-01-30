@@ -42,6 +42,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		public DocumentDatabase Database { get; set; }
 
 		private List<SqlReplicationConfig> replicationConfigs;
+		private ConcurrentDictionary<string, DateTime> lastError = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 
 		private SqlReplicationStatus replicationStatus;
 		private PrefetchingBehavior prefetchingBehavior;
@@ -97,8 +98,10 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 
 				var relevantConfigs =
-					config.Where(x => ByteArrayComparer.Instance.Compare(GetLastEtagFor(x), leastReplicatedEtag) <= 0)
-						  .ToList();
+					config
+						.Where(x => ByteArrayComparer.Instance.Compare(GetLastEtagFor(x), leastReplicatedEtag) <= 0) // haven't replicate the etag yet
+						.Where(x => SystemTime.UtcNow >= lastError.GetOrDefault(x.Name)) // have error or the timeout expired
+						.ToList();
 
 				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
 				if (documents.Count == 0)
@@ -114,8 +117,8 @@ namespace Raven.Database.Bundles.SqlReplication
 					{
 						try
 						{
-							ReplicateToDesintation(replicationConfig, documents);
-							successes.Enqueue(replicationConfig);
+							if (ReplicateToDesintation(replicationConfig, documents))
+								successes.Enqueue(replicationConfig);
 						}
 						catch (Exception e)
 						{
@@ -151,9 +154,23 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private void ReplicateToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private bool ReplicateToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
 		{
-			var providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
+			DbProviderFactory providerFactory;
+			try
+			{
+				providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
+			}
+			catch (Exception e)
+			{
+				log.WarnException(
+					string.Format("Could not find provider factory {0} to replicate to sql for {1}, ignoring", cfg.FactoryName,
+					              cfg.Name), e);
+
+				lastError[cfg.Name] = DateTime.MaxValue; // always error 
+
+				return false;
+			}
 
 			var dictionary = new Dictionary<string, List<ItemToReplicate>>();
 			foreach (var jsonDocument in docs)
@@ -165,12 +182,45 @@ namespace Raven.Database.Bundles.SqlReplication
 						continue;
 				}
 				var patcher = new SqlReplicationScriptedJsonPatcher(Database, dictionary, jsonDocument.Key);
-				patcher.Apply(jsonDocument.ToJson(), new ScriptedPatchRequest
+				try
 				{
-					Script = cfg.Script
-				});
+					patcher.Apply(jsonDocument.ToJson(), new ScriptedPatchRequest
+					{
+						Script = cfg.Script
+					});
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not process SQL Replication script for " + cfg.Name +", skipping this document", e);
+				}
 			}
+			try
+			{
+				WriteToRelationalDatabase(cfg, providerFactory, dictionary);
+				return true;
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Failure to replicate changes to relational database for " + cfg.Name +", updates", e);
+				DateTime time;
+					DateTime newTime;
+				if (lastError.TryGetValue(cfg.Name, out time) == false)
+				{
+					newTime = SystemTime.UtcNow.AddMinutes(1);
+				}
+				else
+				{
+					var totalMinutes = (SystemTime.UtcNow - time).TotalMinutes;
+					newTime = SystemTime.UtcNow.AddMinutes(Math.Max(10, Math.Min(1, totalMinutes + 1)));
+				}
+				lastError[cfg.Name] = newTime;
+				return false;
+			}
+		}
 
+		private void WriteToRelationalDatabase(SqlReplicationConfig cfg, DbProviderFactory providerFactory,
+		                                       Dictionary<string, List<ItemToReplicate>> dictionary)
+		{
 			using (var commandBuilder = providerFactory.CreateCommandBuilder())
 			using (var connection = providerFactory.CreateConnection())
 			{
@@ -193,13 +243,12 @@ namespace Raven.Database.Bundles.SqlReplication
 								cmd.Parameters.Add(dbParameter);
 								dbParameter.Value = itemToReplicate.Columns.Value<object>(itemToReplicate.PkName);
 								cmd.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}",
-																commandBuilder.QuoteIdentifier(kvp.Key),
-																commandBuilder.QuoteIdentifier(itemToReplicate.PkName),
-																dbParameter.ParameterName
+								                                commandBuilder.QuoteIdentifier(kvp.Key),
+								                                commandBuilder.QuoteIdentifier(itemToReplicate.PkName),
+								                                dbParameter.ParameterName
 									);
 								cmd.ExecuteNonQuery();
 							}
-
 						}
 
 						foreach (var itemToReplicate in kvp.Value)
@@ -408,6 +457,11 @@ namespace Raven.Database.Bundles.SqlReplication
 								prefix, 0, 256))
 				{
 					var cfg = document.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
+					if (string.IsNullOrWhiteSpace(cfg.Name))
+					{
+						log.Warn("Could not find name for sql replication document {0}, ignoring", document.Key);
+						continue;
+					}
 					if (string.IsNullOrWhiteSpace(cfg.ConnectionStringName) == false)
 					{
 						var connectionString = ConfigurationManager.ConnectionStrings[cfg.ConnectionStringName];

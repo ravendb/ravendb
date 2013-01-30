@@ -101,6 +101,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
@@ -236,6 +239,8 @@
     <Compile Include="Server\Responders\Admin\AdminRestore.cs" />
     <Compile Include="Server\Responders\BulkInsert.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugDocReferences.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
     <Compile Include="Server\Responders\Identity.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />

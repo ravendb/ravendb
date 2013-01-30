@@ -16,12 +16,13 @@ namespace Raven.Database.Storage
 		
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
+		void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
 
 		IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take);
 
-		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int take);
-		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take);
+		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int start, int take);
+		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take);
 
 		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets);
 		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, List<object> itemsToDelete);

@@ -2,17 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-#if SILVERLIGHT
-using System.Net.Browser;
-#endif
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
+#if SILVERLIGHT
+using System.Net.Browser;
+#endif
 
-namespace Raven.Client.Document.OAuth
+namespace Raven.Abstractions.OAuth
 {
 	public class SecuredAuthenticator : AbstractAuthenticator
 	{
@@ -186,7 +185,7 @@ namespace Raven.Client.Document.OAuth
 
 			return sendDataTask.ContinueWith(t =>
 			{
-				t.AssertNotFailed();
+				t.Wait();
 
 				return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
 					.AddUrlIfFaulting(authRequest.RequestUri)

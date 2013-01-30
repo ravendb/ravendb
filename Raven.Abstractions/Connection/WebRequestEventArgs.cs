@@ -11,7 +11,7 @@ using System.Net;
 using Raven.Client.Silverlight.Connection;
 #endif
 
-namespace Raven.Client.Connection
+namespace Raven.Abstractions.Connection
 {
 	/// <summary>
 	/// Event arguments for the event of creating a <see cref="WebRequest"/>

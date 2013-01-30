@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Raven.Tests.Indexes;
 using Raven.Tests.MailingList;
 
@@ -16,13 +18,14 @@ namespace BulkStressTest
 		private const string DbName = "BulkStressTestDb";
 		static void Main()
 		{
-			for (int i = 0; i < 1000; i++)
+			using (var store = new DocumentStore
 			{
-				Console.WriteLine(i);
-				using (var x = new MapReduceIndexOnLargeDataSet())
-				{
-					x.WillNotProduceAnyErrors();
-				}
+				Url = "http://localhost:8080"
+			})
+			{
+				store.Initialize();
+				var readResponseJson = ((ServerClient) store.DatabaseCommands).CreateRequest("GET", "/debug/user-info").ReadResponseJson();
+				Console.WriteLine(readResponseJson);
 			}
 
 			//const int numberOfItems = 100000000;

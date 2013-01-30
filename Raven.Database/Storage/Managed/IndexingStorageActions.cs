@@ -129,7 +129,7 @@ namespace Raven.Storage.Managed
 			var indexStats = GetCurrentIndex(index);
 			indexStats["reduce_attempts"] = indexStats.Value<int>("reduce_attempts") + stats.ReduceAttempts;
 			indexStats["reduce_successes"] = indexStats.Value<int>("reduce_successes") + stats.ReduceSuccesses;
-			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceSuccesses;
+			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceErrors;
 			storage.IndexingStats.UpdateKey(indexStats);
 
 		}
@@ -171,6 +171,16 @@ namespace Raven.Storage.Managed
 				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase))
 				.Select(x => x.Value<string>("key"))
 				.Distinct(StringComparer.InvariantCultureIgnoreCase);
+		}
+
+		public int GetCountOfDocumentsReferencing(string key)
+		{
+			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject {{"ref", key}})
+			                                          .TakeWhile(
+				                                          x =>
+				                                          key.Equals(x.Value<string>("ref"),
+				                                                     StringComparison.CurrentCultureIgnoreCase))
+			                                          .Count();
 		}
 
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)

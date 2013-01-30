@@ -1233,7 +1233,7 @@ namespace Raven.Client.Connection
 				   };
 		}
 
-		public IDatabaseCommands ForDefaultDatabase()
+		public IDatabaseCommands ForSystemDatabase()
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)

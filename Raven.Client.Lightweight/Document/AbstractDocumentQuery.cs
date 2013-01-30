@@ -110,6 +110,20 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected string[] orderByFields = new string[0];
 
+		/// <summary>
+		///   The fields to highlight
+		/// </summary>
+		protected List<HighlightedField> highlightedFields = new List<HighlightedField>();
+
+		/// <summary>
+		///   Highlighter pre tags
+		/// </summary>
+		protected string[] highlighterPreTags = new string[0];
+
+		/// <summary>
+		///   Highlighter post tags
+		/// </summary>
+		protected string[] highlighterPostTags = new string[0];
 
 		/// <summary>
 		///   The types to sort the fields by (NULL if not specified)
@@ -159,6 +173,11 @@ namespace Raven.Client.Document
 		/// Holds the query stats
 		/// </summary>
 		protected RavenQueryStatistics queryStats = new RavenQueryStatistics();
+
+		/// <summary>
+		/// Holds the query highlightings
+		/// </summary>
+		protected RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -259,7 +278,7 @@ namespace Raven.Client.Document
 			this.indexName = indexName;
 			this.theSession = theSession;
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
-			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
+			this.AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
@@ -268,6 +287,12 @@ namespace Raven.Client.Document
 			{
 				WaitForNonStaleResultsAsOfLastWrite();
 			}
+		}
+
+		private void UpdateStatsAndHighlightings(QueryResult queryResult)
+		{
+			this.queryStats.UpdateQueryStats(queryResult);
+			this.highlightings.Update(queryResult);
 		}
 
 		/// <summary>
@@ -298,8 +323,11 @@ namespace Raven.Client.Document
 			queryStats = other.queryStats;
 			defaultOperator = other.defaultOperator;
 			defaultField = other.defaultField;
-
-			AfterQueryExecuted(queryStats.UpdateQueryStats);
+			highlightedFields = other.highlightedFields;
+			highlighterPreTags = other.highlighterPreTags;
+			highlighterPostTags = other.highlighterPostTags;
+			
+			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
 
 		#region TSelf Members
@@ -425,8 +453,8 @@ namespace Raven.Client.Document
 		public void WaitForNonStaleResults(TimeSpan waitTimeout)
 		{
 			theWaitForNonStaleResults = true;
-		    cutoffEtag = null;
-		    cutoff = null;
+			cutoffEtag = null;
+			cutoff = null;
 			timeout = waitTimeout;
 		}
 
@@ -439,15 +467,15 @@ namespace Raven.Client.Document
 				beforeQueryExecutionAction(indexQuery);
 
 			return new QueryOperation(theSession,
-			                          indexName,
-			                          indexQuery,
-			                          projectionFields,
-			                          sortByHints,
-			                          theWaitForNonStaleResults,
-			                          setOperationHeaders,
-			                          timeout,
-			                          transformResultsFunc,
-			                          includes);
+									  indexName,
+									  indexQuery,
+									  projectionFields,
+									  sortByHints,
+									  theWaitForNonStaleResults,
+									  setOperationHeaders,
+									  timeout,
+									  transformResultsFunc,
+									  includes);
 		}
 
 #if !SILVERLIGHT
@@ -617,6 +645,37 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
+			string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
+		{
+			this.Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
+			string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+		{
+			this.Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
+		{
+			this.SetHighlighterTags(preTag, postTag);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string[] preTags, string[] postTags)
+		{
+			this.SetHighlighterTags(preTags, postTags);
+			return this;
+		}
+
+		public void SetHighlighterTags(string preTag, string postTag)
+		{
+			this.SetHighlighterTags(new[] {preTag}, new[] {postTag});
+		}
+
 		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
@@ -643,6 +702,24 @@ namespace Raven.Client.Document
 			orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
 			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
 		}
+
+		public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
+		{
+			highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
+		}
+
+		public void Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+		{
+			highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
+			fieldHighlightings = highlightings.AddField(fieldName);
+		}
+
+		public void SetHighlighterTags(string[] preTags, string[] postTags)
+		{
+			highlighterPreTags = preTags;
+			highlighterPostTags = postTags;
+		}
+
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -1525,10 +1602,13 @@ If you really want to do in memory filtering on the data returned from the query
 					FieldsToFetch = fieldsToFetch,
 					SpatialFieldName = spatialFieldName,
 					QueryShape = queryShape,
-					SpatialRelation =  spatialRelation,
+					SpatialRelation = spatialRelation,
 					DistanceErrorPercentage = distanceErrorPct,
 					DefaultField = defaultField,
-					DefaultOperator = defaultOperator
+					DefaultOperator = defaultOperator,
+					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
+					HighlighterPreTags = highlighterPreTags.ToArray(),
+					HighlighterPostTags = highlighterPostTags.ToArray()
 				};
 			}
 
@@ -1544,7 +1624,10 @@ If you really want to do in memory filtering on the data returned from the query
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 				FieldsToFetch = fieldsToFetch,
 				DefaultField = defaultField,
-				DefaultOperator = defaultOperator
+				DefaultOperator = defaultOperator,
+				HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
+				HighlighterPreTags = highlighterPreTags.ToArray(),
+				HighlighterPostTags = highlighterPostTags.ToArray()
 			};
 		}
 
@@ -1735,7 +1818,7 @@ If you really want to do in memory filtering on the data returned from the query
 				return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
 			if(whereParams.Value is ValueType)
 				return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-				                         false, true);
+										 false, true);
 
 			var stringWriter = new StringWriter();
 			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);

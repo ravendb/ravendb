@@ -46,7 +46,14 @@ namespace Raven.Abstractions.Util
 					loadId(token.Value<string>(), prefix);
 					break;
 				case JTokenType.Integer:
-					loadId(token.Value<int>().ToString(CultureInfo.InvariantCulture), prefix);
+					try
+					{
+						loadId(token.Value<long>().ToString(CultureInfo.InvariantCulture), prefix);
+					}
+					catch (OverflowException)
+					{
+						loadId(token.Value<ulong>().ToString(CultureInfo.InvariantCulture), prefix);
+					}
 					break;
 				// here we ignore everything else
 				// if it ain't a string or array, it is invalid

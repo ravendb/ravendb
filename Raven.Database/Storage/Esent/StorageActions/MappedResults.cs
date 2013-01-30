@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -458,10 +459,13 @@ namespace Raven.Storage.Esent.StorageActions
 				removed.Add(new ReduceKeyAndBucket(bucket, reduceKey));
 				Api.JetDelete(session, MappedResults);
 			} while (Api.TryMoveNext(session, MappedResults));
+		}
 
-			foreach (var reduceKey in removed.Select(x => x.ReduceKey))
+		public void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed)
+		{
+			foreach (var keyAndBucket in removed)
 			{
-				DecrementReduceKeyCounter(view, reduceKey);
+				DecrementReduceKeyCounter(view, keyAndBucket.ReduceKey);
 			}
 		}
 
@@ -539,7 +543,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults) && take > 0);
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int take)
+		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int start, int take)
 		{
 			if (take <= 0)
 				yield break;
@@ -552,7 +556,8 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, MappedResults, HashReduceKey(key), MakeKeyGrbit.None);
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
 				yield break;
-
+			if (TryMoveTableRecords(MappedResults, start, false))
+				yield break;
 			do
 			{
 
@@ -593,7 +598,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults) && take > 0);
 		}
 
-		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take)
+		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take)
 		{
 			if (take <= 0)
 				yield break;
@@ -607,6 +612,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, ReducedResults, SeekGrbit.SeekGE) == false)
 				yield break;
 
+			if (TryMoveTableRecords(ReducedResults, start, false))
+				yield break;
 			do
 			{
 
@@ -757,13 +764,17 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_hashed_reduce_key_and_bucket");
 			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, MappedResults, HashReduceKey(reduceKey), MakeKeyGrbit.None);
-			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
+
+			Api.MakeKey(session, MappedResults, 0, MakeKeyGrbit.None);
+			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
 				yield break;
 
 			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, MappedResults, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 
-			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+			Api.MakeKey(session, MappedResults, int.MaxValue, MakeKeyGrbit.None);
+			if (Api.TrySetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
+				yield break; 
 			do
 			{
 				var viewFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
@@ -835,6 +846,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void FlushMapReduceUpdates()
 		{
 			if (reduceKeyChanges == null)

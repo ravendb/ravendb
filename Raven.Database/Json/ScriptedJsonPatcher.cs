@@ -47,7 +47,7 @@ namespace Raven.Database.Json
 			}
 		}
 
-		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch)
+		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0)
 		{
 			if (document == null)
 				return null;
@@ -55,13 +55,13 @@ namespace Raven.Database.Json
 			if (String.IsNullOrEmpty(patch.Script))
 				throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-			var resultDocument = ApplySingleScript(document, patch);
+			var resultDocument = ApplySingleScript(document, patch, size);
 			if (resultDocument != null)
 				document = resultDocument;
 			return document;
 		}
 
-		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch)
+		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size)
 		{
 			JintEngine jintEngine;
 			try
@@ -99,6 +99,10 @@ namespace Raven.Database.Json
 				}
 				var jsObject = ToJsObject(jintEngine.Global, doc);
 				jintEngine.ResetSteps();
+				if (size != 0)
+				{
+					jintEngine.SetMaxSteps(10*1000 + (size*5));
+				}
 				jintEngine.CallFunction("ExecutePatchScript", jsObject);
 				foreach (var kvp in patch.Values)
 				{

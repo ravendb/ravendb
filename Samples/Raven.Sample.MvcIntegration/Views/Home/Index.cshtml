@@ -13,6 +13,30 @@
 	</div>
 	
 	<script src="@Url.Content("~/Scripts/jquery.min.js")"></script>
+	
+	<script>
+		$.originalVersion = true;
+		Backbone = { originalVersion: true };
+		_ = { originalVersion: true };
+	</script>
+
+	@Raven.Client.MvcIntegration.RavenProfiler.CurrentRequestSessions()
+
+	<script>
+		function checkScripts() {
+			if ($.originalVersion && Backbone.originalVersion && _.originalVersion) {
+				console.log('original scripts unchanged');
+			} else {
+				alert('Original scripts overwritten by profiler');
+			}
+		}
+
+		checkScripts();
+		$(function() {
+			checkScripts();
+		});
+	</script>
+	
 	<script>
 		$('#singleGet').on('click', function() {
 			$.getJSON('@Url.Action("SingleSessionGet", "Home")');

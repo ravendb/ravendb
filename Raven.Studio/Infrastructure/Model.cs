@@ -33,7 +33,7 @@ namespace Raven.Studio.Infrastructure
 				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
 				ApplicationModel.Current.Server.Value.DocumentStore
 					.AsyncDatabaseCommands
-					.ForDefaultDatabase()
+					.ForSystemDatabase()
 					.GetAsync("Raven/StudioConfig")
 					.ContinueOnSuccessInTheUIThread(doc =>
 					{

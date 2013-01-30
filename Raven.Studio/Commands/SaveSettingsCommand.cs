@@ -88,29 +88,37 @@ namespace Raven.Studio.Commands
 			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
 			if (sqlReplicationSettings != null)
 			{
-				session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
-					.ContinueOnSuccessInTheUIThread(documents =>
-					{
-						sqlReplicationSettings.UpdateIds();
-						if (documents != null)
-						{
-							foreach (var sqlReplicationConfig in documents)
-							{
-								if (sqlReplicationSettings.SqlReplicationConfigs.All(config => config.Id != sqlReplicationConfig.Id))
-								{
-									session.Delete(sqlReplicationConfig);
-								}
-							}
-						}
+				if (sqlReplicationSettings.SqlReplicationConfigs.Any(config => config.Name == "Temp_Name") == false && sqlReplicationSettings.SqlReplicationConfigs.Any(config => string.IsNullOrWhiteSpace(config.Name)))
+				{
+					session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+					       .ContinueOnSuccessInTheUIThread(documents =>
+					       {
+						       sqlReplicationSettings.UpdateIds();
+						       if (documents != null)
+						       {
+							       foreach (var sqlReplicationConfig in documents)
+							       {
+								       if (sqlReplicationSettings.SqlReplicationConfigs.All(config => config.Id != sqlReplicationConfig.Id))
+								       {
+									       session.Delete(sqlReplicationConfig);
+								       }
+							       }
+						       }
 
-						foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
-						{
-							session.Store(sqlReplicationConfig);
-						}
+						       foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
+						       {
+							       sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
+							       session.Store(sqlReplicationConfig);
+						       }
 
-						session.SaveChangesAsync().Catch();
-					})
-					.Catch();
+						       session.SaveChangesAsync().Catch();
+					       })
+					       .Catch();
+				}
+				else
+				{
+					ApplicationModel.Current.AddNotification(new Notification("Sql Replicaiton settings not saved, all settings must have a name and it must be different from \"Temp_Name\"", NotificationLevel.Error));
+				}
 			}
 
             var versioningSettings = settingsModel.GetSection<VersioningSettingsSectionModel>();
@@ -240,7 +248,7 @@ namespace Raven.Studio.Commands
 
 			foreach (var apiKeyDefinition in apiKeysToDelete)
 			{
-				ApplicationModel.DatabaseCommands.ForDefaultDatabase().DeleteDocumentAsync(apiKeyDefinition.Id);
+				ApplicationModel.DatabaseCommands.ForSystemDatabase().DeleteDocumentAsync(apiKeyDefinition.Id);
 			}
 
 			foreach (var apiKeyDefinition in apiKeysModel.ApiKeys)

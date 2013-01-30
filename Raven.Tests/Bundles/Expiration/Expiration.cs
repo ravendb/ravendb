@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -77,8 +78,21 @@ namespace Raven.Tests.Bundles.Expiration
 				var company2 = session.Load<Company>(company.Id);
 				Assert.NotNull(company2);
 				var metadata = session.Advanced.GetMetadataFor(company2);
-				var expirationDate = metadata.Value<DateTime>("Raven-Expiration-Date");
-				Assert.Equal(DateTimeKind.Utc, expirationDate.Kind);
+				var expirationDate = metadata["Raven-Expiration-Date"];
+				Assert.NotNull(expirationDate);
+				DateTime dateTime;
+				try
+				{
+					dateTime = expirationDate.Value<DateTime>();
+				}
+				catch (Exception e)
+				{
+					Debugger.Launch();
+					var x = expirationDate.Value<DateTime>();
+					Console.WriteLine(x);
+					throw new IOException("Could not convert " + expirationDate + " " + expirationDate.Type, e);
+				}
+				Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
 				Assert.Equal(expiry, expirationDate);
 			}
 		}
