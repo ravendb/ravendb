@@ -102,33 +102,6 @@ namespace Raven.Studio.Models
 			ExpireAt = new Observable<DateTime>();
 			ExpireAt.PropertyChanged += (sender, args) => TimeChanged = true;
 			CurrentSection = dataSection;
-			
-			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
-			ApplicationModel.Current.Server.Value.DocumentStore
-			                .AsyncDatabaseCommands
-							.ForSystemDatabase()
-			                .CreateRequest("/admin/databases/" + databaseName, "GET")
-			                .ReadResponseJsonAsync()
-			                .ContinueOnSuccessInTheUIThread(doc =>
-			                {
-				                if (doc == null)
-					                return;
-
-				                var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions
-				                                                       .CreateSerializer()
-				                                                       .Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
-
-				                string activeBundles;
-				                databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
-
-				                if (activeBundles == null) 
-									return;
-				                if (activeBundles.Contains("Expiration"))
-				                {
-					                hasExpiration = true;
-									OnPropertyChanged(() => HasExpiration);
-				                }
-			                });
 
 			References = new BindableCollection<LinkModel>(model => model.Title);
 			Related = new BindableCollection<LinkModel>(model => model.Title);
@@ -273,6 +246,7 @@ namespace Raven.Studio.Models
 		public bool HasExpiration
 		{
 			get { return hasExpiration; }
+			set { hasExpiration = value; OnPropertyChanged(() => HasExpiration); }
 		}
 
 		public bool TimeChanged { get; set; }
@@ -364,18 +338,16 @@ namespace Raven.Studio.Models
 						result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
 						LocalId = result.Document.Key;
 						SetCurrentDocumentKey(result.Document.Key);
-						if (HasExpiration)
+						var expiration = result.Document.Metadata["Raven-Expiration-Date"];
+						if (expiration != null)
 						{
-							var expiration = result.Document.Metadata["Raven-Expiration-Date"];
-							if (expiration != null)
-							{
-								ExpireAt.Value = DateTime.Parse(expiration.ToString());
-								EnableExpiration.Value = true;
-							}
-							else
-							{
-								ExpireAt.Value = DateTime.Now;
-							}
+							ExpireAt.Value = DateTime.Parse(expiration.ToString());
+							EnableExpiration.Value = true;
+							HasExpiration = true;
+						}
+						else
+						{
+							HasExpiration = false;
 						}
 					}
 
