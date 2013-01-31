@@ -18,7 +18,7 @@ namespace Raven.Database.Extensions
 
 		public static bool IsAdministrator(this IPrincipal principal, AnonymousUserAccessMode mode)
 		{
-			if (principal == null)
+			if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
 			{
 				if (mode == AnonymousUserAccessMode.Admin)
 					return true; 
