@@ -41,13 +41,15 @@ namespace Raven.Storage.Esent.Backup
 		{
 			if (File.Exists(Path.Combine(backupLocation, "RavenDB.Backup")) == false)
 			{
-				output(backupLocation + " doesn't look like a valid backup");
+				output("Error: " + backupLocation + " doesn't look like a valid backup");
+				output("Error: Restore Canceled");
 				throw new InvalidOperationException(backupLocation + " doesn't look like a valid backup");
 			}
 
 			if (Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
 			{
-				output("Database already exists, cannot restore to an existing database.");
+				output("Error: Database already exists, cannot restore to an existing database.");
+				output("Error: Restore Canceled");
 				throw new IOException("Database already exists, cannot restore to an existing database.");
 			}
 
