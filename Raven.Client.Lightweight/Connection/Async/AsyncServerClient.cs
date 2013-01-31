@@ -588,16 +588,14 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
-		/// </summary>
-		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc ) {
-			return GetFacetsAsync( index, query, facetSetupDoc, 0, null );
-		}
-
-		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize ) {
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {
 			return ExecuteWithReplication( "GET", operationUrl => {
 				var requestUri = operationUrl + string.Format( "/facets/{0}?facetDoc={1}&query={2}&facetStart={3}&facetPageSize={4}",
 				Uri.EscapeUriString( index ),

@@ -1588,25 +1588,13 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
-		/// </summary>
-		/// <param name="index"></param>
-		/// <param name="query"></param>
-		/// <param name="facetSetupDoc"></param>
-		/// <returns></returns>
-		public FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc ) {
-			return GetFacets( index, query, facetSetupDoc, 0, null );
-		}
-
-		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		/// <param name="index"></param>
-		/// <param name="query"></param>
-		/// <param name="facetSetupDoc"></param>
-		/// <param name="start"></param>
-		/// <param name="pageSize"></param>
-		/// <returns></returns>
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize ) {
 			return ExecuteWithReplication( "GET", operationUrl => {
 				var requestUri = operationUrl + string.Format( "/facets/{0}?facetDoc={1}&{2}&facetStart={3}&facetPageSize={4}",
