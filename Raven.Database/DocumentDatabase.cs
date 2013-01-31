@@ -20,6 +20,7 @@ using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
+using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
@@ -53,6 +54,8 @@ namespace Raven.Database
 {
 	public class DocumentDatabase : IDisposable
 	{
+		private readonly InMemoryRavenConfiguration configuration;
+
 		[ImportMany]
 		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
@@ -148,6 +151,8 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+			this.configuration = configuration;
+
 			using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
 			{
 				if (configuration.IsTenantDatabase == false)
@@ -1049,6 +1054,22 @@ namespace Raven.Database
 					// ensure that the code can compile
 					new DynamicViewCompiler(name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
 					DeleteIndex(name);
+					break;
+				case IndexCreationOptions.Create:
+					foreach (var suggestionOption in definition.Suggestion)
+					{
+						var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionOption.Field + "-" + suggestionOption.Distance + "-" + suggestionOption.Accuracy);
+
+						var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+							workContext,
+							Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
+							configuration.RunInMemory,
+							SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
+							suggestionOption.Field,
+							suggestionOption.Accuracy);
+
+						IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
+					}
 					break;
 			}
 

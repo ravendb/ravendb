@@ -5,11 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using System.Web;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Tasks;
 using Raven.Json.Linq;
 using SpellChecker.Net.Search.Spell;
 using Task = System.Threading.Tasks.Task;
@@ -56,9 +55,9 @@ namespace Raven.Database.Queries
 
 
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
-					database,
+					database.WorkContext,
 					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
-					indexReader,
+					indexReader.Directory() is RAMDirectory,
 					GetStringDistance(suggestionQuery.Distance),
 					suggestionQuery.Field,
 					suggestionQuery.Accuracy);
