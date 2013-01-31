@@ -149,7 +149,7 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, int take, List<object> itemsToDelete)
 		{
 			var seen = new HashSet<Tuple<string, int>>();
 
@@ -183,11 +183,18 @@ namespace Raven.Storage.Managed
 					{
 						foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
 						{
+							take--;
 							yield return mappedResultInfo;
 						}
 					}
 					itemsToDelete.Add(result);
+
+					if (take <= 0)
+						break;
 				}
+
+				if (take <= 0)
+					break;
 			}
 		}
 
