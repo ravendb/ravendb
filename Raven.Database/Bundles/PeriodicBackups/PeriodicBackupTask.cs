@@ -17,7 +17,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Bundles.PeriodicBackups
 {
 	[InheritedExport(typeof (IStartupTask))]
-	[ExportMetadata("Bundle", "PeriodicBackups")]
+	[ExportMetadata("Bundle", "PeriodicBackup")]
 	public class PeriodicBackupTask : IStartupTask, IDisposable
 	{
 		public DocumentDatabase Database { get; set; }
@@ -46,7 +46,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 			interval = backupConfigs.Interval;
 			logger.Info("Periodic backups started, will backup every" + interval + "minutes");
-			timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(interval), TimeSpan.FromMinutes(interval));
+			timer = new Timer(TimerCallback, null, TimeSpan.Zero, TimeSpan.FromMinutes(interval));
 		}
 
 		private void TimerCallback(object state)

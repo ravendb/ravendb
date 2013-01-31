@@ -85,7 +85,7 @@
 					<TextBox Grid.Column="1" Margin="5"  Text="{Binding AwsAccessKey, Mode=TwoWay}" VerticalAlignment="Center"/>
 
 					<TextBlock Grid.Row="1" Text="AWS Secret Key: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Margin="5"  Text="{Binding AwsSecretKey, Mode=TwoWay}" VerticalAlignment="Center"/>
+					<PasswordBox Grid.Row="1" Grid.Column="1" Margin="5"  Password="{Binding AwsSecretKey, Mode=TwoWay}"  VerticalAlignment="Center"/>
 				</Grid>
 			</Grid>
 			<Grid Visibility="{Binding ShowPeriodicBackup.Value, Converter={StaticResource BooleanToOppositeVisibility}}">
