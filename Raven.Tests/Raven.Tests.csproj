@@ -509,6 +509,7 @@
     <Compile Include="Issues\RavenDB814.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
     <Compile Include="Issues\RavenDB_851.cs" />
+    <Compile Include="Issues\RavenDB_863.cs" />
     <Compile Include="Issues\RavenDB_868.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />

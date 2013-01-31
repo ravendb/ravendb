@@ -106,10 +106,10 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce("a", new[] {"a"},  1, true, new List<object>());
+					var results = accessor.MapReduce.GetItemsToReduce("a", new[] {"a"},  1, true, 10, new List<object>());
 					Assert.Equal(0, results.Count());
 
-					results = accessor.MapReduce.GetItemsToReduce("b", new[] {"b"}, 1, true, new List<object>());
+					results = accessor.MapReduce.GetItemsToReduce("b", new[] {"b"}, 1, true, 10, new List<object>());
 					Assert.Equal(2, results.Count());
 				});
 			}

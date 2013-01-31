@@ -123,7 +123,8 @@ namespace Raven.Database.Indexing
 							reduceKeys: keysToReduce,
 							index: index.IndexName,
 							itemsToDelete: itemsToDelete,
-							loadData: true
+							loadData: true,
+							take: context.CurrentNumberOfItemsToReduceInSingleBatch
 						).ToList();
 
 					var sp = Stopwatch.StartNew();
@@ -205,7 +206,8 @@ namespace Raven.Database.Indexing
 							reduceKeys: keysToReduce,
 							index: index.IndexName,
 							itemsToDelete: itemsToDelete,
-							loadData: false
+							loadData: false,
+							take: int.MaxValue // just get all
 						).ToList();
 
 				// Only look at the scheduled batch for this run, not the entire set of pending reductions.
