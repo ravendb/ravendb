@@ -13,7 +13,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -100,7 +102,7 @@ namespace Raven.Client.Indexes
 												string queryRootName, Expression node)
 		{
 			var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-			builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
+			 builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
 			return builder.ToString();
 		}
 
@@ -221,7 +223,7 @@ namespace Raven.Client.Indexes
 			{
 				OutputTypeIfNeeded(member);
 			}
-			var name = member.Name;
+			var name = GetPropertyName(member.Name, exprType);
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
 				// only translate from the root type or derivatives
@@ -255,6 +257,23 @@ namespace Raven.Client.Indexes
 			{
 				CloseOutputTypeIfNeeded(member);
 			}
+		}
+
+		private string GetPropertyName(string name, Type exprType)
+		{
+			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			if (propertyInfo != null)
+			{
+				var jsonProperty = propertyInfo.GetCustomAttributes(typeof (JsonPropertyAttribute), false).FirstOrDefault() as JsonPropertyAttribute;
+				if (jsonProperty != null)
+				{
+					if (keywordsInCSharp.Contains(jsonProperty.PropertyName))
+						return '@' + jsonProperty.PropertyName;
+					return jsonProperty.PropertyName;
+				}
+			}
+
+			return name;
 		}
 
 		private void CloseOutputTypeIfNeeded(MemberInfo member)
