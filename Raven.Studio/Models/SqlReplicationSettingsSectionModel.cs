@@ -1,16 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Linq;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Implementation;
 using Microsoft.Expression.Interactivity.Core;
@@ -20,7 +10,6 @@ using Raven.Client.Connection.Async;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
 using Raven.Studio.Controls.Editors;
-using Raven.Studio.Features.Patch;
 using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 
@@ -30,7 +19,7 @@ namespace Raven.Studio.Models
 	{
 		private ICommand addReplicationCommand;
 		private ICommand deleteReplicationCommand;
-		public const string CollectionsIndex = "Raven/DocumentsByEntityName";
+		private const string CollectionsIndex = "Raven/DocumentsByEntityName";
 
 		static SqlReplicationSettingsSectionModel()
 		{
@@ -165,7 +154,6 @@ namespace Raven.Studio.Models
 					                                                               }, null).ContinueOnSuccessInTheUIThread(result =>
 					                                                               {
 						                                                               FirstItemOfCollection.Value = result.Results.FirstOrDefault();
-						                                                               //TODO: save the document
 					                                                               });
 				}
 			}
