@@ -335,7 +335,12 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
-		FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc);
+		FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc );
+
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize );
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag

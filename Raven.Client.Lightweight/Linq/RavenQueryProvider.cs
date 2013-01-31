@@ -156,7 +156,8 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 					, databaseCommands
 #endif
-					, asyncDatabaseCommands
+					, asyncDatabaseCommands,
+					isMapReduce
 				};
 				return (IQueryable) Activator.CreateInstance(makeGenericType, args);
 			}

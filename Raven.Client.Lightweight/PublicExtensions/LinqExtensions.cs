@@ -55,20 +55,33 @@ namespace Raven.Client
 		/// </summary>
 		public static FacetResults ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
 		{
+			return queryable.ToFacets(facetDoc, 0);
+		}
+
+		/// <summary>
+		/// Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		public static FacetResults ToFacets<T>(this IQueryable<T> queryable, string facetDoc, int start, int? pageSize = null)
+		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.GetIndexQuery();
 
-			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, query, facetDoc);
+			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, query, facetDoc, start, pageSize);
 		}
 #endif
 
 #if !SILVERLIGHT
 		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
 		{
+			return queryable.ToFacetsLazy(facetDoc, 0, null);
+		}
+
+		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc, int start, int? pageSize)
+		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
 
-			var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery { Query = query });
+			var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery { Query = query }, start, pageSize);
 
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
 			return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
@@ -80,10 +93,18 @@ namespace Raven.Client
 		/// </summary>
 		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
 		{
+			return queryable.ToFacetsAsync(facetDoc, 0, null);
+		}
+
+		/// <summary>
+		/// Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc, int start, int? pageSize)
+		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
 			var query = ravenQueryInspector.ToAsyncString();
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.AsyncIndexQueried, new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.AsyncIndexQueried, new IndexQuery { Query = query }, facetDoc, start, pageSize);
 		}
 
 		/// <summary>
@@ -245,6 +266,15 @@ namespace Raven.Client
 				.ContinueWith(task => task.Result.Item2);
 		}
 
+
+		/// <summary>
+		/// Returns whatever the query has any results asynchronously
+		/// </summary>
+		public static Task<bool> AnyAsync<T>(this IQueryable<T> source)
+		{
+			return source.CountAsync().ContinueWith(x => x.Result > 0);
+		}
+
 		/// <summary>
 		/// Returns the total count of results for a query asynchronously. 
 		/// </summary>
@@ -267,22 +297,22 @@ namespace Raven.Client
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
 		public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms,
-		                                           decimal boost = 1,
-		                                           SearchOptions options = SearchOptions.Guess,
-		                                           EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
+												   decimal boost = 1,
+												   SearchOptions options = SearchOptions.Guess,
+												   EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			Expression expression = self.Expression;
 			if (expression.Type != typeof(IRavenQueryable<T>))
-		{
+			{
 				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-		}
+			}
 			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression,
-			                                                          fieldSelector,
-			                                                          Expression.Constant(searchTerms),
-			                                                          Expression.Constant(boost),
-			                                                          Expression.Constant(options),
-			                                                          Expression.Constant(escapeQueryOptions)));
+																	  fieldSelector,
+																	  Expression.Constant(searchTerms),
+																	  Expression.Constant(boost),
+																	  Expression.Constant(options),
+																	  Expression.Constant(escapeQueryOptions)));
 			return (IRavenQueryable<T>)queryable;
 		}
 
@@ -291,13 +321,13 @@ namespace Raven.Client
 		/// </summary>
 		public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
 		{
-			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod ();
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			Expression expression = self.Expression;
-			if (expression.Type != typeof (IRavenQueryable<T>))
+			if (expression.Type != typeof(IRavenQueryable<T>))
 			{
-				expression = Expression.Convert (expression, typeof (IRavenQueryable<T>));
+				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
 			}
-			var queryable = self.Provider.CreateQuery (Expression.Call (null, currentMethod.MakeGenericMethod (typeof (T)), expression));
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
 			return (IOrderedQueryable<T>)queryable;
 		}
 	}

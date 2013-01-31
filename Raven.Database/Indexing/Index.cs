@@ -684,11 +684,16 @@ namespace Raven.Database.Indexing
 						clonedField = new Field(field.Name, field.GetBinaryValue(),
 												field.IsStored ? Field.Store.YES : Field.Store.NO);
 					}
-					else
+					else if (field.StringValue != null)
 					{
 						clonedField = new Field(field.Name, field.StringValue,
-										field.IsStored ? Field.Store.YES : Field.Store.NO,
-										field.IsIndexed ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
+						                        field.IsStored ? Field.Store.YES : Field.Store.NO,
+						                        field.IsIndexed ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
+					}
+					else
+					{
+						//probably token stream, and we can't handle fields with token streams, so we skip this.
+						continue;
 					}
 					clonedDocument.Add(clonedField);
 				}
