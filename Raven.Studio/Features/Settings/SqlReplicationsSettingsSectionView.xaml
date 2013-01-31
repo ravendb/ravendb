@@ -83,7 +83,6 @@
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 
@@ -127,26 +126,16 @@
 							 Visibility="{Binding ElementName=ConnectionStringMode, Path=SelectedIndex, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=2}"
 							 MinWidth="250"/>
 				</StackPanel>
-
-				<sdk:GridSplitter Grid.Row="2" 
-								  VerticalAlignment="Center" 
-								  HorizontalAlignment="Stretch"/>
 				
-				<Grid Grid.Row="3">
-
+				<Grid Grid.Row="2">
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto"/>
 						<RowDefinition Height="*"/>
 					</Grid.RowDefinitions>
 						<TextBlock Text="Script: "/>
-
 						<Editors:JsonEditor Grid.Row="1" BoundDocument="{Binding Script}" Margin="5,0,10,10" />
-
-					
 				</Grid>
 			</Grid>
-
 		</Grid>
-
 	</Border>
 </UserControl>

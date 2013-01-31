@@ -53,7 +53,8 @@ namespace Raven.Studio.Models
 				"System.Data.OleDb",
 				"System.Data.OracleClient",
 				"MySql.Data.MySqlClient",
-				"System.Data.SqlServerCe.3.5"
+				"System.Data.SqlServerCe.3.5",
+				"Npgsql"
 			};
 		}
 
