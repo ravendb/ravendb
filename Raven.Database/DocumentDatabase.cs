@@ -1055,22 +1055,6 @@ namespace Raven.Database
 					new DynamicViewCompiler(name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
 					DeleteIndex(name);
 					break;
-				case IndexCreationOptions.Create:
-					foreach (var suggestionOption in definition.Suggestion)
-					{
-						var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionOption.Field + "-" + suggestionOption.Distance + "-" + suggestionOption.Accuracy);
-
-						var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
-							workContext,
-							Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
-							configuration.RunInMemory,
-							SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
-							suggestionOption.Field,
-							suggestionOption.Accuracy);
-
-						IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
-					}
-					break;
 			}
 
 			// this has to happen in this fashion so we will expose the in memory status after the commit, but 
@@ -1082,13 +1066,14 @@ namespace Raven.Database
 			{
 				actions.Indexing.AddIndex(name, definition.IsMapReduce);
 				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-
 			});
 
 			// The act of adding it here make it visible to other threads
 			// we have to do it in this way so first we prepare all the elements of the 
 			// index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(name, definition);
+
+			InvokeSuggestionIndexing(name, definition);
 
 			workContext.ClearErrorsFor(name);
 
@@ -1099,6 +1084,26 @@ namespace Raven.Database
 			}));
 
 			return name;
+		}
+
+		private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
+		{
+			foreach (var suggestion in definition.Suggestions)
+			{
+				var field = suggestion.Key;
+				var suggestionOption = suggestion.Value;
+				var indexExtensionKey = MonoHttpUtility.UrlEncode(field + "-" + suggestionOption.Distance + "-" + suggestionOption.Accuracy);
+
+				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					workContext,
+					Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
+					configuration.RunInMemory,
+					SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
+					field,
+					suggestionOption.Accuracy);
+
+				IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
+			}
 		}
 
 		private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)

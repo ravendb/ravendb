@@ -25,7 +25,7 @@ namespace Raven.Abstractions.Indexing
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
 			Fields = new List<string>();
-			Suggestion = new List<SuggestionOptions>();
+			Suggestions = new Dictionary<string, SuggestionOptions>();
 		}
 
 		/// <summary>
@@ -119,10 +119,10 @@ namespace Raven.Abstractions.Indexing
 		public IList<string> Fields { get; set; }
 
 		/// <summary>
-		/// Gets or sets the fields that support the suggestion feature
+		/// Gets or sets the suggest options
 		/// </summary>
-		/// <value>The sort options.</value>
-		public IList<SuggestionOptions> Suggestion { get; set; }
+		/// <value>The suggest options.</value>
+		public IDictionary<string, SuggestionOptions> Suggestions { get; set; }
 
 		/// <summary>
 		/// Equals the specified other.
@@ -136,14 +136,14 @@ namespace Raven.Abstractions.Indexing
 			if (ReferenceEquals(this, other))
 				return true;
 			return Maps.SequenceEqual(other.Maps) &&
-				   Suggestion.SequenceEqual(other.Suggestion) &&
 			       Equals(other.Name, Name) &&
 			       Equals(other.Reduce, Reduce) &&
 			       Equals(other.TransformResults, TransformResults) &&
 			       DictionaryEquals(other.Stores, Stores) &&
 			       DictionaryEquals(other.Indexes, Indexes) &&
 			       DictionaryEquals(other.Analyzers, Analyzers) &&
-			       DictionaryEquals(other.SortOptions, SortOptions);
+				   DictionaryEquals(other.SortOptions, SortOptions) &&
+				   DictionaryEquals(other.Suggestions, Suggestions);
 		}
 
 		private static bool DictionaryEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
@@ -218,13 +218,13 @@ namespace Raven.Abstractions.Indexing
 			{
 				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
 				result = (result * 397) ^ Maps.Count;
-				result = (result * 397) ^ Suggestion.Count;
 				result = (result * 397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
 				result = (result * 397) ^ (TransformResults != null ? TransformResults.GetHashCode() : 0);
 				result = (result * 397) ^ DictionaryHashCode(Stores);
 				result = (result * 397) ^ DictionaryHashCode(Indexes);
 				result = (result * 397) ^ DictionaryHashCode(Analyzers);
 				result = (result * 397) ^ DictionaryHashCode(SortOptions);
+				result = (result * 397) ^ DictionaryHashCode(Suggestions);
 				return result;
 			}
 		}
@@ -292,8 +292,8 @@ namespace Raven.Abstractions.Indexing
 				indexDefinition.SortOptions = new Dictionary<string, SortOptions>(SortOptions);
 			if (Stores != null)
 				indexDefinition.Stores = new Dictionary<string, FieldStorage>(Stores);
-			if (Suggestion != null)
-				indexDefinition.Suggestion = new List<SuggestionOptions>(Suggestion);
+			if (Suggestions != null)
+				indexDefinition.Suggestions = new Dictionary<string, SuggestionOptions>(Suggestions);
 			return indexDefinition;
 		}
 	}

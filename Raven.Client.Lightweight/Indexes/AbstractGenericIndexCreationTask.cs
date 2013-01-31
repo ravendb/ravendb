@@ -25,6 +25,7 @@ namespace Raven.Client.Indexes
 			IndexSortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
+			IndexSuggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 		}
 
 		public override bool IsMapReduce
@@ -65,6 +66,11 @@ namespace Raven.Client.Indexes
 		/// Index sort options
 		/// </summary>
 		protected IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> IndexSortOptions { get; set; }
+
+		/// <summary>
+		/// Index suggest options
+		/// </summary>
+		protected IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> IndexSuggestions { get; set; }
 
 		/// <summary>
 		/// Index sort options
@@ -145,6 +151,18 @@ namespace Raven.Client.Indexes
 		protected void Sort(Expression<Func<TReduceResult, object>> field, SortOptions sort)
 		{
 			IndexSortOptions.Add(field, sort);
+		}
+
+		/// <summary>
+		/// Register a field to be sorted
+		/// </summary>
+		protected void Suggestion(Expression<Func<TReduceResult, object>> field, SuggestionOptions suggestion = null)
+		{
+			IndexSuggestions.Add(field, suggestion ?? new SuggestionOptions
+			{
+				Accuracy = 0.5f,
+				Distance = StringDistanceTypes.Levenshtein
+			});
 		}
 	}
 }
