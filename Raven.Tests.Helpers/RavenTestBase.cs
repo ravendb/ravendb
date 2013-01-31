@@ -102,13 +102,14 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false)
+		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null)
 		{
-			var ravenDbServer = GetNewServer();
+			ravenDbServer = ravenDbServer ?? GetNewServer();
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
-				Url = GetServerUrl(fiddler)
+				Url = GetServerUrl(fiddler),
+				DefaultDatabase = databaseName,
 			};
 			store.AfterDispose += (sender, args) =>
 			{
