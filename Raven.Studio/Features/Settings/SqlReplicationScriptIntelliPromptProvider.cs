@@ -52,7 +52,7 @@ namespace Raven.Studio.Features.Settings
 					Text = "sqlReplicate",
 					AutoCompletePreText = "sqlReplicate",
 					DescriptionProvider =
-						 new HtmlContentProvider("(<em>Collection</em>, <em>Id</em>, <em>data</em>)<br/>This is what it is doing<br/><strong>Collection</strong> description of param1 <br/><strong>Id</strong> description of param2 <br/><strong>Data</strong> description of param3 <br/>")
+						 new HtmlContentProvider("//Will update/insert the specified object (with the object properties matching the table columns)<br/>//to the specified table, using the specified pkName<br/>sqlReplicate(table, pkName, columnsObj)")
 				});
 			}
 
