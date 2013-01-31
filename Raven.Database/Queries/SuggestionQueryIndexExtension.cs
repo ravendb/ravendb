@@ -15,7 +15,7 @@ namespace Raven.Database.Queries
 {
 	public class SuggestionQueryIndexExtension : IIndexExtension
 	{
-		private readonly DocumentDatabase database;
+		private readonly WorkContext workContext;
 		private readonly string key;
 		private readonly string field;
 		private readonly Directory directory;
@@ -23,18 +23,18 @@ namespace Raven.Database.Queries
 
 		[CLSCompliant(false)]
 		public SuggestionQueryIndexExtension(
-			DocumentDatabase database,
+			WorkContext workContext,
 			string key,
-			IndexReader reader,
+			bool isRunInMemory,
 			StringDistance distance, 
 			string field, 
 			float accuracy)
 		{
-			this.database = database;
+			this.workContext = workContext;
 			this.key = key;
 			this.field = field;
 			
-			if(reader.Directory() is RAMDirectory)
+			if(isRunInMemory)
 			{
 				directory = new RAMDirectory();
 			}
@@ -49,7 +49,7 @@ namespace Raven.Database.Queries
 
 		public void Init(IndexReader reader)
 		{
-			spellChecker.IndexDictionary(new LuceneDictionary(reader, field), database.WorkContext.CancellationToken);
+			spellChecker.IndexDictionary(new LuceneDictionary(reader, field), workContext.CancellationToken);
 		}
 
 		public SuggestionQueryResult Query(SuggestionQuery suggestionQuery, IndexReader indexReader)
@@ -99,7 +99,7 @@ namespace Raven.Database.Queries
 
 		public void OnDocumentsIndexed(IEnumerable<Document> documents)
 		{
-			spellChecker.IndexDictionary(new EnumerableDictionary(documents, field), database.WorkContext.CancellationToken);
+			spellChecker.IndexDictionary(new EnumerableDictionary(documents, field), workContext.CancellationToken);
 		}
 
 		public class EnumerableDictionary : SpellChecker.Net.Search.Spell.IDictionary

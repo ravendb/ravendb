@@ -511,6 +511,7 @@
     <Compile Include="Issues\RavenDB_851.cs" />
     <Compile Include="Issues\RavenDB_868.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
+    <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
@@ -960,6 +961,7 @@
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Stress\InlineValueAttribute.cs" />
+    <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
@@ -1149,7 +1151,6 @@
     <Compile Include="Storage\SimilarIndexNames.cs" />
     <Compile Include="Stress\BigDoc.cs" />
     <Compile Include="Suggestions\SuggestionsLazy.cs" />
-    <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />

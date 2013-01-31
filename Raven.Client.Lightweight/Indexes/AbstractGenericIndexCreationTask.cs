@@ -25,6 +25,7 @@ namespace Raven.Client.Indexes
 			IndexSortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
+			IndexSuggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 		}
 
 		public override bool IsMapReduce
@@ -36,7 +37,7 @@ namespace Raven.Client.Indexes
 		{
 			if (Reduce == null)
 				return enumerable.Take(indexQuery.PageSize);
-			
+
 			var compile = Reduce.Compile();
 			return compile(enumerable.Cast<TReduceResult>()).Cast<object>().Take(indexQuery.PageSize);
 		}
@@ -54,65 +55,42 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Index storage options
 		/// </summary>
-		protected IDictionary<Expression<Func<TReduceResult, object>>, FieldStorage> Stores
-		{
-			get;
-			set;
-		}
+		protected IDictionary<Expression<Func<TReduceResult, object>>, FieldStorage> Stores { get; set; }
 
 		/// <summary>
 		/// Index storage options
 		/// </summary>
-		protected IDictionary<string, FieldStorage> StoresStrings
-		{
-			get;
-			set;
-		}
+		protected IDictionary<string, FieldStorage> StoresStrings { get; set; }
 
 		/// <summary>
 		/// Index sort options
 		/// </summary>
-		protected IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> IndexSortOptions
-		{
-			get;
-			set;
-		}
+		protected IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> IndexSortOptions { get; set; }
+
+		/// <summary>
+		/// Index suggest options
+		/// </summary>
+		protected IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> IndexSuggestions { get; set; }
 
 		/// <summary>
 		/// Index sort options
 		/// </summary>
-		protected IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers
-		{
-			get;
-			set;
-		}
+		protected IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
 
 		/// <summary>
 		/// Index sort options
 		/// </summary>
-		protected IDictionary<string, string> AnalyzersStrings
-		{
-			get;
-			set;
-		}
+		protected IDictionary<string, string> AnalyzersStrings { get; set; }
 
 		/// <summary>
 		/// Indexing options
 		/// </summary>
-		protected IDictionary<Expression<Func<TReduceResult, object>>, FieldIndexing> Indexes
-		{
-			get;
-			set;
-		}
+		protected IDictionary<Expression<Func<TReduceResult, object>>, FieldIndexing> Indexes { get; set; }
 
 		/// <summary>
 		/// Indexing options
 		/// </summary>
-		protected IDictionary<string, FieldIndexing> IndexesStrings
-		{
-			get;
-			set;
-		}
+		protected IDictionary<string, FieldIndexing> IndexesStrings { get; set; }
 
 		/// <summary>
 		/// Register a field to be indexed
@@ -173,6 +151,18 @@ namespace Raven.Client.Indexes
 		protected void Sort(Expression<Func<TReduceResult, object>> field, SortOptions sort)
 		{
 			IndexSortOptions.Add(field, sort);
+		}
+
+		/// <summary>
+		/// Register a field to be sorted
+		/// </summary>
+		protected void Suggestion(Expression<Func<TReduceResult, object>> field, SuggestionOptions suggestion = null)
+		{
+			IndexSuggestions.Add(field, suggestion ?? new SuggestionOptions
+			{
+				Accuracy = 0.5f,
+				Distance = StringDistanceTypes.Levenshtein
+			});
 		}
 	}
 }

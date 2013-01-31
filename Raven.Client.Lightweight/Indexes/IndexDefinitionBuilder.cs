@@ -43,34 +43,47 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <value>The stores.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, FieldStorage> Stores { get; set; }
+
 		/// <summary>
 		/// Gets or sets the stores options
 		/// </summary>
 		/// <value>The stores.</value>
 		public IDictionary<string, FieldStorage> StoresStrings { get; set; }
+
 		/// <summary>
 		/// Gets or sets the indexing options
 		/// </summary>
 		/// <value>The indexes.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, FieldIndexing> Indexes { get; set; }
+
 		/// <summary>
 		/// Gets or sets the indexing options
 		/// </summary>
 		/// <value>The indexes.</value>
 		public IDictionary<string, FieldIndexing> IndexesStrings { get; set; }
+
 		/// <summary>
 		/// Gets or sets the sort options.
 		/// </summary>
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
+
 		/// <summary>
 		/// Get os set the analyzers
 		/// </summary>
 		public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
+
 		/// <summary>
 		/// Get os set the analyzers
 		/// </summary>
 		public IDictionary<string, string> AnalyzersStrings { get; set; }
+
+		/// <summary>
+		/// Gets or sets the suggestion options.
+		/// </summary>
+		/// <value>The suggestion options.</value>
+		public IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> Suggestions { get; set; }
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
@@ -81,6 +94,7 @@ namespace Raven.Client.Indexes
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			IndexesStrings = new Dictionary<string, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
+			Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
 		}
@@ -105,7 +119,8 @@ namespace Raven.Client.Indexes
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),
-				Analyzers = ConvertToStringDictionary(Analyzers)
+				Analyzers = ConvertToStringDictionary(Analyzers),
+				Suggestions = ConvertToStringDictionary(Suggestions),
 			};
 
 			foreach (var indexesString in IndexesStrings)

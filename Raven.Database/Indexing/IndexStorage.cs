@@ -178,8 +178,8 @@ namespace Raven.Database.Indexing
 								  true, out distanceType);
 					var field = decodedKey.Substring(0, lastIndexOfDistance);
 					var extension = new SuggestionQueryIndexExtension(
-						documentDatabase, 
-						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader,
+						documentDatabase.WorkContext, 
+						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader.Directory() is RAMDirectory,
 						SuggestionQueryRunner.GetStringDistance(distanceType),
 						field,
 						accuracy);

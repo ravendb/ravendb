@@ -401,7 +401,8 @@ namespace Raven.Client.Indexes
 				Reduce = Reduce,
 				TransformResults = TransformResults,
 				Stores = Stores,
-				StoresStrings = StoresStrings
+				StoresStrings = StoresStrings,
+				Suggestions = IndexSuggestions,
 			}.ToIndexDefinition(Conventions);
 		}
 

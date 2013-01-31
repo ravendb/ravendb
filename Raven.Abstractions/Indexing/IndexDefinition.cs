@@ -25,6 +25,7 @@ namespace Raven.Abstractions.Indexing
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
 			Fields = new List<string>();
+			Suggestions = new Dictionary<string, SuggestionOptions>();
 		}
 
 		/// <summary>
@@ -118,6 +119,12 @@ namespace Raven.Abstractions.Indexing
 		public IList<string> Fields { get; set; }
 
 		/// <summary>
+		/// Gets or sets the suggest options
+		/// </summary>
+		/// <value>The suggest options.</value>
+		public IDictionary<string, SuggestionOptions> Suggestions { get; set; }
+
+		/// <summary>
 		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
@@ -135,7 +142,8 @@ namespace Raven.Abstractions.Indexing
 			       DictionaryEquals(other.Stores, Stores) &&
 			       DictionaryEquals(other.Indexes, Indexes) &&
 			       DictionaryEquals(other.Analyzers, Analyzers) &&
-			       DictionaryEquals(other.SortOptions, SortOptions);
+				   DictionaryEquals(other.SortOptions, SortOptions) &&
+				   DictionaryEquals(other.Suggestions, Suggestions);
 		}
 
 		private static bool DictionaryEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
@@ -216,6 +224,7 @@ namespace Raven.Abstractions.Indexing
 				result = (result * 397) ^ DictionaryHashCode(Indexes);
 				result = (result * 397) ^ DictionaryHashCode(Analyzers);
 				result = (result * 397) ^ DictionaryHashCode(SortOptions);
+				result = (result * 397) ^ DictionaryHashCode(Suggestions);
 				return result;
 			}
 		}
@@ -283,6 +292,8 @@ namespace Raven.Abstractions.Indexing
 				indexDefinition.SortOptions = new Dictionary<string, SortOptions>(SortOptions);
 			if (Stores != null)
 				indexDefinition.Stores = new Dictionary<string, FieldStorage>(Stores);
+			if (Suggestions != null)
+				indexDefinition.Suggestions = new Dictionary<string, SuggestionOptions>(Suggestions);
 			return indexDefinition;
 		}
 	}
