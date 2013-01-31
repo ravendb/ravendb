@@ -9,6 +9,7 @@
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
              xmlns:sdk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
              xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+             xmlns:ContextMenu="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
              mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400">
 
 	<UserControl.Resources>
@@ -49,16 +50,28 @@
                          ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
                          ItemTemplate="{StaticResource ReplicationItemTemplate}"
                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+
 					<i:Interaction.Behaviors>
 						<Behaviors:SelectItemOnRightClick />
 					</i:Interaction.Behaviors>
+
+					<ContextMenu:ContextMenuService.ContextMenu>
+						<ContextMenu:ContextMenu>
+							<ContextMenu:MenuItem Header="Delete"
+                                                  Command="{Binding DeleteReplication}">
+								<ContextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_Delete_Tiny}"/>
+								</ContextMenu:MenuItem.Icon>
+							</ContextMenu:MenuItem>
+						</ContextMenu:ContextMenu>
+					</ContextMenu:ContextMenuService.ContextMenu>
+
 				</ListBox>
 			</Grid>
 
 			<sdk:GridSplitter Grid.Row="1" 
 								  VerticalAlignment="Center" 
 								  HorizontalAlignment="Stretch"/>
-
 
 			<TextBlock Grid.Row="2" 
 						   Text="Select a replication to edit it" 
@@ -89,7 +102,7 @@
 					<TextBlock Text="      "/>
 
 					<TextBlock Text="Raven Entity Name: " VerticalAlignment="Center"/>
-					<ComboBox SelectedItem="{Binding SelectedReplication.Value.RavenEntityName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					<ComboBox SelectedIndex="{Binding SelectedCollectionIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 							  ItemsSource="{Binding AvailableObjects}"
 							  Margin="5" 
 							  Width="350"/>

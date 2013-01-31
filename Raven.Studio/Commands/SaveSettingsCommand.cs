@@ -88,7 +88,7 @@ namespace Raven.Studio.Commands
 			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
 			if (sqlReplicationSettings != null)
 			{
-				if (sqlReplicationSettings.SqlReplicationConfigs.Any(config => config.Name == "Temp_Name") == false && sqlReplicationSettings.SqlReplicationConfigs.Any(config => string.IsNullOrWhiteSpace(config.Name)))
+				if (sqlReplicationSettings.SqlReplicationConfigs.Any(config => config.Name == "Temp_Name") == false && sqlReplicationSettings.SqlReplicationConfigs.Any(config => string.IsNullOrWhiteSpace(config.Name)) == false)
 				{
 					session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
 					       .ContinueOnSuccessInTheUIThread(documents =>
