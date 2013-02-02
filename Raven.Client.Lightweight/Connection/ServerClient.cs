@@ -194,7 +194,7 @@ namespace Raven.Client.Connection
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + Uri.EscapeDataString(key), "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 			

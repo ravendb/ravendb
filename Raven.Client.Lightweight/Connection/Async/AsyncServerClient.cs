@@ -422,7 +422,7 @@ namespace Raven.Client.Connection.Async
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (opUrl + "/docs/" + key).NoCache(), "GET", metadata, credentials, convention)
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (opUrl + "/docs/" + Uri.EscapeDataString(key)).NoCache(), "GET", metadata, credentials, convention)
 				.AddOperationHeaders(OperationsHeaders));
 
 			request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
