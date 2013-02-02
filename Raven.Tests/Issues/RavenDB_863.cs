@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Database.Indexing;
@@ -41,7 +42,7 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce("test", new[] { "a", "b" }, 0, true, 2, new List<object>()).ToList();
+					var results = accessor.MapReduce.GetItemsToReduce("test", new[] { "a", "b" }, 0, true, 2, new List<object>(), new HashSet<Tuple<string, int>>()).ToList();
 					Assert.Equal(2, results.Count);
 					Assert.Equal(results[0].Bucket, results[1].Bucket);
 				});
@@ -74,7 +75,7 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce("test", new[] { "a", "b" }, 0, true, 3, new List<object>()).ToList();
+					var results = accessor.MapReduce.GetItemsToReduce("test", new[] { "a", "b" }, 0, true, 3, new List<object>(), new HashSet<Tuple<string, int>>()).ToList();
 					Assert.Equal(4, results.Count);
 				});
 			}

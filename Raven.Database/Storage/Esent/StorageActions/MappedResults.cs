@@ -204,7 +204,10 @@ namespace Raven.Storage.Esent.StorageActions
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, int take, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, int take, 
+			List<object> itemsToDelete,
+			HashSet<Tuple<string, int>> itemsAlreadySeen
+		)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
 
@@ -233,7 +236,6 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					reader = (OptimizedIndexReader)itemsToDelete[0];
 				}
-				var seen = new HashSet<Tuple<string, int>>();
 				do
 				{
 					var indexFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
@@ -254,7 +256,9 @@ namespace Raven.Storage.Esent.StorageActions
 					var bucket =
 							Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"]).Value;
 
-					if (seen.Add(Tuple.Create(reduceKeyFromDb, bucket)))
+					var thisIsNewScheduledReductionRow = reader.Add(session, ScheduledReductions);
+					var neverSeenThisKeyAndBucket = itemsAlreadySeen.Add(Tuple.Create(reduceKeyFromDb, bucket));
+					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket) 
 					{
 						foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
 						{
@@ -262,8 +266,6 @@ namespace Raven.Storage.Esent.StorageActions
 							yield return mappedResultInfo;
 						}
 					}
-
-					reader.Add(session, ScheduledReductions);
 
 					if (take <= 0)
 						break;
