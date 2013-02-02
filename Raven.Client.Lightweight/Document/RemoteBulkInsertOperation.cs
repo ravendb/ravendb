@@ -27,6 +27,7 @@ namespace Raven.Client.Document
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
+		private readonly BulkInsertOptions options;
 		private readonly ServerClient client;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 		private readonly HttpJsonRequest httpJsonRequest;
@@ -36,6 +37,7 @@ namespace Raven.Client.Document
 
 		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client)
 		{
+			this.options = options;
 			this.client = client;
 			items = new BlockingCollection<RavenJObject>(options.BatchSize*8);
 			string requestUrl = "/bulkInsert?";
@@ -44,37 +46,52 @@ namespace Raven.Client.Document
 			if (options.CheckReferencesInIndexes)
 				requestUrl += "&checkReferencesInIndexes=true";
 
+			var expect100Continue = client.Expect100Continue();
+
 			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
 			HttpJsonRequest req = client.CreateRequest("POST", requestUrl + "&no-op=for-auth-only",
 			                                           disableRequestCompression: true);
+			req.PrepareForLongRequest();
 			req.ExecuteRequest();
 
 
 			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
 			// the request may take a long time to process, so we need to set a large timeout value
-			httpJsonRequest.Timeout = TimeSpan.FromHours(6); 
+			httpJsonRequest.PrepareForLongRequest();
 			nextTask = httpJsonRequest.GetRawRequestStream()
 			                          .ContinueWith(task =>
 			                          {
-				                          Stream requestStream = task.Result;
-				                          while (true)
+				                          try
 				                          {
-					                          var batch = new List<RavenJObject>();
-					                          RavenJObject item;
-					                          while (items.TryTake(out item, 200))
-					                          {
-						                          if (item == null) // marker
-						                          {
-							                          FlushBatch(requestStream, batch);
-							                          return;
-						                          }
-						                          batch.Add(item);
-						                          if (batch.Count >= options.BatchSize)
-							                          break;
-					                          }
-					                          FlushBatch(requestStream, batch);
+					                          expect100Continue.Dispose();
 				                          }
+				                          catch (Exception)
+				                          {
+				                          }
+										  WriteQueueToServer(task);
 			                          });
+		}
+
+		private void WriteQueueToServer(Task<Stream> task)
+		{
+			Stream requestStream = task.Result;
+			while (true)
+			{
+				var batch = new List<RavenJObject>();
+				RavenJObject item;
+				while (items.TryTake(out item, 200))
+				{
+					if (item == null) // marker
+					{
+						FlushBatch(requestStream, batch);
+						return;
+					}
+					batch.Add(item);
+					if (batch.Count >= options.BatchSize)
+						break;
+				}
+				FlushBatch(requestStream, batch);
+			}
 		}
 
 		public event Action<string> Report;
