@@ -33,6 +33,9 @@ namespace Raven.Json.Linq
 		public RavenJArray(IEnumerable content)
 		{
 			Items = new List<RavenJToken>();
+			if (content == null)
+				return;
+
 			var ravenJToken = content as RavenJToken;
 			if (ravenJToken != null)
 			{
