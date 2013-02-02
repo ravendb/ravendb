@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -424,7 +425,7 @@ namespace Raven.Client.Linq
 		/// <returns></returns>
 		protected virtual ExpressionInfo GetMember(Expression expression)
 		{
-			var parameterExpression = expression as ParameterExpression;
+			var parameterExpression = GetParameterExpressionIncludingConvertions(expression);
 			if (parameterExpression != null)
 			{
 				if (currentPath.EndsWith(","))
@@ -447,6 +448,19 @@ namespace Raven.Client.Linq
 			return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath);
 		}
 
+		private static ParameterExpression GetParameterExpressionIncludingConvertions(Expression expression)
+		{
+			var paramExpr = expression as ParameterExpression;
+			if (paramExpr != null)
+				return paramExpr;
+			switch (expression.NodeType )
+			{
+				case ExpressionType.Convert:
+				case ExpressionType.ConvertChecked:
+					return GetParameterExpressionIncludingConvertions(((UnaryExpression) expression).Operand);
+			}
+			return null;
+		}
 
 
 		private void VisitEquals(MethodCallExpression expression)
@@ -651,7 +665,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitMethodCall(MethodCallExpression expression, bool negated = false)
 		{
-			if (expression.Method.DeclaringType != typeof (string) && expression.Method.Name == "Equals")
+			var declaringType = expression.Method.DeclaringType;
+			Debug.Assert(declaringType != null);
+			if (declaringType != typeof (string) && expression.Method.Name == "Equals")
 			{
 				switch (expression.Arguments.Count)
 				{
@@ -666,38 +682,44 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				return;
 			}
-			if (expression.Method.DeclaringType == typeof (LinqExtensions) ||
-			    expression.Method.DeclaringType == typeof (RavenQueryableExtensions))
+			if (declaringType == typeof (LinqExtensions) ||
+			    declaringType == typeof (RavenQueryableExtensions))
 			{
 				VisitLinqExtensionsMethodCall(expression);
 				return;
 			}
-			if (expression.Method.DeclaringType == typeof (Queryable))
+			if (declaringType == typeof (Queryable))
 			{
 				VisitQueryableMethodCall(expression);
 				return;
 			}
 
-			if (expression.Method.DeclaringType == typeof (String))
+			if (declaringType == typeof (String))
 			{
 				VisitStringMethodCall(expression);
 				return;
 			}
 
-			if (expression.Method.DeclaringType == typeof (Enumerable))
+			if (declaringType == typeof (Enumerable))
 			{
 				VisitEnumerableMethodCall(expression, negated);
 				return;
 			}
+			if (declaringType.IsGenericType &&
+			    declaringType.GetGenericTypeDefinition() == typeof (List<>))
+			{
+				VisitListMethodCall(expression);
+				return;
+			}
 
-			if (expression.Method.DeclaringType == typeof (LinqExtensions) ||
-			    expression.Method.DeclaringType == typeof (RavenQueryableExtensions))
+			if (declaringType == typeof (LinqExtensions) ||
+			    declaringType == typeof (RavenQueryableExtensions))
 			{
 				VisitLinqExtensionsMethodCall(expression);
 				return;
 			}
 
-			var method = expression.Method.DeclaringType.Name + "." + expression.Method.Name;
+			var method = declaringType.Name + "." + expression.Method.Name;
 			throw new NotSupportedException(string.Format("Method not supported: {0}. Expression: {1}.", method, expression));
 		}
 
@@ -820,6 +842,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			if (((SearchOptions) value).HasFlag(SearchOptions.Guess))
 				chainedWhere = true;
+		}
+
+		private void VisitListMethodCall(MethodCallExpression expression)
+		{
+			switch (expression.Method.Name)
+			{
+				case "Contains":
+				{
+					var memberInfo = GetMember(expression.Object);
+					var oldPath = currentPath;
+					currentPath = memberInfo.Path + ",";
+					VisitExpression(expression.Arguments[0]);
+					currentPath = oldPath;
+		
+					break;
+				}
+				default:
+					{
+						throw new NotSupportedException("Method not supported: List." + expression.Method.Name);
+					}
+			}
 		}
 
 		private void VisitEnumerableMethodCall(MethodCallExpression expression, bool negated)
