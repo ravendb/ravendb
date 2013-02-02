@@ -272,7 +272,7 @@ namespace Raven.Client.Indexes
 				{
 					if (keywordsInCSharp.Contains(jsonProperty.PropertyName))
 						return '@' + jsonProperty.PropertyName;
-					return jsonProperty.PropertyName;
+					return jsonProperty.PropertyName ?? name;
 				}
 			}
 
