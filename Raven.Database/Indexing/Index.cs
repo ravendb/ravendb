@@ -343,7 +343,7 @@ namespace Raven.Database.Indexing
 							shouldRecreateSearcher = changedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
-								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments);
+								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
 							}
 						}
 						catch (Exception e)
@@ -639,6 +639,11 @@ namespace Raven.Database.Indexing
 			IIndexExtension val;
 			indexExtensions.TryGetValue(indexExtensionKey, out val);
 			return val;
+		}
+
+		public IIndexExtension GetExtensionByPrefix(string indexExtensionKeyPrefix)
+		{
+			return indexExtensions.FirstOrDefault(x => x.Key.StartsWith(indexExtensionKeyPrefix)).Value;
 		}
 
 		public void SetExtension(string indexExtensionKey, IIndexExtension extension)
