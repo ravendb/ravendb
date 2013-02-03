@@ -3,7 +3,8 @@
 					xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
 					xmlns:Models="clr-namespace:Raven.Studio.Models" xmlns:Messages="clr-namespace:Raven.Studio.Messages">
 
-	<Converters:BooleanToIntConverter x:Key="BooleanToInt"/>
+	<Converters:IntParamEqualityConverter x:Key="IntParamEquality"/>
+	<Converters:VisibilityByParamInEqualityConverter x:Key="VisibilityByParamInEquality"/>
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
 	<Converters:StringToBooleanConverter x:Key="StringToBoolean"/>
