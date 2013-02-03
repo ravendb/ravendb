@@ -168,8 +168,8 @@ namespace Raven.Database.Indexing
 			if (Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED) ||
 				Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED_NO_NORMS))// explicitly not analyzed
 			{
-				// date time and date time offset have the same structure fo analyzed and not analyzed.
-				if (!(value is DateTime) && !(value is DateTimeOffset))
+				// date time, time span and date time offset have the same structure fo analyzed and not analyzed.
+				if (!(value is DateTime) && !(value is DateTimeOffset) && !(value is TimeSpan))
 				{
 					yield return CreateFieldWithCaching(name, value.ToString(), storage,
 														indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -183,7 +183,14 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-			if (value is DateTime)
+			if (value is TimeSpan)
+			{
+				var val = (TimeSpan)value;
+				var spanAsString = val.ToString(Default.TimeSpanLexicalFormat);
+				yield return CreateFieldWithCaching(name, spanAsString, storage,
+				   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+			}
+			else if (value is DateTime)
 			{
 				var val = (DateTime)value;
 				var dateAsString = val.ToString(Default.DateTimeFormatsToWrite);

@@ -1700,7 +1700,11 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				return (bool)whereParams.Value ? "true" : "false";
 			}
-
+			if (type == typeof (TimeSpan))
+			{
+				var val = (TimeSpan) whereParams.Value;
+				return val.ToString(Default.TimeSpanLexicalFormat);
+			}
 			if (type == typeof(DateTime))
 			{
 				var val = (DateTime)whereParams.Value;

@@ -26,6 +26,7 @@ namespace Raven.Abstractions
 		};
 
 		public static readonly string DateTimeOffsetFormatsToWrite = "o";
+		public static readonly string TimeSpanLexicalFormat = @"dddddddd\.hh\:mm\:ss\.fffffff";
 		public static readonly string DateTimeFormatsToWrite = "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff";
 
 		public static readonly JsonConverter[] Converters = new JsonConverter[]

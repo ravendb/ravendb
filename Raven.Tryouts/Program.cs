@@ -1,8 +1,10 @@
-﻿internal class Program
+﻿using System;
+
+internal class Program
 {
 	private static void Main(string[] args)
 	{
-		
+		Console.WriteLine(TimeSpan.FromHours(1123123).ToString(@"dddddddd\.hh\:mm\:ss\.fffffff"));
 	}
 
 	private static float T(double p0)
