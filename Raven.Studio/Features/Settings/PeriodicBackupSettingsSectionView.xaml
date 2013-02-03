@@ -65,7 +65,7 @@
 
 						<TextBlock Grid.Row="2" Text="Interval: " VerticalAlignment="Center"/>
 						<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-							<toolkit:NumericUpDown Margin="5" Value="{Binding PeriodicBackupSetup.Interval, Mode=TwoWay}" Maximum="214748364" VerticalAlignment="Center"/>
+							<toolkit:NumericUpDown Margin="5" Value="{Binding PeriodicBackupSetup.IntervalMilliseconds, Mode=TwoWay, Converter=MillisecondsToMinutes}" Maximum="214748364" VerticalAlignment="Center"/>
 							<TextBlock Text="in Minutes" VerticalAlignment="Center"/>
 						</StackPanel>
 					</Grid>

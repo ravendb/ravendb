@@ -251,6 +251,7 @@
     <Compile Include="Infrastructure\Converters\GetApiKeyDirectLink.cs" />
     <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
+    <Compile Include="Infrastructure\Converters\MillisecondsToMinutesConverter.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
     <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />

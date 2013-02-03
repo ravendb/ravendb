@@ -5,6 +5,7 @@
 	
 	<Converters:BooleanToIntConverter x:Key="BooleanToInt"/>
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+	<Converters:MillisecondsToMinutesConverter x:Key="MillisecondsToMinutes" />
 	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
 	<Converters:StringToBooleanConverter x:Key="StringToBoolean"/>
 	<Converters:BooleanToStaleStatConverter x:Key="BooleanToStaleStatConverter" />
