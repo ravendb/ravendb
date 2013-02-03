@@ -56,7 +56,10 @@ namespace Raven.Database.Bundles.SqlReplication
 				if (notification.Id == null)
 					return;
 				if (notification.Id.StartsWith("Raven/SqlReplication/Configuration/", StringComparison.InvariantCultureIgnoreCase))
+				{
 					replicationConfigs = null;
+					lastError.Clear();
+				}
 			};
 
 			GetReplicationStatus();
