@@ -60,7 +60,7 @@ properties {
 			return "$build_dir\$_"
 		}
 	  
-		$test_prjs = @("Raven.Tests.dll","Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll" )
+		$test_prjs = @("Raven.Tests.dll","Raven.Bundles.Tests.dll" )
 }
 
 task default -depends Stable,Release
