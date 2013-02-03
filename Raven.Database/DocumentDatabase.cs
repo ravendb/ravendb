@@ -687,7 +687,7 @@ namespace Raven.Database
 						newEtag = addDocumentResult.Etag;
 
 						CheckReferenceBecauseOfDocumentUpdate(key, actions);
-
+						metadata[Constants.LastModified] = addDocumentResult.SavedAt;
 						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
