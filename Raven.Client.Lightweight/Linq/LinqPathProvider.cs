@@ -33,6 +33,7 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public Result GetPath(Expression expression)
 		{
+			expression = SimplifyExpression(expression);
 			var callExpression = expression as MethodCallExpression;
 			if (callExpression != null)
 			{
@@ -97,6 +98,24 @@ namespace Raven.Client.Linq
 			}
 			
 			return result;
+		}
+
+		private static Expression SimplifyExpression(Expression expression)
+		{
+			while (true)
+			{
+				switch (expression.NodeType)
+				{
+					case ExpressionType.Quote:
+						expression = ((UnaryExpression) expression).Operand;
+						break;
+					case ExpressionType.Lambda:
+						expression = ((LambdaExpression) expression).Body;
+						break;
+					default:
+						return expression;
+				}
+			}
 		}
 
 		/// <summary>
