@@ -76,7 +76,7 @@ namespace Raven.Studio.Commands
 				csvReader = new CsvReader(reader);
 				header = csvReader.ReadHeaderRecord();
 				entity = Inflector.Pluralize(Path.GetFileNameWithoutExtension(file));
-				if (entity.Length > 0 &&  char.IsLower(entity[0])))
+				if (entity.Length > 0 &&  char.IsLower(entity[0]))
 					entity = char.ToUpper(entity[0]) + entity.Substring(1);
 				sw = Stopwatch.StartNew();
 
