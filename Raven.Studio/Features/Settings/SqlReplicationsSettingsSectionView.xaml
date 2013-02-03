@@ -86,26 +86,33 @@
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 
-				<StackPanel Orientation="Horizontal" Margin="5">
-					<TextBlock Text="Name: " VerticalAlignment="Center"/>
-					<TextBox Text="{Binding SelectedReplication.Value.Name, Mode=TwoWay}" MinWidth="150" TextAlignment="Left" VerticalAlignment="Center"/>
+				<toolkit:WrapPanel Orientation="Horizontal" Margin="5">
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="Name: " VerticalAlignment="Center"/>
+						<TextBox Text="{Binding SelectedReplication.Value.Name, Mode=TwoWay}" MinWidth="150" TextAlignment="Left" VerticalAlignment="Center"/>
 
-					<TextBlock Text="      "/>
+						<TextBlock Text="      "/>
+					</StackPanel>
+					
 
-					<TextBlock Text="Factory Name: " VerticalAlignment="Center"/> 
-					<ComboBox SelectedItem="{Binding SelectedReplication.Value.FactoryName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="Factory Name: " VerticalAlignment="Center"/>
+						<ComboBox SelectedItem="{Binding SelectedReplication.Value.FactoryName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 							  ItemsSource="{Binding AvilableFactoryNames}"
 							  Margin="5" 
 							  Width="350"/>
 
-					<TextBlock Text="      "/>
-
-					<TextBlock Text="Raven Entity Name: " VerticalAlignment="Center"/>
-					<ComboBox SelectedIndex="{Binding SelectedCollectionIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+						<TextBlock Text="      "/>
+					</StackPanel>
+					
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="Collection: " VerticalAlignment="Center"/>
+						<ComboBox SelectedIndex="{Binding SelectedCollectionIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 							  ItemsSource="{Binding AvailableObjects}"
 							  Margin="5" 
 							  Width="350"/>
-				</StackPanel>
+					</StackPanel>		
+				</toolkit:WrapPanel>
 
 				<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
 					<ComboBox x:Name="ConnectionStringMode" VerticalAlignment="Center" SelectedIndex="{Binding SelectedConnectionStringIndex, Mode=TwoWay}">
