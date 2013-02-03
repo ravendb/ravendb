@@ -464,7 +464,7 @@ namespace Raven.Client.Document
 
 		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
-			var indexQuery = GetIndexQuery();
+			var indexQuery = GetIndexQuery(isAsync: false);
 
 			if(beforeQueryExecutionAction != null)
 				beforeQueryExecutionAction(indexQuery);
@@ -481,7 +481,7 @@ namespace Raven.Client.Document
 									  includes);
 		}
 
-		public IndexQuery GetIndexQuery()
+		public IndexQuery GetIndexQuery(bool isAsync)
 		{
 			var query = queryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);

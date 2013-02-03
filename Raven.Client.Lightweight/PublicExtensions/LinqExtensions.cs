@@ -59,7 +59,7 @@ namespace Raven.Client
 		public static FacetResults ToFacets<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var query = ravenQueryInspector.GetIndexQuery();
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
 			return ravenQueryInspector.DatabaseCommands.GetFacets( ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize );
 		}
@@ -72,7 +72,7 @@ namespace Raven.Client
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public static FacetResults ToFacets<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
-			var indexQuery = query.GetIndexQuery();
+			var indexQuery = query.GetIndexQuery(isAsync: false);
 			var documentQuery = ((DocumentQuery<T>) query);
 			return documentQuery.DatabaseCommands.GetFacets(documentQuery.IndexQueried, indexQuery, facetSetupDoc, start, pageSize);
 		}
@@ -88,7 +88,7 @@ namespace Raven.Client
 		public static Lazy<FacetResults> ToFacetsLazy<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var query = ravenQueryInspector.GetIndexQuery();
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
 			var lazyOperation = new LazyFacetsOperation( ravenQueryInspector.IndexQueried, facetSetupDoc, query, start, pageSize );
 
@@ -104,7 +104,7 @@ namespace Raven.Client
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public static Lazy<FacetResults> ToFacetsLazy<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
-			var indexQuery = query.GetIndexQuery();
+			var indexQuery = query.GetIndexQuery(isAsync: false);
 			var documentQuery = ((DocumentQuery<T>)query);
 
 			var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetSetupDoc, indexQuery, start, pageSize);
@@ -123,7 +123,7 @@ namespace Raven.Client
 		public static Task<FacetResults> ToFacetsAsync<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.GetIndexQuery();
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
 
 			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync( ravenQueryInspector.AsyncIndexQueried, query, facetSetupDoc, start, pageSize );
 		}
@@ -137,7 +137,7 @@ namespace Raven.Client
 		public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
 			var ravenQueryInspector = ((AsyncDocumentQuery<T>)queryable);
-			var query = ravenQueryInspector.GetIndexQuery();
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
 
 			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize);
 		}

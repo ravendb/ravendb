@@ -60,6 +60,6 @@ namespace Raven.Client
 		/// <summary>
 		/// Create the index query object for this query
 		/// </summary>
-		IndexQuery GetIndexQuery();
+		IndexQuery GetIndexQuery(bool isAsync);
 	}
 }

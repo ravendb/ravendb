@@ -143,11 +143,16 @@ namespace Raven.Client.Linq
 			return fields + luceneQuery;
 		}
 
-		public IndexQuery GetIndexQuery()
+		public IndexQuery GetIndexQuery(bool isAsync = true)
 		{
 			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-			return luceneQuery.GetIndexQuery();
+			if (isAsync == false)
+			{
+				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+				return luceneQuery.GetIndexQuery(false);
+			}
+			var asyncLuceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
+			return asyncLuceneQuery.GetIndexQuery(true);
 		}
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
