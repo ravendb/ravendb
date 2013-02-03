@@ -14,14 +14,17 @@ namespace Raven.Abstractions.Data
 		/// Default, equivalent to Levenshtein
 		/// </summary>
 		Default = 0,
-		/// <summary>
-		/// JaroWinkler distance algorithm
-		/// </summary>
-		JaroWinkler,
+
 		/// <summary>
 		/// Levenshtein distance algorithm (default)
 		/// </summary>
 		Levenshtein,
+
+		/// <summary>
+		/// JaroWinkler distance algorithm
+		/// </summary>
+		JaroWinkler,
+		
 		/// <summary>
 		/// NGram distance algorithm
 		/// </summary>
