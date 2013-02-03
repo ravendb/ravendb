@@ -616,6 +616,7 @@
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
+    <Compile Include="MailingList\RavenDbRecoveryTests.cs" />
     <Compile Include="MailingList\RavenDB_859.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
