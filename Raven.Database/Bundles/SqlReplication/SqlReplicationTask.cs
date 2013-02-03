@@ -99,16 +99,8 @@ namespace Raven.Database.Bundles.SqlReplication
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
 				}
-			    Guid? leastReplicatedEtag = null;
 				var localReplicationStatus = GetReplicationStatus();
-				foreach (var sqlReplicationConfig in config)
-				{
-					var lastEtag = GetLastEtagFor(localReplicationStatus, sqlReplicationConfig);
-                    if (leastReplicatedEtag == null)
-                        leastReplicatedEtag = lastEtag;
-                    else if (ByteArrayComparer.Instance.Compare(lastEtag, leastReplicatedEtag.Value) < 0)
-						leastReplicatedEtag = lastEtag;
-				}
+				var leastReplicatedEtag = GetLeastReplicatedEtag(config, localReplicationStatus);
 
 				if(leastReplicatedEtag == null)
 				{
@@ -118,7 +110,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag.Value);
 				if (documents.Count == 0 || 
-					documents.Count == 1 && RavenSqlreplicationStatus.Equals(documents[0].Key, StringComparison.InvariantCultureIgnoreCase)) // ignore changes just for this doc, since we just wrote it
+					documents.All(x=>x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))) // ignore changes for system docs
 				{
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
@@ -180,6 +172,20 @@ namespace Raven.Database.Bundles.SqlReplication
 					AfterReplicationCompleted();
 				}
 			}
+		}
+
+		private Guid? GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
+		{
+			Guid? leastReplicatedEtag = null;
+			foreach (var sqlReplicationConfig in config)
+			{
+				var lastEtag = GetLastEtagFor(localReplicationStatus, sqlReplicationConfig);
+				if (leastReplicatedEtag == null)
+					leastReplicatedEtag = lastEtag;
+				else if (ByteArrayComparer.Instance.Compare(lastEtag, leastReplicatedEtag.Value) < 0)
+					leastReplicatedEtag = lastEtag;
+			}
+			return leastReplicatedEtag;
 		}
 
 		private bool ReplicateToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
