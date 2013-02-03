@@ -53,7 +53,10 @@ namespace Raven.Database.Server.Responders
 			if (distanceTypes == StringDistanceTypes.None)
 			{
 				context.SetStatusToBadRequest();
-				context.Write("Suggestion is disabled since you specified the Distance value as 'StringDistanceTypes.None'.");
+				context.WriteJson(new
+				{
+					Error = "Suggestion is disabled since you specified the Distance value as 'StringDistanceTypes.None'."
+				});
 				return;
 			}
 
