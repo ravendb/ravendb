@@ -37,7 +37,7 @@ namespace Raven.Json.Linq
 				return;
 
 			var ravenJToken = content as RavenJToken;
-			if (ravenJToken != null)
+			if (ravenJToken != null && ravenJToken.Type != JTokenType.Array)
 			{
 				Items.Add(ravenJToken);
 			}
@@ -64,7 +64,10 @@ namespace Raven.Json.Linq
 		public RavenJArray(IEnumerable<RavenJToken> content)
 		{
 			Items = new List<RavenJToken>();
-			Items.AddRange(content);
+			if (content != null)
+			{
+				Items.AddRange(content);
+			}
 		}
 
 		/// <summary>
