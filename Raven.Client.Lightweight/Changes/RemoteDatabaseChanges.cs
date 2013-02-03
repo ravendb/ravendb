@@ -12,6 +12,8 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Database.Util;
 using Raven.Json.Linq;

@@ -5,9 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Reflection;
-#if NETFX_CORE
 using Raven.Imports.Newtonsoft.Json.Utilities;
-#endif
 
 namespace Raven.Client.Linq
 {
