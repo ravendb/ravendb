@@ -39,6 +39,8 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="6" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="6" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <TextBlock Text="Field"
@@ -119,6 +121,26 @@
 							</i:EventTrigger>
 						</i:Interaction.Triggers>
 					</sdk:AutoCompleteBox>
+
+                    <TextBlock Text="Suggestion"
+                               Grid.Row="6"
+                               VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding SuggestionDistance, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+                              SelectedItem="{Binding SuggestionDistance, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+                              Grid.Row="6"
+                              Grid.Column="1"
+                              MinWidth="90"
+                              VerticalAlignment="Center" />
+                    <toolkit:NumericUpDown Value="{Binding SuggestionAccuracy, Mode=TwoWay}"
+                                           Maximum="1"
+                                           Minimum="0"
+                                           DecimalPlaces="1"
+                                           Increment="0.1"
+                                           Grid.Row="6"
+                                           Grid.Column="2"
+                                           Margin="8,0,4,0"
+                                           VerticalAlignment="Center" />
+
                 </Grid>
             </Border>
         </DataTemplate>

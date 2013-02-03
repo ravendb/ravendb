@@ -11,9 +11,14 @@ namespace Raven.Abstractions.Data
 	public enum StringDistanceTypes
 	{
 		/// <summary>
+		/// Default, suggestion is not active
+		/// </summary>
+		None,
+
+		/// <summary>
 		/// Default, equivalent to Levenshtein
 		/// </summary>
-		Default = 0,
+		Default,
 
 		/// <summary>
 		/// Levenshtein distance algorithm (default)
