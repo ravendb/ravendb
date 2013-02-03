@@ -63,6 +63,8 @@ namespace Raven.Studio.Models
 				if (PeriodicBackupSetup == null)
 					return;
 				HasDocument = true;
+				if (string.IsNullOrWhiteSpace(PeriodicBackupSetup.GlacierVaultName))
+					IsS3Selected.Value = true;
 				OnPropertyChanged(() => HasDocument);
 				OnPropertyChanged(() => PeriodicBackupSetup);
 			});

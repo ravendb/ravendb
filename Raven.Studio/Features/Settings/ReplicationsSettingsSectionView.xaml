@@ -131,7 +131,7 @@
 					<ComboBox Grid.Row="8" 
 							  Grid.Column="1" 
 							  Margin="5" 
-							  SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}"
+							  SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay, Converter={StaticResource fromEnumWithDescription}}"
 							  ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"
 							  IsEnabled="{Binding IsChecked, ElementName=Disabled, Converter={StaticResource NegatingBool}}"/>
 				</Grid>	
