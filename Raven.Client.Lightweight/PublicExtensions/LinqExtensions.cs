@@ -63,6 +63,19 @@ namespace Raven.Client
 
 			return ravenQueryInspector.DatabaseCommands.GetFacets( ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize );
 		}
+
+		/// <summary>
+		/// Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static FacetResults ToFacets<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			var indexQuery = query.GetIndexQuery();
+			var documentQuery = ((DocumentQuery<T>) query);
+			return documentQuery.DatabaseCommands.GetFacets(documentQuery.IndexQueried, indexQuery, facetSetupDoc, start, pageSize);
+		}
 #endif
 
 #if !SILVERLIGHT
@@ -75,11 +88,28 @@ namespace Raven.Client
 		public static Lazy<FacetResults> ToFacetsLazy<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var query = ravenQueryInspector.ToString();
+			var query = ravenQueryInspector.GetIndexQuery();
 
-			var lazyOperation = new LazyFacetsOperation( ravenQueryInspector.IndexQueried, facetSetupDoc, new IndexQuery { Query = query }, start, pageSize );
+			var lazyOperation = new LazyFacetsOperation( ravenQueryInspector.IndexQueried, facetSetupDoc, query, start, pageSize );
 
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+			return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+		}
+
+		/// <summary>
+		/// Lazily Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static Lazy<FacetResults> ToFacetsLazy<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			var indexQuery = query.GetIndexQuery();
+			var documentQuery = ((DocumentQuery<T>)query);
+
+			var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetSetupDoc, indexQuery, start, pageSize);
+
+			var documentSession = ((DocumentSession)documentQuery.Session);
 			return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
 		}
 #endif
@@ -93,9 +123,23 @@ namespace Raven.Client
 		public static Task<FacetResults> ToFacetsAsync<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.ToAsyncString();
+			var query = ravenQueryInspector.GetIndexQuery();
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync( ravenQueryInspector.AsyncIndexQueried, new IndexQuery { Query = query }, facetSetupDoc, start, pageSize );
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync( ravenQueryInspector.AsyncIndexQueried, query, facetSetupDoc, start, pageSize );
+		}
+
+		/// <summary>
+		/// Async Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			var ravenQueryInspector = ((AsyncDocumentQuery<T>)queryable);
+			var query = ravenQueryInspector.GetIndexQuery();
+
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize);
 		}
 
 		/// <summary>
