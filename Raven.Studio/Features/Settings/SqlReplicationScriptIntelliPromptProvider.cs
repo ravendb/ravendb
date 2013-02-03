@@ -54,6 +54,15 @@ namespace Raven.Studio.Features.Settings
 					DescriptionProvider =
 						 new HtmlContentProvider("Will update/insert the specified object (with the object properties matching the table columns) to the specified table, using the specified pkName<br/>sqlReplicate(table, pkName, columnsObj)")
 				});
+
+				session.Items.Add(new CompletionItem
+				{
+					ImageSourceProvider = new CommonImageSourceProvider(CommonImage.FieldPublic),
+					Text = "documentId",
+					AutoCompletePreText = "documentId",
+					DescriptionProvider =
+						 new HtmlContentProvider("The document id for the current document")
+				});
 			}
 
 			if (session.Items.Count > 0)
