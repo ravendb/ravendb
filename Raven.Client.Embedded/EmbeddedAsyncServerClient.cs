@@ -340,13 +340,18 @@ namespace Raven.Client.Embedded
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
-			// Should add a 'matches' paramater? Setting to null for now.
+			// Should add a 'matches' parameter? Setting to null for now.
 			return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, null, start, pageSize, metadataOnly));
 		}
 
 		public void ForceReadFromMaster()
 		{
 			databaseCommands.ForceReadFromMaster();
+		}
+
+		public Task<JsonDocumentMetadata> HeadAsync(string key)
+		{
+			return new CompletedTask<JsonDocumentMetadata>(databaseCommands.Head(key));
 		}
 	}
 }
