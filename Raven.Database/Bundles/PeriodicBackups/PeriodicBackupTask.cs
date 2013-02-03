@@ -12,6 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Database.Plugins;
+using Raven.Database.Server;
 using Raven.Database.Smuggler;
 using Raven.Database.Tasks;
 using Raven.Json.Linq;
@@ -54,41 +55,47 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 		private void ReadSetupValuesFromDocument()
 		{
-			try
+			using (LogManager.OpenMappedContext("database", Database.Name ?? Constants.SystemDatabase))
+			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
-				// Not having a setup doc means this DB isn't enabled for periodic backups
-				var document = Database.Get(PeriodicBackupSetup.RavenDocumentKey, null);
-				if (document == null)
+				LogContext.DatabaseName.Value = Database.Name;
+
+				try
 				{
-					backupConfigs = null;
-					return;
+					// Not having a setup doc means this DB isn't enabled for periodic backups
+					var document = Database.Get(PeriodicBackupSetup.RavenDocumentKey, null);
+					if (document == null)
+					{
+						backupConfigs = null;
+						return;
+					}
+
+					backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
+					if (backupConfigs.IntervalMilliseconds <= 0)
+					{
+						logger.Warn("Peridoic backup interval is set to zero or less, periodic backup is now disabled");
+						return;
+					}
+
+					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
+					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
+
+					var interval = TimeSpan.FromMilliseconds(backupConfigs.IntervalMilliseconds);
+					logger.Info("Periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
+					timer = new Timer(TimerCallback, null, TimeSpan.Zero, interval);
 				}
-
-				backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
-				if (backupConfigs.IntervalMilliseconds <= 0)
+				catch (Exception ex)
 				{
-					logger.Warn("Peridoic backup interval is set to zero or less, periodic backup is now disabled");
-					return;
+					logger.ErrorException("Could not read periodic backup config", ex);
+					Database.AddAlert(new Alert
+					{
+						AlertLevel = AlertLevel.Error,
+						CreatedAt = SystemTime.UtcNow,
+						Message = ex.Message,
+						Title = "Error in Periodic Backup",
+						Exception = ex
+					});
 				}
-
-				awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
-				awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
-
-				var interval = TimeSpan.FromMilliseconds(backupConfigs.IntervalMilliseconds);
-				logger.Info("Periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
-				timer = new Timer(TimerCallback, null, TimeSpan.Zero, interval);
-			}
-			catch (Exception ex)
-			{
-				logger.ErrorException("Could not read periodic backup config", ex);
-				Database.AddAlert(new Alert
-				{
-					AlertLevel = AlertLevel.Error,
-					CreatedAt = SystemTime.UtcNow,
-					Message = ex.Message,
-					Title = "Error in Periodic Backup",
-					Exception = ex
-				});
 			}
 		}
 
@@ -103,64 +110,70 @@ namespace Raven.Database.Bundles.PeriodicBackups
 					return;
 				currentTask = Task.Factory.StartNew(() =>
 				{
-					try
+					using (LogManager.OpenMappedContext("database", Database.Name ?? Constants.SystemDatabase))
+					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 					{
-						var localBackupConfigs = backupConfigs;
-						if (localBackupConfigs == null)
-							return;
+						LogContext.DatabaseName.Value = Database.Name;
 
-						var backupPath = localBackupConfigs.LocalFolderName ??
-						                 Path.Combine(Database.Configuration.DataDirectory, "PeriodicBackup-Temp");
-						var options = new SmugglerOptions
+						try
 						{
-							BackupPath = backupPath,
-							LastDocsEtag = localBackupConfigs.LastDocsEtag,
-							LastAttachmentEtag = localBackupConfigs.LastAttachmentsEtag
-						};
-						var dd = new DataDumper(Database, options);
-						var filePath = dd.ExportData(null, true);
+							var localBackupConfigs = backupConfigs;
+							if (localBackupConfigs == null)
+								return;
 
-						// No-op if nothing has changed
-						if (options.LastDocsEtag == backupConfigs.LastDocsEtag &&
-						    options.LastAttachmentEtag == backupConfigs.LastAttachmentsEtag)
-						{
-							logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
-							return;
+							var backupPath = localBackupConfigs.LocalFolderName ??
+											 Path.Combine(Database.Configuration.DataDirectory, "PeriodicBackup-Temp");
+							var options = new SmugglerOptions
+							{
+								BackupPath = backupPath,
+								LastDocsEtag = localBackupConfigs.LastDocsEtag,
+								LastAttachmentEtag = localBackupConfigs.LastAttachmentsEtag
+							};
+							var dd = new DataDumper(Database, options);
+							var filePath = dd.ExportData(null, true);
+
+							// No-op if nothing has changed
+							if (options.LastDocsEtag == backupConfigs.LastDocsEtag &&
+								options.LastAttachmentEtag == backupConfigs.LastAttachmentsEtag)
+							{
+								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
+								return;
+							}
+
+							UploadToServer(filePath, localBackupConfigs);
+
+							localBackupConfigs.LastAttachmentsEtag = options.LastAttachmentEtag;
+							localBackupConfigs.LastDocsEtag = options.LastDocsEtag;
+							if (backupConfigs == null) // it was removed by the user?
+							{
+								localBackupConfigs.IntervalMilliseconds = -1; // this disable the periodic backup
+							}
+							var ravenJObject = RavenJObject.FromObject(localBackupConfigs);
+							ravenJObject.Remove("Id");
+							var putResult = Database.Put(PeriodicBackupSetup.RavenDocumentKey, null, ravenJObject,
+														 new RavenJObject(), null);
+							if (Etag.Increment(localBackupConfigs.LastDocsEtag, 1) == putResult.ETag) // the last etag is with just us
+								localBackupConfigs.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
 						}
-
-						UploadToServer(filePath, localBackupConfigs);
-
-						localBackupConfigs.LastAttachmentsEtag = options.LastAttachmentEtag;
-						localBackupConfigs.LastDocsEtag = options.LastDocsEtag;
-						if (backupConfigs == null) // it was removed by the user?
+						catch (ObjectDisposedException)
 						{
-							localBackupConfigs.IntervalMilliseconds = -1; // this disable the periodic backup
+							// shutting down, probably
 						}
-						var ravenJObject = RavenJObject.FromObject(localBackupConfigs);
-						ravenJObject.Remove("Id");
-						var putResult = Database.Put(PeriodicBackupSetup.RavenDocumentKey, null, ravenJObject,
-						                             new RavenJObject(), null);
-						if (Etag.Increment(localBackupConfigs.LastDocsEtag, 1) == putResult.ETag) // the last etag is with just us
-							localBackupConfigs.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
-					}
-					catch (ObjectDisposedException)
-					{
-						// shutting down, probably
-					}
-					catch (Exception e)
-					{
-						Database.AddAlert(new Alert
+						catch (Exception e)
 						{
-							AlertLevel = AlertLevel.Error,
-							CreatedAt = SystemTime.UtcNow,
-							Message = e.Message,
-							Title = "Error in Periodic Backup",
-							Exception = e
-						});
-						logger.ErrorException("Error when performing periodic backup", e);
+							Database.AddAlert(new Alert
+							{
+								AlertLevel = AlertLevel.Error,
+								CreatedAt = SystemTime.UtcNow,
+								Message = e.Message,
+								Title = "Error in Periodic Backup",
+								Exception = e
+							});
+							logger.ErrorException("Error when performing periodic backup", e);
+						}
 					}
 				})
-				.ContinueWith( _ =>
+				.ContinueWith(_ =>
 				{
 					currentTask = null;
 				});
@@ -212,7 +225,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 		private string GetArchiveDescription()
 		{
-			return "Periodic backup for db " + (Database.Name ?? Constants.SystemDatabase) +" at " + DateTime.UtcNow;
+			return "Periodic backup for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + DateTime.UtcNow;
 		}
 
 		public void Dispose()
