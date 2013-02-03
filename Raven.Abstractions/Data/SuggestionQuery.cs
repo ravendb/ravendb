@@ -16,6 +16,7 @@ namespace Raven.Abstractions.Data
 		public SuggestionQuery()
 		{
 			MaxSuggestions = 15;
+			Distance = StringDistanceTypes.Default;
 		}
 
 		/// <summary>
