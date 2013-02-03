@@ -52,7 +52,7 @@ namespace Raven.Database.Server.Responders
 
 			if (distanceTypes == StringDistanceTypes.None)
 			{
-				context.SetStatusToPreconditionFailed();
+				context.SetStatusToBadRequest();
 				context.Write("Suggestion is disabled since you specified the Distance value as 'StringDistanceTypes.None'.");
 				return;
 			}
