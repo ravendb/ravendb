@@ -19,12 +19,7 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public FacetResults GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc)
-		{
-			return GetFacets(index, indexQuery, facetSetupDoc, 0, null);
-		}
-
-		public FacetResults GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc, int start, int? pageSize)
+		public FacetResults GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
 			var facetSetup = database.Get(facetSetupDoc, null);
 			if (facetSetup == null)
