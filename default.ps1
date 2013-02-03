@@ -12,7 +12,7 @@ properties {
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Release"
-	$global:failedTest = $false
+	
 	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), "Jint.Raven.???",
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???","Lucene.Net.Contrib.FastVectorHighlighter.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", 
@@ -134,30 +134,17 @@ task Test -depends Compile {
 	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
 	Write-Host "xUnit location: $xUnit"
 	
-	$global:failedTest = $false
-
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $build_dir\$_ (esent)"
 			exec { &"$xUnit" "$build_dir\$_" }
-			if($LastExitCode -ne 0) {
-				$global:failedTest = $true
-			}
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $build_dir\$_ (default)"
-			&"$xUnit" "$build_dir\$_"
-			if($LastExitCode -ne 0) {
-				$global:failedTest = $true
-			}
+			exec { &"$xUnit" "$build_dir\$_" }
 		}
-	}
-	
-	if ($hasFailingTests) {
-		$global:failedTest = true
-		write-host "We have a failing test!!!!!..........!!!!!.........!!!!!" -BackgroundColor Red -ForegroundColor Yellow		
 	}
 }
 
@@ -550,10 +537,6 @@ task CreateNugetPackages -depends Compile {
 }
 
 TaskTearDown {
-	if ($global:failedTest)
-	{
-		write-host "Again... We have a failing test!!!!! Now that you know about it, you can take care of that." -BackgroundColor Red -ForegroundColor Yellow		
-	}
 	
 	if ($LastExitCode -ne 0) {
 		write-host "TaskTearDown detected an error. Build failed." -BackgroundColor Red -ForegroundColor Yellow
