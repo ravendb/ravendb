@@ -198,7 +198,7 @@ namespace Raven.Database.Linq
 		}
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, string shapeWKT,
-			SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.QuadPrefixTree,
+			SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree,
 			int maxTreeLevel = 0, double distanceErrorPct = 0.025)
 		{
 			if (maxTreeLevel == 0)
@@ -209,7 +209,7 @@ namespace Raven.Database.Linq
 						maxTreeLevel = 9; // about 2 meters, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
 						break;
 					case SpatialSearchStrategy.QuadPrefixTree:
-						maxTreeLevel = 9; // about 1 meter, should be good enough
+						maxTreeLevel = 25; // about 1 meter, should be good enough
 						break;
 					default:
 						throw new ArgumentOutOfRangeException("spatialSearchStrategy");
