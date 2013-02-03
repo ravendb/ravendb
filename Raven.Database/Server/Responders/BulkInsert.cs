@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
+using System.Web;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
@@ -33,7 +34,10 @@ namespace Raven.Database.Server.Responders
 				// to handle the authentication
 				return; 
 			}
-
+			if (HttpContext.Current != null)
+			{
+				HttpContext.Current.Server.ScriptTimeout = 60*60*6; // six hours should do it, I think.
+			}
 			var options = new BulkInsertOptions
 			{
 				CheckForUpdates = context.GetCheckForUpdates(),

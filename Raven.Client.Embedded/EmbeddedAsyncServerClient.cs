@@ -282,11 +282,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask();
 		}
 
-		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc ) {
-			return GetFacetsAsync( index, query, facetSetupDoc, 0, null );
-		}
-
-		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize ) {
+		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {
 			return new CompletedTask<FacetResults>( databaseCommands.GetFacets( index, query, facetSetupDoc, start, pageSize ) );
 		}
 

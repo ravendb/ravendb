@@ -18,16 +18,7 @@ namespace Raven.Client.Document.Batches
 		private readonly int start;
 		private readonly int? pageSize;
 
-		public LazyFacetsOperation(string index, string facetSetupDoc, IndexQuery query)
-		{
-			this.index = index;
-			this.facetSetupDoc = facetSetupDoc;
-			this.query = query;
-			start = 0;
-			pageSize = null;
-		}
-
-		public LazyFacetsOperation( string index, string facetSetupDoc, IndexQuery query, int start, int? pageSize ) {
+		public LazyFacetsOperation( string index, string facetSetupDoc, IndexQuery query, int start = 0, int? pageSize = null ) {
 			this.index = index;
 			this.facetSetupDoc = facetSetupDoc;
 			this.query = query;

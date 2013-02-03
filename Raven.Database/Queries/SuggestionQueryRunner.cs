@@ -38,7 +38,11 @@ namespace Raven.Database.Queries
 
 			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field + "-" + suggestionQuery.Distance + "-" + suggestionQuery.Accuracy);
 
-			var indexExtension = database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
+			var indexExtension = (
+				                     database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) ??
+									 database.IndexStorage.GetIndexExtensionByPrefix(indexName, MonoHttpUtility.UrlEncode(suggestionQuery.Field +"-"+suggestionQuery.Distance)) ??
+									 database.IndexStorage.GetIndexExtensionByPrefix(indexName, MonoHttpUtility.UrlEncode(suggestionQuery.Field)) 
+			                     ) as SuggestionQueryIndexExtension;
 
 
 			IndexSearcher currentSearcher;

@@ -329,6 +329,7 @@ namespace Raven.Studio.Models
 					}
 					else
 					{
+						AssertNoPropertyBeyondSize(result.Document.DataAsJson, 500 * 1000);
 						var recentQueue = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.RecentDocuments;
 						ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 						                                               ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
@@ -415,6 +416,34 @@ namespace Raven.Studio.Models
 
 				         return false;
 			         });
+		}
+
+		public void AssertNoPropertyBeyondSize(RavenJToken token, int maxSize, string path = "")
+		{
+			if (path.StartsWith("."))
+				path = path.Substring(1);
+			switch (token.Type)
+			{
+				case JTokenType.Object:
+					foreach (var item in ((RavenJObject)token))
+					{
+						if (item.Key != null && item.Key.Length > maxSize)
+							throw new InvalidOperationException(string.Format("Document's property Name: \"{0}\" is too long to view in the studio (property length: {1:#,#}, max allowed length: {2:#,#})", path + "." + item.Key, item.Key.Length, maxSize));
+						AssertNoPropertyBeyondSize(item.Value, maxSize, path + "." + item.Key);
+					}
+					break;
+				case JTokenType.Array:
+					foreach (var item in ((RavenJArray)token))
+					{
+						AssertNoPropertyBeyondSize(item, maxSize, path + ".");
+					}
+					break;
+				case JTokenType.String:
+					var value = token.Value<string>();
+					if (value != null && value.Length > maxSize)
+						throw new InvalidOperationException(string.Format("Document's property: \"{0}\" is too long to view in the studio (property length: {1:#,#}, max allowed length: {2:#,#})", path, value.Length, maxSize));
+					break;
+			}
 		}
 
 		public bool EditingDatabase { get; set; }

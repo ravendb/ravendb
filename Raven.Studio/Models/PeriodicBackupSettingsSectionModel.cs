@@ -25,7 +25,7 @@ namespace Raven.Studio.Models
 				if (licensingStatus != null && licensingStatus.Attributes != null)
 				{
 					string active;
-					if (licensingStatus.Attributes.TryGetValue("PeriodicBackups", out active) == false)
+					if (licensingStatus.Attributes.TryGetValue("PeriodicBackup", out active) == false)
 						ShowPeriodicBackup.Value = true;
 					else
 					{

@@ -210,6 +210,7 @@
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
     <Compile Include="Bugs\IndexesWithDateTimeMin.cs" />
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
+    <Compile Include="Bugs\Indexing\CanHaveEscapedSecialCharactersInDefinition.cs" />
     <Compile Include="Bugs\Indexing\CannotCreateIndexWithoutReduce.cs" />
     <Compile Include="Bugs\Indexing\WillRemoveTypesThatNotExistsOnTheServer.cs" />
     <Compile Include="Bugs\Indexing\IndexBuilderShouldCastNull.cs" />
@@ -495,6 +496,7 @@
     <Compile Include="Bugs\Smuggler.cs" />
     <Compile Include="Bundles\IndexedProperties\IndexedProperties.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
+    <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
@@ -509,6 +511,8 @@
     <Compile Include="Issues\RavenDB814.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
     <Compile Include="Issues\RavenDB_851.cs" />
+    <Compile Include="Issues\RavenDB_863.cs" />
+    <Compile Include="Issues\RavenDB_863_2.cs" />
     <Compile Include="Issues\RavenDB_868.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
@@ -567,6 +571,7 @@
     <Compile Include="Linq\IsNullOrEmpty.cs" />
     <Compile Include="Issues\RavenDB_556.cs" />
     <Compile Include="Issues\RavenDB_579.cs" />
+    <Compile Include="MailingList\Accounts.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\bikkies.cs" />
@@ -617,6 +622,7 @@
     <Compile Include="MailingList\SmugglerTests.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
+    <Compile Include="MailingList\Tamir.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\ThorTimeRange\Repro.cs" />
     <Compile Include="MailingList\TriggerCanAccessFullMetadataInQueryProjection.cs" />
@@ -624,6 +630,7 @@
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
     <Compile Include="MailingList\UintId.cs" />
+    <Compile Include="MailingList\UrlInIdsRepro.cs" />
     <Compile Include="MailingList\Vitaliy.cs" />
     <Compile Include="MailingList\WhereInTests.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />
@@ -717,8 +724,6 @@
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisQueryParametersTests.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisTests.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisShouldSupportMapReduceIndexes.cs" />
-    <Compile Include="Bundles\PeriodicBackups\FactIfAwsIsAvailable.cs" />
-    <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Async\AttachmentReplication.cs" />
     <Compile Include="Bundles\Replication\Async\ConflictWhenReplicating.cs" />
     <Compile Include="Bundles\Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />

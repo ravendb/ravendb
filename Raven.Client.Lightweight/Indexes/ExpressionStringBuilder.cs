@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -15,7 +16,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using System.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -25,6 +25,9 @@ namespace Raven.Client.Indexes
 	public class ExpressionStringBuilder : ExpressionVisitor
 	{
 		// Fields
+		private static readonly char[] LiteralSymbolsToEscape = new[] {'\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v'};
+		private static readonly string[] LiteralEscapedSymbols = new[] {@"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v"};
+		
 		private readonly StringBuilder _out = new StringBuilder();
 		private readonly DocumentConvention convention;
 		private readonly Type queryRoot;
@@ -269,7 +272,7 @@ namespace Raven.Client.Indexes
 				{
 					if (keywordsInCSharp.Contains(jsonProperty.PropertyName))
 						return '@' + jsonProperty.PropertyName;
-					return jsonProperty.PropertyName;
+					return jsonProperty.PropertyName ?? name;
 				}
 			}
 
@@ -773,7 +776,7 @@ namespace Raven.Client.Indexes
 			if (node.Value is string)
 			{
 				Out("\"");
-				Out(s);
+				OutLiteral(node.Value as string);
 				Out("\"");
 				return node;
 			}
@@ -785,7 +788,7 @@ namespace Raven.Client.Indexes
 			if (node.Value is char)
 			{
 				Out("'");
-				Out(s);
+				OutLiteral((char) node.Value);
 				Out("'");
 				return node;
 			}
@@ -817,6 +820,31 @@ namespace Raven.Client.Indexes
 			}
 			Out(s);
 			return node;
+		}
+
+		private void OutLiteral(string value) 
+		{
+			if (value.Length == 0)
+				return;
+
+			_out.Append(string.Concat(value.SelectMany(EscapeChar)));
+		}
+
+		private void OutLiteral(char c) 
+		{
+		   _out.Append(EscapeChar(c));
+		}
+
+		private static string EscapeChar(char c) {
+			var index = Array.IndexOf(LiteralSymbolsToEscape, c);
+
+			if (index != -1)
+				return LiteralEscapedSymbols[index];
+
+			if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
+				return @"\u" + ((int) c).ToString("x4");
+
+			return c.ToString(CultureInfo.InvariantCulture);
 		}
 
 		private bool IsLastOperatorIs(char s)

@@ -231,22 +231,14 @@ namespace Raven.Client.Connection.Async
 		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
-		/// </summary>
-		/// <param name="index">Name of the index.</param>
-		/// <param name="query">Query to build facet results.</param>
-		/// <param name="facetSetupDoc">Name of the FacetSetup document.</param>
-		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc );
-
-		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		/// <param name="index">Name of the index.</param>
-		/// <param name="query">Query to build facet results.</param>
-		/// <param name="facetSetupDoc">Name of the FacetSetup document.</param>
-		/// <param name="start">Start index for paging.</param>
-		/// <param name="pageSize">Paging PageSize. Overrides Facet.MaxResults if set.</param>
-		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize );
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
 
 		/// <summary>
 		/// Gets the Logs

@@ -603,6 +603,11 @@ namespace Raven.Database.Indexing
 			return GetIndexByName(index).GetExtension(indexExtensionKey);
 		}
 
+		public IIndexExtension GetIndexExtensionByPrefix(string index, string indexExtensionKeyPrefix)
+		{
+			return GetIndexByName(index).GetExtensionByPrefix(indexExtensionKeyPrefix);
+		}
+
 		public void SetIndexExtension(string indexName, string indexExtensionKey, IIndexExtension suggestionQueryIndexExtension)
 		{
 			GetIndexByName(indexName).SetExtension(indexExtensionKey, suggestionQueryIndexExtension);

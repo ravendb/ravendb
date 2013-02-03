@@ -59,7 +59,7 @@ namespace Raven.Studio.Commands
 				var status = doc.DataAsJson["restoreStatus"].Values().Select(token => token.ToString()).ToList();
 				startRestoreTask.Output.Clear();
 				startRestoreTask.Output.AddRange(status);
-				if (status.Last().Contains("The new database was created") == false)
+				if (status.Last().Contains("The new database was created") == false && status.Last().Contains("Restore Canceled") == false)
 					Time.Delay(TimeSpan.FromMilliseconds(250)).ContinueOnSuccessInTheUIThread(UpdateStatus);
 				else
 				{
@@ -67,7 +67,12 @@ namespace Raven.Studio.Commands
 					startRestoreTask.TaskStatus = TaskStatus.Ended;
 				}
 			})
-			.Catch(exception => startRestoreTask.ReportError(exception));
+			.Catch(exception =>
+			{
+				startRestoreTask.ReportError(exception);
+				startRestoreTask.CanExecute.Value = true;
+				startRestoreTask.TaskStatus = TaskStatus.Ended;
+			});
 		}
 	}
 }

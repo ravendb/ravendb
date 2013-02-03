@@ -124,8 +124,8 @@ namespace Raven.Bundles.Replication.Responders
 			if(existingMetadata.Value<bool>(Constants.RavenDeleteMarker)) //deleted locally as well
 			{
 				log.Debug("Replicating deleted item {0} from {1} that was deleted locally. Merging histories", id, Src);
-				var existingHistory = existingMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
-				var newHistory = metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+				var existingHistory = new RavenJArray(existingMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
+				var newHistory = new RavenJArray(metadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
 
 				foreach (var item in newHistory)
 				{

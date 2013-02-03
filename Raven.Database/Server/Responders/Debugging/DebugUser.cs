@@ -27,7 +27,7 @@ namespace Raven.Database.Server.Responders.Debugging
 		public override void Respond(IHttpContext context)
 		{
 			var principal = context.User;
-			if (principal == null)
+			if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
 			{
 				context.WriteJson(new
 				{

@@ -18,7 +18,7 @@ namespace Raven.Database.Extensions
 
 		public static bool IsAdministrator(this IPrincipal principal, AnonymousUserAccessMode mode)
 		{
-			if (principal == null)
+			if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
 			{
 				if (mode == AnonymousUserAccessMode.Admin)
 					return true; 
@@ -175,6 +175,9 @@ namespace Raven.Database.Extensions
 			var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 			if (databaseAccessPrincipal != null)
 			{
+				if (databaseAccessPrincipal.AdminDatabases.Any(name => name == "*")
+				    && database.Name != null && database.Name != "<system>")
+					return true;
 				if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, database.Name, StringComparison.InvariantCultureIgnoreCase)))
 					return true;
 			}

@@ -149,10 +149,13 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, List<object> itemsToDelete)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData,
+				int take,
+				List<object> itemsToDelete,
+				HashSet<Tuple<string, int>> itemsAlreadySeen
+			)
 		{
-			var seen = new HashSet<Tuple<string, int>>();
-
+			var seenLocally = new HashSet<Tuple<string, int>>();
 			foreach (var reduceKey in reduceKeys)
 			{
 				var keyCriteria = new RavenJObject
@@ -179,15 +182,29 @@ namespace Raven.Storage.Managed
 
 					var bucket = result.Value<int>("bucket");
 
-					if (seen.Add(Tuple.Create(reduceKeyFromDb, bucket)))
+					var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
+					var thisIsNewScheduledReductionRow = itemsToDelete.Contains(result, RavenJTokenEqualityComparer.Default) == false;
+					var neverSeenThisKeyAndBucket = itemsAlreadySeen.Add(rowKey);
+					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 					{
-						foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
+						if (seenLocally.Add(rowKey))
 						{
-							yield return mappedResultInfo;
+							foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
+							{
+								take--;
+								yield return mappedResultInfo;
+							}
 						}
 					}
-					itemsToDelete.Add(result);
+					if(thisIsNewScheduledReductionRow)
+						itemsToDelete.Add(result);
+
+					if (take <= 0)
+						break;
 				}
+
+				if (take <= 0)
+					break;
 			}
 		}
 
