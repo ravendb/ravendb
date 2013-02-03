@@ -102,9 +102,12 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null, bool deleteDirectory = true, bool runInMemory = true)
+		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
+			 bool deleteDirectoryAfter = true, 
+			 bool deleteDirectoryBefore = true,
+			 bool runInMemory = true)
 		{
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectory);
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectoryBefore);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
@@ -114,7 +117,7 @@ namespace Raven.Tests.Helpers
 			store.AfterDispose += (sender, args) =>
 			{
 				ravenDbServer.Dispose();
-				if (deleteDirectory)
+				if (deleteDirectoryAfter)
 					ClearDatabaseDirectory();
 			};
 			ModifyStore(store);

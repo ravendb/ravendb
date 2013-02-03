@@ -21,14 +21,20 @@ namespace Raven.Tests.MailingList
 			configuration.DefaultStorageTypeName = "esent";
 		}
 
+		public override void Dispose()
+		{
+			SystemTime.UtcDateTime = null;
+			base.Dispose();
+		}
+
 		[Fact]
 		public void CanRunWithDTCTxAndRestart()
 		{
-			var store = NewRemoteDocumentStore(runInMemory: false, deleteDirectory: false);
+			var store = NewRemoteDocumentStore(runInMemory: false, deleteDirectoryAfter: false, deleteDirectoryBefore: true);
 			using (store)
 			{
 				// Define ids for 5 testdocuments
-				var documentIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+				var documentIds = new string[] { "1", "2", "3", "4", "5" };
 
 				// First we add the documents to the store
 				foreach (var id in documentIds)
@@ -42,7 +48,7 @@ namespace Raven.Tests.MailingList
 
 					}
 				}
-			
+
 				// We then load and update the documents in the same transaction and batch
 				// but before we commit we stop the RavenDb service in order to simulate
 				// a restart of the service
@@ -71,23 +77,24 @@ namespace Raven.Tests.MailingList
 				}
 
 
-
 				// We simulate that the server is restarting. The delay is important as this will make
 				// the transaction timeout before we start the service again
 				SystemTime.UtcDateTime = () => DateTime.UtcNow.AddDays(1);
 
-				store = NewRemoteDocumentStore(runInMemory: false, deleteDirectory: false); //restart
-				foreach (var id in documentIds)
+				using (var store2 = NewRemoteDocumentStore(runInMemory: false, deleteDirectoryBefore: false, deleteDirectoryAfter: true)) //restart
 				{
-					using (var session = store.OpenSession())
+					foreach (var id in documentIds)
 					{
-						session.Advanced.AllowNonAuthoritativeInformation = false;
-						session.Advanced.UseOptimisticConcurrency = true;
+						using (var session = store2.OpenSession())
+						{
+							session.Advanced.AllowNonAuthoritativeInformation = false;
+							session.Advanced.UseOptimisticConcurrency = true;
 
-						var testMessage = session.Load<TestDocument>(id);
-						testMessage.Description = "Updated again";
+							var testMessage = session.Load<TestDocument>(id);
+							testMessage.Description = "Updated again";
 
-						session.SaveChanges();
+							session.SaveChanges();
+						}
 					}
 				}
 			}
@@ -101,7 +108,7 @@ namespace Raven.Tests.MailingList
 			/// <summary>
 			/// Id
 			/// </summary>
-			public Guid Id { get; set; }
+			public string Id { get; set; }
 
 			/// <summary>
 			/// Desription

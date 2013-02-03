@@ -153,7 +153,9 @@ namespace Raven.Storage.Esent.StorageActions
 			var timeout = Api.RetrieveColumnAsInt64(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
 			if (SystemTime.UtcNow > DateTime.FromBinary(timeout.Value))// the timeout for the transaction has passed
 			{
+				var bookmark = Api.GetBookmark(session, Documents);
 				RollbackTransaction(guid);
+				Api.JetGotoBookmark(session, Documents, bookmark, bookmark.Length);
 				return;
 			}
 			throw new ConcurrencyException("Document '" + key + "' is locked by transaction: " + guid);
