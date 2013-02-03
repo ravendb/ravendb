@@ -12,6 +12,9 @@ using System.Linq;
 using System.Net;
 using Raven.Abstractions.Json;
 using Raven.Client.Listeners;
+#if NETFX_CORE
+using Raven.Client.WinRT.Connection;
+#endif
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions;

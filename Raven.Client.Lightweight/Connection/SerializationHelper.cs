@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#else
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
 #endif
 using System.Globalization;
 using System.Linq;

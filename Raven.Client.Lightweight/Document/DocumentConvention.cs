@@ -22,6 +22,9 @@ using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+#if NETFX_CORE
+using Raven.Imports.Newtonsoft.Json.Utilities;
+#endif
 
 namespace Raven.Client.Document
 {
