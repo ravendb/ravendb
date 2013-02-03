@@ -1249,6 +1249,54 @@ namespace Raven.Client.Connection.Async
 			readStripingBase = -1;// this means that will have to use the master url first
 		}
 
+		public Task<JsonDocumentMetadata> HeadAsync(string key)
+		{
+			EnsureIsNotNullOrEmpty(key, "key");
+			return ExecuteWithReplication("HEAD", u => DirectHeadAsync(u, key));
+		}
+
+		/// <summary>
+		/// Do a direct HEAD request against the server for the specified document
+		/// </summary>
+		private Task<JsonDocumentMetadata> DirectHeadAsync(string serverUrl, string key)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
+			                                                                   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
+				                                                                   .AddOperationHeaders(OperationsHeaders))
+			                                            .AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			return request.ReadResponseJsonAsync().ContinueWith(task =>
+			{
+				try
+				{
+					var deserializeJsonDocumentMetadata = SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
+					return (Task<JsonDocumentMetadata>) new CompletedTask<JsonDocumentMetadata>(deserializeJsonDocumentMetadata);
+				}
+				catch (AggregateException e)
+				{
+					var webException = e.ExtractSingleInnerException() as WebException;
+					if (webException == null)
+						throw;
+					var httpWebResponse = webException.Response as HttpWebResponse;
+					if (httpWebResponse == null)
+						throw;
+					if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						return new CompletedTask<JsonDocumentMetadata>((JsonDocumentMetadata) null);
+					if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+					{
+						throw new ConflictException("Conflict detected on " + key +
+						                            ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
+						{
+							Etag = httpWebResponse.GetEtagHeader()
+						};
+					}
+					throw;
+				}
+			}).Unwrap();
+		}
+
 		public HttpJsonRequest CreateRequest(string requestUrl, string method)
 		{
 			var metadata = new RavenJObject();

@@ -289,5 +289,12 @@ namespace Raven.Client.Connection.Async
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		void ForceReadFromMaster();
+
+		/// <summary>
+		/// Retrieves the document metadata for the specified document key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
+		Task<JsonDocumentMetadata> HeadAsync(string key);
 	}
 }
