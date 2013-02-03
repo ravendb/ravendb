@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Indexing
 {
@@ -267,6 +268,10 @@ namespace Raven.Abstractions.Indexing
 			foreach (var toRemove in Analyzers.Where(x => string.IsNullOrEmpty(x.Value)).ToArray())
 			{
 				Analyzers.Remove(toRemove);
+			}
+			foreach (var toRemove in Suggestions.Where(x => x.Value.Distance == StringDistanceTypes.None).ToArray())
+			{
+				Suggestions.Remove(toRemove);
 			}
 		}
 

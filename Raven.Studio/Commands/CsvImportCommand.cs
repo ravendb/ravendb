@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
+using Raven.Client.Util;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -74,7 +75,7 @@ namespace Raven.Studio.Commands
 				this.databaseCommands = databaseCommands;
 				csvReader = new CsvReader(reader);
 				header = csvReader.ReadHeaderRecord();
-				entity = Path.GetFileNameWithoutExtension(file);
+				entity = Inflector.Pluralize(Path.GetFileNameWithoutExtension(file));
 				sw = Stopwatch.StartNew();
 
 				enumerator = csvReader.DataRecords.GetEnumerator();

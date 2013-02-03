@@ -78,6 +78,11 @@ namespace Raven.Studio.Models
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
+			CreateOrEditField(index.Suggestions, (f, i) =>
+			{
+				f.SuggestionAccuracy = i.Accuracy;
+				f.SuggestionDistance = i.Distance;
+			});
 
 			RestoreDefaults(index);
 
@@ -167,12 +172,14 @@ namespace Raven.Studio.Models
 			index.Stores.Clear();
 			index.SortOptions.Clear();
 			index.Analyzers.Clear();
+			index.Suggestions.Clear();
 			foreach (var item in Fields.Where(item => item.Name != null))
 			{
 				index.Indexes[item.Name] = item.Indexing;
 				index.Stores[item.Name] = item.Storage;
 				index.SortOptions[item.Name] = item.Sort;
 				index.Analyzers[item.Name] = item.Analyzer;
+				index.Suggestions[item.Name] = new SuggestionOptions { Accuracy = item.SuggestionAccuracy, Distance = item.SuggestionDistance };
 			}
 			index.RemoveDefaultValues();
 		}
@@ -672,8 +679,38 @@ namespace Raven.Studio.Models
 						Storage = FieldStorage.No,
 						Indexing = FieldIndexing.Default,
 						Sort = SortOptions.None,
-						Analyzer = string.Empty
+						Analyzer = string.Empty,
+						SuggestionAccuracy = 0,
+						SuggestionDistance = StringDistanceTypes.None,
 					};
+				}
+			}
+
+			private float suggestionAccuracy;
+			public float SuggestionAccuracy
+			{
+				get { return suggestionAccuracy; }
+				set
+				{
+					if (suggestionAccuracy != value)
+					{
+						suggestionAccuracy = value;
+						OnPropertyChanged(() => suggestionAccuracy);
+					}
+				}
+			}
+
+			private StringDistanceTypes suggestionDistance;
+			public StringDistanceTypes SuggestionDistance
+			{
+				get { return suggestionDistance; }
+				set
+				{
+					if (suggestionDistance != value)
+					{
+						suggestionDistance = value;
+						OnPropertyChanged(() => suggestionDistance);
+					}
 				}
 			}
 		}
