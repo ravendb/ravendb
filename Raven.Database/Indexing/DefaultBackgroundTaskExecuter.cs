@@ -164,7 +164,14 @@ namespace Raven.Database.Indexing
 		{
 			if (result.Count == 0)
 				return;
+			if (result.Count == 1)
+			{
+				action(result[0]);
+				return;
+			}
 
+			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
+			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
 			{
 				var tasks = new Task[result.Count];
