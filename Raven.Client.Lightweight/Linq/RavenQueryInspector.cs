@@ -150,22 +150,6 @@ namespace Raven.Client.Linq
 			return luceneQuery.GetIndexQuery();
 		}
 
-		/// <summary>
-		/// Returns a <see cref="System.String"/> that represents this instance.
-		/// </summary>
-		/// <returns>
-		/// A <see cref="System.String"/> that represents this instance.
-		/// </returns>
-		public string ToAsyncString()
-		{
-			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-			var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-			string fields = "";
-			if(ravenQueryProvider.FieldsToFetch.Count > 0)
-				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-			return fields + luceneQuery;
-		}
-
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
 			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new Dictionary<string, string>(), isMapReduce);
