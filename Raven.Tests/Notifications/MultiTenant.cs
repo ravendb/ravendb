@@ -59,9 +59,8 @@ namespace Raven.Tests.Notifications
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 				var list = new BlockingCollection<DocumentChangeNotification>();
-				var taskObservable = store.Changes("test");
-				taskObservable.Task.Wait();
-				taskObservable
+				var taskObservable = store.Changes("test").Task.Result;
+				taskObservable.Task.Result
 					.ForDocument("items/1")
 					.Subscribe(list.Add);
 
