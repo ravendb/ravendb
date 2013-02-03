@@ -9,12 +9,12 @@ namespace Raven.Studio.Infrastructure.Converters
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			var interval = (int) value;
-			return (int)TimeSpan.FromMilliseconds(interval).TotalMinutes;
+			return (int) (TimeSpan.FromMilliseconds(interval).TotalMinutes);
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			return (int)TimeSpan.FromMinutes((int) value).TotalMilliseconds;
+			return (int)TimeSpan.FromMinutes((double) value).TotalMilliseconds;
 		}
 	}
 }
