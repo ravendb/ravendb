@@ -124,23 +124,26 @@
 
                     <TextBlock Text="Suggestion"
                                Grid.Row="6"
+                               Grid.Column="2"
                                VerticalAlignment="Center" />
-                    <ComboBox ItemsSource="{Binding SuggestionDistance, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
-                              SelectedItem="{Binding SuggestionDistance, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
-                              Grid.Row="6"
-                              Grid.Column="1"
-                              MinWidth="90"
-                              VerticalAlignment="Center" />
-                    <toolkit:NumericUpDown Value="{Binding SuggestionAccuracy, Mode=TwoWay}"
-                                           Maximum="1"
-                                           Minimum="0"
-                                           DecimalPlaces="1"
-                                           Increment="0.1"
-                                           Grid.Row="6"
-                                           Grid.Column="2"
-                                           Margin="8,0,4,0"
-                                           VerticalAlignment="Center" />
-
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                        Grid.Row="6"
+                                Grid.Column="3">
+                        <ComboBox ItemsSource="{Binding SuggestionDistance, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+                                  SelectedItem="{Binding SuggestionDistance, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+                                  MinWidth="90"
+                                  ToolTipService.ToolTip="Distance"
+                                  VerticalAlignment="Center" />
+                        <toolkit:NumericUpDown Value="{Binding SuggestionAccuracy, Mode=TwoWay}"
+                                               Maximum="1"
+                                               Minimum="0"
+                                               DecimalPlaces="1"
+                                               ToolTipService.ToolTip="Accuracy"
+                                               Increment="0.1"
+                                               Margin="8,0,4,0"
+                                               VerticalAlignment="Center" />
+                    </StackPanel>
                 </Grid>
             </Border>
         </DataTemplate>
