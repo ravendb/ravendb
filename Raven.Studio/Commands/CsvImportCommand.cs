@@ -76,6 +76,8 @@ namespace Raven.Studio.Commands
 				csvReader = new CsvReader(reader);
 				header = csvReader.ReadHeaderRecord();
 				entity = Inflector.Pluralize(Path.GetFileNameWithoutExtension(file));
+				if (entity.Length > 0 &&  char.IsLower(entity[0])))
+					entity = char.ToUpper(entity[0]) + entity.Substring(1);
 				sw = Stopwatch.StartNew();
 
 				enumerator = csvReader.DataRecords.GetEnumerator();
@@ -106,7 +108,7 @@ namespace Raven.Studio.Commands
 							}
 							else if (string.Equals("Raven-Entity-Name", column, StringComparison.InvariantCultureIgnoreCase))
 							{
-								metadata = new RavenJObject {{"Raven-Entity-Name", record[column]}};
+								metadata = new RavenJObject { { "Raven-Entity-Name", record[column] } };
 								id = id ?? record[column] + "/";
 							}
 							else
@@ -123,7 +125,7 @@ namespace Raven.Studio.Commands
 						}
 					}
 
-					metadata = metadata ?? new RavenJObject {{"Raven-Entity-Name", entity}};
+					metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
 					document.Add("@metadata", metadata);
 					metadata.Add("@id", id ?? Guid.NewGuid().ToString());
 
@@ -164,7 +166,7 @@ namespace Raven.Studio.Commands
 									taskModel.ReportError("Import not completed");
 									taskModel.TaskStatus = TaskStatus.Ended;
 								});
-								
+
 								return t;
 							}
 							return t.IsCompleted ? ImportAsync() : t;
@@ -212,7 +214,7 @@ namespace Raven.Studio.Commands
 						return decimalResult;
 					}
 				}
-				else if(ch == '"' && value.Length > 1 && value[value.Length-1] == '"')
+				else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
 				{
 					return value.Substring(1, value.Length - 2);
 				}
