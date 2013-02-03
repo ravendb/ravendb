@@ -174,6 +174,7 @@ namespace Raven.Database.Indexing
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
 			{
+				LogContext.DatabaseName.Value = context.DatabaseName ?? Constants.SystemDatabase;
 				var tasks = new Task[result.Count];
 				for (int i = 0; i < result.Count; i++)
 				{

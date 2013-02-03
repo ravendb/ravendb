@@ -25,6 +25,7 @@ using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
+using Raven.Database.Server;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
@@ -55,11 +56,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				if (notification.Id == null)
 					return;
-				if (notification.Id.StartsWith("Raven/SqlReplication/Configuration/", StringComparison.InvariantCultureIgnoreCase))
-				{
-					replicationConfigs = null;
-					lastError.Clear();
-				}
+				if (!notification.Id.StartsWith("Raven/SqlReplication/Configuration/", StringComparison.InvariantCultureIgnoreCase))
+					return;
+
+				replicationConfigs = null;
+				lastError.Clear();
 			};
 
 			GetReplicationStatus();
@@ -68,13 +69,18 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			var task = Task.Factory.StartNew(() =>
 			{
-				try
+				using (LogManager.OpenMappedContext("database", database.Name ?? Constants.SystemDatabase))
+				using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 				{
-					BackgroundSqlReplication();
-				}
-				catch (Exception e)
-				{
-					log.ErrorException("Fatal failure when replicating to SQL. All SQL Replication activity STOPPED", e);
+					LogContext.DatabaseName.Value = database.Name ?? Constants.SystemDatabase;
+					try
+					{
+						BackgroundSqlReplication();
+					}
+					catch (Exception e)
+					{
+						log.ErrorException("Fatal failure when replicating to SQL. All SQL Replication activity STOPPED", e);
+					}
 				}
 			}, TaskCreationOptions.LongRunning);
 			database.ExtensionsState.GetOrAdd(typeof(SqlReplicationTask).FullName, k => new DisposableAction(task.Wait));
