@@ -120,8 +120,8 @@ namespace Raven.Storage.Esent.StorageActions
 							  SystemTime.UtcNow + transactionInformation.Timeout);
 				try
 				{
-				update.Save();
-			}
+					update.Save();
+				}
 				catch (EsentKeyDuplicateException)
 				{
 					// someone else might ahvehave created this record in a separate thread
@@ -154,7 +154,9 @@ namespace Raven.Storage.Esent.StorageActions
 			var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
 			if (SystemTime.UtcNow > timeout)// the timeout for the transaction has passed
 			{
+				var bookmark = Api.GetBookmark(session, Documents);
 				RollbackTransaction(guid);
+				Api.JetGotoBookmark(session, Documents, bookmark, bookmark.Length);
 				return;
 			}
 			throw new ConcurrencyException("Document '" + key + "' is locked by transacton: " + guid);
