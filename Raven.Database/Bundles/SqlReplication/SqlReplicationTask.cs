@@ -21,6 +21,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -180,6 +181,68 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private bool ReplicateToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
 		{
+			var providerFactory = TryGetDbProviderFactory(cfg);
+			if (providerFactory == null) 
+				return false;
+
+			var dictionary = ApplyConversionScript(cfg, docs);
+			if (dictionary.Count == 0)
+				return true;
+			try
+			{
+				WriteToRelationalDatabase(cfg, providerFactory, dictionary);
+				return true;
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Failure to replicate changes to relational database for " + cfg.Name +", updates", e);
+				DateTime time, newTime;
+				if (lastError.TryGetValue(cfg.Name, out time) == false)
+				{
+					newTime = SystemTime.UtcNow.AddMinutes(1);
+				}
+				else
+				{
+					var totalMinutes = (SystemTime.UtcNow - time).TotalMinutes;
+					newTime = SystemTime.UtcNow.AddMinutes(Math.Max(10, Math.Min(1, totalMinutes + 1)));
+				}
+				lastError[cfg.Name] = newTime;
+				return false;
+			}
+		}
+
+		private Dictionary<string, List<ItemToReplicate>> ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		{
+			var dictionary = new Dictionary<string, List<ItemToReplicate>>();
+			foreach (var jsonDocument in docs)
+			{
+				if (string.IsNullOrEmpty(cfg.RavenEntityName) == false)
+				{
+					var entityName = jsonDocument.Metadata.Value<string>(Constants.RavenEntityName);
+					if (string.Equals(cfg.RavenEntityName, entityName, StringComparison.InvariantCultureIgnoreCase) == false)
+						continue;
+				}
+				var patcher = new SqlReplicationScriptedJsonPatcher(Database, dictionary, jsonDocument.Key);
+				try
+				{
+					DocumentRetriever.EnsureIdInMetadata(jsonDocument);
+					jsonDocument.Metadata[Constants.DocumentIdFieldName] = jsonDocument.Key;
+					var document = jsonDocument.ToJson();
+					patcher.Apply(document, new ScriptedPatchRequest
+					{
+						Script = cfg.Script
+					});
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping this document", e);
+				}
+			}
+			return dictionary;
+		}
+
+		private DbProviderFactory TryGetDbProviderFactory(SqlReplicationConfig cfg)
+		{
 			DbProviderFactory providerFactory;
 			try
 			{
@@ -193,55 +256,9 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				lastError[cfg.Name] = DateTime.MaxValue; // always error 
 
-				return false;
+				return null;
 			}
-
-			var dictionary = new Dictionary<string, List<ItemToReplicate>>();
-			foreach (var jsonDocument in docs)
-			{
-				if (string.IsNullOrEmpty(cfg.RavenEntityName) == false)
-				{
-					var entityName = jsonDocument.Metadata.Value<string>(Constants.RavenEntityName);
-					if (string.Equals(cfg.RavenEntityName, entityName, StringComparison.InvariantCultureIgnoreCase) == false)
-						continue;
-				}
-				var patcher = new SqlReplicationScriptedJsonPatcher(Database, dictionary, jsonDocument.Key);
-				try
-				{
-					patcher.Apply(jsonDocument.ToJson(), new ScriptedPatchRequest
-					{
-						Script = cfg.Script
-					});
-				}
-				catch (Exception e)
-				{
-					log.WarnException("Could not process SQL Replication script for " + cfg.Name +", skipping this document", e);
-				}
-			}
-			if (dictionary.Count == 0)
-				return true;
-			try
-			{
-				WriteToRelationalDatabase(cfg, providerFactory, dictionary);
-				return true;
-			}
-			catch (Exception e)
-			{
-				log.WarnException("Failure to replicate changes to relational database for " + cfg.Name +", updates", e);
-				DateTime time;
-					DateTime newTime;
-				if (lastError.TryGetValue(cfg.Name, out time) == false)
-				{
-					newTime = SystemTime.UtcNow.AddMinutes(1);
-				}
-				else
-				{
-					var totalMinutes = (SystemTime.UtcNow - time).TotalMinutes;
-					newTime = SystemTime.UtcNow.AddMinutes(Math.Max(10, Math.Min(1, totalMinutes + 1)));
-				}
-				lastError[cfg.Name] = newTime;
-				return false;
-			}
+			return providerFactory;
 		}
 
 		private void WriteToRelationalDatabase(SqlReplicationConfig cfg, DbProviderFactory providerFactory,
@@ -267,7 +284,7 @@ namespace Raven.Database.Bundles.SqlReplication
 								var dbParameter = cmd.CreateParameter();
 								dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, itemToReplicate.PkName);
 								cmd.Parameters.Add(dbParameter);
-								dbParameter.Value = itemToReplicate.Columns.Value<object>(itemToReplicate.PkName) ?? DBNull.Value;
+								dbParameter.Value = itemToReplicate.DocumentId;
 								cmd.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}",
 								                                commandBuilder.QuoteIdentifier(kvp.Key),
 								                                commandBuilder.QuoteIdentifier(itemToReplicate.PkName),
@@ -298,7 +315,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 								var pkParam = cmd.CreateParameter();
 								pkParam.ParameterName = GetParameterName(providerFactory, commandBuilder, itemToReplicate.PkName);
-								SetParamValue(pkParam, itemToReplicate.Columns[itemToReplicate.PkName]);
+								pkParam.Value = itemToReplicate.DocumentId;
 								cmd.Parameters.Add(pkParam);
 
 								sb.Append(") \r\nVALUES (")
@@ -415,6 +432,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		public class ItemToReplicate
 		{
 			public string PkName { get; set; }
+			public string DocumentId { get; set; }
 			public RavenJObject Columns { get; set; }
 		}
 
@@ -447,6 +465,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					itemToReplicates.Add(new ItemToReplicate
 					{
 						PkName = pkName,
+						DocumentId = docId,
 						Columns = ToRavenJObject(cols)
 					});
 				}));
