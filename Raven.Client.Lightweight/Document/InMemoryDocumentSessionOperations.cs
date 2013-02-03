@@ -7,22 +7,16 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Reflection;
 #if !SILVERLIGHT
 using System.Transactions;
 #endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
@@ -42,7 +36,6 @@ namespace Raven.Client.Document
 		private readonly int hash = Interlocked.Increment(ref counter);
 
 		protected bool GenerateDocumentKeysOnStore = true;
-
 		/// <summary>
 		/// The session id 
 		/// </summary>
@@ -812,15 +805,23 @@ more responsive application.
 				{
 					Transaction.Current.EnlistDurable(
 						ResourceManagerId,
-						new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+						new RavenClientEnlistment(transactionalSession, () =>
+						{
+							RegisteredStoresInTransaction.Remove(localIdentifier);
+							if (documentStore.WasDisposed)
+								throw new ObjectDisposedException("RavenDB Session");
+						}),
 						EnlistmentOptions.None);
 				}
 				else
 				{
 					var promotableSinglePhaseNotification = new PromotableRavenClientEnlistment(transactionalSession,
-																								() =>
-																								RegisteredStoresInTransaction.
-																									Remove(localIdentifier));
+						() =>
+						{
+							RegisteredStoresInTransaction.Remove(localIdentifier);
+							if (documentStore.WasDisposed)
+								throw new ObjectDisposedException("RavenDB Session");
+						});
 					var registeredSinglePhaseNotification =
 						Transaction.Current.EnlistPromotableSinglePhase(promotableSinglePhaseNotification);
 
@@ -828,7 +829,12 @@ more responsive application.
 					{
 						Transaction.Current.EnlistDurable(
 							ResourceManagerId,
-							new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+							new RavenClientEnlistment(transactionalSession, () =>
+							{
+								RegisteredStoresInTransaction.Remove(localIdentifier);
+								if(documentStore.WasDisposed)
+									throw new ObjectDisposedException("RavenDB Session");
+							}),
 							EnlistmentOptions.None);
 					}
 				}
@@ -905,7 +911,7 @@ more responsive application.
 			entitiesByKey.Clear();
 		}
 
-		readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+		private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
 		public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
 		public EntityToJson EntityToJson { get; private set; }
 
@@ -923,7 +929,6 @@ more responsive application.
 		/// </summary>
 		public virtual void Dispose()
 		{
-
 		}
 
 		/// <summary>

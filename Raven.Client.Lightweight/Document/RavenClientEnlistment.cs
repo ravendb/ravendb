@@ -42,9 +42,9 @@ namespace Raven.Client.Document
 		/// <param name="preparingEnlistment">A <see cref="T:System.Transactions.PreparingEnlistment"/> object used to send a response to the transaction manager.</param>
 		public void Prepare(PreparingEnlistment preparingEnlistment)
 		{
-			onTxComplete();
 			try
 			{
+				onTxComplete();
 				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
 					var name = TransactionRecoveryInformationFileName;
@@ -77,9 +77,9 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">An <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void Commit(Enlistment enlistment)
 		{
-			onTxComplete();
 			try
 			{
+				onTxComplete();
 				session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
@@ -99,9 +99,9 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">A <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void Rollback(Enlistment enlistment)
 		{
-			onTxComplete();
 			try
 			{
+				onTxComplete();
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
@@ -148,9 +148,9 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">An <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void InDoubt(Enlistment enlistment)
 		{
-			onTxComplete();
 			try
 			{
+				onTxComplete();
 				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
