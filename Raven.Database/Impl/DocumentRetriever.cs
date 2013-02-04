@@ -70,7 +70,6 @@ namespace Raven.Database.Impl
 				SkipDeleteFromIndex = resultingDocument.SkipDeleteFromIndex,
 				NonAuthoritativeInformation = resultingDocument.NonAuthoritativeInformation,
 				TempIndexScore = resultingDocument.TempIndexScore,
-				TempSpatialDistance = resultingDocument.TempSpatialDistance,
 				DataAsJson =
 					resultingDocument.DataAsJson.IsSnapshot
 						? (RavenJObject) resultingDocument.DataAsJson.CreateSnapshot()
@@ -109,10 +108,6 @@ namespace Raven.Database.Impl
 				if (document != null)
 				{
 					document.Metadata[Constants.TemporaryScoreValue] = queryScore;
-					if (queryResult.Distance != null)
-					{
-						document.Metadata[Constants.TemporarySpatialDistance] = queryResult.Distance;
-					}
 				}
 				return document;
 			}
@@ -175,10 +170,6 @@ namespace Raven.Database.Impl
 			var metadata = GetMetadata(doc);
 			metadata.Remove("@id");
 			metadata[Constants.TemporaryScoreValue] = queryScore;
-			if (queryResult.Distance != null)
-			{
-				metadata[Constants.TemporarySpatialDistance] = queryResult.Distance;
-			}
 			return new JsonDocument
 			{
 				Key = queryResult.Key,

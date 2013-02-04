@@ -54,7 +54,6 @@ namespace Raven.Client.Connection
 					LastModified = lastModified,
 					Etag = etag,
 					TempIndexScore = metadata == null ? null : metadata.Value<float?>(Constants.TemporaryScoreValue),
-					TempSpatialDistance = metadata == null ? null : metadata.Value<double?>(Constants.TemporarySpatialDistance),
 					NonAuthoritativeInformation = nai,
 					Metadata = metadata.FilterHeaders(),
 					DataAsJson = doc,

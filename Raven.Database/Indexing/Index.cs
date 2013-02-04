@@ -246,22 +246,12 @@ namespace Raven.Database.Indexing
 
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
-			var indexQueryResult = new IndexQueryResult
+			return new IndexQueryResult
 			{
 				Score = score.Score,
 				Key = document.Get(Constants.DocumentIdFieldName),
 				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
-			var fieldDoc = score as FieldDoc;
-			if (fieldDoc != null)
-			{
-				foreach (var result in fieldDoc.fields.OfType<DistanceValue>())
-				{
-					indexQueryResult.Distance = result.Value;
-					break;
-				}
-			}
-			return indexQueryResult;
 		}
 
 		public static RavenJObject CreateDocumentFromFields(Document document, FieldsToFetch fieldsToFetch)

@@ -31,14 +31,7 @@ namespace Raven.Studio.Features.Documents
             {
                 return "TempIndexScore";
             }
-			else if (binding == "$Temp:Distance")
-			{
-				return "TempSpatialDistance";
-			}
-            else
-            {
-                return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
-            }
+	        return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
         }
 
         private static string ExpandPropertyPathToXamlBinding(string binding)

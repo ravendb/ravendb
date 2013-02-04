@@ -75,11 +75,6 @@ namespace Raven.Abstractions.Data
 		public float? TempIndexScore { get; set; }
 
 		/// <summary>
-		/// The distance from the center point in spatial queries
-		/// </summary>
-		public double? TempSpatialDistance { get; set; }
-
-		/// <summary>
 		/// How much space this document takes on disk
 		/// Only relevant during indexing phases, and not available on the client
 		/// </summary>

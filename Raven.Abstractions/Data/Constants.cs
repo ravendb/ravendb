@@ -25,7 +25,6 @@ namespace Raven.Abstractions.Data
 		public const string RavenLastModified = "Raven-Last-Modified";
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
-		public const string TemporarySpatialDistance = "Temp-Spatial-Distance";
 		public const string DefaultSpatialFieldName = "__spatial";
 		public const string SpatialShapeFieldName = "__spatialShape";
 		public const double DefaultSpatialDistanceErrorPct = 0.025d;
