@@ -126,12 +126,12 @@ namespace Raven.Database.Server.Security.OAuth
 			if ("Administrators".Equals(role, StringComparison.InvariantCultureIgnoreCase) == false)
 				return false;
 
-			var databaseAccess = tokenBody.AuthorizedDatabases.FirstOrDefault(x=>string.Equals(x.TenantId, tenantId, StringComparison.InvariantCultureIgnoreCase) || x.TenantId == "*");
+			var databaseAccess = tokenBody.AuthorizedDatabases
+				.Where(x=>
+					string.Equals(x.TenantId, tenantId, StringComparison.InvariantCultureIgnoreCase) ||
+					x.TenantId == "*");
 
-			if (databaseAccess == null)
-				return false;
-
-			return databaseAccess.Admin;
+			return databaseAccess.Any(access => access.Admin);
 		}
 
 		public IIdentity Identity
