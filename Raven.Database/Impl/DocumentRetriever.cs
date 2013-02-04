@@ -70,6 +70,7 @@ namespace Raven.Database.Impl
 				SkipDeleteFromIndex = resultingDocument.SkipDeleteFromIndex,
 				NonAuthoritativeInformation = resultingDocument.NonAuthoritativeInformation,
 				TempIndexScore = resultingDocument.TempIndexScore,
+				TempSpatialDistance = resultingDocument.TempSpatialDistance,
 				DataAsJson =
 					resultingDocument.DataAsJson.IsSnapshot
 						? (RavenJObject) resultingDocument.DataAsJson.CreateSnapshot()
