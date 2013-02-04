@@ -1065,9 +1065,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformer.cs">
       <Link>Imports\Connection\ReplicationInformer.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformerCache.cs">
-      <Link>Imports\Connection\ReplicationInformerCache.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\SerializationHelper.cs">
       <Link>Imports\Connection\SerializationHelper.cs</Link>
     </Compile>
@@ -1455,11 +1452,11 @@
     <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\Stopwatch.cs">
       <Link>Imports\MissingFromSilverlight\Stopwatch.cs</Link>
     </Compile>
+    <Compile Include="Connection\ReplicationInformerLocalCache.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="MissingFromWinRT\AppDomain.cs" />
     <Compile Include="MissingFromWinRT\DescriptionAttribute.cs" />
-    <Compile Include="MissingFromWinRT\IsolatedStorageFile.cs" />
     <Compile Include="MissingFromWinRT\StringExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
