@@ -18,21 +18,21 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new SpatialEntity(45.70955, -73.569131)
+					session.Store(new SpatialEntity(45.70955, -73.569131) // 22.23 Kb
 					{
 						Id = "se/1",
 						Name = "Universite du Quebec a Montreal",
 						Description = "UQAM",
 					});
 
-					session.Store(new SpatialEntity(45.50955, -73.569131)
+					session.Store(new SpatialEntity(45.50955, -73.569131) // 0 Km
 					{
 						Id = "se/2",
 						Name = "UQAM",
 						Description = "Universite du Quebec a Montreal",
 					});
 
-					session.Store(new SpatialEntity(45.60955, -73.569131)
+					session.Store(new SpatialEntity(45.60955, -73.569131) // 11.11 KM 
 					{
 						Id = "se/3",
 						Name = "UQAM",
