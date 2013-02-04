@@ -356,10 +356,8 @@ namespace Raven.Storage.Managed
 
 			foreach (var reduction in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(new RavenJObject
 			{
-				{"view", indexName},
-				{"level", 0}
-			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
-								x.Value<int>("level") == 0)
+				{"view", indexName}
+			}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase))
 								.Take(take))
 			{
 				allKeysToReduce.Add(reduction.Value<string>("reduceKey"));
