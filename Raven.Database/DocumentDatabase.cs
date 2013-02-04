@@ -668,7 +668,7 @@ namespace Raven.Database
 			workContext.DocsPerSecIncreaseBy(1);
 			key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
 			RemoveReservedProperties(document);
-			RemoveReservedProperties(metadata);
+			RemoveMetadataReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
 			lock (putSerialLock)
 			{
@@ -840,6 +840,13 @@ namespace Raven.Database
 			{
 				throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
 			}
+		}
+
+		private static void RemoveMetadataReservedProperties(RavenJObject metadata)
+		{
+			RemoveReservedProperties(metadata);
+			metadata.Remove("Raven-Last-Modified");
+			metadata.Remove("Last-Modified");
 		}
 
 		private static void RemoveReservedProperties(RavenJObject document)
