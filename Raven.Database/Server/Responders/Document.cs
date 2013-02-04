@@ -52,7 +52,7 @@ namespace Raven.Database.Server.Responders
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
-					ProcessPatchResult(context, docId, patchResult.PatchResult, null, TODO);
+					ProcessPatchResult(context, docId, patchResult.PatchResult, null, null);
 					break;
 				case "EVAL":
 					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
