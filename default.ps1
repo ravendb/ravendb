@@ -517,7 +517,7 @@ task CreateNugetPackages -depends Compile {
 			}
 		}
 		$nuspec.Save($_.FullName);
-		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
+		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
 	
 	# Upload packages
