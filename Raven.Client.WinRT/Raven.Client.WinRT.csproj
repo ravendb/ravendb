@@ -1466,12 +1466,17 @@
     <Compile Include="MissingFromWinRT\AppDomain.cs" />
     <Compile Include="MissingFromWinRT\DescriptionAttribute.cs" />
     <Compile Include="MissingFromWinRT\IsolatedStorageFile.cs" />
+    <Compile Include="MissingFromWinRT\StringExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Reference Include="Microsoft.Threading.Tasks">
+      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\win8\Microsoft.Threading.Tasks.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '11.0' ">
     <VisualStudioVersion>11.0</VisualStudioVersion>
   </PropertyGroup>
