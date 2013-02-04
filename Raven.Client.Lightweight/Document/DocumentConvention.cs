@@ -23,6 +23,7 @@ using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 #if NETFX_CORE
+using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 #endif
 
@@ -85,7 +86,9 @@ namespace Raven.Client.Document
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
 			{
+#if !NETFX_CORE
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+#endif
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
@@ -231,7 +234,7 @@ namespace Raven.Client.Document
 
 			if (t.Name.Contains("<>"))
 				return null;
-			if (t.IsGenericType)
+			if (t.IsGenericType())
 			{
 				var name = t.GetGenericTypeDefinition().Name;
 				if (name.Contains('`'))

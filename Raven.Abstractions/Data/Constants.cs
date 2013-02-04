@@ -71,7 +71,9 @@ namespace Raven.Abstractions.Data
 
 		public const int DefaultIndexFileBlockSize = 12 * 1024;
 
+#if !NETFX_CORE
 		public static readonly Type DefaultCryptoServiceProvider = typeof(AesManaged);
+#endif
 
 		//Quotas
 		public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";

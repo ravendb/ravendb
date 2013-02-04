@@ -423,6 +423,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IReferenceResolver.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IReferenceResolver.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ITraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ITraceWriter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IValueProvider.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IValueProvider.cs</Link>
     </Compile>
@@ -1440,8 +1443,23 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\CD.cs">
+      <Link>Imports\MissingFromSilverlight\CD.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\MD5.cs">
+      <Link>Imports\MissingFromSilverlight\MD5.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\NameValueCollection.cs">
       <Link>Imports\MissingFromSilverlight\NameValueCollection.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\SpinWait.cs">
+      <Link>Imports\MissingFromSilverlight\SpinWait.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\SplitOrderedList.cs">
+      <Link>Imports\MissingFromSilverlight\SplitOrderedList.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\Stopwatch.cs">
+      <Link>Imports\MissingFromSilverlight\Stopwatch.cs</Link>
     </Compile>
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
