@@ -615,15 +615,6 @@
     <Compile Include="..\Raven.Abstractions\Connection\CountingStream.cs">
       <Link>Imports\Connection\CountingStream.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\HttpRavenRequest.cs">
-      <Link>Imports\Connection\HttpRavenRequest.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\HttpRavenRequestFactory.cs">
-      <Link>Imports\Connection\HttpRavenRequestFactory.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\HttpRequestHelper.cs">
-      <Link>Imports\Connection\HttpRequestHelper.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
       <Link>Imports\Connection\OAuthHelper.cs</Link>
     </Compile>
@@ -728,6 +719,9 @@
     </Compile>
     <Compile Include="..\raven.abstractions\data\LogItem.cs">
       <Link>Imports\Data\LogItem.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\MoreLikeThisQuery.cs">
+      <Link>Imports\Data\MoreLikeThisQuery.cs</Link>
     </Compile>
     <Compile Include="..\raven.abstractions\data\MultiLoadResult.cs">
       <Link>Imports\Data\MultiLoadResult.cs</Link>

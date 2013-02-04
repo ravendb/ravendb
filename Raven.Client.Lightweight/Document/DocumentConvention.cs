@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
@@ -24,7 +25,6 @@ using Raven.Client.Util;
 using Raven.Json.Linq;
 #if NETFX_CORE
 using Raven.Client.WinRT.MissingFromWinRT;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 #endif
 
 namespace Raven.Client.Document
