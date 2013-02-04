@@ -12,7 +12,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
 		{
-			using(var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
 			{
 				store.ExecuteIndex(new SpatialIndex());
 
@@ -51,9 +51,9 @@ namespace Raven.Tests.MailingList
 						.WithinRadiusOf(500, 45.50955, -73.569133)
 						.ToList();
 
-					Assert.True(results[0].Id == "se/2");
-					Assert.True(results[1].Id == "se/3");
-					Assert.True(results[2].Id == "se/1");
+					Assert.Equal(results[0].Id, "se/2");
+					Assert.Equal(results[1].Id, "se/3");
+					Assert.Equal(results[2].Id, "se/1");
 				}
 
 			}
