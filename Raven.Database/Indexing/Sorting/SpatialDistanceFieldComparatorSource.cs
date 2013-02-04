@@ -105,6 +105,8 @@ namespace Raven.Database.Indexing.Sorting
 					return double.NaN;
 				}
 				var pt = shape as Point;
+				if (pt == null)
+					pt = shape.GetCenter();
 				return SpatialIndex.Context.GetDistCalc().Distance(pt, originPt);
 			}
 
