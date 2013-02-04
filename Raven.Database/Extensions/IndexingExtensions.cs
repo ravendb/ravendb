@@ -106,10 +106,18 @@ namespace Raven.Database.Extensions
 
 		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition)
 		{
-			if (self.SortedFields == null || self.SortedFields.Length <= 0)
-				return null;
-
 			var spatialQuery = self as SpatialIndexQuery;
+			if (self.SortedFields == null || self.SortedFields.Length <= 0)
+			{
+				if(spatialQuery != null) // default ordering for spatial indexes is the distance
+				{
+					var shape = SpatialIndex.ReadShape(spatialQuery.QueryShape);
+					var dsort = new SpatialDistanceFieldComparatorSource(shape.GetCenter());
+					return new Sort(new SortField(Constants.DistanceFieldName, dsort, reverse: true));
+				}
+				return null;
+			}
+
 
 			return new Sort(self.SortedFields
 							.Select(sortedField =>
