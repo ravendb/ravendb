@@ -15,6 +15,7 @@ namespace Raven.Database.Data
 		public RavenJObject Projection { get; set; }
 
 		public float Score { get; set; }
+		public double? Distance { get; set; }
 	    public Dictionary<string, string[]> Highligtings { get; set; }
 
 	    public bool Equals(IndexQueryResult other)

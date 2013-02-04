@@ -106,7 +106,13 @@ namespace Raven.Database.Impl
 					return null;
 				var document = GetDocumentWithCaching(queryResult.Key);
 				if (document != null)
+				{
 					document.Metadata[Constants.TemporaryScoreValue] = queryScore;
+					if (queryResult.Distance != null)
+					{
+						document.Metadata[Constants.TemporarySpatialDistance] = queryResult.Distance;
+					}
+				}
 				return document;
 			}
 
@@ -168,6 +174,10 @@ namespace Raven.Database.Impl
 			var metadata = GetMetadata(doc);
 			metadata.Remove("@id");
 			metadata[Constants.TemporaryScoreValue] = queryScore;
+			if (queryResult.Distance != null)
+			{
+				metadata[Constants.TemporarySpatialDistance] = queryResult.Distance;
+			}
 			return new JsonDocument
 			{
 				Key = queryResult.Key,

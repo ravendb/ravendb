@@ -29,6 +29,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing.Sorting;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -243,14 +244,24 @@ namespace Raven.Database.Indexing
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 
-		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
+		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
-			return new IndexQueryResult
+			var indexQueryResult = new IndexQueryResult
 			{
-				Score = score,
+				Score = score.Score,
 				Key = document.Get(Constants.DocumentIdFieldName),
 				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
+			var fieldDoc = score as FieldDoc;
+			if (fieldDoc != null)
+			{
+				foreach (var result in fieldDoc.fields.OfType<DistanceValue>())
+				{
+					indexQueryResult.Distance = result.Value;
+					break;
+				}
+			}
+			return indexQueryResult;
 		}
 
 		public static RavenJObject CreateDocumentFromFields(Document document, FieldsToFetch fieldsToFetch)
@@ -862,7 +873,7 @@ namespace Raven.Database.Indexing
 							{
 								var scoreDoc = search.ScoreDocs[i];
 								var document = indexSearcher.Doc(scoreDoc.Doc);
-								var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc.Score);
+								var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
@@ -984,7 +995,7 @@ namespace Raven.Database.Indexing
 						for (int i = indexQuery.Start; i < intersectResults.Count && (i - indexQuery.Start) < pageSizeBestGuess; i++)
 						{
 							Document document = indexSearcher.Doc(intersectResults[i].LuceneId);
-							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
 							if (ShouldIncludeInResults(indexQueryResult) == false)
 							{
 								indexQuery.SkippedResults.Value++;
@@ -1033,7 +1044,7 @@ namespace Raven.Database.Indexing
 				for (int i = 0; i < min; i++)
 				{
 					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 			}
@@ -1241,7 +1252,7 @@ namespace Raven.Database.Indexing
 				for (int i = 0; i < min; i++)
 				{
 					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 				return 0;

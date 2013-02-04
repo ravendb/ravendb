@@ -298,7 +298,7 @@
     <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />
     <Compile Include="Indexing\Sorting\RandomSortField.cs" />
-    <Compile Include="Indexing\Sorting\SpatialDistanceSortField.cs">
+    <Compile Include="Indexing\Sorting\SpatialDistanceFieldComparatorSource.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Json\ScriptedJsonPatcher.cs" />
