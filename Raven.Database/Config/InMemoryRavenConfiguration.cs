@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
+using Raven.Database.Config.Settings;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
@@ -39,19 +40,18 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
-			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 64 * 1024;
+
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
-			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
-			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
+			
+			
 			NumberOfItemsToExecuteReduceInSingleStep = 1024;
-			MaxIndexingRunLatency = TimeSpan.FromMinutes(5);
+			
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
 
 			CreatePluginsDirectoryIfNotExisting = true;
 			CreateAnalyzersDirectoryIfNotExisting = true;
 
-			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory / 2);
 			MaxNumberOfParallelIndexTasks = 8;
 
 			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
@@ -74,67 +74,90 @@ namespace Raven.Database.Config
 
 		public void Initialize()
 		{
+			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 64 * 1024;
+			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
+
+			var ravenSettings = new RavenSettings()
+			{
+				MaxPageSize =
+					new IntergerSettingWithMin(Settings["Raven/MaxPageSize"], 1024, 10),
+				MemoryCacheLimitMegabytes =
+					new IntegerSetting(Settings["Raven/MemoryCacheLimitMegabytes"], GetDefaultMemoryCacheLimitMegabytes),
+				MemoryCacheExpiration =
+					new TimeSpanSetting(Settings["Raven/MemoryCacheExpiration"], TimeSpan.FromMinutes(5),
+					                    TimeSpanArgumentType.FromSeconds),
+				MemoryCacheLimitPercentage =
+					new IntegerSetting(Settings["Raven/MemoryCacheLimitPercentage"], 0 /* auto size */),
+				MemoryCacheLimitCheckInterval =
+					new TimeSpanSetting(Settings["Raven/MemoryCacheLimitCheckInterval"], MemoryCache.Default.PollingInterval,
+					                    TimeSpanArgumentType.FromParse),
+				MaxIndexingRunLatency =
+					new TimeSpanSetting(Settings["Raven/MaxIndexingRunLatency"], TimeSpan.FromMinutes(5),
+					                    TimeSpanArgumentType.FromParse),
+				MaxNumberOfItemsToIndexInSingleBatch =
+					new IntergerSettingWithMin(Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
+					                           defaultMaxNumberOfItemsToIndexInSingleBatch, 128),
+				AvailableMemoryForRaisingIndexBatchSizeLimit =
+					new IntegerSetting(Settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"],
+					                   Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2)),
+				MaxNumberOfItemsToReduceInSingleBatch =
+					new IntergerSettingWithMin(Settings["Raven/MaxNumberOfItemsToReduceInSingleBatch"],
+					                           defaultMaxNumberOfItemsToIndexInSingleBatch/2, 128),
+				NumberOfItemsToExecuteReduceInSingleStep =
+					new IntegerSetting(Settings["Raven/NumberOfItemsToExecuteReduceInSingleStep"], 1024),
+				MaxNumberOfParallelIndexTasks =
+					new IntergerSettingWithMin(Settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1),
+				TempIndexPromotionMinimumQueryCount =
+					new IntegerSetting(Settings["Raven/TempIndexPromotionMinimumQueryCount"], 100),
+
+			};
+
 			// Core settings
-			var maxPageSizeStr = Settings["Raven/MaxPageSize"];
-			MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
-			MaxPageSize = Math.Max(MaxPageSize, 10);
+			MaxPageSize = ravenSettings.MaxPageSize.Value;
 
-			var cacheMemoryLimitMegabytes = Settings["Raven/MemoryCacheLimitMegabytes"];
-			MemoryCacheLimitMegabytes = cacheMemoryLimitMegabytes == null
-											? GetDefaultMemoryCacheLimitMegabytes()
-											: int.Parse(cacheMemoryLimitMegabytes);
+			MemoryCacheLimitMegabytes = ravenSettings.MemoryCacheLimitMegabytes.Value;
 
-			var memoryCacheExpiration = Settings["Raven/MemoryCacheExpiration"];
-			MemoryCacheExpiration = memoryCacheExpiration == null
-										? TimeSpan.FromMinutes(5)
-										: TimeSpan.FromSeconds(int.Parse(memoryCacheExpiration));
+			MemoryCacheExpiration = ravenSettings.MemoryCacheExpiration.Value;
 
-			var memoryCacheLimitPercentage = Settings["Raven/MemoryCacheLimitPercentage"];
-			MemoryCacheLimitPercentage = memoryCacheLimitPercentage == null
-								? 0 // auto-size
-								: int.Parse(memoryCacheLimitPercentage);
-			var memoryCacheLimitCheckInterval = Settings["Raven/MemoryCacheLimitCheckInterval"];
-			MemoryCacheLimitCheckInterval = memoryCacheLimitCheckInterval == null
-								? MemoryCache.Default.PollingInterval
-								: TimeSpan.Parse(memoryCacheLimitCheckInterval);
+			MemoryCacheLimitPercentage = ravenSettings.MemoryCacheLimitPercentage.Value;
+
+			MemoryCacheLimitCheckInterval = ravenSettings.MemoryCacheLimitCheckInterval.Value;
 
 			// Index settings
-			var maxIndexingRunLatencyStr = Settings["Raven/MaxIndexingRunLatency"];
-			if (maxIndexingRunLatencyStr != null)
+			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
+
+			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
+
+			if (MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default)
 			{
-				MaxIndexingRunLatency = TimeSpan.Parse(maxIndexingRunLatencyStr);
+				InitialNumberOfItemsToIndexInSingleBatch = defaultInitialNumberOfItemsToIndexInSingleBatch;
+			}
+			else
+			{
+				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItemsToIndexInSingleBatch, InitialNumberOfItemsToIndexInSingleBatch);
 			}
 
-			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
-			if (maxNumberOfItemsToIndexInSingleBatch != null)
-			{
-				MaxNumberOfItemsToIndexInSingleBatch = Math.Max(int.Parse(maxNumberOfItemsToIndexInSingleBatch), 128);
-				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItemsToIndexInSingleBatch,
-																	InitialNumberOfItemsToIndexInSingleBatch);
-			}
-			var availableMemoryForRaisingIndexBatchSizeLimit = Settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"];
-			if (availableMemoryForRaisingIndexBatchSizeLimit != null)
-			{
-				AvailableMemoryForRaisingIndexBatchSizeLimit = int.Parse(availableMemoryForRaisingIndexBatchSizeLimit);
-			}
+			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
+
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
 				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
 																	MaxNumberOfItemsToIndexInSingleBatch);
 			}
-			var maxNumberOfItemsToReduceInSingleBatch = Settings["Raven/MaxNumberOfItemsToReduceInSingleBatch"];
-			if (maxNumberOfItemsToReduceInSingleBatch != null)
+
+			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
+			if (MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default)
 			{
-				MaxNumberOfItemsToReduceInSingleBatch = Math.Max(int.Parse(maxNumberOfItemsToReduceInSingleBatch), 128);
+				InitialNumberOfItemsToReduceInSingleBatch = defaultInitialNumberOfItemsToIndexInSingleBatch / 2;
+			}
+			else
+			{
 				InitialNumberOfItemsToReduceInSingleBatch = Math.Min(MaxNumberOfItemsToReduceInSingleBatch,
 																	InitialNumberOfItemsToReduceInSingleBatch);
 			}
-			var numberOfItemsToExecuteReduceInSingleStep = Settings["Raven/NumberOfItemsToExecuteReduceInSingleStep"];
-			if (numberOfItemsToExecuteReduceInSingleStep != null)
-			{
-				NumberOfItemsToExecuteReduceInSingleStep = int.Parse(numberOfItemsToExecuteReduceInSingleStep);
-			}
+
+			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
 
 			var initialNumberOfItemsToReduceInSingleBatch = Settings["Raven/InitialNumberOfItemsToReduceInSingleBatch"];
 			if (initialNumberOfItemsToReduceInSingleBatch != null)
@@ -143,12 +166,9 @@ namespace Raven.Database.Config
 																	MaxNumberOfItemsToReduceInSingleBatch);
 			}
 
-			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
-			MaxNumberOfParallelIndexTasks = maxNumberOfParallelIndexTasks != null ? int.Parse(maxNumberOfParallelIndexTasks) : Environment.ProcessorCount;
-			MaxNumberOfParallelIndexTasks = Math.Max(1, MaxNumberOfParallelIndexTasks);
+			MaxNumberOfParallelIndexTasks = ravenSettings.MaxNumberOfParallelIndexTasks.Value;
 
-			var minimumQueryCount = Settings["Raven/TempIndexPromotionMinimumQueryCount"];
-			TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
+			TempIndexPromotionMinimumQueryCount = ravenSettings.TempIndexPromotionMinimumQueryCount.Value;
 
 			var queryThreshold = Settings["Raven/TempIndexPromotionThreshold"];
 			TempIndexPromotionThreshold = queryThreshold != null ? int.Parse(queryThreshold) : 60000; // once a minute
@@ -318,10 +338,10 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
+			// we need to leave ( a lot ) of room for other things as well, so we min the cache size
 
 			var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
-				// reduce the unmanaged cache size from the default limit
+				// reduce the unmanaged cache size from the default min
 						(GetConfigurationValue<int>("Raven/Esent/CacheSizeMax") ?? 1024);
 
 			if (val < 0)
