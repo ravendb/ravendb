@@ -6,8 +6,11 @@
 using System;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Client.Changes;
 
 namespace Raven.Client.Extensions
 {
@@ -46,7 +49,7 @@ namespace Raven.Client.Extensions
 				req.Write(doc.ToString(Formatting.Indented));
 				req.ExecuteRequest();
 
-				self.ForDatabase(name).PutIndex("Raven/DocumentsByEntityName", new RavenDocumentsByEntityName().CreateIndexDefinition());
+				new RavenDocumentsByEntityName().Execute(serverClient, new DocumentConvention());
 			}
 			catch (Exception)
 			{
@@ -139,26 +142,24 @@ namespace Raven.Client.Extensions
 			serverClient.ForceReadFromMaster();
 
 			return serverClient.GetAsync(docId)
-				.ContinueWith(get =>
-				{
-					if (get.Result != null)
-						return get;
+			                   .ContinueWith(get =>
+			                   {
+				                   if (get.Result != null)
+					                   return get;
 
-					var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(name), "PUT");
-					req.Write(doc.ToString(Formatting.Indented));
-					return req.ExecuteRequestAsync();
-				})
-				.Unwrap()
-				.ContinueWith(x =>
-				{
-					if (ignoreFailures == false)
-						x.Wait(); // will throw on error
+				                   var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(name), "PUT");
+				                   req.Write(doc.ToString(Formatting.Indented));
+				                   return req.ExecuteRequestAsync();
+			                   })
+			                   .Unwrap()
+			                   .ContinueWith(x =>
+			                   {
+				                   if (ignoreFailures == false)
+					                   x.AssertNotFailed(); // will throw on error
 
-					self.ForDatabase(name).PutIndexAsync("Raven/DocumentsByEntityName", new RavenDocumentsByEntityName().CreateIndexDefinition(), false).Wait();
-
-					var observedException = x.Exception;
-					GC.KeepAlive(observedException);
-				});
+				                   return new RavenDocumentsByEntityName().ExecuteAsync(serverClient, new DocumentConvention());
+			                   }).Unwrap()
+			                   .ObserveException();
 		}
 
 		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
