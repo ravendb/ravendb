@@ -39,7 +39,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		protected static Type GetLogManagerTypeStatic()
 		{
-#if !SL_4
+#if !SL_4 && !NETFX_CORE
 			Assembly log4NetAssembly = GetLog4NetAssembly();
 			return log4NetAssembly != null
 				       ? log4NetAssembly.GetType("log4net.LogManager")
@@ -51,7 +51,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		protected override Type GetNdcType()
 		{
-#if !SL_4
+#if !SL_4 && !NETFX_CORE
 			Assembly log4NetAssembly = GetLog4NetAssembly();
 			return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.NDC") : Type.GetType("log4net.NDC, log4net");
 #else
@@ -61,7 +61,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		protected override Type GetMdcType()
 		{
-#if !SL_4
+#if !SL_4 && !NETFX_CORE
 			Assembly log4NetAssembly = GetLog4NetAssembly();
 			return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.MDC") : Type.GetType("log4net.MDC, log4net");
 #else
@@ -69,7 +69,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 #endif
 		}
 
-#if !SL_4
+#if !SL_4 && !NETFX_CORE
 		private static Assembly GetLog4NetAssembly()
 		{
 			return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.FullName.StartsWith("log4net,"));
