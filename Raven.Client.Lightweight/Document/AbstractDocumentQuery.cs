@@ -1161,7 +1161,7 @@ If you really want to do in memory filtering on the data returned from the query
 				return fieldName;
 
 			var val = (start ?? end);
-			var isNumeric = val is int || val is long || val is decimal || val is double || val is float;
+			var isNumeric = val is int || val is long || val is decimal || val is double || val is float || val is TimeSpan;
 
 			if (isNumeric && fieldName.EndsWith("_Range") == false)
 				fieldName = fieldName + "_Range";
@@ -1712,19 +1712,6 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				return (bool)whereParams.Value ? "true" : "false";
 			}
-			if (type == typeof (TimeSpan))
-			{
-				var val = (TimeSpan) whereParams.Value;
-				return val.ToString(Default.TimeSpanLexicalFormat);
-			}
-			if (type == typeof(DateTime))
-			{
-				var val = (DateTime)whereParams.Value;
-				var s = val.ToString(Default.DateTimeFormatsToWrite);
-				if(val.Kind == DateTimeKind.Utc)
-					s += "Z";
-				return s;
-			}
 			if (type == typeof(DateTimeOffset))
 			{
 				var val = (DateTimeOffset)whereParams.Value;
@@ -1847,6 +1834,8 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((double)(decimal)whereParams.Value);
 			if (whereParams.Value is double)
 				return NumberUtil.NumberToString((double)whereParams.Value);
+			if (whereParams.Value is TimeSpan)
+				return NumberUtil.NumberToString(((TimeSpan) whereParams.Value).Ticks);
 			if (whereParams.Value is float)
 				return NumberUtil.NumberToString((float)whereParams.Value);
 			if(whereParams.Value is string)

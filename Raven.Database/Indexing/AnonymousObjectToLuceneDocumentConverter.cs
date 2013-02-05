@@ -183,14 +183,7 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-			if (value is TimeSpan)
-			{
-				var val = (TimeSpan)value;
-				var spanAsString = val.ToString(Default.TimeSpanLexicalFormat);
-				yield return CreateFieldWithCaching(name, spanAsString, storage,
-				   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
-			}
-			else if (value is DateTime)
+			if (value is DateTime)
 			{
 				var val = (DateTime)value;
 				var dateAsString = val.ToString(Default.DateTimeFormatsToWrite);
@@ -272,31 +265,36 @@ namespace Raven.Database.Indexing
 				numericFieldsCache[cacheKey] = numericField = new NumericField(fieldName, storage, true);
 			}
 
-			if (value is int)
+			if (value is TimeSpan)
+			{
+				yield return numericField.SetDoubleValue(((TimeSpan)value).Ticks);
+		
+			}
+			else if (value is int)
 			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Long)
 					yield return numericField.SetLongValue((int)value);
 				else
 					yield return numericField.SetIntValue((int)value);
 			}
-			if (value is long)
+			else if (value is long)
 			{
 				yield return numericField
 					.SetLongValue((long)value);
 			}
-			if (value is decimal)
+			else if (value is decimal)
 			{
 				yield return numericField
 					.SetDoubleValue((double)(decimal)value);
 			}
-			if (value is float)
+			else if (value is float)
 			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((float)value);
 				else
 					yield return numericField.SetFloatValue((float)value);
 			}
-			if (value is double)
+			else if (value is double)
 			{
 				yield return numericField
 					.SetDoubleValue((double)value);

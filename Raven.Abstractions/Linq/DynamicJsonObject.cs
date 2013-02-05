@@ -213,6 +213,12 @@ namespace Raven.Abstractions.Linq
 						{
 							return dateTimeOffset;
 						}
+						TimeSpan timeSpan;
+						if (TimeSpan.TryParse(s, out timeSpan))
+						{
+							return timeSpan;
+						}
+
 					}
 					return value ?? new DynamicNullObject { IsExplicitNull = true };
 			}
