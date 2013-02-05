@@ -16,6 +16,9 @@ using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
+#if !NETFX_CORE
+using Raven.Abstractions.MissingFromBCL;
+#endif
 
 namespace Raven.Client.Indexes
 {
@@ -971,6 +974,7 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
+#if !NETFX_CORE
 		/// <summary>
 		///   Visits the children of the <see cref = "T:System.Linq.Expressions.DynamicExpression" />.
 		/// </summary>
@@ -984,6 +988,7 @@ namespace Raven.Client.Indexes
 			VisitExpressions('(', node.Arguments, ')');
 			return node;
 		}
+#endif
 
 		/// <summary>
 		///   Visits the element init.
@@ -1486,7 +1491,12 @@ namespace Raven.Client.Indexes
 		}
 		private static bool IsExtensionMethod(MethodCallExpression node)
 		{
-			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
+#if NETFX_CORE
+			var attribute = node.Method.GetType().GetTypeInfo().GetCustomAttribute(typeof (ExtensionAttribute));
+#else
+			var attribute = Attribute.GetCustomAttribute(node.Method, typeof (ExtensionAttribute));
+#endif
+			if (attribute == null)
 				return false;
 
 			if (node.Method.DeclaringType.Name == "Enumerable")
@@ -1641,7 +1651,7 @@ namespace Raven.Client.Indexes
 			return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
 				&& type.IsGenericType() && type.Name.Contains("AnonymousType")
 				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
-				&& type.Attributes.HasFlag(TypeAttributes.NotPublic);
+				&& type.GetTypeInfo().Attributes.HasFlag(TypeAttributes.NotPublic);
 		}
 
 		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
@@ -1972,10 +1982,10 @@ namespace Raven.Client.Indexes
 
 		private static bool ShouldConvert(Type nonNullableType)
 		{
-			if(nonNullableType.IsEnum)
+			if(nonNullableType.IsEnum())
 				return true;
 
-			return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
+			return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType() == false);
 		}
 	}
 }

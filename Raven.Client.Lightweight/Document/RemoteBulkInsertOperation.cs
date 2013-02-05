@@ -5,8 +5,12 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Extensions;
+#if NETFX_CORE
+using Raven.Client.WinRT.Connection;
+#else
+using Raven.Client.Connection;
+#endif
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 

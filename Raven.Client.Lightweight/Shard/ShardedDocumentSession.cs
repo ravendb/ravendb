@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
+#if !SILVERLIGHT  && !NETFX_CORE
 
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,7 @@ using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Json.Linq;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
@@ -77,7 +78,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Cannot generate key asynchronously using synchronous session");
 		}
 
-		#region Properties to access different interfacess
+#region Properties to access different interfacess
 
 		ISyncAdvancedSessionOperation IDocumentSession.Advanced
 		{
@@ -102,9 +103,9 @@ namespace Raven.Client.Shard
 
 		#endregion
 
-		#region Load and Include
+#region Load and Include
 
-		#region Synchronous
+#region Synchronous
 
 		public T Load<T>(string id)
 		{
@@ -253,7 +254,7 @@ namespace Raven.Client.Shard
 
 		#endregion
 
-		#region Lazy loads
+#region Lazy loads
 
 		/// <summary>
 		/// Loads the specified ids and a function to call when it is evaluated
@@ -428,7 +429,7 @@ namespace Raven.Client.Shard
 				IncrementRequestCount();
 				while (ExecuteLazyOperationsSingleStep())
 				{
-					Thread.Sleep(100);
+					ThreadSleep.Sleep(100);
 				}
 
 				foreach (var pendingLazyOperation in pendingLazyOperations)
@@ -490,7 +491,7 @@ namespace Raven.Client.Shard
 
 		#endregion
 
-		#region Queries
+#region Queries
 
 		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName)
 		{

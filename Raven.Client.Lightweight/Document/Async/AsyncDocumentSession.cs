@@ -25,7 +25,7 @@ namespace Raven.Client.Document.Async
 	/// </summary>
 	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
-		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+		private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.

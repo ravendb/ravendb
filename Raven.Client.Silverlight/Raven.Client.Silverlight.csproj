@@ -827,6 +827,9 @@
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
       <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
+      <Link>Imports\MissingFromBCL\WinRTCompetability.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
     </Compile>

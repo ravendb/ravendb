@@ -62,7 +62,7 @@ namespace Raven.Client
 		}
 #endif
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
@@ -132,7 +132,7 @@ namespace Raven.Client
 		}
 #endif
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Suggest alternative values for the queried term

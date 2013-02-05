@@ -173,7 +173,9 @@ namespace Raven.Client.Document
 			{
 				task.AssertNotFailed();
 
+#if !NETFX_CORE
 				ShardedDocumentQuery<T>.AssertNoDuplicateIdsInResults(shardQueryOperations);
+#endif
 
 				var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
@@ -184,10 +186,12 @@ namespace Raven.Client.Document
 			});
 		}
 
+#if !NETFX_CORE
 		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
 			throw new NotSupportedException("Lazy in not supported with the async API");
 		}
+#endif
 
 		public override IDatabaseCommands DatabaseCommands
 		{

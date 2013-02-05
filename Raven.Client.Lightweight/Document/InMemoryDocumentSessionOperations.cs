@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System.Transactions;
 #endif
 using System.Text;
@@ -724,7 +724,7 @@ more responsive application.
 			};
 			deferedCommands.Clear();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			if (documentStore.EnlistInDistributedTransactions)
 				TryEnlistInAmbientTransaction();
 #endif
@@ -791,7 +791,7 @@ more responsive application.
 			deletedEntities.Clear();
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		protected virtual void TryEnlistInAmbientTransaction()
 		{
 

@@ -9,6 +9,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.SessionOperations
@@ -63,11 +64,11 @@ namespace Raven.Client.Document.SessionOperations
 			AddOperationHeaders();
 		}
 
-		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $", 
-#if !SILVERLIGHT
+		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
+#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled|
 #endif
-			RegexOptions.IgnorePatternWhitespace);
+ RegexOptions.IgnorePatternWhitespace);
 
 		private void AssertNotQueryById()
 		{
@@ -200,7 +201,7 @@ namespace Raven.Client.Document.SessionOperations
 			if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
 			{
 				var type = typeof(T);
-				if (type == typeof(string) || typeof(T).IsValueType || typeof(T).IsEnum)
+				if (type == typeof(string) || typeof(T).IsValueType() || typeof(T).IsEnum())
 				{
 					return result.Value<T>(projectionFields[0]);
 				}

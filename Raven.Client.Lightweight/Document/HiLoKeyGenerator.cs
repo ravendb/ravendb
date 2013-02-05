@@ -6,7 +6,9 @@
 using System;
 using System.Linq;
 using System.Threading;
+#if !NETFX_CORE
 using System.Transactions;
+#endif
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
@@ -67,8 +69,10 @@ namespace Raven.Client.Document
 
 		private RangeValue GetNextRange(IDatabaseCommands databaseCommands)
 		{
+#if !NETFX_CORE
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
+#endif
 				ModifyCapacityIfRequired();
 				while (true)
 				{
@@ -130,7 +134,9 @@ namespace Raven.Client.Document
 						// expected, we need to retry
 					}
 				}
+#if !NETFX_CORE
 			}
+#endif
 		}
 
 		private void PutDocument(IDatabaseCommands databaseCommands,JsonDocument document)

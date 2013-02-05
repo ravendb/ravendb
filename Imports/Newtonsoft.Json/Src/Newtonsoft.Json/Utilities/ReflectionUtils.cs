@@ -56,7 +56,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     Other
   }
 
-  internal class CustomAttributeProvider
+	public class CustomAttributeProvider
   {
     private readonly object _underlyingObject;
 

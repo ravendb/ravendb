@@ -100,7 +100,7 @@ namespace Raven.Client
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -147,7 +147,7 @@ namespace Raven.Client
 		///</summary>
 		Guid? GetLastWrittenEtag();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 	}

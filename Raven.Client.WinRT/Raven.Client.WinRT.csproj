@@ -789,9 +789,6 @@
     <Compile Include="..\Raven.Abstractions\Extensions\CharExtensions.cs">
       <Link>Imports\Extensions\CharExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\raven.abstractions\extensions\CryptoTransformExtensions.cs">
-      <Link>Imports\Extensions\CryptoTransformExtensions.cs</Link>
-    </Compile>
     <Compile Include="..\raven.abstractions\extensions\DisposableAction.cs">
       <Link>Imports\Extensions\DisposableAction.cs</Link>
     </Compile>
@@ -1122,9 +1119,6 @@
     <Compile Include="..\raven.client.lightweight\document\async\AsyncDocumentKeyGeneration.cs">
       <Link>Imports\Document\Async\AsyncDocumentKeyGeneration.cs</Link>
     </Compile>
-    <Compile Include="..\raven.client.lightweight\document\async\AsyncDocumentSession.cs">
-      <Link>Imports\Document\Async\AsyncDocumentSession.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
     </Compile>
@@ -1155,9 +1149,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazySuggestOperation.cs">
       <Link>Imports\Document\Batches\LazySuggestOperation.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\BulkInsertOperation.cs">
-      <Link>Imports\Document\BulkInsertOperation.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\DefaultRavenContractResolver.cs">
       <Link>Imports\Document\DefaultRavenContractResolver.cs</Link>
     </Compile>
@@ -1172,9 +1163,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
       <Link>Imports\Document\DocumentSessionListeners.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentStore.cs">
-      <Link>Imports\Document\DocumentStore.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\EntityToJson.cs">
       <Link>Imports\Document\EntityToJson.cs</Link>
@@ -1233,9 +1221,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\ReflectionUtil.cs">
       <Link>Imports\Document\ReflectionUtil.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\RemoteBulkInsertOperation.cs">
-      <Link>Imports\Document\RemoteBulkInsertOperation.cs</Link>
-    </Compile>
     <Compile Include="..\raven.client.lightweight\document\sessionoperations\LoadOperation.cs">
       <Link>Imports\Document\SessionOperations\LoadOperation.cs</Link>
     </Compile>
@@ -1244,9 +1229,6 @@
     </Compile>
     <Compile Include="..\raven.client.lightweight\document\sessionoperations\QueryOperation.cs">
       <Link>Imports\Document\SessionOperations\QueryOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\ShardedDocumentQuery.cs">
-      <Link>Imports\Document\ShardedDocumentQuery.cs</Link>
     </Compile>
     <Compile Include="..\raven.client.lightweight\exceptions\ConflictException.cs">
       <Link>Imports\Exceptions\ConflictException.cs</Link>
@@ -1337,9 +1319,6 @@
     </Compile>
     <Compile Include="..\raven.client.lightweight\indexes\IClientSideDatabase.cs">
       <Link>Imports\Indexes\IClientSideDatabase.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\IndexCreation.cs">
-      <Link>Imports\Indexes\IndexCreation.cs</Link>
     </Compile>
     <Compile Include="..\raven.client.lightweight\indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
@@ -1507,7 +1486,9 @@
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="MissingFromWinRT\AppDomain.cs" />
+    <Compile Include="MissingFromWinRT\AssemblyExtentionsMissingsFromWinRT.cs" />
     <Compile Include="MissingFromWinRT\DescriptionAttribute.cs" />
+    <Compile Include="MissingFromWinRT\ListExtenMissingFromWinRT.cs" />
     <Compile Include="MissingFromWinRT\StringExtensions.cs" />
     <Compile Include="MissingFromWinRT\ThreadSleep.cs" />
   </ItemGroup>

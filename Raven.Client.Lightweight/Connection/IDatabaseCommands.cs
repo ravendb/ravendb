@@ -409,10 +409,14 @@ namespace Raven.Client.Connection
 		/// </summary>
 		void ForceReadFromMaster();
 
+#if !NETFX_CORE
+
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
+#endif
+
 	}
 }
 #endif

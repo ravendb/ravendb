@@ -66,7 +66,7 @@ namespace Raven.Json.Linq
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJObject"/> class.
 		/// </summary>
-		public RavenJObject() :this(StringComparer.InvariantCulture)
+		public RavenJObject() :this(StringComparer.Ordinal)
 		{
 		}
 

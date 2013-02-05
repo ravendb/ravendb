@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 
@@ -408,7 +409,7 @@ namespace Raven.Client.Linq
 		}
 
 		private static readonly Regex castingRemover = new Regex(@"(?<!\\)[\(\)]",
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 				RegexOptions.None
 #else
 				RegexOptions.Compiled
@@ -931,7 +932,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				case "Select":
 				{
-					if (expression.Arguments[0].Type.IsGenericType &&
+					if (expression.Arguments[0].Type.IsGenericType() &&
 					    expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof (IQueryable<>) &&
 					    expression.Arguments[0].Type != expression.Arguments[1].Type)
 					{

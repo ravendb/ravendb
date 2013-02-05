@@ -452,7 +452,7 @@ namespace Raven.Client.Document
 			                          includes);
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT  && !NETFX_CORE
 		/// <summary>
 		///   Gets the query result
 		///   Execute the query the first time that this is called.
@@ -515,7 +515,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -646,7 +646,7 @@ namespace Raven.Client.Document
 			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>
