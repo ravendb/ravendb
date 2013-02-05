@@ -56,7 +56,8 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			new QueryForFacets(database, index, defaultFacets, rangeFacets, indexQuery, results, start, pageSize).Execute();
+			var queryForFacets = new QueryForFacets(database, index, defaultFacets, rangeFacets, indexQuery, results, start, pageSize);
+			queryForFacets.Execute();
 
 			return results;
 		}
