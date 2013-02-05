@@ -106,10 +106,12 @@ namespace Raven.Database.Extensions
 
 		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition)
 		{
-			if (self.SortedFields == null || self.SortedFields.Length <= 0)
-				return null;
-
 			var spatialQuery = self as SpatialIndexQuery;
+			if (self.SortedFields == null || self.SortedFields.Length <= 0)
+			{
+				return null;
+			}
+
 
 			return new Sort(self.SortedFields
 							.Select(sortedField =>

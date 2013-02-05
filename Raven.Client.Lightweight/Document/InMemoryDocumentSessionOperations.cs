@@ -58,6 +58,13 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+		private Dictionary<string, object> externalState;
+
+		public IDictionary<string, object> ExternalState
+		{
+			get { return externalState ?? (externalState = new Dictionary<string, object>()); }
+		}
+
 #if !SILVERLIGHT
 		private bool hasEnlisted;
 		[ThreadStatic]

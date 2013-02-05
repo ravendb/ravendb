@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -1027,24 +1028,35 @@ If you really want to do in memory filtering on the data returned from the query
 				.Append(">:(");
 
 			var first = true;
+			AddItemToInClause(fieldName, list, first);
+			queryText.Append(") ");
+		}
+
+		private void AddItemToInClause(string fieldName, IEnumerable<object> list, bool first)
+		{
 			foreach (var value in list)
 			{
-				if(first == false)
+				var enumerable = value as IEnumerable;
+				if (enumerable != null && value is string == false)
+				{
+					AddItemToInClause(fieldName, enumerable.Cast<object>(), first);
+					return;
+				}
+				if (first == false)
 				{
 					queryText.Append(",");
 				}
 				first = false;
 				var whereParams = new WhereParams
 				{
-					AllowWildcards = true, 
-					IsAnalyzed = true, 
-					FieldName = fieldName, 
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					FieldName = fieldName,
 					Value = value
 				};
 				EnsureValidFieldName(whereParams);
 				queryText.Append(TransformToEqualValue(whereParams).Replace(",", "`,`"));
 			}
-			queryText.Append(") ");
 		}
 
 		/// <summary>

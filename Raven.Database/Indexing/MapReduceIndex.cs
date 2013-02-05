@@ -13,6 +13,7 @@ using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
@@ -195,7 +196,7 @@ namespace Raven.Database.Indexing
 			return RavenJToken.FromObject(reduceValue).ToString(Formatting.None);
 		}
 
-		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
+		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
 			if (fieldsToFetch.IsProjection == false)
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());

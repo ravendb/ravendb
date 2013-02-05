@@ -58,6 +58,11 @@ namespace Raven.Client
 		bool UseOptimisticConcurrency { get; set; }
 
 		/// <summary>
+		/// Allow extensions to provide additional state per session
+		/// </summary>
+		IDictionary<string, object> ExternalState { get; }
+
+		/// <summary>
 		/// Mark the entity as read only, change tracking won't apply 
 		/// to such an entity. This can be done as an optimization step, so 
 		/// we don't need to check the entity for changes.

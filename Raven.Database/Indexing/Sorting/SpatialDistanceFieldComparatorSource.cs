@@ -6,29 +6,15 @@ using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Indexing.Sorting
 {
-	public class SpatialDistanceSortField : SortField
+	public struct DistanceValue : IComparable
 	{
-		private readonly Point center;
-
-		public SpatialDistanceSortField(string field, bool reverse, SpatialIndexQuery qry)
-			: base(field, CUSTOM, reverse)
+		public double Value;
+		public int CompareTo(object obj)
 		{
-			var shape = SpatialIndex.ReadShape(qry.QueryShape);
-			center = shape.GetCenter();
+			if (obj == null)
+				return 1;
+			return Value.CompareTo(((DistanceValue) obj).Value);
 		}
-
-		public override FieldComparator GetComparator(int numHits, int sortPos)
-		{
-			return new SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator(center, numHits);
-		}
-
-		public override FieldComparatorSource ComparatorSource
-		{
-			get
-			{
-				return new SpatialDistanceFieldComparatorSource(center);
-			}
-		} 
 	}
 
 	public class SpatialDistanceFieldComparatorSource : FieldComparatorSource
@@ -47,25 +33,25 @@ namespace Raven.Database.Indexing.Sorting
 
 		public class SpatialDistanceFieldComparator : FieldComparator
 		{
-			private readonly double[] values;
-			private double bottom;
+			private readonly DistanceValue[] values;
+			private DistanceValue bottom;
 			private readonly Point originPt;
 
 			private IndexReader currentIndexReader;
 
 			public SpatialDistanceFieldComparator(Point origin, int numHits)
 			{
-				values = new double[numHits];
+				values = new DistanceValue[numHits];
 				originPt = origin;
 			}
 
 			public override int Compare(int slot1, int slot2)
 			{
-				double a = values[slot1];
-				double b = values[slot2];
-				if (a > b)
+				var a = values[slot1];
+				var b = values[slot2];
+				if (a.Value > b.Value)
 					return 1;
-				if (a < b)
+				if (a.Value < b.Value)
 					return -1;
 
 				return 0;
@@ -79,12 +65,12 @@ namespace Raven.Database.Indexing.Sorting
 			public override int CompareBottom(int doc)
 			{
 				var v2 = CalculateDistance(doc);
-				if (bottom > v2)
+				if (bottom.Value > v2)
 				{
 					return 1;
 				}
 
-				if (bottom < v2)
+				if (bottom.Value < v2)
 				{
 					return -1;
 				}
@@ -94,7 +80,10 @@ namespace Raven.Database.Indexing.Sorting
 
 			public override void Copy(int slot, int doc)
 			{
-				values[slot] = CalculateDistance(doc);
+				values[slot] = new DistanceValue
+				{
+					Value = CalculateDistance(doc)
+				};
 			}
 
 			private double CalculateDistance(int doc)
@@ -116,6 +105,8 @@ namespace Raven.Database.Indexing.Sorting
 					return double.NaN;
 				}
 				var pt = shape as Point;
+				if (pt == null)
+					pt = shape.GetCenter();
 				return SpatialIndex.Context.GetDistCalc().Distance(pt, originPt);
 			}
 
