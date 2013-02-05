@@ -49,7 +49,7 @@ namespace Raven.Client.Extensions
 				req.Write(doc.ToString(Formatting.Indented));
 				req.ExecuteRequest();
 
-				new RavenDocumentsByEntityName().Execute(serverClient, new DocumentConvention());
+				new RavenDocumentsByEntityName().Execute(serverClient.ForDatabase(name), new DocumentConvention());
 			}
 			catch (Exception)
 			{
@@ -157,7 +157,7 @@ namespace Raven.Client.Extensions
 				                   if (ignoreFailures == false)
 					                   x.AssertNotFailed(); // will throw on error
 
-				                   return new RavenDocumentsByEntityName().ExecuteAsync(serverClient, new DocumentConvention());
+				                   return new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention());
 			                   }).Unwrap()
 			                   .ObserveException();
 		}
