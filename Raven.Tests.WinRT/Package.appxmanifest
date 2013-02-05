@@ -28,8 +28,11 @@
         <VisualElements 
             DisplayName="NoUIEntryPoints"
             Description="vstest.executionengine.App"
+            Logo="Images\UnitTestStoreLogo.png"
+            SmallLogo="Images\UnitTestStoreLogo.png"
             ForegroundText="light"
             BackgroundColor="#0084FF">
+          <SplashScreen Image="Images\UnitTestStoreLogo.png"/>
         </VisualElements>
     </Application>
 
@@ -39,8 +42,11 @@
         <VisualElements 
             DisplayName="NoUIEntryPoints"
             Description="vstest.executionengine.x86.App"
+            Logo="Images\UnitTestStoreLogo.png"
+            SmallLogo="Images\UnitTestStoreLogo.png"
             ForegroundText="light"
             BackgroundColor="#0084FF">
+          <SplashScreen Image="Images\UnitTestStoreLogo.png"/>
         </VisualElements>
     </Application>
   </Applications>
