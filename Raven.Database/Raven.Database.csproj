@@ -193,6 +193,14 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Config\StronglyTypedRavenSettings.cs" />
+    <Compile Include="Config\Settings\BooleanSetting.cs" />
+    <Compile Include="Config\Settings\IntegerSetting.cs" />
+    <Compile Include="Config\Settings\IntegerSettingWithMin.cs" />
+    <Compile Include="Config\Settings\MultipliedIntegerSetting.cs" />
+    <Compile Include="Config\Settings\Setting.cs" />
+    <Compile Include="Config\Settings\StringSetting.cs" />
+    <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
     <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Extensions\AdminFinder.cs" />
