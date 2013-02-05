@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Data
 		public List<string> Ranges { get; set; }
 		public int? MaxResults { get; set; }
 		public FacetTermSortMode TermSortMode { get; set; }
-		public bool InclueRemainingTerms { get; set; }
+		public bool IncludeRemainingTerms { get; set; }
 
 		public Facet()
 		{

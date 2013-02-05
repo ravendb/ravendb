@@ -300,7 +300,7 @@ namespace Raven.Database.Queries
 						RemainingHits = groups.Values.Sum() - (previousHits + values.Sum(x => x.Hits)),
 					};
 
-					if (facet.InclueRemainingTerms)
+					if (facet.IncludeRemainingTerms)
 						Results.Results[facet.Name].RemainingTerms = allTerms.Skip(Start + values.Count).ToList();
 				}
 			}
