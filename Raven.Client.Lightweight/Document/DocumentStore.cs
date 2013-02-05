@@ -173,7 +173,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public string ApiKey { get; set; }
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		private string connectionStringName;
 
 		/// <summary>

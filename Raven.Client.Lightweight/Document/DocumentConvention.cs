@@ -125,7 +125,11 @@ namespace Raven.Client.Document
 
 		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
 		{
+#if NETFX_CORE
+			var count = typeTagName.ToCharArray().Count(char.IsUpper);
+#else
 			var count = typeTagName.Count(char.IsUpper);
+#endif
 
 			if (count <= 1) // simple name, just lower case it
 				return typeTagName.ToLowerInvariant();
@@ -342,7 +346,7 @@ namespace Raven.Client.Document
 
 		private static IEnumerable<PropertyInfo> GetPropertiesForType(Type type)
 		{
-			foreach (var propertyInfo in type.GetProperties())
+			foreach (var propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
 			{
 				yield return propertyInfo;
 			}

@@ -17,6 +17,7 @@ using Raven.Client.Listeners;
 using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Client.Extensions;
+using Raven.Client.WinRT.MissingFromWinRT;
 
 namespace Raven.Client.Document
 {
@@ -112,10 +113,14 @@ namespace Raven.Client.Document
 			return documentQuery;
 		}
 
+#if !SILVERLIGHT && !NETFX_CORE
+
 		protected override void ExecuteActualQuery()
 		{
 			throw new NotSupportedException("Async queries don't support synchronous execution");
 		}
+
+#endif
 
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{
@@ -157,7 +162,8 @@ namespace Raven.Client.Document
 					if (lastResults.All(acceptable => acceptable))
 						return new CompletedTask().Task;
 
-					Thread.Sleep(100);
+
+					ThreadSleep.Sleep(100);
 
 					return loop();
 				}).Unwrap();

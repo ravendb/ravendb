@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#endif
 using System.Collections.Generic;
 using System.Net;
 using Raven.Abstractions.Data;
@@ -16,9 +13,12 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #else
-using Raven.Client.Indexes;
+using System.Collections.Specialized;
 #endif
+using Raven.Client.Indexes;
 using Raven.Client.Connection.Async;
 
 

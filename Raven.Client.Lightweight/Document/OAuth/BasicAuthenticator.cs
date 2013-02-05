@@ -8,6 +8,8 @@ using Raven.Client.Extensions;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 using System.Net.Browser;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Document.OAuth
@@ -45,7 +47,7 @@ namespace Raven.Client.Document.OAuth
 				});
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public Action<HttpWebRequest> HandleOAuthResponse(string oauthSource)
 		{
 			var authRequest = PrepareOAuthRequest(oauthSource);

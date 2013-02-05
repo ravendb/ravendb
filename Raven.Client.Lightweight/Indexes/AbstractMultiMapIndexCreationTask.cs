@@ -6,6 +6,7 @@ using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Indexes
 {
