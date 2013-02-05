@@ -20,7 +20,12 @@ namespace Raven.Database.Config.Settings
 
 		public override int Value
 		{
-			get { return value != null ? int.Parse(value) : (getDefaultValue != null ? getDefaultValue() : defaultValue); }
+			get
+			{
+				return string.IsNullOrEmpty(value) == false
+					       ? int.Parse(value)
+					       : (getDefaultValue != null ? getDefaultValue() : defaultValue);
+			}
 		}
 	}
 }

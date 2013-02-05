@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="IntergerSettingWithMin.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="IntegerSettingWithMin.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -7,11 +7,11 @@ using System;
 
 namespace Raven.Database.Config.Settings
 {
-	public class IntergerSettingWithMin : Setting<int>
+	public class IntegerSettingWithMin : Setting<int>
 	{
 		private readonly int min;
 
-		public IntergerSettingWithMin(string value, int defaultValue, int min)
+		public IntegerSettingWithMin(string value, int defaultValue, int min)
 			: base(value, defaultValue)
 		{
 			this.min = min;
@@ -21,7 +21,7 @@ namespace Raven.Database.Config.Settings
 		{
 			get
 			{
-				return value != null ? Math.Max(int.Parse(value), min) : defaultValue;
+				return string.IsNullOrEmpty(value) == false ? Math.Max(int.Parse(value), min) : defaultValue;
 			}
 		}
 

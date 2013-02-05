@@ -23,15 +23,11 @@ namespace Raven.Database.Config.Settings
 			this.argumentType = argumentType;
 		}
 
-		//public TimeSpanSetting(string value, Func<TimeSpan> getDefaultValue) : base(value, getDefaultValue)
-		//{
-		//}
-
 		public override TimeSpan Value
 		{
 			get
 			{
-				if (value != null)
+				if (string.IsNullOrEmpty(value) == false)
 				{
 					switch (argumentType)
 					{
