@@ -25,6 +25,11 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 					{
 						{"Tag", FieldStorage.No},
 						{"LastModified", FieldStorage.No}
+					},
+					TermVectors =
+					{
+						{"Tag", FieldTermVector.No},
+						{"LastModified", FieldTermVector.No}						
 					}
 				});
 			}

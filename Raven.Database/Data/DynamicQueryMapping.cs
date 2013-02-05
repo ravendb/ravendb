@@ -137,6 +137,7 @@ namespace Raven.Database.Data
 			{
 				index.Stores[field] = FieldStorage.Yes;
 				index.Indexes[field] = FieldIndexing.Analyzed;
+				index.TermVectors[field] = FieldTermVector.WithPositionsAndOffsets;
 			}
 			return index;
 		}

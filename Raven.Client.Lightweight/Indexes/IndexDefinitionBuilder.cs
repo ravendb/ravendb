@@ -85,6 +85,19 @@ namespace Raven.Client.Indexes
 		public IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> Suggestions { get; set; }
 
 		/// <summary>
+		/// Gets or sets the term vector options
+		/// </summary>
+		/// <value>The term vectors.</value>
+		public IDictionary<Expression<Func<TReduceResult, object>>, FieldTermVector> TermVectors { get; set; }
+
+		/// <summary>
+		/// Gets or sets the term vector options
+		/// </summary>
+		/// <value>The term vectors.</value>
+		public IDictionary<string, FieldTermVector> TermVectorsStrings { get; set; }
+
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
 		public IndexDefinitionBuilder()
@@ -97,6 +110,8 @@ namespace Raven.Client.Indexes
 			Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
+			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
+			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
 		}
 
 		/// <summary>
@@ -121,6 +136,7 @@ namespace Raven.Client.Indexes
 				SortOptions = ConvertToStringDictionary(SortOptions),
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
+                TermVectors =  ConvertToStringDictionary(TermVectors)
 			};
 
 			foreach (var indexesString in IndexesStrings)
@@ -140,8 +156,15 @@ namespace Raven.Client.Indexes
 			foreach (var analyzerString in AnalyzersStrings)
 			{
 				if (indexDefinition.Analyzers.ContainsKey(analyzerString.Key))
-					throw new InvalidOperationException("There is a duplicate key in stores: " + analyzerString.Key);
+					throw new InvalidOperationException("There is a duplicate key in analyzers: " + analyzerString.Key);
 				indexDefinition.Analyzers.Add(analyzerString);
+			}
+
+			foreach (var termVectorString in TermVectorsStrings)
+			{
+				if (indexDefinition.TermVectors.ContainsKey(termVectorString.Key))
+					throw new InvalidOperationException("There is a duplicate key in term vectors: " + termVectorString.Key);
+				indexDefinition.TermVectors.Add(termVectorString);
 			}
 
 			if (Map != null)

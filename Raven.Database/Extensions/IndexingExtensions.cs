@@ -104,6 +104,37 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+		public static Field.TermVector GetTermVector(this IndexDefinition self, string name, Field.TermVector defaultTermVector)
+		{
+			if (self.TermVectors == null)
+				return defaultTermVector;
+
+			FieldTermVector value;
+			if (self.TermVectors.TryGetValue(name, out value) == false)
+				return defaultTermVector;
+
+			if (value != FieldTermVector.No && self.GetIndex(name, null) == Field.Index.NO)
+			{
+				throw new InvalidOperationException(string.Format("TermVectors cannot be enabled for the field {0} because Indexing is set to No", name));
+			}
+
+			switch (value)
+			{
+				case FieldTermVector.No:
+					return Field.TermVector.NO;
+				case FieldTermVector.WithOffsets:
+					return Field.TermVector.WITH_OFFSETS;
+				case FieldTermVector.WithPositions:
+					return Field.TermVector.WITH_POSITIONS;
+				case FieldTermVector.WithPositionsAndOffsets:
+					return Field.TermVector.WITH_POSITIONS_OFFSETS;
+				case FieldTermVector.Yes:
+					return Field.TermVector.YES;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
 		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition)
 		{
 			var spatialQuery = self as SpatialIndexQuery;
