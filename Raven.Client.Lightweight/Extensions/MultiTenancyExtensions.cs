@@ -13,6 +13,7 @@ namespace Raven.Client.Extensions
 {
 	using Raven.Client.Connection.Async;
 	using System.Threading.Tasks;
+	using Raven.Client.Indexes;
 
 	///<summary>
 	/// Extension methods to create multitenant databases
@@ -44,6 +45,8 @@ namespace Raven.Client.Extensions
 				var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
 				req.Write(doc.ToString(Formatting.Indented));
 				req.ExecuteRequest();
+
+				self.ForDatabase(name).PutIndex("Raven/DocumentsByEntityName", new RavenDocumentsByEntityName().CreateIndexDefinition());
 			}
 			catch (Exception)
 			{
@@ -146,10 +149,12 @@ namespace Raven.Client.Extensions
 					return req.ExecuteRequestAsync();
 				})
 				.Unwrap()
-				.ContinueWith(x=>
+				.ContinueWith(x =>
 				{
 					if (ignoreFailures == false)
 						x.Wait(); // will throw on error
+
+					self.ForDatabase(name).PutIndexAsync("Raven/DocumentsByEntityName", new RavenDocumentsByEntityName().CreateIndexDefinition(), false).Wait();
 
 					var observedException = x.Exception;
 					GC.KeepAlive(observedException);
