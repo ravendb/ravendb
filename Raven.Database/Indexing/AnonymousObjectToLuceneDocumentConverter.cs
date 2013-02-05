@@ -188,7 +188,7 @@ namespace Raven.Database.Indexing
 			if (value is TimeSpan)
 			{
 				var val = (TimeSpan)value;
-				yield return CreateFieldWithCaching(name, val.ToString("C",CultureInfo.InvariantCulture), storage,
+				yield return CreateFieldWithCaching(name, val.ToString("c",CultureInfo.InvariantCulture), storage,
 						   indexDefinition.GetIndex(name,  Field.Index.NOT_ANALYZED_NO_NORMS),termVector);
 			} 
 			else if (value is DateTime)
