@@ -400,7 +400,8 @@ namespace Raven.Tests.Faceted
 														 group d by d.Manufacturer
 															 into result
 															 select new { Manufacturer = result.Key, Count = result.Count() };
-					var camerasByHits = cameraCounts.OrderBy( x => x.Count ).Select( x => x.Manufacturer.ToLower() ).ToList();
+					var camerasByHits = cameraCounts.OrderBy( x => x.Count ).ThenBy(x=>x.Manufacturer)
+						.Select( x => x.Manufacturer.ToLower() ).ToList();
 
 					Assert.Equal( 2, facetResults.Results[ "Manufacturer" ].Values.Count() );
 					Assert.Equal( camerasByHits[ 0 ], facetResults.Results[ "Manufacturer" ].Values[ 0 ].Range );
