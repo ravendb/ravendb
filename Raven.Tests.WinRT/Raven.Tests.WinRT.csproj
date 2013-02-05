@@ -115,7 +115,7 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="RavenTestBase.cs" />
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="BasicSessionApiTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -134,6 +134,12 @@
     <Reference Include="Microsoft.Threading.Tasks">
       <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\win8\Microsoft.Threading.Tasks.dll</HintPath>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Images\UnitTestLogo.png" />
+    <Content Include="Images\UnitTestSmallLogo.png" />
+    <Content Include="Images\UnitTestSplashScreen.png" />
+    <Content Include="Images\UnitTestStoreLogo.png" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '11.0' ">
     <VisualStudioVersion>11.0</VisualStudioVersion>

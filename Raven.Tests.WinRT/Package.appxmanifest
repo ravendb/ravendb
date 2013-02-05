@@ -27,12 +27,12 @@
         EntryPoint="vstest.executionengine.App">
         <VisualElements 
             DisplayName="NoUIEntryPoints"
+            Logo="Images\UnitTestLogo.png"
+            SmallLogo="Images\UnitTestSmallLogo.png"
             Description="vstest.executionengine.App"
-            Logo="Images\UnitTestStoreLogo.png"
-            SmallLogo="Images\UnitTestStoreLogo.png"
             ForegroundText="light"
             BackgroundColor="#0084FF">
-          <SplashScreen Image="Images\UnitTestStoreLogo.png"/>
+            <SplashScreen Image="Images\UnitTestSplashScreen.png" />
         </VisualElements>
     </Application>
 
@@ -41,12 +41,12 @@
         EntryPoint="vstest.executionengine.x86.App">
         <VisualElements 
             DisplayName="NoUIEntryPoints"
+            Logo="Images\UnitTestLogo.png"
+            SmallLogo="Images\UnitTestSmallLogo.png"
             Description="vstest.executionengine.x86.App"
-            Logo="Images\UnitTestStoreLogo.png"
-            SmallLogo="Images\UnitTestStoreLogo.png"
             ForegroundText="light"
             BackgroundColor="#0084FF">
-          <SplashScreen Image="Images\UnitTestStoreLogo.png"/>
+            <SplashScreen Image="Images\UnitTestSplashScreen.png" />
         </VisualElements>
     </Application>
   </Applications>
