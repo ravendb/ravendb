@@ -214,7 +214,7 @@ namespace Raven.Abstractions.Linq
 							return dateTimeOffset;
 						}
 						TimeSpan timeSpan;
-						if (TimeSpan.TryParse(s, out timeSpan))
+						if (TimeSpan.TryParseExact(s,"C", CultureInfo.InvariantCulture, out timeSpan))
 						{
 							return timeSpan;
 						}
