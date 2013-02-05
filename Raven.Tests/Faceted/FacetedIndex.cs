@@ -124,7 +124,7 @@ namespace Raven.Tests.Faceted
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				ExecuteTest(store, _originalFacets);
+                ExecuteTest(store, _stronglyTypedFacets);
 			}
 		}
 
