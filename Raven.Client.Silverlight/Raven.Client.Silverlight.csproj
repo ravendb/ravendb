@@ -685,6 +685,9 @@
     <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\Absdtractions\TaskExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\FieldTermVector.cs">
+      <Link>Imports\Indexing\FieldTermVector.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptions.cs">
       <Link>Imports\Indexing\SpatialOptions.cs</Link>
     </Compile>

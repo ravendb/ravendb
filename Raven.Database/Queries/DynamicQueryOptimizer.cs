@@ -153,20 +153,22 @@ namespace Raven.Database.Queries
 
 					    if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
 					    {
-					        var nonHighlightableFields = indexQuery
-					            .HighlightedFields
-					            .Where(x =>
-					                   !indexDefinition.Stores.ContainsKey(x.Field) ||
-					                   indexDefinition.Stores[x.Field] != FieldStorage.Yes ||
-					                   !indexDefinition.Indexes.ContainsKey(x.Field) ||
-					                   indexDefinition.Indexes[x.Field] != FieldIndexing.Analyzed)
-					            .Select(x => x.Field)
-					            .ToArray();
+						    var nonHighlightableFields = indexQuery
+							    .HighlightedFields
+								.Where(x =>
+										!indexDefinition.Stores.ContainsKey(x.Field) ||
+										indexDefinition.Stores[x.Field] != FieldStorage.Yes ||
+										!indexDefinition.Indexes.ContainsKey(x.Field) ||
+										indexDefinition.Indexes[x.Field] != FieldIndexing.Analyzed ||
+										!indexDefinition.TermVectors.ContainsKey(x.Field) ||
+										indexDefinition.TermVectors[x.Field] != FieldTermVector.WithPositionsAndOffsets)
+								.Select(x => x.Field)
+								.ToArray();
 
 					        if (nonHighlightableFields.Any())
 					        {
 					            explain(indexName,
-					                () => "The following fields could not be highlighted because are not stored and not analysed: " +
+					                () => "The following fields could not be highlighted because they are not stored, analyzed and using term vectors with positions and offsets: " +
 					                      string.Join(", ", nonHighlightableFields));
 					            return false;
 					        }
