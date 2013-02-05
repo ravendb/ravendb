@@ -1712,6 +1712,14 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				return (bool)whereParams.Value ? "true" : "false";
 			}
+			if (type == typeof(DateTime))
+			{
+				var val = (DateTime)whereParams.Value;
+				var s = val.ToString(Default.DateTimeFormatsToWrite);
+				if (val.Kind == DateTimeKind.Utc)
+					s += "Z";
+				return s;
+			}
 			if (type == typeof(DateTimeOffset))
 			{
 				var val = (DateTimeOffset)whereParams.Value;
