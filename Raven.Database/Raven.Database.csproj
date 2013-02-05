@@ -371,6 +371,7 @@
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthCookie.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
     <Compile Include="Server\Security\Triggers\WindowsAuthDeleteTrigger.cs" />
