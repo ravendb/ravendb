@@ -183,7 +183,13 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-			if (value is DateTime)
+			if (value is TimeSpan)
+			{
+				var val = (TimeSpan)value;
+				yield return CreateFieldWithCaching(name, val.ToString(), storage,
+						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+			} 
+			else if (value is DateTime)
 			{
 				var val = (DateTime)value;
 				var dateAsString = val.ToString(Default.DateTimeFormatsToWrite);
@@ -267,7 +273,7 @@ namespace Raven.Database.Indexing
 
 			if (value is TimeSpan)
 			{
-				yield return numericField.SetDoubleValue(((TimeSpan)value).Ticks);
+				yield return numericField.SetLongValue(((TimeSpan)value).Ticks);
 		
 			}
 			else if (value is int)

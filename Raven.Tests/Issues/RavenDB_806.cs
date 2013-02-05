@@ -26,7 +26,6 @@ namespace Raven.Tests.Issues
 					var result = session.Query<Foo>()
 										.Customize(x => x.WaitForNonStaleResults())
 										.SingleOrDefault(x => x.Start <= time && x.Until > time);
-
 					Assert.NotNull(result);
 				}
 			}
@@ -123,6 +122,7 @@ namespace Raven.Tests.Issues
 										.Customize(x => x.WaitForNonStaleResults())
 										.SingleOrDefault(x => x.Start <= time && x.Until > time);
 
+					WaitForUserToContinueTheTest(documentStore);
 					Assert.NotNull(result);
 				}
 			}
