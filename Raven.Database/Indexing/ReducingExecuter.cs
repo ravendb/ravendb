@@ -121,6 +121,8 @@ namespace Raven.Database.Indexing
 					{
 						context.CancellationToken.ThrowIfCancellationRequested();
 
+                        var sp = Stopwatch.StartNew();
+
 						var persistedResults = actions.MapReduce.GetItemsToReduce
 							(
 								level: level,
@@ -136,8 +138,6 @@ namespace Raven.Database.Indexing
 							retry = false;
 							return;
 						}
-
-						var sp = Stopwatch.StartNew();
 
 						result.count += persistedResults.Count;
 						result.size += persistedResults.Sum(x => x.Size);
