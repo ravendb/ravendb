@@ -16,6 +16,7 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Async
 {
