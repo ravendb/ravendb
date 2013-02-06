@@ -1365,7 +1365,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				var value = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
 				if (value != null)
-					return value.NewField;
+					return value.NewField ?? field;
 				return field;
 			}).ToArray();
 
@@ -1397,12 +1397,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				var values = new Dictionary<string, RavenJToken>();
 				foreach (var renamedField in FieldsToRename.Select(x=>x.OriginalField).Distinct())
 				{
-					values[renamedField] = safeToModify[renamedField];
+					RavenJToken value;
+					if (safeToModify.TryGetValue(renamedField, out value) == false) 
+						continue;
+					values[renamedField] = value;
 					safeToModify.Remove(renamedField);
 				}
 				foreach (var rename in FieldsToRename)
 				{
-					RavenJToken val = values[rename.OriginalField];
+					RavenJToken val;
+					if (values.TryGetValue(rename.OriginalField, out val) == false)
+						continue;
 					changed = true;
 					var ravenJObject = val as RavenJObject;
 					if (rename.NewField == null && ravenJObject != null)
@@ -1412,6 +1417,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					else if (rename.NewField != null)
 					{
 						safeToModify[rename.NewField] = val;
+					}
+					else
+					{
+						safeToModify[rename.OriginalField] = val;
 					}
 				}
 				if (!changed)
