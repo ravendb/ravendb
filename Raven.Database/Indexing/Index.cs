@@ -847,8 +847,8 @@ namespace Raven.Database.Indexing
 								highlighter = new FastVectorHighlighter(
 									FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
 									FastVectorHighlighter.DEFAULT_FIELD_MATCH,
-									new SimpleFragListBuilder(),
-									new SimpleFragmentsBuilder(
+									new RavenFragListBuilder(), 
+									new RavenFragmentsBuilder(
 										indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
 											? indexQuery.HighlighterPreTags
 											: BaseFragmentsBuilder.COLORED_PRE_TAGS,
