@@ -1134,7 +1134,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					AddToFieldsToFetch(memberExpression.ToPropertyPath('_'), memberExpression.Member.Name);
 					if (insideSelect == false)
 					{
-						FieldsToRename.RemoveAll(x => x.OriginalField == memberExpression.Member.Name);
+						foreach (var renamedField in FieldsToRename.Where(x=>x.OriginalField == memberExpression.Member.Name).ToArray())
+						{
+							FieldsToRename.Remove(renamedField);
+						}
 						FieldsToRename.Add(new RenamedField
 						{
 							NewField = null,
