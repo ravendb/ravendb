@@ -51,7 +51,7 @@ namespace Raven.Client.Linq
 )
 		{
 			FieldsToFetch = new HashSet<string>();
-			FieldsToRename = new Dictionary<string, string>();
+			FieldsToRename = new List<RenamedField>();
 
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
@@ -102,7 +102,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Set the fields to rename
 		/// </summary>
-		public Dictionary<string, string> FieldsToRename { get; private set; }
+		public List<RenamedField> FieldsToRename { get; private set; }
 
 		/// <summary>
 		/// Change the result type for the query provider
@@ -240,9 +240,9 @@ namespace Raven.Client.Linq
 
 			var renamedFields = FieldsToFetch.Select(field =>
 			{
-				string value;
-				if (FieldsToRename.TryGetValue(field, out value) && value != null)
-					return value;
+				var renamedField = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
+				if (renamedField != null)
+					return renamedField.NewField;
 				return field;
 			}).ToArray();
 

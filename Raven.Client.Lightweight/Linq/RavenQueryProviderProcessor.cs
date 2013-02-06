@@ -68,7 +68,7 @@ namespace Raven.Client.Linq
 			Action<QueryResult> afterQueryExecuted,
 			string indexName,
 			HashSet<string> fieldsToFetch,
-			Dictionary<string, string> fieldsTRename,
+			List<RenamedField> fieldsTRename,
 			bool isMapReduce)
 		{
 			FieldsToFetch = fieldsToFetch;
@@ -91,7 +91,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Rename the fields from one name to another
 		/// </summary>
-		public Dictionary<string, string> FieldsToRename { get; set; }
+		public List<RenamedField> FieldsToRename { get; set; }
 
 		/// <summary>
 		/// Visits the expression and generate the lucene query
@@ -1134,7 +1134,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					AddToFieldsToFetch(memberExpression.ToPropertyPath('_'), memberExpression.Member.Name);
 					if (insideSelect == false)
 					{
-						FieldsToRename[memberExpression.Member.Name] = null;
+						FieldsToRename.RemoveAll(x => x.OriginalField == memberExpression.Member.Name);
+						FieldsToRename.Add(new RenamedField
+						{
+							NewField = null,
+							OriginalField = memberExpression.Member.Name
+						});
 					}
 					break;
 					//Anonymous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
@@ -1211,10 +1216,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					var idPropName = luceneQuery.DocumentConvention.FindIdentityPropertyNameFromEntityName(luceneQuery.DocumentConvention.GetTypeTagName(typeof (T)));
 					if (docField == idPropName)
 					{
-						FieldsToRename[Constants.DocumentIdFieldName] = renamedField;
+						FieldsToRename.Add(new RenamedField
+						{
+							NewField = renamedField,
+							OriginalField = Constants.DocumentIdFieldName
+						});
 					}
 				}
-				FieldsToRename[docField] = renamedField;
+				FieldsToRename.Add(new RenamedField
+				{
+					NewField = renamedField,
+					OriginalField = docField
+				});
 			}
 		}
 
@@ -1347,9 +1360,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			var renamedFields = FieldsToFetch.Select(field =>
 			{
-				string value;
-				if (FieldsToRename.TryGetValue(field, out value) && value != null)
-					return value;
+				var value = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
+				if (value != null)
+					return value.NewField;
 				return field;
 			}).ToArray();
 
@@ -1378,21 +1391,24 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				var result = queryResult.Results[index];
 				var safeToModify = (RavenJObject) result.CreateSnapshot();
 				bool changed = false;
+				var values = new Dictionary<string, RavenJToken>();
+				foreach (var renamedField in FieldsToRename.Select(x=>x.OriginalField).Distinct())
+				{
+					values[renamedField] = safeToModify[renamedField];
+					safeToModify.Remove(renamedField);
+				}
 				foreach (var rename in FieldsToRename)
 				{
-					RavenJToken val;
-					if (safeToModify.TryGetValue(rename.Key, out val) == false)
-						continue;
+					RavenJToken val = values[rename.OriginalField];
 					changed = true;
 					var ravenJObject = val as RavenJObject;
-					if (rename.Value == null && ravenJObject != null)
+					if (rename.NewField == null && ravenJObject != null)
 					{
 						safeToModify = ravenJObject;
 					}
-					else if (rename.Value != null)
+					else if (rename.NewField != null)
 					{
-						safeToModify[rename.Value] = val;
-						safeToModify.Remove(rename.Key);
+						safeToModify[rename.NewField] = val;
 					}
 				}
 				if (!changed)
@@ -1516,5 +1532,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		}
 
 		#endregion
+	}
+
+	public class RenamedField
+	{
+		public string OriginalField { get; set; }
+		public string NewField { get; set; }
 	}
 }
