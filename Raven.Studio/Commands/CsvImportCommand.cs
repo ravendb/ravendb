@@ -75,7 +75,7 @@ namespace Raven.Studio.Commands
 				this.databaseCommands = databaseCommands;
 				csvReader = new CsvReader(reader);
 				header = csvReader.ReadHeaderRecord();
-				entity = Inflector.Pluralize(Path.GetFileNameWithoutExtension(file));
+				entity = Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(file)));
 				if (entity.Length > 0 &&  char.IsLower(entity[0]))
 					entity = char.ToUpper(entity[0]) + entity.Substring(1);
 				sw = Stopwatch.StartNew();
