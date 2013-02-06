@@ -11,6 +11,8 @@ namespace Raven.Client.Changes
 		private readonly Action onZero;
 		private readonly Task task;
 		private int value = 0;
+	    private volatile bool isDisposed = false;
+		private readonly ConcurrentSet<Task<IDisposable>> toDispose = new ConcurrentSet<Task<IDisposable>>();
 		public Task Task
 		{
 			get { return task; }
@@ -33,6 +35,26 @@ namespace Raven.Client.Changes
 			{
 				onZero();
 			}
+		}
+
+		public void Add(Task<IDisposable> disposableTask)
+		{
+			if (isDisposed)
+			{
+				disposableTask.ContinueWith(_ => { using (_.Result) { } });
+				return;
+			}
+			toDispose.Add(disposableTask);
+		}
+
+		public void Dispose()
+		{
+		    isDisposed = true;
+			foreach (var disposableTask in toDispose)
+			{
+				disposableTask.ContinueWith(_ => { using (_.Result) { } });
+			}
+			onZero();
 		}
 
 		public event Action<DocumentChangeNotification> OnDocumentChangeNotification = delegate { };
