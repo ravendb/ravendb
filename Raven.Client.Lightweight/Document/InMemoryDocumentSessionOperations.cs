@@ -562,66 +562,41 @@ more responsive application.
 			string id;
 			var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
 
-			return PreStoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
+			return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
 		}
 
 		public Task StoreAsync(object entity, Guid etag)
 		{
-			return PreStoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true);
+			return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true);
 		}
 
 		public Task StoreAsync(object entity, Guid etag, string id)
 		{
-			return PreStoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true);
+			return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true);
 		}
 
 		public Task StoreAsync(object entity, string id)
 		{
-			return PreStoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
+			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
 		}
 
-		private Task PreStoreAsyncInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
+		private Task StoreAsyncInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
-
-			DocumentMetadata value;
-			if (entitiesAndMetadata.TryGetValue(entity, out value))
-			{
-				value.ETag = etag ?? value.ETag;
-				value.ForceConcurrencyCheck = forceConcurrencyCheck;
-				return new CompletedTask();
-			}
 
 			if (id == null)
 			{
 				return GenerateDocumentKeyForStorageAsync(entity).ContinueWith(task =>
 				{
 					id = task.Result;
+					StoreInternal(entity, etag, id, forceConcurrencyCheck);
 
-					return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck);
-				}).Unwrap();
+					return new CompletedTask();
+				});
 			}
 
-			return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck);
-		}
-
-		private Task StoreAsyncInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
-		{
-			GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
-
-			// we make the check here even if we just generated the key
-			// users can override the key generation behavior, and we need
-			// to detect if they generate duplicates.
-			AssertNoNonUniqueInstance(entity, id);
-
-			var metadata = new RavenJObject();
-			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
-			if (tag != null)
-				metadata.Add(Constants.RavenEntityName, tag);
-			if (id != null)
-				knownMissingIds.Remove(id);
-			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
+			StoreInternal(entity, etag, id, forceConcurrencyCheck);
 
 			return new CompletedTask();
 		}
