@@ -234,6 +234,10 @@
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
+    <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Documents\ConflictsView.xaml.cs">
+      <DependentUpon>ConflictsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
@@ -254,6 +258,7 @@
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\MillisecondsToMinutesConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibilityByParamInEqualityConverter.cs" />
+    <Compile Include="Models\ConflictsModel.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
     <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
@@ -523,6 +528,9 @@
     <Compile Include="Models\VersioningSettingsSectionModel.cs" />
     <Compile Include="Views\Alerts.xaml.cs">
       <DependentUpon>Alerts.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Conflicts.xaml.cs">
+      <DependentUpon>Conflicts.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Patch.xaml.cs">
       <DependentUpon>Patch.xaml</DependentUpon>
@@ -880,6 +888,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Documents\ConflictsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Input\InputWindowWithSuggestion.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -979,6 +991,10 @@
     <Page Include="Views\Alerts.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Conflicts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Patch.xaml">
       <SubType>Designer</SubType>
