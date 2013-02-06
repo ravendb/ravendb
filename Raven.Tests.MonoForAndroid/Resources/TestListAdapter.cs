@@ -1,23 +1,20 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 using Android.App;
 using Android.Content;
-using Android.OS;
-using Android.Runtime;
 using Android.Views;
 using Android.Widget;
+using Raven.Tests.MonoForAndroid.Models;
+using System.Linq;
 
 namespace Raven.Tests.MonoForAndroid.Resources
 {
-	class TestListAdapter : BaseAdapter<string>
+	class TestListAdapter : BaseAdapter<TestItem>
 	{
 		private readonly Activity context;
-		public List<string> Tests;
+		public List<TestItem> Tests;
 
-		public TestListAdapter(Activity context, List<string> tests ): base()
+		public TestListAdapter(Activity context, List<TestItem> tests ): base()
 		{
 			this.context = context;
 			Tests = tests;
@@ -34,31 +31,39 @@ namespace Raven.Tests.MonoForAndroid.Resources
 
 			var view = convertView;
 
-			//if (convertView == null || !(convertView is LinearLayout))
-			//	view = context.LayoutInflater.Inflate(Resource.Layout.AnimalItem, parent, false);
+			if (convertView == null || !(convertView is LinearLayout))
+				view = context.LayoutInflater.Inflate(Resource.Layout.TestItem, parent, false);
 
-			////Find references to each subview in the list item's view
-			//var imageItem = view.FindViewById(Resource.Id.imageItem) as ImageView;
-			//var textTop = view.FindViewById(Resource.Id.textTop) as TextView;
-			//var textBottom = view.FindViewById(Resource.Id.textBottom) as TextView;
+			//Find references to each subview in the list item's view
+			var checkBox = view.FindViewById(Resource.Id.checkBox1) as CheckBox;
+		
+			//Assign this item's values to the various subviews
+			checkBox.Checked = item.Selected;
+			checkBox.Text = item.Name;
+			checkBox.Click += (sender, args) =>
+			{
+				var box = ((CheckBox)sender);
+				var name = box.Text;
 
-			////Assign this item's values to the various subviews
-			//imageItem.SetImageResource(item.Image);
-			//textTop.SetText(item.Name, TextView.BufferType.Normal);
-			//textBottom.SetText(item.Description, TextView.BufferType.Normal);
+				foreach (var testItem in Tests.Where(testItem => testItem.Name == name))
+				{
+					testItem.Selected = box.Checked;
+				}
+			};
 
+			//checkBox.SetText(item.Name, TextView.BufferType.Normal);
 			//Finally return the view
 			return view;
 		}
 
 		public override int Count
 		{
-			get { throw new NotImplementedException(); }
+			get { return Tests.Count; }
 		}
 
-		public override string this[int position]
+		public override TestItem this[int position]
 		{
-			get { throw new NotImplementedException(); }
+			get { return Tests[position]; }
 		}
 	}
 }

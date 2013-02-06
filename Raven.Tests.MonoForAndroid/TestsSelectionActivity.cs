@@ -1,14 +1,17 @@
-﻿using System.Reflection;
+﻿using System.Collections.Generic;
+using System.Reflection;
 using Android.App;
 using Android.Preferences;
 using Android.Widget;
 using Android.OS;
 using System.Linq;
+using Raven.Tests.MonoForAndroid.Models;
+using Raven.Tests.MonoForAndroid.Resources;
 
 namespace Raven.Tests.MonoForAndroid
 {
-	[Activity(Label = "Raven.Tests.MonoForAndroid", MainLauncher = true, Icon = "@drawable/icon")]
-	public class TestsSelectionActivity : PreferenceActivity
+	[Activity(Label = "Raven.Tests.MonoForAndroid", Icon = "@drawable/icon")]
+	public class TestsSelectionActivity : ListActivity
 	{
 		int count = 1;
 
@@ -16,32 +19,17 @@ namespace Raven.Tests.MonoForAndroid
 		{
 			base.OnCreate(bundle);
 
+			ListAdapter = new TestListAdapter(this, new List<TestItem>
+			{
+				new TestItem{Name = "Test1", Selected = true},
+				new TestItem{Name = "Test2", Selected = false},
+				new TestItem{Name = "Test3", Selected = true},
+			});
+			
 			// Set our view from the "main" layout resource
-			SetContentView(Resource.Layout.TestSelection);
+			//SetContentView(Resource.Layout.TestItem);
 
-			// Get our button from the layout resource,
-			// and attach an event to it
-
-			//AddPreferencesFromResource();
-			var items = Assembly.GetCallingAssembly().GetTypes();
-
-			//foreach (var item in items)
-			//{
-			//	var methods = item.GetMethods();
-			//	foreach (var methodInfo in methods)
-			//	{
-			//		var list = methodInfo.GetCustomAttributes(typeof(FactAttribute), true);
-					
-
-			//	}
-			//}
-
-			Button button = FindViewById<Button>(Resource.Id.MyButton);
-			//var testsList = FindViewById<ListView>(Resource.Id.TestsList);
-			//testsList.ChoiceMode = ChoiceMode.Multiple;
-			//testsList.Adapter = new ArrayAdapter<string>(this, Resource.Layout.Main, MonoForAndroidTestBase.Tests.Keys.ToArray());
-
-			button.Click += delegate { button.Text = string.Format("{0} clicks!", count++); };
+		
 		}
 	}
 }

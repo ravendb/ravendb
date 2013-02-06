@@ -45,11 +45,26 @@ namespace Raven.Tests.MonoForAndroid
 		public partial class Id
 		{
 			
+			// aapt resource value: 0x7f050003
+			public const int DeselectAllButton = 2131034115;
+			
 			// aapt resource value: 0x7f050000
-			public const int MyButton = 2131034112;
+			public const int RunTests = 2131034112;
+			
+			// aapt resource value: 0x7f050002
+			public const int SelectAllButton = 2131034114;
+			
+			// aapt resource value: 0x7f050004
+			public const int TestsList = 2131034116;
+			
+			// aapt resource value: 0x7f050005
+			public const int checkBox1 = 2131034117;
 			
 			// aapt resource value: 0x7f050001
-			public const int TestsList = 2131034113;
+			public const int linearLayout1 = 2131034113;
+			
+			// aapt resource value: 0x7f050006
+			public const int myButton = 2131034118;
 			
 			private Id()
 			{
@@ -63,7 +78,10 @@ namespace Raven.Tests.MonoForAndroid
 			public const int Main = 2130903040;
 			
 			// aapt resource value: 0x7f030001
-			public const int TestSelection = 2130903041;
+			public const int TestItem = 2130903041;
+			
+			// aapt resource value: 0x7f030002
+			public const int TestSelection = 2130903042;
 			
 			private Layout()
 			{

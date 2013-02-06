@@ -46,6 +46,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\TestItem.cs" />
+    <Compile Include="Resources\TestListAdapter.cs" />
+    <Compile Include="TestsActivity.cs" />
     <Compile Include="TestsSelectionActivity.cs" />
     <Compile Include="MonoForAndroidTestBase.cs" />
     <Compile Include="Resources\Resource.Designer.cs" />
@@ -57,6 +60,7 @@
     <AndroidResource Include="Resources\Layout\TestSelection.axml">
       <SubType>AndroidResource</SubType>
     </AndroidResource>
+    <AndroidResource Include="Resources\Layout\TestItem.axml" />
   </ItemGroup>
   <ItemGroup>
     <AndroidResource Include="Resources\Layout\Main.axml" />
