@@ -401,11 +401,8 @@ namespace Raven.Studio.Models
 
 						                         ResolvingConflict = true;
 
-						                         dataSection.Document.DeleteText(TextChangeTypes.Custom, 0, dataSection.Document.CurrentSnapshot.Length);
-						                         dataSection.Document.AppendText(TextChangeTypes.Custom, docsConflictsResolver.Resolve());
-
-						                         metaDataSection.Document.DeleteText(TextChangeTypes.Custom, 0, metaDataSection.Document.CurrentSnapshot.Length);
-						                         metaDataSection.Document.AppendText(TextChangeTypes.Custom, metadataConflictsResolver.Resolve());
+						                         JsonData = docsConflictsResolver.Resolve();
+                                                 JsonMetadata = metadataConflictsResolver.Resolve();
 
 						                         OnPropertyChanged(() => dataSection);
 						                         OnPropertyChanged(() => document);
@@ -469,10 +466,8 @@ namespace Raven.Studio.Models
 				                EditingDatabase = true;
 				                OnPropertyChanged(() => EditingDatabase);
 				                Key = database;
-				                dataSection.Document.DeleteText(TextChangeTypes.Custom, 0, dataSection.Document.CurrentSnapshot.Length);
-				                dataSection.Document.AppendText(TextChangeTypes.Custom, doc.ToString());
-				                metaDataSection.Document.DeleteText(TextChangeTypes.Custom, 0, metaDataSection.Document.CurrentSnapshot.Length);
-				                metaDataSection.Document.AppendText(TextChangeTypes.Custom, meta.ToString());
+				                JsonData = doc.ToString();
+				                JsonMetadata = meta.ToString();
 			                });
 		}
 
@@ -725,8 +720,8 @@ namespace Raven.Studio.Models
 
 		private void UpdateDocumentSize()
 		{
-			double byteCount = Encoding.UTF8.GetByteCount(JsonDataDocument.CurrentSnapshot.Text)
-			                   + Encoding.UTF8.GetByteCount(MetaDataDocument.CurrentSnapshot.Text);
+			double byteCount = Encoding.UTF8.GetByteCount(JsonData)
+			                   + Encoding.UTF8.GetByteCount(JsonMetadata);
 
 			string sizeTerm = "Bytes";
 			if (byteCount >= 1024 * 1024)
@@ -748,7 +743,7 @@ namespace Raven.Studio.Models
 			if (Separator == null)
 				return;
 
-			// Note: if this proves to be too slow with large documents, we can potential optimize the finding 
+			// Note: if this proves to be too slow with large documents, we can potentially optimize the finding 
 			// of references by only considering the parts of the AST which occur after the Offset at which the text change began
 			// (we can find this by getting hold of the TextSnapshotChangedEventArgs)
 			var potentialReferences = FindPotentialReferences(JsonDataDocument).ToList();
