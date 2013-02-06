@@ -238,6 +238,7 @@
     <Compile Include="Features\Documents\ConflictsView.xaml.cs">
       <DependentUpon>ConflictsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\ConflictDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />

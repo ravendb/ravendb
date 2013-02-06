@@ -298,6 +298,7 @@ namespace Raven.Studio.Models
 				Navigator = null;
 				CurrentIndex = 0;
 				TotalItems = 0;
+			    ResolvingConflict = false;
 				SetCurrentDocumentKey(null);
 				ParentPathSegments.Clear();
 				ParentPathSegments.Add(new PathSegment { Name = "Documents", Url = "/documents" });
@@ -316,102 +317,105 @@ namespace Raven.Studio.Models
 			Navigator.GetDocument().ContinueOnSuccessInTheUIThread(
 				result =>
 				{
-					if (result.Document == null)
-					{
-						HandleDocumentNotFound();
-						return;
-					}
+				    if (result.IsConflicted)
+				    {
+                        ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+                                             .AsyncDatabaseCommands
+                                             .GetAsync(result.ConflictingVersionIds.ToArray(), null)
+                                             .ContinueOnSuccessInTheUIThread(loadResult =>
+                                             {
+                                                 var docs = new List<RavenJObject>();
+                                                 var metadatas = new List<RavenJObject>();
+                                                 foreach (var doc in loadResult.Results)
+                                                 {
+                                                     metadatas.Add(doc.Value<RavenJObject>("@metadata"));
+                                                     doc.Remove("@metadata");
+                                                     docs.Add(doc);
+                                                 }
 
-					if (string.IsNullOrEmpty(result.Document.Key))
-					{
-						Mode = DocumentMode.Projection;
-						LocalId = Guid.NewGuid().ToString();
-					}
-					else
-					{
-						AssertNoPropertyBeyondSize(result.Document.DataAsJson, 500 * 1000);
-						var recentQueue = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.RecentDocuments;
-						ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
-						                                               ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
-						                                               "/docs/" + result.Document.Key;
-						recentQueue.Add(result.Document.Key);
-						Mode = DocumentMode.DocumentWithId;
-						result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
-						LocalId = result.Document.Key;
-						SetCurrentDocumentKey(result.Document.Key);
-						var expiration = result.Document.Metadata["Raven-Expiration-Date"];
-						if (expiration != null)
-						{
-							ExpireAt.Value = DateTime.Parse(expiration.ToString());
-							EnableExpiration.Value = true;
-							HasExpiration = true;
-						}
-						else
-						{
-							HasExpiration = false;
-						}
-					}
+                                                 ClearMetadatas(metadatas);
 
-					urlForFirst = result.UrlForFirst;
+                                                 var docsConflictsResolver = new ConflictsResolver(docs.ToArray());
+                                                 var metadataConflictsResolver = new ConflictsResolver(metadatas.ToArray());
+
+                                                 SetCurrentDocumentKey(result.ConflictDocumentId);
+
+                                                 OnPropertyChanged(() => DisplayId);
+                                                 Etag = result.ConflictEtag;
+
+                                                 ResolvingConflict = true;
+
+                                                 JsonData = docsConflictsResolver.Resolve();
+                                                 JsonMetadata = metadataConflictsResolver.Resolve();
+
+                                                 HasUnsavedChanges = false;
+
+                                                 OnPropertyChanged(() => dataSection);
+                                                 OnPropertyChanged(() => document);
+                                             });
+				    }
+				    else
+				    {
+				        if (result.Document == null)
+				        {
+				            HandleDocumentNotFound();
+				            return;
+				        }
+
+				        ResolvingConflict = false;
+
+				        if (string.IsNullOrEmpty(result.Document.Key))
+				        {
+				            Mode = DocumentMode.Projection;
+				            LocalId = Guid.NewGuid().ToString();
+				        }
+				        else
+				        {
+				            AssertNoPropertyBeyondSize(result.Document.DataAsJson, 500*1000);
+				            var recentQueue = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.RecentDocuments;
+				            ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+				                                                           ApplicationModel.Current.Server.Value.SelectedDatabase
+				                                                                           .Value.Name +
+				                                                           "/docs/" + result.Document.Key;
+				            recentQueue.Add(result.Document.Key);
+				            Mode = DocumentMode.DocumentWithId;
+				            result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
+				            LocalId = result.Document.Key;
+				            SetCurrentDocumentKey(result.Document.Key);
+				            var expiration = result.Document.Metadata["Raven-Expiration-Date"];
+				            if (expiration != null)
+				            {
+				                ExpireAt.Value = DateTime.Parse(expiration.ToString());
+				                EnableExpiration.Value = true;
+				                HasExpiration = true;
+				            }
+				            else
+				            {
+				                HasExpiration = false;
+				            }
+				        }
+
+                        document.Value = result.Document;
+                        
+                        WhenParsingComplete(dataSection.Document)
+                            .ContinueOnUIThread(t => ApplyOutliningMode());
+
+                        HandleDocumentChanged();
+				    }
+
+				    urlForFirst = result.UrlForFirst;
 					urlForPrevious = result.UrlForPrevious;
 					urlForLast = result.UrlForLast;
 					urlForNext = result.UrlForNext;
 
-					document.Value = result.Document;
 					CurrentIndex = (int) result.Index;
 					TotalItems = (int) result.TotalDocuments;
 
 					ParentPathSegments.Clear();
 					ParentPathSegments.AddRange(result.ParentPath);
 
-					WhenParsingComplete(dataSection.Document)
-						.ContinueOnUIThread(t => ApplyOutliningMode());
-
-					HandleDocumentChanged();
 				})
-			         .Catch(exception =>
-			         {
-				         var conflictException = exception.GetBaseException() as ConflictException;
-
-				         if (conflictException != null)
-				         {
-					         ApplicationModel.Current.Server.Value.SelectedDatabase.Value
-					                         .AsyncDatabaseCommands
-					                         .GetAsync(conflictException.ConflictedVersionIds, null)
-					                         .ContinueOnSuccessInTheUIThread(doc =>
-					                         {
-						                         var docs = new List<RavenJObject>();
-						                         var metadatas = new List<RavenJObject>();
-						                         foreach (var result in doc.Results)
-						                         {
-							                         metadatas.Add(result.Value<RavenJObject>("@metadata"));
-							                         result.Remove("@metadata");
-							                         docs.Add(result);
-						                         }
-
-						                         ClearMetadatas(metadatas);
-
-						                         var docsConflictsResolver = new ConflictsResolver(docs.ToArray());
-						                         var metadataConflictsResolver = new ConflictsResolver(metadatas.ToArray());
-
-						                         Key = url.GetQueryParam("id");
-						                         DocumentKey = Key;
-						                         OnPropertyChanged(() => DisplayId);
-						                         Etag = conflictException.Etag;
-
-						                         ResolvingConflict = true;
-
-						                         JsonData = docsConflictsResolver.Resolve();
-                                                 JsonMetadata = metadataConflictsResolver.Resolve();
-
-						                         OnPropertyChanged(() => dataSection);
-						                         OnPropertyChanged(() => document);
-					                         });
-					         return true;
-				         }
-
-				         return false;
-			         });
+			    .Catch();
 		}
 
 		public void AssertNoPropertyBeyondSize(RavenJToken token, int maxSize, string path = "")

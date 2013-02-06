@@ -55,7 +55,7 @@ namespace Raven.Studio.Models
             {
                 return editDocument ??
                        (editDocument =
-                        new EditVirtualDocumentCommand() {  });
+                        new EditVirtualDocumentCommand() { DocumentNavigatorFactory  = (id, itemIndex) => new ConflictDocumentsNavigator(id, itemIndex)});
             }
         }
 
