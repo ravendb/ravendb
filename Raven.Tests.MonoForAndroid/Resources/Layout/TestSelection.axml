@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="First Category">
+        <CheckBoxPreference
+            android:key="chooseFromList"
+            android:title="CheckBox Preference"
+            android:defaultValue="true"
+            android:summary="Do you want to Choose from the List?" />
+        <ListPreference
+            android:title="List Preference"
+            android:summary="Allows you to select an array item"
+            android:dependency="chooseFromList"
+            android:key="listChoice"
+            android:defaultValue="1" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="Second Category">
+        <PreferenceScreen
+            android:title="Advanced Options">
+            <CheckBoxPreference
+                android:key="advancedOption"
+                android:title="Advanced Option"
+                android:defaultValue="true"
+                android:summary="This is an Advanced Option" />
+        </PreferenceScreen>
+        <EditTextPreference
+            android:dialogTitle="EditTextTitle"
+            android:dialogMessage="Please enter your Text:"
+            android:key="mainOption"
+            android:title="Some Title"
+            android:summary="This is an EditText Preference"
+            android:defaultValue="Test" />
+    </PreferenceCategory>
+</PreferenceScreen>

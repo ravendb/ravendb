@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Android.App;
+using Android.Preferences;
 using Android.Widget;
 using Android.OS;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Linq;
 namespace Raven.Tests.MonoForAndroid
 {
 	[Activity(Label = "Raven.Tests.MonoForAndroid", MainLauncher = true, Icon = "@drawable/icon")]
-	public class TestsSelectionActivity : Activity
+	public class TestsSelectionActivity : PreferenceActivity
 	{
 		int count = 1;
 
@@ -16,11 +17,12 @@ namespace Raven.Tests.MonoForAndroid
 			base.OnCreate(bundle);
 
 			// Set our view from the "main" layout resource
-			SetContentView(Resource.Layout.Main);
+			SetContentView(Resource.Layout.TestSelection);
 
 			// Get our button from the layout resource,
 			// and attach an event to it
 
+			//AddPreferencesFromResource();
 			var items = Assembly.GetCallingAssembly().GetTypes();
 
 			//foreach (var item in items)
