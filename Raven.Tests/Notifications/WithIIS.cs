@@ -25,7 +25,7 @@ namespace Raven.Tests.Notifications
 		[IISExpressInstalledFact]
 		public void CheckNotificationInIIS()
 		{
-			using (var store = NewDocumentStore(true))
+			using (var store = NewDocumentStore())
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
@@ -40,7 +40,7 @@ namespace Raven.Tests.Notifications
 				}
 
 				DocumentChangeNotification documentChangeNotification;
-				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(5)));
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(10)));
 
 				Assert.Equal("items/1", documentChangeNotification.Id);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
