@@ -217,8 +217,10 @@ namespace Raven.Database.Server
 					},
 					LoadedDatabases =
 						from documentDatabase in allDbs
-						let totalSizeOnDisk = documentDatabase.Database.GetTotalSizeOnDisk()
-						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
+						let indexStorageSize = documentDatabase.Database.GetIndexStorageSizeOnDisk()
+						let transactionalStorageSize = documentDatabase.Database.GetTransactionalStorageSizeOnDisk()
+						let totalDatabaseSize = indexStorageSize + transactionalStorageSize
+						let lastUsed = databaseLastRecentlyUsed.GetOrDefault( documentDatabase.Name )
 						select new
 						{
 							documentDatabase.Name,
@@ -227,8 +229,12 @@ namespace Raven.Database.Server
 								lastUsed, 
 								documentDatabase.Database.WorkContext.LastWorkTime
 							}.Max(),
-							Size = totalSizeOnDisk,
-							HumaneSize = DatabaseSize.Humane(totalSizeOnDisk),
+							TransactionalStorageSize = transactionalStorageSize,
+							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane( transactionalStorageSize ),
+							IndexStorageSize = indexStorageSize,
+							IndexStorageHumaneSize = DatabaseSize.Humane( indexStorageSize ),
+							TotalDatabaseSize = totalDatabaseSize,
+							TotalDatabaseHumaneSize = DatabaseSize.Humane( totalDatabaseSize ),
 							documentDatabase.Database.Statistics.CountOfDocuments,
 							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
 							documentDatabase.Database.WorkContext.ConcurrentRequests
