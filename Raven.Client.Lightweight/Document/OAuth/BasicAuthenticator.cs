@@ -34,10 +34,10 @@ namespace Raven.Client.Document.OAuth
 				.ConvertSecurityExceptionToServerNotFound()
 				.ContinueWith(task =>
 				{
-#if !SILVERLIGHT
-					using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
-#else
+#if SILVERLIGHT
 					using(var stream = task.Result.GetResponseStream())
+#else
+					using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
 #endif
 					using (var reader = new StreamReader(stream))
 					{

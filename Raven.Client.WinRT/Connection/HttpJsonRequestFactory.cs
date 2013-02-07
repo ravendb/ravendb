@@ -56,7 +56,9 @@ namespace Raven.Client.WinRT.Connection
 
 		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
 		{
-			throw new NotImplementedException();
+			var request = new HttpJsonRequest(createHttpJsonRequestParams.Url, createHttpJsonRequestParams.Method, createHttpJsonRequestParams.Metadata, createHttpJsonRequestParams.Convention, this);
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Client = request.httpClient});
+			return request;
 		}
 
 		public IDisposable DisableAllCaching()
