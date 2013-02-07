@@ -10,7 +10,7 @@ using Raven.Tests.MonoForAndroid.Resources;
 
 namespace Raven.Tests.MonoForAndroid
 {
-	[Activity(Label = "Raven.Tests.MonoForAndroid", Icon = "@drawable/icon")]
+	[Activity(Label = "RavenDB Mono For Android Tester", Icon = "@drawable/icon")]
 	public class TestsSelectionActivity : ListActivity
 	{
 		int count = 1;

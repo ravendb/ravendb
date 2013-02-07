@@ -1,18 +1,25 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Android.App;
+using Android.Graphics;
 using Android.OS;
 using Android.Widget;
+using Java.Lang;
+using NUnit.Framework;
 using Raven.Tests.MonoForAndroid.Models;
 using Raven.Tests.MonoForAndroid.Resources;
 using System.Linq;
+using Exception = System.Exception;
 
 namespace Raven.Tests.MonoForAndroid
 {
-	[Activity(Label = "Raven.Tests.MonoForAndroid", MainLauncher = true, Icon = "@drawable/icon")]
+	[Activity(Label = "RavenDB Mono For Android Tester", MainLauncher = true, Icon = "@drawable/icon")]
 	public class TestsActivity : Activity
 	{
 		protected override void OnCreate(Bundle bundle)
 		{
+			LoadTests();
 			base.OnCreate(bundle);
 			
 			SetContentView(Resource.Layout.Main);
@@ -21,41 +28,116 @@ namespace Raven.Tests.MonoForAndroid
 			var selectButton = FindViewById<Button>(Resource.Id.SelectAllButton);
 			var deselectButton = FindViewById<Button>(Resource.Id.DeselectAllButton);
 			var runTestsButton = FindViewById<Button>(Resource.Id.RunTests);
-			var tests = new List<TestItem>();
-			for (int i = 0; i < 20; i++)
-			{
-				tests.Add(new TestItem{Name = "Test" + (i + 1), Selected = true});
-			}
+
+			var tests = GetAllTests();
+			MarkAllAs(tests, true);
 
 			list.Adapter = new TestListAdapter(this, tests);
 
 			selectButton.Click += (sender, args) =>
 			{
-				foreach (var testItem in tests)
-				{
-					testItem.Selected = true;
-				}
+				MarkAllAs(tests, true);
 
 				list.Adapter = new TestListAdapter(this, tests);
 			};
 
 			deselectButton.Click += (sender, args) =>
 			{
-				foreach (var testItem in tests)
-				{
-					testItem.Selected = false;
-				}
+				MarkAllAs(tests, false);
 
 				list.Adapter = new TestListAdapter(this, tests);
 			};
 
 			runTestsButton.Click += (sender, args) =>
 			{
-				foreach (var testItem in tests.Where(item => item.Selected))
-				{
-					//TODO: run the tests
-				}
+				SetContentView(Resource.Layout.Testing);
+				var selectedTests = tests.Where(item => item.Selected).ToList();
+				var thread = new Thread(() => RunTests(selectedTests));
+				thread.Run();
 			};
+		}
+
+		private List<TestItem> GetAllTests()
+		{
+			return Assembly.GetExecutingAssembly().GetTypes()
+			               .Where(type => type.IsAssignableFrom(typeof (MonoForAndroidTestBase)))
+			               .SelectMany(testType => testType.GetMethods())
+			               .Where(method => method.GetCustomAttributes(typeof (TestAttribute), true).Length > 0)
+			               .Select(testMethod => new TestItem
+			               {
+				               Name = testMethod.DeclaringType.Name + "->" + testMethod.Name,
+							   Action = () =>
+							   {
+								   var instance = Activator.CreateInstance(testMethod.DeclaringType);
+								   try
+								   {
+									   testMethod.Invoke(instance, null);
+								   }
+								   finally
+								   {
+									   var disposable = instance as IDisposable;
+									   if(disposable != null)
+										   disposable.Dispose();
+								   }
+							   }
+			               })
+			               .ToList();
+		}
+
+		private void LoadTests()
+		{
+			//Not Sure how to handle this 
+		}
+
+		public void RunTests(List<TestItem> testsToRun)
+		{
+
+			var failedTitle = FindViewById<TextView>(Resource.Id.FailedTests);
+			failedTitle.SetTextColor(Color.Red);
+
+			var passedTitle = FindViewById<TextView>(Resource.Id.PassedTests);
+			passedTitle.SetTextColor(Color.Green);
+
+			var failedTestsList = FindViewById<TextView>(Resource.Id.FailedTestsList);
+			var passedTestsList = FindViewById<TextView>(Resource.Id.PassedTestsList);
+			var testsStatus = FindViewById<TextView>(Resource.Id.TestsStatus);
+			var passed = 0;
+			var failed = 0;
+
+			failedTestsList.Text = "";
+			passedTestsList.Text = "";
+			
+			foreach (var testItem in testsToRun)
+			{
+				UpdateStatus(testsStatus, passed, failed, testsToRun.Count());
+				try
+				{
+					testItem.Action.Invoke();
+					passedTestsList.Text += testItem.Name + "\n";
+					passed++;
+				}
+				catch (Exception e)
+				{
+					failedTestsList.Text += testItem.Name + "\nError: " + e.Message +"\n\n";
+					failed++;
+				}
+			}
+
+			UpdateStatus(testsStatus, passed, failed, testsToRun.Count());
+		}
+
+		private void UpdateStatus(TextView testsStatus, int passed, int failed, int count)
+		{
+
+			testsStatus.Text = string.Format("Passed: {0}, Failed: {1}, of {2}", passed, failed, count);
+		}
+
+		private static void MarkAllAs(IEnumerable<TestItem> tests, bool value)
+		{
+			foreach (var testItem in tests)
+			{
+				testItem.Selected = value;
+			}
 		}
 	}
 }
