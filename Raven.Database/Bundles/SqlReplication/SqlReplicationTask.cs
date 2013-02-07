@@ -210,7 +210,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 			catch (Exception e)
 			{
-				log.WarnException("Failure to replicate changes to relational database for " + cfg.Name +", updates", e);
+				log.WarnException("Failure to replicate changes to relational database for: " + cfg.Name + Environment.NewLine + e.Data["SQL"], e);
 				DateTime time, newTime;
 				if (lastError.TryGetValue(cfg.Name, out time) == false)
 				{
@@ -305,7 +305,15 @@ namespace Raven.Database.Bundles.SqlReplication
 								                                commandBuilder.QuoteIdentifier(itemToReplicate.PkName),
 								                                dbParameter.ParameterName
 									);
-								cmd.ExecuteNonQuery();
+								try
+								{
+									cmd.ExecuteNonQuery();
+								}
+								catch (Exception e)
+								{
+									e.Data["SQL"] = cmd.CommandText;
+									throw;
+								}
 							}
 						}
 
@@ -350,7 +358,15 @@ namespace Raven.Database.Bundles.SqlReplication
 								sb.Length = sb.Length - 2;
 								sb.Append(")");
 								cmd.CommandText = sb.ToString();
-								cmd.ExecuteNonQuery();
+								try
+								{
+									cmd.ExecuteNonQuery();
+								}
+								catch (Exception e)
+								{
+									e.Data["SQL"] = cmd.CommandText;
+									throw;
+								}
 							}
 						}
 					}
