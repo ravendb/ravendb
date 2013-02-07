@@ -212,7 +212,7 @@ namespace Raven.Database.Indexing
 
 		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, DynamicJsonObject dynamicJsonObject)
 		{
-			var newDocId = dynamicJsonObject.GetDocumentId();
+			var newDocId = dynamicJsonObject.GetRootParentOrSelf().GetDocumentId();
 			return new IndexingResult
 			{
 				Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, Field.Store.NO).ToList(),

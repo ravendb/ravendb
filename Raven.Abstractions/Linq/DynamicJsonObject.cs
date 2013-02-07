@@ -220,11 +220,15 @@ namespace Raven.Abstractions.Linq
 
 		private RavenJObject FindReference(string refId)
 		{
+			return GetRootParentOrSelf().Scan().FirstOrDefault(x => x.Value<string>("$id") == refId);
+		}
+
+		public DynamicJsonObject GetRootParentOrSelf()
+		{
 			var p = this;
 			while (p.parent != null)
 				p = p.parent;
-
-			return p.Scan().FirstOrDefault(x => x.Value<string>("$id") == refId);
+			return p;
 		}
 
 		private IEnumerable<RavenJObject> Scan()
@@ -294,7 +298,7 @@ namespace Raven.Abstractions.Linq
 		{
 			if (name == Constants.DocumentIdFieldName)
 			{
-				return GetDocumentId();
+				return GetRootParentOrSelf().GetDocumentId();
 			}
 			RavenJToken value;
 			if (inner.TryGetValue(name, out value))
@@ -310,7 +314,7 @@ namespace Raven.Abstractions.Linq
 			}
 			if (name == "Id")
 			{
-				return GetDocumentId();
+				return GetRootParentOrSelf().GetDocumentId();
 			}
 			if (name == "Inner")
 			{

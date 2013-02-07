@@ -138,7 +138,11 @@ namespace Raven.Tests.Linq
 			{
 				Map = snapshots => snapshots
 					                   .SelectMany(x => x.ClickActions)
-					                   .Select(x => new {ClickedBy = x.ContactId, x.CreativeId});
+					                   .Select(x => new
+					                   {
+						                   ClickedBy = new[] {x.ContactId},
+						                   x.CreativeId
+					                   });
 
 				Reduce = result => result
 					                   .GroupBy(x => x.CreativeId)
