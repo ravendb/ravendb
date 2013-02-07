@@ -214,12 +214,12 @@ namespace Raven.Database.Bundles.SqlReplication
 				DateTime time, newTime;
 				if (lastError.TryGetValue(cfg.Name, out time) == false)
 				{
-					newTime = SystemTime.UtcNow.AddMinutes(1);
+					newTime = SystemTime.UtcNow.AddSeconds(5);
 				}
 				else
 				{
-					var totalMinutes = (SystemTime.UtcNow - time).TotalMinutes;
-					newTime = SystemTime.UtcNow.AddMinutes(Math.Max(10, Math.Min(1, totalMinutes + 1)));
+					var totalSeconds = (SystemTime.UtcNow - time).TotalSeconds;
+					newTime = SystemTime.UtcNow.AddSeconds(Math.Max(60 * 15, Math.Min(5, totalSeconds + 5)));
 				}
 				lastError[cfg.Name] = newTime;
 				return false;
