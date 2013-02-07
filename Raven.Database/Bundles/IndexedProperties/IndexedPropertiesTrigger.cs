@@ -14,6 +14,7 @@ using Document = Lucene.Net.Documents.Document;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace Raven.Bundles.IndexedProperties
 {
@@ -40,7 +41,12 @@ namespace Raven.Bundles.IndexedProperties
 			private readonly IndexedPropertiesSetupDoc setupDoc;
 			private readonly string index;
 			private readonly AbstractViewGenerator viewGenerator;
-			private readonly ConcurrentSet<string> itemsToRemove = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+            // TODO combine the concurrentSet and concurrentDictionary into 1, maybe don't need both?
+            private readonly ConcurrentSet<string> itemsToRemove =
+                new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            private readonly ConcurrentDictionary<string, Dictionary<string, object>> cachedValues = 
+                new ConcurrentDictionary<string, Dictionary<string, object>>();
 
 			public IndexPropertyBatcher(DocumentDatabase database, IndexedPropertiesSetupDoc setupDoc, string index, AbstractViewGenerator viewGenerator)
 			{
@@ -56,27 +62,17 @@ namespace Raven.Bundles.IndexedProperties
 				// - Customer/1 has 2 orders (order/3 & order/5)
 				// - Map/Reduce runs and AvgOrderCost in "customer/1" is set to the average cost of "order/3" and "order/5" (8.56 for example)
 				// - "order/3" and "order/5" are deleted (so customer/1 will no longer be included in the results of the Map/Reduce
-				// - I think we need to write back to the "customer/1" doc and delete the AvgOrderCost field in the Json (otherwise it'll still have the last value of 8.56)
+				// - I think we need to write back to the "customer/1" doc and delete the AvgOrderCost field in the Json,
+                //   otherwise it'll still have the last value of 8.56
 
-				RavenJObject entry;
-				try
-				{
-					entry = RavenJObject.Parse(entryKey);
-				}
-				catch (Exception e)
-				{
-					log.WarnException("Could not properly parse entry key for index: " + index,e);
-					return;
+                if (String.IsNullOrEmpty(entryKey))
+                {
+                    log.Warn("Null or empty \"entryKey\" provided, '{0}' for index '{1}'", setupDoc.DocumentKey, index);
+                    return;
+                }
 
-				}
-				var documentId = entry.Value<string>(setupDoc.DocumentKey);
-				if(documentId == null)
-				{
-					log.Warn("Could not find document id property '{0}' in '{1}' for index '{2}'", setupDoc.DocumentKey, entryKey, index);
-					return;
-				}
-
-				itemsToRemove.Add(documentId);
+                Console.WriteLine("ItemsToRemove - Add - {0}", entryKey);
+				itemsToRemove.Add(entryKey);
 			}
 
 			public override void OnIndexEntryCreated(string entryKey, Document document)
@@ -90,6 +86,7 @@ namespace Raven.Bundles.IndexedProperties
 
 				var documentId = resultDocId.StringValue;
 
+                Console.WriteLine("ItemsToRemove - Remove - {0}", documentId);
 				itemsToRemove.TryRemove(documentId);
 
 				var resultDoc = database.Get(documentId, null);
@@ -116,54 +113,50 @@ namespace Raven.Bundles.IndexedProperties
 				}
 
 				var changesMade = false;
-                if (setupDoc.Type == IndexedPropertiesType.FieldMapping)
-                {
-                    changesMade = ApplySimpleFieldMappings(document, resultDoc, changesMade);
-                }
-                else if (setupDoc.Type == IndexedPropertiesType.Scripted)
-                {
-                    changesMade = ApplyScript(document, ref resultDoc, changesMade);
-                }
+                if (setupDoc.Type == IndexedPropertiesType.FieldMapping)                
+                    changesMade = ApplySimpleFieldMappings(document, resultDoc);                
+                else if (setupDoc.Type == IndexedPropertiesType.Scripted)                
+                    changesMade = ApplyScript(document, ref resultDoc);
+                
                 if (changesMade)                
                     database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
 			}
 
-            private bool ApplyScript(Document document, ref JsonDocument resultDoc, bool changesMade)
+            private bool ApplyScript(Document document, ref JsonDocument resultDoc)
             {
+                var changesMade = false;
                 var scriptedJsonPatcher = new ScriptedJsonPatcher(database);
                 var values = new Dictionary<string, object>();
+                // Make all the fields inside the Lucene doc, available as variables inside the script
                 foreach (var field in document.GetFields()
                     .Where(f => f.Name.EndsWith("_Range") == false && f.Name != Constants.ReduceKeyFieldName))
                 {
                     // It seems like all the fields from the Map/Reduce results come out as strings
-                    // so maybe this is a bit redundant??? Also it make the scripts harder, have to convert
-                    // from string -> int, before doing Maths (if needed), i.e. parseFloat(value) + 5
-                    //var numericField = field as NumericField;
-                    //if (numericField != null)
-                    //    values.Add(field.Name, numericField.NumericValue);
-                    //else
-                    //    values.Add(field.Name, field.StringValue);
+                    // Try and confirm this, if so we don't need to worry about NumericField, StringField etc
                     values.Add(field.Name, field.StringValue);
                 }
                 var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = values };
                 try
                 {                    
                     var timer = Stopwatch.StartNew();
-                    var result = scriptedJsonPatcher.Apply(resultDoc.DataAsJson, patchRequest);
-                    /// TODO get rid of this wierdness, plus it would be better to not use the ref paramater
-                    resultDoc = new JsonDocument() { DataAsJson = RavenJObject.FromObject(result) };
+                    var result = scriptedJsonPatcher.Apply(resultDoc.DataAsJson, patchRequest);                    
+                    resultDoc.DataAsJson = RavenJObject.FromObject(result);
                     timer.Stop();
                     var msecs = timer.Elapsed.TotalMilliseconds;
+                    changesMade = true;
+                    Console.WriteLine("CachedValues - Add - {0} - {1}", resultDoc.Key, String.Join(", ", values));
+                    cachedValues.AddOrUpdate(resultDoc.Key, values, (str, dict) => values);
                 }
                 catch (Exception e)
                 {
                     log.WarnException("Could not process Indexed Properties script for " + resultDoc.Key + ", skipping this document", e);
                 }
-                return true;
+                return changesMade;
             }
 
-            private bool ApplySimpleFieldMappings(Document document, JsonDocument resultDoc, bool changesMade)
+            private bool ApplySimpleFieldMappings(Document document, JsonDocument resultDoc)
             {
+                bool changesMade = false;
                 foreach (var mapping in setupDoc.FieldNameMappings)
                 {
                     var field =
@@ -187,6 +180,8 @@ namespace Raven.Bundles.IndexedProperties
 
 			public override void Dispose()
 			{
+                Console.WriteLine("Dispose - ItemsToRemove - {0}", String.Join(", ", itemsToRemove));
+                Console.WriteLine("Dispose - CachedValues - {0}", String.Join(", ", cachedValues.Keys));
 				foreach (var documentId in itemsToRemove)
 				{
 					var resultDoc = database.Get(documentId, null);
@@ -208,7 +203,20 @@ namespace Raven.Bundles.IndexedProperties
                     }
                     else if (setupDoc.Type == IndexedPropertiesType.Scripted)
                     {
-                        throw new NotImplementedException();
+                        // How do we work out which fields to delete??? We need to know the fields that the script originally wrote???
+                        // With the mappings it easier, but with the script we need to capture what was done when it was run to be sure?
+                        // Do we need to match the FieldMapping behaviour, i.e. removing the fields from the Json that
+                        // we previously mapped when the index item was created??? Maybe we just have to remove all possible fields?
+                        var values = new Dictionary<string, object>();
+                        if (cachedValues.TryGetValue(documentId, out values) == false)
+                            continue;
+
+                        foreach (var field in values)                
+                        {
+                            if (resultDoc.DataAsJson.ContainsKey(field.Key))
+                                resultDoc.DataAsJson.Remove(field.Key);
+                            changesMade = true;
+                        }
                     }
 
 					if (changesMade)

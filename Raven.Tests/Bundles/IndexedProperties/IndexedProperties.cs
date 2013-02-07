@@ -10,6 +10,7 @@ using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Xunit;
+using System;
 
 namespace Raven.Tests.Bundles.IndexedProperties
 {
@@ -87,8 +88,11 @@ namespace Raven.Tests.Bundles.IndexedProperties
             var indexPropsSetup = new IndexedPropertiesSetupDoc
             {
                 DocumentKey = "CustomerId",
-                Script = @"
-this.AverageOrderAmount = parseFloat(AverageOrderAmount) + 5.0;
+//                Script = @"
+//this.AverageOrderAmount = parseFloat(AverageOrderAmount) + 5.0;
+//this.OrderCount = parseInt(Count);"
+                 Script = @"
+this.AverageOrderAmount = parseFloat(AverageOrderAmount);
 this.OrderCount = parseInt(Count);"
             };
 
@@ -123,24 +127,37 @@ this.OrderCount = parseInt(Count);"
                 }
 
                 WaitForIndexing(store);
+                Console.WriteLine("Finished waiting for indexing\n");
 
                 using (var session = store.OpenSession())
                 {
                     var customer1 = session.Load<Customer>("customers/1");
-                    var customer2 = session.Load<Customer>("customers/2");
-
-                    var rawDoc1 = session.Advanced.DocumentStore.DatabaseCommands.Get("customers/1").DataAsJson;
-                    var rawDoc2 = session.Advanced.DocumentStore.DatabaseCommands.Get("customers/2").DataAsJson;
-
-                    var test = rawDoc2.ToString();
+                    var customer2 = session.Load<Customer>("customers/2");                    
 
                     //Assert.Equal(6m, customer1.AverageOrderAmount);
                     //Assert.Equal(1.5m, customer2.AverageOrderAmount);
                 }
 
-                // TODO now delete one of the source docs, orders/4 and see if the results are correct
+                var rawDoc1a = store.DatabaseCommands.Get("customers/1").DataAsJson;
+                var rawDoc2a = store.DatabaseCommands.Get("customers/2").DataAsJson;                
 
-                // TODO now delete one of the source docs, now orders/5 and see if customers/2 has all its results removed
+                // now delete one of the source docs, orders/4 and see if the results are correct
+                store.DatabaseCommands.Delete("orders/4", null);
+                WaitForIndexing(store);
+                Console.WriteLine("Finished waiting for indexing\n");
+                var rawDoc1b = store.DatabaseCommands.Get("customers/1").DataAsJson;
+                var rawDoc2b = store.DatabaseCommands.Get("customers/2").DataAsJson;                
+
+                // now orders/5 and see if customers/2 has all its results removed
+                store.DatabaseCommands.Delete("orders/5", null);
+                WaitForIndexing(store);
+                Console.WriteLine("Finished waiting for indexing\n");
+                var rawDoc1c = store.DatabaseCommands.Get("customers/1").DataAsJson;
+                var rawDoc2c = store.DatabaseCommands.Get("customers/2").DataAsJson;
+
+                // TODO write units tests that ensue the delete behaviour, i.e. the fields that were mapped are removed
+
+                var final = rawDoc2c.ToString();
             }
         }
 
