@@ -1695,7 +1695,7 @@ namespace Raven.Client.Indexes
 				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
 		}
 
-		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
+		public static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
 		{
 			"abstract",
 			"as",

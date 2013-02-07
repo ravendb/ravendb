@@ -228,6 +228,7 @@
     <Compile Include="Bugs\LiveProjections\Entities\User.cs" />
     <Compile Include="Bugs\LiveProjections\Indexes\TaskSummaryIndex.cs" />
     <Compile Include="Bugs\LiveProjections\LiveProjectionOnTasks.cs" />
+    <Compile Include="Bugs\LoadAllStartingWith.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
     <Compile Include="Bugs\MapRedue\Chris.cs" />
@@ -578,6 +579,7 @@
     <Compile Include="Linq\IsNullOrEmpty.cs" />
     <Compile Include="Issues\RavenDB_556.cs" />
     <Compile Include="Issues\RavenDB_579.cs" />
+    <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="MailingList\Accounts.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
