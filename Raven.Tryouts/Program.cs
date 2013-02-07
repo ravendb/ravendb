@@ -14,14 +14,36 @@ internal class Program
 {
 	private static void Main(string[] args)
 	{
-		for (int i = 0; i < 100; i++)
+		using (var ds = new DocumentStore
 		{
-			Console.Clear();
-			Console.WriteLine(i);
-			using(var x= new FailingChangesApiTests())
+			Url = "http://localhost:8080",
+			DefaultDatabase = "sql"
+		}.Initialize())
+		{
+			int pages = 0;
+			while (true)
 			{
-				x.Should_get_independent_notification_subscriptions();
+				using (var session = ds.OpenSession(new OpenSessionOptions
+				{
+					ForceReadFromMaster = true
+				}))
+				{
+					session.Advanced.MaxNumberOfRequestsPerSession = 10000;
+					var results = session.Query<User>()
+					       .Take(1024)
+					       .Skip(pages*1024)
+					       .ToList();
+					if (results.Count == 0)
+						break;
+					pages++;
+				}
 			}
 		}
+	}
+
+	public class User
+	{
+		public string Name, Email;
+		public string[] Phones;
 	}
 }

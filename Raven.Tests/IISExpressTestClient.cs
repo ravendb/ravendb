@@ -41,7 +41,7 @@ namespace Raven.Tests
 			throw new FileNotFoundException("Could not find source directory for Raven.Web");
 		}
 
-		public IDocumentStore NewDocumentStore()
+		public IDocumentStore NewDocumentStore(bool fiddler = false)
 		{
 			if (iisExpress == null)
 			{
@@ -49,7 +49,10 @@ namespace Raven.Tests
 				iisExpress.Start(DeployWebProjectToTestDirectory(), 8084);
 			}
 
-			return new DocumentStore {Url = iisExpress.Url}.Initialize();
+			var url = iisExpress.Url;
+			if (fiddler)
+				url = url.Replace("localhost", "localhost.fiddler");
+			return new DocumentStore {Url = url}.Initialize();
 		}
 
 		public void Dispose()

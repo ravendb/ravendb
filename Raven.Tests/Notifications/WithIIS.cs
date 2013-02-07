@@ -9,6 +9,7 @@ using System.IO;
 using System.Net;
 using System.Reactive.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Tests.Bugs.Identifiers;
 using Xunit;
 using Raven.Abstractions.Extensions;
@@ -24,15 +25,13 @@ namespace Raven.Tests.Notifications
 		[IISExpressInstalledFact]
 		public void CheckNotificationInIIS()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(true))
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
-				var taskObservable = store.Changes();
-				taskObservable.Task.Wait();
-				var observableWithTask = taskObservable.ForDocument("items/1");
-				observableWithTask.Task.Wait();
-				
-				observableWithTask.Subscribe(list.Add);
+
+				store.Changes().Task.Result
+					.ForDocument("items/1").Task.Result
+					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{
