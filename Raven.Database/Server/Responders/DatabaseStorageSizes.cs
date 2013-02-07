@@ -26,12 +26,12 @@ namespace Raven.Database.Server.Responders
 					var totalSizeOnDisk = totalIndexSizeOnDisk + totalDatabaseSizeOnDisk;
 					context.WriteJson(new
 					{
-						DatabaseSize = totalDatabaseSizeOnDisk,
-						DatabaseSizeHumane = DatabaseSize.Humane( totalDatabaseSizeOnDisk ),
-						IndexSize = totalIndexSizeOnDisk,
-						IndexSizeHumane = DatabaseSize.Humane( totalIndexSizeOnDisk ),
-						TotalSize = totalSizeOnDisk,
-						TotalSizeHumane = DatabaseSize.Humane( totalSizeOnDisk ),
+						TransactionalStorageSize = totalDatabaseSizeOnDisk,
+						TransactionalStorageSizeHumane = DatabaseSize.Humane( totalDatabaseSizeOnDisk ),
+						IndexStorageSize = totalIndexSizeOnDisk,
+						IndexStorageSizeHumane = DatabaseSize.Humane( totalIndexSizeOnDisk ),
+						TotalDatabaseSize = totalSizeOnDisk,
+						TotalDatabaseSizeHumane = DatabaseSize.Humane( totalSizeOnDisk ),
 					} );
 					break;
 			}
