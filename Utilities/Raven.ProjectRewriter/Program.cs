@@ -22,8 +22,8 @@ namespace Raven.ProjectRewriter
 			//    "Raven.Json",
 			//    "Raven.Abstractions");
 
-			// GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
-			// 	@"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
+			GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
+				@"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
 		}
 
 		private static void GenerateSilverlight4(string srcPath, string destFile, params string[] references)
