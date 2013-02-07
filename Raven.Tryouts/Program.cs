@@ -8,35 +8,19 @@ using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Tests.Faceted;
 using System.Linq;
+using Raven.Tests.MailingList;
 
 internal class Program
 {
 	private static void Main(string[] args)
 	{
-		using (var store = new DocumentStore
+		for (int i = 0; i < 100; i++)
 		{
-			Url = "http://localhost:8080",
-			DefaultDatabase = "dump"
-		}.Initialize())
-		{
-			for (int k = 0; k < 5; k++)
+			Console.Clear();
+			Console.WriteLine(i);
+			using(var x= new FailingChangesApiTests())
 			{
-				var rand = new Random(9321);
-				var longs = new List<long>();
-				for (int i = 0; i < 100; i++)
-				{
-					var sp = Stopwatch.StartNew();
-					var x = store.DatabaseCommands.Get("tracks/" + rand.Next(1, 999999));
-
-					var q = store.DatabaseCommands.Query("Tracks/ByCommon", new IndexQuery
-					{
-						Query = "Query:" + x.DataAsJson.Value<string>("NormalizedTitle").Split().Last()
-					}, new string[0]);
-
-					longs.Add(sp.ElapsedMilliseconds);
-				}
-
-				Console.Write(longs.Average() + ", ");
+				x.Should_get_independent_notification_subscriptions();
 			}
 		}
 	}
