@@ -50,30 +50,6 @@ namespace Raven.Client
 		/// Stores the specified entity with the specified etag.
 		/// The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
-		void Store(object entity, Guid etag);
-
-		/// <summary>
-		/// Stores the specified entity in the session. The entity will be saved when <see cref="SaveChangesAsync"/> is called.
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		void Store(object entity);
-
-		/// <summary>
-		/// Stores the specified entity with the specified etag, under the specified id
-		/// </summary>
-		void Store(object entity, Guid etag, string id);
-
-		/// <summary>
-		/// Stores the specified dynamic entity, under the specified id
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		void Store(object entity, string id);
-
-		/// <summary>
-		/// Stores the specified entity with the specified etag.
-		/// The entity will be saved when <see cref="SaveChangesAsync"/> is called.
-		/// </summary>
 		Task StoreAsync(object entity, Guid etag);
 
 		/// <summary>
