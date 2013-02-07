@@ -958,6 +958,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Exceptions\ServerRequestError.cs">
       <Link>Data\ServerRequestError.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\AsyncDocumentSessionExtesions.cs">
+      <Link>Imports\Extensions\AsyncDocumentSessionExtesions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>

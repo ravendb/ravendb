@@ -1,4 +1,5 @@
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Async

@@ -556,6 +556,50 @@ more responsive application.
 			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
+		public Task StoreAsync(object entity)
+		{
+			string id;
+			var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
+
+			return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
+		}
+
+		public Task StoreAsync(object entity, Guid etag)
+		{
+			return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true);
+		}
+
+		public Task StoreAsync(object entity, Guid etag, string id)
+		{
+			return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true);
+		}
+
+		public Task StoreAsync(object entity, string id)
+		{
+			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
+		}
+
+		private Task StoreAsyncInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
+		{
+			if (null == entity)
+				throw new ArgumentNullException("entity");
+
+			if (id == null)
+			{
+				return GenerateDocumentKeyForStorageAsync(entity).ContinueWith(task =>
+				{
+					id = task.Result;
+					StoreInternal(entity, etag, id, forceConcurrencyCheck);
+
+					return new CompletedTask();
+				});
+			}
+
+			StoreInternal(entity, etag, id, forceConcurrencyCheck);
+
+			return new CompletedTask();
+		}
+
 		protected abstract string GenerateKey(object entity);
 
 		protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
