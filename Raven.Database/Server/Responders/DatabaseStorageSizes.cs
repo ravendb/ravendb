@@ -21,17 +21,17 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					var totalIndexSizeOnDisk = Database.GetIndexStorageSizeOnDisk();
-					var totalDatabaseSizeOnDisk = Database.GetTransactionalStorageSizeOnDisk();
-					var totalSizeOnDisk = totalIndexSizeOnDisk + totalDatabaseSizeOnDisk;
+					var indexStorageSize = Database.GetIndexStorageSizeOnDisk();
+					var transactionalStorageSize = Database.GetTransactionalStorageSizeOnDisk();
+					var totalDatabaseSize = indexStorageSize + transactionalStorageSize;
 					context.WriteJson(new
 					{
-						TransactionalStorageSize = totalDatabaseSizeOnDisk,
-						TransactionalStorageSizeHumane = DatabaseSize.Humane( totalDatabaseSizeOnDisk ),
-						IndexStorageSize = totalIndexSizeOnDisk,
-						IndexStorageSizeHumane = DatabaseSize.Humane( totalIndexSizeOnDisk ),
-						TotalDatabaseSize = totalSizeOnDisk,
-						TotalDatabaseSizeHumane = DatabaseSize.Humane( totalSizeOnDisk ),
+						TransactionalStorageSize = transactionalStorageSize,
+						TransactionalStorageSizeHumane = DatabaseSize.Humane( transactionalStorageSize ),
+						IndexStorageSize = indexStorageSize,
+						IndexStorageSizeHumane = DatabaseSize.Humane( indexStorageSize ),
+						TotalDatabaseSize = totalDatabaseSize,
+						TotalDatabaseSizeHumane = DatabaseSize.Humane( totalDatabaseSize ),
 					} );
 					break;
 			}
