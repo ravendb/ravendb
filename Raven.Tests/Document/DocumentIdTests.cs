@@ -37,11 +37,7 @@ namespace Raven.Tests.Document
 			{
 				var obj = new TestObject { Name = "Test object" };
 				session.StoreAsync(obj).Wait();
-				Assert.Null(obj.Id);
-
-				session.SaveChangesAsync().Wait();
 				Assert.NotNull(obj.Id);
-
 			}
 		}
 
