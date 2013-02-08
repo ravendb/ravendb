@@ -20,6 +20,7 @@ namespace Raven.Tests.Bundles.IndexedProperties
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
+            public decimal TotalAmount { get; set; }
 			public decimal AverageOrderAmount { get; set; }
             public int OrderCount { get; set; }
 		}
@@ -28,14 +29,14 @@ namespace Raven.Tests.Bundles.IndexedProperties
 		{
 			public string Id { get; set; }
 			public string CustomerId { get; set; }
-			public decimal TotalAmount { get; set; }
+			public decimal Amount { get; set; }
 		}
 
 		private class OrderResults
 		{
 			public string CustomerId { get; set; }
-			public decimal Amount { get; set; }
-			public int Count { get; set; }
+			public decimal TotalAmount { get; set; }
+			public int OrderCount { get; set; }
 			public decimal AverageOrderAmount { get; set; }            
 		}
 
@@ -47,21 +48,21 @@ namespace Raven.Tests.Bundles.IndexedProperties
 								select new
 								{
 									order.CustomerId,
-									Amount = order.TotalAmount,
-									Count = 1,
-									AverageOrderAmount = order.TotalAmount
+									OrderCount = 1,
+									TotalAmount = order.Amount,
+									AverageOrderAmount = 0
 								};
 
 				Reduce = results => from result in results
 									group result by result.CustomerId
 										into g
-										let amount = g.Sum(x=>x.Amount)
-										let count = g.Sum(x=>x.Count)
+										let amount = g.Sum(x=>x.TotalAmount)
+										let count = g.Sum(x=>x.OrderCount)
 										select new
 										{
 											CustomerId = g.Key,
-											Count = count,
-											Amount = amount,
+                                            OrderCount = count,
+                                            TotalAmount = amount,
 											AverageOrderAmount = amount / count
 										};
 			}
@@ -75,7 +76,9 @@ namespace Raven.Tests.Bundles.IndexedProperties
                 DocumentKey = "CustomerId",
                 FieldNameMappings =
 				{
-					{"AverageOrderAmount", "AverageOrderAmount"}
+                    {"TotalAmount", "TotalAmount"},
+					{"AverageOrderAmount", "AverageOrderAmount"},
+                    {"OrderCount", "OrderCount"}
 				}
             };
 
@@ -87,13 +90,15 @@ namespace Raven.Tests.Bundles.IndexedProperties
         {
             var indexPropsSetup = new IndexedPropertiesSetupDoc
             {
-                DocumentKey = "CustomerId",
-//                Script = @"
-//this.AverageOrderAmount = parseFloat(AverageOrderAmount) + 5.0;
-//this.OrderCount = parseInt(Count);"
+                 DocumentKey = "CustomerId",
+//                 Script = @"
+//this.TotalAmount = parseFloat(intputDoc.TotalAmount);
+//this.AverageOrderAmount = parseFloat(intputDoc.AverageOrderAmount);
+//this.OrderCount = parseInt(intputDoc.OrderCount);"
                  Script = @"
+this.TotalAmount = parseFloat(TotalAmount);
 this.AverageOrderAmount = parseFloat(AverageOrderAmount);
-this.OrderCount = parseInt(Count);"
+this.OrderCount = parseInt(OrderCount);"
             };
 
             RunIndexedProperties(indexPropsSetup);
@@ -107,57 +112,109 @@ this.OrderCount = parseInt(Count);"
                 ordersAverageAmount.Execute(store);
 
                 store.DatabaseCommands.Put(IndexedPropertiesSetupDoc.IdPrefix + ordersAverageAmount.IndexName,
-                                           null,
-                                           RavenJObject.FromObject(indexPropsSetup),
-                                           new RavenJObject());
+                                           null, RavenJObject.FromObject(indexPropsSetup), new RavenJObject());
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Customer { Id = "customers/1", Name = "Customer 1" });
                     session.Store(new Customer { Id = "customers/2", Name = "Customer 2" });
 
-                    session.Store(new Order { Id = "orders/1", CustomerId = "customers/1", TotalAmount = 10 });
-                    session.Store(new Order { Id = "orders/2", CustomerId = "customers/1", TotalAmount = 5 });
-                    session.Store(new Order { Id = "orders/3", CustomerId = "customers/1", TotalAmount = 3 });
+                    session.Store(new Order { Id = "orders/1", CustomerId = "customers/1", Amount = 10 });
+                    session.Store(new Order { Id = "orders/2", CustomerId = "customers/1", Amount = 5 });
+                    session.Store(new Order { Id = "orders/3", CustomerId = "customers/1", Amount = 3 });
 
-                    session.Store(new Order { Id = "orders/4", CustomerId = "customers/2", TotalAmount = 1 });
-                    session.Store(new Order { Id = "orders/5", CustomerId = "customers/2", TotalAmount = 2 });
+                    session.Store(new Order { Id = "orders/4", CustomerId = "customers/2", Amount = 1 });
+                    session.Store(new Order { Id = "orders/5", CustomerId = "customers/2", Amount = 2 });
 
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
-                Console.WriteLine("Finished waiting for indexing\n");
+                WaitForIndexing(store);                
+
+                using (var session = store.OpenSession())
+                {
+                    var rawDoc1Test = store.DatabaseCommands.Get("customers/1").DataAsJson;
+                    var rawDoc2Test = store.DatabaseCommands.Get("customers/2").DataAsJson;
+
+                    var customer1 = session.Load<Customer>("customers/1");
+                    var customer2 = session.Load<Customer>("customers/2");                    
+
+                    Assert.Equal(6m, customer1.AverageOrderAmount);
+                    Assert.Equal(3, customer1.OrderCount);
+                    Assert.Equal(18m, customer1.TotalAmount);
+
+                    Assert.Equal(1.5m, customer2.AverageOrderAmount);
+                    Assert.Equal(2, customer2.OrderCount);
+                    Assert.Equal(3, customer2.TotalAmount);                    
+                }                             
+
+                // now delete one of the source docs, orders/4 and see if the results are correct
+                store.DatabaseCommands.Delete("orders/4", null);
+                WaitForIndexing(store);                
 
                 using (var session = store.OpenSession())
                 {
                     var customer1 = session.Load<Customer>("customers/1");
-                    var customer2 = session.Load<Customer>("customers/2");                    
+                    var customer2 = session.Load<Customer>("customers/2");
 
-                    //Assert.Equal(6m, customer1.AverageOrderAmount);
-                    //Assert.Equal(1.5m, customer2.AverageOrderAmount);
-                }
+                    Assert.Equal(6m, customer1.AverageOrderAmount);
+                    Assert.Equal(3, customer1.OrderCount);
+                    Assert.Equal(18m, customer1.TotalAmount);
 
-                var rawDoc1a = store.DatabaseCommands.Get("customers/1").DataAsJson;
-                var rawDoc2a = store.DatabaseCommands.Get("customers/2").DataAsJson;                
-
-                // now delete one of the source docs, orders/4 and see if the results are correct
-                store.DatabaseCommands.Delete("orders/4", null);
-                WaitForIndexing(store);
-                Console.WriteLine("Finished waiting for indexing\n");
-                var rawDoc1b = store.DatabaseCommands.Get("customers/1").DataAsJson;
-                var rawDoc2b = store.DatabaseCommands.Get("customers/2").DataAsJson;                
+                    Assert.Equal(2.0m, customer2.AverageOrderAmount);
+                    Assert.Equal(1, customer2.OrderCount);
+                    Assert.Equal(2m, customer2.TotalAmount);
+                }                
 
                 // now orders/5 and see if customers/2 has all its results removed
                 store.DatabaseCommands.Delete("orders/5", null);
-                WaitForIndexing(store);
-                Console.WriteLine("Finished waiting for indexing\n");
-                var rawDoc1c = store.DatabaseCommands.Get("customers/1").DataAsJson;
-                var rawDoc2c = store.DatabaseCommands.Get("customers/2").DataAsJson;
+                WaitForIndexing(store);                                
 
-                // TODO write units tests that ensue the delete behaviour, i.e. the fields that were mapped are removed
+                using (var session = store.OpenSession())
+                {
+                    var customer1 = session.Load<Customer>("customers/1");
+                    var customer2 = session.Load<Customer>("customers/2");
 
-                var final = rawDoc2c.ToString();
+                    Assert.Equal(6m, customer1.AverageOrderAmount);
+                    Assert.Equal(3, customer1.OrderCount);
+                    Assert.Equal(18m, customer1.TotalAmount);
+
+                    Assert.Equal(0m, customer2.AverageOrderAmount);
+                    Assert.Equal(0, customer2.OrderCount);
+                    Assert.Equal(0m, customer2.TotalAmount);
+                }
+
+                // ensue the delete behaviour, i.e. the fields that were mapped are removed
+                var rawDoc1 = store.DatabaseCommands.Get("customers/1").DataAsJson;
+                var rawDoc2 = store.DatabaseCommands.Get("customers/2").DataAsJson;                
+                Assert.False(rawDoc2.ContainsKey("OrderCount"));
+                Assert.False(rawDoc2.ContainsKey("AverageOrderAmount"));
+                Assert.False(rawDoc2.ContainsKey("TotalAmount"));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Id = "orders/9", CustomerId = "customers/1", Amount = 2 });
+                    session.Store(new Order { Id = "orders/4", CustomerId = "customers/2", Amount = 4.8m });
+                    session.Store(new Order { Id = "orders/5", CustomerId = "customers/2", Amount = 2.5m });
+                    
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);                
+
+                using (var session = store.OpenSession())
+                {
+                    var customer1 = session.Load<Customer>("customers/1");
+                    var customer2 = session.Load<Customer>("customers/2");
+
+                    Assert.Equal(5m, customer1.AverageOrderAmount);
+                    Assert.Equal(4, customer1.OrderCount);
+                    Assert.Equal(20m, customer1.TotalAmount);
+
+                    Assert.Equal(3.65m, customer2.AverageOrderAmount);
+                    Assert.Equal(2, customer2.OrderCount);
+                    Assert.Equal(7.3m, customer2.TotalAmount);
+                }
             }
         }
 

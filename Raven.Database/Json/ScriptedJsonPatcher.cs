@@ -69,14 +69,15 @@ namespace Raven.Database.Json
 			{
 				jintEngine = scriptsCache.CheckoutScript(CreateEngine, patch);
 			}
-			catch (NotSupportedException)
-			{
-				throw;
-			}
-			catch (JintException)
-			{
-				throw;
-			}
+            // TODO I don't think these are needed anymore, they are probably left from debugging!!
+            //catch (NotSupportedException)
+            //{
+            //    throw;
+            //}
+            //catch (JintException)
+            //{
+            //    throw;
+            //}
 			catch (Exception e)
 			{
 				throw new InvalidOperationException("Could not parse: " + Environment.NewLine + patch.Script, e);
