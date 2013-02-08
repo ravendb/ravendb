@@ -30,7 +30,7 @@ namespace Raven.Studio.Commands
 			DatabaseCommands.ForSystemDatabase().DeleteDocumentAsync("Raven/Restore/Status")
 			                .ContinueOnSuccessInTheUIThread(() =>
 			                {
-				                DatabaseCommands.StartRestoreAsync(backupLocation.Value, databaseLocation.Value, name.Value).Catch();
+				                DatabaseCommands.StartRestoreAsync(backupLocation.Value.ToString(), databaseLocation.Value.ToString(), name.Value.ToString()).Catch();
 				                failCount = 0;
 				                UpdateStatus();
 			                });
