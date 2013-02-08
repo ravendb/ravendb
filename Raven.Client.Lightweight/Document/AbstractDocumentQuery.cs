@@ -1787,14 +1787,15 @@ If you really want to do in memory filtering on the data returned from the query
 				return null;
 
 			Func<object, string> value;
-			if(implicitStringsCache.TryGetValue(type,out value))
+			var localStringsCache = implicitStringsCache;
+			if(localStringsCache.TryGetValue(type,out value))
 				return value;
 
 			var methodInfo = type.GetMethod("op_Implicit", new[] {type});
 
 			if (methodInfo == null || methodInfo.ReturnType != typeof(string))
 			{
-				implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+				implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
 				{
 					{type, null}
 				};
@@ -1805,7 +1806,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			var func = (Func<object, string>) Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
 
-			implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+			implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
 				{
 					{type, func}
 				};
