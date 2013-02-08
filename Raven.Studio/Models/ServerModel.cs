@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -24,6 +26,25 @@ namespace Raven.Studio.Models
 		private string buildNumber;
 		private Observable<bool> isConnected;
 
+		private string rawUrl;
+		public string RawUrl
+		{
+			get { return rawUrl; }
+			set
+			{
+				if (string.IsNullOrWhiteSpace(value))
+					rawUrl = null;
+				else
+				{
+					if(Url.EndsWith("/"))
+						rawUrl = Url + value;
+					else
+						rawUrl = Url + "/" + value;
+				}
+
+				OnPropertyChanged(() => RawUrl);
+			}
+		}
 
 		public DocumentConvention Conventions
 		{
@@ -45,6 +66,7 @@ namespace Raven.Studio.Models
 		{
 			Url = url;
             Databases = new BindableCollection<string>(name => name);
+			RecentDocuments = new Dictionary<string, QueueModel<string>>();
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
 		    IsConnected = new Observable<bool>{Value = true};
@@ -72,7 +94,8 @@ namespace Raven.Studio.Models
 			// already gives the user a clear warning about the dangers of sending passwords in the clear. I think that 
 			// this is sufficient warning and we don't require an additional step, so we can disable this check safely.
 			documentStore.JsonRequestFactory.
-				EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
+			              EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers
+				=
 				true;
 
 			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
@@ -81,17 +104,19 @@ namespace Raven.Studio.Models
 					onWebRequest(eventArgs.Request);
 			};
 
-			defaultDatabase = new[] { Constants.SystemDatabase};
+			defaultDatabase = new[] {Constants.SystemDatabase};
 			Databases.Set(defaultDatabase);
 			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 
+			//DisplayRawUrl();
 			DisplayBuildNumber();
 			DisplayLicenseStatus();
-		    TimerTickedAsync();
+			TimerTickedAsync();
 		}
 
 		public bool CreateNewDatabase { get; set; }
 		private static bool firstTick = true;
+
 		public override Task TimerTickedAsync()
 		{
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
@@ -105,7 +130,7 @@ namespace Raven.Studio.Models
 
 				                   	    ApplicationModel.Current.Server.Value.DocumentStore
 				                   	        .AsyncDatabaseCommands
-				                   	        .ForDefaultDatabase()
+											.ForSystemDatabase()
 				                   	        .GetAsync("Raven/StudioConfig")
 				                   	        .ContinueOnSuccessInTheUIThread(doc =>
 				                   	        {
@@ -232,6 +257,16 @@ namespace Raven.Studio.Models
 				})
 				.Catch();
 		}
+
+		//private void DisplayRawUrl()
+		//{
+		//	if (SelectedDatabase != null && SelectedDatabase.Value != null && SelectedDatabase.Value.Name != null)
+		//		RawUrl = Path.Combine(Url, "databases", SelectedDatabase.Value.Name);
+		//	else
+		//		RawUrl = Url;
+		//}
+
+		public Dictionary<string, QueueModel<string>> RecentDocuments { get; set; } 
 
 		public Observable<LicensingStatus> License { get; private set; }
 		public Observable<bool> IsConnected

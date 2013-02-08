@@ -70,6 +70,8 @@ namespace Raven.Database.Linq
 
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
+		public IDictionary<string, FieldTermVector> TermVectors { get; set; } 
+
 		public HashSet<string> ForEntityNames { get; set; }
 
 		public string[] Fields
@@ -96,6 +98,7 @@ namespace Raven.Database.Linq
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 			SpatialStrategies = new ConcurrentDictionary<string, SpatialStrategy>();
+			TermVectors = new Dictionary<string, FieldTermVector>();
 		}
 
 		public void Init(IndexDefinition definition)
@@ -201,7 +204,20 @@ namespace Raven.Database.Linq
 			SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree,
 			int maxTreeLevel = 0, double distanceErrorPct = 0.025)
 		{
-			if (maxTreeLevel == 0) maxTreeLevel = GeohashPrefixTree.GetMaxLevelsPossible();
+			if (maxTreeLevel == 0)
+			{
+				switch (spatialSearchStrategy)
+				{
+					case SpatialSearchStrategy.GeohashPrefixTree:
+						maxTreeLevel = 9; // about 2 meters, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
+						break;
+					case SpatialSearchStrategy.QuadPrefixTree:
+						maxTreeLevel = 25; // about 1 meter, should be good enough
+						break;
+					default:
+						throw new ArgumentOutOfRangeException("spatialSearchStrategy");
+				}
+			}
 			var strategy = SpatialStrategies.GetOrAdd(fieldName, s => SpatialIndex.CreateStrategy(fieldName, spatialSearchStrategy, maxTreeLevel));
 
 			var shape = SpatialIndex.ReadShape(shapeWKT);

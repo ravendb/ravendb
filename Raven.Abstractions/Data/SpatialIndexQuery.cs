@@ -46,6 +46,9 @@ namespace Raven.Abstractions.Data
 			PageSize = query.PageSize;
 			FieldsToFetch = query.FieldsToFetch;
 			SortedFields = query.SortedFields;
+		    HighlighterPreTags = query.HighlighterPreTags;
+		    HighlighterPostTags = query.HighlighterPostTags;
+		    HighlightedFields = query.HighlightedFields;
 		}
 
 		/// <summary>

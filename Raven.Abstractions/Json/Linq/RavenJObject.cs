@@ -48,7 +48,8 @@ namespace Raven.Json.Linq
 		{
 			get { return Properties.Keys; }
 		}
-		public bool IsSnapshot
+
+		public override bool IsSnapshot
 		{
 			get { return Properties.IsSnapshot; }
 		}
@@ -333,7 +334,7 @@ namespace Raven.Json.Linq
 			return new RavenJObject(Properties.CreateSnapshot());
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			Properties.EnsureSnapshot();
 		}

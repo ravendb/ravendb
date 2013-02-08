@@ -16,7 +16,8 @@ namespace Raven.Database.Server.Security.OAuth
 
 			var isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
-				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All || 
+				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All ||
+				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin || 
 			        Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
 			        isGetRequest;
 
@@ -88,9 +89,15 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			const string bearerPrefix = "Bearer ";
 
-
 			var auth = ctx.Request.Headers["Authorization"];
-			if (auth == null || auth.Length <= bearerPrefix.Length || !auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+			if(auth == null)
+			{
+				auth = ctx.Request.GetCookie("OAuth-Token");
+				if (auth != null)
+					auth = Uri.UnescapeDataString(auth);
+			}
+			if (auth == null || auth.Length <= bearerPrefix.Length ||
+				!auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
 				return null;
 
 			var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);
@@ -125,12 +132,12 @@ namespace Raven.Database.Server.Security.OAuth
 			if ("Administrators".Equals(role, StringComparison.InvariantCultureIgnoreCase) == false)
 				return false;
 
-			var databaseAccess = tokenBody.AuthorizedDatabases.FirstOrDefault(x=>string.Equals(x.TenantId, tenantId, StringComparison.InvariantCultureIgnoreCase) || x.TenantId == "*");
+			var databaseAccess = tokenBody.AuthorizedDatabases
+				.Where(x=>
+					string.Equals(x.TenantId, tenantId, StringComparison.InvariantCultureIgnoreCase) ||
+					x.TenantId == "*");
 
-			if (databaseAccess == null)
-				return false;
-
-			return databaseAccess.Admin;
+			return databaseAccess.Any(access => access.Admin);
 		}
 
 		public IIdentity Identity
@@ -156,6 +163,11 @@ namespace Raven.Database.Server.Security.OAuth
 		public List<string> GetApprovedDatabases()
 		{
 			return tokenBody.AuthorizedDatabases.Select(access => access.TenantId).ToList();
+		}
+
+		public AccessTokenBody TokenBody
+		{
+			get { return tokenBody; }
 		}
 	}
 }

@@ -33,8 +33,11 @@ namespace Raven.Json.Linq
 		public RavenJArray(IEnumerable content)
 		{
 			Items = new List<RavenJToken>();
+			if (content == null)
+				return;
+
 			var ravenJToken = content as RavenJToken;
-			if (ravenJToken != null)
+			if (ravenJToken != null && ravenJToken.Type != JTokenType.Array)
 			{
 				Items.Add(ravenJToken);
 			}
@@ -61,7 +64,10 @@ namespace Raven.Json.Linq
 		public RavenJArray(IEnumerable<RavenJToken> content)
 		{
 			Items = new List<RavenJToken>();
-			Items.AddRange(content);
+			if (content != null)
+			{
+				Items.AddRange(content);
+			}
 		}
 
 		/// <summary>
@@ -92,6 +98,11 @@ namespace Raven.Json.Linq
 		public override RavenJToken CloneToken()
 		{
 			return CloneTokenImpl(new RavenJArray());
+		}
+
+		public override bool IsSnapshot
+		{
+			get { return isSnapshot; }
 		}
 
 		public int Length { get { return Items.Count; } }
@@ -258,7 +269,7 @@ namespace Raven.Json.Linq
 			Add(token);
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			isSnapshot = true;
 		}

@@ -13,6 +13,7 @@ using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
@@ -81,8 +82,14 @@ namespace Raven.Database.Indexing
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 			using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 			{
-				var mapResults =
-					RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats).ToList();
+				var mapResults = RobustEnumerationIndex(
+						documentsWrapped.GetEnumerator(), 
+						viewGenerator.MapDefinitions, 
+						actions, 
+						stats)
+					.ToList();
+				actions.MapReduce.UpdateRemovedMapReduceStats(name, changed);
+
 				foreach (var mappedResultFromDocument in mapResults.GroupBy(GetDocumentId))
 				{
 					var dynamicResults = mappedResultFromDocument.Select(x => (object)new DynamicJsonObject(RavenJObject.FromObject(x, jsonSerializer))).ToList();
@@ -189,7 +196,7 @@ namespace Raven.Database.Indexing
 			return RavenJToken.FromObject(reduceValue).ToString(Formatting.None);
 		}
 
-		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
+		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
 			if (fieldsToFetch.IsProjection == false)
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
@@ -205,8 +212,9 @@ namespace Raven.Database.Indexing
 				foreach (var key in keys)
 				{
 					actions.MapReduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
-
 				}
+
+				actions.MapReduce.UpdateRemovedMapReduceStats(name, reduceKeyAndBuckets);
 				actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBuckets);
 			});
 			Write((writer, analyzer, stats) =>

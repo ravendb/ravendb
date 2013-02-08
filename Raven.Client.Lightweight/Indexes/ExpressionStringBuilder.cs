@@ -7,12 +7,14 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
@@ -23,6 +25,9 @@ namespace Raven.Client.Indexes
 	public class ExpressionStringBuilder : ExpressionVisitor
 	{
 		// Fields
+		private static readonly char[] LiteralSymbolsToEscape = new[] {'\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v'};
+		private static readonly string[] LiteralEscapedSymbols = new[] {@"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v"};
+		
 		private readonly StringBuilder _out = new StringBuilder();
 		private readonly DocumentConvention convention;
 		private readonly Type queryRoot;
@@ -100,7 +105,7 @@ namespace Raven.Client.Indexes
 												string queryRootName, Expression node)
 		{
 			var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-			builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
+			 builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
 			return builder.ToString();
 		}
 
@@ -221,7 +226,7 @@ namespace Raven.Client.Indexes
 			{
 				OutputTypeIfNeeded(member);
 			}
-			var name = member.Name;
+			var name = GetPropertyName(member.Name, exprType);
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
 				// only translate from the root type or derivatives
@@ -257,6 +262,23 @@ namespace Raven.Client.Indexes
 			}
 		}
 
+		private string GetPropertyName(string name, Type exprType)
+		{
+			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			if (propertyInfo != null)
+			{
+				var jsonProperty = propertyInfo.GetCustomAttributes(typeof (JsonPropertyAttribute), false).FirstOrDefault() as JsonPropertyAttribute;
+				if (jsonProperty != null)
+				{
+					if (keywordsInCSharp.Contains(jsonProperty.PropertyName))
+						return '@' + jsonProperty.PropertyName;
+					return jsonProperty.PropertyName ?? name;
+				}
+			}
+
+			return name;
+		}
+
 		private void CloseOutputTypeIfNeeded(MemberInfo member)
 		{
 			var memberType = GetMemberType(member);
@@ -267,6 +289,7 @@ namespace Raven.Client.Indexes
 				memberType == typeof(decimal?) ||
 				memberType == typeof(double?) ||
 				memberType == typeof(long?) ||
+				memberType == typeof(DateTime?) ||
 				memberType == typeof(float?))
 			{
 				Out(")");
@@ -276,7 +299,11 @@ namespace Raven.Client.Indexes
 		private void OutputTypeIfNeeded(MemberInfo member)
 		{
 			var memberType = GetMemberType(member);
-			if (memberType == typeof(decimal))
+			if (memberType == typeof (DateTime?)) 
+			{
+				Out("((DateTime?)");
+			}
+			else if (memberType == typeof(decimal))
 			{
 				Out("((decimal)");
 			}
@@ -754,7 +781,7 @@ namespace Raven.Client.Indexes
 			if (node.Value is string)
 			{
 				Out("\"");
-				Out(s);
+				OutLiteral(node.Value as string);
 				Out("\"");
 				return node;
 			}
@@ -766,7 +793,7 @@ namespace Raven.Client.Indexes
 			if (node.Value is char)
 			{
 				Out("'");
-				Out(s);
+				OutLiteral((char) node.Value);
 				Out("'");
 				return node;
 			}
@@ -798,6 +825,31 @@ namespace Raven.Client.Indexes
 			}
 			Out(s);
 			return node;
+		}
+
+		private void OutLiteral(string value) 
+		{
+			if (value.Length == 0)
+				return;
+
+			_out.Append(string.Concat(value.SelectMany(EscapeChar)));
+		}
+
+		private void OutLiteral(char c) 
+		{
+		   _out.Append(EscapeChar(c));
+		}
+
+		private static string EscapeChar(char c) {
+			var index = Array.IndexOf(LiteralSymbolsToEscape, c);
+
+			if (index != -1)
+				return LiteralEscapedSymbols[index];
+
+			if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
+				return @"\u" + ((int) c).ToString("x4");
+
+			return c.ToString(CultureInfo.InvariantCulture);
 		}
 
 		private bool IsLastOperatorIs(char s)
@@ -1643,7 +1695,7 @@ namespace Raven.Client.Indexes
 				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
 		}
 
-		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
+		public static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
 		{
 			"abstract",
 			"as",

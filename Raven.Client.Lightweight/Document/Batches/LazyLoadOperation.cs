@@ -25,7 +25,7 @@ namespace Raven.Client.Document.Batches
 		{
 			return new GetRequest
 			{
-				Url = "/docs/"+key
+				Url = "/docs/" + Uri.EscapeDataString(key)
 			};
 		}
 

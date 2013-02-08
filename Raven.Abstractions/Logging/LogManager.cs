@@ -64,6 +64,9 @@ namespace Raven.Abstractions.Logging
 
 		public static void RegisterTarget<T>() where T: Target, new()
 		{
+			if (targets.OfType<T>().Any())
+				return;
+
 			targets.Add(new T());
 		}
 

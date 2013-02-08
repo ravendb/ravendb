@@ -5,11 +5,13 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using System.Web;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Json.Linq;
 using SpellChecker.Net.Search.Spell;
+using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Queries
 {
@@ -36,7 +38,11 @@ namespace Raven.Database.Queries
 
 			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field + "-" + suggestionQuery.Distance + "-" + suggestionQuery.Accuracy);
 
-			var indexExtension = database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
+			var indexExtension = (
+				                     database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) ??
+									 database.IndexStorage.GetIndexExtensionByPrefix(indexName, MonoHttpUtility.UrlEncode(suggestionQuery.Field +"-"+suggestionQuery.Distance)) ??
+									 database.IndexStorage.GetIndexExtensionByPrefix(indexName, MonoHttpUtility.UrlEncode(suggestionQuery.Field)) 
+			                     ) as SuggestionQueryIndexExtension;
 
 
 			IndexSearcher currentSearcher;
@@ -53,14 +59,21 @@ namespace Raven.Database.Queries
 
 
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					database.WorkContext,
 					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
-					indexReader,
+					indexReader.Directory() is RAMDirectory,
 					GetStringDistance(suggestionQuery.Distance),
 					suggestionQuery.Field,
 					suggestionQuery.Accuracy);
-				suggestionQueryIndexExtension.Init(indexReader);
 
 				database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
+
+				long _;
+				var task = Task.Factory.StartNew(() => suggestionQueryIndexExtension.Init(indexReader));
+				database.AddTask(task, new RavenJObject(), out _);
+
+				// wait for a bit for the suggestions to complete, but not too much (avoid IIS resets)
+				task.Wait(15000, database.WorkContext.CancellationToken);
 
 				return suggestionQueryIndexExtension.Query(suggestionQuery, indexReader);
 			}

@@ -50,6 +50,16 @@ namespace Raven.Database.Server.Responders
 			if (Enum.TryParse(context.Request.QueryString["distance"], true, out distanceTypes) == false)
 				distanceTypes = StringDistanceTypes.Default;
 
+			if (distanceTypes == StringDistanceTypes.None)
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				{
+					Error = "Suggestion is disabled since you specified the Distance value as 'StringDistanceTypes.None'."
+				});
+				return;
+			}
+
 			if (int.TryParse(context.Request.QueryString["max"], out numOfSuggestions) == false)
 				numOfSuggestions = 10;
 

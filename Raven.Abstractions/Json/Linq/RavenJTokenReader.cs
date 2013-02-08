@@ -422,6 +422,10 @@ namespace Raven.Json.Linq
 					return JsonToken.Bytes;
 				case JTokenType.Guid:
 					return JsonToken.String;
+				case JTokenType.TimeSpan:
+					return JsonToken.String;
+				case JTokenType.Uri:
+					return JsonToken.String;
 				default:
 					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("Type", token.Type, "Unexpected JTokenType.");
 			}

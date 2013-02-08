@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Tests.Silverlight

@@ -8,6 +8,8 @@ namespace Raven.Database.Indexing
 
 		public Guid LastIndexedEtag { get; set; }
 
+		public Index Index { get; set; }
+
 		public override string ToString()
 		{
 			return string.Format("IndexName: {0}, LastIndexedEtag: {1}", IndexName, LastIndexedEtag);

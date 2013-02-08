@@ -361,6 +361,22 @@ namespace Raven.Storage.Esent.StorageActions
 			return QueryReferences(key, "by_ref", "key");
 		}
 
+
+		public int GetCountOfDocumentsReferencing(string key)
+		{
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_ref");
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
+				return 0;
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+								 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+			int records;
+			Api.JetIndexRecordCount(session, IndexedDocumentsReferences, out records, 0);
+			return records;
+		}
+
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
 			return QueryReferences(key, "by_key", "ref");
@@ -375,7 +391,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
 			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-
+								 
 			var results = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			do
 			{

@@ -4,14 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
-using NetTopologySuite.IO;
+using System.Web;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Tasks;
 using Raven.Database.Util.Streams;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
@@ -37,7 +34,10 @@ namespace Raven.Database.Server.Responders
 				// to handle the authentication
 				return; 
 			}
-
+			if (HttpContext.Current != null)
+			{
+				HttpContext.Current.Server.ScriptTimeout = 60*60*6; // six hours should do it, I think.
+			}
 			var options = new BulkInsertOptions
 			{
 				CheckForUpdates = context.GetCheckForUpdates(),

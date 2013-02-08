@@ -33,11 +33,16 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public Result GetPath(Expression expression)
 		{
+			expression = SimplifyExpression(expression);
 			var callExpression = expression as MethodCallExpression;
 			if (callExpression != null)
 			{
 				if(callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
 				{
+					if(callExpression.Arguments.Count != 1)
+						throw new ArgumentException("Invalid computation: " + callExpression +
+											". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
+			
 					var target = GetPath(callExpression.Arguments[0]);
 					return new Result
 					{
@@ -93,6 +98,24 @@ namespace Raven.Client.Linq
 			}
 			
 			return result;
+		}
+
+		private static Expression SimplifyExpression(Expression expression)
+		{
+			while (true)
+			{
+				switch (expression.NodeType)
+				{
+					case ExpressionType.Quote:
+						expression = ((UnaryExpression) expression).Operand;
+						break;
+					case ExpressionType.Lambda:
+						expression = ((LambdaExpression) expression).Body;
+						break;
+					default:
+						return expression;
+				}
+			}
 		}
 
 		/// <summary>

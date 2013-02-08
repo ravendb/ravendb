@@ -308,7 +308,7 @@ namespace Raven.Client.Connection
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
 		/// with the default database
 		/// </summary>
-		IDatabaseCommands ForDefaultDatabase();
+		IDatabaseCommands ForSystemDatabase();
 
 		/// <summary>
 		/// Returns a list of suggestions based on the specified suggestion query
@@ -333,9 +333,14 @@ namespace Raven.Client.Connection
 		IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize);
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc);
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag

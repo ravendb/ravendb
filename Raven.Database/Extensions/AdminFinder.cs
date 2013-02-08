@@ -7,6 +7,7 @@ using System.Security.Principal;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Extensions
@@ -15,10 +16,14 @@ namespace Raven.Database.Extensions
 	{
 		private static readonly CachingAdminFinder cachingAdminFinder = new CachingAdminFinder();
 
-		public static bool IsAdministrator(this IPrincipal principal)
+		public static bool IsAdministrator(this IPrincipal principal, AnonymousUserAccessMode mode)
 		{
-			if (principal == null)
+			if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
+			{
+				if (mode == AnonymousUserAccessMode.Admin)
+					return true; 
 				return false;
+			}
 
 			var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 			var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
@@ -170,6 +175,9 @@ namespace Raven.Database.Extensions
 			var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 			if (databaseAccessPrincipal != null)
 			{
+				if (databaseAccessPrincipal.AdminDatabases.Any(name => name == "*")
+				    && database.Name != null && database.Name != "<system>")
+					return true;
 				if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, database.Name, StringComparison.InvariantCultureIgnoreCase)))
 					return true;
 			}

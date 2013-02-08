@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -28,12 +29,14 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing.Sorting;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
+using Lucene.Net.Search.Vectorhighlight;
 
 namespace Raven.Database.Indexing
 {
@@ -70,6 +73,10 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
+		public TimeSpan LastIndexingDuration { get; set; }
+		public long TimePerDoc { get; set; }
+		public Task CurrentMapIndexingTask { get; set; } 
+
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
 			if (directory == null) throw new ArgumentNullException("directory");
@@ -102,6 +109,7 @@ namespace Raven.Database.Indexing
 				return lastQueryTime;
 			}
 		}
+
 		public DateTime LastIndexTime { get; set; }
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
@@ -127,17 +135,30 @@ namespace Raven.Database.Indexing
 				}
 
 				disposed = true;
+				var task = CurrentMapIndexingTask;
+				if (task != null)
+				{
+					try
+					{
+						task.Wait();
+					}
+					catch (Exception e)
+					{
+						logIndexing.Warn("Error while closing the index (could not wait for current indexing task)", e);
+					}
+				}
+
 				foreach (var indexExtension in indexExtensions)
 				{
 					indexExtension.Value.Dispose();
 				}
+
 				if (currentIndexSearcherHolder != null)
 				{
 					var item = currentIndexSearcherHolder.SetIndexSearcher(null, wait: true);
 					if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
 					{
 						logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
-						Console.Beep();
 					}
 				}
 
@@ -223,11 +244,11 @@ namespace Raven.Database.Indexing
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 
-		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
+		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
 			return new IndexQueryResult
 			{
-				Score = score,
+				Score = score.Score,
 				Key = document.Get(Constants.DocumentIdFieldName),
 				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
@@ -323,7 +344,7 @@ namespace Raven.Database.Indexing
 							shouldRecreateSearcher = changedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
-								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments);
+								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
 							}
 						}
 						catch (Exception e)
@@ -621,6 +642,11 @@ namespace Raven.Database.Indexing
 			return val;
 		}
 
+		public IIndexExtension GetExtensionByPrefix(string indexExtensionKeyPrefix)
+		{
+			return indexExtensions.FirstOrDefault(x => x.Key.StartsWith(indexExtensionKeyPrefix)).Value;
+		}
+
 		public void SetExtension(string indexExtensionKey, IIndexExtension extension)
 		{
 			indexExtensions.TryAdd(indexExtensionKey, extension);
@@ -664,11 +690,17 @@ namespace Raven.Database.Indexing
 						clonedField = new Field(field.Name, field.GetBinaryValue(),
 												field.IsStored ? Field.Store.YES : Field.Store.NO);
 					}
-					else
+					else if (field.StringValue != null)
 					{
 						clonedField = new Field(field.Name, field.StringValue,
-										field.IsStored ? Field.Store.YES : Field.Store.NO,
-										field.IsIndexed ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
+												field.IsStored ? Field.Store.YES : Field.Store.NO,
+												field.IsIndexed ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS,
+												field.IsTermVectorStored ? Field.TermVector.YES : Field.TermVector.NO);
+					}
+					else
+					{
+						//probably token stream, and we can't handle fields with token streams, so we skip this.
+						continue;
 					}
 					clonedDocument.Add(clonedField);
 				}
@@ -808,15 +840,68 @@ namespace Raven.Database.Indexing
 							indexQuery.TotalSize.Value = search.TotalHits;
 							adjustStart = false;
 
+							FastVectorHighlighter highlighter = null;
+							FieldQuery fieldQuery = null;
+
+							if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
+							{
+								highlighter = new FastVectorHighlighter(
+									FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
+									FastVectorHighlighter.DEFAULT_FIELD_MATCH,
+									new SimpleFragListBuilder(),
+									new SimpleFragmentsBuilder(
+										indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
+											? indexQuery.HighlighterPreTags
+											: BaseFragmentsBuilder.COLORED_PRE_TAGS,
+										indexQuery.HighlighterPostTags != null && indexQuery.HighlighterPostTags.Any()
+											? indexQuery.HighlighterPostTags
+											: BaseFragmentsBuilder.COLORED_POST_TAGS));
+
+								fieldQuery = highlighter.GetFieldQuery(luceneQuery);
+							}
+
 							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
-								Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+								var scoreDoc = search.ScoreDocs[i];
+								var document = indexSearcher.Doc(scoreDoc.Doc);
+								var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
 									skippedResultsInCurrentLoop++;
 									continue;
+								}
+
+								if (highlighter != null)
+								{
+									var highlightings =
+										from highlightedField in this.indexQuery.HighlightedFields
+										select new
+										{
+											highlightedField.Field,
+											highlightedField.FragmentsField,
+											Fragments = highlighter.GetBestFragments(
+												fieldQuery,
+												indexSearcher.IndexReader,
+												scoreDoc.Doc,
+												highlightedField.Field,
+												highlightedField.FragmentLength,
+												highlightedField.FragmentCount)
+										}
+										into fieldHighlitings
+										where fieldHighlitings.Fragments != null &&
+											  fieldHighlitings.Fragments.Length > 0
+										select fieldHighlitings;
+
+									if (fieldsToFetch.IsProjection || parent.IsMapReduce)
+									{
+										foreach (var highlighting in highlightings)
+											if (!string.IsNullOrEmpty(highlighting.FragmentsField))
+												indexQueryResult.Projection[highlighting.FragmentsField]
+													= new RavenJArray(highlighting.Fragments);
+									} else
+										indexQueryResult.Highligtings = highlightings
+											.ToDictionary(x => x.Field, x => x.Fragments);
 								}
 
 								returnedResults++;
@@ -901,7 +986,7 @@ namespace Raven.Database.Indexing
 						for (int i = indexQuery.Start; i < intersectResults.Count && (i - indexQuery.Start) < pageSizeBestGuess; i++)
 						{
 							Document document = indexSearcher.Doc(intersectResults[i].LuceneId);
-							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
 							if (ShouldIncludeInResults(indexQueryResult) == false)
 							{
 								indexQuery.SkippedResults.Value++;
@@ -950,7 +1035,7 @@ namespace Raven.Database.Indexing
 				for (int i = 0; i < min; i++)
 				{
 					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 			}
@@ -999,7 +1084,7 @@ namespace Raven.Database.Indexing
 				if (spatialIndexQuery != null)
 				{
 					var spatialStrategy = parent.viewGenerator.GetStrategyForField(spatialIndexQuery.SpatialFieldName);
-					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
+					var dq = SpatialIndex.MakeQuery(q, spatialStrategy, spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery { { q, Occur.MUST }, { dq, Occur.MUST } };
@@ -1158,7 +1243,7 @@ namespace Raven.Database.Indexing
 				for (int i = 0; i < min; i++)
 				{
 					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].Score);
+					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
 					alreadyReturned.Add(indexQueryResult.Projection);
 				}
 				return 0;

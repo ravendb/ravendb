@@ -42,6 +42,8 @@ namespace Raven.Client.Indexes
 			return enumerable.Take(indexQuery.PageSize);
 		}
 
+		public virtual bool IsMapReduce { get { return false; } }
+
 		/// <summary>
 		/// Gets the name of the index.
 		/// </summary>
@@ -76,7 +78,7 @@ namespace Raven.Client.Indexes
 		/// <param name="lat">Latitude</param>
 		/// <param name="lng">Longitude</param>
 		/// <returns></returns>
-		public static object SpatialGenerate(double lat, double lng)
+		public static object SpatialGenerate(double? lat, double? lng)
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
@@ -88,7 +90,7 @@ namespace Raven.Client.Indexes
 		/// <param name="lat">Latitude</param>
 		/// <param name="lng">Longitude</param>
 		/// <returns></returns>
-		public static object SpatialGenerate(string fieldName, double lat, double lng)
+		public static object SpatialGenerate(string fieldName, double? lat, double? lng)
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
@@ -101,7 +103,7 @@ namespace Raven.Client.Indexes
 			/// <param name="fieldName">The field name, will be used for querying</param>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
-			public static object Generate(string fieldName, double lat, double lng)
+			public static object Generate(string fieldName, double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 			}
@@ -111,7 +113,7 @@ namespace Raven.Client.Indexes
 			/// </summary>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
-			public static object Generate(double lat, double lng)
+			public static object Generate(double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 			}
@@ -399,8 +401,15 @@ namespace Raven.Client.Indexes
 				Reduce = Reduce,
 				TransformResults = TransformResults,
 				Stores = Stores,
-				StoresStrings = StoresStrings
+				StoresStrings = StoresStrings,
+				Suggestions = IndexSuggestions,
+				TermVectors = TermVectors
 			}.ToIndexDefinition(Conventions);
+		}
+
+		public override bool IsMapReduce
+		{
+			get { return Reduce != null; }
 		}
 
 		/// <summary>

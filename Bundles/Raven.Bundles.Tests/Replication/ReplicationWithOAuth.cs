@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;

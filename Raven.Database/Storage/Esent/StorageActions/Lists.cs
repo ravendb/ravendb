@@ -32,10 +32,15 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["name"], name, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["key"], key, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["etag"], uuidGenerator.CreateSequentialUuid(uuidType).TransformToValueForEsentSorting());
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
+				using (var columnStream = new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"]))
 				{
-					data.WriteTo(stream);
-					stream.Flush();
+					if (exists)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					{
+						data.WriteTo(stream);
+						stream.Flush();
+					}
 				}
 				update.Save();
 			}
@@ -47,7 +52,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Lists, key, Encoding.Unicode, MakeKeyGrbit.None);
 
-			if(Api.TrySeek(session, Lists, SeekGrbit.SeekEQ))
+			if (Api.TrySeek(session, Lists, SeekGrbit.SeekEQ))
 				Api.JetDelete(session, Lists);
 		}
 
@@ -81,7 +86,7 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 				var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
-				if(string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 					yield break;
 
 				count++;
@@ -97,7 +102,7 @@ namespace Raven.Storage.Esent.StorageActions
 					};
 				}
 			} while (Api.TryMoveNext(session, Lists) && count < take);
-		
+
 		}
 
 		public ListItem Read(string name, string key)

@@ -12,7 +12,7 @@ namespace Raven.Abstractions.Data
 			{
 				{"Text", "The encryption is correct."}
 			};
-			InDatabaseKeyVerificationDocumentContents.EnsureSnapshot();
+			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 		
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";

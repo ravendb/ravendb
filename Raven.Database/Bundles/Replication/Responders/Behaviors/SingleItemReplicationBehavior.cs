@@ -53,20 +53,12 @@ namespace Raven.Bundles.Replication.Responders
 			                                && existingMetadata[Constants.RavenDeleteMarker].Value<bool>();
 
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
-				existingDocumentIsDeleted == false &&
 				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))		// this update is direct child of the existing doc, so we are fine with overwriting this
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
-				AddWithoutConflict(id, existingEtag, metadata, incoming);
-				return;
-			}
 
-			if (existingDocumentIsInConflict == false &&				// if the current document is not in conflict, we can continue without having to keep conflict semantics
-				existingDocumentIsDeleted &&
-				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))	// this update is direct child of the existing doc, so we are fine with overwriting this
-			{
-				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
-				AddWithoutConflict(id, null, metadata, incoming);
+				var etag = existingDocumentIsDeleted == false ? existingEtag : (Guid?)null;
+				AddWithoutConflict(id, etag, metadata, incoming);
 				return;
 			}
 
@@ -132,8 +124,8 @@ namespace Raven.Bundles.Replication.Responders
 			if(existingMetadata.Value<bool>(Constants.RavenDeleteMarker)) //deleted locally as well
 			{
 				log.Debug("Replicating deleted item {0} from {1} that was deleted locally. Merging histories", id, Src);
-				var existingHistory = existingMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
-				var newHistory = metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+				var existingHistory = new RavenJArray(existingMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
+				var newHistory = new RavenJArray(metadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
 
 				foreach (var item in newHistory)
 				{

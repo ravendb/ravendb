@@ -50,25 +50,25 @@ namespace Raven.Client
 		/// Stores the specified entity with the specified etag.
 		/// The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
-		void Store(object entity, Guid etag);
+		Task StoreAsync(object entity, Guid etag);
 
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
-		void Store(object entity);
+		Task StoreAsync(object entity);
 
 		/// <summary>
 		/// Stores the specified entity with the specified etag, under the specified id
 		/// </summary>
-		void Store(object entity, Guid etag, string id);
+		Task StoreAsync(object entity, Guid etag, string id);
 
 		/// <summary>
 		/// Stores the specified dynamic entity, under the specified id
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		void Store(object entity, string id);
+		Task StoreAsync(object entity, string id);
 
 		/// <summary>
 		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="SaveChangesAsync"/> is called.
@@ -151,7 +151,8 @@ namespace Raven.Client
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <param name="indexName">Name of the index.</param>
-		IRavenQueryable<T> Query<T>(string indexName);
+		/// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
+		IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false);
 
 		/// <summary>
 		/// Dynamically queries RavenDB using LINQ
