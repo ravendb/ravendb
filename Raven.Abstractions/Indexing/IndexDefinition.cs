@@ -28,7 +28,6 @@ namespace Raven.Abstractions.Indexing
 			Fields = new List<string>();
 			Suggestions = new Dictionary<string, SuggestionOptions>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
-		    IsNew = false;
 		}
 
 		/// <summary>
@@ -83,11 +82,6 @@ namespace Raven.Abstractions.Indexing
 		}
 
 		public bool IsCompiled { get; set; }
-
-        /// <summary>
-        /// When first created, we want to behave a little differently and run in memory
-        /// </summary>
-        public bool IsNew { get; set; }
 
 		/// <summary>
 		/// Gets or sets the stores options
@@ -242,8 +236,6 @@ namespace Raven.Abstractions.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Temp"))
-					return "Temp";
 				if (name.StartsWith("Auto"))
 					return "Auto";
 				if (IsCompiled)

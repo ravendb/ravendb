@@ -202,7 +202,7 @@ namespace Raven.Database.Indexing
 			bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (indexDefinition.IsTemp || configuration.RunInMemory)
+            if (indexDefinitionStorage.IsNewThisSession(indexDefinition) || configuration.RunInMemory)
 			{
 				directory = new RAMDirectory();
 				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
@@ -380,7 +380,6 @@ namespace Raven.Database.Indexing
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
 			AssertAnalyzersValid(indexDefinition);
 
-		    indexDefinition.IsNew = true;
 			indexes.AddOrUpdate(indexDefinition.Name, n =>
 			{
 				var directory = OpenOrCreateLuceneDirectory(indexDefinition, encodedName);
@@ -438,6 +437,8 @@ namespace Raven.Database.Indexing
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery();
+
+		
 			return indexQueryOperation.Query();
 		}
 

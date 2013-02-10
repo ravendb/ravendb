@@ -54,7 +54,7 @@ namespace Raven.Database.Indexing
 
         public IndexingPriority Priority { get; set; }
 
-		/// <summary>
+	    /// <summary>
 		/// Note, this might be written to be multiple threads at the same time
 		/// We don't actually care for exact timing, it is more about general feeling
 		/// </summary>
@@ -419,22 +419,30 @@ namespace Raven.Database.Indexing
 
 		private void WriteInMemoryIndexToDiskIfNecessary(WorkContext context)
 		{
-			if (context.Configuration.RunInMemory || !indexDefinition.IsNew)
-				return;
-            
-			var dir = indexWriter.Directory as RAMDirectory;
-			if (dir == null ||
-				dir.SizeInBytes() < context.Configuration.TempIndexInMemoryMaxBytes) //TODO: Rename to NewIndexEtc
+			if (context.Configuration.RunInMemory || !context.IndexDefinitionStorage.IsNewThisSession(indexDefinition))
 				return;
 
-			indexWriter.Commit();
-			var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
-			directory = fsDir;
+            var dir = indexWriter.Directory as RAMDirectory;
+		    if (dir == null) return;
 
-			indexWriter.Analyzer.Close();
-			indexWriter.Dispose(true);
-		    indexDefinition.IsNew = false;
-			CreateIndexWriter();
+		    var stale = false;
+            var toobig = dir.SizeInBytes() >= context.Configuration.TempIndexInMemoryMaxBytes;
+
+            context.Database.TransactionalStorage.Batch(accessor =>
+            {
+                stale = accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
+            });
+   	
+            if (toobig || !stale)
+            {
+                indexWriter.Commit();
+			    var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+			    directory = fsDir;
+
+			    indexWriter.Analyzer.Close();
+			    indexWriter.Dispose(true);
+			    CreateIndexWriter();       
+            }
 		}
 
 		public RavenPerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
