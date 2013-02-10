@@ -23,6 +23,7 @@ namespace Raven.Abstractions.Data
 		public int? ReduceIndexingErrors { get; set; }
 		public Guid? LastReducedEtag { get; set; }
 		public DateTime? LastReducedTimestamp { get; set; }
+        public DateTime CreatedTimestamp { get; set; }
 
 		public IndexingPerformanceStats[] Performance { get; set; }
 

@@ -580,63 +580,91 @@ namespace Raven.Database.Indexing
 				value.Flush();
 			}
 
-		    documentDatabase.TransactionalStorage.Batch(accessor =>
-		    {
-		        var results = new Dictionary<string, DateTime>();
-		        foreach (var index in indexes)
-		        {
-		            var stats = accessor.Indexing.GetIndexStats(index.Key);
-                    if(stats.Priority.HasFlag(IndexingPriority.Idle))
-                        continue;
-                    if(index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase) == false) // TODO: a better way to do this when we remove temp indexes
-                        continue;
-
-		            var lastQueryTime = index.Value.LastQueryTime ?? DateTime.MinValue;
-		            results[index.Key] = lastQueryTime;
-		        }
-
-		        var sortedResults = results.OrderBy(x => x.Value).ToArray();
-		        for (int i = 0; i < Math.Min(2, sortedResults.Length); i++)
-		        {
-		            var nextQuery = indexes.OrderBy(x => x.Value.LastQueryTime ?? DateTime.MinValue)
-                        .FirstOrDefault(x => (x.Value.LastQueryTime ?? DateTime.MinValue) > sortedResults[i].Value);
-                    if(nextQuery.Key == null)
-                        continue;
-
-		            var nextIndexQueryTime = nextQuery.Value.LastQueryTime ?? DateTime.MinValue;
-
-                    if ((nextIndexQueryTime - sortedResults[i].Value).TotalHours > 1) // this index hasn't been queries for an hour after the newest index after it
-                    {
-                        accessor.Indexing.SetIndexPriority(sortedResults[i].Key, IndexingPriority.Idle);
-                        GetIndexByName(sortedResults[i].Key).Priority = IndexingPriority.Idle;
-                    }
-		        }
-
-		    });
-
-
-			documentDatabase.TransactionalStorage.Batch(accessor =>
-			{
-				var maxDate = latestPersistedQueryTime;
-				foreach (var index in indexes)
-				{
-					var lastQueryTime = index.Value.LastQueryTime ?? DateTime.MinValue;
-					if (lastQueryTime <= latestPersistedQueryTime)
-						continue;
-
-					accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
-					{
-						{"LastQueryTime", lastQueryTime}
-					}, UuidType.Indexing);
-
-					if (lastQueryTime > maxDate)
-						maxDate = lastQueryTime;
-				}
-				latestPersistedQueryTime = maxDate;
-			});
+		    SetUnusedIndexesToIdle();
+			UpdateLatestPersistedQueryTime();
 		}
 
-		public void FlushMapIndexes()
+	    private void UpdateLatestPersistedQueryTime()
+	    {
+	        documentDatabase.TransactionalStorage.Batch(accessor =>
+	        {
+	            var maxDate = latestPersistedQueryTime;
+	            foreach (var index in indexes)
+	            {
+	                var lastQueryTime = index.Value.LastQueryTime ?? DateTime.MinValue;
+	                if (lastQueryTime <= latestPersistedQueryTime)
+	                    continue;
+
+	                accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
+	                {
+	                    {"LastQueryTime", lastQueryTime}
+	                }, UuidType.Indexing);
+
+	                if (lastQueryTime > maxDate)
+	                    maxDate = lastQueryTime;
+	            }
+	            latestPersistedQueryTime = maxDate;
+	        });
+	    }
+
+	    private void SetUnusedIndexesToIdle()
+	    {
+	        documentDatabase.TransactionalStorage.Batch(accessor =>
+	        {
+	            var autoIndexesSortedByLastQueryTime =
+	                (from index in indexes
+	                 let stats = accessor.Indexing.GetIndexStats(index.Key)
+	                 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
+	                 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase) &&
+	                       stats.Priority.HasFlag(IndexingPriority.Idle)
+	                 orderby lastQueryTime
+	                 select new
+	                 {
+	                     LastQueryTime = lastQueryTime,
+	                     Index = index.Value,
+	                     Name = index.Key,
+	                     stats.Priority,
+                         CreationDate = stats.CreatedTimestamp
+	                 }).ToArray();
+
+	            var leastUsedThreshold = Math.Min(2, autoIndexesSortedByLastQueryTime.Length - 1);
+	            for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
+	            {
+	                var thisItem = autoIndexesSortedByLastQueryTime[i];
+	                var age = (DateTime.UtcNow - thisItem.CreationDate).TotalMinutes;
+	                var lastQuery = (DateTime.UtcNow - thisItem.LastQueryTime).TotalMinutes;
+	                var difference = age - lastQuery;
+
+                    // If it was created in the last 45 minutes and not queried since, it needs deleting
+	                if (difference < 5 && age > 45)
+	                {
+	                    accessor.Indexing.DeleteIndex(thisItem.Name);
+	                    continue;
+	                }
+                    // If it was created in the last 15 minutes and not queried since, it needs making idle
+                    if (difference < 5 && age > 15)
+                    {
+                        accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+                        thisItem.Index.Priority = IndexingPriority.Idle;
+                        continue;
+                    }
+
+                    // If it's a fairly established query then we need to determine whether there is any activity currently
+                    // If there is activity and this has not been queried against 'recently' it needs idling
+	                if (i < leastUsedThreshold)
+	                {
+	                    var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
+	                    if ((nextItem.LastQueryTime - thisItem.LastQueryTime).TotalHours > 1)
+	                    {
+	                        accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+	                        thisItem.Index.Priority = IndexingPriority.Idle;
+	                    }
+	                }
+	            }
+	        });
+	    }
+
+	    public void FlushMapIndexes()
 		{
 			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
 			{

@@ -73,6 +73,7 @@ namespace Raven.Storage.Managed
 				LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
                 Priority = (IndexingPriority)readResult.Key.Value<int>("priority"),
 				LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
+                CreatedTimestamp = readResult.Key.Value<DateTime>("createdTimestamp"),
 				LastReducedEtag =
 					readResult.Key.Value<byte[]>("lastReducedEtag") != null
 						? (Guid?)new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
@@ -97,7 +98,7 @@ namespace Raven.Storage.Managed
 				{"touches", 0},
 				{"lastEtag", Guid.Empty.ToByteArray()},
 				{"lastTimestamp", DateTime.MinValue},
-				
+				{"createdTimestamp", DateTime.UtcNow},
 				{"reduce_attempts", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
 				{"reduce_successes",createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
 				{"reduce_failures", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},

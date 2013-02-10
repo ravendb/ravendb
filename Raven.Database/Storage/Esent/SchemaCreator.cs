@@ -123,6 +123,14 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
+
+            Api.JetAddColumn(session, tableid, "created_timestamp", new JET_COLUMNDEF
+            {
+                cbMax = 8, //64 bits
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "attempts", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.Long,
