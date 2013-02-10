@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -98,7 +99,7 @@ namespace Raven.Storage.Managed
 				{"touches", 0},
 				{"lastEtag", Guid.Empty.ToByteArray()},
 				{"lastTimestamp", DateTime.MinValue},
-				{"createdTimestamp", DateTime.UtcNow},
+				{"createdTimestamp", SystemTime.UtcNow},
 				{"reduce_attempts", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
 				{"reduce_successes",createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
 				{"reduce_failures", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},

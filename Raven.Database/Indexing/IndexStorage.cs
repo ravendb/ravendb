@@ -615,8 +615,7 @@ namespace Raven.Database.Indexing
 	                (from index in indexes
 	                 let stats = accessor.Indexing.GetIndexStats(index.Key)
 	                 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
-	                 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase) &&
-	                       stats.Priority.HasFlag(IndexingPriority.Idle)
+	                 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
 	                 orderby lastQueryTime
 	                 select new
 	                 {
@@ -627,31 +626,39 @@ namespace Raven.Database.Indexing
                          CreationDate = stats.CreatedTimestamp
 	                 }).ToArray();
 
-	            var leastUsedThreshold = Math.Min(2, autoIndexesSortedByLastQueryTime.Length - 1);
+	            var idleChecks = 0;
 	            for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
 	            {
 	                var thisItem = autoIndexesSortedByLastQueryTime[i];
-	                var age = (DateTime.UtcNow - thisItem.CreationDate).TotalMinutes;
-	                var lastQuery = (DateTime.UtcNow - thisItem.LastQueryTime).TotalMinutes;
-	                var difference = age - lastQuery;
-
-                    // If it was created in the last 45 minutes and not queried since, it needs deleting
-	                if (difference < 5 && age > 45)
-	                {
-	                    accessor.Indexing.DeleteIndex(thisItem.Name);
-	                    continue;
-	                }
-                    // If it was created in the last 15 minutes and not queried since, it needs making idle
-                    if (difference < 5 && age > 15)
+	                var age = (SystemTime.UtcNow - thisItem.CreationDate).TotalMinutes;
+                    var lastQuery = (SystemTime.UtcNow - thisItem.LastQueryTime).TotalMinutes;
+	     
+                    if(age < 15)
+                        continue; // too young to make decisions about this one yet
+                    
+                    if ((age < 25 && lastQuery > 15) || 
+                        (age < 60 && lastQuery > 25))
                     {
                         accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
                         thisItem.Index.Priority = IndexingPriority.Idle;
                         continue;
                     }
 
+                    if(age < 90 && lastQuery > 30 &&
+                        thisItem.Priority.HasFlag(IndexingPriority.Idle))
+	                {
+                        // relatively young index, haven't been queried for a while already
+                        // can be safely removed, probably
+	                    accessor.Indexing.DeleteIndex(thisItem.Name);
+	                    continue;
+	                }
+
+	                if (thisItem.Priority.HasFlag(IndexingPriority.Idle))
+	                    continue;
+                    
                     // If it's a fairly established query then we need to determine whether there is any activity currently
                     // If there is activity and this has not been queried against 'recently' it needs idling
-	                if (i < leastUsedThreshold)
+	                if (++idleChecks < 2 && i < autoIndexesSortedByLastQueryTime.Length-1)
 	                {
 	                    var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
 	                    if ((nextItem.LastQueryTime - thisItem.LastQueryTime).TotalHours > 1)
