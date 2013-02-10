@@ -26,6 +26,7 @@ using Lucene.Net.Index;
 using WeightedFragInfo = Lucene.Net.Search.Vectorhighlight.FieldFragList.WeightedFragInfo;
 using SubInfo = Lucene.Net.Search.Vectorhighlight.FieldFragList.WeightedFragInfo.SubInfo;
 using Toffs = Lucene.Net.Search.Vectorhighlight.FieldPhraseList.WeightedPhraseInfo.Toffs;
+using System.Linq;
 
 namespace Lucene.Net.Search.Vectorhighlight
 {
@@ -116,10 +117,10 @@ namespace Lucene.Net.Search.Vectorhighlight
         protected virtual String MakeFragment(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo fragInfo)
         {
             int s = fragInfo.startOffset;
-            return MakeFragment(fragInfo, GetFragmentSource(buffer, index, values, s, fragInfo.endOffset), s);
+            return MakeFragment(fragInfo, GetFragmentSource(buffer, index, values, ref s, fragInfo), s);
         }
 
-        private String MakeFragment(WeightedFragInfo fragInfo, String src, int s)
+	    private String MakeFragment(WeightedFragInfo fragInfo, String src, int s)
         {
             StringBuilder fragment = new StringBuilder();
             int srcIndex = 0;
@@ -183,10 +184,105 @@ namespace Lucene.Net.Search.Vectorhighlight
                 index[0]++;
             }
             int eo = buffer.Length < endOffset ? buffer.Length : endOffset;
-            return buffer.ToString().Substring(startOffset, eo - startOffset);
+
+            return buffer.ToString(startOffset, eo - startOffset);
         }
 
-        protected virtual String GetPreTag(int num)
+		private string GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, ref int startOffset, WeightedFragInfo weightedFragInfo)
+		{
+			while (buffer.Length < weightedFragInfo.endOffset && index[0] < values.Length)
+			{
+				buffer.Append(values[index[0]].StringValue);
+				if (values[index[0]].IsTokenized && values[index[0]].StringValue.Length > 0 && index[0] + 1 < values.Length)
+					buffer.Append(' ');
+				index[0]++;
+			}
+
+			var endOffset = 0;
+			startOffset = buffer.Length - 1;
+
+			foreach (var subInfo in weightedFragInfo.subInfos)
+			{
+				foreach (var termsOffset in subInfo.termsOffsets)
+				{
+					if (termsOffset.startOffset < startOffset)
+						startOffset = termsOffset.startOffset;
+					if (termsOffset.endOffset > endOffset)
+						endOffset = termsOffset.endOffset;
+				}
+			}
+
+			var maxLength = weightedFragInfo.endOffset - weightedFragInfo.startOffset;
+			var bufferLength = buffer.Length;
+			var stopChars = new[] {',', '.', ';','!','?'};
+
+			while (endOffset - startOffset < maxLength - 2) // limit the size of the returned string
+			{
+				if (endOffset >= bufferLength) // out of range
+				{
+					endOffset = bufferLength;
+
+					startOffset = Math.Max(0, startOffset - maxLength - endOffset);
+					break;
+				}
+				if (startOffset == 0) // out of range
+				{
+					endOffset = Math.Min(bufferLength, startOffset + maxLength);
+					break;
+				}
+				var localStartOffset = startOffset;
+				if (stopChars.Any(c => c == buffer[localStartOffset]) && buffer[startOffset + 1] == ' ')
+				{
+					startOffset += 2; //remove the char and the white space
+
+					endOffset = Math.Min(bufferLength, startOffset + maxLength);
+					break;
+				}
+
+				endOffset++;
+				startOffset--;
+			}
+
+			int retStartOffset;
+			var retVal = TrimEdges(buffer, startOffset, endOffset, out retStartOffset); // cuts part words
+			startOffset = retStartOffset;
+			return retVal;
+		}
+
+		private string TrimEdges(StringBuilder buffer, int startOffset, int endOffset, out int retStartOffset)
+	    {
+		    var localStart = startOffset;
+		    var localEnd = endOffset;
+			if (startOffset != 0 && buffer[startOffset - 1] != ' ')
+		    {
+				while (buffer[localStart] != ' ' && localStart != endOffset)
+			    {
+				    localStart++;
+			    }
+
+				if(localStart == endOffset)
+					localStart = startOffset;
+		    }
+
+			if (endOffset != buffer.Length && buffer[endOffset + 1] != ' ')
+			{
+				while (buffer[localEnd] != ' ' && localEnd != localStart)
+				{
+					localEnd--;
+				}
+
+				if (localEnd == localStart)
+				{
+					localEnd = endOffset;
+					localStart = startOffset;
+				}
+			}
+
+		    retStartOffset = localStart;
+			return buffer.ToString(localStart, localEnd - localStart);
+	    }
+
+	    protected virtual String GetPreTag(int num)
         {
             int n = num % preTags.Length;
             return preTags[n];

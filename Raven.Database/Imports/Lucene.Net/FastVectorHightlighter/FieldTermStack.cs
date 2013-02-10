@@ -103,7 +103,7 @@ namespace Lucene.Net.Search.Vectorhighlight
         {
             this.fieldName = fieldName;
 
-            TermFreqVector tfv = reader.GetTermFreqVector(docId, fieldName);
+            var tfv = reader.GetTermFreqVector(docId, fieldName);
             if (tfv == null) return; // just return to make null snippets
             TermPositionVector tpv = null;
             try
@@ -128,7 +128,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                 int[] poss = tpv.GetTermPositions(index);
                 if (poss == null) return; // just return to make null snippets
                 for (int i = 0; i < tvois.Length; i++)
-                    termList.AddLast(new TermInfo(term, tvois[i].GetStartOffset(), tvois[i].GetEndOffset(), poss[i]));
+                    termList.AddLast(new TermInfo(term, tvois[i].StartOffset, tvois[i].EndOffset, poss[i]));
             }
 
             // sort by position
