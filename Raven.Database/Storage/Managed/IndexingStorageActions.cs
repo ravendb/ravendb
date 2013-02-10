@@ -207,7 +207,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IndexFailureInformation GetFailureRate(string index)
+	    public IndexFailureInformation GetFailureRate(string index)
 		{
 			var readResult = storage.IndexingStats.Read(index);
 			if (readResult == null)
@@ -235,7 +235,7 @@ namespace Raven.Storage.Managed
 			storage.IndexingStats.UpdateKey(key);
 		}
 
-        public void SetIndexingPriority(string index, IndexingPriority priority)
+        public void SetIndexPriority(string index, IndexingPriority priority)
         {
             var readResult = storage.IndexingStats.Read(index);
             if (readResult == null)

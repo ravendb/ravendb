@@ -133,7 +133,7 @@ namespace Raven.Storage.Esent
             {
                 coltyp = JET_coltyp.Long,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-            }, null, null, out columnid);
+            }, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "errors", new JET_COLUMNDEF
 			{

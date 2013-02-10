@@ -11,7 +11,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 {
     public class From45To46 : ISchemaUpdate
     {
-        public string FromSchemaVersion { get { return "4.5"} }
+        public string FromSchemaVersion { get { return "4.5"; } }
         
         public void Init(IUuidGenerator generator)
         {
