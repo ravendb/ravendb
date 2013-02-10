@@ -30,7 +30,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			var plugins = new PluginsStatus { Plugins = Directory.GetFiles(dir).Where(s => s.EndsWith(".dll")).Select(Path.GetFileName).ToList() };
+			var plugins = new PluginsStatus { Plugins = Directory.GetFiles(dir,"*.dll").Select(Path.GetFileNameWithoutExtension).ToList() };
 			
 
 			context.WriteJson(plugins);

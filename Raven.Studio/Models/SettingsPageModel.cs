@@ -92,7 +92,7 @@ namespace Raven.Studio.Models
 					{
 						var plugins = ((RavenJObject)item).Deserialize<PluginsStatus>(new DocumentConvention());
 
-						if (plugins == null || plugins.Plugins.Contains("Raven.Bundles.Authorization.dll") == false)
+						if (plugins == null || plugins.Plugins.Contains("Raven.Bundles.Authorization", StringComparer.InvariantCultureIgnoreCase) == false)
 							return;
 
 						var authSection = new AuthorizationSettingsSectionModel();
