@@ -130,7 +130,7 @@ namespace Raven.Database.Queries
                 documentDatabase.PutIndex(permanentIndexName, indexDefinition);
             }
             
-            return Tuple.Create(permanentIndexName, false);
+            return Tuple.Create(permanentIndexName, true);
 		
 		}
 	}
