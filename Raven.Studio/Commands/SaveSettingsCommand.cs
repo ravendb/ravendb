@@ -200,6 +200,16 @@ namespace Raven.Studio.Commands
             settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
 			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
 
+			string activeBundles;
+			settingsModel.DatabaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
+
+			if (activeBundles == null || activeBundles.Contains("PeriodicBackup") == false)
+			{
+				activeBundles = "PeriodicBackup;" + activeBundles;
+			}
+
+			settingsModel.DatabaseDocument.Settings["Raven/ActiveBundles"] = activeBundles;
+
 			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
