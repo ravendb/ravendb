@@ -15,13 +15,15 @@ namespace Raven.Tests.Notifications
 {
 	public class MultiTenant : RavenTest
 	{
+		private string url = "http://localhost:8079";
+
 		[Fact]
 		public void CanGetNotificationsFromTenant_DefaultDatabase()
 		{
 			using(GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8079",
+				Url = url,
 				DefaultDatabase = "test"
 			}.Initialize())
 			{
@@ -30,7 +32,7 @@ namespace Raven.Tests.Notifications
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
 				taskObservable
-					.ForDocument("items/1")
+					.ForDocument("items/1").Task.Result
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -54,14 +56,14 @@ namespace Raven.Tests.Notifications
 			using (GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8079",
+				Url = url,
 			}.Initialize())
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes("test").Task.Result;
 				taskObservable.Task.Result
-					.ForDocument("items/1")
+					.ForDocument("items/1").Task.Result
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession("test"))
@@ -85,16 +87,14 @@ namespace Raven.Tests.Notifications
 			using (GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8079",
+				Url = url,
 			}.Initialize())
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 				store.DatabaseCommands.EnsureDatabaseExists("another");
 				var list = new BlockingCollection<DocumentChangeNotification>();
-				var taskObservable = store.Changes("test");
-				taskObservable.Task.Wait();
-				taskObservable
-					.ForDocument("items/1")
+				store.Changes("test").Task.Result
+					.ForDocument("items/1").Task.Result
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession("another"))

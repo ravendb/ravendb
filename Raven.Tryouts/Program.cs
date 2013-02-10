@@ -1,13 +1,27 @@
 ﻿using System;
 using Raven.Tests.Indexes;
+using Raven.Tests.Notifications;
 
 internal class Program
 {
 	private static void Main(string[] args)
 	{
-		using (var x = new HighlightTesting())
+		for (int i = 0; i < 100; i++)
 		{
-			x.HighlightText();
+			Console.Clear();
+			Console.WriteLine(i);
+			using (var x = new MultiTenant())
+			{
+				x.CanGetNotificationsFromTenant_DefaultDatabase();
+			}
+			using (var x = new MultiTenant())
+			{
+				x.CanGetNotificationsFromTenant_ExplicitDatabase();
+			}
+			using (var x = new MultiTenant())
+			{
+				x.CanGetNotificationsFromTenant_AndNotFromAnother();
+			}
 		}
 	}
 
