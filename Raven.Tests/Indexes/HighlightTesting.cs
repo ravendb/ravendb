@@ -51,6 +51,7 @@ namespace Raven.Tests.Indexes
 
 			Index(x => x.Name, FieldIndexing.Analyzed);
 			Store(x => x.Name, FieldStorage.Yes);
+			TermVector(x => x.Name, FieldTermVector.WithPositionsAndOffsets);
 		}
 	}
 
