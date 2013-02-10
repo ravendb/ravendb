@@ -398,7 +398,12 @@ namespace Raven.Tests.Querying
 					{
 						{"Title", FieldIndexing.Analyzed},
 						{"Category", FieldIndexing.Analyzed}
-					}
+					},
+					TermVectors =
+						{
+							{"Title", FieldTermVector.WithPositionsAndOffsets},
+							{"Category", FieldTermVector.WithPositionsAndOffsets}							
+						}
 				});
 
 			var blogOne = new Blog
@@ -473,7 +478,12 @@ namespace Raven.Tests.Querying
 					{
 						{"Title", FieldIndexing.Analyzed},
 						{"Category", FieldIndexing.Analyzed}
-					}
+					},
+					TermVectors =
+						{
+							{"Title", FieldTermVector.WithPositionsAndOffsets},
+							{"Category", FieldTermVector.WithPositionsAndOffsets}							
+						}
 				});
 
 			var blogOne = new Blog
@@ -540,7 +550,12 @@ namespace Raven.Tests.Querying
 					{
 						{"Title", FieldIndexing.Analyzed},
 						{"Category", FieldIndexing.Analyzed}
-					}
+					},
+					TermVectors =
+						{
+							{"Title", FieldTermVector.WithPositionsAndOffsets},
+							{"Category", FieldTermVector.WithPositionsAndOffsets}							
+						}
 				});
 
 			var blogOne = new Blog

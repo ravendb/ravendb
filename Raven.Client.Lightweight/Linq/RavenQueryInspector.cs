@@ -157,7 +157,7 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new Dictionary<string, string>(), isMapReduce);
+			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
 		}
 
 		/// <summary>
@@ -167,7 +167,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>(), isMapReduce);
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
 				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
@@ -180,7 +180,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>(), isMapReduce);
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
 				var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
@@ -229,7 +229,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>(), isMapReduce);
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
 			if (isAsync)
 			{
 				var luceneQueryAsync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);

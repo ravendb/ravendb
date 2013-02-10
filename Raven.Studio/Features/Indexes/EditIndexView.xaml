@@ -111,7 +111,7 @@
 										 MinimumPrefixLength="0"
 										 IsTextCompletionEnabled="True"
 										 VerticalAlignment="Center"
-										 Margin="5,5,5,0">
+										 Margin="0,5,5,0">
 						<i:Interaction.Behaviors>
 							<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
 						</i:Interaction.Behaviors>
@@ -122,12 +122,24 @@
 						</i:Interaction.Triggers>
 					</sdk:AutoCompleteBox>
 
+                    <TextBlock Text="TermVector"
+                               Grid.Row="6"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0" />
+                    <ComboBox ItemsSource="{Binding TermVector, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+                              SelectedItem="{Binding TermVector, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+                              Grid.Row="6"
+                              Grid.Column="1"
+                              MinWidth="90"
+                              VerticalAlignment="Center" />
+                    
                     <TextBlock Text="Suggestion"
                                Grid.Row="6"
                                Grid.Column="2"
+                               Margin="8,0,4,0"
                                VerticalAlignment="Center" />
                     <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Right"
+                                HorizontalAlignment="Left"
                         Grid.Row="6"
                                 Grid.Column="3">
                         <ComboBox ItemsSource="{Binding SuggestionDistance, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"

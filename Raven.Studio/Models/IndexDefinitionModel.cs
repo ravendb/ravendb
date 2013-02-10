@@ -76,6 +76,7 @@ namespace Raven.Studio.Models
 
 			CreateOrEditField(index.Indexes, (f, i) => f.Indexing = i);
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
+			CreateOrEditField(index.TermVectors, (f, i) => f.TermVector = i);
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
 			CreateOrEditField(index.Suggestions, (f, i) =>
@@ -173,12 +174,14 @@ namespace Raven.Studio.Models
 			index.SortOptions.Clear();
 			index.Analyzers.Clear();
 			index.Suggestions.Clear();
+			index.TermVectors.Clear();
 			foreach (var item in Fields.Where(item => item.Name != null))
 			{
 				index.Indexes[item.Name] = item.Indexing;
 				index.Stores[item.Name] = item.Storage;
 				index.SortOptions[item.Name] = item.Sort;
 				index.Analyzers[item.Name] = item.Analyzer;
+				index.TermVectors[item.Name] = item.TermVector;
 				index.Suggestions[item.Name] = new SuggestionOptions { Accuracy = item.SuggestionAccuracy, Distance = item.SuggestionDistance };
 			}
 			index.RemoveDefaultValues();
@@ -642,6 +645,21 @@ namespace Raven.Studio.Models
 				}
 			}
 
+			private FieldTermVector termVector;
+			public FieldTermVector TermVector
+			{
+				get { return termVector; }
+				set
+				{
+					if (termVector != value)
+					{
+						termVector = value;
+						OnPropertyChanged(() => TermVector);
+					}
+				}
+			}
+
+
 			private SortOptions sort;
 			public SortOptions Sort
 			{
@@ -678,6 +696,7 @@ namespace Raven.Studio.Models
 					{
 						Storage = FieldStorage.No,
 						Indexing = FieldIndexing.Default,
+						TermVector =  FieldTermVector.No,
 						Sort = SortOptions.None,
 						Analyzer = string.Empty,
 						SuggestionAccuracy = 0,

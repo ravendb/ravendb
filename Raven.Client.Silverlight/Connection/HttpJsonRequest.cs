@@ -59,6 +59,7 @@ namespace Raven.Client.Silverlight.Connection
 			newWebRequest.Credentials = webRequest.Credentials;
 			result(newWebRequest);
 			webRequest = newWebRequest;
+			requestSendToServer = false;
 
 			if (postedData == null)
 			{

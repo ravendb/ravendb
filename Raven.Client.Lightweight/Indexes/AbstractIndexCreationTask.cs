@@ -403,6 +403,7 @@ namespace Raven.Client.Indexes
 				Stores = Stores,
 				StoresStrings = StoresStrings,
 				Suggestions = IndexSuggestions,
+				TermVectors = TermVectors
 			}.ToIndexDefinition(Conventions);
 		}
 

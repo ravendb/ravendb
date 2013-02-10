@@ -24,7 +24,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = null, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = null, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -66,7 +66,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc_WithRemoteDocumentStore()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = null, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = null, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -108,7 +108,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -149,7 +149,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc_WithRemoteDocumentStore()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -190,7 +190,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithPageSize_HitsDesc()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -231,7 +231,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithPageSize_HitsDesc_WithRemoteDocumentStore()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -272,7 +272,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithPageSize_HitsAsc()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsAsc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsAsc, IncludeRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -313,7 +313,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithPageSize_HitsAsc_WithRemoteDocumentStore()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsAsc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsAsc, IncludeRemainingTerms = true } };
 
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -354,7 +354,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithPageSize_TermDesc()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, IncludeRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -395,7 +395,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithPageSize_TermDesc_WithRemoteDocumentStore()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, IncludeRemainingTerms = true } };
 
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -436,7 +436,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedPagingSearchWithPageSize_TermAsc()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueAsc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueAsc, IncludeRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -476,7 +476,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_TermAsc_WithRemoteDocumentStore() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueAsc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueAsc, IncludeRemainingTerms = true } };
 
 			using( var store = NewRemoteDocumentStore() ) {
 				Setup( store );
@@ -513,7 +513,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_HitsDesc_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using( var store = NewDocumentStore() ) {
 				Setup( store );
@@ -550,7 +550,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_HitsDesc_WithRemoteDocumentStore_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using( var store = NewRemoteDocumentStore() ) {
 				Setup( store );
@@ -587,7 +587,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_HitsAsc_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsAsc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsAsc, IncludeRemainingTerms = true } };
 
 			using( var store = NewDocumentStore() ) {
 				Setup( store );
@@ -624,7 +624,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_HitsAsc_WithRemoteDocumentStore_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsAsc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.HitsAsc, IncludeRemainingTerms = true } };
 
 			using( var store = NewRemoteDocumentStore() ) {
 				Setup( store );
@@ -661,7 +661,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_TermDesc_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, IncludeRemainingTerms = true } };
 
 			using( var store = NewDocumentStore() ) {
 				Setup( store );
@@ -698,7 +698,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_TermDesc_WithRemoteDocumentStore_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, IncludeRemainingTerms = true } };
 
 			using( var store = NewRemoteDocumentStore() ) {
 				Setup( store );
@@ -735,7 +735,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_TermAsc_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueAsc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueAsc, IncludeRemainingTerms = true } };
 
 			using( var store = NewDocumentStore() ) {
 				Setup( store );
@@ -772,7 +772,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithPageSize_TermAsc_WithRemoteDocumentStore_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueAsc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueAsc, IncludeRemainingTerms = true } };
 
 			using( var store = NewRemoteDocumentStore() ) {
 				Setup( store );
@@ -809,7 +809,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = null, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = null, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using( var store = NewDocumentStore() ) {
 				Setup( store );
@@ -847,7 +847,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc_WithRemoteDocumentStore_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = null, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = null, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using( var store = NewRemoteDocumentStore() ) {
 				Setup( store );
@@ -885,7 +885,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using( var store = NewRemoteDocumentStore() ) {
 				Setup( store );
@@ -922,7 +922,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc_WithRemoteDocumentStore_LuceneQuery() {
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
 			using( var store = NewRemoteDocumentStore() ) {
 				Setup( store );

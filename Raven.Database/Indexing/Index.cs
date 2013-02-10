@@ -693,8 +693,9 @@ namespace Raven.Database.Indexing
 					else if (field.StringValue != null)
 					{
 						clonedField = new Field(field.Name, field.StringValue,
-						                        field.IsStored ? Field.Store.YES : Field.Store.NO,
-						                        field.IsIndexed ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
+												field.IsStored ? Field.Store.YES : Field.Store.NO,
+												field.IsIndexed ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS,
+												field.IsTermVectorStored ? Field.TermVector.YES : Field.TermVector.NO);
 					}
 					else
 					{

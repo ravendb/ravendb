@@ -210,16 +210,16 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 			catch (Exception e)
 			{
-				log.WarnException("Failure to replicate changes to relational database for " + cfg.Name +", updates", e);
+				log.WarnException("Failure to replicate changes to relational database for: " + cfg.Name + Environment.NewLine + e.Data["SQL"], e);
 				DateTime time, newTime;
 				if (lastError.TryGetValue(cfg.Name, out time) == false)
 				{
-					newTime = SystemTime.UtcNow.AddMinutes(1);
+					newTime = SystemTime.UtcNow.AddSeconds(5);
 				}
 				else
 				{
-					var totalMinutes = (SystemTime.UtcNow - time).TotalMinutes;
-					newTime = SystemTime.UtcNow.AddMinutes(Math.Max(10, Math.Min(1, totalMinutes + 1)));
+					var totalSeconds = (SystemTime.UtcNow - time).TotalSeconds;
+					newTime = SystemTime.UtcNow.AddSeconds(Math.Max(60 * 15, Math.Min(5, totalSeconds + 5)));
 				}
 				lastError[cfg.Name] = newTime;
 				return false;
@@ -305,7 +305,15 @@ namespace Raven.Database.Bundles.SqlReplication
 								                                commandBuilder.QuoteIdentifier(itemToReplicate.PkName),
 								                                dbParameter.ParameterName
 									);
-								cmd.ExecuteNonQuery();
+								try
+								{
+									cmd.ExecuteNonQuery();
+								}
+								catch (Exception e)
+								{
+									e.Data["SQL"] = cmd.CommandText;
+									throw;
+								}
 							}
 						}
 
@@ -350,7 +358,15 @@ namespace Raven.Database.Bundles.SqlReplication
 								sb.Length = sb.Length - 2;
 								sb.Append(")");
 								cmd.CommandText = sb.ToString();
-								cmd.ExecuteNonQuery();
+								try
+								{
+									cmd.ExecuteNonQuery();
+								}
+								catch (Exception e)
+								{
+									e.Data["SQL"] = cmd.CommandText;
+									throw;
+								}
 							}
 						}
 					}

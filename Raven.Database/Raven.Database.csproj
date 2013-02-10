@@ -193,6 +193,14 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Config\StronglyTypedRavenSettings.cs" />
+    <Compile Include="Config\Settings\BooleanSetting.cs" />
+    <Compile Include="Config\Settings\IntegerSetting.cs" />
+    <Compile Include="Config\Settings\IntegerSettingWithMin.cs" />
+    <Compile Include="Config\Settings\MultipliedIntegerSetting.cs" />
+    <Compile Include="Config\Settings\Setting.cs" />
+    <Compile Include="Config\Settings\StringSetting.cs" />
+    <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
     <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Extensions\AdminFinder.cs" />
@@ -241,6 +249,7 @@
     <Compile Include="Server\Responders\Admin\AdminRestore.cs" />
     <Compile Include="Server\Responders\BulkInsert.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
+    <Compile Include="Server\Responders\DatabaseStorageSizes.cs" />
     <Compile Include="Server\Responders\Debugging\DebugDocReferences.cs" />
     <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
     <Compile Include="Server\Responders\Identity.cs" />
@@ -373,6 +382,7 @@
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthCookie.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
     <Compile Include="Server\Security\Triggers\WindowsAuthDeleteTrigger.cs" />

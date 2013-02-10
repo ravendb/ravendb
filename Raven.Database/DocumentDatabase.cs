@@ -1921,6 +1921,46 @@ namespace Raven.Database
 		public TransportState TransportState { get; private set; }
 
 		/// <summary>
+		/// Get the total index storage size taken by the indexes on the disk.
+		/// This explicitly does NOT include in memory indexes.
+		/// </summary>
+		/// <remarks>
+		/// This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetIndexStorageSizeOnDisk()
+		{
+			if( Configuration.RunInMemory )
+				return 0;
+			var indexes = Directory.GetFiles( Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories );
+			var totalIndexSize = indexes.Sum( file =>
+			{
+				try
+				{
+					return new FileInfo( file ).Length;
+				} catch( FileNotFoundException )
+				{
+					return 0;
+				}
+			} );
+
+			return totalIndexSize;
+		}
+
+		/// <summary>
+		/// Get the total size taken by the database on the disk.
+		/// This explicitly does NOT include in memory database.
+		/// It does include any reserved space on the file system, which may significantly increase
+		/// the database size.
+		/// </summary>
+		/// <remarks>
+		/// This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetTransactionalStorageSizeOnDisk()
+		{
+			return Configuration.RunInMemory ? 0 : TransactionalStorage.GetDatabaseSizeInBytes();
+		}
+
+		/// <summary>
 		/// Get the total size taken by the database on the disk.
 		/// This explicitly does NOT include in memory indexes or in memory database.
 		/// It does include any reserved space on the file system, which may significantly increase
@@ -1933,20 +1973,7 @@ namespace Raven.Database
 		{
 			if (Configuration.RunInMemory)
 				return 0;
-			var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
-			var totalIndexSize = indexes.Sum(file =>
-			{
-				try
-				{
-					return new FileInfo(file).Length;
-				}
-				catch (FileNotFoundException)
-				{
-					return 0;
-				}
-			});
-
-			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
+			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk();
 		}
 
 		public Guid GetIndexEtag(string indexName, Guid? previousEtag)
