@@ -19,6 +19,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -29,14 +30,12 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing.Sorting;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
-using Lucene.Net.Search.Vectorhighlight;
 
 namespace Raven.Database.Indexing
 {
@@ -848,7 +847,7 @@ namespace Raven.Database.Indexing
 								highlighter = new FastVectorHighlighter(
 									FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
 									FastVectorHighlighter.DEFAULT_FIELD_MATCH,
-									new SimpleFragListBuilder(),
+									new SimpleFragListBuilder(), 
 									new SimpleFragmentsBuilder(
 										indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
 											? indexQuery.HighlighterPreTags
