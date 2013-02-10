@@ -359,8 +359,7 @@ namespace Raven.Database.Indexing
 						if (changedDocs > 0)
 						{
 							UpdateIndexingStats(context, stats);
-							WriteTempIndexToDiskIfNeeded(context);
-
+							WriteInMemoryIndexToDiskIfNecessary(context);
 							Flush(); // just make sure changes are flushed to disk
 						}
 					}
@@ -418,14 +417,14 @@ namespace Raven.Database.Indexing
 			indexWriter.SetRAMBufferSizeMB(1024);
 		}
 
-		private void WriteTempIndexToDiskIfNeeded(WorkContext context)
+		private void WriteInMemoryIndexToDiskIfNecessary(WorkContext context)
 		{
-			if (context.Configuration.RunInMemory || !indexDefinition.IsTemp)
+			if (context.Configuration.RunInMemory || !indexDefinition.IsNew)
 				return;
-
+            
 			var dir = indexWriter.Directory as RAMDirectory;
 			if (dir == null ||
-				dir.SizeInBytes() < context.Configuration.TempIndexInMemoryMaxBytes)
+				dir.SizeInBytes() < context.Configuration.TempIndexInMemoryMaxBytes) //TODO: Rename to NewIndexEtc
 				return;
 
 			indexWriter.Commit();
@@ -434,7 +433,7 @@ namespace Raven.Database.Indexing
 
 			indexWriter.Analyzer.Close();
 			indexWriter.Dispose(true);
-
+		    indexDefinition.IsNew = false;
 			CreateIndexWriter();
 		}
 

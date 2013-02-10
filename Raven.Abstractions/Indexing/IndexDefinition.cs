@@ -28,6 +28,7 @@ namespace Raven.Abstractions.Indexing
 			Fields = new List<string>();
 			Suggestions = new Dictionary<string, SuggestionOptions>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
+		    IsNew = false;
 		}
 
 		/// <summary>
@@ -83,13 +84,10 @@ namespace Raven.Abstractions.Indexing
 
 		public bool IsCompiled { get; set; }
 
-		/// <summary>
-		/// Returns a boolean value indicating whether this IndexDefinition is of a temporary index
-		/// </summary>
-		public bool IsTemp
-		{
-			get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase); }
-		}
+        /// <summary>
+        /// When first created, we want to behave a little differently and run in memory
+        /// </summary>
+        public bool IsNew { get; set; }
 
 		/// <summary>
 		/// Gets or sets the stores options
