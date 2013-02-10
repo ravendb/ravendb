@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Tests.Bugs;
 using Raven.Tests.Indexes;
 using Raven.Tests.Notifications;
 
@@ -10,17 +11,9 @@ internal class Program
 		{
 			Console.Clear();
 			Console.WriteLine(i);
-			using (var x = new MultiTenant())
+			using (var x = new AsyncCommit())
 			{
-				x.CanGetNotificationsFromTenant_DefaultDatabase();
-			}
-			using (var x = new MultiTenant())
-			{
-				x.CanGetNotificationsFromTenant_ExplicitDatabase();
-			}
-			using (var x = new MultiTenant())
-			{
-				x.CanGetNotificationsFromTenant_AndNotFromAnother();
+				x.DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalseWhenQuerying();
 			}
 		}
 	}
