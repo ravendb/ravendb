@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "4.5";
+		public const string SchemaVersion = "4.6";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -128,6 +128,12 @@ namespace Raven.Storage.Esent
 				coltyp = JET_coltyp.Long,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
 			}, defaultValue, defaultValue.Length, out columnid);
+
+            Api.JetAddColumn(session, tableid, "priority", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, null, out columnid);
 
 			Api.JetAddColumn(session, tableid, "errors", new JET_COLUMNDEF
 			{

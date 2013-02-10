@@ -119,7 +119,14 @@ namespace Raven.Database.Indexing
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
-						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
+					    IndexStats indexStats = accessor.Indexing.GetIndexStats(indexName);
+                        if (indexStats != null)
+                        {
+                            indexImplementation.Priority = indexStats.Priority;
+                        }
+
+
+					    var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
 						if (read == null)
 							return;
 
@@ -417,6 +424,16 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 
+            if (value.Priority.HasFlag(IndexingPriority.Idle) && value.Priority.HasFlag(IndexingPriority.Forced) == false)
+            {
+                documentDatabase.TransactionalStorage.Batch(accessor =>
+                {
+                    value.Priority = IndexingPriority.Normal;
+                    accessor.Indexing.SetIndexPriority(index, IndexingPriority.Normal);
+                    documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
+                });
+            }
+
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery();
@@ -560,6 +577,41 @@ namespace Raven.Database.Indexing
 
 				value.Flush();
 			}
+
+		    documentDatabase.TransactionalStorage.Batch(accessor =>
+		    {
+		        var results = new Dictionary<string, DateTime>();
+		        foreach (var index in indexes)
+		        {
+		            var stats = accessor.Indexing.GetIndexStats(index.Key);
+                    if(stats.Priority.HasFlag(IndexingPriority.Idle))
+                        continue;
+                    if(index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase) == false) // TODO: a better way to do this when we remove temp indexes
+                        continue;
+
+		            var lastQueryTime = index.Value.LastQueryTime ?? DateTime.MinValue;
+		            results[index.Key] = lastQueryTime;
+		        }
+
+		        var sortedResults = results.OrderBy(x => x.Value).ToArray();
+		        for (int i = 0; i < Math.Min(2, sortedResults.Length); i++)
+		        {
+		            var nextQuery = indexes.OrderBy(x => x.Value.LastQueryTime ?? DateTime.MinValue)
+                        .FirstOrDefault(x => (x.Value.LastQueryTime ?? DateTime.MinValue) > sortedResults[i].Value);
+                    if(nextQuery.Key == null)
+                        continue;
+
+		            var nextIndexQueryTime = nextQuery.Value.LastQueryTime ?? DateTime.MinValue;
+
+                    if ((nextIndexQueryTime - sortedResults[i].Value).TotalHours > 1) // this index hasn't been queries for an hour after the newest index after it
+                    {
+                        accessor.Indexing.SetIndexPriority(sortedResults[i].Key, IndexingPriority.Idle);
+                        GetIndexByName(sortedResults[i].Key).Priority = IndexingPriority.Idle;
+                    }
+		        }
+
+		    });
+
 
 			documentDatabase.TransactionalStorage.Batch(accessor =>
 			{

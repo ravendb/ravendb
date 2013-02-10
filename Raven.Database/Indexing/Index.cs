@@ -51,6 +51,9 @@ namespace Raven.Database.Indexing
 		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
+
+        public IndexingPriority Priority { get; set; }
+
 		/// <summary>
 		/// Note, this might be written to be multiple threads at the same time
 		/// We don't actually care for exact timing, it is more about general feeling

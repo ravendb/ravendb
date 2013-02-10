@@ -79,6 +79,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
 				IndexingErrors =
 					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
+                Priority = (IndexingPriority)Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["priority"]).Value,
 				LastIndexedEtag =
 					Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).
 						TransfromToGuidWithProperSorting(),
@@ -122,6 +123,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, IndexesStats, JET_prep.Insert))
 			{
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["priority"], 0);
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue.ToBinary());
 				update.Save();
@@ -229,6 +231,22 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 		}
+
+        public void SetIndexPriority(string index, IndexingPriority priority)
+        {
+            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+                throw new IndexDoesNotExistsException("There is no index named: " + index);
+
+            using (var update = new Update(session, IndexesStats, JET_prep.Replace))
+            {
+                Api.SetColumn(session, IndexesStats,
+                              tableColumnsCache.IndexesStatsColumns["priority"],
+                              (int)priority);
+                update.Save();
+            }
+        }
 
 		public void UpdateIndexingStats(string index, IndexingWorkStats stats)
 		{

@@ -6,6 +6,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
@@ -30,7 +31,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
-			if (IsMapStale(name) || hasReduce && IsReduceStale(name))
+			if (IsMapStale(name, isIdle: true) || hasReduce && IsReduceStale(name))
 			{
 				if (cutOff != null)
 				{
@@ -85,12 +86,19 @@ namespace Raven.Storage.Esent.StorageActions
 			return string.Equals(view, name, StringComparison.InvariantCultureIgnoreCase);
 		}
 
-		public bool IsMapStale(string name)
+		public bool IsMapStale(string name, bool isIdle)
 		{
 			 Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 				return false;
+            if (isIdle == false)
+            {
+                var priority = (IndexingPriority)Api.RetrieveColumnAsInt32(session, IndexesStats,
+                                                 tableColumnsCache.IndexesStatsColumns["priority"]).Value;
+                if (priority.HasFlag(IndexingPriority.Idle))
+                    return false;
+            }
 
 			var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
 			                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);

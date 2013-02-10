@@ -290,7 +290,7 @@ namespace Raven.Database.Indexing
 			public int size;
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle)
 		{
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
