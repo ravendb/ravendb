@@ -1799,7 +1799,7 @@ namespace Raven.Database
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup, databaseDocument);
 		}
 
-		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag = true)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{

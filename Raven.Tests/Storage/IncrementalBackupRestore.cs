@@ -58,7 +58,7 @@ namespace Raven.Tests.Storage
 					{"Raven/Esent/CircularLog", "false"}
 				}
 
-			}, BackupDir, DataDir, s => { });
+			}, BackupDir, DataDir, s => { }, defrag: true);
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 			

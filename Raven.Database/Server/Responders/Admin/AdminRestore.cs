@@ -73,13 +73,14 @@ namespace Raven.Database.Server.Responders.Admin
 
 			var restoreStatus = new List<string>();
 			SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, new TransactionInformation());
+			var defrag = "true".Equals(context.Request.QueryString["defrag"], StringComparison.InvariantCultureIgnoreCase);
 			DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
 			                         msg =>
 			                         {
 				                         restoreStatus.Add(msg);
 				                         SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 											 RavenJObject.FromObject(new {restoreStatus}), new RavenJObject(), null);
-			                         });
+			                         }, defrag);
 
 			if (databaseDocument == null)
 				return;
