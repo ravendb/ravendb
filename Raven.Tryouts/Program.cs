@@ -1,10 +1,14 @@
 ﻿using System;
+using Raven.Tests.Indexes;
 
 internal class Program
 {
 	private static void Main(string[] args)
 	{
-		Console.WriteLine(TimeSpan.FromHours(1123123).ToString(@"dddddddd\.hh\:mm\:ss\.fffffff"));
+		using (var x = new HighlightTesting())
+		{
+			x.HighlightText();
+		}
 	}
 
 	private static float T(double p0)
