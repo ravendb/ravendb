@@ -120,7 +120,7 @@ namespace Raven.Tests.Queries
 		}
 
 		[Fact]
-		public void SingleInvokedQueryShouldCreateOnlyCreatedTempIndex()
+		public void SingleInvokedQueryShouldCreateAutoIndex()
 		{
 			int initialIndexCount = db.Statistics.CountOfIndexes;
 
@@ -135,10 +135,7 @@ namespace Raven.Tests.Queries
 		  
 
 			var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto")).SingleOrDefault();
-			var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp")).SingleOrDefault();
-
-			Assert.False(string.IsNullOrEmpty(tempIndexName));
-			Assert.True(string.IsNullOrEmpty(autoIndexName));
+			Assert.False(string.IsNullOrEmpty(autoIndexName));
 		}
 
 		[Fact]
