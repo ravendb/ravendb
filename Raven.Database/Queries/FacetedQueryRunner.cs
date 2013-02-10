@@ -56,7 +56,8 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			new QueryForFacets(database, index, defaultFacets, rangeFacets, indexQuery, results, start, pageSize).Execute();
+			var queryForFacets = new QueryForFacets(database, index, defaultFacets, rangeFacets, indexQuery, results, start, pageSize);
+			queryForFacets.Execute();
 
 			return results;
 		}
@@ -299,7 +300,7 @@ namespace Raven.Database.Queries
 						RemainingHits = groups.Values.Sum() - (previousHits + values.Sum(x => x.Hits)),
 					};
 
-					if (facet.InclueRemainingTerms)
+					if (facet.IncludeRemainingTerms)
 						Results.Results[facet.Name].RemainingTerms = allTerms.Skip(Start + values.Count).ToList();
 				}
 			}

@@ -69,7 +69,7 @@ namespace Raven.Tests.Bundles.Expiration
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
-				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
+				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite));
 				session.SaveChanges();
 			}
 
@@ -80,16 +80,7 @@ namespace Raven.Tests.Bundles.Expiration
 				var metadata = session.Advanced.GetMetadataFor(company2);
 				var expirationDate = metadata["Raven-Expiration-Date"];
 				Assert.NotNull(expirationDate);
-				DateTime dateTime;
-				try
-				{
-					dateTime = expirationDate.Value<DateTime>();
-				}
-				catch (Exception e)
-				{
-					throw new IOException("Could not convert " + expirationDate + " " + expirationDate.Type + " value: " + expirationDate.Value<object>() + " " +
-										  " type: " + expirationDate.Value<object>().GetType().AssemblyQualifiedName, e);
-				}
+				DateTime dateTime = expirationDate.Value<DateTime>();
 				Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
 				Assert.Equal(expiry, expirationDate);
 			}

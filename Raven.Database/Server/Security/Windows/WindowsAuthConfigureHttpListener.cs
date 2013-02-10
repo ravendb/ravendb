@@ -24,7 +24,9 @@ namespace Raven.Database.Server.Security.Windows
 		{
 			var authHeader = request.Headers["Authorization"];
 			var hasApiKey = "True".Equals(request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
-			if(string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer ") || hasApiKey)
+			var hasOAuthTokenInCookie = request.Cookies["OAuth-Token"] != null;
+			if (hasApiKey || hasOAuthTokenInCookie || 
+					string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
 				// this is an OAuth request that has a token
 				// we allow this to go through and we will authenticate that on the OAuth Request Authorizer

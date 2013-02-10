@@ -529,7 +529,7 @@ namespace Raven.Client.Document
 				}
 				oauthSource = Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequestAsync(oauthSource);
+				return securedAuthenticator.DoOAuthRequestAsync(Url,oauthSource);
 			};
 
 		}

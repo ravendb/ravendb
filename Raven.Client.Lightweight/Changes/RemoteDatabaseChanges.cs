@@ -156,30 +156,47 @@ namespace Raven.Client.Changes
 				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnIndexChangeNotification += taskedObservable.Send;
-			counter.OnError = taskedObservable.Error;
+			counter.OnError += taskedObservable.Error;
 
 		
 			return taskedObservable;
 
 		}
 
+		private Task lastSendTask;
+
 		private Task Send(string command, string value)
 		{
-			try
+			lock (this)
 			{
-				var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
-				if (string.IsNullOrEmpty(value) == false)
-					sendUrl += "&value=" + Uri.EscapeUriString(value);
+				var sendTask = lastSendTask;
+				if (sendTask != null)
+				{
+					sendTask.ContinueWith(_ =>
+					{
+						Send(command, value);
+					});
+				}
 
-				sendUrl = sendUrl.NoCache();
+				try
+				{
+					var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
+					if (string.IsNullOrEmpty(value) == false)
+						sendUrl += "&value=" + Uri.EscapeUriString(value);
 
-				var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
-				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-				return httpJsonRequest.ExecuteRequestAsync().ObserveException();
-			}
-			catch (Exception e)
-			{
-				return new CompletedTask(e).Task.ObserveException();
+					sendUrl = sendUrl.NoCache();
+
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
+					var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
+					return lastSendTask =
+						httpJsonRequest.ExecuteRequestAsync()
+							.ObserveException()
+							.ContinueWith(task => lastSendTask = null);
+				}
+				catch (Exception e)
+				{
+					return new CompletedTask(e).Task.ObserveException();
+				}
 			}
 		}
 
@@ -207,7 +224,7 @@ namespace Raven.Client.Changes
 				notification => string.Equals(notification.Id, docId, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
-			counter.OnError = taskedObservable.Error;
+			counter.OnError += taskedObservable.Error;
 
 			return taskedObservable;
 		}
@@ -235,7 +252,7 @@ namespace Raven.Client.Changes
 				notification => true);
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
-			counter.OnError = taskedObservable.Error;
+			counter.OnError += taskedObservable.Error;
 
 			return taskedObservable;
 		}
@@ -264,7 +281,7 @@ namespace Raven.Client.Changes
 				notification => true);
 
 			counter.OnIndexChangeNotification += taskedObservable.Send;
-			counter.OnError = taskedObservable.Error;
+			counter.OnError += taskedObservable.Error;
 
 			return taskedObservable;
 		}
@@ -339,7 +356,6 @@ namespace Raven.Client.Changes
 			{
 				case "DocumentChangeNotification":
 					var documentChangeNotification = value.JsonDeserialization<DocumentChangeNotification>();
-
 					foreach (var counter in counters)
 					{
 						counter.Value.Send(documentChangeNotification);
@@ -351,7 +367,13 @@ namespace Raven.Client.Changes
 					foreach (var counter in counters)
 					{
 						counter.Value.Send(indexChangeNotification);
-					} break;
+					} 
+					break;
+				case "Initialized":
+				case "Heartbeat":
+					break;
+				default:
+					break;
 			}
 		}
 

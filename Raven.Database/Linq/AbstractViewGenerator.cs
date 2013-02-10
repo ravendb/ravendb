@@ -70,6 +70,8 @@ namespace Raven.Database.Linq
 
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
+		public IDictionary<string, FieldTermVector> TermVectors { get; set; } 
+
 		public HashSet<string> ForEntityNames { get; set; }
 
 		public string[] Fields
@@ -96,6 +98,7 @@ namespace Raven.Database.Linq
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 			SpatialStrategies = new ConcurrentDictionary<string, SpatialStrategy>();
+			TermVectors = new Dictionary<string, FieldTermVector>();
 		}
 
 		public void Init(IndexDefinition definition)

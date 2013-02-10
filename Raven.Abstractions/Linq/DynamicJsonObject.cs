@@ -196,8 +196,8 @@ namespace Raven.Abstractions.Linq
 						if (s.Length == 0)
 							return s;
 
-						//optimizations, don't try to call TryParse if first char isn't a digit
-						if (char.IsDigit(s[0]) == false)
+						//optimizations, don't try to call TryParse if first char isn't a digit or '-'
+						if (char.IsDigit(s[0]) == false && s[0] != '-')
 							return s;
 
 
@@ -213,6 +213,13 @@ namespace Raven.Abstractions.Linq
 						{
 							return dateTimeOffset;
 						}
+						TimeSpan timeSpan;
+						if (s.Contains(":")  && 
+							TimeSpan.TryParseExact(s,"c", CultureInfo.InvariantCulture, out timeSpan))
+						{
+							return timeSpan;
+						}
+
 					}
 					return value ?? new DynamicNullObject { IsExplicitNull = true };
 			}

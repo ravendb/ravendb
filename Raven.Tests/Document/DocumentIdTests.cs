@@ -26,7 +26,7 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
-		public void WithAsynchronousApiIdsAreGeneratedOnSaveChanges()
+		public void WithAsynchronousApiIdsAreGeneratedOnStoreAsync()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore
@@ -36,7 +36,23 @@ namespace Raven.Tests.Document
 			using (var session = store.OpenAsyncSession())
 			{
 				var obj = new TestObject { Name = "Test object" };
-				session.Store(obj);
+				session.StoreAsync(obj).Wait();
+				Assert.NotNull(obj.Id);
+			}
+		}
+
+		[Fact]
+		public void WithAsynchronousAdvancedStoreApiIdsAreGeneratedOnSaveChanges()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			using (var session = store.OpenAsyncSession())
+			{
+				var obj = new TestObject { Name = "Test object" };
+				session.Advanced.Store(obj);
 				Assert.Null(obj.Id);
 
 				session.SaveChangesAsync().Wait();

@@ -586,10 +586,15 @@ namespace Raven.Storage.Esent
 
 		public static void DisableIndexChecking(JET_INSTANCE jetInstance)
 		{
-			const int JET_paramEnableIndexCleanup = 54;
-
 			Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, JET_param.EnableIndexChecking, 0, null);
-			Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param)JET_paramEnableIndexCleanup, 0, null);	
+			if (Environment.OSVersion.Version >= new Version(5, 2))
+			{
+				// JET_paramEnableIndexCleanup is not supported on WindowsXP
+
+				const int JET_paramEnableIndexCleanup = 54;
+
+				Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param) JET_paramEnableIndexCleanup, 0, null);
+			}
 		}
 	}
 }
