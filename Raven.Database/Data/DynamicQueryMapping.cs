@@ -25,8 +25,6 @@ namespace Raven.Database.Data
 		public DynamicSortInfo[] SortDescriptors { get; set; }
 		public DynamicQueryMappingItem[] Items { get; set; }
 		public AggregationOperation AggregationOperation { get; set; }
-		public string TemporaryIndexName { get; set; }
-		public string PermanentIndexName { get; set; }
 		public string[] HighlightedFields { get; set; }
 
 		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
@@ -418,11 +416,7 @@ namespace Raven.Database.Data
 					: string.Format("Temp/{0}/By{1}{2}", targetName, indexName, groupBy);
 
 
-			// If there is a permanent index, then use that without bothering anything else
-			var permanentIndex = database.GetIndexDefinition(permanentIndexName);
-			map.PermanentIndexName = permanentIndexName;
-			map.TemporaryIndexName = temporaryIndexName;
-			map.IndexName = permanentIndex != null ? permanentIndexName : temporaryIndexName;
+		    map.IndexName = permanentIndexName;
 		}
 
 		public class DynamicSortInfo

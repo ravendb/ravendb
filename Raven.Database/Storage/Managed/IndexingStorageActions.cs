@@ -71,7 +71,7 @@ namespace Raven.Storage.Managed
 				ReduceIndexingSuccesses = readResult.Key.Value<int?>("reduce_successes"),
 				Name = readResult.Key.Value<string>("index"),
 				LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
-                Priority = readResult.Key.Value<IndexingPriority>("priority"),
+                Priority = (IndexingPriority)readResult.Key.Value<int>("priority"),
 				LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
 				LastReducedEtag =
 					readResult.Key.Value<byte[]>("lastReducedEtag") != null
