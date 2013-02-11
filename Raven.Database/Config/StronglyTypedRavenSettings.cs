@@ -89,9 +89,11 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/TaskScheduler"], (string) null);
 			AllowLocalAccessWithoutAuthorization =
 				new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
+            TimeToWaitBeforeRunningIdleIndexes = new IntegerSettingWithMin(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], 10, 1);
 		}
 
-		private string GetDefaultWebDir()
+	    
+	    private string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
 		}
@@ -170,5 +172,8 @@ namespace Raven.Database.Config
 		public StringSetting TaskScheduler { get; private set; }
 
 		public BooleanSetting AllowLocalAccessWithoutAuthorization { get; private set; }
-	}
+
+        public IntegerSettingWithMin TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+    
+    }
 }

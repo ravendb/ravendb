@@ -135,6 +135,7 @@ namespace Raven.Database.Config
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
+		    TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
 
 			ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
 
@@ -185,7 +186,9 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-		private void FilterActiveBundles()
+	    protected int TimeToWaitBeforeRunningIdleIndexes { get; set; }
+
+	    private void FilterActiveBundles()
 		{
 			var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
 

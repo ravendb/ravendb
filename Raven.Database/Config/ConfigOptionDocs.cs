@@ -54,6 +54,9 @@ namespace Raven.Database.Config
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
 			{"Raven/NewIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a new index held in memory. When a new index size reaches that value or is no longer stale, it will be using on disk indexing, rather then RAM indexing. Default: 25 MB."},
 			
+            // Idle 
+            {"Raven/TimeToWaitBeforeRunningIdleIndexes", "int", null, "How long in minutes the database should be idle for before updating low priority indexes, default: 10"},
+
 			// Auto Indexing
 			{"Raven/CreateAutoIndexesForAdHocQueriesIfNeeded", "bool", "true", "Whatever we allow creation of auto indexes on dynamic queries"},
 			
