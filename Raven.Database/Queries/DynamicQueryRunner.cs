@@ -111,10 +111,10 @@ namespace Raven.Database.Queries
 		private Tuple<string, bool> GetAppropriateIndexToQuery(string entityName, IndexQuery query, DynamicQueryMapping map)
 		{
 			var appropriateIndex = new DynamicQueryOptimizer(documentDatabase).SelectAppropriateIndex(entityName, query);
-			if (appropriateIndex != null)
+			if (appropriateIndex.MatchType == DynamicQueryMatchType.Complete)
 			{
-			    map.IndexName = appropriateIndex;
-				return Tuple.Create(appropriateIndex, false);
+			    map.IndexName = appropriateIndex.IndexName;
+				return Tuple.Create(appropriateIndex.IndexName, false);
 			}
 			return CreateAutoIndex(map.IndexName, map.CreateIndexDefinition);
 		}

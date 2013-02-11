@@ -636,7 +636,7 @@ namespace Raven.Database.Indexing
 	                var thisItem = autoIndexesSortedByLastQueryTime[i];
 	                var age = (SystemTime.UtcNow - thisItem.CreationDate).TotalMinutes;
                     var lastQuery = (SystemTime.UtcNow - thisItem.LastQueryTime).TotalMinutes;
-	     
+                    
                     if(age < 15)
                         continue; // too young to make decisions about this one yet
                     
