@@ -162,8 +162,14 @@ namespace Raven.Database.Indexing
 						},
 						x => x.Dispose());
 				}
-				return sourceCount;
+				return new WritingDocumentsInfo
+				{
+					ChangedDocs = sourceCount,
+					HighestETag = batch.HighestEtagInBatch,
+					ShouldStoreCommitPoint = true
+				};
 			});
+
 			AddindexingPerformanceStat(new IndexingPerformanceStats
 			{
 				OutputCount = count,
@@ -269,7 +275,16 @@ namespace Raven.Database.Indexing
 						context.AddError(name, null, e.Message);
 					},
 					batcher => batcher.Dispose());
-				return keys.Length;
+
+				IndexStats currentIndexStats = null;
+				context.TransactionalStorage.Batch(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(name));
+
+				return new WritingDocumentsInfo
+				{
+					ChangedDocs = keys.Length,
+					HighestETag = currentIndexStats.LastIndexedEtag,
+					ShouldStoreCommitPoint = true
+				};
 			});
 		}
 	}

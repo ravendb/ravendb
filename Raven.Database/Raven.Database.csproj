@@ -220,10 +220,13 @@
     <Compile Include="Extensions\AdminFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\CurrentIndexingScope.cs" />
+    <Compile Include="Indexing\IndexCommitPoint.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
+    <Compile Include="Indexing\WritingDocumentsInfo.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
+    <Compile Include="Indexing\IndexSegmentsInfo.cs" />
     <Compile Include="Indexing\LowerCaseKeywordTokenizer.cs" />
     <Compile Include="Indexing\LowerCaseWhitespaceAnalyzer.cs" />
     <Compile Include="Indexing\LowerCaseWhitespaceTokenizer.cs" />

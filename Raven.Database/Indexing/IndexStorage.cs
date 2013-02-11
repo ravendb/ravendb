@@ -32,6 +32,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
@@ -45,6 +46,8 @@ namespace Raven.Database.Indexing
 	{
 		private readonly DocumentDatabase documentDatabase;
 		private const string IndexVersion = "2.0.0.1";
+		private const string LastCommitPointDirectory = "CommitPoint";
+		private const string LastCommitPointFile = "index.commitPoint";
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -230,7 +233,24 @@ namespace Raven.Database.Indexing
 						if (configuration.ResetIndexOnUncleanShutdown)
 							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
 
-						CheckIndexAndRecover(directory, indexDirectory);
+						IndexCommitPoint lastCommitPoint;
+
+						if (TryReuseLastCommitPointToRecoverIndex(indexDefinition, indexFullPath, out lastCommitPoint) == false)
+						{
+							CheckIndexAndRecover(directory, indexDirectory);
+						}
+						else
+						{
+							if (lastCommitPoint == null)
+								throw new InvalidOperationException("Index '" + indexDefinition.Name + "' reused previous segment files after in order to recover, but NULL commit point was returned.");
+
+							documentDatabase.TransactionalStorage.Batch(
+								accessor =>
+								accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.LastIndexedETag,
+								                                    lastCommitPoint.TimeStamp));
+
+						}
+
 						directory.DeleteFile("writing-to-index.lock");
 					}
 				}
@@ -293,6 +313,106 @@ namespace Raven.Database.Indexing
 			sp.Restart();
 			checkIndex.FixIndex(status);
 			startupLog.Warn("Fixed index {0} in {1}", indexDirectory, sp.Elapsed);
+		}
+
+		public static void StoreCommitPoint(IndexCommitPoint indexCommit, string indexDirectory)
+		{
+			var commitPointDirectoryFullPath = Path.Combine(indexDirectory, LastCommitPointDirectory);
+
+			if (Directory.Exists(commitPointDirectoryFullPath))
+			{
+				Directory.Delete(commitPointDirectoryFullPath);
+			}
+
+			Directory.CreateDirectory(commitPointDirectoryFullPath);
+
+			using (var commitPointFile = File.Create(Path.Combine(commitPointDirectoryFullPath, LastCommitPointFile)))
+			{
+				var jsonSerializer = new JsonSerializer();
+				var textWriter = new JsonTextWriter(new StreamWriter(commitPointFile));
+
+				jsonSerializer.Serialize(textWriter, indexCommit);
+			}
+
+			File.Copy(Path.Combine(indexDirectory, indexCommit.SegmentsInfo.CurrentSegmentFileName), Path.Combine(commitPointDirectoryFullPath, indexCommit.SegmentsInfo.CurrentSegmentFileName));
+		}
+
+		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
+		{
+			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+
+			if (indexCommit.SegmentsInfo != null && indexCommit.SegmentsInfo.IsIndexCorrupted == false)
+			{
+				var commitPointDirectoryFullPath = Path.Combine(indexFullPath, LastCommitPointDirectory);
+
+				if (Directory.Exists(commitPointDirectoryFullPath))
+				{
+					IOExtensions.DeleteDirectory(commitPointDirectoryFullPath);
+				}
+
+				Directory.CreateDirectory(commitPointDirectoryFullPath);
+
+				using (var commitPointFile = File.Create(Path.Combine(commitPointDirectoryFullPath, LastCommitPointFile)))
+				{
+					using (var sw = new StreamWriter(commitPointFile))
+					{
+						var jsonSerializer = new JsonSerializer();
+						var textWriter = new JsonTextWriter(sw);
+
+						jsonSerializer.Serialize(textWriter, indexCommit);
+						
+						sw.Flush();
+					}
+				}
+
+				File.Copy(Path.Combine(indexFullPath, indexCommit.SegmentsInfo.CurrentSegmentFileName), Path.Combine(commitPointDirectoryFullPath, indexCommit.SegmentsInfo.CurrentSegmentFileName));
+			}
+		}
+
+		private static bool TryReuseLastCommitPointToRecoverIndex(IndexDefinition indexDefinition, string fullIndexPath, out IndexCommitPoint indexCommit)
+		{
+			indexCommit = null;
+
+			try
+			{
+				if (indexDefinition.IsMapReduce == false)
+					return false;
+
+				var commitPointDirectoryFullPath = Path.Combine(fullIndexPath, LastCommitPointDirectory);
+
+				if (Directory.Exists(commitPointDirectoryFullPath) == false)
+					return false;
+
+				using (var commitPointFile = File.Open(Path.Combine(commitPointDirectoryFullPath, LastCommitPointFile), FileMode.Open))
+				{
+					var jsonSerializer = new JsonSerializer();
+					var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+
+					indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+				}
+
+				var filesInIndexDirectory = Directory.GetFiles(fullIndexPath);
+
+				var missingFile =
+					indexCommit.SegmentsInfo.ReferencedFiles.Any(
+						referencedFile => filesInIndexDirectory.Contains(referencedFile) == false);
+
+				if (missingFile)
+				{
+					return false;
+				}
+
+				File.Copy(Path.Combine(commitPointDirectoryFullPath, indexCommit.SegmentsInfo.CurrentSegmentFileName), Path.Combine(fullIndexPath, indexCommit.SegmentsInfo.CurrentSegmentFileName), true);
+
+				return true;
+			}
+			catch (Exception ex)
+			{
+				log.ErrorException("Error occured during an attempt to recover an index named '" + indexDefinition.Name +
+				                   "'from last segment files", ex);
+
+				return false;
+			}
 		}
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)

@@ -242,7 +242,6 @@ namespace Raven.Database.Indexing
 
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
-
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
 			return new IndexQueryResult
@@ -304,7 +303,7 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
-		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, int> action)
+		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, WritingDocumentsInfo> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
@@ -314,6 +313,7 @@ namespace Raven.Database.Indexing
 				bool shouldRecreateSearcher;
 				var toDispose = new List<Action>();
 				Analyzer searchAnalyzer = null;
+				WritingDocumentsInfo info;
 				try
 				{
 					waitReason = "Write";
@@ -340,12 +340,12 @@ namespace Raven.Database.Indexing
 							logIndexing.Warn("Could not obtain the 'writing-to-index' lock of '{0}' index", name);
 						}
 
-						int changedDocs;
+						
 						var stats = new IndexingWorkStats();
 						try
 						{
-							changedDocs = action(indexWriter, searchAnalyzer, stats);
-							shouldRecreateSearcher = changedDocs > 0;
+							info = action(indexWriter, searchAnalyzer, stats);
+							shouldRecreateSearcher = info.ChangedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
 								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
@@ -357,7 +357,7 @@ namespace Raven.Database.Indexing
 							throw;
 						}
 
-						if (changedDocs > 0)
+						if (info.ChangedDocs > 0)
 						{
 							UpdateIndexingStats(context, stats);
 							WriteTempIndexToDiskIfNeeded(context);
@@ -382,9 +382,50 @@ namespace Raven.Database.Indexing
 					waitReason = null;
 					LastIndexTime = SystemTime.UtcNow;
 				}
+
+				if (info.ShouldStoreCommitPoint && info.HighestETag != null)
+				{
+					StoreCommitPoint(info.HighestETag.Value);
+				}
+
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
 			}
+		}
+
+		private void StoreCommitPoint(Guid latestIndexedETag)
+		{
+			var indexCommit = new IndexCommitPoint
+			{
+				LastIndexedETag = latestIndexedETag,
+				TimeStamp = SystemTime.UtcNow,
+				SegmentsInfo = GetCurrentSegmentsInfo()
+			};
+
+			context.IndexStorage.StoreCommitPoint(name, indexCommit);
+		}
+
+		private IndexSegmentsInfo GetCurrentSegmentsInfo()
+		{
+			var segmentInfos = new SegmentInfos();
+			var result = new IndexSegmentsInfo();
+
+			try
+			{
+				segmentInfos.Read(directory);
+
+				result.Generation = segmentInfos.Generation;
+				result.CurrentSegmentFileName = segmentInfos.GetCurrentSegmentFileName();
+				result.ReferencedFiles = segmentInfos.Files(directory, false);
+			}
+			catch (CorruptIndexException ex)
+			{
+				logIndexing.WarnException(string.Format("Could not read segment information for index '{0}'", name), ex);
+
+				result.IsIndexCorrupted = true;
+			}
+
+			return result;
 		}
 
 		protected void UpdateIndexingStats(WorkContext context, IndexingWorkStats stats)
@@ -1290,7 +1331,7 @@ namespace Raven.Database.Indexing
 							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
 							allFilesWriter.WriteLine(fileName);
 						}
-						return 0;
+						return WritingDocumentsInfo.WithoutCommitPoint(0);
 					});
 
 					var commit = snapshotter.Snapshot();

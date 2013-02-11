@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
 			var lastEtag = lastByEtag.Etag.Value;
 
 			context.IndexedPerSecIncreaseBy(jsonDocs.Count);
-			var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
+			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
 
 			ExecuteAllInterleaved(result, index => HandleIndexingFor(index, lastEtag, lastModified));
 
@@ -278,7 +278,7 @@ namespace Raven.Database.Indexing
 			public IndexingBatch Batch { get; set; }
 		}
 
-		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
+		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs, Guid highestETagInBatch)
 		{
 			var last = jsonDocs.Last();
 
@@ -323,7 +323,7 @@ namespace Raven.Database.Indexing
 				if (viewGenerator == null)
 					return; // probably deleted
 
-				var batch = new IndexingBatch();
+				var batch = new IndexingBatch(highestETagInBatch);
 
 				foreach (var item in filteredDocs)
 				{
