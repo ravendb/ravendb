@@ -328,7 +328,6 @@ namespace Raven.Client.Changes
 		}
 
 		private volatile bool disposed;
-		private IDisposable connection;
 
 		public Task DisposeAsync()
 		{

@@ -110,7 +110,6 @@
     <Compile Include="Connection\SerializationHelper.cs" />
     <Compile Include="Connection\ServerClient.cs" />
     <Compile Include="Connection\ServerHash.cs" />
-    <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Converters\GuidConverter.cs" />
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />
@@ -270,7 +269,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-	<Import Project="..\SharedLibs\Microsoft.Bcl\Microsoft.Bcl.targets" />
+  <Import Project="..\SharedLibs\Microsoft.Bcl\Microsoft.Bcl.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

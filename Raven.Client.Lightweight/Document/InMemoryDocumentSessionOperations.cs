@@ -564,12 +564,12 @@ more responsive application.
 			return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
 		}
 
-		public Task StoreAsync(object entity, Guid etag)
+		public Task StoreAsync(object entity, Etag etag)
 		{
 			return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true);
 		}
 
-		public Task StoreAsync(object entity, Guid etag, string id)
+		public Task StoreAsync(object entity, Etag etag, string id)
 		{
 			return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true);
 		}
@@ -579,7 +579,7 @@ more responsive application.
 			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
 		}
 
-		private Task StoreAsyncInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
+		private Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");

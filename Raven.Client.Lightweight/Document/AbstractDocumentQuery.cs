@@ -484,8 +484,6 @@ namespace Raven.Client.Document
 									  includes);
 		}
 
-#if !SILVERLIGHT  && !NETFX_CORE
-
 		public IndexQuery GetIndexQuery(bool isAsync)
 		{
 			var query = queryText.ToString();
@@ -493,6 +491,7 @@ namespace Raven.Client.Document
 			return indexQuery;
 		}
 
+#if !SILVERLIGHT  && !NETFX_CORE
 		/// <summary>
 		///   Gets the query result
 		///   Execute the query the first time that this is called.
@@ -717,8 +716,6 @@ namespace Raven.Client.Document
 			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
-
 		public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
 		{
 			highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
@@ -736,6 +733,7 @@ namespace Raven.Client.Document
 			highlighterPostTags = postTags;
 		}
 
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>

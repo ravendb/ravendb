@@ -12,7 +12,6 @@ using Raven.Client.Extensions;
 using Raven.Client.WinRT.Connection;
 #else
 using Raven.Client.Connection;
-using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 #endif
 using Raven.Imports.Newtonsoft.Json.Bson;
