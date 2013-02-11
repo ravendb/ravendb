@@ -204,14 +204,12 @@ namespace Raven.Storage.Esent.StorageActions
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, int take, 
-			List<object> itemsToDelete,
-			HashSet<Tuple<string, int>> itemsAlreadySeen
-		)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, int take, List<object> itemsToDelete, HashSet<Tuple<string, int>> itemsAlreadySeen, List<string> reduceKeysDone)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
 			var seenLocally = new HashSet<Tuple<string, int>>();
-			foreach (var reduceKey in reduceKeys)
+		    var reduceKeysLeft = reduceKeys.Where(x => !reduceKeysDone.Contains(x)).ToList();
+		    foreach (var reduceKey in reduceKeysLeft)
 			{
 				Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
@@ -274,6 +272,8 @@ namespace Raven.Storage.Esent.StorageActions
 					if (take <= 0)
 						break;
 				} while (Api.TryMoveNext(session, ScheduledReductions));
+
+                reduceKeysDone.Add(reduceKey);
 
 				if (take <= 0)
 					break;

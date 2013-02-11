@@ -102,6 +102,7 @@ namespace Raven.Database.Indexing
 
 				bool retry = true;
 				var itemsAlreadySeen = new HashSet<Tuple<string, int>>();
+                var reduceKeysDone = new List<string>();
 				while (retry)
 				{
 					transactionalStorage.Batch(actions =>
@@ -111,15 +112,11 @@ namespace Raven.Database.Indexing
                         var batchTimeWatcher = Stopwatch.StartNew();
 
 						var persistedResults = actions.MapReduce.GetItemsToReduce
-							(
-								level: level,
+							(index: index.IndexName,
 								reduceKeys: keysToReduce,
-								index: index.IndexName,
-								itemsToDelete: itemsToDelete,
+								level: level,
 								loadData: true,
-								take: context.CurrentNumberOfItemsToReduceInSingleBatch,
-								itemsAlreadySeen: itemsAlreadySeen
-							).ToList();
+                                take: this.context.CurrentNumberOfItemsToReduceInSingleBatch, itemsToDelete: itemsToDelete, itemsAlreadySeen: itemsAlreadySeen, reduceKeysDone: reduceKeysDone).ToList();
 						if (persistedResults.Count == 0)
 						{
 							retry = false;
@@ -202,15 +199,11 @@ namespace Raven.Database.Indexing
 				var batchTimeWatcher = Stopwatch.StartNew();
 
 				var scheduledItems = actions.MapReduce.GetItemsToReduce
-						(
-							level: 0,
+						(index: index.IndexName,
 							reduceKeys: keysToReduce,
-							index: index.IndexName,
-							itemsToDelete: itemsToDelete,
-							loadData: false,
-							take: int.MaxValue, // just get all, we do the rate limit when we load the number of keys to reduce, anyway
-							itemsAlreadySeen: new HashSet<Tuple<string, int>>()
-						).ToList();
+							level: 0,
+							loadData: false, // just get all, we do the rate limit when we load the number of keys to reduce, anyway
+							take: int.MaxValue, itemsToDelete: itemsToDelete, itemsAlreadySeen: new HashSet<Tuple<string, int>>(), reduceKeysDone: new List<string>()).ToList();
 
 				// Only look at the scheduled batch for this run, not the entire set of pending reductions.
 				//var batchKeys = scheduledItems.Select(x => x.ReduceKey).ToArray();
