@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Nberardi : RavenTest
+	public class RavenDB_852 : RavenTest
 	{
 		[Fact]
 		public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
