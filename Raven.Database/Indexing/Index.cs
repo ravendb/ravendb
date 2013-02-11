@@ -335,6 +335,11 @@ namespace Raven.Database.Indexing
 					var locker = directory.MakeLock("writing-to-index.lock");
 					try
 					{
+						if (locker.Obtain() == false)
+						{
+							logIndexing.Warn("Could not obtain the 'writing-to-index' lock of '{0}' index", name);
+						}
+
 						int changedDocs;
 						var stats = new IndexingWorkStats();
 						try
