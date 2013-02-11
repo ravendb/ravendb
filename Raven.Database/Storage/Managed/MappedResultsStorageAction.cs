@@ -152,8 +152,7 @@ namespace Raven.Storage.Managed
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			var seenLocally = new HashSet<Tuple<string, int>>();
-			var reduceKeysLeft = getItemsToReduceParams.ReduceKeys.Where(x => !getItemsToReduceParams.ReduceKeysDone.Contains(x)).ToList();
-			foreach (var reduceKey in reduceKeysLeft)
+			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
 				var keyCriteria = new RavenJObject
 			                  {
@@ -199,6 +198,8 @@ namespace Raven.Storage.Managed
 					if (getItemsToReduceParams.Take <= 0)
 						break;
 				}
+
+				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
 
 				if (getItemsToReduceParams.Take <= 0)
 					break;

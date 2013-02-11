@@ -208,8 +208,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
 			var seenLocally = new HashSet<Tuple<string, int>>();
-		    var reduceKeysLeft = getItemsToReduceParams.ReduceKeys.Where(x => !getItemsToReduceParams.ReduceKeysDone.Contains(x)).ToList();
-		    foreach (var reduceKey in reduceKeysLeft)
+		    foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
@@ -247,8 +246,7 @@ namespace Raven.Storage.Esent.StorageActions
 						continue;
 					if (levelFromDb != getItemsToReduceParams.Level)
 						continue;
-					if (string.IsNullOrEmpty(reduceKey) == false &&
-						string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+					if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
 						continue;
 
 					var bucket =
@@ -273,7 +271,7 @@ namespace Raven.Storage.Esent.StorageActions
 						break;
 				} while (Api.TryMoveNext(session, ScheduledReductions));
 
-                getItemsToReduceParams.ReduceKeysDone.Add(reduceKey);
+                getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
 
 				if (getItemsToReduceParams.Take <= 0)
 					break;

@@ -100,9 +100,14 @@ namespace Raven.Database.Indexing
 			{
 				var level = i;
 
+				var reduceParams = new GetItemsToReduceParams(
+					index.IndexName, 
+					keysToReduce, 
+					level,
+					true,
+					itemsToDelete);
+
 				bool retry = true;
-				var itemsAlreadySeen = new HashSet<Tuple<string, int>>();
-                var reduceKeysDone = new List<string>();
 				while (retry)
 				{
 					transactionalStorage.Batch(actions =>
@@ -111,8 +116,8 @@ namespace Raven.Database.Indexing
 
                         var batchTimeWatcher = Stopwatch.StartNew();
 
-						var persistedResults = actions.MapReduce.GetItemsToReduce
-							(new GetItemsToReduceParams(index: index.IndexName, reduceKeys: keysToReduce, level: level, loadData: true, take: context.CurrentNumberOfItemsToReduceInSingleBatch, itemsToDelete: itemsToDelete, itemsAlreadySeen: itemsAlreadySeen, reduceKeysDone: reduceKeysDone)).ToList();
+						reduceParams.Take = context.CurrentNumberOfItemsToReduceInSingleBatch;
+						var persistedResults = actions.MapReduce.GetItemsToReduce(reduceParams).ToList();
 						if (persistedResults.Count == 0)
 						{
 							retry = false;
@@ -194,9 +199,14 @@ namespace Raven.Database.Indexing
 			{
 				var batchTimeWatcher = Stopwatch.StartNew();
 
-				var scheduledItems = actions.MapReduce.GetItemsToReduce
-						(// just get all, we do the rate limit when we load the number of keys to reduce, anyway
-						 , new GetItemsToReduceParams(index: index.IndexName, reduceKeys: keysToReduce, level: 0, loadData: false, take: int.MaxValue, itemsToDelete: itemsToDelete, itemsAlreadySeen: new HashSet<Tuple<string, int>>(), reduceKeysDone: new List<string>())).ToList();
+				
+				var getItemsToReduceParams = new GetItemsToReduceParams(index: index.IndexName, reduceKeys: keysToReduce, level: 0,
+				                                                        loadData: false,
+																		itemsToDelete: itemsToDelete)
+				{
+					Take = int.MaxValue// just get all, we do the rate limit when we load the number of keys to reduce, anyway
+				};
+				var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
 
 				// Only look at the scheduled batch for this run, not the entire set of pending reductions.
 				//var batchKeys = scheduledItems.Select(x => x.ReduceKey).ToArray();
