@@ -739,6 +739,9 @@ namespace Raven.Database
 				Guid? preTouchEtag;
 				Guid? afterTouchEtag;
 				actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+
+				actions.General.MaybePulseTransaction();
+
 				if(preTouchEtag == null || afterTouchEtag == null)
 					continue;
 
