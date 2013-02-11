@@ -93,7 +93,7 @@ namespace Raven.Database.Indexing
 					}
 					if (foundWork == false)
 					{
-					    isIdle = context.WaitForWork(TimeSpan.FromMinutes(context.Configuration.NewIndexInMemoryMaxBytes), ref workCounter, FlushIndexes, name);
+					    isIdle = context.WaitForWork(context.Configuration.TimeToWaitBeforeRunningIdleIndexes, ref workCounter, FlushIndexes, name);
 					}
 					else // notify the tasks executer that it has work to do
 					{

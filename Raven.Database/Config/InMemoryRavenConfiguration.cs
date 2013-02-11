@@ -136,6 +136,7 @@ namespace Raven.Database.Config
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
 		    TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
+		    TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
 
 			ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
 
@@ -186,7 +187,8 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-	    protected int TimeToWaitBeforeRunningIdleIndexes { get; set; }
+	    public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+        public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; } 
 
 	    private void FilterActiveBundles()
 		{
@@ -654,7 +656,7 @@ namespace Raven.Database.Config
 
 		internal bool IsTenantDatabase { get; set; }
 
-		[Browsable(false)]
+	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{

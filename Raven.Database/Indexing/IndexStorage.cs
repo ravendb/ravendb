@@ -662,7 +662,7 @@ namespace Raven.Database.Indexing
 	                if (++idleChecks < 2 && i < autoIndexesSortedByLastQueryTime.Length-1)
 	                {
 	                    var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
-	                    if ((nextItem.LastQueryTime - thisItem.LastQueryTime).TotalHours > 1)
+	                    if ((nextItem.LastQueryTime - thisItem.LastQueryTime) > documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle)
 	                    {
 	                        accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
 	                        thisItem.Index.Priority = IndexingPriority.Idle;

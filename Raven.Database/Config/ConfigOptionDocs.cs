@@ -55,7 +55,8 @@ namespace Raven.Database.Config
 			{"Raven/NewIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a new index held in memory. When a new index size reaches that value or is no longer stale, it will be using on disk indexing, rather then RAM indexing. Default: 25 MB."},
 			
             // Idle 
-            {"Raven/TimeToWaitBeforeRunningIdleIndexes", "int", null, "How long in minutes the database should be idle for before updating low priority indexes, default: 10"},
+            {"Raven/TimeToWaitBeforeRunningIdleIndexes", "TimeSpan", "00:10:00", "How long the database should be idle for before updating low priority indexes, default: 10 minutes"},
+            {"Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle", "TimeSpan", "1:00:00", "How long the database should wait before marking an index with the idle flag, default: 1 hour"},
 
 			// Auto Indexing
 			{"Raven/CreateAutoIndexesForAdHocQueriesIfNeeded", "bool", "true", "Whatever we allow creation of auto indexes on dynamic queries"},
