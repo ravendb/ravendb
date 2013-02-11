@@ -257,7 +257,7 @@ namespace Raven.Client.Shard
 		/// Gets the etag of the last document written by any session belonging to this 
 		/// document store
 		///</summary>
-		public override Guid? GetLastWrittenEtag()
+		public override Etag GetLastWrittenEtag()
 		{
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}

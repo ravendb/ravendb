@@ -19,12 +19,12 @@ namespace Raven.Storage.Esent.StorageActions
 	public partial class DocumentStorageActions
 	{
 
-		private Guid EnsureDocumentEtagMatch(string key, Guid? etag, string method)
+		private Etag EnsureDocumentEtagMatch(string key, Etag etag, string method)
 		{
-			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
+			var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			if (existingEtag != etag && etag != null)
 			{
-				if(etag == Guid.Empty)
+				if(etag == Etag.InvalidEtag)
 				{
 					var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 					if(metadata.ContainsKey(Constants.RavenDeleteMarker) && 
@@ -38,24 +38,24 @@ namespace Raven.Storage.Esent.StorageActions
 											   "' using a non current etag")
 				{
 					ActualETag = existingEtag,
-					ExpectedETag = etag.Value
+					ExpectedETag = etag
 				};
 			}
 			return existingEtag;
 		}
 
-		private void EnsureDocumentEtagMatchInTransaction(string key, Guid? etag)
+		private void EnsureDocumentEtagMatchInTransaction(string key, Etag etag)
 		{
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Guid existingEtag;
+			Etag existingEtag;
 			if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ))
 			{
-				existingEtag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
+				existingEtag = Etag.Parse(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]));
 			}
 			else
 			{
-				existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
+				existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			}
 			if (existingEtag != etag && etag != null)
 			{
@@ -63,7 +63,7 @@ namespace Raven.Storage.Esent.StorageActions
 											   "' using a non current etag")
 				{
 					ActualETag = existingEtag,
-					ExpectedETag = etag.Value
+					ExpectedETag = etag
 				};
 			}
 		}
@@ -153,7 +153,9 @@ namespace Raven.Storage.Esent.StorageActions
 			var timeout = Api.RetrieveColumnAsInt64(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
 			if (SystemTime.UtcNow > DateTime.FromBinary(timeout.Value))// the timeout for the transaction has passed
 			{
+				var bookmark = Api.GetBookmark(session, Documents);
 				RollbackTransaction(guid);
+				Api.JetGotoBookmark(session, Documents, bookmark, bookmark.Length);
 				return;
 			}
 			throw new ConcurrencyException("Document '" + key + "' is locked by transaction: " + guid);

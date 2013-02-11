@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Issues
+﻿using Raven.Client.Extensions;
+
+namespace Raven.Tests.Issues
 {
 	using System.Collections.Generic;
 	using Raven.Client;

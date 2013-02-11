@@ -15,6 +15,7 @@ using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Client.Extensions;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Input;

@@ -74,7 +74,7 @@ namespace Raven.Database.Indexing
 		///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
 		///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
 		/// </summary>
-		public IEnumerable<AbstractField> CreateFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false)
+		public IEnumerable<AbstractField> CreateFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO)
 		{
 			if (string.IsNullOrWhiteSpace(name))
 				throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
@@ -87,16 +87,18 @@ namespace Raven.Database.Indexing
 
 			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
+			var termVector = indexDefinition.GetTermVector(name, defaultTermVector);
+
 			if (value == null)
 			{
 				yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-								 Field.Index.NOT_ANALYZED_NO_NORMS);
+								 Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				yield break;
 			}
 			if (Equals(value, string.Empty))
 			{
 				yield return CreateFieldWithCaching(name, Constants.EmptyString, storage,
-							 Field.Index.NOT_ANALYZED_NO_NORMS);
+							 Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				yield break;
 			}
 			if (value is DynamicNullObject)
@@ -109,14 +111,14 @@ namespace Raven.Database.Indexing
 						yield break; // we don't emit null for sorting	
 					}
 					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-														Field.Index.NOT_ANALYZED_NO_NORMS);
+														Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				}
 				yield break;
 			}
 			var boostedValue = value as BoostedValue;
 			if (boostedValue != null)
 			{
-				foreach (var field in CreateFields(name, boostedValue.Value, storage))
+				foreach (var field in CreateFields(name, boostedValue.Value, storage, false, termVector))
 				{
 					field.Boost = boostedValue.Boost;
 					field.OmitNorms = false;
@@ -135,7 +137,7 @@ namespace Raven.Database.Indexing
 			var bytes = value as byte[];
 			if (bytes != null)
 			{
-				yield return CreateBinaryFieldWithCaching(name, bytes, storage, fieldIndexingOptions);
+				yield return CreateBinaryFieldWithCaching(name, bytes, storage, fieldIndexingOptions, termVector);
 				yield break;
 			}
 
@@ -149,7 +151,7 @@ namespace Raven.Database.Indexing
 					if (nestedArray == false && !Equals(storage, Field.Store.NO) && sentArrayField == false)
 					{
 						sentArrayField = true;
-						yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+						yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 					}
 
 					if (CanCreateFieldsForNestedArray(itemToIndex, fieldIndexingOptions))
@@ -168,30 +170,35 @@ namespace Raven.Database.Indexing
 			if (Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED) ||
 				Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED_NO_NORMS))// explicitly not analyzed
 			{
-				// date time and date time offset have the same structure fo analyzed and not analyzed.
-				if (!(value is DateTime) && !(value is DateTimeOffset))
+				// date time, time span and date time offset have the same structure fo analyzed and not analyzed.
+				if (!(value is DateTime) && !(value is DateTimeOffset) && !(value is TimeSpan))
 				{
 					yield return CreateFieldWithCaching(name, value.ToString(), storage,
-														indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+														indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 					yield break;
 				}
 			}
 			if (value is string)
 			{
 				var index = indexDefinition.GetIndex(name, Field.Index.ANALYZED);
-				yield return CreateFieldWithCaching(name, value.ToString(), storage,
-								 index);
+				yield return CreateFieldWithCaching(name, value.ToString(), storage, index, termVector);
 				yield break;
 			}
 
-			if (value is DateTime)
+			if (value is TimeSpan)
+			{
+				var val = (TimeSpan)value;
+				yield return CreateFieldWithCaching(name, val.ToString("c",CultureInfo.InvariantCulture), storage,
+						   indexDefinition.GetIndex(name,  Field.Index.NOT_ANALYZED_NO_NORMS),termVector);
+			} 
+			else if (value is DateTime)
 			{
 				var val = (DateTime)value;
 				var dateAsString = val.ToString(Default.DateTimeFormatsToWrite);
 				if(val.Kind == DateTimeKind.Utc)
 					dateAsString += "Z";
 				yield return CreateFieldWithCaching(name, dateAsString, storage,
-						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 			else if (value is DateTimeOffset)
 			{
@@ -207,12 +214,12 @@ namespace Raven.Database.Indexing
 					dtoStr = val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
 				}
 				yield return CreateFieldWithCaching(name, dtoStr, storage,
-						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 			else if (value is bool)
 			{
 				yield return new Field(name, ((bool)value) ? "true" : "false", storage,
-							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 
 			}
 			else if (value is decimal)
@@ -226,71 +233,76 @@ namespace Raven.Database.Indexing
 						s = s.Substring(0, s.Length - 1);
 				}
 				yield return CreateFieldWithCaching(name, s, storage,
-									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 			else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible)value);
 				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), storage,
-									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 			else if (value is IDynamicJsonObject)
 			{
 				var inner = ((IDynamicJsonObject)value).Inner;
-				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				yield return CreateFieldWithCaching(name, inner.ToString(Formatting.None), storage,
-									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 			else
 			{
-				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(Formatting.None), storage,
-									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
+									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 
 
-			foreach (var numericField in CreateNumericFieldWithCaching(name, value, storage))
+			foreach (var numericField in CreateNumericFieldWithCaching(name, value, storage, termVector))
 				yield return numericField;
 		}
 
 		private IEnumerable<AbstractField> CreateNumericFieldWithCaching(string name, object value,
-			Field.Store defaultStorage)
+			Field.Store defaultStorage, Field.TermVector termVector)
 		{
 
 			var fieldName = name + "_Range";
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
-			var cacheKey = new FieldCacheKey(name, null, storage, multipleItemsSameFieldCount.ToArray());
+			var cacheKey = new FieldCacheKey(name, null, storage, termVector, multipleItemsSameFieldCount.ToArray());
 			NumericField numericField;
 			if (numericFieldsCache.TryGetValue(cacheKey, out numericField) == false)
 			{
 				numericFieldsCache[cacheKey] = numericField = new NumericField(fieldName, storage, true);
 			}
 
-			if (value is int)
+			if (value is TimeSpan)
+			{
+				yield return numericField.SetLongValue(((TimeSpan)value).Ticks);
+		
+			}
+			else if (value is int)
 			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Long)
 					yield return numericField.SetLongValue((int)value);
 				else
 					yield return numericField.SetIntValue((int)value);
 			}
-			if (value is long)
+			else if (value is long)
 			{
 				yield return numericField
 					.SetLongValue((long)value);
 			}
-			if (value is decimal)
+			else if (value is decimal)
 			{
 				yield return numericField
 					.SetDoubleValue((double)(decimal)value);
 			}
-			if (value is float)
+			else if (value is float)
 			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((float)value);
 				else
 					yield return numericField.SetFloatValue((float)value);
 			}
-			if (value is double)
+			else if (value is double)
 			{
 				yield return numericField
 					.SetDoubleValue((double)value);
@@ -317,12 +329,12 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		private Field CreateBinaryFieldWithCaching(string name, byte[] value, Field.Store store, Field.Index index)
+		private Field CreateBinaryFieldWithCaching(string name, byte[] value, Field.Store store, Field.Index index, Field.TermVector termVector)
 		{
 			if (value.Length > 1024)
 				throw new ArgumentException("Binary values must be smaller than 1Kb");
 
-			var cacheKey = new FieldCacheKey(name, null, store, multipleItemsSameFieldCount.ToArray());
+			var cacheKey = new FieldCacheKey(name, null, store, termVector, multipleItemsSameFieldCount.ToArray());
 			Field field;
 			var stringWriter = new StringWriter();
 			JsonExtensions.CreateDefaultJsonSerializer().Serialize(stringWriter, value);
@@ -333,7 +345,7 @@ namespace Raven.Database.Indexing
 
 			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
 			{
-				fieldsCache[cacheKey] = field = new Field(name, val, store, index);
+				fieldsCache[cacheKey] = field = new Field(name, val, store, index, termVector);
 			}
 			field.SetValue(val);
 			field.Boost = 1;
@@ -346,20 +358,25 @@ namespace Raven.Database.Indexing
 			private readonly string name;
 			private readonly Field.Index? index;
 			private readonly Field.Store store;
+			private readonly Field.TermVector termVector;
 			private readonly int[] multipleItemsSameField;
 
-			public FieldCacheKey(string name, Field.Index? index, Field.Store store, int[] multipleItemsSameField)
+			public FieldCacheKey(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
 			{
 				this.name = name;
 				this.index = index;
 				this.store = store;
+				this.termVector = termVector;
 				this.multipleItemsSameField = multipleItemsSameField;
 			}
 
 
 			protected bool Equals(FieldCacheKey other)
 			{
-				return string.Equals(name, other.name) && Equals(index, other.index) && Equals(store, other.store) &&
+				return string.Equals(name, other.name) && 
+					Equals(index, other.index) &&
+					Equals(store, other.store) &&
+					Equals(termVector, other.termVector) &&
 					multipleItemsSameField.SequenceEqual(other.multipleItemsSameField);
 			}
 
@@ -378,21 +395,22 @@ namespace Raven.Database.Indexing
 					int hashCode = (name != null ? name.GetHashCode() : 0);
 					hashCode = (hashCode * 397) ^ (index != null ? index.GetHashCode() : 0);
 					hashCode = (hashCode * 397) ^ store.GetHashCode();
+					hashCode = (hashCode * 397) ^ termVector.GetHashCode();
 					hashCode = multipleItemsSameField.Aggregate(hashCode, (h, x) => h * 397 ^ x);
 					return hashCode;
 				}
 			}
 		}
 
-		private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index)
+		private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index, Field.TermVector termVector)
 		{
-			var cacheKey = new FieldCacheKey(name, index, store, multipleItemsSameFieldCount.ToArray());
+			var cacheKey = new FieldCacheKey(name, index, store, termVector, multipleItemsSameFieldCount.ToArray());
 			Field field;
-			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
-			{
-				fieldsCache[cacheKey] = field = new Field(name, value, store, index);
-			}
-			field.SetValue(value);
+
+		    if (fieldsCache.TryGetValue(cacheKey, out field) == false)
+		        fieldsCache[cacheKey] = field = new Field(name, value, store, index, termVector);
+
+		    field.SetValue(value);
 			field.Boost = 1;
 			field.OmitNorms = true;
 			return field;

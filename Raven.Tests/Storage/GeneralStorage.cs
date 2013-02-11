@@ -43,13 +43,13 @@ namespace Raven.Tests.Storage
 		public void Can_query_by_id_prefix()
 		{
 			db.Put("abc", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Hello", null, new RavenJObject {{"a", "b"}}, new RavenJObject(), null);
+			db.Put("Raven/Databases/Hello", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 			db.Put("Raven/Databases/Northwind", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 			db.Put("Raven/Databases/Sys", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 			db.Put("Raven/Databases/Db", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 			db.Put("Raven/Database", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
-			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/",null, 0, 10);
+			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/", null, 0, 10);
 
 			Assert.Equal(4, dbs.Length);
 		}
@@ -64,7 +64,7 @@ namespace Raven.Tests.Storage
 				.Single();
 			var id = doc["@metadata"].Value<string>("@id");
 			Assert.False(string.IsNullOrWhiteSpace(id));
-			Assert.DoesNotThrow(() => new Guid(id)); 
+			Assert.DoesNotThrow(() => new Guid(id));
 		}
 
 		[Fact]
@@ -104,7 +104,7 @@ namespace Raven.Tests.Storage
 				{
 					foreach (var property in key.ToArray())// nothing in .NET supports iterating & modifying at the same time, no news here
 					{
-						if(property.Value.Type != JTokenType.String)
+						if (property.Value.Type != JTokenType.String)
 							continue;
 						var value = property.Value.Value<string>();
 						if (value.EndsWith("==") == false)
@@ -117,7 +117,7 @@ namespace Raven.Tests.Storage
 				switch (command.Value<string>("Cmd"))
 				{
 					case "Put":
-						table.Put(command["Key"], new byte[] {1, 2, 3}, txId);
+						table.Put(command["Key"], new byte[] { 1, 2, 3 }, txId);
 						break;
 					case "Del":
 						table.Remove(command["Key"], txId);
@@ -132,18 +132,18 @@ namespace Raven.Tests.Storage
 			Assert.Null(tableStorage.Tasks["ByIndexAndTime"].LastOrDefault());
 		}
 
-	    [Fact]
+		[Fact]
 		public void CanAddAndRemoveMultipleTasks_InSingleTx()
 		{
-			db.TransactionalStorage.Batch(actions=>
+			db.TransactionalStorage.Batch(actions =>
 			{
 				for (int i = 0; i < 3; i++)
 				{
 					actions.Tasks.AddTask(new RemoveFromIndexTask
 					{
 						Index = "foo",
-						Keys = { "tasks/"+i },
-					},SystemTime.UtcNow);
+						Keys = { "tasks/" + i },
+					}, SystemTime.UtcNow);
 				}
 			});
 
@@ -172,7 +172,7 @@ namespace Raven.Tests.Storage
 				Assert.Equal(1, actions.Documents.GetDocumentsCount());
 
 				RavenJObject metadata;
-				Guid? tag;
+				Etag tag;
 				actions.Documents.DeleteDocument("a", null, out metadata, out tag);
 			});
 
@@ -187,7 +187,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsAfter(Guid.Empty,5).ToArray();
+				var documents = actions.Documents.GetDocumentsAfter(Etag.Empty, 5).ToArray();
 				Assert.Equal(1, documents.Length);
 			});
 		}
@@ -204,8 +204,8 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var doc = actions.Documents.DocumentByKey("a",null);
-				var documents = actions.Documents.GetDocumentsAfter(doc.Etag.Value, 5).Select(x => x.Key).ToArray();
+				var doc = actions.Documents.DocumentByKey("a", null);
+				var documents = actions.Documents.GetDocumentsAfter(doc.Etag, 5).Select(x => x.Key).ToArray();
 				Assert.Equal(2, documents.Length);
 				Assert.Equal("b", documents[0]);
 				Assert.Equal("c", documents[1]);
@@ -222,17 +222,17 @@ namespace Raven.Tests.Storage
 				actions.Documents.AddDocument("c", null, new RavenJObject(), new RavenJObject());
 			});
 
-			Guid guid = Guid.Empty;
+			Etag etag = null;
 			db.TransactionalStorage.Batch(actions =>
 			{
 				var doc = actions.Documents.DocumentByKey("a", null);
-				guid = doc.Etag.Value;
+				etag = doc.Etag;
 				actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
 			});
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsAfter(guid, 5).Select(x => x.Key).ToArray();
+				var documents = actions.Documents.GetDocumentsAfter(etag, 5).Select(x => x.Key).ToArray();
 				Assert.Equal(3, documents.Length);
 				Assert.Equal("b", documents[0]);
 				Assert.Equal("c", documents[1]);
@@ -252,8 +252,8 @@ namespace Raven.Tests.Storage
 					var thread = new Thread(() =>
 					{
 						var cmds = new List<ICommandData>();
-						 for (var k = 0; k < 100; k++)
-						 {
+						for (var k = 0; k < 100; k++)
+						{
 							var newId = Interlocked.Increment(ref numberOfDocsAdded);
 							cmds.Add(new PutCommandData
 							{
@@ -269,26 +269,26 @@ namespace Raven.Tests.Storage
 				}
 
 				var docs = new List<string>();
-				var lastEtag = Guid.Empty;
+				var lastEtag = Etag.Empty;
 				var total = 0;
-			    var stop = false;
-			    do
-			    {
+				var stop = false;
+				do
+				{
 					var etag = lastEtag;
-			        var jsonDocuments = new JsonDocument[0];
-			        db.TransactionalStorage.Batch(actions =>
-			        {
+					var jsonDocuments = new JsonDocument[0];
+					db.TransactionalStorage.Batch(actions =>
+					{
 						jsonDocuments = actions.Documents.GetDocumentsAfter(etag, 1000).Where(x => x != null).ToArray();
-			        });
-					docs.AddRange(jsonDocuments.Select(x=>x.Key));
-			        total += jsonDocuments.Length;
-			    	if (jsonDocuments.Length > 0)
-			    		lastEtag = jsonDocuments.Last().Etag.Value;
-			    	if (stop)
+					});
+					docs.AddRange(jsonDocuments.Select(x => x.Key));
+					total += jsonDocuments.Length;
+					if (jsonDocuments.Length > 0)
+						lastEtag = jsonDocuments.Last().Etag;
+					if (stop)
 						break;
 					if (threads.All(x => !x.IsAlive))
 						stop = true;
-			    } while (true);
+				} while (true);
 
 				Assert.Equal(numberOfDocsAdded, total);
 			}
@@ -328,7 +328,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanEnqueueAndPeek()
 		{
-			db.TransactionalStorage.Batch(actions => actions.Queue.EnqueueToQueue("ayende", new byte[]{1,2}));
+			db.TransactionalStorage.Batch(actions => actions.Queue.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
 
 			db.TransactionalStorage.Batch(actions => Assert.Equal(new byte[] { 1, 2 }, actions.Queue.PeekFromQueue("ayende").First().Item1));
 		}
@@ -363,7 +363,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetNewIdentityValues()
 		{
-			db.TransactionalStorage.Batch(actions=>
+			db.TransactionalStorage.Batch(actions =>
 			{
 				var nextIdentityValue = actions.General.GetNextIdentityValue("users");
 

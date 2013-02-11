@@ -12,8 +12,8 @@ namespace Raven.Database.Storage
 {
 	public interface ITransactionStorageActions
 	{
-		Guid AddDocumentInTransaction(string key, Guid? etag, RavenJObject data, RavenJObject metadata, TransactionInformation transactionInformation);
-		bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag);
+		Etag AddDocumentInTransaction(string key, Etag etag, RavenJObject data, RavenJObject metadata, TransactionInformation transactionInformation);
+		bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Etag etag);
 		void RollbackTransaction(Guid txId);
 		void ModifyTransactionId(Guid fromTxId, Guid toTxId, TimeSpan timeout);
 		void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified);

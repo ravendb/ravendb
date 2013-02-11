@@ -52,12 +52,11 @@ namespace Raven.Tests.NotModified
 			using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				// Store an item
-				Guid? firstEtag;
+				Raven.Abstractions.Data.Etag firstEtag;
 				using (var session = docStore.OpenSession())
 				{
 					session.Store(firstItemToStore);
 					session.SaveChanges();
-					firstEtag = session.Advanced.GetEtagFor(firstItemToStore);
 				}
 
 				// Here, we should get the same etag we got when we asked the session
@@ -65,7 +64,7 @@ namespace Raven.Tests.NotModified
 				using (var response = GetHttpResponseHandle304(getRequest))
 				{
 					Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-					Assert.Equal(firstEtag, response.GetEtagHeader());
+					firstEtag = response.GetEtagHeader();
 				}
 
 				// If we ask with If-None-Match (and it's a match), we'll get 304 Not Modified
@@ -77,12 +76,11 @@ namespace Raven.Tests.NotModified
 				}
 
 				// Change the item or add a second item
-				Guid? secondEtag;
+				Raven.Abstractions.Data.Etag secondEtag;
 				using (var session = docStore.OpenSession())
 				{
 					session.Store(secondItemToStore);
 					session.SaveChanges();
-					secondEtag = session.Advanced.GetEtagFor(secondItemToStore);
 				}
 
 				// If we ask with the old etag, we'll get a new result
@@ -91,7 +89,7 @@ namespace Raven.Tests.NotModified
 				using (var response = GetHttpResponseHandle304(getRequest))
 				{
 					Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-					Assert.Equal(secondEtag, response.GetEtagHeader());
+					secondEtag = response.GetEtagHeader();
 				}
 
 				// If we ask with the new etag, we'll get 304 Not Modified

@@ -33,6 +33,7 @@ namespace Raven.Studio.Models
 		public HomeModel()
 		{
 			ModelUrl = "/home";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
 		}
 
 	    private bool isGeneratingSampleData;

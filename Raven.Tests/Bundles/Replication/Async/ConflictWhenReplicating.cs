@@ -6,6 +6,7 @@
 using System;
 using System.Threading;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
 

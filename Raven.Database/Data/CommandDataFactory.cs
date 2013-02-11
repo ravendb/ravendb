@@ -62,9 +62,9 @@ namespace Raven.Database.Data
 			}
 		}
 
-		private static Guid? GetEtagFromCommand(RavenJObject jsonCommand)
+		private static Etag GetEtagFromCommand(RavenJObject jsonCommand)
 		{
-			return jsonCommand["Etag"] != null && jsonCommand["Etag"].Value<string>() != null ? new Guid(jsonCommand["Etag"].Value<string>()) : (Guid?)null;
+			return jsonCommand["Etag"] != null && jsonCommand["Etag"].Value<string>() != null ? Etag.Parse(jsonCommand["Etag"].Value<string>()) : null;
 		}
 	}
 }

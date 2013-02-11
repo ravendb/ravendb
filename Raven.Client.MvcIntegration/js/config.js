@@ -4,25 +4,11 @@
 		'backbone': 'vendor/backbone',
 		'underscore': 'vendor/underscore',
 		'text': 'vendor/text'
-	},
-	shim: {
-		underscore: {
-			init: function () {
-				return this._.noConflict();
-			}
-		},
-		backbone: {
-			deps: ['underscore', 'jquery'],
-			init: function () {
-				return this.Backbone.noConflict();
-			}
-		}
 	}
 });
 
-require(['jquery'], function ($) {
-	$.noConflict(true); // restore global $ and jQuery to original values
-});
+// This file will be included last, remove jQuery that we loaded earlier
+$.noConflict(true);
 
 require(['underscore'], function (_) {
 	_.templateSettings = {

@@ -8,7 +8,7 @@
              mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400">
 
-		<Border x:Name="LayoutRoot" Style="{StaticResource Style_Border_SettingsSection}">
+	<Border x:Name="LayoutRoot" Style="{StaticResource Style_Border_SettingsSection}">
 		<Grid>
 			<Grid Visibility="{Binding ShowPeriodicBackup.Value, Converter={StaticResource BooleanToVisibility}}">
 				<Grid.ColumnDefinitions>
@@ -39,33 +39,37 @@
 							<ColumnDefinition Width="Auto"/>
 						</Grid.ColumnDefinitions>
 
-						<ComboBox SelectedIndex="{Binding IsS3Selected.Value, Converter={StaticResource BooleanToInt}, Mode=TwoWay}" VerticalAlignment="Center" Width="150">
-                            <ComboBox.ItemsSource>
-                                <Behaviors:StringCollection>
-                                    <System:String>Glacier Vault Name:</System:String>
-                                    <System:String>S3 Bucket Name:</System:String>
-                                </Behaviors:StringCollection>
-                            </ComboBox.ItemsSource>
+						<ComboBox SelectedIndex="{Binding SelectedOption.Value, Mode=TwoWay}" VerticalAlignment="Center" Width="150">
+							<ComboBox.ItemsSource>
+								<Behaviors:StringCollection>
+									<System:String>File System Folder:</System:String>
+									<System:String>Glacier Vault Name:</System:String>
+									<System:String>S3 Bucket Name:</System:String>
+								</Behaviors:StringCollection>
+							</ComboBox.ItemsSource>
 						</ComboBox>
 
-						<TextBox Grid.Column="1" 
-                             Margin="5"  
-                             Text="{Binding PeriodicBackupSetup.GlacierVaultName, Mode=TwoWay}" 
+						<TextBox Grid.Column="1"
+                             Margin="5"
+                             Text="{Binding PeriodicBackupSetup.GlacierVaultName, Mode=TwoWay}"
                              VerticalAlignment="Center"
-                             Visibility="{Binding IsS3Selected.Value, Converter={StaticResource BooleanToOppositeVisibility} }"/>
+                             Visibility="{Binding SelectedOption.Value, Converter={StaticResource IntParamEquality}, ConverterParameter=1 }"/>
 
-						<TextBox Grid.Column="1" 
-                             Margin="5"  
-                             Text="{Binding PeriodicBackupSetup.S3BucketName, Mode=TwoWay}" 
+						<TextBox Grid.Column="1"
+                             Margin="5"
+                             Text="{Binding PeriodicBackupSetup.S3BucketName, Mode=TwoWay}"
                              VerticalAlignment="Center"
-                             Visibility="{Binding IsS3Selected.Value, Converter={StaticResource BooleanToVisibility} }"/>
+                             Visibility="{Binding SelectedOption.Value, Converter={StaticResource IntParamEquality}, ConverterParameter=2 }"/>
 
-						<TextBlock Grid.Row="1" Text="Aws Region Endpoint: " VerticalAlignment="Center"/>
-						<TextBox Grid.Row="1" Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.AwsRegionEndpoint, Mode=TwoWay}" VerticalAlignment="Center"/>
+						<TextBox Grid.Column="1"
+															Margin="5"
+															Text="{Binding PeriodicBackupSetup.LocalFolderName, Mode=TwoWay}"
+															VerticalAlignment="Center"
+															Visibility="{Binding SelectedOption.Value, Converter={StaticResource IntParamEquality}, ConverterParameter=0 }"/>
 
 						<TextBlock Grid.Row="2" Text="Interval: " VerticalAlignment="Center"/>
 						<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-							<toolkit:NumericUpDown Margin="5" Value="{Binding PeriodicBackupSetup.Interval, Mode=TwoWay}" Maximum="214748364" VerticalAlignment="Center"/>
+							<toolkit:NumericUpDown Margin="5" Value="{Binding PeriodicBackupSetup.IntervalMilliseconds, Mode=TwoWay, Converter={StaticResource MillisecondsToMinutes}}" Maximum="214748364" VerticalAlignment="Center"/>
 							<TextBlock Text="in Minutes" VerticalAlignment="Center"/>
 						</StackPanel>
 					</Grid>
@@ -79,19 +83,24 @@
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto"/>
 						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
 					</Grid.RowDefinitions>
 
-					<TextBlock Text="AWS Access Key: " VerticalAlignment="Center"/>
-					<TextBox Grid.Column="1" Margin="5"  Text="{Binding AwsAccessKey, Mode=TwoWay}" VerticalAlignment="Center"/>
+					<TextBlock Text="AWS Access Key: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
+					<TextBox Grid.Column="1" Margin="5"  Text="{Binding AwsAccessKey, Mode=TwoWay}" VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
 
-					<TextBlock Grid.Row="1" Text="AWS Secret Key: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Margin="5"  Text="{Binding AwsSecretKey, Mode=TwoWay}" VerticalAlignment="Center"/>
+					<TextBlock Grid.Row="1" Text="AWS Secret Key: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
+					<PasswordBox Grid.Row="1" Grid.Column="1" Margin="5"  Password="{Binding AwsSecretKey, Mode=TwoWay}"  VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
+
+					<TextBlock Grid.Row="2" Text="Aws Region Endpoint: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
+					<TextBox Grid.Row="2" Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.AwsRegionEndpoint, Mode=TwoWay}" VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
+
 				</Grid>
 			</Grid>
 			<Grid Visibility="{Binding ShowPeriodicBackup.Value, Converter={StaticResource BooleanToOppositeVisibility}}">
-				<TextBlock Text="Your license does not approve the use of periodic backups, to enable this feature you need to perchuse a license with periodic backups bundle"/>
+				<TextBlock Text="Your license does not allow the use of periodic backups, to enable this feature you need to perchuse a license with periodic backups bundle"/>
 			</Grid>
 		</Grid>
-		
+
 	</Border>
 </UserControl>

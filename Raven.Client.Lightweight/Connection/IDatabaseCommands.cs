@@ -75,14 +75,14 @@ namespace Raven.Client.Connection
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
+        PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Deletes the document with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		void Delete(string key, Guid? etag);
+        void Delete(string key, Etag etag);
 
 		/// <summary>
 		/// Puts a byte array as attachment with the specified key
@@ -91,7 +91,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata);
+        void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
 		/// Updates just the attachment with the specified key's metadata
@@ -99,7 +99,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		/// <param name="metadata">The metadata.</param>
-		void UpdateAttachmentMetadata(string key, Guid? etag, RavenJObject metadata);
+        void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
 
 		/// <summary>
 		/// Retrieves the attachment with the specified key
@@ -126,7 +126,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		void DeleteAttachment(string key, Guid? etag);
+        void DeleteAttachment(string key, Etag etag);
 
 		/// <summary>
 		/// Returns the names of all tenant databases on the RavenDB server
@@ -313,7 +313,7 @@ namespace Raven.Client.Connection
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
 		/// with the default database
 		/// </summary>
-		IDatabaseCommands ForDefaultDatabase();
+		IDatabaseCommands ForSystemDatabase();
 
 		/// <summary>
 		/// Returns a list of suggestions based on the specified suggestion query
@@ -338,9 +338,14 @@ namespace Raven.Client.Connection
 		IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize);
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc);
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
@@ -362,7 +367,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		void Patch(string key, PatchRequest[] patches, Guid? etag);
+        void Patch(string key, PatchRequest[] patches, Etag etag);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -370,7 +375,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		void Patch(string key, ScriptedPatchRequest patch, Guid? etag);
+        void Patch(string key, ScriptedPatchRequest patch, Etag etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope

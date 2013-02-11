@@ -110,8 +110,8 @@ namespace Raven.Client.Document
 							max = minNextMax + capacity;
 							document = new JsonDocument
 							{
-								Etag = Guid.Empty,
-								// sending empty guid means - ensure the that the document does NOT exists
+								Etag = Etag.Empty,
+								// sending empty etag means - ensure the that the document does NOT exists
 								Metadata = new RavenJObject(),
 								DataAsJson = RavenJObject.FromObject(new { Max = max }),
 								Key = HiLoDocumentKey

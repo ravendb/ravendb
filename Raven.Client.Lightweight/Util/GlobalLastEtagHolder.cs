@@ -1,5 +1,4 @@
-using System;
-using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client.Util
 {
@@ -7,19 +6,16 @@ namespace Raven.Client.Util
 	{
 		private class EtagHolder
 		{
-			public Guid Etag;
-			public byte[] Bytes;
+			public Etag Etag;
 		}
 
 		private volatile EtagHolder lastEtag;
 		protected readonly object lastEtagLocker = new object();
 
-		public void UpdateLastWrittenEtag(Guid? etag)
+        public void UpdateLastWrittenEtag(Etag etag)
 		{
 			if (etag == null)
 				return;
-
-			var newEtag = etag.Value.ToByteArray();
 
 			if (lastEtag == null)
 			{
@@ -29,8 +25,7 @@ namespace Raven.Client.Util
 					{
 						lastEtag = new EtagHolder
 						{
-							Bytes = newEtag,
-							Etag = etag.Value
+							Etag = etag
 						};
 						return;
 					}
@@ -38,7 +33,7 @@ namespace Raven.Client.Util
 			}
 
 			// not the most recent etag
-			if (Buffers.Compare(lastEtag.Bytes, newEtag) >= 0)
+			if (lastEtag.Etag.CompareTo(etag) >= 0)
 			{
 				return;
 			}
@@ -46,21 +41,20 @@ namespace Raven.Client.Util
 			lock (lastEtagLocker)
 			{
 				// not the most recent etag
-				if (Buffers.Compare(lastEtag.Bytes, newEtag) >= 0)
+                if (lastEtag.Etag.CompareTo(etag) >= 0)
 				{
 					return;
 				}
 
 				lastEtag = new EtagHolder
 				{
-					Etag = etag.Value,
-					Bytes = newEtag
+					Etag = etag,
 				};
 			}
 		}
 
 		
-		public Guid? GetLastWrittenEtag()
+		public Etag GetLastWrittenEtag()
 		{
 			var etagHolder = lastEtag;
 			if (etagHolder == null)

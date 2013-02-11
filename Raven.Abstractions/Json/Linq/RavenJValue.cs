@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -57,6 +58,11 @@ namespace Raven.Json.Linq
 		public override RavenJToken CloneToken()
 		{
 			return new RavenJValue(Value, Type);
+		}
+
+		public override bool IsSnapshot
+		{
+			get { return isSnapshot; }
 		}
 
 		/// <summary>
@@ -194,6 +200,8 @@ namespace Raven.Json.Linq
 				return JTokenType.Uri;
 			else if (value is TimeSpan)
 				return JTokenType.TimeSpan;
+			else if (value is Etag)
+				return JTokenType.String;
 
 			throw new ArgumentException("Could not determine JSON object type for type {0}.".FormatWith(CultureInfo.InvariantCulture, value.GetType()));
 		}
@@ -632,7 +640,7 @@ namespace Raven.Json.Linq
 			return _value.ToString();
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			isSnapshot = true;
 		}

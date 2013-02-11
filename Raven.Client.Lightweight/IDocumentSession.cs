@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -99,7 +100,8 @@ namespace Raven.Client
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <param name="indexName">Name of the index.</param>
-		IRavenQueryable<T> Query<T>(string indexName);
+		/// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
+		IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false);
 
 		/// <summary>
 		/// Dynamically queries RavenDB using LINQ
@@ -141,12 +143,12 @@ namespace Raven.Client
 		/// <summary>
 		/// Stores the specified entity with the specified etag
 		/// </summary>
-		void Store(object entity, Guid etag);
+		void Store(object entity, Etag etag);
 
 		/// <summary>
 		/// Stores the specified entity with the specified etag, under the specified id
 		/// </summary>
-		void Store(object entity, Guid etag, string id);
+		void Store(object entity, Etag etag, string id);
 
 		/// <summary>
 		/// Stores the specified dynamic entity.

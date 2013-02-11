@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Database.Tasks;
 using Xunit;
 
@@ -49,7 +50,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator =>
 				{
 					mutator.Indexing.AddIndex("test", false);
-					mutator.Indexing.UpdateLastIndexed("test", Guid.NewGuid(), cutoff);
+					mutator.Indexing.UpdateLastIndexed("test", Etag.InvalidEtag, cutoff);
 				});
 				tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask { Index = "test" }, SystemTime.UtcNow));
 				tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", null, null)));

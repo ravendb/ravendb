@@ -11,6 +11,8 @@ namespace Raven.Studio.Models
 		public TermsModel()
 		{
 			ModelUrl = "/terms";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
+
 			terms = new ObservableCollection<KeyValuePair<string, ObservableCollection<string>>>();
 		}
 

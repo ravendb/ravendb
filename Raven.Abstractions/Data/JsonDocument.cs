@@ -61,7 +61,7 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
-		public Guid? Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		/// <summary>
 		/// Gets or sets the last modified date for the document
@@ -92,8 +92,8 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
-			DataAsJson.EnsureSnapshot();
-			Metadata.EnsureSnapshot();
+			DataAsJson.EnsureCannotBeChangeAndEnableSnapshotting();
+			Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
 
 			var doc = (RavenJObject)DataAsJson.CreateSnapshot();
 			var metadata = (RavenJObject)Metadata.CreateSnapshot();
@@ -101,7 +101,7 @@ namespace Raven.Abstractions.Data
 			if (LastModified != null)
 				metadata[Constants.LastModified] = LastModified.Value;
 			if (Etag != null)
-				metadata["@etag"] = Etag.Value.ToString();
+				metadata["@etag"] = Etag.ToString();
 			if (NonAuthoritativeInformation != null)
 				metadata["Non-Authoritative-Information"] = NonAuthoritativeInformation.Value;
 			//if (metadata.ContainsKey("@id") == false)

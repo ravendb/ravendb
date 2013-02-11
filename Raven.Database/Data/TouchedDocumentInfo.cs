@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Raven.Abstractions.Data;
 
 namespace Raven.Database.Data
 {
 	public class TouchedDocumentInfo
 	{
-		public Guid TouchedEtag { get; set; }
-		public Guid PreTouchEtag { get; set; }
+		public Etag TouchedEtag { get; set; }
+		public Etag PreTouchEtag { get; set; }
 	}
 }

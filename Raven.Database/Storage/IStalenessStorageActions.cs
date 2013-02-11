@@ -4,19 +4,20 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage
 {
 	public interface IStalenessStorageActions
 	{
-		bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag);
+		bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag);
 
 		bool IsReduceStale(string name);
 		bool IsMapStale(string name);
 
-		Tuple<DateTime, Guid> IndexLastUpdatedAt(string name);
-		Guid GetMostRecentDocumentEtag();
-		Guid GetMostRecentAttachmentEtag();
+		Tuple<DateTime, Etag> IndexLastUpdatedAt(string name);
+		Etag GetMostRecentDocumentEtag();
+		Etag GetMostRecentAttachmentEtag();
 		int GetIndexTouchCount(string indexName);
 	}
 }

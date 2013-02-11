@@ -12,6 +12,9 @@ namespace Raven.Studio.Models
 	    public AllDocumentsModel()
 		{
 			ModelUrl = "/documents";
+		    ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+		                                                   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+		                                                   "/docs";
 		}
 
 		public DocumentsModel Documents

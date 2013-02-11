@@ -595,11 +595,14 @@
     <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />
     <Compile Include="Connection\OAuthHelper.cs" />
+    <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
+    <Compile Include="Data\HighlightedField.cs" />
     <Compile Include="Data\BulkInsertOptions.cs" />
+    <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
@@ -649,6 +652,7 @@
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
+    <Compile Include="Data\UuidType.cs" />
     <Compile Include="Extensions\AttachmentExtensions.cs" />
     <Compile Include="Extensions\CharExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />
@@ -663,7 +667,10 @@
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
+    <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="Indexing\FieldTermVector.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />
+    <Compile Include="Indexing\SuggestionOptions.cs" />
     <Compile Include="Json\ConflictsResolver.cs" />
     <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
@@ -719,6 +726,8 @@
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="MissingFromBCL\WinRTCompetability.cs" />
+    <Compile Include="OAuth\AbstractAuthenticator.cs" />
+    <Compile Include="OAuth\SecuredAuthenticator.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
@@ -733,7 +742,7 @@
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
-    <Compile Include="Util\Etag.cs" />
+    <Compile Include="Util\EtagUtil.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
@@ -748,7 +757,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="..\packages\Microsoft.Bcl.Build.1.0.0-rc\tools\Microsoft.Bcl.Build.targets" />
+  <Import Project="..\SharedLibs\Microsoft.Bcl\Microsoft.Bcl.targets" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

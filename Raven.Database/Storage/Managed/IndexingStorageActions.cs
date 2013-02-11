@@ -70,11 +70,11 @@ namespace Raven.Storage.Managed
 				ReduceIndexingErrors = readResult.Key.Value<int?>("reduce_failures"),
 				ReduceIndexingSuccesses = readResult.Key.Value<int?>("reduce_successes"),
 				Name = readResult.Key.Value<string>("index"),
-				LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
+				LastIndexedEtag = Etag.Parse(readResult.Key.Value<byte[]>("lastEtag")),
 				LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
 				LastReducedEtag =
 					readResult.Key.Value<byte[]>("lastReducedEtag") != null
-						? (Guid?)new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
+						? Etag.Parse(readResult.Key.Value<byte[]>("lastReducedEtag"))
 						: null,
 				LastReducedTimestamp = readResult.Key.Value<DateTime?>("lastReducedTimestamp")
 			};
@@ -129,7 +129,7 @@ namespace Raven.Storage.Managed
 			var indexStats = GetCurrentIndex(index);
 			indexStats["reduce_attempts"] = indexStats.Value<int>("reduce_attempts") + stats.ReduceAttempts;
 			indexStats["reduce_successes"] = indexStats.Value<int>("reduce_successes") + stats.ReduceSuccesses;
-			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceSuccesses;
+			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceErrors;
 			storage.IndexingStats.UpdateKey(indexStats);
 
 		}
@@ -171,6 +171,16 @@ namespace Raven.Storage.Managed
 				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase))
 				.Select(x => x.Value<string>("key"))
 				.Distinct(StringComparer.OrdinalIgnoreCase);
+		}
+
+		public int GetCountOfDocumentsReferencing(string key)
+		{
+			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject {{"ref", key}})
+			                                          .TakeWhile(
+				                                          x =>
+				                                          key.Equals(x.Value<string>("ref"),
+				                                                     StringComparison.CurrentCultureIgnoreCase))
+			                                          .Count();
 		}
 
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
@@ -223,7 +233,7 @@ namespace Raven.Storage.Managed
 			storage.IndexingStats.UpdateKey(key);
 		}
 
-		public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
+		public void UpdateLastIndexed(string index, Etag etag, DateTime timestamp)
 		{
 			locker.EnterWriteLock();
 			try
@@ -267,7 +277,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public void UpdateLastReduced(string index, Guid etag, DateTime timestamp)
+		public void UpdateLastReduced(string index, Etag etag, DateTime timestamp)
 		{
 			var readResult = storage.IndexingStats.Read(index);
 			if (readResult == null)

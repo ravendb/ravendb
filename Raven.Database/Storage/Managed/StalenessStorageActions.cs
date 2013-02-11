@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
@@ -25,7 +26,7 @@ namespace Raven.Storage.Managed
 			this.storage = storage;
 		}
 
-		public bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag)
+		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
 		{
 			var readResult = storage.IndexingStats.Read(name);
 
@@ -49,7 +50,7 @@ namespace Raven.Storage.Managed
 				{
 					var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
 
-					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.Value.ToByteArray()) < 0)
+					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.ToByteArray()) < 0)
 						return true;
 				}
 				else
@@ -90,7 +91,7 @@ namespace Raven.Storage.Managed
 				.FirstOrDefault();
 		}
 
-		public Tuple<DateTime,Guid> IndexLastUpdatedAt(string name)
+		public Tuple<DateTime,Etag> IndexLastUpdatedAt(string name)
 		{
 			var readResult = storage.IndexingStats.Read(name);
 
@@ -102,14 +103,12 @@ namespace Raven.Storage.Managed
 			{
 				return Tuple.Create(
 					readResult.Key.Value<DateTime>("lastReducedTimestamp"),
-					new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
+					Etag.Parse(readResult.Key.Value<byte[]>("lastReducedEtag"))
 					);
 			}
 
-			return Tuple.Create(
-				readResult.Key.Value<DateTime>("lastTimestamp"),
-				new Guid(readResult.Key.Value<byte[]>("lastEtag"))
-				);
+			return Tuple.Create(readResult.Key.Value<DateTime>("lastTimestamp"),
+				Etag.Parse(readResult.Key.Value<byte[]>("lastEtag")));
 		}
 
 		public int GetIndexTouchCount(string name)
@@ -122,24 +121,24 @@ namespace Raven.Storage.Managed
 			return readResult.Key.Value<int>("touches");
 		}
 
-		public Guid GetMostRecentDocumentEtag()
+		public Etag GetMostRecentDocumentEtag()
 		{
 			foreach (var doc in storage.Documents["ByEtag"].SkipFromEnd(0))
 			{
 				var docEtag = doc.Value<byte[]>("etag");
-				return new Guid(docEtag);
+				return Etag.Parse(docEtag);
 			}
-			return Guid.Empty;
+			return Etag.Empty;
 		}
 
-		public Guid GetMostRecentAttachmentEtag()
+		public Etag GetMostRecentAttachmentEtag()
 		{
 			foreach (var doc in storage.Attachments["ByEtag"].SkipFromEnd(0))
 			{
 				var docEtag = doc.Value<byte[]>("etag");
-				return new Guid(docEtag);
+                return Etag.Parse(docEtag);
 			}
-			return Guid.Empty;
+			return Etag.Empty;
 		}
 	}
 }

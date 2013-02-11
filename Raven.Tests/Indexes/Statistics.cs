@@ -28,14 +28,14 @@ namespace Raven.Tests.Indexes
 			db = store.DocumentDatabase;
 
 			db.PutIndex("pagesByTitle2",
-			            new IndexDefinition
-			            {
+						new IndexDefinition
+						{
 							Map = @"
 					from doc in docs
 					where doc.type == ""page""
 					select new {  f = 2 / doc.size };
 				"
-			            });
+						});
 		}
 
 		public override void Dispose()
@@ -47,7 +47,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_get_stats_for_indexing_without_any_indexing()
 		{
-			Assert.Equal(1, db.Statistics.Indexes.Count(x=>x.Name.StartsWith("Raven") == false));
+			Assert.Equal(1, db.Statistics.Indexes.Count(x => x.Name.StartsWith("Raven") == false));
 			Assert.True(db.Statistics.Indexes.Any(x => x.Name == "pagesByTitle2"));
 			Assert.Equal(0, db.Statistics.Indexes.First((x => x.Name == "pagesByTitle2")).IndexingAttempts);
 		}
@@ -55,9 +55,9 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_get_stats_for_indexing()
 		{
-			db.Put("1", Guid.Empty,
-			       RavenJObject.Parse(
-			       	@"{
+			db.Put("1", Etag.Empty,
+				   RavenJObject.Parse(
+					@"{
 				type: 'page', 
 				some: 'val', 
 				other: 'var', 
@@ -81,8 +81,8 @@ namespace Raven.Tests.Indexes
 					Thread.Sleep(100);
 			} while (docs.IsStale);
 
-		    var indexStats = db.Statistics.Indexes.First(x=>x.Name == "pagesByTitle2");
-		    Assert.Equal("pagesByTitle2", indexStats.Name);
+			var indexStats = db.Statistics.Indexes.First(x => x.Name == "pagesByTitle2");
+			Assert.Equal("pagesByTitle2", indexStats.Name);
 			Assert.Equal(1, indexStats.IndexingAttempts);
 			Assert.Equal(1, indexStats.IndexingSuccesses);
 		}
@@ -90,9 +90,9 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_get_stats_for_indexing_including_errors()
 		{
-			db.Put("1", Guid.Empty,
-			       RavenJObject.Parse(
-			       	@"{
+			db.Put("1", Etag.Empty,
+				   RavenJObject.Parse(
+					@"{
 				type: 'page', 
 				some: 'val', 
 				other: 'var', 
@@ -102,9 +102,9 @@ namespace Raven.Tests.Indexes
 				'@metadata': {'@id': 1}
 			}"),
 				   new RavenJObject(), null);
-			db.Put("2", Guid.Empty,
-			       RavenJObject.Parse(
-			       	@"{
+			db.Put("2", Etag.Empty,
+				   RavenJObject.Parse(
+					@"{
 				type: 'page', 
 				some: 'val', 
 				other: 'var', 
@@ -128,8 +128,8 @@ namespace Raven.Tests.Indexes
 					Thread.Sleep(100);
 			} while (docs.IsStale);
 
-		    var indexStats = db.Statistics.Indexes.First(x=>x.Name == "pagesByTitle2");
-		    Assert.Equal("pagesByTitle2", indexStats.Name);
+			var indexStats = db.Statistics.Indexes.First(x => x.Name == "pagesByTitle2");
+			Assert.Equal("pagesByTitle2", indexStats.Name);
 			Assert.Equal(2, indexStats.IndexingAttempts);
 			Assert.Equal(1, indexStats.IndexingErrors);
 			Assert.Equal(1, indexStats.IndexingSuccesses);
@@ -138,9 +138,9 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_get_details_about_indexing_errors()
 		{
-			db.Put("1", Guid.Empty,
-			       RavenJObject.Parse(
-			       	@"{
+			db.Put("1", Etag.Empty,
+				   RavenJObject.Parse(
+					@"{
 				type: 'page', 
 				some: 'val', 
 				other: 'var', 

@@ -10,12 +10,11 @@ using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
-using Raven.Database.Impl;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Data;
-using Raven.Database.Extensions;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -23,51 +22,57 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IAttachmentsStorageActions
 	{
-		public Guid AddAttachment(string key, Guid? etag, Stream data, RavenJObject headers)
+		public Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Files, SeekGrbit.SeekEQ);
 			if (isUpdate)
 			{
-				var existingEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting();
+				var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
 				if (existingEtag != etag && etag != null)
 				{
 					throw new ConcurrencyException("PUT attempted on attachment '" + key +
 						"' using a non current etag")
 					{
 						ActualETag = existingEtag,
-						ExpectedETag = etag.Value
+						ExpectedETag = etag
 					};
 				}
 			}
 			else
 			{
-				if(data == null)
+				if (data == null)
 					throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
 
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], 1);
 			}
 
-			Guid newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
+			Etag newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
-				if(data != null)
+				if (data != null)
 				{
 					long written;
-					using (var stream = new BufferedStream(new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"])))
+					using (var columnStream = new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"]))
 					{
-						data.CopyTo(stream);
-						written = stream.Position;
-						stream.Flush();
+						if (isUpdate)
+							columnStream.SetLength(0);
+						using (var stream = new BufferedStream(columnStream))
+						{
+							data.CopyTo(stream);
+							written = stream.Position;
+							stream.Flush();
+						}
 					}
 					if (written == 0) // empty attachment
 					{
 						Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], new byte[0]);
 					}
 				}
+
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);
 
@@ -75,10 +80,10 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			logger.Debug("Adding attachment {0}", key);
 
-		    return newETag;
+			return newETag;
 		}
 
-		public void DeleteAttachment(string key, Guid? etag)
+		public void DeleteAttachment(string key, Etag etag)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -88,19 +93,19 @@ namespace Raven.Storage.Esent.StorageActions
 				return;
 			}
 
-			var fileEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting();
+			var fileEtag = Etag.Parse(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
 			if (fileEtag != etag && etag != null)
 			{
 				throw new ConcurrencyException("DELETE attempted on attachment '" + key +
 					"' using a non current etag")
 				{
 					ActualETag = fileEtag,
-					ExpectedETag = etag.Value
+					ExpectedETag = etag
 				};
 			}
 
 			Api.JetDelete(session, Files);
-			
+
 			if (Api.TryMoveFirst(session, Details))
 				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], -1);
 			logger.Debug("Attachment with key '{0}' was deleted", key);
@@ -147,10 +152,10 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, Files) && optimizer.Count < pageSize);
 
 			return optimizer.Select(Session, Files, ReadCurrentAttachmentInformation);
-		
+
 		}
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag, int take, long maxTotalSize)
+		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Etag etag, int take, long maxTotalSize)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
 			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -168,7 +173,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return optimizer
 				.Where(_ => totalSize <= maxTotalSize)
 				.Select(Session, Files, o => ReadCurrentAttachmentInformation())
-				.Select(x=>
+				.Select(x =>
 				{
 					totalSize += x.Size;
 					return x;
@@ -180,11 +185,11 @@ namespace Raven.Storage.Esent.StorageActions
 			return new AttachmentInformation
 			{
 				Size = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]) ?? 0,
-				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
+				Etag = Etag.Parse(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
 				Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 				Metadata =
 					RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"],
-					                                              Encoding.Unicode))
+																  Encoding.Unicode))
 			};
 		}
 
@@ -206,9 +211,9 @@ namespace Raven.Storage.Esent.StorageActions
 					StorageActionsAccessor storageActionsAccessor = transactionalStorage.GetCurrentBatch();
 					var documentStorageActions = ((DocumentStorageActions)storageActionsAccessor.Attachments);
 					return documentStorageActions.GetAttachmentStream(key);
-				}, 
+				},
 				Size = (int)GetAttachmentStream(key).Length,
-				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
+				Etag = Etag.Parse(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
 				Metadata = RavenJObject.Parse(metadata)
 			};
 		}

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication;
 using Raven.Database.Server;
@@ -33,8 +34,8 @@ namespace Raven.Bundles.Replication.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			Guid mostRecentDocumentEtag = Guid.Empty;
-			Guid mostRecentAttachmentEtag = Guid.Empty;
+			Etag mostRecentDocumentEtag = Etag.Empty;
+			Etag mostRecentAttachmentEtag = Etag.Empty;
 			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 			Database.TransactionalStorage.Batch(accessor =>
 			{

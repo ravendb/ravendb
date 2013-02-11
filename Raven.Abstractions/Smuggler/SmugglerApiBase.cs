@@ -20,15 +20,15 @@ namespace Raven.Abstractions.Smuggler
 		private const int MaxSizeOfUncompressedSizeToSendToDatabase = 32 * 1024 * 1024;
 		protected readonly SmugglerOptions smugglerOptions;
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
-		private readonly LinkedList<Tuple<Guid, DateTime>> batchRecording = new LinkedList<Tuple<Guid, DateTime>>();
+		private readonly LinkedList<Tuple<Etag, DateTime>> batchRecording = new LinkedList<Tuple<Etag, DateTime>>();
 
 		protected abstract RavenJArray GetIndexes(int totalCount);
-		protected abstract RavenJArray GetDocuments(Guid lastEtag);
-		protected abstract Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag);
+		protected abstract RavenJArray GetDocuments(Etag lastEtag);
+		protected abstract Etag ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
 
 		protected abstract void PutIndex(string indexName, RavenJToken index);
 		protected abstract void PutAttachment(AttachmentExportInfo attachmentExportInfo);
-		protected abstract Guid FlushBatch(List<RavenJObject> batch);
+		protected abstract Etag FlushBatch(List<RavenJObject> batch);
 		protected abstract DatabaseStatistics GetStats();
 
 		protected abstract void ShowProgress(string format, params object[] args);
@@ -135,8 +135,8 @@ namespace Raven.Abstractions.Smuggler
 				using (var jsonReader = new JsonTextReader(streamReader))
 				{
 					var ravenJObject = RavenJObject.Load(jsonReader);
-					options.LastDocsEtag = new Guid(ravenJObject.Value<string>("LastDocEtag"));
-					options.LastAttachmentEtag = new Guid(ravenJObject.Value<string>("LastAttachmentEtag"));
+					options.LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
+					options.LastAttachmentEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
 				}
 			}
 		}
@@ -155,7 +155,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private Guid ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Guid lastEtag)
+		private Etag ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			int totalCount = 0;
 
@@ -171,7 +171,7 @@ namespace Raven.Abstractions.Smuggler
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 					{
-						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, smugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}",lastEtag);
 						continue;
 					}
@@ -184,11 +184,15 @@ namespace Raven.Abstractions.Smuggler
 				ModifyBatchSize(options, currentProcessingTime);
 
 				var final = documents.Where(options.MatchFilters).ToList();
+
+                if (options.ShouldExcludeExpired)
+                    final = documents.Where(options.ExcludeExpired).ToList();
+
 				final.ForEach(item => item.WriteTo(jsonWriter));
 				totalCount += final.Count;
 
 				ShowProgress("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", documents.Length, totalCount);
-				lastEtag = new Guid(documents.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+				lastEtag = Etag.Parse(documents.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
 			}
 		}
 
@@ -385,11 +389,12 @@ namespace Raven.Abstractions.Smuggler
 				throw new InvalidDataException("StartArray was expected");
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
-				attachmentCount += 1;
 				var item = RavenJToken.ReadFrom(jsonReader);
 				if ((options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
 					continue;
-				var attachmentExportInfo =
+                attachmentCount += 1;
+
+                var attachmentExportInfo =
 					new JsonSerializer
 						{
 							Converters = { new JsonToJsonConverter() }
@@ -405,7 +410,7 @@ namespace Raven.Abstractions.Smuggler
 		{
 			var sw = Stopwatch.StartNew();
 			var actualBatchSize = batch.Count;
-			Guid lastEtagInBatch = FlushBatch(batch);
+			Etag lastEtagInBatch = FlushBatch(batch);
 			sw.Stop();
 
 			var currentProcessingTime = sw.Elapsed;
@@ -420,7 +425,7 @@ namespace Raven.Abstractions.Smuggler
 		private void OutputIndexingDistance()
 		{
 			var databaseStatistics = GetStats();
-			var earliestIndexedEtag = Guid.Empty;
+		    Etag earliestIndexedEtag = Etag.Empty;
 			foreach (var indexStat in databaseStatistics.Indexes)
 			{
 				if (earliestIndexedEtag.CompareTo(indexStat.LastIndexedEtag) < 0)
@@ -443,8 +448,8 @@ namespace Raven.Abstractions.Smuggler
 			}
 
 
-			var currentDoc = Etag.GetChangesCount(databaseStatistics.LastDocEtag);
-			var lastIndexed = Etag.GetChangesCount(earliestIndexedEtag);
+			var currentDoc = EtagUtil.GetChangesCount(databaseStatistics.LastDocEtag);
+			var lastIndexed = EtagUtil.GetChangesCount(earliestIndexedEtag);
 
 			var distance = Math.Max(0, currentDoc - lastIndexed);
 			TimeSpan latency = TimeSpan.Zero;

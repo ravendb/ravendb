@@ -29,10 +29,10 @@ namespace Raven.Tests
 		[Fact]
 		public void CanMergeConsecutiveInMemoryUpdates()
 		{
-			var last = Guid.Empty;
+			Etag last = Etag.Empty;
 			for (int i = 0; i < 5; i++)
 			{
-				last = Etag.Increment(last, 1);
+				last = EtagUtil.Increment(last, 1);
 				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
 				{
 					new JsonDocument
@@ -43,16 +43,16 @@ namespace Raven.Tests
 				});
 			}
 
-			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Guid.Empty).Count);
+			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count);
 		}
 
 		[Fact]
 		public void CanProperlyHandleNonConsecutiveUpdates()
 		{
-			var last = Guid.Empty;
+			Etag last = Etag.Empty;
 			for (int i = 0; i < 5; i++)
 			{
-				last = Etag.Increment(last, 1);
+				last = EtagUtil.Increment(last, 1);
 				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
 				{
 					new JsonDocument
@@ -62,10 +62,10 @@ namespace Raven.Tests
 					},
 				});
 			}
-			last = Etag.Increment(last, 10);
+			last = EtagUtil.Increment(last, 10);
 			for (int i = 0; i < 5; i++)
 			{
-				last = Etag.Increment(last, 1);
+				last = EtagUtil.Increment(last, 1);
 				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
 				{
 					new JsonDocument
@@ -76,8 +76,8 @@ namespace Raven.Tests
 				});
 			}
 
-			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Guid.Empty).Count);
-			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Increment(Guid.Empty, 15)).Count);
+			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count);
+			Assert.Equal(5, prefetchingBehavior.GetDocumentsBatchFrom(EtagUtil.Increment(Etag.Empty, 15)).Count);
 		}
 	}
 }

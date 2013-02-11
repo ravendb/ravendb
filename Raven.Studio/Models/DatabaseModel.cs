@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Reactive.Disposables;
@@ -34,12 +35,21 @@ namespace Raven.Studio.Models
 
 		public Observable<TaskModel> SelectedTask { get; set; }
 		public Observable<DatabaseDocument> DatabaseDocument { get; set; }
+		public QueueModel<string> RecentDocuments
+		{
+			get
+			{
+				if (ApplicationModel.Current.Server.Value.RecentDocuments.ContainsKey(Name) == false)
+					ApplicationModel.Current.Server.Value.RecentDocuments[name] = new QueueModel<string>(5);
+
+				return ApplicationModel.Current.Server.Value.RecentDocuments[Name];
+			}
+		}
 
 		public DatabaseModel(string name, DocumentStore documentStore)
 		{
 			this.name = name;
 			this.documentStore = documentStore;
-
 			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
 				new ImportTask(),
@@ -62,7 +72,7 @@ namespace Raven.Studio.Models
 			OnPropertyChanged(() => StatusImage);
 
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
-			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+											? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
 			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 
 		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
@@ -90,7 +100,7 @@ namespace Raven.Studio.Models
 			if (ApplicationModel.Current != null)
 				ApplicationModel.Current.Server.Value.DocumentStore
 					.AsyncDatabaseCommands
-					.ForDefaultDatabase()
+					.ForSystemDatabase()
 					.GetAsync("Raven/Databases/" + Name)
 					.ContinueOnSuccessInTheUIThread(doc =>
 					{
@@ -109,10 +119,10 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				return DatabaseDocument != null && 
-					   DatabaseDocument.Value.Settings != null && 
-					   DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
-					   DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Contains("Replication");
+				return DatabaseDocument != null &&
+				       DatabaseDocument.Value.Settings != null &&
+				       DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
+				       DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Split(';').Contains("Replication", StringComparer.OrdinalIgnoreCase);
 			}
 		}
 

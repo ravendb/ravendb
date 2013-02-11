@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -206,7 +207,7 @@ namespace Raven.Database.Server
 					Memory = new
 					{
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
-						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(false)),
+						ManagedMemorySizeInMB = ConvertBytesToMBs(GetCurrentManagedMemorySize()),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
 						Databases = allDbs.Select(db => new
 						{
@@ -216,8 +217,10 @@ namespace Raven.Database.Server
 					},
 					LoadedDatabases =
 						from documentDatabase in allDbs
-						let totalSizeOnDisk = documentDatabase.Database.GetTotalSizeOnDisk()
-						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
+						let indexStorageSize = documentDatabase.Database.GetIndexStorageSizeOnDisk()
+						let transactionalStorageSize = documentDatabase.Database.GetTransactionalStorageSizeOnDisk()
+						let totalDatabaseSize = indexStorageSize + transactionalStorageSize
+						let lastUsed = databaseLastRecentlyUsed.GetOrDefault( documentDatabase.Name )
 						select new
 						{
 							documentDatabase.Name,
@@ -226,8 +229,12 @@ namespace Raven.Database.Server
 								lastUsed, 
 								documentDatabase.Database.WorkContext.LastWorkTime
 							}.Max(),
-							Size = totalSizeOnDisk,
-							HumaneSize = DatabaseSize.Humane(totalSizeOnDisk),
+							TransactionalStorageSize = transactionalStorageSize,
+							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane( transactionalStorageSize ),
+							IndexStorageSize = indexStorageSize,
+							IndexStorageHumaneSize = DatabaseSize.Humane( indexStorageSize ),
+							TotalDatabaseSize = totalDatabaseSize,
+							TotalDatabaseHumaneSize = DatabaseSize.Humane( totalDatabaseSize ),
 							documentDatabase.Database.Statistics.CountOfDocuments,
 							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
 							documentDatabase.Database.WorkContext.ConcurrentRequests
@@ -246,6 +253,19 @@ namespace Raven.Database.Server
 			using (var p = Process.GetCurrentProcess())
 				return p.PrivateMemorySize64;
 		}
+
+		private static long GetCurrentManagedMemorySize()
+		{
+			var safelyGetPerformanceCounter = PerformanceCountersUtils.SafelyGetPerformanceCounter(
+				".NET CLR Memory", "# Total committed Bytes", CurrentProcessName.Value);
+			return safelyGetPerformanceCounter ?? GC.GetTotalMemory(false);
+		}
+
+		private static readonly Lazy<string> CurrentProcessName = new Lazy<string>(() =>
+		{
+			using (var p = Process.GetCurrentProcess())
+				return p.ProcessName;
+		});
 
 		public void Dispose()
 		{

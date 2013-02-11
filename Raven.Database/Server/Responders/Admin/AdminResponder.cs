@@ -17,7 +17,7 @@ namespace Raven.Database.Server.Responders.Admin
 
 		public override void Respond(IHttpContext context)
 		{
-			if (context.User.IsAdministrator() == false && context.User.IsAdministrator(Database) == false)
+			if (context.User.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode) == false && context.User.IsAdministrator(Database) == false)
 			{
 				context.SetStatusToUnauthorized();
 				context.WriteJson(new

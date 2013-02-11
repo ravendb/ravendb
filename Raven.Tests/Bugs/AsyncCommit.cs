@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Threading;
+using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
@@ -63,23 +65,27 @@ namespace Raven.Tests.Bugs
 						.FirstOrDefault();
 				}
 
+				var task = new Task(() =>
+				{
+					using (var s = documentStore.OpenSession())
+					{
+						s.Advanced.AllowNonAuthoritativeInformation = false;
+						var user = s.Advanced.LuceneQuery<AccurateCount.User>("test")
+							.FirstOrDefault();
+						Assert.Equal("Rahien", user.Name);
+					}
+				});
 				using (var s = documentStore.OpenSession())
 				using (var scope = new TransactionScope())
 				{
 					var user = s.Load<AccurateCount.User>("users/1");
 					user.Name = "Rahien";
 					s.SaveChanges();
+					task.Start();
+					Thread.Sleep(250);
 					scope.Complete();
 				}
-
-
-				using (var s = documentStore.OpenSession())
-				{
-					s.Advanced.AllowNonAuthoritativeInformation = false;
-					var user = s.Advanced.LuceneQuery<AccurateCount.User>("test")
-						.FirstOrDefault();
-					Assert.Equal("Rahien", user.Name);
-				}
+				task.Wait();
 			}
 		}
 	}

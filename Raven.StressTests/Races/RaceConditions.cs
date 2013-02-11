@@ -57,6 +57,12 @@ namespace Raven.StressTests.Races
 		}
 
 		[Fact]
+		public void MultiGetNonStaleRequslts()
+		{
+			Run<MultiGetNonStaleResults>(x => x.ShouldBeAbleToGetNonStaleResults(), 15);
+		}
+		
+		[Fact]
 		public void AfterCommitWillNotRetainSameEtag()
 		{
 			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag(), 250);

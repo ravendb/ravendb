@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Data
 	{
 		public DocumentChangeTypes Type { get; set; }
 		public string Id { get; set; }
-		public Guid? Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		public override string ToString()
 		{
@@ -51,7 +51,7 @@ namespace Raven.Abstractions.Data
 	{
 		public IndexChangeTypes Type { get; set; }
 		public string Name { get; set; }
-		public Guid? Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		public override string ToString()
 		{

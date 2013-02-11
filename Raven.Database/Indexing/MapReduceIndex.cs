@@ -13,6 +13,7 @@ using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
@@ -81,8 +82,15 @@ namespace Raven.Database.Indexing
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 			using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 			{
-				var mapResults = RobustEnumerationIndex(documentsWrapped.GetEnumerator(), viewGenerator.MapDefinitions, actions, stats);
-				foreach (var mappedResultFromDocument in GroupByDocumentId(context, mapResults))
+				var mapResults = RobustEnumerationIndex(
+						documentsWrapped.GetEnumerator(), 
+						viewGenerator.MapDefinitions, 
+						actions, 
+						stats)
+					.ToList();
+				actions.MapReduce.UpdateRemovedMapReduceStats(name, changed);
+
+				foreach (var mappedResultFromDocument in mapResults.GroupBy(GetDocumentId))
 				{
 					var dynamicResults = mappedResultFromDocument.Select(x => (object)new DynamicJsonObject(RavenJObject.FromObject(x, jsonSerializer))).ToList();
 					foreach (
@@ -103,8 +111,6 @@ namespace Raven.Database.Indexing
 
 						var data = GetMappedData(doc);
 
-						logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
-
 						items.Add(new MapResultItem
 						{
 							Data = data,
@@ -123,15 +129,14 @@ namespace Raven.Database.Indexing
 				foreach (var referencedDocument in result)
 				{
 					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+					actions.General.MaybePulseTransaction();
 				}
 			}
 
-			int mapCount = 0;
 			foreach (var mapResultItem in items)
 			{
 				actions.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
-				if(mapCount++ % 50000 == 0)
-					actions.General.PulseTransaction();
+				actions.General.MaybePulseTransaction();
 			}
 
 			UpdateIndexingStats(context, stats);
@@ -145,71 +150,6 @@ namespace Raven.Database.Indexing
 				Started = start
 			});
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
-		}
-
-		// we don't use the usual GroupBy, because that isn't streaming
-		// we rely on the fact that all values from the same docs are always outputed at 
-		// the same time, so we can take advantage of this fact
-		private IEnumerable<IGrouping<object, dynamic>> GroupByDocumentId(WorkContext context, IEnumerable<object> docs)
-		{
-			var enumerator = docs.GetEnumerator();
-			if (enumerator.MoveNext() == false)
-				yield break;
-
-			while (true)
-			{
-				object documentId;
-				try
-				{
-					documentId = GetDocumentId(enumerator.Current);
-				}
-				catch (Exception e)
-				{
-					context.AddError(name, null, e.Message);
-					if (enumerator.MoveNext() == false)
-						yield break;
-					continue;
-				}
-				var groupByDocumentId = new Grouping(documentId, enumerator);
-				yield return groupByDocumentId;
-				if (groupByDocumentId.Done)
-					break;
-			}
-		}
-
-		private class Grouping : IGrouping<object, object>
-		{
-			private readonly IEnumerator enumerator;
-			private bool newKeyFound;
-			public bool Done { get; private set; }
-
-			public IEnumerator<object> GetEnumerator()
-			{
-				if (newKeyFound || Done)
-					yield break;
-				yield return enumerator.Current;
-
-				if (enumerator.MoveNext() == false)
-					Done = true;
-
-				var documentId = GetDocumentId(enumerator.Current);
-
-				if (Equals(documentId, Key) == false)
-					newKeyFound = true;
-			}
-
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
-			}
-
-			public object Key { get; private set; }
-
-			public Grouping(object key, IEnumerator enumerator)
-			{
-				this.enumerator = enumerator;
-				Key = key;
-			}
 		}
 
 		private RavenJObject GetMappedData(object doc)
@@ -256,7 +196,7 @@ namespace Raven.Database.Indexing
 			return RavenJToken.FromObject(reduceValue).ToString(Formatting.None);
 		}
 
-		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
+		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
 			if (fieldsToFetch.IsProjection == false)
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
@@ -272,8 +212,9 @@ namespace Raven.Database.Indexing
 				foreach (var key in keys)
 				{
 					actions.MapReduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
-
 				}
+
+				actions.MapReduce.UpdateRemovedMapReduceStats(name, reduceKeyAndBuckets);
 				actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBuckets);
 			});
 			Write((writer, analyzer, stats) =>
@@ -431,8 +372,7 @@ namespace Raven.Database.Indexing
 									case 0:
 									case 1:
 										Actions.MapReduce.PutReducedResult(name, reduceKeyAsString, Level + 1, mappedResults.Key, mappedResults.Key / 1024, ToJsonDocument(doc));
-										if(count % 50000 == 0)
-											Actions.General.PulseTransaction();
+										Actions.General.MaybePulseTransaction();
 										break;
 									case 2:
 										WriteDocumentToIndex(doc, indexWriter, analyzer);

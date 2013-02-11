@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Runtime.Serialization;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client.Exceptions
 {
@@ -27,7 +28,7 @@ namespace Raven.Client.Exceptions
 		/// <summary>
 		/// Gets or sets the conflicted document etag
 		/// </summary>
-		public Guid Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.

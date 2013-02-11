@@ -67,7 +67,8 @@ namespace Raven.Client.Indexes
 				Analyzers = Analyzers,
 				Reduce = Reduce,
 				TransformResults = TransformResults,
-				Stores = Stores
+				Stores = Stores,
+				Suggestions = IndexSuggestions,
 			}.ToIndexDefinition(Conventions, validateMap: false);
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{

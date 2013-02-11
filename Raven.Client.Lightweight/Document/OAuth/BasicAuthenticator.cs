@@ -3,6 +3,8 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.OAuth;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 #if SILVERLIGHT

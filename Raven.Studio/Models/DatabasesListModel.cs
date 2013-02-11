@@ -18,6 +18,7 @@ namespace Raven.Studio.Models
         public DatabasesListModel()
         {
             ModelUrl = "/databases";
+	        ApplicationModel.Current.Server.Value.RawUrl = "databases";
             changeDatabase = new ChangeDatabaseCommand();
             DatabasesWithEditableBundles = new List<string>();
             Databases = new BindableCollection<DatabaseListItemModel>(m => m.Name);
