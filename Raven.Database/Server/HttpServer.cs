@@ -1323,8 +1323,16 @@ namespace Raven.Database.Server
 			{
 				var bytes = Convert.FromBase64String(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-				var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-				databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+				try
+				{
+					var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+					databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not unprotect secured db data " + prop.Key +" setting the value to '<data could not be decrypted>'", e);
+					databaseDocument.SecuredSettings[prop.Key] = "<data could not be decrypted>";
+				}
 			}
 		}
 	}
