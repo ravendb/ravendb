@@ -140,7 +140,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var list = actions.Lists.Read("items", Guid.Empty, null, 5).ToList();
+				var list = actions.Lists.Read("items", Etag.Empty, null, 5).ToList();
 
 				list = actions.Lists.Read("items", list.Last().Etag, list.Last().Etag, 5).ToList();
 				Assert.Equal(0, list.Count);
