@@ -127,6 +127,12 @@ namespace Raven.Database.Indexing
 			if (result.Count == 0)
 				return;
 
+			if (result.Count == 1)
+			{
+				action(result[0]);
+				return;
+			}
+
 			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
 
 			SortResultsMixedAccordingToTimePerDoc(result);
