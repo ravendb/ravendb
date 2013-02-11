@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -29,11 +31,20 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
+					long documentsCount = 0;
 					Etag lastDocEtag = Etag.Empty;
 					Database.TransactionalStorage.Batch(accessor =>
 					{
 						lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+						documentsCount = accessor.Documents.GetDocumentsCount();
 					});
+
+					var array = lastDocEtag.ToByteArray().Concat(BitConverter.GetBytes(documentsCount)).ToArray();
+					using (var md5 = MD5.Create())
+					{
+						var hashed = md5.ComputeHash(array);
+						lastDocEtag = new Guid(hashed);
+					}
 
 					if (context.MatchEtag(lastDocEtag))
 					{

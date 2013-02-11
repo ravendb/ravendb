@@ -68,7 +68,7 @@ namespace Raven.Tests.Issues
 		private static Query Parse(string q)
 		{
 			using (var defaultAnalyzer = new KeywordAnalyzer())
-			using (var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer))
+			using (var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer))
 				return QueryBuilder.BuildQuery(q, perFieldAnalyzerWrapper);
 		}
 	}

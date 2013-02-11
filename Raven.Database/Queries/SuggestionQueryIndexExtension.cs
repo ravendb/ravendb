@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -15,6 +17,7 @@ namespace Raven.Database.Queries
 {
 	public class SuggestionQueryIndexExtension : IIndexExtension
 	{
+		private readonly WorkContext workContext;
 		private readonly string key;
 		private readonly string field;
 		private readonly Directory directory;
@@ -22,16 +25,18 @@ namespace Raven.Database.Queries
 
 		[CLSCompliant(false)]
 		public SuggestionQueryIndexExtension(
+			WorkContext workContext,
 			string key,
-			IndexReader reader,
+			bool isRunInMemory,
 			StringDistance distance, 
 			string field, 
 			float accuracy)
 		{
+			this.workContext = workContext;
 			this.key = key;
 			this.field = field;
 			
-			if(reader.Directory() is RAMDirectory)
+			if(isRunInMemory)
 			{
 				directory = new RAMDirectory();
 			}
@@ -46,7 +51,7 @@ namespace Raven.Database.Queries
 
 		public void Init(IndexReader reader)
 		{
-			spellChecker.IndexDictionary(new LuceneDictionary(reader, field));
+			spellChecker.IndexDictionary(new LuceneDictionary(reader, field), workContext.CancellationToken);
 		}
 
 		public SuggestionQueryResult Query(SuggestionQuery suggestionQuery, IndexReader indexReader)
@@ -94,28 +99,41 @@ namespace Raven.Database.Queries
 			};
 		}
 
-		public void OnDocumentsIndexed(IEnumerable<Document> documents)
+		public void OnDocumentsIndexed(IEnumerable<Document> documents, Analyzer searchAnalyzer)
 		{
-			spellChecker.IndexDictionary(new EnumerableDictionary(documents, field));
+			spellChecker.IndexDictionary(new EnumerableDictionary(documents, field, searchAnalyzer), workContext.CancellationToken);
 		}
 
 		public class EnumerableDictionary : SpellChecker.Net.Search.Spell.IDictionary
 		{
 			private readonly IEnumerable<Document> documents;
 			private readonly string field;
+			private readonly Analyzer searchAnalyzer;
 
-			public EnumerableDictionary(IEnumerable<Document> documents, string field)
+			public EnumerableDictionary(IEnumerable<Document> documents, string field, Analyzer searchAnalyzer)
 			{
 				this.documents = documents;
 				this.field = field;
+				this.searchAnalyzer = searchAnalyzer;
 			}
 
 			public IEnumerator<string> GetWordsIterator()
 			{
-				return (from document in documents 
-						from fieldable in document.GetFieldables(field) 
-						select fieldable.StringValue
-						).GetEnumerator();
+				foreach (var document in documents)
+				{
+					foreach (var fieldable in document.GetFieldables(field))
+					{
+						var str = fieldable.StringValue;
+						if(string.IsNullOrEmpty(str))
+							continue;
+						var tokenStream = searchAnalyzer.ReusableTokenStream(field, new StringReader(str));
+						while (tokenStream.IncrementToken())
+						{
+							var term = tokenStream.GetAttribute<ITermAttribute>();
+							yield return term.Term;
+						}
+					}
+				}
 			}
 		}
 

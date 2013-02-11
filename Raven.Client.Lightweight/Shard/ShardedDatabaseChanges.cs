@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using System.Linq;
 using Raven.Client.Extensions;
@@ -14,18 +15,19 @@ namespace Raven.Client.Shard
 		public ShardedDatabaseChanges(IDatabaseChanges[] shardedDatabaseChanges)
 		{
 			this.shardedDatabaseChanges = shardedDatabaseChanges;
-			Task = Task.Factory.ContinueWhenAll(shardedDatabaseChanges.Select(x => x.Task).ToArray(), tasks =>
+			Task = System.Threading.Tasks.Task.Factory.ContinueWhenAll(shardedDatabaseChanges.Select(x => x.Task).ToArray(), tasks =>
 			{
 				foreach (var task in tasks)
 				{
 					task.AssertNotFailed();
 				}
+				return (IDatabaseChanges) this;
 			});
 		}
 
 		public bool Connected { get; private set; }
 		public event EventHandler ConnectionStatusChanged = delegate {};
-		public Task Task { get; private set; }
+		public Task<IDatabaseChanges> Task { get; private set; }
 
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{

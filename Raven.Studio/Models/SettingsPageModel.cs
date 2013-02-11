@@ -4,9 +4,11 @@ using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -32,14 +34,13 @@ namespace Raven.Studio.Models
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
-				Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 				return; 
 			}
 
 	        ApplicationModel.Current.Server.Value.DocumentStore
 		        .AsyncDatabaseCommands
-		        .ForDefaultDatabase()
+				.ForSystemDatabase()
 		        .CreateRequest("/admin/databases/" + databaseName, "GET")
 		        .ReadResponseJsonAsync()
 		        .ContinueOnSuccessInTheUIThread(doc =>
@@ -62,16 +63,21 @@ namespace Raven.Studio.Models
 
 			        if (activeBundles != null)
 			        {
-				        if (activeBundles.Contains("Quotas"))
+						var bundles = activeBundles.Split(';').ToList();
+
+				        if (bundles.Contains("Quotas"))
 					        Settings.Sections.Add(new QuotaSettingsSectionModel());
 
-				        if (activeBundles.Contains("Replication"))
+				        if (bundles.Contains("Replication"))
 					        Settings.Sections.Add(new ReplicationSettingsSectionModel());
 
-				        if (activeBundles.Contains("Versioning"))
+						if(bundles.Contains("SqlReplication"))
+							Settings.Sections.Add(new SqlReplicationSettingsSectionModel());
+
+				        if (bundles.Contains("Versioning"))
 					        Settings.Sections.Add(new VersioningSettingsSectionModel());
 
-				        if (activeBundles.Contains("Authorization"))
+				        if (bundles.Contains("Authorization"))
 					        Settings.Sections.Add(new AuthorizationSettingsSectionModel());
 			        }
 
@@ -79,6 +85,20 @@ namespace Raven.Studio.Models
 			        {
 				        settingsSectionModel.LoadFor(databaseDocument);
 			        }
+
+					var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/plugins/status".NoCache(), "GET");
+
+					req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(item =>
+					{
+						var plugins = ((RavenJObject)item).Deserialize<PluginsStatus>(new DocumentConvention());
+
+						if (plugins == null || plugins.Plugins.Contains("Raven.Bundles.Authorization", StringComparer.InvariantCultureIgnoreCase) == false)
+							return;
+
+						var authSection = new AuthorizationSettingsSectionModel();
+						Settings.Sections.Add(authSection);
+						authSection.LoadFor(databaseDocument);
+					});
 		        });
         }
 

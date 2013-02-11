@@ -151,31 +151,55 @@ namespace Raven.Database.Queries
 						if (indexDefinition == null)
 							return false;
 
-						if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
+					    if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
+					    {
+						    var nonHighlightableFields = indexQuery
+							    .HighlightedFields
+								.Where(x =>
+										!indexDefinition.Stores.ContainsKey(x.Field) ||
+										indexDefinition.Stores[x.Field] != FieldStorage.Yes ||
+										!indexDefinition.Indexes.ContainsKey(x.Field) ||
+										indexDefinition.Indexes[x.Field] != FieldIndexing.Analyzed ||
+										!indexDefinition.TermVectors.ContainsKey(x.Field) ||
+										indexDefinition.TermVectors[x.Field] != FieldTermVector.WithPositionsAndOffsets)
+								.Select(x => x.Field)
+								.ToArray();
+
+					        if (nonHighlightableFields.Any())
+					        {
+					            explain(indexName,
+					                () => "The following fields could not be highlighted because they are not stored, analyzed and using term vectors with positions and offsets: " +
+					                      string.Join(", ", nonHighlightableFields));
+					            return false;
+					        }
+					    }
+
+					    if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
 						{
 							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { });
 
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
-								if (sortedField.Field.StartsWith(Constants.RandomFieldName))
+								var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortedField.Field);
+								if (normalizedFieldName.StartsWith(Constants.RandomFieldName))
 									continue;
 
 								// if the field is not in the output, then we can't sort on it. 
-								if (abstractViewGenerator.ContainsField(sortedField.Field) == false)
+								if (abstractViewGenerator.ContainsField(normalizedFieldName) == false)
 								{
 									explain(indexName,
 											() =>
-											"Rejected because index does not contains field '" + sortedField.Field + "' which we need to sort on");
+											"Rejected because index does not contains field '" + normalizedFieldName + "' which we need to sort on");
 									return false;
 								}
 
-								var dynamicSortInfo = sortInfo.FirstOrDefault(x => x.Field == sortedField.Field);
+								var dynamicSortInfo = sortInfo.FirstOrDefault(x => x.Field == normalizedFieldName);
 
 								if (dynamicSortInfo == null)// no sort order specified, we don't care, probably
 									continue;
 
 								SortOptions value;
-								if (indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false)
+								if (indexDefinition.SortOptions.TryGetValue(normalizedFieldName, out value) == false)
 								{
 									switch (dynamicSortInfo.FieldType)// if we can't find the value, we check if we asked for the default sorting
 									{
@@ -184,7 +208,7 @@ namespace Raven.Database.Queries
 											continue;
 										default:
 											explain(indexName,
-													() => "The specified sort type is different than the default for field: " + sortedField.Field);
+													() => "The specified sort type is different than the default for field: " + normalizedFieldName);
 											return false;
 									}
 								}
@@ -194,7 +218,7 @@ namespace Raven.Database.Queries
 									explain(indexName,
 											() =>
 											"The specified sort type (" + dynamicSortInfo.FieldType + ") is different than the one specified for field '" +
-											sortedField.Field + "' (" + value + ")");
+											normalizedFieldName + "' (" + value + ")");
 									return false; // different sort order, there is a problem here
 							}
 						}

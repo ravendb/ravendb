@@ -31,10 +31,7 @@ namespace Raven.Studio.Features.Documents
             {
                 return "TempIndexScore";
             }
-            else
-            {
-                return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
-            }
+	        return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
         }
 
         private static string ExpandPropertyPathToXamlBinding(string binding)

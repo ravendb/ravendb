@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Bundles.Replication.Async

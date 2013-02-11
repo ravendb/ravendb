@@ -72,7 +72,7 @@ namespace Raven.Studio.Models
 			OnPropertyChanged(() => StatusImage);
 
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
-			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+											? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
 			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 
 		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
@@ -100,7 +100,7 @@ namespace Raven.Studio.Models
 			if (ApplicationModel.Current != null)
 				ApplicationModel.Current.Server.Value.DocumentStore
 					.AsyncDatabaseCommands
-					.ForDefaultDatabase()
+					.ForSystemDatabase()
 					.GetAsync("Raven/Databases/" + Name)
 					.ContinueOnSuccessInTheUIThread(doc =>
 					{
@@ -119,10 +119,10 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				return DatabaseDocument != null && 
-					   DatabaseDocument.Value.Settings != null && 
-					   DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
-					   DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Contains("Replication");
+				return DatabaseDocument != null &&
+				       DatabaseDocument.Value.Settings != null &&
+				       DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
+				       DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Split(';').Contains("Replication", StringComparer.OrdinalIgnoreCase);
 			}
 		}
 

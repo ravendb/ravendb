@@ -329,6 +329,7 @@ namespace Raven.Client.Document.SessionOperations
 				case "Int32":
 					return SortOptions.Int;
 				case "Int64":
+				case "TimeSpan":
 					return SortOptions.Long;
 				case "Double":
 				case "Decimal":

@@ -56,11 +56,16 @@ namespace Raven.Storage.Esent.StorageActions
 				if (data != null)
 				{
 					long written;
-					using (var stream = new BufferedStream(new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"])))
+					using (var columnStream = new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"]))
 					{
-						data.CopyTo(stream);
-						written = stream.Position;
-						stream.Flush();
+						if (isUpdate)
+							columnStream.SetLength(0);
+						using (var stream = new BufferedStream(columnStream))
+						{
+							data.CopyTo(stream);
+							written = stream.Position;
+							stream.Flush();
+						}
 					}
 					if (written == 0) // empty attachment
 					{

@@ -238,6 +238,16 @@ namespace Raven.Database.Server.Responders
 			{
 				return InputStream;
 			}
+
+			public bool HasCookie(string name)
+			{
+				return false;
+			}
+
+			public string GetCookie(string name)
+			{
+				return null;
+			}
 		}
 
 		public void Dispose()
@@ -325,6 +335,11 @@ namespace Raven.Database.Server.Responders
 			public Task WriteAsync(string data)
 			{
 				throw new NotSupportedException();
+			}
+
+			public void SetCookie(string name, string val)
+			{
+				// cookies are not supported
 			}
 		}
 	}

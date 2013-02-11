@@ -1,8 +1,0 @@
-#!/bin/sh
-
-# Server
-xbuild /property:StyleCopEnabled=false Raven.Server/Raven.Server.csproj
-
-# Client
-#   Remark: There's no "Client Profile" on Mono
-xbuild /p:TargetFrameworkProfile="" /property:StyleCopEnabled=false Raven.Client.Lightweight/Raven.Client.Lightweight.csproj

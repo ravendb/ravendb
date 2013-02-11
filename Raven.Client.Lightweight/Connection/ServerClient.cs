@@ -194,7 +194,7 @@ namespace Raven.Client.Connection
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + Uri.EscapeDataString(key), "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1232,7 +1232,7 @@ namespace Raven.Client.Connection
 				   };
 		}
 
-		public IDatabaseCommands ForDefaultDatabase()
+		public IDatabaseCommands ForSystemDatabase()
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
@@ -1587,20 +1587,23 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		/// <param name="index"></param>
-		/// <param name="query"></param>
-		/// <param name="facetSetupDoc"></param>
-		/// <returns></returns>
-		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc)
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
 		{
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&{2}",
-															  Uri.EscapeUriString(index),
-															  Uri.EscapeDataString(facetSetupDoc),
-															  query.GetMinimalQueryString());
+				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&{2}&facetStart={3}&facetPageSize={4}",
+																Uri.EscapeUriString(index),
+																Uri.EscapeDataString(facetSetupDoc),
+																query.GetMinimalQueryString(),
+																start,
+																pageSize);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
@@ -1708,6 +1711,31 @@ namespace Raven.Client.Connection
 		~ServerClient()
 		{
 			Dispose();
+		}
+
+		public RavenJToken GetOperationStatus(long id)
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, url + "/operation/status?id" + id, "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+			try
+			{
+				return request.ReadResponseJson();
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+					throw;
+				return null;
+			}
+		}
+
+		public IDisposable Expect100Continue()
+		{
+			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+			servicePoint.Expect100Continue = true;
+			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
 	}
 }

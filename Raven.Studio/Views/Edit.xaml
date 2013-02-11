@@ -589,6 +589,7 @@
 									<RowDefinition Height="Auto"/>
 								</Grid.RowDefinitions>
 
+								<controls:DateTimePicker SelectedDateTime="{Binding ExpireAt.Value, Mode=TwoWay}"/>
 								<controls:DateTimePicker SelectedDateTime="{Binding ExpireAt, Mode=TwoWay}"/>
 							</Grid>
 						</StackPanel>

@@ -55,6 +55,7 @@
     <Reference Include="Microsoft.Threading.Tasks.Extensions.Desktop">
       <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
@@ -81,6 +82,7 @@
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Changes\TaskedObservable.cs" />
     <Compile Include="Changes\TaskErrorExtensions.cs" />
+    <Compile Include="Util\CSharpClassName.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
@@ -122,12 +124,12 @@
     <Compile Include="Document\GenerateEntityIdOnTheClient.cs" />
     <Compile Include="Document\EntityToJson.cs" />
     <Compile Include="Document\MultiDatabaseHiLoGenerator.cs" />
-    <Compile Include="Document\RemoteBulkInsertOperation.cs" />
-    <Compile Include="Document\OAuth\AbstractAuthenticator.cs" />
     <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
-    <Compile Include="Document\OAuth\SecuredAuthenticator.cs" />
+    <Compile Include="Document\RemoteBulkInsertOperation.cs" />
     <Compile Include="Document\BulkInsertOperation.cs" />
     <Compile Include="Exceptions\ServerRequestError.cs" />
+    <Compile Include="FieldHighlightings.cs" />
+    <Compile Include="Extensions\AsyncDocumentSessionExtesions.cs" />
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
@@ -221,6 +223,7 @@
     <Compile Include="Linq\RavenQueryInspector.cs" />
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
+    <Compile Include="RavenQueryHighlightings.cs" />
     <Compile Include="RavenQueryStatistics.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="Shard\BaseShardedDocumentSession.cs" />

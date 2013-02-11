@@ -257,7 +257,7 @@ namespace Raven.Database.Indexing
 					int localWork = 0;
 					while (context.RunIndexing)
 					{
-						jsonDocuments = GetJsonDocsFromDisk(nextEtag);
+						jsonDocuments = GetJsonDocsFromDisk(highestLoadedEtag);
 						if (jsonDocuments.Count > 0)
 							break;
 

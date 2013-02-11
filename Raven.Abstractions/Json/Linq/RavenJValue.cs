@@ -60,6 +60,11 @@ namespace Raven.Json.Linq
 			return new RavenJValue(Value, Type);
 		}
 
+		public override bool IsSnapshot
+		{
+			get { return isSnapshot; }
+		}
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
 		/// </summary>
@@ -635,7 +640,7 @@ namespace Raven.Json.Linq
 			return _value.ToString();
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			isSnapshot = true;
 		}

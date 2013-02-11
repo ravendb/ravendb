@@ -24,9 +24,11 @@ namespace Raven.Database.Server.Security
 			if (NeverSecret.Urls.Contains(requestUrl))
 				return true;
 
-			var hasApiKey = "true".Equals(context.Request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
+			var hasApiKey = "True".Equals(context.Request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
 			var authHeader = context.Request.Headers["Authorization"];
-			if (hasApiKey || string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+			var hasOAuthTokenInCookie = context.Request.HasCookie("OAuth-Token");
+			if (hasApiKey || hasOAuthTokenInCookie || 
+				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
 				return oAuthRequestAuthorizer.Authorize(context, hasApiKey);
 			}

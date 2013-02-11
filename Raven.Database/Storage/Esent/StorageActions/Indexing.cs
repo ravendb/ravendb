@@ -183,18 +183,12 @@ namespace Raven.Storage.Esent.StorageActions
 				if (!Api.TrySeek(session, op.Table, SeekGrbit.SeekGE))
 					continue;
 				var columnids = Api.GetColumnDictionary(session, op.Table);
-				var count = 0;
 				do
 				{
 					var indexNameFromDb = Api.RetrieveColumnAsString(session, op.Table, columnids["view"]);
 					if (string.Equals(name, indexNameFromDb, StringComparison.OrdinalIgnoreCase) == false)
 						break;
-					if (count++ > 10000)
-					{
-						PulseTransaction();
-						count = 0;
-					}
-
+					MaybePulseTransaction();
 					Api.JetDelete(session, op.Table);
 				} while (Api.TryMoveNext(session, op.Table));
 			}
@@ -362,6 +356,22 @@ namespace Raven.Storage.Esent.StorageActions
 			return QueryReferences(key, "by_ref", "key");
 		}
 
+
+		public int GetCountOfDocumentsReferencing(string key)
+		{
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_ref");
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
+				return 0;
+			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+								 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+			int records;
+			Api.JetIndexRecordCount(session, IndexedDocumentsReferences, out records, 0);
+			return records;
+		}
+
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
 			return QueryReferences(key, "by_key", "ref");
@@ -376,7 +386,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
 			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-
+								 
 			var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			do
 			{

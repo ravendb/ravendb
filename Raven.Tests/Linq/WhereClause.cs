@@ -479,7 +479,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void NegatingSubClauses()
 		{
-			var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null, null)).Not
+			var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null, null, false)).Not
 				.OpenSubclause()
 				.WhereEquals("IsPublished", true)
 				.AndAlso()

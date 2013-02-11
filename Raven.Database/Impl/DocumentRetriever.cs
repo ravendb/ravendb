@@ -106,7 +106,9 @@ namespace Raven.Database.Impl
 					return null;
 				var document = GetDocumentWithCaching(queryResult.Key);
 				if (document != null)
+				{
 					document.Metadata[Constants.TemporaryScoreValue] = queryScore;
+				}
 				return document;
 			}
 

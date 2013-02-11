@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
@@ -69,7 +70,7 @@ namespace Raven.Client.Document
 
 			if (CachedJsonDocs != null)
 			{
-				jObject.EnsureSnapshot();
+				jObject.EnsureCannotBeChangeAndEnableSnapshotting();
 				CachedJsonDocs[entity] = jObject;
 				return (RavenJObject)jObject.CreateSnapshot();
 			}
@@ -158,6 +159,13 @@ namespace Raven.Client.Document
 			}
 		}
 
+		private static Regex arrayEndRegex = new Regex(@"\[\], [\w\.-]+$",
+#if !SILVERLIGHT
+		                                               RegexOptions.Compiled
+#else
+													   RegexOptions.None	
+#endif
+		);
 		private static bool ShouldSimplifyJsonBasedOnType(string typeValue, JsonProperty jsonProperty)
 		{
 			if (jsonProperty != null && (jsonProperty.TypeNameHandling == TypeNameHandling.All || jsonProperty.TypeNameHandling == TypeNameHandling.Arrays))
@@ -169,7 +177,7 @@ namespace Raven.Client.Document
 				return true;
 			if (typeValue.StartsWith("System.Collections.Generic.Dictionary`2[["))
 				return true;
-			if (typeValue.EndsWith("[], mscorlib")) // array
+			if (arrayEndRegex.IsMatch(typeValue)) // array
 				return true;
 			return false;
 		}

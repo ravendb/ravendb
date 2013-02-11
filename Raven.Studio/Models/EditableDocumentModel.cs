@@ -93,11 +93,14 @@ namespace Raven.Studio.Models
 		public EditableDocumentModel()
 		{
 			ModelUrl = "/edit";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
 
 			dataSection = new DocumentSection{ Name = "Data", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			DocumentSections = new List<DocumentSection> { dataSection, metaDataSection };
 			EnableExpiration = new Observable<bool>();
+			ExpireAt = new Observable<DateTime>();
+			ExpireAt.PropertyChanged += (sender, args) => TimeChanged = true;
 			CurrentSection = dataSection;
 			
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
@@ -270,6 +273,7 @@ namespace Raven.Studio.Models
 		public bool HasExpiration
 		{
 			get { return hasExpiration; }
+			set { hasExpiration = value; OnPropertyChanged(() => HasExpiration); }
 		}
 
 		public bool TimeChanged { get; set; }
@@ -361,12 +365,27 @@ namespace Raven.Studio.Models
 					}
 					else
 					{
+						AssertNoPropertyBeyondSize(result.Document.DataAsJson, 500 * 1000);
 						var recentQueue = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.RecentDocuments;
+						ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+						                                               ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+						                                               "/docs/" + result.Document.Key;
 						recentQueue.Add(result.Document.Key);
 						Mode = DocumentMode.DocumentWithId;
 						result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
 						LocalId = result.Document.Key;
 						SetCurrentDocumentKey(result.Document.Key);
+						var expiration = result.Document.Metadata["Raven-Expiration-Date"];
+						if (expiration != null)
+						{
+							ExpireAt.Value = DateTime.Parse(expiration.ToString());
+							EnableExpiration.Value = true;
+							HasExpiration = true;
+						}
+						else
+						{
+							HasExpiration = false;
+						}
 						if (HasExpiration)
 						{
 							var expiration = result.Document.Metadata["Raven-Expiration-Date"];
@@ -448,13 +467,41 @@ namespace Raven.Studio.Models
 			         });
 		}
 
+		public void AssertNoPropertyBeyondSize(RavenJToken token, int maxSize, string path = "")
+		{
+			if (path.StartsWith("."))
+				path = path.Substring(1);
+			switch (token.Type)
+			{
+				case JTokenType.Object:
+					foreach (var item in ((RavenJObject)token))
+					{
+						if (item.Key != null && item.Key.Length > maxSize)
+							throw new InvalidOperationException(string.Format("Document's property Name: \"{0}\" is too long to view in the studio (property length: {1:#,#}, max allowed length: {2:#,#})", path + "." + item.Key, item.Key.Length, maxSize));
+						AssertNoPropertyBeyondSize(item.Value, maxSize, path + "." + item.Key);
+					}
+					break;
+				case JTokenType.Array:
+					foreach (var item in ((RavenJArray)token))
+					{
+						AssertNoPropertyBeyondSize(item, maxSize, path + ".");
+					}
+					break;
+				case JTokenType.String:
+					var value = token.Value<string>();
+					if (value != null && value.Length > maxSize)
+						throw new InvalidOperationException(string.Format("Document's property: \"{0}\" is too long to view in the studio (property length: {1:#,#}, max allowed length: {2:#,#})", path, value.Length, maxSize));
+					break;
+			}
+		}
+
 		public bool EditingDatabase { get; set; }
 
 		private void EditDatabaseDocument(string database)
 		{
 			ApplicationModel.Current.Server.Value.DocumentStore
 			                .AsyncDatabaseCommands
-			                .ForDefaultDatabase()
+							.ForSystemDatabase()
 			                .CreateRequest("/admin/databases/" + database, "GET")
 			                .ReadResponseJsonAsync()
 			                .ContinueOnSuccessInTheUIThread(result =>
@@ -1205,7 +1252,7 @@ namespace Raven.Studio.Models
 
 				var req = ApplicationModel.Current.Server.Value.DocumentStore
 				                          .AsyncDatabaseCommands
-				                          .ForDefaultDatabase()
+										  .ForSystemDatabase()
 				                          .CreateRequest("/admin/databases/" + ApplicationModel.Database.Value.Name, "PUT");
 
 				req
@@ -1237,13 +1284,17 @@ namespace Raven.Studio.Models
 						}
 						else
 						{
-							metadata[Constants.RavenEntityName] = parentModel.ExpireAt;
+							metadata[Constants.RavenEntityName] = entityName;
 						}
 					}
 
 					if (parentModel.EnableExpiration.Value)
 					{
-						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+					}
+					else if (metadata.ContainsKey("Raven-Expiration-Date"))
+					{
+						metadata.Remove("Raven-Expiration-Date");
 					}
 				}
 				catch (Exception ex)
