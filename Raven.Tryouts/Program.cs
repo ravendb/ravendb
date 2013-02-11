@@ -22,7 +22,6 @@ namespace BulkStressTest
 				Console.WriteLine(i);
 				using (var dataSetIndexTests = new DataSetIndexTests())
 					dataSetIndexTests.can_execute_query_default();
-
 			}
 		}
 

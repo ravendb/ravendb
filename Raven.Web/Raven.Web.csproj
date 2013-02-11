@@ -114,7 +114,6 @@
       <Link>RavenDB.snk</Link>
     </None>
     <Content Include="packages.config" />
-    <Content Include="app.config" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
@@ -142,7 +141,7 @@
     </VisualStudio>
   </ProjectExtensions>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-	<Import Project="..\SharedLibs\Microsoft.Bcl\Microsoft.Bcl.targets" />
+  <Import Project="..\SharedLibs\Microsoft.Bcl\Microsoft.Bcl.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
