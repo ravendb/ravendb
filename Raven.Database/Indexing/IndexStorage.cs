@@ -431,6 +431,10 @@ namespace Raven.Database.Indexing
                     value.Priority = IndexingPriority.Normal;
                     accessor.Indexing.SetIndexPriority(index, IndexingPriority.Normal);
                     documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
+                    documentDatabase.RaiseNotifications(new IndexChangeNotification() {
+                        Name = value.name,
+                        Type = IndexChangeTypes.IndexPromotedFromIdle
+                    });
                 });
             }
 
@@ -641,6 +645,10 @@ namespace Raven.Database.Indexing
                     {
                         accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
                         thisItem.Index.Priority = IndexingPriority.Idle;
+                        documentDatabase.RaiseNotifications(new IndexChangeNotification() {
+                            Name = thisItem.Name,
+                            Type = IndexChangeTypes.IndexDemotedToIdle
+                        });
                         
                         continue;
                     }
@@ -666,6 +674,10 @@ namespace Raven.Database.Indexing
 	                    {
 	                        accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
 	                        thisItem.Index.Priority = IndexingPriority.Idle;
+                            documentDatabase.RaiseNotifications(new IndexChangeNotification() {
+                                Name = thisItem.Name,
+                                Type = IndexChangeTypes.IndexDemotedToIdle
+                            });
 	                    }
 	                }
 	            }
