@@ -47,6 +47,14 @@ namespace Raven.Database.Server.Responders.Admin
 				IsTenantDatabase = true
 			};
 
+			if (databaseDocument != null)
+			{
+				foreach (var setting in databaseDocument.Settings)
+				{
+					ravenConfiguration.Settings[setting.Key] = setting.Value;
+				}
+			}
+
 			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Raven.ravendb")))
 			{
 				ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
@@ -58,6 +66,7 @@ namespace Raven.Database.Server.Responders.Admin
 			}
 
 			ravenConfiguration.CustomizeValuesForTenant(databaseName);
+
 			ravenConfiguration.Initialize();
 
 			string documentDataDir;
