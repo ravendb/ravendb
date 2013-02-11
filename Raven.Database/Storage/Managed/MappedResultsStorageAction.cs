@@ -149,11 +149,7 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData,
-				int take,
-				List<object> itemsToDelete,
-				HashSet<Tuple<string, int>> itemsAlreadySeen
-			)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, int take, List<object> itemsToDelete, HashSet<Tuple<string, int>> itemsAlreadySeen, List<string> reduceKeysDone)
 		{
 			var seenLocally = new HashSet<Tuple<string, int>>();
 			foreach (var reduceKey in reduceKeys)
