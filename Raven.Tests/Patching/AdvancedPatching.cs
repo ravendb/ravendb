@@ -159,11 +159,11 @@ this.Parts = this.Email.split('@');";
 		{
 			var doc = RavenJObject.FromObject(test);
 			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-																							{
-																								Script = @"
+			{
+				Script = @"
 this.Comments.Remove('two');
 "
-																							});
+			});
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
 			Assert.Equal(new[] { "one", "seven" }.ToList(), result.Comments);
@@ -190,10 +190,10 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			var doc = RavenJObject.FromObject(test);
 			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-																							{
-																								Script = "this.TheName = Name",
-																								Values = { { "Name", "ayende" } }
-																							});
+			{
+				Script = "this.TheName = Name",
+				Values = { { "Name", "ayende" } }
+			});
 			Assert.Equal("ayende", resultJson.Value<string>("TheName"));
 		}
 
@@ -222,9 +222,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
 			advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-																			{
-																				Script = "output(this.Id)"
-																			});
+			{
+				Script = "output(this.Id)"
+			});
 
 			Assert.Equal("someId", advancedJsonPatcher.Debug[0]);
 		}
@@ -300,13 +300,13 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 				}
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
-																{
-																	Script = @"
+				{
+					Script = @"
 var another = LoadDocument(anotherId);
 this.Value = another.Value;
 ",
-																	Values = { { "anotherId", "CustomTypes/2" } }
-																});
+					Values = { { "anotherId", "CustomTypes/2" } }
+				});
 
 				var resultDoc = store.DatabaseCommands.Get("CustomTypes/1");
 				var resultJson = resultDoc.DataAsJson;
@@ -327,13 +327,11 @@ this.Value = another.Value;
 					s.SaveChanges();
 				}
 
-
 				store.DatabaseCommands.Patch("products/1",
-														 new ScriptedPatchRequest
-														 {
-															 Script = "this.Test = 'a';"
-														 });
-
+				new ScriptedPatchRequest
+				{
+					Script = "this.Test = 'a';"
+				});
 
 				var resultDoc = store.DatabaseCommands.Get("products/1");
 
@@ -348,11 +346,10 @@ this.Value = another.Value;
 			using (var store = NewDocumentStore())
 			{
 				store.DatabaseCommands.Patch("products/1",
-														 new ScriptedPatchRequest
-														 {
-															 Script = "this.Test = 'a';"
-														 });
-
+				new ScriptedPatchRequest
+				{
+					Script = "this.Test = 'a';"
+				});
 			}
 		}
 
@@ -432,7 +429,6 @@ this.Value = another.Value;
 			Assert.Equal("two", item2Result.Comments[1]);
 			Assert.Equal("seven", item2Result.Comments[2]);
 		}
-
 
 		class CustomType
 		{

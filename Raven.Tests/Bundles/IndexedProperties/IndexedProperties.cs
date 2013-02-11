@@ -50,7 +50,8 @@ namespace Raven.Tests.Bundles.IndexedProperties
 									order.CustomerId,
 									OrderCount = 1,
 									TotalAmount = order.Amount,
-									AverageOrderAmount = 0
+									AverageOrderAmount = 0,
+                                    Blah_Blah = 5.0m
 								};
 
 				Reduce = results => from result in results
@@ -63,7 +64,8 @@ namespace Raven.Tests.Bundles.IndexedProperties
 											CustomerId = g.Key,
                                             OrderCount = count,
                                             TotalAmount = amount,
-											AverageOrderAmount = amount / count
+											AverageOrderAmount = amount / count,
+                                            Blah_Blah = 5.0m
 										};
 			}
 		}
@@ -91,14 +93,18 @@ namespace Raven.Tests.Bundles.IndexedProperties
             var indexPropsSetup = new IndexedPropertiesSetupDoc
             {
                  DocumentKey = "CustomerId",
-//                 Script = @"
+                 Script = @"
+//this.debug_outputs.push(intputDoc.TotalAmount);
+output(global.inputDoc.TotalAmount);
+output(this.TotalAmount);
 //this.TotalAmount = parseFloat(intputDoc.TotalAmount);
+//this.TotalAmount = intputDoc.TotalAmount;
 //this.AverageOrderAmount = parseFloat(intputDoc.AverageOrderAmount);
 //this.OrderCount = parseInt(intputDoc.OrderCount);"
-                 Script = @"
-this.TotalAmount = parseFloat(TotalAmount);
-this.AverageOrderAmount = parseFloat(AverageOrderAmount);
-this.OrderCount = parseInt(OrderCount);"
+                //                 Script = @"
+//this.TotalAmount = parseFloat(TotalAmount);
+//this.AverageOrderAmount = parseFloat(AverageOrderAmount);
+//this.OrderCount = parseInt(OrderCount);"
             };
 
             RunIndexedProperties(indexPropsSetup);

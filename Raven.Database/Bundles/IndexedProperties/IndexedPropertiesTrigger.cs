@@ -134,9 +134,9 @@ namespace Raven.Bundles.IndexedProperties
                 var scriptedJsonPatcher = new ScriptedJsonPatcher(database);
 
                 // TODO fix this so we can namespace the values we pass in, so they can be accessed via "mapReduce." or "inputDoc."
-                //var values = new Dictionary<string, object> {{ "inputDoc", RavenJToken.FromObject(fields) }};
-                //var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = values };
-                var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = fields };
+                var values = new Dictionary<string, object> {{ "inputDoc", RavenJToken.FromObject(fields) }};
+                var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = values };
+                //var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = fields };
                 try
                 {                    
                     var timer = Stopwatch.StartNew();

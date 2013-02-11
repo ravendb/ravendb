@@ -22,9 +22,13 @@ namespace Raven.Database.Json
 	{
 		private static readonly ScriptsCache scriptsCache = new ScriptsCache();
 		private readonly Func<string, RavenJObject> loadDocument;
+        private readonly Func<string, Guid?, RavenJObject, RavenJObject, PutResult> putDocument;
+		
+        [ThreadStatic]
+        private static Func<string, RavenJObject> loadDocumentStatic;
 
-		[ThreadStatic]
-		private static Func<string, RavenJObject> loadDocumentStatic;
+        [ThreadStatic]
+        private static Func<string, Guid?, RavenJObject, RavenJObject, PutResult> putDocumentStatic;
 
 		public List<string> Debug = new List<string>();
 
@@ -37,14 +41,23 @@ namespace Raven.Database.Json
 					throw new InvalidOperationException(
 						"Cannot load by id without database context");
 				});
+                putDocument = ((id, etag, document, metadata) =>
+                {
+                    throw new InvalidOperationException(
+                        "Cannot put a document without database context");
+                });
 			}
 			else
 			{
 				loadDocument = id =>
 				{
-					var jsonDocument = database.Get(id, null);
+					var jsonDocument = database.Get(id, null);                    
 					return jsonDocument == null ? null : jsonDocument.ToJson();
 				};
+                putDocument = (id, etag, document, metadata)  =>
+                {
+                    return database.Put(id, etag, document, metadata, null);                    
+                };
 			}
 		}
 
@@ -68,22 +81,14 @@ namespace Raven.Database.Json
 			try
 			{
 				jintEngine = scriptsCache.CheckoutScript(CreateEngine, patch);
-			}
-            // TODO I don't think these are needed anymore, they are probably left from debugging!!
-            //catch (NotSupportedException)
-            //{
-            //    throw;
-            //}
-            //catch (JintException)
-            //{
-            //    throw;
-            //}
+			}           
 			catch (Exception e)
 			{
 				throw new InvalidOperationException("Could not parse: " + Environment.NewLine + patch.Script, e);
 			}
 
 			loadDocumentStatic = loadDocument;
+            putDocumentStatic = putDocument;
 			try
 			{
 				CustomizeEngine(jintEngine);
@@ -92,7 +97,8 @@ namespace Raven.Database.Json
 				{
 					if (kvp.Value is RavenJToken)
 					{
-						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, (RavenJToken)kvp.Value));
+                        var jsValue = ToJsInstance(jintEngine.Global, (RavenJToken)kvp.Value);
+						jintEngine.SetParameter(kvp.Key, jsValue);
 					}
 					else
 					{
@@ -101,7 +107,8 @@ namespace Raven.Database.Json
 						jintEngine.SetParameter(kvp.Key, jsInstance);
 					}
 				}
-				var jsObject = ToJsObject(jintEngine.Global, doc);
+
+                var jsObject = ToJsObject(jintEngine.Global, doc);
 				jintEngine.ResetSteps();
 				if (size != 0)
 				{
@@ -282,6 +289,8 @@ namespace Raven.Database.Json
 		{
 			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
 			var wrapperScript = String.Format(@"
+//Nice hack from http://stackoverflow.com/questions/3277182/how-to-get-the-global-object-in-javascript
+var global = Function('return this')();
 function ExecutePatchScript(docInner){{
   (function(doc){{
 	{0}
@@ -294,7 +303,6 @@ function ExecutePatchScript(docInner){{
 				.SetDebugMode(false)
 				.SetMaxRecursions(50)
 				.SetMaxSteps(10 * 1000);
-
 
 			AddScript(jintEngine, "Raven.Database.Json.Map.js");
 			AddScript(jintEngine, "Raven.Database.Json.lodash.js");
