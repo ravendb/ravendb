@@ -56,7 +56,7 @@ namespace Raven.Database.Queries
 			// We decline to suggest an index here and choose to use the default index created for this
 			// sort of query, which is what we would have to choose anyway.
 			if (indexQuery.AggregationOperation != AggregationOperation.None)
-				return null;
+				return new DynamicQueryOptimizerResult("", DynamicQueryMatchType.Failure);
 
 			if (string.IsNullOrEmpty(indexQuery.Query) && // we optimize for empty queries to use Raven/DocumentsByEntityName
 			    (indexQuery.SortedFields == null || indexQuery.SortedFields.Length == 0) && // and no sorting was requested
@@ -98,6 +98,8 @@ namespace Raven.Database.Queries
 					.Select(indexName =>
 					{
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
+					    var currentBestState = DynamicQueryMatchType.Complete;
+
 						if (abstractViewGenerator == null) // there is no matching view generator
 						{
 							explain(indexName, () => "There is no matching view generator. Maybe the index in the process of being deleted?");
@@ -164,7 +166,7 @@ namespace Raven.Database.Queries
 														normalizedFieldsQueriedUpon.Where(s => abstractViewGenerator.ContainsFieldOnMap(s) == false);
 													return "The following fields are missing: " + string.Join(", ", missingFields);
 												});
-                            return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
+                            currentBestState = DynamicQueryMatchType.Partial;
                         }
 
 						var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
@@ -210,8 +212,9 @@ namespace Raven.Database.Queries
 									explain(indexName,
 											() =>
 											"Rejected because index does not contains field '" + normalizedFieldName + "' which we need to sort on");
-                                    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-                                }
+                                    currentBestState = DynamicQueryMatchType.Partial;
+								    continue;
+								}
 
 								var dynamicSortInfo = sortInfo.FirstOrDefault(x => x.Field == normalizedFieldName);
 
@@ -282,7 +285,7 @@ namespace Raven.Database.Queries
                                 return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
 						}
 						}
-                        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Complete);
+                        return new DynamicQueryOptimizerResult(indexName, currentBestState);
 					})
                     .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
 					.OrderByDescending(result =>
@@ -293,7 +296,11 @@ namespace Raven.Database.Queries
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(result.IndexName);
 						if (abstractViewGenerator == null) // there isn't a matching view generator
 							return -1;
-						return abstractViewGenerator.CountOfFields;
+
+                        // TODO: Factor in staleness and remove this hard coded multiplier
+					    var multiplier = result.MatchType == DynamicQueryMatchType.Partial ? 1 : 10;
+
+                        return abstractViewGenerator.CountOfFields * multiplier;
 					});
 
 			DynamicQueryOptimizerResult bestResult = null;
@@ -309,7 +316,7 @@ namespace Raven.Database.Queries
 			}
 
 			explain(bestResult == null ? "Temporary index will be created" : bestResult.IndexName, () => "Selected as best match");
-		    return bestResult;
+		    return bestResult ?? new DynamicQueryOptimizerResult("", DynamicQueryMatchType.Failure);
 		}
 	}
 }

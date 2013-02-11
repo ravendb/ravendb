@@ -27,6 +27,8 @@ namespace Raven.Database.Data
 		public AggregationOperation AggregationOperation { get; set; }
 		public string[] HighlightedFields { get; set; }
 
+	    private List<Action<IndexDefinition>> extraActionsToPerform = new List<Action<IndexDefinition>>();
+ 
 		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
 
 		public DynamicQueryMapping()
@@ -279,6 +281,49 @@ namespace Raven.Database.Data
 				dynamicSortInfo.Field = ReplaceInvalidCharactersForFields(dynamicSortInfo.Field);
 			}
 		}
+
+        public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
+        {
+            this.Items = this.Items.Union(
+                indexDefinition.Fields
+                   .Where(field => this.Items.All(item => item.From != field))
+                   .Select(field => new DynamicQueryMappingItem()
+                   {
+                       From = field,
+                       To = ReplaceInvalidCharactersForFields(field),
+                       QueryFrom = EscapeParentheses(field)
+                   })
+           ).ToArray();
+
+            this.SortDescriptors = this.SortDescriptors.Union(
+                indexDefinition.SortOptions
+                    .Where(option => this.SortDescriptors.All(desc => desc.Field != option.Key))
+                    .Select(option => new DynamicSortInfo()
+                    {
+                        Field = option.Key,
+                        FieldType = option.Value
+                    })
+                ).ToArray();
+
+            foreach (var fieldStorage in indexDefinition.Stores)
+            {
+                KeyValuePair<string, FieldStorage> storage = fieldStorage;
+                extraActionsToPerform.Add(def=> def.Stores[storage.Key] = storage.Value);
+            }
+
+            foreach (var fieldIndex in indexDefinition.Indexes)
+            {
+                KeyValuePair<string, FieldIndexing> index = fieldIndex;
+                extraActionsToPerform.Add(def=> def.Indexes[index.Key] = index.Value);
+            }
+
+            foreach (var fieldTermVector in indexDefinition.TermVectors)
+            {
+                KeyValuePair<string, FieldTermVector> vector = fieldTermVector;
+                extraActionsToPerform.Add(def=> def.TermVectors[vector.Key] = vector.Value);
+            }
+            this.FindIndexName(database, this, query);
+	    }
 
 		static readonly Regex replaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
 		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<Tuple<string, string>> fields)

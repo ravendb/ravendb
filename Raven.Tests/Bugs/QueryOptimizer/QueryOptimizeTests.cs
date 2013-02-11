@@ -46,7 +46,7 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 				                                               },
 				                                               new string[0]);
 
-				Assert.Equal("Temp/AllDocs/ByAgeAndName", queryResult.IndexName);
+				Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
 
 				queryResult = store.DatabaseCommands.Query("dynamic",
 															   new IndexQuery
@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 															   },
 															   new string[0]);
 
-				Assert.Equal("Temp/AllDocs/ByAgeAndName", queryResult.IndexName);
+				Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
 			}
 		}
 
