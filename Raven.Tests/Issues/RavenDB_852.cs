@@ -10,7 +10,7 @@ namespace Raven.Tests.MailingList
 	public class RavenDB_852 : RavenTest
 	{
 		[Fact]
-		public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
+		public void Spatial_Search_Should_Sort_By_Nearest_To_Farthest()
 		{
 			using (var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize()) {
 				store.ExecuteIndex(new SpatialIndex());
