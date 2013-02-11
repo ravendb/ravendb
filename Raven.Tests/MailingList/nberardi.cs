@@ -12,10 +12,12 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize()) {
+			using (var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			{
 				store.ExecuteIndex(new SpatialIndex());
 
-				using (var session = store.OpenSession()) {
+				using (var session = store.OpenSession())
+				{
 					session.Store(new SpatialEntity(45.70955, -73.569131) // 22.23 Kb
 					{
 						Id = "se/1",
@@ -36,7 +38,8 @@ namespace Raven.Tests.MailingList
 
 				WaitForIndexing(store);
 
-				using (var session = store.OpenSession()) {
+				using (var session = store.OpenSession())
+				{
 					var results = session.Advanced.LuceneQuery<SpatialEntity>("SpatialIndex")
 						.WithinRadiusOf(500, 45.50955, -73.569133)
 						.ToList();
@@ -56,7 +59,8 @@ namespace Raven.Tests.MailingList
 				Map =
 					entities =>
 					from e in entities
-					select new {
+					select new
+					{
 						_ = SpatialGenerate(e.Latitude, e.Longitude)
 					};
 			}
@@ -72,7 +76,7 @@ namespace Raven.Tests.MailingList
 				Longitude = longitude;
 			}
 
-			public string Id { get;set;}
+			public string Id { get; set; }
 			public double Latitude { get; set; }
 			public double Longitude { get; set; }
 		}
