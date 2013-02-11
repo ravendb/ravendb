@@ -67,7 +67,7 @@ namespace Raven.Client.Document
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
 		private HttpJsonRequestFactory jsonRequestFactory = 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();

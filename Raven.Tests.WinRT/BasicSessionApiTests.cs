@@ -14,7 +14,7 @@ namespace Raven.Tests.WinRT
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					session.Store(new User {Name = "Fitzchak"});
+					session.StoreAsync(new User { Name = "Fitzchak" });
 					await session.SaveChangesAsync();
 				}
 

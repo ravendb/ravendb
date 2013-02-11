@@ -49,7 +49,7 @@ namespace Raven.Client
 			return source;
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>

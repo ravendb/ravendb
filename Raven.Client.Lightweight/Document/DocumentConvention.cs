@@ -274,7 +274,7 @@ namespace Raven.Client.Document
 			return FindTypeTagName(type) ?? DefaultTypeTagName(type);
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Generates the document key.
 		/// </summary>

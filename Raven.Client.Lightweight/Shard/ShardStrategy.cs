@@ -13,6 +13,7 @@ using Raven.Abstractions.Json;
 using Raven.Client.Document;
 #if NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Client.WinRT.MissingFromWinRT;
 #else
 using System.Security.Cryptography;
 #endif
