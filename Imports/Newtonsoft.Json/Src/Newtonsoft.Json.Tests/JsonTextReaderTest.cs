@@ -30,9 +30,9 @@ using System.Text;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 using Raven.Imports.Newtonsoft.Json;
 using System.IO;
@@ -2210,7 +2210,7 @@ bye", reader.Value);
     {
       double d;
 
-      d = Convert.ToDouble("6.0221418e23");
+      d = Convert.ToDouble("6.0221418e23", CultureInfo.InvariantCulture);
       Console.WriteLine(d.ToString(new CultureInfo("fr-FR")));
       Console.WriteLine(d.ToString("0.#############################################################################"));
 
@@ -2533,24 +2533,51 @@ bye", reader.Value);
       //Assert.IsFalse(jsonTextReader.Read());
     }
 
-    public class ToggleReaderError : TextReader
+    [Test]
+    public void WriteReadBoundaryDecimals()
     {
-      private readonly TextReader _inner;
+      StringWriter sw = new StringWriter();
+      JsonTextWriter writer = new JsonTextWriter(sw);
 
-      public bool Error { get; set; }
+      writer.WriteStartArray();
+      writer.WriteValue(decimal.MaxValue);
+      writer.WriteValue(decimal.MinValue);
+      writer.WriteEndArray();
 
-      public ToggleReaderError(TextReader inner)
-      {
-        _inner = inner;
-      }
+      string json = sw.ToString();
 
-      public override int Read(char[] buffer, int index, int count)
-      {
-        if (Error)
-          throw new Exception("Read error");
+      StringReader sr = new StringReader(json);
+      JsonTextReader reader = new JsonTextReader(sr);
 
-        return _inner.Read(buffer, index, 1);
-      }
+      Assert.IsTrue(reader.Read());
+
+      decimal? max = reader.ReadAsDecimal();
+      Assert.AreEqual(decimal.MaxValue, max);
+
+      decimal? min = reader.ReadAsDecimal();
+      Assert.AreEqual(decimal.MinValue, min);
+
+      Assert.IsTrue(reader.Read());
+    }
+  }
+
+  public class ToggleReaderError : TextReader
+  {
+    private readonly TextReader _inner;
+
+    public bool Error { get; set; }
+
+    public ToggleReaderError(TextReader inner)
+    {
+      _inner = inner;
+    }
+
+    public override int Read(char[] buffer, int index, int count)
+    {
+      if (Error)
+        throw new Exception("Read error");
+
+      return _inner.Read(buffer, index, 1);
     }
   }
 

@@ -23,7 +23,7 @@ namespace Raven.Database.Tasks
 
 		public RemoveFromIndexTask()
 		{
-			Keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public override void Merge(Task task)
@@ -34,7 +34,7 @@ namespace Raven.Database.Tasks
 
 		public override void Execute(WorkContext context)
 		{
-			var keysToRemove = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			var keysToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			try
 			{
 				context.TransactionalStorage.Batch(accessor =>

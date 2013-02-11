@@ -117,14 +117,14 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         return value.Length;
     }
 
-    public static string ToCharAsUnicode(char c)
+    public static void ToCharAsUnicode(char c, char[] buffer)
     {
-      char h1 = MathUtils.IntToHex((c >> 12) & '\x000f');
-      char h2 = MathUtils.IntToHex((c >> 8) & '\x000f');
-      char h3 = MathUtils.IntToHex((c >> 4) & '\x000f');
-      char h4 = MathUtils.IntToHex(c & '\x000f');
-
-      return new string(new[] { '\\', 'u', h1, h2, h3, h4 });
+      buffer[0] = '\\';
+      buffer[1] = 'u';
+      buffer[2] = MathUtils.IntToHex((c >> 12) & '\x000f');
+      buffer[3] = MathUtils.IntToHex((c >> 8) & '\x000f');
+      buffer[4] = MathUtils.IntToHex((c >> 4) & '\x000f');
+      buffer[5] = MathUtils.IntToHex(c & '\x000f');
     }
 
     public static TSource ForgivingCaseSensitiveFind<TSource>(this IEnumerable<TSource> source, Func<TSource, string> valueSelector, string testValue)
@@ -155,17 +155,29 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
       if (!char.IsUpper(s[0]))
         return s;
 
-      string camelCase = null;
-#if !(NETFX_CORE || PORTABLE)
-      camelCase = char.ToLower(s[0], CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture);
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < s.Length; i++)
+      {
+        bool hasNext = (i + 1 < s.Length);
+        if ((i == 0 || !hasNext) || char.IsUpper(s[i + 1]))
+        {
+          char lowerCase;
+#if !NETFX_CORE
+          lowerCase = char.ToLower(s[i], CultureInfo.InvariantCulture);
 #else
-      camelCase = char.ToLower(s[0]).ToString();
+          lowerCase = char.ToLower(s[i]);
 #endif
 
-      if (s.Length > 1)
-        camelCase += s.Substring(1);
+          sb.Append(lowerCase);
+        }
+        else
+        {
+          sb.Append(s.Substring(i));
+          break;
+        }
+      }
 
-      return camelCase;
+      return sb.ToString();
     }
 
     public static bool IsHighSurrogate(char c)

@@ -36,7 +36,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			if (Database.IsVersioningActive(document.Metadata))
 			{
-				var revisionPos = key.LastIndexOf("/revisions/", StringComparison.InvariantCultureIgnoreCase);
+				var revisionPos = key.LastIndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
 				if (revisionPos != -1)
 				{
 					var parentKey = key.Remove(revisionPos);

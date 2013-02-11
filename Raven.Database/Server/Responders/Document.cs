@@ -52,18 +52,20 @@ namespace Raven.Database.Server.Responders
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
-					ProcessPatchResult(context, docId, patchResult.PatchResult, null);
+					ProcessPatchResult(context, docId, patchResult.PatchResult, null, null);
 					break;
 				case "EVAL":
 					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
 					var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
-					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context), true);
-					ProcessPatchResult(context, docId, advPatchResult.Item1.PatchResult, advPatchResult.Item2);
+					bool testOnly;
+					bool.TryParse(context.Request.QueryString["test"], out testOnly);
+					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context), testOnly);
+					ProcessPatchResult(context, docId, advPatchResult.Item1.PatchResult, advPatchResult.Item2, advPatchResult.Item1.Document);
 					break;
 			}
 		}
 
-		private void ProcessPatchResult(IHttpContext context, string docId, PatchResult patchResult, object debug)
+		private void ProcessPatchResult(IHttpContext context, string docId, PatchResult patchResult, object debug, RavenJObject document)
 		{
 				switch (patchResult)
 				{
@@ -73,6 +75,14 @@ namespace Raven.Database.Server.Responders
 					case PatchResult.Patched:
 						context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
 						context.WriteJson(new {Patched = true, Debug = debug});
+						break;
+					case PatchResult.Tested:
+						context.WriteJson(new
+						{
+							Patched = false, 
+							Debug = debug,
+							Document = document
+						});
 						break;
 					default:
 						throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");

@@ -118,6 +118,20 @@ namespace Raven.Abstractions.Data
 			};
 		}
 
+		public static bool TryParse(string str, out Etag etag)
+		{
+			try
+			{
+				etag = Parse(str);
+				return true;
+			}
+			catch (Exception)
+			{
+				etag = null;
+				return false;
+			}
+		}
+
 		public static Etag Parse(string str)
 		{
 			if (string.IsNullOrEmpty(str))
@@ -126,25 +140,24 @@ namespace Raven.Abstractions.Data
 				throw new ArgumentException("str must be 36 characters");
 
 			var buffer = new byte[16]
-                                {
-                                        byte.Parse(str.Substring(16,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(14,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(11,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(9,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(6,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(4,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(2,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(0,2), NumberStyles.HexNumber),
-
-                                        byte.Parse(str.Substring(34,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(32,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(30,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(28,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(26,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(24,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(21,2), NumberStyles.HexNumber),
-                                        byte.Parse(str.Substring(19,2), NumberStyles.HexNumber),
-                                };
+			{
+				byte.Parse(str.Substring(16, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(14, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(11, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(9, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(6, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(4, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(2, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(0, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(34, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(32, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(30, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(28, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(26, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(24, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(21, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(19, 2), NumberStyles.HexNumber),
+			};
 
 			return new Etag
 			{
@@ -209,7 +222,12 @@ namespace Raven.Abstractions.Data
 
 		public Etag HashWith(Etag other)
 		{
-			byte[] etagBytes = other.ToBytes().Concat(ToBytes()).ToArray();
+			return HashWith(other.ToBytes());
+		}
+
+		public Etag HashWith(IEnumerable<byte> bytes)
+		{
+			var etagBytes = ToBytes().Concat(bytes).ToArray();
 #if !SILVERLIGHT
 			using (var md5 = MD5.Create())
 			{

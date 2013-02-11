@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Data
 
 		public IndexedPropertiesSetupDoc()
 		{
-			FieldNameMappings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+			FieldNameMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		}
 	}
 }

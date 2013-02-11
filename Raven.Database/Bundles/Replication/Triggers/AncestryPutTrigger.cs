@@ -30,15 +30,15 @@ namespace Raven.Bundles.Replication.Triggers
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) && // we don't deal with system documents
-				key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilos
+			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // we don't deal with system documents
+				key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilos
 				return;
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				var documentMetadata = GetDocumentMetadata(key);
 				if (documentMetadata != null)
 				{
-					var history = documentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+					RavenJArray history = new RavenJArray(documentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
 					metadata[Constants.RavenReplicationHistory] = history;
 
 					if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 

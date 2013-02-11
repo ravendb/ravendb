@@ -64,5 +64,20 @@ namespace Raven.Database.Server.Abstractions
 		{
 			return request.InputStream;
 		}
+
+		public bool HasCookie(string name)
+		{
+			return request.Cookies[name] != null;
+		}
+
+		public string GetCookie(string name)
+		{
+			var cookie = request.Cookies[name];
+			if (cookie == null)
+			{
+				return null;
+			}
+			return cookie.Value;
+		}
 	}
 }

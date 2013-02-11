@@ -16,12 +16,12 @@ namespace Raven.Database.Linq.PrivateExtensions
 		public static IEnumerable<dynamic> WhereEntityIs(this IEnumerable<dynamic> self, params string[] metadata)
 		{
 			return self.Where(doc => metadata.Any(
-				m => string.Equals(m, doc[Constants.Metadata][Constants.RavenEntityName], StringComparison.InvariantCultureIgnoreCase)));
+				m => string.Equals(m, doc[Constants.Metadata][Constants.RavenEntityName], StringComparison.OrdinalIgnoreCase)));
 		}
 
 		public static dynamic IfEntityIs(this object self, string name)
 		{
-			if (string.Equals(name, ((dynamic)self)[Constants.Metadata][Constants.RavenEntityName], StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(name, ((dynamic)self)[Constants.Metadata][Constants.RavenEntityName], StringComparison.OrdinalIgnoreCase))
 				return self;
 
 			return new DynamicNullObject();

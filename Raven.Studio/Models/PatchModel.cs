@@ -15,6 +15,7 @@ using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Client.Extensions;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Input;
@@ -393,7 +394,7 @@ namespace Raven.Studio.Models
 
 				case PatchOnOptions.Index:
 					return ApplicationModel.Database.Value.AsyncDatabaseCommands.GetIndexNamesAsync(0, 500)
-						.ContinueWith(t => (IList<object>) t.Result.Where(s => s.StartsWith(enteredText, StringComparison.InvariantCultureIgnoreCase)).Cast<object>().ToList());
+						.ContinueWith(t => (IList<object>) t.Result.Where(s => s.StartsWith(enteredText, StringComparison.OrdinalIgnoreCase)).Cast<object>().ToList());
 
 				default:
 					return null;

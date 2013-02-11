@@ -28,7 +28,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 			CreateReduceKeysCountsTable(session,dbid);
 			CreateReduceKeysStatusTable(session, dbid);
 
-			var countsPerKeyPerIndex = new Dictionary<string, Dictionary<string, int>>(StringComparer.InvariantCultureIgnoreCase);
+			var countsPerKeyPerIndex = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
 			using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
 			{
 				SchemaCreator.CreateIndexes(session, mappedResults, new JET_INDEXCREATE

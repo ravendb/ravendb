@@ -23,5 +23,12 @@ namespace Raven.Client.Extensions
 		{
 			return value.ToString(CultureInfo.InvariantCulture);
 		}
+
+#if NETFX_CORE
+		public static bool Contains(this string str, char c)
+		{
+			return str.Contains(c.ToString());
+		}
+#endif
 	}
 }

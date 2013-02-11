@@ -18,8 +18,8 @@ namespace Raven.Abstractions.Data
 
 		public Dictionary<string, string> Attributes
 		{
-			get { return attributes ?? (attributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)); }
-			set { attributes = new Dictionary<string, string>(value, StringComparer.InvariantCultureIgnoreCase); }
+			get { return attributes ?? (attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)); }
+			set { attributes = new Dictionary<string, string>(value, StringComparer.OrdinalIgnoreCase); }
 		}
 	}
 }

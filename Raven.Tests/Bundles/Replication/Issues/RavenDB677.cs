@@ -20,7 +20,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			 store1.DatabaseCommands.Delete("ayende", null);
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.NotEmpty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, 10));
+				 Assert.NotEmpty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10));
 			 });
 
 			 Etag last = Etag.Empty.Setup(UuidType.Documents, 1).IncrementBy(3);
@@ -35,7 +35,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Empty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, 10).ToArray());
+				 Assert.Empty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).ToArray());
 			 });
 		 }
 
@@ -49,7 +49,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			 store1.DatabaseCommands.Delete("rahien", null);
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Equal(2, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, 10).Count());
+				 Assert.Equal(2, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).Count());
 			 });
 
 			 Etag last = Etag.Empty.Setup(UuidType.Documents, 1).IncrementBy(3);
@@ -65,7 +65,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Equal(1, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, 10).Count());
+				 Assert.Equal(1, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).Count());
 			 });
 		 }
 	}

@@ -101,19 +101,24 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.Threading.Tasks">
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\net40\Microsoft.Threading.Tasks.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions">
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\net40\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions.Desktop, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Threading.Tasks.Extensions, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Threading.Tasks.Extensions.Desktop, Version=1.0.14.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Mono.Cecil">
@@ -134,14 +139,15 @@
     <Reference Include="System.DirectoryServices" />
     <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Management" />
+    <Reference Include="System.Net" />
     <Reference Include="System.Runtime">
-      <HintPath>..\packages\Microsoft.Bcl.1.0.11-beta\lib\net40\System.Runtime.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.1.0.16-rc\lib\net40\System.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Threading.Tasks">
-      <HintPath>..\packages\Microsoft.Bcl.1.0.11-beta\lib\net40\System.Threading.Tasks.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.1.0.16-rc\lib\net40\System.Threading.Tasks.dll</HintPath>
     </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
@@ -186,22 +192,48 @@
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
-    <Compile Include="Bundles\SpellChecker\IDictionary.cs" />
-    <Compile Include="Bundles\SpellChecker\JaroWinklerDistance.cs" />
-    <Compile Include="Bundles\SpellChecker\LevenshteinDistance.cs" />
-    <Compile Include="Bundles\SpellChecker\LuceneDictionary.cs" />
-    <Compile Include="Bundles\SpellChecker\NGramDistance.cs" />
-    <Compile Include="Bundles\SpellChecker\PlainTextDictionary.cs" />
-    <Compile Include="Bundles\SpellChecker\SpellChecker.cs" />
-    <Compile Include="Bundles\SpellChecker\StringDistance.cs" />
-    <Compile Include="Bundles\SpellChecker\SuggestWord.cs" />
-    <Compile Include="Bundles\SpellChecker\SuggestWordQueue.cs" />
-    <Compile Include="Bundles\SpellChecker\TRStringDistance.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldPhraseList.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldQuery.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldTermStack.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FragListBuilder.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FragmentsBuilder.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\ScoreOrderFragmentsBuilder.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\SimpleFragListBuilder.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\SimpleFragmentsBuilder.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\StringUtils.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\Support.cs" />
+    <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\VectorHighlightMapper.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\IDictionary.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\JaroWinklerDistance.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\LevenshteinDistance.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\LuceneDictionary.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\NGramDistance.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\PlainTextDictionary.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\SpellChecker.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\StringDistance.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\SuggestWord.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\SuggestWordQueue.cs" />
+    <Compile Include="Imports\Lucene.Net\SpellChecker\TRStringDistance.cs" />
+    <Compile Include="Bundles\SqlReplication\LastReplicatedEtag.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationConfig.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationStatus.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationTask.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
     <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Config\StronglyTypedRavenSettings.cs" />
+    <Compile Include="Config\Settings\BooleanSetting.cs" />
+    <Compile Include="Config\Settings\IntegerSetting.cs" />
+    <Compile Include="Config\Settings\IntegerSettingWithMin.cs" />
+    <Compile Include="Config\Settings\MultipliedIntegerSetting.cs" />
+    <Compile Include="Config\Settings\Setting.cs" />
+    <Compile Include="Config\Settings\StringSetting.cs" />
+    <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
     <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Extensions\AdminFinder.cs" />
@@ -216,6 +248,7 @@
     <Compile Include="Indexing\LowerCaseWhitespaceTokenizer.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
     <Compile Include="Indexing\PrefetchingBehavior.cs" />
+    <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
@@ -230,6 +263,7 @@
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicEnumerable.cs" />
     <Compile Include="Linq\StringLiteralExpression.cs" />
+    <Compile Include="Plugins\PluginsStatus.cs" />
     <Compile Include="Queries\MoreLikeThisQueryRunner.cs" />
     <Compile Include="Queries\MoreLikeThisQueryExtensions.cs" />
     <Compile Include="Queries\MatchNoDocsQuery.cs" />
@@ -247,6 +281,9 @@
     <Compile Include="Server\Responders\Admin\AdminRestore.cs" />
     <Compile Include="Server\Responders\BulkInsert.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
+    <Compile Include="Server\Responders\DatabaseStorageSizes.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugDocReferences.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
     <Compile Include="Server\Responders\Identity.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
@@ -304,7 +341,7 @@
     <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />
     <Compile Include="Indexing\Sorting\RandomSortField.cs" />
-    <Compile Include="Indexing\Sorting\SpatialDistanceSortField.cs">
+    <Compile Include="Indexing\Sorting\SpatialDistanceFieldComparatorSource.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Json\ScriptedJsonPatcher.cs" />
@@ -365,6 +402,8 @@
     <Compile Include="Server\Responders\Favicon.cs" />
     <Compile Include="Server\Responders\Licensing.cs" />
     <Compile Include="Server\Responders\Logs.cs" />
+    <Compile Include="Server\Responders\OperationStatus.cs" />
+    <Compile Include="Server\Responders\Plugins.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
@@ -376,6 +415,7 @@
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthCookie.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
     <Compile Include="Server\Security\Triggers\WindowsAuthDeleteTrigger.cs" />
@@ -662,6 +702,7 @@
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
+    <Compile Include="Storage\Esent\StorageActions\EsentUtil.cs" />
     <Compile Include="Storage\Esent\StorageActions\General.cs" />
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />
@@ -883,5 +924,5 @@
     </CreateItem>
   </Target>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="..\packages\Microsoft.Bcl.1.0.11-beta\tools\portable-net40+sl4+win8+wp71\Microsoft.Bcl.targets" />
+	<Import Project="..\SharedLibs\Microsoft.Bcl\Microsoft.Bcl.targets" />
 </Project>

@@ -11,17 +11,25 @@ namespace Raven.Abstractions.Data
 	public enum StringDistanceTypes
 	{
 		/// <summary>
+		/// Default, suggestion is not active
+		/// </summary>
+		None,
+
+		/// <summary>
 		/// Default, equivalent to Levenshtein
 		/// </summary>
-		Default = 0,
-		/// <summary>
-		/// JaroWinkler distance algorithm
-		/// </summary>
-		JaroWinkler,
+		Default,
+
 		/// <summary>
 		/// Levenshtein distance algorithm (default)
 		/// </summary>
 		Levenshtein,
+
+		/// <summary>
+		/// JaroWinkler distance algorithm
+		/// </summary>
+		JaroWinkler,
+		
 		/// <summary>
 		/// NGram distance algorithm
 		/// </summary>

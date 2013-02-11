@@ -22,7 +22,7 @@ namespace Raven.Studio.Infrastructure
 		{
 			IsLoaded = true;
 			if (string.IsNullOrWhiteSpace(state) == false &&
-				state.StartsWith(ModelUrl, StringComparison.InvariantCultureIgnoreCase) &&
+				state.StartsWith(ModelUrl, StringComparison.OrdinalIgnoreCase) &&
 				ModelUrlIgnoreList.Any(state.StartsWith) == false)
 			{
 				LoadModelParameters(state.Substring(ModelUrl.Length));

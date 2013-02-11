@@ -351,7 +351,7 @@ namespace Raven.Munin
 		{
 			var ravenJObject = key as RavenJObject;
 			if (ravenJObject != null)
-				ravenJObject.EnsureSnapshot();
+				ravenJObject.EnsureCannotBeChangeAndEnableSnapshotting();
 
 			KeyToFilePos = KeyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
 			{

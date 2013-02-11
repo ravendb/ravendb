@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq.Expressions;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Abstractions.Linq
 {
@@ -17,7 +18,7 @@ namespace Raven.Abstractions.Linq
 
 		public override bool TryConvert(ConvertBinder binder, out object result)
 		{
-			result = binder.ReturnType.IsValueType
+			result = binder.ReturnType.IsValueType()
 				         ? Activator.CreateInstance(binder.ReturnType)
 				         : null;
 			return true;

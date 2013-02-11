@@ -3,11 +3,15 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.OAuth;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 using System.Net.Browser;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Document.OAuth
@@ -45,7 +49,7 @@ namespace Raven.Client.Document.OAuth
 				});
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public Action<HttpWebRequest> HandleOAuthResponse(string oauthSource)
 		{
 			var authRequest = PrepareOAuthRequest(oauthSource);
@@ -75,7 +79,7 @@ namespace Raven.Client.Document.OAuth
 			if (String.IsNullOrEmpty(apiKey) == false)
 				SetHeader(authRequest.Headers, "Api-Key", apiKey);
 
-			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
+			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false &&
 			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
 			return authRequest;

@@ -60,6 +60,11 @@ namespace Raven.Json.Linq
 			return new RavenJValue(Value, Type);
 		}
 
+		public override bool IsSnapshot
+		{
+			get { return isSnapshot; }
+		}
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
 		/// </summary>
@@ -166,8 +171,10 @@ namespace Raven.Json.Linq
 		{
 			if (value == null)
 				return JTokenType.Null;
+#if !NETFX_CORE
 			else if (value == DBNull.Value)
 				return JTokenType.Null;
+#endif
 			else if (value is string)
 				return GetStringValueType(current);
 			else if (value is long || value is int || value is short || value is sbyte
@@ -633,7 +640,7 @@ namespace Raven.Json.Linq
 			return _value.ToString();
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			isSnapshot = true;
 		}

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Connection.Async;
 
@@ -40,5 +41,10 @@ namespace Raven.Client.Connection
 		/// The last term that we asked the query to use equals on
 		/// </summary>
 		KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
+
+		/// <summary>
+		/// Get the index query for this query
+		/// </summary>
+		IndexQuery GetIndexQuery(bool isAsync );
 	}
 }

@@ -18,6 +18,7 @@ namespace Raven.Studio.Models
 		public ApiKeysSectionModel()
 		{
 			SectionName = "Api Keys";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
 
 			OriginalApiKeys = new ObservableCollection<ApiKeyDefinition>();
 			ApiKeys = new ObservableCollection<ApiKeyDefinition>();

@@ -102,7 +102,7 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 
 			var auth = context.Request.Headers["Authorization"];
-			if (string.IsNullOrEmpty(auth) || auth.StartsWith("Basic", StringComparison.InvariantCultureIgnoreCase) == false)
+			if (string.IsNullOrEmpty(auth) || auth.StartsWith("Basic", StringComparison.OrdinalIgnoreCase) == false)
 			{
 				return null;
 			}

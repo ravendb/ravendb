@@ -10,7 +10,7 @@ namespace Raven.Database.Storage
 		
 		void Remove(string name, string key);
 
-		IEnumerable<ListItem> Read(string name, Etag start, int take);
+		IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take);
 
 		ListItem Read(string name, string key);
 

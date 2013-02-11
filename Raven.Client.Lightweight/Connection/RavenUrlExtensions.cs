@@ -5,7 +5,11 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using System.Windows.Browser;
+#endif
+#if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Connection
@@ -41,11 +45,6 @@ namespace Raven.Client.Connection
 		{
 			var databases = url + "/databases/?pageSize=" + pageSize;
 			return start > 0 ? databases + "&start=" + start : databases;
-		}
-
-		public static string SilverlightEnsuresStartup(this string url)
-		{
-			return url + "/silverlight/ensureStartup";
 		}
 
 		public static string Terms(this string url, string index, string field, string fromValue, int pageSize)

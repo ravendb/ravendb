@@ -381,7 +381,7 @@ namespace Raven.Client.Embedded
 			// indexEntriesOnly is not supported for embedded
 
 			QueryResultWithIncludes queryResult;
-			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase))
+			if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
 			{
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
@@ -657,7 +657,7 @@ namespace Raven.Client.Embedded
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
 		/// with the root database. Useful if the database has works against a tenant database.
 		/// </summary>
-		public IDatabaseCommands ForDefaultDatabase()
+		public IDatabaseCommands ForSystemDatabase()
 		{
 			return this;
 		}
@@ -698,16 +698,16 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		/// <param name="index"></param>
-		/// <param name="query"></param>
-		/// <param name="facetSetupDoc"></param>
-		/// <returns></returns>
-		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc)
-		{
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.ExecuteGetTermsQuery(index, query, facetSetupDoc);
+			return database.ExecuteGetTermsQuery( index, query, facetSetupDoc, start, pageSize );
 		}
 
 		/// <summary>

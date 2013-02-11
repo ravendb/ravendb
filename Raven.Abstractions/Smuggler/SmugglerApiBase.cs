@@ -184,6 +184,10 @@ namespace Raven.Abstractions.Smuggler
 				ModifyBatchSize(options, currentProcessingTime);
 
 				var final = documents.Where(options.MatchFilters).ToList();
+
+                if (options.ShouldExcludeExpired)
+                    final = documents.Where(options.ExcludeExpired).ToList();
+
 				final.ForEach(item => item.WriteTo(jsonWriter));
 				totalCount += final.Count;
 
@@ -385,11 +389,12 @@ namespace Raven.Abstractions.Smuggler
 				throw new InvalidDataException("StartArray was expected");
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
-				attachmentCount += 1;
 				var item = RavenJToken.ReadFrom(jsonReader);
 				if ((options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
 					continue;
-				var attachmentExportInfo =
+                attachmentCount += 1;
+
+                var attachmentExportInfo =
 					new JsonSerializer
 						{
 							Converters = { new JsonToJsonConverter() }

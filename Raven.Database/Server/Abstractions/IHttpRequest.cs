@@ -20,5 +20,7 @@ namespace Raven.Database.Server.Abstractions
 		Uri Url { get; set; }
 		string RawUrl { get; set; }
 		Stream GetBufferLessInputStream();
+		bool HasCookie(string name);
+		string GetCookie(string name);
 	}
 }

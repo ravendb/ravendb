@@ -17,7 +17,7 @@ namespace Raven.Client.Connection
 	{
 		// 17 numeric characters on a datetime field == Lucene datetime
 		private static readonly Regex luceneDateTimePattern = new Regex(@"\d{17}",
-#if !SILVERLIGHT 
+#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled
 #else 
 			RegexOptions.None

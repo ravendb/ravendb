@@ -48,14 +48,15 @@ namespace Raven.Json.Linq
 		{
 			get { return Properties.Keys; }
 		}
-		public bool IsSnapshot
+
+		public override bool IsSnapshot
 		{
 			get { return Properties.IsSnapshot; }
 		}
 
 		public RavenJObject WithCaseInsensitivePropertyNames()
 		{
-			var props = new DictionaryWithParentSnapshot(StringComparer.InvariantCultureIgnoreCase);
+			var props = new DictionaryWithParentSnapshot(StringComparer.OrdinalIgnoreCase);
 			foreach (var property in Properties)
 			{
 				props[property.Key] = property.Value;
@@ -66,7 +67,7 @@ namespace Raven.Json.Linq
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJObject"/> class.
 		/// </summary>
-		public RavenJObject() :this(StringComparer.InvariantCulture)
+		public RavenJObject() :this(StringComparer.Ordinal)
 		{
 		}
 
@@ -333,7 +334,7 @@ namespace Raven.Json.Linq
 			return new RavenJObject(Properties.CreateSnapshot());
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			Properties.EnsureSnapshot();
 		}

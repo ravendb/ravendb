@@ -65,14 +65,14 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public JToken Value
     {
       [DebuggerStepThrough]
-      get { return (ChildrenTokens.Count > 0) ? ChildrenTokens[0] : null; }
+      get { return (_content.Count > 0) ? _content[0] : null; }
       set
       {
         CheckReentrancy();
 
         JToken newValue = value ?? new JValue((object) null);
 
-        if (ChildrenTokens.Count == 0)
+        if (_content.Count == 0)
         {
           InsertItem(0, newValue, false);
         }
@@ -209,7 +209,12 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
     {
       writer.WritePropertyName(_name);
-      Value.WriteTo(writer, converters);
+
+      JToken value = Value;
+      if (value != null)
+        value.WriteTo(writer, converters);
+      else
+        writer.WriteNull();
     }
 
     internal override int GetDeepHashCode()
@@ -229,6 +234,12 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         if (!reader.Read())
           throw JsonReaderException.Create(reader, "Error reading JProperty from JsonReader.");
       }
+
+      while (reader.TokenType == JsonToken.Comment)
+      {
+        reader.Read();
+      }
+
       if (reader.TokenType != JsonToken.PropertyName)
         throw JsonReaderException.Create(reader, "Error reading JProperty from JsonReader. Current JsonReader item is not a property: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
 

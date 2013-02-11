@@ -10,7 +10,6 @@
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
              xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
              xmlns:Controls="clr-namespace:Microsoft.Windows.Controls"
-             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" 
              mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400" >
 
 	<UserControl.Resources>
@@ -20,7 +19,7 @@
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
 			<Setter Property="Template">
-                <Setter.Value>
+				<Setter.Value>
 					<ControlTemplate TargetType="sdk:AutoCompleteBox">
 						<Grid Margin="{TemplateBinding Padding}"
                               Background="{TemplateBinding Background}">
@@ -34,7 +33,7 @@
 										<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
 																 PropertyName="IsSelected" 
 																 Value="True"/>
-										<i:InvokeCommandAction Command="{Binding DataContext.AddRuleToUser, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+										<i:InvokeCommandAction Command="{Binding DataContext.AddRoleToUser, RelativeSource={RelativeSource AncestorType=UserControl}}" />
 									</Behaviors:StudioKeyTrigger>
 								</i:Interaction.Triggers>
 							</Controls:WatermarkedTextBox>
@@ -92,24 +91,24 @@
 				</Setter.Value>
 			</Setter>
 		</Style>
-		
-		<DataTemplate x:Key="AuthorizationUserTemplate" DataType="Data:AuthorizationUser">
-            <Grid Margin="4" x:Name="grid">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
 
-                <Button Grid.Row="0" 
+		<DataTemplate x:Key="AuthorizationUserTemplate" DataType="Data:AuthorizationUser">
+			<Grid Margin="4" x:Name="grid">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
+				<Button Grid.Row="0" 
 						Style="{StaticResource Style_Button_MouseOverChrome}"
 						Grid.Column="3" 
 						HorizontalAlignment="Right" 
@@ -118,9 +117,9 @@
 						VerticalAlignment="Center" 
 						ToolTipService.ToolTip="Remove this authorization user">
 					<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
-                </Button>
+				</Button>
 
-                <TextBlock Grid.Row="0" 
+				<TextBlock Grid.Row="0" 
 						   Text="Id:" 
 						   VerticalAlignment="Center"/>
 
@@ -129,22 +128,22 @@
 					<TextBox Text="{Binding Id, Converter={StaticResource IdStringToIdWithoutHeader}, ConverterParameter='Authorization/Users/', Mode=TwoWay}" 
 							 Margin="1"
 							 VerticalAlignment="Center"/>
-                </toolkit:DockPanel>
+				</toolkit:DockPanel>
 
-                <TextBlock Grid.Row="1" 
+				<TextBlock Grid.Row="1" 
 						   Text="Name:"
 						   VerticalAlignment="Center"/>
-                <TextBox Grid.Row="1"
+				<TextBox Grid.Row="1"
 						 Grid.Column="1"
                          Grid.ColumnSpan="2"
 						 Text="{Binding Name, Mode=TwoWay}" 
                          Margin="5"/>
 
-                <TextBlock Grid.Row="2" 
+				<TextBlock Grid.Row="2" 
 						   Text="Roles:" 
 						   VerticalAlignment="Center"/>
 
-                <sdk:AutoCompleteBox Grid.Row="2"
+				<sdk:AutoCompleteBox Grid.Row="2"
 					  Grid.Column="1"
                             x:Name="AddRoleTextBox"
                             Text="{Binding DataContext.NewRoleForUser, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
@@ -152,12 +151,12 @@
 											 IsTextCompletionEnabled="True"
 											 VerticalAlignment="Center"
 											 Margin="5,5,5,0">
-                    <i:Interaction.Behaviors>
-                        <Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                    </i:Interaction.Behaviors>
-                </sdk:AutoCompleteBox>
+					<i:Interaction.Behaviors>
+						<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+					</i:Interaction.Behaviors>
+				</sdk:AutoCompleteBox>
 
-                <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+				<Button Style="{StaticResource Style_Button_MouseOverChrome}"
 										Grid.Row="2"
 					                    Grid.Column="2"
 										HorizontalAlignment="Right" 
@@ -165,17 +164,17 @@
 										VerticalAlignment="Center"
 										ToolTipService.ToolTip="Add new role"
                                         Margin="0,0,5,0">
-                    <Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
-                    <i:Interaction.Triggers>
-                        <i:EventTrigger EventName="Click">
-                            <ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
+					<Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
+					<i:Interaction.Triggers>
+						<i:EventTrigger EventName="Click">
+							<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
 																	 PropertyName="IsSelected" 
 																	 Value="True"/>
-                        </i:EventTrigger>
-                    </i:Interaction.Triggers>
-                </Button>
+						</i:EventTrigger>
+					</i:Interaction.Triggers>
+				</Button>
 
-                <ListBox Grid.Row="3"
+				<ListBox Grid.Row="3"
                          Grid.Column="1"
 							 ItemsSource="{Binding Roles}"
 							 Margin="5"
@@ -184,44 +183,44 @@
                              MinHeight="25"
                              MaxHeight="100"
                              ScrollViewer.VerticalScrollBarVisibility="Visible">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource Style_ListBoxItem_Default}">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <toolkit:DockPanel>
-                                <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+					<ListBox.ItemContainerStyle>
+						<Style TargetType="ListBoxItem" BasedOn="{StaticResource Style_ListBoxItem_Default}">
+							<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+						</Style>
+					</ListBox.ItemContainerStyle>
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<toolkit:DockPanel>
+								<Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                             toolkit:DockPanel.Dock="Right"
                                             HorizontalAlignment="Right" 
                                             Command="{Binding DataContext.DeleteRoleFromUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                             CommandParameter="{Binding}" 
                                             VerticalAlignment="Center"
                                             ToolTipService.ToolTip="Remove this role">
-                                    <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
-                                    <i:Interaction.Triggers>
-                                        <i:EventTrigger EventName="Click">
-                                            <ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem, AncestorLevel=2}}" 
+									<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+									<i:Interaction.Triggers>
+										<i:EventTrigger EventName="Click">
+											<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem, AncestorLevel=2}}" 
                                                                          PropertyName="IsSelected" 
                                                                          Value="True"/>
-                                        </i:EventTrigger>
-                                    </i:Interaction.Triggers>
-                                </Button>
+										</i:EventTrigger>
+									</i:Interaction.Triggers>
+								</Button>
 
-                                <TextBlock Text="{Binding}"/>
+								<TextBlock Text="{Binding}"/>
 
-                            </toolkit:DockPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                
-                <TextBlock Grid.Row="4" 
+							</toolkit:DockPanel>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+
+				<TextBlock Grid.Row="4" 
 						   Text="Permissions:" 
 						   VerticalAlignment="Top"
                            Margin="0,9,0,0"/>
-                
-                    <sdk:DataGrid Margin="5"
+
+				<sdk:DataGrid Margin="5"
                                   Grid.Row="4"
                                   Grid.Column="1"
                                   ItemsSource="{Binding Permissions}"
@@ -229,55 +228,55 @@
                                   MinHeight="56"
                                   MaxHeight="156"
                                   VerticalScrollBarVisibility="Visible">
-                        <i:Interaction.Behaviors>
-                            <Behaviors:SelectRowOnRightClickBehavior />
-                        </i:Interaction.Behaviors>
+					<i:Interaction.Behaviors>
+						<Behaviors:SelectRowOnRightClickBehavior />
+					</i:Interaction.Behaviors>
 
-                        <sdk:DataGrid.Columns>
-                            <sdk:DataGridCheckBoxColumn Header="Allow"
+					<sdk:DataGrid.Columns>
+						<sdk:DataGridCheckBoxColumn Header="Allow"
                                                         Binding="{Binding Allow}" 
                                                         Width="Auto" 
                                                         CanUserResize="False"
                                                         CanUserReorder="False"/>
-                            <sdk:DataGridTextColumn Header="Operation"
+						<sdk:DataGridTextColumn Header="Operation"
                                                     Binding="{Binding Operation}" 
                                                     Width="*"
                                                     CanUserReorder="False"/>
-                            <sdk:DataGridTextColumn Header="Tags"
+						<sdk:DataGridTextColumn Header="Tags"
                                                     Binding="{Binding Tags,Mode=TwoWay,  Converter={StaticResource StringListToString}}"
                                                     IsReadOnly="False" 
                                                     Width="*"
                                                     CanUserReorder="False"/>
-                            <sdk:DataGridTemplateColumn Header="Priority"
+						<sdk:DataGridTemplateColumn Header="Priority"
                                                         CanUserReorder="False">
-                                <sdk:DataGridTemplateColumn.CellEditingTemplate>
-                                    <DataTemplate>
-                                        <toolkit:NumericUpDown Margin="5" Value="{Binding Priority, Mode=TwoWay}" Maximum="214748364"/>
-                                    </DataTemplate>
-                                </sdk:DataGridTemplateColumn.CellEditingTemplate>
-                            </sdk:DataGridTemplateColumn>
-                        <sdk:DataGridTemplateColumn Width="Auto" CanUserReorder="False" CanUserResize="False">
-                                <sdk:DataGridTemplateColumn.CellEditingTemplate>
-                                    <DataTemplate>
-                                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+							<sdk:DataGridTemplateColumn.CellEditingTemplate>
+								<DataTemplate>
+									<toolkit:NumericUpDown Margin="5" Value="{Binding Priority, Mode=TwoWay}" Maximum="214748364"/>
+								</DataTemplate>
+							</sdk:DataGridTemplateColumn.CellEditingTemplate>
+						</sdk:DataGridTemplateColumn>
+						<sdk:DataGridTemplateColumn Width="Auto" CanUserReorder="False" CanUserResize="False">
+							<sdk:DataGridTemplateColumn.CellEditingTemplate>
+								<DataTemplate>
+									<Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                                 Command="{Binding DataContext.DeletePermissionFromUser, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                                 CommandParameter="{Binding}"
                                                 ToolTipService.ToolTip="Delete Permission">
-                                            <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
-                                            <i:Interaction.Triggers>
-                                                <i:EventTrigger EventName="Click">
-                                                    <ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
+										<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+										<i:Interaction.Triggers>
+											<i:EventTrigger EventName="Click">
+												<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
 																	 PropertyName="IsSelected" 
 																	 Value="True"/>
-                                                </i:EventTrigger>
-                                            </i:Interaction.Triggers>
-                                        </Button>
-                                    </DataTemplate>
-                                </sdk:DataGridTemplateColumn.CellEditingTemplate>
-                            </sdk:DataGridTemplateColumn>
-                        </sdk:DataGrid.Columns>
-                    </sdk:DataGrid>
-                    <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+											</i:EventTrigger>
+										</i:Interaction.Triggers>
+									</Button>
+								</DataTemplate>
+							</sdk:DataGridTemplateColumn.CellEditingTemplate>
+						</sdk:DataGridTemplateColumn>
+					</sdk:DataGrid.Columns>
+				</sdk:DataGrid>
+				<Button Style="{StaticResource Style_Button_MouseOverChrome}"
                             Grid.Column="2" 
                             Grid.Row="4"
                             HorizontalAlignment="Right" 
@@ -285,32 +284,32 @@
                             Command="{Binding DataContext.AddPermissionToUser, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                             ToolTipService.ToolTip="Add new Permission"
                             Margin="0,9,5,0">
-                        <Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="Click">
-                                <ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
+					<Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
+					<i:Interaction.Triggers>
+						<i:EventTrigger EventName="Click">
+							<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
 																	 PropertyName="IsSelected" 
 																	 Value="True"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </Button>
+						</i:EventTrigger>
+					</i:Interaction.Triggers>
+				</Button>
 			</Grid>
-        </DataTemplate>
-		
-        <DataTemplate x:Key="AuthorizationRoleTemplate" DataType="Data:AuthorizationRole">
-            <Grid Margin="4" x:Name="grid">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+		</DataTemplate>
 
-                <Button Grid.Row="0" 
+		<DataTemplate x:Key="AuthorizationRoleTemplate" DataType="Data:AuthorizationRole">
+			<Grid Margin="4" x:Name="grid">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
+				<Button Grid.Row="0" 
                         Style="{StaticResource Style_Button_MouseOverChrome}"
                         Grid.Column="3" 
                         HorizontalAlignment="Right" 
@@ -318,10 +317,10 @@
                         CommandParameter="{Binding}"  
                         VerticalAlignment="Center" 
                         ToolTipService.ToolTip="Remove this authorization role">
-                    <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
-                </Button>
+					<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+				</Button>
 
-                <TextBlock Grid.Row="0" 
+				<TextBlock Grid.Row="0" 
 						   Text="Id:" 
 						   VerticalAlignment="Center"/>
 				<toolkit:DockPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="5">
@@ -329,13 +328,13 @@
 					<TextBox Text="{Binding Id, Converter={StaticResource IdStringToIdWithoutHeader}, ConverterParameter='Authorization/Roles/', Mode=TwoWay}" 
 							 Margin="1"
 							 VerticalAlignment="Center"/>
-                </toolkit:DockPanel>
+				</toolkit:DockPanel>
 
 				<TextBlock Grid.Row="1" 
 						   Text="Permissions:" 
                            Margin="0,9,0,0"
 						   VerticalAlignment="Top"/>
-                    <sdk:DataGrid Margin="5"
+				<sdk:DataGrid Margin="5"
                                   Grid.Row="1"
                                   Grid.Column="1"
                                   ItemsSource="{Binding Permissions}"
@@ -343,53 +342,53 @@
                                   MinHeight="56"
                                   MaxHeight="156"
                                   VerticalScrollBarVisibility="Visible">
-                        <i:Interaction.Behaviors>
-                            <Behaviors:SelectRowOnRightClickBehavior />
-                        </i:Interaction.Behaviors>
+					<i:Interaction.Behaviors>
+						<Behaviors:SelectRowOnRightClickBehavior />
+					</i:Interaction.Behaviors>
 
-                        <sdk:DataGrid.Columns>
-                            <sdk:DataGridCheckBoxColumn Header="Allow"
+					<sdk:DataGrid.Columns>
+						<sdk:DataGridCheckBoxColumn Header="Allow"
                                                         Binding="{Binding Allow}" Width="Auto"
                                                         CanUserReorder="False" CanUserResize="False"/>
-                            <sdk:DataGridTextColumn Header="Operation"
+						<sdk:DataGridTextColumn Header="Operation"
                                                     Binding="{Binding Operation}" 
                                                     Width="*"
                                                     CanUserReorder="False"/>
-                            <sdk:DataGridTextColumn Header="Tags"
+						<sdk:DataGridTextColumn Header="Tags"
                                                     Binding="{Binding Tags,Mode=TwoWay,  Converter={StaticResource StringListToString}}"
                                                     Width="*"
                                                     IsReadOnly="False"
                                                     CanUserReorder="False"/>
-                        <sdk:DataGridTemplateColumn Header="Priority" CanUserReorder="False" >
-                                <sdk:DataGridTemplateColumn.CellEditingTemplate>
-                                    <DataTemplate>
-                                        <toolkit:NumericUpDown Margin="5" Value="{Binding Priority, Mode=TwoWay}" Maximum="214748364"/>
-                                    </DataTemplate>
-                                </sdk:DataGridTemplateColumn.CellEditingTemplate>
-                            </sdk:DataGridTemplateColumn>
-                        <sdk:DataGridTemplateColumn CanUserReorder="False" CanUserResize="False">
-                                <sdk:DataGridTemplateColumn.CellEditingTemplate>
-                                    <DataTemplate>
-                                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+						<sdk:DataGridTemplateColumn Header="Priority" CanUserReorder="False" >
+							<sdk:DataGridTemplateColumn.CellEditingTemplate>
+								<DataTemplate>
+									<toolkit:NumericUpDown Margin="5" Value="{Binding Priority, Mode=TwoWay}" Maximum="214748364"/>
+								</DataTemplate>
+							</sdk:DataGridTemplateColumn.CellEditingTemplate>
+						</sdk:DataGridTemplateColumn>
+						<sdk:DataGridTemplateColumn CanUserReorder="False" CanUserResize="False">
+							<sdk:DataGridTemplateColumn.CellEditingTemplate>
+								<DataTemplate>
+									<Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                                 Command="{Binding DataContext.DeletePermissionFromRole, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                                 CommandParameter="{Binding}"
                                                 ToolTipService.ToolTip="Delete Permission">
-                                            <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
-                                            <i:Interaction.Triggers>
-                                                <i:EventTrigger EventName="Click">
-                                                    <ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
+										<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+										<i:Interaction.Triggers>
+											<i:EventTrigger EventName="Click">
+												<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
 																	 PropertyName="IsSelected" 
 																	 Value="True"/>
-                                                </i:EventTrigger>
-                                            </i:Interaction.Triggers>
-                                        </Button>
-                                    </DataTemplate>
-                                </sdk:DataGridTemplateColumn.CellEditingTemplate>
-                            </sdk:DataGridTemplateColumn>
-                        </sdk:DataGrid.Columns>
+											</i:EventTrigger>
+										</i:Interaction.Triggers>
+									</Button>
+								</DataTemplate>
+							</sdk:DataGridTemplateColumn.CellEditingTemplate>
+						</sdk:DataGridTemplateColumn>
+					</sdk:DataGrid.Columns>
 
-                    </sdk:DataGrid>
-                    <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+				</sdk:DataGrid>
+				<Button Style="{StaticResource Style_Button_MouseOverChrome}"
                             Grid.Row="1"
                             Grid.Column="2" 
                             HorizontalAlignment="Right" 
@@ -397,48 +396,48 @@
                             Margin="0,9,0,0"
                             Command="{Binding DataContext.AddPermissionToRole, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                             ToolTipService.ToolTip="Add new Permission">
-                        <Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="Click">
-                                <ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
+					<Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
+					<i:Interaction.Triggers>
+						<i:EventTrigger EventName="Click">
+							<ei:ChangePropertyAction TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}}" 
 																	 PropertyName="IsSelected" 
 																	 Value="True"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </Button>
-            </Grid>
-        </DataTemplate>
-    </UserControl.Resources>
+						</i:EventTrigger>
+					</i:Interaction.Triggers>
+				</Button>
+			</Grid>
+		</DataTemplate>
+	</UserControl.Resources>
 
-    <Grid x:Name="LayoutRoot">
-        <sdk:TabControl>
-            <sdk:TabItem Header="Users">
-                <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
-                    <toolkit:HeaderedContentControl.Header>
-                        <StackPanel Orientation="Horizontal"
+	<Grid x:Name="LayoutRoot">
+		<sdk:TabControl>
+			<sdk:TabItem Header="Users">
+				<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
+					<toolkit:HeaderedContentControl.Header>
+						<StackPanel Orientation="Horizontal"
                                     Margin="0,4,4,4"
                                     VerticalAlignment="Center">
-                            
-                            <Button Command="{Binding AddAuthorizationUser}"
+
+							<Button Command="{Binding AddAuthorizationUser}"
                                     Style="{StaticResource Style_Button_MouseOverChrome}"
                                     ToolTipService.ToolTip="Add Authorization User">
-                                <Button.Content>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="{StaticResource Image_Add_Tiny}"
+								<Button.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_Add_Tiny}"
                                                Stretch="None"/>
-                                        <TextBlock Text="Add Authorization User" Margin="2,0,0,0" />
-                                    </StackPanel>
-                                </Button.Content>
-                            </Button>
+										<TextBlock Text="Add Authorization User" Margin="2,0,0,0" />
+									</StackPanel>
+								</Button.Content>
+							</Button>
 
-                            <StackPanel Orientation="Horizontal" Grid.Column="3">
-                                <Controls:WatermarkedTextBox Text="{Binding SearchUsers, Mode=TwoWay}" 
+							<StackPanel Orientation="Horizontal" Grid.Column="3">
+								<Controls:WatermarkedTextBox Text="{Binding SearchUsers, Mode=TwoWay}" 
                                                                       Watermark="Search" 
                                                                       Width="200" 
                                                                       Margin="5"
                                                                       x:Name="SearchBox"
                                                                       KeyDown="EnterClick"/>
-                                <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+								<Button Style="{StaticResource Style_Button_MouseOverChrome}"
                                                 Grid.Row="3"
                                                 Grid.Column="2" 
                                                 HorizontalAlignment="Right" 
@@ -446,50 +445,50 @@
                                                 Margin="0,9,0,0"
                                                 Command="{Binding Search}" 
                                                 ToolTipService.ToolTip="Search Api Keys">
-                                    <Image Source="{StaticResource Image_Search_Small}"/>
-                                </Button>
-                            </StackPanel>
-                        </StackPanel>
-                    </toolkit:HeaderedContentControl.Header>
-                    <ListBox  Style="{StaticResource Databases_FluidList}"
+									<Image Source="{StaticResource Image_Search_Small}"/>
+								</Button>
+							</StackPanel>
+						</StackPanel>
+					</toolkit:HeaderedContentControl.Header>
+					<ListBox  Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding AuthorizationUsers}"
-										 SelectedItem="{Binding SeletedUser, Mode=TwoWay}"
+										 SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
 										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Authorization}"
 										 ItemTemplate="{StaticResource AuthorizationUserTemplate}"
 										 ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    </ListBox>
-                </toolkit:HeaderedContentControl>
-            </sdk:TabItem>
-            
-            <sdk:TabItem Header="Roles">
-                <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
-                    <toolkit:HeaderedContentControl.Header>
-                        <StackPanel Orientation="Horizontal"
+					</ListBox>
+				</toolkit:HeaderedContentControl>
+			</sdk:TabItem>
+
+			<sdk:TabItem Header="Roles">
+				<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
+					<toolkit:HeaderedContentControl.Header>
+						<StackPanel Orientation="Horizontal"
                                     Margin="0,4,4,4"
                                     VerticalAlignment="Center">
-                            
-                            <Button Command="{Binding AddAuthorizationRole}"
+
+							<Button Command="{Binding AddAuthorizationRole}"
                                     Style="{StaticResource Style_Button_MouseOverChrome}"
                                     ToolTipService.ToolTip="Add Authorization Role">
-                                <Button.Content>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="{StaticResource Image_Add_Tiny}"
+								<Button.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_Add_Tiny}"
                                                Stretch="None"/>
-                                        <TextBlock Text="Add Authorization Role" Margin="2,0,0,0" />
-                                    </StackPanel>
-                                </Button.Content>
-                            </Button>
-                        </StackPanel>
-                    </toolkit:HeaderedContentControl.Header>
-                    <ListBox  Style="{StaticResource Databases_FluidList}"
+										<TextBlock Text="Add Authorization Role" Margin="2,0,0,0" />
+									</StackPanel>
+								</Button.Content>
+							</Button>
+						</StackPanel>
+					</toolkit:HeaderedContentControl.Header>
+					<ListBox  Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding AuthorizationRoles}"
-										 SelectedItem="{Binding SeletedRole, Mode=TwoWay}"
+										 SelectedItem="{Binding SelectedRole, Mode=TwoWay}"
 										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Authorization}"
 										 ItemTemplate="{StaticResource AuthorizationRoleTemplate}"
 										 ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    </ListBox>
-                </toolkit:HeaderedContentControl>
-            </sdk:TabItem>
-        </sdk:TabControl>
-    </Grid>
+					</ListBox>
+				</toolkit:HeaderedContentControl>
+			</sdk:TabItem>
+		</sdk:TabControl>
+	</Grid>
 </UserControl>

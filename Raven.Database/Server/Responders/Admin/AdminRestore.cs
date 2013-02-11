@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
@@ -19,43 +20,107 @@ namespace Raven.Database.Server.Responders.Admin
 
 			var restoreRequest = context.ReadJsonObject<RestoreRequest>();
 
-			var ravenConfiguration = new RavenConfiguration();
+			DatabaseDocument databaseDocument = null;
+
+			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Database.Document")))
+			{
+				var databaseDocumentText = File.ReadAllText(Path.Combine(restoreRequest.RestoreLocation, "Database.Document"));
+				databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
+			}
+
+			var databaseName = !string.IsNullOrWhiteSpace(restoreRequest.DatabaseName) ? restoreRequest.DatabaseName
+								   : databaseDocument == null ? null : databaseDocument.Id;
+
+			if (string.IsNullOrWhiteSpace(databaseName))
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				{
+					Error = "A database name must be supplied if the restore location does not contain a valid Database.Document file"
+				});
+				return;
+			}
+
+			var ravenConfiguration = new RavenConfiguration()
+			{
+				DatabaseName = databaseName,
+				IsTenantDatabase = true
+			};
+
+			if(databaseDocument != null)
+			{
+				foreach (var setting in databaseDocument.Settings)
+				{
+					ravenConfiguration.Settings[setting.Key] = setting.Value;
+				}
+			}
+
 			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Raven.ravendb")))
 			{
-				ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+				ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+
 			}
 			else if (Directory.Exists(Path.Combine(restoreRequest.RestoreLocation, "new")))
 			{
-				ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+				ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
 
-			var restoreStatus = new List<string>();
+			ravenConfiguration.CustomizeValuesForTenant(databaseName);
+			ravenConfiguration.Initialize();
 
-			DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, restoreRequest.DatabaseLocation,
+			string documentDataDir;
+			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
+
+			var restoreStatus = new List<string>();
+			SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, new TransactionInformation());
+			var defrag = "true".Equals(context.Request.QueryString["defrag"], StringComparison.InvariantCultureIgnoreCase);
+			DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
 			                         msg =>
 			                         {
 				                         restoreStatus.Add(msg);
 				                         SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 											 RavenJObject.FromObject(new {restoreStatus}), new RavenJObject(), null);
-			                         });
+			                         }, defrag);
 
-			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Database.Document")))
+			if (databaseDocument == null)
+				return;
+
+			databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+			databaseDocument.Id = databaseName;
+			SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument), new RavenJObject(), null);
+
+			restoreStatus.Add("The new database was created");
+			SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+				RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+
+		}
+
+		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)
+		{
+			if (Path.IsPathRooted(databaseLocation))
 			{
-				var databaseDocumentText = File.ReadAllText(Path.Combine(restoreRequest.RestoreLocation, "Database.Document"));
-				var databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
-				if (databaseDocument == null)
-					return;
-
-				if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
-					databaseDocument.Settings[Constants.RavenDataDir] = restoreRequest.DatabaseLocation;
-				if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseName))
-					databaseDocument.Id = "Raven/Databases/" + restoreRequest.DatabaseName;
-				SystemDatabase.Put(databaseDocument.Id, null, RavenJObject.FromObject(databaseDocument), new RavenJObject(), null);
-
-				restoreStatus.Add("The new database was created");
-				SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-					RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+				documentDataDir = databaseLocation;
+				return databaseLocation;
 			}
+
+			var baseDataPath = Path.GetDirectoryName(SystemDatabase.Configuration.DataDirectory);
+			if (baseDataPath == null)
+				throw new InvalidOperationException("Could not find root data path");
+
+			if (string.IsNullOrWhiteSpace(databaseLocation))
+			{
+				documentDataDir = Path.Combine("~/Databases", databaseName);
+				return Path.Combine(baseDataPath, documentDataDir.Substring(2));
+			}
+
+			documentDataDir = databaseLocation;
+
+			if (!documentDataDir.StartsWith("~/") && !documentDataDir.StartsWith(@"~\"))
+			{
+				documentDataDir = "~/" + documentDataDir.TrimStart(new char[] { '/', '\\' });
+			}
+
+			return Path.Combine(baseDataPath, documentDataDir.Substring(2));
 		}
 	}
 }

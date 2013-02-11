@@ -68,7 +68,7 @@ namespace Raven.Studio.Models
 		public CollectionsModel()
 		{
 			ModelUrl = "/collections";
-
+			ApplicationModel.Current.Server.Value.RawUrl = null;
             Collections = new BindableCollection<CollectionModel>(model => model.Name);
             SelectedCollection = new Observable<CollectionModel>();
 

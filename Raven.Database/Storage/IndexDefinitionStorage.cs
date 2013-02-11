@@ -33,9 +33,9 @@ namespace Raven.Database.Storage
 		private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
 
 		private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
-			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.OrdinalIgnoreCase);
 		private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
-			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.OrdinalIgnoreCase);
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly string path;
@@ -50,13 +50,11 @@ namespace Raven.Database.Storage
 			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
 			this.configuration = configuration;
-			this.extensions = extensions;// this is used later in the ctor, so it must appears first
+			this.extensions = extensions; // this is used later in the ctor, so it must appears first
 			this.path = Path.Combine(path, IndexDefDir);
 
 			if (Directory.Exists(this.path) == false && configuration.RunInMemory == false)
 				Directory.CreateDirectory(this.path);
-
-			this.extensions = extensions;
 
 			if (configuration.RunInMemory == false)
 				ReadIndexesFromDisk();
@@ -92,6 +90,7 @@ namespace Raven.Database.Storage
 					Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
 					Indexes = generator.Indexes,
 					Stores = generator.Stores,
+					TermVectors = generator.TermVectors,
 					IsCompiled = true
 				};
 				indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);

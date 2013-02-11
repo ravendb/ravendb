@@ -89,6 +89,7 @@ namespace Raven.Smuggler
 			            		{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
 								{"incremental", "States usage of incremental operations", _ => incremental = true },
 								{"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _=> waitForIndexing=true},
+                                {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true },
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}
