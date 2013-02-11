@@ -27,6 +27,9 @@ namespace Raven.Tests.Bundles.SqlReplication
 				ConfigurationManager.ConnectionStrings["LocalHost"],
 			})
 			{
+				if(connectionString == null)
+					continue;
+
 				var providerFactory = DbProviderFactories.GetFactory(connectionString.ProviderName);
 				try
 				{
