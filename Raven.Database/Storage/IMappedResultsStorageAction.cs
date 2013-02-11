@@ -25,7 +25,7 @@ namespace Raven.Database.Storage
 		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take);
 
 		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets);
-		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, int take, List<object> itemsToDelete, HashSet<Tuple<string, int>> itemsAlreadySeen, List<string> reduceKeysDone);
+		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams);
 		ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete);
 		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
@@ -34,6 +34,30 @@ namespace Raven.Database.Storage
 		ReduceType GetLastPerformedReduceType(string indexName, string reduceKey);
 		IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey);
 		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData);
+	}
+
+	public class GetItemsToReduceParams
+	{
+		public GetItemsToReduceParams(string index, string[] reduceKeys, int level, bool loadData, int take)
+		{
+			Index = index;
+			ReduceKeys = reduceKeys;
+			Level = level;
+			LoadData = loadData;
+			Take = take;
+			ItemsToDelete = new List<object>();
+			ItemsAlreadySeen = new HashSet<Tuple<string, int>>();
+			ReduceKeysDone = new HashSet<string>();
+		}
+
+		public string Index { get; private set; }
+		public string[] ReduceKeys { get; private set; }
+		public int Level { get; private set; }
+		public bool LoadData { get; private set; }
+		public int Take { get; set; }
+		public List<object> ItemsToDelete { get; private set; }
+		public HashSet<Tuple<string, int>> ItemsAlreadySeen { get; private set; }
+		public HashSet<string> ReduceKeysDone { get; private set; }
 	}
 
 	public class ReduceKeyAndBucket

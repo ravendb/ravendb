@@ -112,11 +112,7 @@ namespace Raven.Database.Indexing
                         var batchTimeWatcher = Stopwatch.StartNew();
 
 						var persistedResults = actions.MapReduce.GetItemsToReduce
-							(index: index.IndexName,
-								reduceKeys: keysToReduce,
-								level: level,
-								loadData: true,
-                                take: this.context.CurrentNumberOfItemsToReduceInSingleBatch, itemsToDelete: itemsToDelete, itemsAlreadySeen: itemsAlreadySeen, reduceKeysDone: reduceKeysDone).ToList();
+							(new GetItemsToReduceParams(index: index.IndexName, reduceKeys: keysToReduce, level: level, loadData: true, take: context.CurrentNumberOfItemsToReduceInSingleBatch, itemsToDelete: itemsToDelete, itemsAlreadySeen: itemsAlreadySeen, reduceKeysDone: reduceKeysDone)).ToList();
 						if (persistedResults.Count == 0)
 						{
 							retry = false;
@@ -199,11 +195,8 @@ namespace Raven.Database.Indexing
 				var batchTimeWatcher = Stopwatch.StartNew();
 
 				var scheduledItems = actions.MapReduce.GetItemsToReduce
-						(index: index.IndexName,
-							reduceKeys: keysToReduce,
-							level: 0,
-							loadData: false, // just get all, we do the rate limit when we load the number of keys to reduce, anyway
-							take: int.MaxValue, itemsToDelete: itemsToDelete, itemsAlreadySeen: new HashSet<Tuple<string, int>>(), reduceKeysDone: new List<string>()).ToList();
+						(// just get all, we do the rate limit when we load the number of keys to reduce, anyway
+						 , new GetItemsToReduceParams(index: index.IndexName, reduceKeys: keysToReduce, level: 0, loadData: false, take: int.MaxValue, itemsToDelete: itemsToDelete, itemsAlreadySeen: new HashSet<Tuple<string, int>>(), reduceKeysDone: new List<string>())).ToList();
 
 				// Only look at the scheduled batch for this run, not the entire set of pending reductions.
 				//var batchKeys = scheduledItems.Select(x => x.ReduceKey).ToArray();
