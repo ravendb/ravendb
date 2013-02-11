@@ -358,7 +358,7 @@ namespace Raven.Storage.Managed
 					{"view", indexName},
 					{"level", 0}
 				}).TakeWhile(x => string.Equals(indexName, x.Value<string>("view"), StringComparison.OrdinalIgnoreCase) &&
-								x.Value<int>("level") == 0))
+								x.Value<int>("level") == 0)
 				.Take(take)
 			)
 			{

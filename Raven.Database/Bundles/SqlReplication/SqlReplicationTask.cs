@@ -114,7 +114,7 @@ namespace Raven.Database.Bundles.SqlReplication
                     continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag.Value);
+				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
 				if (documents.Count == 0 || 
 					documents.All(x=>x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))) // ignore changes for system docs
 				{
@@ -122,11 +122,11 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-                var latestEtag = documents.Last().Etag.Value;
+                var latestEtag = documents.Last().Etag;
 
                 var relevantConfigs =
                     config
-                        .Where(x => ByteArrayComparer.Instance.Compare(GetLastEtagFor(localReplicationStatus, x), latestEtag) <= 0) // haven't replicate the etag yet
+                        .Where(x => GetLastEtagFor(localReplicationStatus, x).CompareTo(latestEtag) <= 0) // haven't replicate the etag yet
                         .Where(x => SystemTime.UtcNow >= lastError.GetOrDefault(x.Name)) // have error or the timeout expired
                         .ToList();
 
@@ -180,15 +180,15 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private Guid? GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
+		private Etag GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
-			Guid? leastReplicatedEtag = null;
+			Etag leastReplicatedEtag = null;
 			foreach (var sqlReplicationConfig in config)
 			{
 				var lastEtag = GetLastEtagFor(localReplicationStatus, sqlReplicationConfig);
 				if (leastReplicatedEtag == null)
 					leastReplicatedEtag = lastEtag;
-				else if (ByteArrayComparer.Instance.Compare(lastEtag, leastReplicatedEtag.Value) < 0)
+				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
 					leastReplicatedEtag = lastEtag;
 			}
 			return leastReplicatedEtag;
@@ -508,9 +508,9 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private Guid GetLastEtagFor(SqlReplicationStatus replicationStatus, SqlReplicationConfig sqlReplicationConfig)
+		private Etag GetLastEtagFor(SqlReplicationStatus replicationStatus, SqlReplicationConfig sqlReplicationConfig)
 		{
-			var lastEtag = Guid.Empty;
+			var lastEtag = Etag.Empty;
 			var lastEtagHolder = replicationStatus.LastReplicatedEtags.FirstOrDefault(
 				x => string.Equals(sqlReplicationConfig.Name, x.Name, StringComparison.InvariantCultureIgnoreCase));
 			if (lastEtagHolder != null)

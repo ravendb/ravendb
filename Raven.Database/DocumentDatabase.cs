@@ -1956,7 +1956,6 @@ namespace Raven.Database
 		/// This is a potentially a very expensive call, avoid making it if possible.
 		/// </remarks>
 		public long GetTransactionalStorageSizeOnDisk()
-		public Etag GetIndexEtag(string indexName, Etag previousEtag)
 		{
 			return Configuration.RunInMemory ? 0 : TransactionalStorage.GetDatabaseSizeInBytes();
 		}
@@ -1977,6 +1976,7 @@ namespace Raven.Database
 			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk();
 		}
 
+		public Etag GetIndexEtag(string indexName, Etag previousEtag)
 		{
 			Etag lastDocEtag = Etag.Empty;
 			Etag lastReducedEtag = null;

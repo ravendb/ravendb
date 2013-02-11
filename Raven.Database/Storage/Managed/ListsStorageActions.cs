@@ -50,7 +50,6 @@ namespace Raven.Storage.Managed
 
 		public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
 		{
-			var endComparer = end == null ? null : new ComparableByteArray(end.Value);
 			return storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
 			{
 				{ "name", name },
@@ -58,7 +57,7 @@ namespace Raven.Storage.Managed
 			})
 			.TakeWhile(x=> 
 				StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("name"), name) &&
-				(endComparer == null || endComparer.CompareTo(x.Value<byte[]>("etag")) > 0 )
+				(end == null || end.CompareTo(Etag.Parse(x.Value<byte[]>("etag"))) > 0)
 				)
 			.Take(take)
 			.Select(result =>

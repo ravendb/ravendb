@@ -39,13 +39,7 @@ namespace Raven.Database.Server.Responders
 						documentsCount = accessor.Documents.GetDocumentsCount();
 					});
 
-					var array = lastDocEtag.ToByteArray().Concat(BitConverter.GetBytes(documentsCount)).ToArray();
-					using (var md5 = MD5.Create())
-					{
-						var hashed = md5.ComputeHash(array);
-						lastDocEtag = new Guid(hashed);
-					}
-
+					lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
 					if (context.MatchEtag(lastDocEtag))
 					{
 						context.SetStatusToNotModified();

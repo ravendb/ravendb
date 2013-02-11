@@ -152,7 +152,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							ravenJObject.Remove("Id");
 							var putResult = Database.Put(PeriodicBackupSetup.RavenDocumentKey, null, ravenJObject,
 														 new RavenJObject(), null);
-							if (Etag.Increment(localBackupConfigs.LastDocsEtag, 1) == putResult.ETag) // the last etag is with just us
+							if (localBackupConfigs.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
 								localBackupConfigs.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
 						}
 						catch (ObjectDisposedException)

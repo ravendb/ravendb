@@ -84,7 +84,6 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Lists, SeekGrbit.SeekGT) == false)
 				yield break;
 		
-			var endComparer = end == null ? null : new ComparableByteArray(end.Value);
 			int count = 0;
 			do
 			{
@@ -94,7 +93,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 
 				var etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]));
-				if (endComparer != null && endComparer.CompareTo(etag) <= 0)
+				if (end != null && end.CompareTo(etag) <= 0)
 					yield break;
 
 				count++;

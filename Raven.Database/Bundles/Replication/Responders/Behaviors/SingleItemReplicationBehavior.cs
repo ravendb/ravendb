@@ -57,7 +57,7 @@ namespace Raven.Bundles.Replication.Responders
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
 
-				var etag = existingDocumentIsDeleted == false ? existingEtag : (Guid?)null;
+				var etag = existingDocumentIsDeleted == false ? existingEtag : null;
 				AddWithoutConflict(id, etag, metadata, incoming);
 				return;
 			}

@@ -848,6 +848,7 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
       <Link>Imports\MissingFromBCL\WinRTCompetability.cs</Link>
+		</Compile>
     <Compile Include="..\Raven.Abstractions\OAuth\AbstractAuthenticator.cs">
       <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
     </Compile>
@@ -1132,7 +1133,8 @@
     </Compile>
     <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
       <Link>MissingFromSilverlight\ThreadSleep.cs</Link>
-    <Compile Include="..\Raven.Database\Bundles\SqlReplication\LastReplicatedEtag.cs">
+		</Compile>
+		<Compile Include="..\Raven.Database\Bundles\SqlReplication\LastReplicatedEtag.cs">
       <Link>Imports\SqlReplication\LastReplicatedEtag.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationConfig.cs">

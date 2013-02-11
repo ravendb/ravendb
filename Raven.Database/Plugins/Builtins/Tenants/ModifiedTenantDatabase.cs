@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Plugins.Builtins.Tenants
 {
@@ -6,7 +7,7 @@ namespace Raven.Database.Plugins.Builtins.Tenants
 	{
 		private const string RavenDatabasesPrefix = "Raven/Databases/";
 
-		public override void AfterCommit(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata, Guid etag)
+		public override void AfterCommit(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata, Etag etag)
 		{
 			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
 				return;

@@ -696,7 +696,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private static List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, JsonDocumentsToReplicate result)
 		{
 			var docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024*1024*25).ToList();
-			Guid? lastEtag = null;
+			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
 			{
 				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
@@ -709,7 +709,7 @@ namespace Raven.Bundles.Replication.Tasks
 						        Metadata = x.Data,
 						        DataAsJson = new RavenJObject()
 					        }))
-				.OrderBy(x => new ComparableByteArray(x.Etag ?? Guid.Empty))
+				.OrderBy(x => x.Etag)
 				.ToList();
 		}
 
@@ -794,11 +794,11 @@ namespace Raven.Bundles.Replication.Tasks
 			return Tuple.Create(attachments, lastAttachmentEtag);
 		}
 
-		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Guid lastAttachmentEtag)
+		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag)
 		{
 			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024*1024*10).ToList();
 
-			Guid? lastEtag = null;
+			Etag lastEtag = null;
 			if (attachmentInformations.Count > 0)
 				lastEtag = attachmentInformations[attachmentInformations.Count - 1].Etag;
 
