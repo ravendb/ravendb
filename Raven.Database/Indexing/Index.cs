@@ -426,7 +426,7 @@ namespace Raven.Database.Indexing
 		    if (dir == null) return;
 
 		    var stale = false;
-            var toobig = dir.SizeInBytes() >= context.Configuration.TempIndexInMemoryMaxBytes;
+            var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
 
             context.Database.TransactionalStorage.Batch(accessor =>
             {

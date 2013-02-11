@@ -641,6 +641,7 @@ namespace Raven.Database.Indexing
                     {
                         accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
                         thisItem.Index.Priority = IndexingPriority.Idle;
+                        
                         continue;
                     }
 
