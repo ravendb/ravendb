@@ -284,9 +284,12 @@ namespace Raven.Database.Data
 
         public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
         {
+            var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
+            if (abstractViewGenerator == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
+
             this.Items = this.Items.Union(
-                indexDefinition.Fields
-                   .Where(field => this.Items.All(item => item.From != field))
+                abstractViewGenerator.Fields
+                   .Where(field => this.Items.All(item => item.From != field) && !field.StartsWith("__"))
                    .Select(field => new DynamicQueryMappingItem()
                    {
                        From = field,
@@ -305,19 +308,19 @@ namespace Raven.Database.Data
                     })
                 ).ToArray();
 
-            foreach (var fieldStorage in indexDefinition.Stores)
+            foreach (var fieldStorage in abstractViewGenerator.Stores)
             {
                 KeyValuePair<string, FieldStorage> storage = fieldStorage;
                 extraActionsToPerform.Add(def=> def.Stores[storage.Key] = storage.Value);
             }
 
-            foreach (var fieldIndex in indexDefinition.Indexes)
+            foreach (var fieldIndex in abstractViewGenerator.Indexes)
             {
                 KeyValuePair<string, FieldIndexing> index = fieldIndex;
                 extraActionsToPerform.Add(def=> def.Indexes[index.Key] = index.Value);
             }
 
-            foreach (var fieldTermVector in indexDefinition.TermVectors)
+            foreach (var fieldTermVector in abstractViewGenerator.TermVectors)
             {
                 KeyValuePair<string, FieldTermVector> vector = fieldTermVector;
                 extraActionsToPerform.Add(def=> def.TermVectors[vector.Key] = vector.Value);

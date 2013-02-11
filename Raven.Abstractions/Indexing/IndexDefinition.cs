@@ -246,7 +246,7 @@ namespace Raven.Abstractions.Indexing
 			}
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Remove the default values that we don't actually need
 		/// </summary>
 		public void RemoveDefaultValues()

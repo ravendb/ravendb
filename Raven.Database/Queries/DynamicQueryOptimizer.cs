@@ -285,6 +285,8 @@ namespace Raven.Database.Queries
                                 return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
 						}
 						}
+					    if (currentBestState != DynamicQueryMatchType.Complete && indexDefinition.Type != "Auto")
+					        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
                         return new DynamicQueryOptimizerResult(indexName, currentBestState);
 					})
                     .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
@@ -297,10 +299,10 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator == null) // there isn't a matching view generator
 							return -1;
 
+					    var definition = database.IndexDefinitionStorage.GetIndexDefinition(result.IndexName);
                         // TODO: Factor in staleness and remove this hard coded multiplier
 					    var multiplier = result.MatchType == DynamicQueryMatchType.Partial ? 1 : 10;
-
-                        return abstractViewGenerator.CountOfFields * multiplier;
+                        return definition.Fields.Count * multiplier;
 					});
 
 			DynamicQueryOptimizerResult bestResult = null;
