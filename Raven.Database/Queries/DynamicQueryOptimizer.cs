@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Abstractions.Util;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 
@@ -290,35 +291,57 @@ namespace Raven.Database.Queries
                         return new DynamicQueryOptimizerResult(indexName, currentBestState);
 					})
                     .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
-					.OrderByDescending(result =>
-					{
-						// We select the widest index, because we want to encourage bigger indexes
-						// Over time, it means that we smaller indexes would wither away and die, while
-						// bigger indexes will be selected more often and then upgrade to permanent indexes
-						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(result.IndexName);
-						if (abstractViewGenerator == null) // there isn't a matching view generator
-							return -1;
+                    .GroupBy(x=>x.MatchType)
+                    .ToDictionary(x=>x.Key,x =>x.ToArray());
 
-					    var definition = database.IndexDefinitionStorage.GetIndexDefinition(result.IndexName);
-                        // TODO: Factor in staleness and remove this hard coded multiplier
-					    var multiplier = result.MatchType == DynamicQueryMatchType.Partial ? 1 : 10;
-                        return definition.Fields.Count * multiplier;
-					});
 
-			DynamicQueryOptimizerResult bestResult = null;
+		    DynamicQueryOptimizerResult[] optimizerResults;
+		    if (results.TryGetValue(DynamicQueryMatchType.Complete, out optimizerResults) && optimizerResults.Length > 0)
+		    {
+		        DynamicQueryOptimizerResult[] prioritizedResults = null;
+		        database.TransactionalStorage.Batch(accessor =>
+		        {
+		            prioritizedResults = optimizerResults.OrderByDescending(result =>
+		            {
+		                var stats = accessor.Indexing.GetIndexStats(result.IndexName);
+		                if (stats == null)
+		                    return new ComparableByteArray(Guid.Empty);
 
-			foreach (var result in results)
-			{
-			    if (bestResult == null)
-			        bestResult = result;
-			    else
-			    {
-			        explain(result.IndexName, () => "Wasn't the widest index matching this query.");
-			    }
-			}
+		                return new ComparableByteArray(stats.LastIndexedEtag);
+		            })
+		                                                 .ThenByDescending(result =>
+		                                                 {
+		                                                     var abstractViewGenerator =
+		                                                         database.IndexDefinitionStorage.GetViewGenerator(
+		                                                             result.IndexName);
+		                                                     if (abstractViewGenerator == null)
+		                                                         return -1;
+		                                                     return abstractViewGenerator.CountOfFields;
+		                                                 })
+		                                                 .ToArray();
+		        });
+		        for (int i = 1; i < prioritizedResults.Length; i++)
+		        {
+		            explain(prioritizedResults[i].IndexName,
+		                    () => "Wasn't the widest / most unstable index matching this query");
+		        }
 
-			explain(bestResult == null ? "Temporary index will be created" : bestResult.IndexName, () => "Selected as best match");
-		    return bestResult ?? new DynamicQueryOptimizerResult("", DynamicQueryMatchType.Failure);
+		        return prioritizedResults[0];
+		    }
+
+		    if (results.TryGetValue(DynamicQueryMatchType.Partial, out optimizerResults) && optimizerResults.Length > 0)
+            {
+                return optimizerResults.OrderByDescending(x =>
+                {
+                    var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(x.IndexName);
+                    if (viewGenerator == null)
+                        return -1;
+                    return viewGenerator.CountOfFields;
+                }).First();
+            }
+
+            return new DynamicQueryOptimizerResult("<invalid index>", DynamicQueryMatchType.Failure);
+
 		}
 	}
 }
