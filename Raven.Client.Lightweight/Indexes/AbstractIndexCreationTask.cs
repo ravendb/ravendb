@@ -28,7 +28,9 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
+#if !NETFX_CORE
 	[System.ComponentModel.Composition.InheritedExport]
+#endif
 	public abstract class AbstractIndexCreationTask
 	{
 		/// <summary>
@@ -251,7 +253,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This is here as a marker only");
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.

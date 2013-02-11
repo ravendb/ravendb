@@ -117,7 +117,7 @@ namespace Raven.Client.Connection
 		}
 
 
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 		private Task<int> ReadAsync()
 		{
 			try

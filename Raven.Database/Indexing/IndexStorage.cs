@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly string path;
-		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.OrdinalIgnoreCase);
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private static readonly ILog startupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
 		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();

@@ -10,8 +10,8 @@ namespace Raven.Studio.Features.Documents
 
 		const double GoldenAngle = 0.381966;
 
-		readonly Dictionary<string, double> baseHues = new Dictionary<string, double>(StringComparer.InvariantCultureIgnoreCase);
-		readonly Dictionary<string, Brush> colors = new Dictionary<string, Brush>(StringComparer.InvariantCultureIgnoreCase);
+		readonly Dictionary<string, double> baseHues = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+		readonly Dictionary<string, Brush> colors = new Dictionary<string, Brush>(StringComparer.OrdinalIgnoreCase);
 
 		public TemplateColorProvider()
 		{

@@ -24,6 +24,8 @@
 #endregion
 
 using System;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+
 #if NET20
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #endif
@@ -36,6 +38,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
   public class JsonProperty
   {
     internal Required? _required;
+    internal bool _hasExplicitDefaultValue;
+    internal object _defaultValue;
 
     // use to cache contract during deserialization
     internal JsonContract PropertyContract { get; set; }
@@ -108,10 +112,35 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     public bool Writable { get; set; }
 
     /// <summary>
+    /// Gets a value indicating whether this <see cref="JsonProperty"/> has a member attribute.
+    /// </summary>
+    /// <value><c>true</c> if has a member attribute; otherwise, <c>false</c>.</value>
+    public bool HasMemberAttribute { get; set; }
+
+    /// <summary>
     /// Gets the default value.
     /// </summary>
     /// <value>The default value.</value>
-    public object DefaultValue { get; set; }
+    public object DefaultValue
+    {
+      get
+      {
+        return _defaultValue;
+      }
+      set
+      {
+        _hasExplicitDefaultValue = true;
+        _defaultValue = value;
+      }
+    }
+
+    internal object GetResolvedDefaultValue()
+    {
+      if (!_hasExplicitDefaultValue && PropertyType != null)
+        return ReflectionUtils.GetDefaultValue(PropertyType);
+
+      return _defaultValue;
+    }
 
     /// <summary>
     /// Gets a value indicating whether this <see cref="JsonProperty"/> is required.

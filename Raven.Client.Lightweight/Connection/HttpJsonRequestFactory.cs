@@ -1,11 +1,12 @@
 ﻿using System;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#else
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
 #endif
 using System.Net;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Util;
@@ -13,8 +14,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-	using Raven.Abstractions.Data;
-
 	///<summary>
 	/// Create the HTTP Json Requests to the RavenDB Server
 	/// and manages the http cache
@@ -53,6 +52,7 @@ namespace Raven.Client.Connection
 		{
 			if (disposed)
 				throw new ObjectDisposedException(typeof(HttpJsonRequestFactory).FullName);
+
 			var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
 				ShouldCacheRequest =

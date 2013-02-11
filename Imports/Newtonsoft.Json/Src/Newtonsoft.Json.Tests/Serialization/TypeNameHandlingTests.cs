@@ -39,9 +39,9 @@ using global::Newtonsoft.Json.Tests.TestObjects;
 #if !NETFX_CORE
 using global::NUnit.Framework;
 #else
-using global::Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = global::Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = global::Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using global::Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = global::Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = global::Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 using global::Newtonsoft.Json.Utilities;
 using global::System.Net;
@@ -1497,6 +1497,14 @@ namespace Newtonsoft.Json.Tests.Serialization
 
       return Equals(w.Content, Content);
     }
+
+    public override int GetHashCode()
+    {
+      if (Content == null)
+        return 0;
+
+      return Content.GetHashCode();
+    }
   }
 
   public interface IExample
@@ -1541,6 +1549,14 @@ namespace Newtonsoft.Json.Tests.Serialization
       {
         return false;
       }
+    }
+
+    public override int GetHashCode()
+    {
+      if (Name == null)
+        return 0;
+
+      return Name.GetHashCode();
     }
   }
 #endif

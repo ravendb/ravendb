@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#endif
 using System.Collections.Generic;
 using System.Net;
 using Raven.Abstractions.Data;
@@ -16,9 +13,12 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #else
-using Raven.Client.Indexes;
+using System.Collections.Specialized;
 #endif
+using Raven.Client.Indexes;
 using Raven.Client.Connection.Async;
 
 
@@ -59,7 +59,7 @@ namespace Raven.Client
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		NameValueCollection SharedOperationsHeaders { get; }
 #else
 		IDictionary<string,string> SharedOperationsHeaders { get; }
@@ -100,7 +100,7 @@ namespace Raven.Client
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -147,7 +147,7 @@ namespace Raven.Client
 		///</summary>
 		Etag GetLastWrittenEtag();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 	}

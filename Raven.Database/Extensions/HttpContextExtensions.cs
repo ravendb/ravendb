@@ -19,7 +19,7 @@ namespace Raven.Database.Extensions
 			var dictionary = new Dictionary<string, Facet>();
 
 			foreach (var facetString in context.Request.QueryString.AllKeys
-				.Where(x=>x.StartsWith("facet.", StringComparison.InvariantCultureIgnoreCase))
+				.Where(x=>x.StartsWith("facet.", StringComparison.OrdinalIgnoreCase))
 				.ToArray())
 			{
 				var parts = facetString.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries);
@@ -72,7 +72,7 @@ namespace Raven.Database.Extensions
 				DefaultField = context.Request.QueryString["defaultField"],
 
 				DefaultOperator = 
-					string.Equals(context.Request.QueryString["operator"], "AND", StringComparison.InvariantCultureIgnoreCase) ?
+					string.Equals(context.Request.QueryString["operator"], "AND", StringComparison.OrdinalIgnoreCase) ?
 						QueryOperator.And : 
 						QueryOperator.Or,
 

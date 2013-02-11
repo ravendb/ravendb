@@ -5,13 +5,15 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+#if SILVERLIGHT || NETFX_CORE
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
 using System.Collections.Specialized;
+#endif
 using System.Diagnostics;
 using System.IO;
 #if !SILVERLIGHT
 using System.IO.Compression;
-#else
-using Raven.Client.Silverlight.MissingFromSilverlight;
 #endif
 using System.Net;
 using System.Text;
@@ -494,7 +496,7 @@ namespace Raven.Client.Connection
 
 		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
-			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return this;
 			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
 				return this; // not because of failover, no need to do this.

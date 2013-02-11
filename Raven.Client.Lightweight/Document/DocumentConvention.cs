@@ -16,12 +16,16 @@ using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+#if NETFX_CORE
+using Raven.Client.WinRT.MissingFromWinRT;
+#endif
 
 namespace Raven.Client.Document
 {
@@ -82,7 +86,9 @@ namespace Raven.Client.Document
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
 			{
+#if !NETFX_CORE
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+#endif
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
@@ -119,7 +125,11 @@ namespace Raven.Client.Document
 
 		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
 		{
+#if NETFX_CORE
+			var count = typeTagName.ToCharArray().Count(char.IsUpper);
+#else
 			var count = typeTagName.Count(char.IsUpper);
+#endif
 
 			if (count <= 1) // simple name, just lower case it
 				return typeTagName.ToLowerInvariant();
@@ -228,7 +238,7 @@ namespace Raven.Client.Document
 
 			if (t.Name.Contains("<>"))
 				return null;
-			if (t.IsGenericType)
+			if (t.IsGenericType())
 			{
 				var name = t.GetGenericTypeDefinition().Name;
 				if (name.Contains('`'))
@@ -336,7 +346,7 @@ namespace Raven.Client.Document
 
 		private static IEnumerable<PropertyInfo> GetPropertiesForType(Type type)
 		{
-			foreach (var propertyInfo in type.GetProperties())
+			foreach (var propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
 			{
 				yield return propertyInfo;
 			}

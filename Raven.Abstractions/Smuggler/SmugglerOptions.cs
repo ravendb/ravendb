@@ -72,7 +72,7 @@ namespace Raven.Abstractions.Smuggler
 					var val = tuple.Item1.Type == JTokenType.String
 								? tuple.Item1.Value<string>()
 								: tuple.Item1.ToString(Formatting.None);
-					matchedFilter |= String.Equals(val, filter.Value, StringComparison.InvariantCultureIgnoreCase) ==
+					matchedFilter |= String.Equals(val, filter.Value, StringComparison.OrdinalIgnoreCase) ==
 					                 filter.ShouldMatch;
 				}
 				if (matchedFilter == false)

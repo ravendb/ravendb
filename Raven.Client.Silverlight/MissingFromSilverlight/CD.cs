@@ -27,6 +27,9 @@ using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+#if NETFX_CORE
+using Raven.Client.WinRT.MissingFromWinRT;
+#endif
 
 namespace System.Collections.Concurrent
 {
@@ -309,7 +312,7 @@ namespace System.Collections.Concurrent
 			foreach (KeyValuePair<TKey, TValue> kvp in this)
 				temp.Add (extractor (kvp));
 
-			return temp.AsReadOnly ();
+			return temp.AsReadOnly();
 		}
 
 		void ICollection.CopyTo (Array array, int startIndex)

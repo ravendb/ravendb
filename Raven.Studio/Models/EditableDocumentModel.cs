@@ -1173,7 +1173,7 @@ namespace Raven.Studio.Models
 					parentModel.IsShowingErrors = true;
 				}
 
-				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 				{
 					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
 					       .ContinueWhenTrueInTheUIThread(SaveDocument);

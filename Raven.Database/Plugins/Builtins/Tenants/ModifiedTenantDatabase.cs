@@ -9,7 +9,7 @@ namespace Raven.Database.Plugins.Builtins.Tenants
 
 		public override void AfterCommit(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata, Etag etag)
 		{
-			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase) == false)
 				return;
 
 			TenantDatabaseModified.Invoke(this, new TenantDatabaseModified.Event
@@ -26,7 +26,7 @@ namespace Raven.Database.Plugins.Builtins.Tenants
 
 		public override void AfterCommit(string key)
 		{
-			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase) == false)
 				return;
 
 			TenantDatabaseModified.Invoke(this, new TenantDatabaseModified.Event

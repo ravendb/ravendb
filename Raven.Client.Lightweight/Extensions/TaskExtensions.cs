@@ -14,6 +14,9 @@ namespace Raven.Client.Extensions
 	{
 		public static Task Delay(TimeSpan timeOut)
 		{
+#if NETFX_CORE
+			return Task.Delay(timeOut);
+#else
 			var tcs = new TaskCompletionSource<object>();
 
 			var timer = new Timer(tcs.SetResult,
@@ -22,6 +25,7 @@ namespace Raven.Client.Extensions
 			                      TimeSpan.FromMilliseconds(-1));
 
 			return tcs.Task.ContinueWith(_ => timer.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+#endif
 		}
 	}
 

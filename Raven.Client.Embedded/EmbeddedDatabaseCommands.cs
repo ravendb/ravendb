@@ -381,7 +381,7 @@ namespace Raven.Client.Embedded
 			// indexEntriesOnly is not supported for embedded
 
 			QueryResultWithIncludes queryResult;
-			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase))
+			if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
 			{
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))

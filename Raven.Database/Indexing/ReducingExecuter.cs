@@ -167,7 +167,7 @@ namespace Raven.Database.Indexing
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
 					var reduceKeys = new HashSet<string>(persistedResults.Select(x => x.ReduceKey),
-					                                     StringComparer.InvariantCultureIgnoreCase);
+					                                     StringComparer.OrdinalIgnoreCase);
 					context.ReducedPerSecIncreaseBy(results.Length);
 
 					context.CancellationToken.ThrowIfCancellationRequested();

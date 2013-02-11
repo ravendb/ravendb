@@ -85,8 +85,8 @@ namespace Raven.Server
 
 			Console.Error.WriteLine(msg);
 
-			if(args.Contains("--msgbox", StringComparer.InvariantCultureIgnoreCase) || 
-				args.Contains("/msgbox", StringComparer.InvariantCultureIgnoreCase))
+			if(args.Contains("--msgbox", StringComparer.OrdinalIgnoreCase) || 
+				args.Contains("/msgbox", StringComparer.OrdinalIgnoreCase))
 		{
 				MessageBox.Show(msg, "RavenDB Startup failure");
 			}
@@ -222,7 +222,7 @@ namespace Raven.Server
 
 		private static void ProtectConfiguration(string file)
 		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);
@@ -239,7 +239,7 @@ namespace Raven.Server
 
 		private static void UnprotectConfiguration(string file)
 		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);

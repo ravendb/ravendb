@@ -31,6 +31,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 
 namespace Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge
@@ -2966,7 +2967,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge
 
     public override string ToString()
     {
-      return string.Format(@"{{ First = {0}, Second = {1} }}", First, Second);
+      return string.Format(CultureInfo.InvariantCulture, @"{{ First = {0}, Second = {1} }}", First, Second);
     }
   }
 }

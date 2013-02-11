@@ -32,7 +32,7 @@ namespace Raven.Database.Server.Responders
 			{
 				var skipCreatingStudioIndexes = Database.Configuration.Settings["Raven/SkipCreatingStudioIndexes"];
 				if (string.IsNullOrEmpty(skipCreatingStudioIndexes) == false && 
-					"true".Equals(skipCreatingStudioIndexes, StringComparison.InvariantCultureIgnoreCase))
+					"true".Equals(skipCreatingStudioIndexes, StringComparison.OrdinalIgnoreCase))
 					return true;
 
 				foreach (var silverlightRequestedAware in SilverlightRequestedAware)

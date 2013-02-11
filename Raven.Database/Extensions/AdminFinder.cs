@@ -170,7 +170,7 @@ namespace Raven.Database.Extensions
 			var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 			if (databaseAccessPrincipal != null)
 			{
-				if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, database.Name, StringComparison.InvariantCultureIgnoreCase)))
+				if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, database.Name, StringComparison.OrdinalIgnoreCase)))
 					return true;
 			}
 

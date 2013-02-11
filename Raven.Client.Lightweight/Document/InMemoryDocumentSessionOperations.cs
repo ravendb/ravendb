@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System.Transactions;
 #endif
 using System.Text;
@@ -63,7 +63,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
 		/// </summary>
-		protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 #if !SILVERLIGHT
 		private bool hasEnlisted;
@@ -85,7 +85,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Translate between a key and its associated entity
 		/// </summary>
-		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
+		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
 		protected readonly string dbName;
 		private readonly DocumentStoreBase documentStore;
@@ -647,7 +647,7 @@ more responsive application.
 			string id;
 			if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) &&
 				documentMetadata.Key != null &&
-				documentMetadata.Key.Equals(id, StringComparison.InvariantCultureIgnoreCase) == false)
+				documentMetadata.Key.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
 			{
 				throw new InvalidOperationException("Entity " + entity.GetType().FullName + " had document key '" +
 													documentMetadata.Key + "' but now has document key property '" + id + "'." +
@@ -724,7 +724,7 @@ more responsive application.
 			};
 			deferedCommands.Clear();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			if (documentStore.EnlistInDistributedTransactions)
 				TryEnlistInAmbientTransaction();
 #endif
@@ -791,7 +791,7 @@ more responsive application.
 			deletedEntities.Clear();
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		protected virtual void TryEnlistInAmbientTransaction()
 		{
 
@@ -863,7 +863,7 @@ more responsive application.
 
 			string id;
 			if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) &&
-				string.Equals(documentMetadata.Key, id, StringComparison.InvariantCultureIgnoreCase) == false)
+				string.Equals(documentMetadata.Key, id, StringComparison.OrdinalIgnoreCase) == false)
 				return true;
 
 			// prevent saves of a modified read only entity

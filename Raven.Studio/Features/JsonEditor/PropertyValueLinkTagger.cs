@@ -70,8 +70,8 @@ namespace Raven.Studio.Features.JsonEditor
         {
             Uri uri;
             return Uri.TryCreate(text, UriKind.Absolute, out uri) &&
-                   (uri.Scheme.Equals("http", StringComparison.InvariantCultureIgnoreCase) ||
-                   uri.Scheme.Equals("https", StringComparison.InvariantCultureIgnoreCase));
+                   (uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) ||
+                   uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase));
         }
 
         private ITextSnapshot GetSnapshot(ICodeDocument document)

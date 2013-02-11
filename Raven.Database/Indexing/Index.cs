@@ -1210,7 +1210,7 @@ namespace Raven.Database.Indexing
 					{
 						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
 
-						if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
+						if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.OrdinalIgnoreCase))
 							continue;
 
 						if (File.Exists(fullPath) == false)

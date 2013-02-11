@@ -8,10 +8,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Client.Document;
+#if NETFX_CORE
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Security.Cryptography;
+#endif
 
 namespace Raven.Client.Shard
 {
@@ -32,7 +36,7 @@ namespace Raven.Client.Shard
 			if (shards.Count == 0)
 				throw new ArgumentException("Shards collection must have at least one item", "shards");
 
-			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.InvariantCultureIgnoreCase);
+			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.OrdinalIgnoreCase);
 
 
 			Conventions = shards.First().Value.Conventions.Clone();
@@ -58,7 +62,7 @@ namespace Raven.Client.Shard
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
 			Etag indexEtag;
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			using (var md5 = MD5.Create())
 			{
                 indexEtag = Etag.Parse(md5.ComputeHash(buffer));
@@ -150,7 +154,7 @@ namespace Raven.Client.Shard
 		{
 			unchecked
 			{
-				return text.Aggregate(11, (current, c) => current * 397 + c);
+				return text.ToCharArray().Aggregate(11, (current, c) => current * 397 + c);
 			}
 		}
 

@@ -64,9 +64,9 @@ namespace Raven.Studio.Models
 
 		private Tuple<string, int> GetIndexGroup(string indexName)
 		{
-			if (indexName.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase))
+			if (indexName.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase))
 				return Tuple.Create("Temp Indexes", 1);
-			if (indexName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase))
+			if (indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
 				return Tuple.Create("Auto Indexes", 2);
 			return Tuple.Create("Indexes", 3);
 		}

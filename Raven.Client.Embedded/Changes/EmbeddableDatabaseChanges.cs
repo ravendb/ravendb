@@ -48,7 +48,7 @@ namespace Raven.Client.Embedded.Changes
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{
 			return new FilteringObservableWithTask<IndexChangeNotification>(indexesObservable,
-				notification => string.Equals(indexName, notification.Name, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(indexName, notification.Name, StringComparison.OrdinalIgnoreCase));
 		}
 
 		public IObservableWithTask<DocumentChangeNotification> ForAllDocuments()
@@ -66,7 +66,7 @@ namespace Raven.Client.Embedded.Changes
 		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
 		{
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
-				notification => string.Equals(docId, notification.Id, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(docId, notification.Id, StringComparison.OrdinalIgnoreCase));
 		}
 
 		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
@@ -74,7 +74,7 @@ namespace Raven.Client.Embedded.Changes
 			if (docIdPrefix == null) throw new ArgumentNullException("docIdPrefix");
 
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
-				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 		}
 
 		public void Dispose()

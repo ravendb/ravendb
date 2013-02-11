@@ -5,10 +5,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyCompany("Hibernating Rhinos")]
-[assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2012. All rights reserved.")]
+[assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2013. All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 
+[assembly: AssemblyTitle("RavenDB")]
 [assembly: AssemblyVersion("2.0.0")]
 [assembly: AssemblyFileVersion("2.0.13.0")]
 [assembly: AssemblyInformationalVersion("2.0.0 / {commit}")]
@@ -18,8 +19,11 @@ using System.Runtime.InteropServices;
 #if SILVERLIGHT
 [assembly: CLSCompliant(false)]
 #else
-[assembly: SuppressIldasm()]
 [assembly: CLSCompliant(true)]
+#endif
+
+#if !SILVERLIGHT && !NETFX_CORE
+[assembly: SuppressIldasm()]
 #endif
 
 #if DEBUG

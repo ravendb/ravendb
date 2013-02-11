@@ -8,7 +8,7 @@ namespace Raven.Abstractions.Data
 	{
 		public GetResponse()
 		{
-			Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+			Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public RavenJToken Result { get; set; }

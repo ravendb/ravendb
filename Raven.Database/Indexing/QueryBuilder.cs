@@ -25,7 +25,7 @@ namespace Raven.Database.Indexing
 		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
-		private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.InvariantCultureIgnoreCase)
+		private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.OrdinalIgnoreCase)
 		{
 			{"in", (field, args) => new TermsMatchQuery(field, args)},
 			{"emptyIn", (field, args) => new TermsMatchQuery(field, Enumerable.Empty<string>())}

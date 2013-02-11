@@ -69,15 +69,15 @@
     </Reference>
     <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\sl5\Microsoft.Threading.Tasks.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\sl4\Microsoft.Threading.Tasks.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Threading.Tasks.Extensions, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\sl5\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\sl4\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions.Silverlight, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.Threading.Tasks.Extensions.Silverlight, Version=1.0.14.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\sl5\Microsoft.Threading.Tasks.Extensions.Silverlight.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\sl4\Microsoft.Threading.Tasks.Extensions.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="NLog">
@@ -99,14 +99,14 @@
     <Reference Include="System.Reactive.PlatformServices">
       <HintPath>..\packages\Rx-PlatformServices.2.0.21114\lib\SL5\System.Reactive.PlatformServices.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime, Version=2.5.11.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    <Reference Include="System.Runtime, Version=2.5.16.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.1.0.11-beta\lib\sl5\System.Runtime.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.1.0.16-rc\lib\sl5\System.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Threading.Tasks, Version=2.5.11.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    <Reference Include="System.Threading.Tasks, Version=2.5.16.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.1.0.11-beta\lib\sl5\System.Threading.Tasks.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.1.0.16-rc\lib\sl5\System.Threading.Tasks.dll</HintPath>
     </Reference>
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -172,6 +172,9 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\JavaScriptDateTimeConverter.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Converters\JavaScriptDateTimeConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\JsonValueConverter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Converters\JsonValueConverter.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\KeyValuePairConverter.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Converters\KeyValuePairConverter.cs</Link>
@@ -422,6 +425,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DefaultSerializationBinder.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\DefaultSerializationBinder.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DynamicValueProvider.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\DynamicValueProvider.cs</Link>
     </Compile>
@@ -436,6 +442,9 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IReferenceResolver.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IReferenceResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ITraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ITraceWriter.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IValueProvider.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IValueProvider.cs</Link>
@@ -497,6 +506,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\LateBoundMetadataTypeAttribute.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\LateBoundMetadataTypeAttribute.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\ObjectConstructor.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\ObjectConstructor.cs</Link>
     </Compile>
@@ -508,6 +520,12 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\StreamingContext.cs">
       <Link>Imports\Imports\Newtonsoft.Json\StreamingContext.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\StringEscapeHandling.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\StringEscapeHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\TraceLevel.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\TraceLevel.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\TypeNameHandling.cs">
       <Link>Imports\Imports\Newtonsoft.Json\TypeNameHandling.cs</Link>
@@ -698,6 +716,9 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
       <Link>Imports\Extensions\Buffers.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\CharExtensions.cs">
+      <Link>Imports\Extensions\CharExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\CryptoTransformExtensions.cs">
       <Link>Imports\Extensions\CryptoTransformExtensions.cs</Link>
     </Compile>
@@ -812,6 +833,9 @@
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
       <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
+      <Link>Imports\MissingFromBCL\WinRTCompetability.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
     </Compile>
@@ -898,6 +922,12 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\RavenUrlExtensions.cs">
       <Link>Connection\RavenUrlExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformerCache.cs">
+      <Link>Imports\Connection\ReplicationInformerCache.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerHash.cs">
+      <Link>Imports\Connection\ServerHash.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
       <Link>Imports\DocumentStoreBase.cs</Link>
@@ -1079,6 +1109,9 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
+      <Link>MissingFromSilverlight\ThreadSleep.cs</Link>
+    </Compile>
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
@@ -1119,9 +1152,6 @@
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
-      <Link>Imports\Imports\Newtonsoft.Json\Dynamic.snk</Link>
-    </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>Imports\RavenDB.snk</Link>
     </None>
@@ -1464,7 +1494,6 @@
     </VisualStudio>
   </ProjectExtensions>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="..\packages\Microsoft.Bcl.1.0.11-beta\tools\portable-net40+sl4+win8+wp71\Microsoft.Bcl.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

@@ -90,9 +90,9 @@ namespace Raven.Imports.Newtonsoft.Json
       return Create(reader as IJsonLineInfo, reader.Path, message, ex);
     }
 
-    internal static JsonSerializationException Create(IJsonLineInfo lineInfo, string path, string message, Exception ex)
+    internal static new JsonSerializationException Create(IJsonLineInfo lineInfo, string path, string message, Exception ex)
     {
-      message = FormatExceptionMessage(lineInfo, path, message);
+      message = JsonPosition.FormatMessage(lineInfo, path, message);
 
       return new JsonSerializationException(message, ex);
     }

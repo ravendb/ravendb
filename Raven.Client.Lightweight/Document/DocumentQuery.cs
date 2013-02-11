@@ -1,16 +1,18 @@
-﻿#if !SILVERLIGHT
+﻿#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Listeners;
 using Raven.Client.Connection.Async;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
 {
@@ -50,7 +52,7 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			var props = typeof (TProjection).GetProperties().Select(x => x.Name).ToArray();
+			var props = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Select(x => x.Name).ToArray();
 			return SelectFields<TProjection>(props, props);
 		}
 

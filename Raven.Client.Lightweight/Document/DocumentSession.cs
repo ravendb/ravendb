@@ -3,11 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -17,6 +18,8 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Util;
+using Raven.Client.WinRT.MissingFromWinRT;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -327,7 +330,7 @@ namespace Raven.Client.Document
 
 			// only load documents that aren't already cached
 			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
-			                                 .Distinct(StringComparer.InvariantCultureIgnoreCase)
+			                                 .Distinct(StringComparer.OrdinalIgnoreCase)
 			                                 .ToArray();
 
 			if (idsOfNotExistingObjects.Length > 0)
@@ -400,7 +403,7 @@ namespace Raven.Client.Document
 			value.ETag = jsonDocument.Etag;
 			value.OriginalValue = jsonDocument.DataAsJson;
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-			foreach (var property in entity.GetType().GetProperties())
+			foreach (var property in entity.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
 			{
 				if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
 					continue;
@@ -626,7 +629,7 @@ namespace Raven.Client.Document
 				IncrementRequestCount();
 				while (ExecuteLazyOperationsSingleStep())
 				{
-					Thread.Sleep(100);
+					ThreadSleep.Sleep(100);
 				}
 
 				foreach (var pendingLazyOperation in pendingLazyOperations)

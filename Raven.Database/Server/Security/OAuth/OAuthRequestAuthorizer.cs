@@ -122,10 +122,10 @@ namespace Raven.Database.Server.Security.OAuth
 
 		public bool IsInRole(string role)
 		{
-			if ("Administrators".Equals(role, StringComparison.InvariantCultureIgnoreCase) == false)
+			if ("Administrators".Equals(role, StringComparison.OrdinalIgnoreCase) == false)
 				return false;
 
-			var databaseAccess = tokenBody.AuthorizedDatabases.FirstOrDefault(x=>string.Equals(x.TenantId, tenantId, StringComparison.InvariantCultureIgnoreCase) || x.TenantId == "*");
+			var databaseAccess = tokenBody.AuthorizedDatabases.FirstOrDefault(x=>string.Equals(x.TenantId, tenantId, StringComparison.OrdinalIgnoreCase) || x.TenantId == "*");
 
 			if (databaseAccess == null)
 				return false;

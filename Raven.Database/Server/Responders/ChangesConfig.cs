@@ -93,7 +93,7 @@ namespace Raven.Database.Server.Responders
 
 		private bool Match(string x, string y)
 		{
-			return string.Equals(x, y, StringComparison.InvariantCultureIgnoreCase);
+			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
 		}
 	}
 }

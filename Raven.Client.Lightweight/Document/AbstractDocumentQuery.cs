@@ -26,8 +26,10 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -450,7 +452,7 @@ namespace Raven.Client.Document
 			                          includes);
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT  && !NETFX_CORE
 		/// <summary>
 		///   Gets the query result
 		///   Execute the query the first time that this is called.
@@ -495,7 +497,7 @@ namespace Raven.Client.Document
 					var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
 					if (queryOperation.IsAcceptable(result) == false)
 					{
-						Thread.Sleep(100);
+						ThreadSleep.Sleep(100);
 						continue;
 					}
 					break;
@@ -513,7 +515,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -644,7 +646,7 @@ namespace Raven.Client.Document
 			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>
@@ -1491,6 +1493,9 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private static Task TaskDelay(int dueTimeMilliseconds)
 		{
+#if NETFX_CORE
+			return Task.Delay(dueTimeMilliseconds);
+#else
 			var taskCompletionSource = new TaskCompletionSource<object>();
 			var cancellationTokenRegistration = new CancellationTokenRegistration();
 			var timer = new Timer(o =>
@@ -1501,6 +1506,7 @@ If you really want to do in memory filtering on the data returned from the query
 			});
 			timer.Change(dueTimeMilliseconds, -1);
 			return taskCompletionSource.Task;
+#endif
 		}
 
 		/// <summary>
@@ -1548,11 +1554,11 @@ If you really want to do in memory filtering on the data returned from the query
 			};
 		}
 
-		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)", 
-#if !SILVERLIGHT
+		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
+#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled
 #else
-			RegexOptions.None
+ RegexOptions.None
 #endif
 
 			);

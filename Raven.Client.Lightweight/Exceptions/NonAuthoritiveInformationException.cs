@@ -11,7 +11,7 @@ namespace Raven.Client.Exceptions
 	/// <summary>
 	/// This exception is raised when a non authoritative information is encountered
 	/// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 	[Serializable]
 #endif
 	public class NonAuthoritativeInformationException : Exception
@@ -40,7 +40,7 @@ namespace Raven.Client.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Initializes a new instance of the <see cref="NonAuthoritativeInformationException"/> class.
 		/// </summary>

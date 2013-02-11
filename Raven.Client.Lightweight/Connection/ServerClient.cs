@@ -1,4 +1,4 @@
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="ServerClient.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -244,7 +244,7 @@ namespace Raven.Client.Connection
 
 		private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
 		{
-			if (!primaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+			if (!primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 			{
 				var forceCheck = headers[Constants.RavenForcePrimaryServerCheck];
 				bool shouldForceCheck;
@@ -1036,7 +1036,7 @@ namespace Raven.Client.Connection
 			var multiLoadResult = new MultiLoadResult
 			{
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase))).ToList()
+				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase))).ToList()
 			};
 
 			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);

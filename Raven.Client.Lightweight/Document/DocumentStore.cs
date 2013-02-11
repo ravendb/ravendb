@@ -46,7 +46,7 @@ namespace Raven.Client.Document
 
 
 #if SILVERLIGHT
-		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 		private readonly object replicationInformersLocker = new object();
 #else
 		/// <summary>
@@ -54,10 +54,10 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 
-		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 #endif
 
-		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
 		private HttpJsonRequestFactory jsonRequestFactory;
 
@@ -173,7 +173,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public string ApiKey { get; set; }
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		private string connectionStringName;
 
 		/// <summary>

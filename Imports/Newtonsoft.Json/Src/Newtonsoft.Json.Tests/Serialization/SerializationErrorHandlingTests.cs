@@ -25,19 +25,24 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.Imports.Newtonsoft.Json.Converters;
-using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Tests.TestObjects;
+#if NET20
+using Newtonsoft.Json.Utilities.LinqBridge;
+#else
+using System.Linq;
+#endif
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 using System.IO;
-using ErrorEventArgs=Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
+using ErrorEventArgs=Newtonsoft.Json.Serialization.ErrorEventArgs;
 
-namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
+namespace Newtonsoft.Json.Tests.Serialization
 {
   [TestFixture]
   public class SerializationErrorHandlingTests : TestFixtureBase
@@ -95,6 +100,99 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
       Assert.AreEqual("Value2", c[1].Member);
       Assert.AreEqual("Value3", c[2].Member);
       Assert.AreEqual("Handle this!", c[2].ThrowError);
+    }
+
+    [Test]
+    public void SerializingErrorIn3DArray()
+    {
+      ListErrorObject[,,] c = new ListErrorObject[,,]
+        {
+          {
+            {
+              new ListErrorObject
+                {
+                  Member = "Value1",
+                  ThrowError = "Handle this!",
+                  Member2 = "Member1"
+                },
+              new ListErrorObject
+                {
+                  Member = "Value2",
+                  Member2 = "Member2"
+                },
+              new ListErrorObject
+                {
+                  Member = "Value3",
+                  ThrowError = "Handle that!",
+                  Member2 = "Member3"
+                }
+            },
+            {
+              new ListErrorObject
+                {
+                  Member = "Value1",
+                  ThrowError = "Handle this!",
+                  Member2 = "Member1"
+                },
+              new ListErrorObject
+                {
+                  Member = "Value2",
+                  Member2 = "Member2"
+                },
+              new ListErrorObject
+                {
+                  Member = "Value3",
+                  ThrowError = "Handle that!",
+                  Member2 = "Member3"
+                }
+            }
+          }
+        };
+
+      string json = JsonConvert.SerializeObject(c, new JsonSerializerSettings
+        {
+          Formatting = Formatting.Indented,
+          Error = (s, e) =>
+            {
+              if (e.CurrentObject.GetType().IsArray)
+                e.ErrorContext.Handled = true;
+            }
+        });
+
+      Assert.AreEqual(@"[
+  [
+    [
+      {
+        ""Member"": ""Value1"",
+        ""ThrowError"": ""Handle this!"",
+        ""Member2"": ""Member1""
+      },
+      {
+        ""Member"": ""Value2""
+      },
+      {
+        ""Member"": ""Value3"",
+        ""ThrowError"": ""Handle that!"",
+        ""Member2"": ""Member3""
+      }
+    ],
+    [
+      {
+        ""Member"": ""Value1"",
+        ""ThrowError"": ""Handle this!"",
+        ""Member2"": ""Member1""
+      },
+      {
+        ""Member"": ""Value2""
+      },
+      {
+        ""Member"": ""Value3"",
+        ""ThrowError"": ""Handle that!"",
+        ""Member2"": ""Member3""
+      }
+    ]
+  ]
+]", json);
     }
 
     [Test]
@@ -166,14 +264,14 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
       List<string> errors = new List<string>();
 
       JsonSerializer serializer = JsonSerializer.Create(new JsonSerializerSettings
-      {
-        Error = delegate(object sender, ErrorEventArgs args)
         {
-          errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
-          args.ErrorContext.Handled = true;
-        },
-        Converters = { new IsoDateTimeConverter() }
-      });
+          Error = delegate(object sender, ErrorEventArgs args)
+            {
+              errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
+              args.ErrorContext.Handled = true;
+            },
+          Converters = {new IsoDateTimeConverter()}
+        });
       var c = serializer.Deserialize<List<DateTime>>(new JsonTextReader(new StringReader(@"[
         ""2009-09-09T00:00:00Z"",
         ""I am not a date and will error!"",
@@ -281,13 +379,13 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
       {
         JsonSerializer serializer = new JsonSerializer();
         serializer.Error += delegate(object sender, ErrorEventArgs args)
-        {
-          // only log an error once
-          if (args.CurrentObject == args.ErrorContext.OriginalObject)
-            errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
-        };
+          {
+            // only log an error once
+            if (args.CurrentObject == args.ErrorContext.OriginalObject)
+              errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
+          };
 
-        serializer.Deserialize(new StringReader(json), typeof(List<List<DateTime>>));
+        serializer.Deserialize(new StringReader(json), typeof (List<List<DateTime>>));
       }
       catch (Exception ex)
       {
@@ -312,7 +410,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
           args.ErrorContext.Handled = true;
         };
       serializer.Deserialize(new JsonTextReader(new StringReader(json)), typeof (MyTypeWithRequiredMembers));
-      
+
       Assert.AreEqual(2, errors.Count);
       Assert.AreEqual(" - Required1 - Required property 'Required1' not found in JSON. Path '', line 1, position 2.", errors[0]);
       Assert.AreEqual(" - Required2 - Required property 'Required2' not found in JSON. Path '', line 1, position 2.", errors[1]);
@@ -327,12 +425,12 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 
       JsonSerializer serializer = new JsonSerializer();
       serializer.Error += delegate(object sender, ErrorEventArgs args)
-      {
-        errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
-        args.ErrorContext.Handled = true;
-      };
+        {
+          errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
+          args.ErrorContext.Handled = true;
+        };
 
-      serializer.Deserialize(new JsonTextReader(new StringReader(json)), typeof(int[]));
+      serializer.Deserialize(new JsonTextReader(new StringReader(json)), typeof (int[]));
 
       Assert.AreEqual(2, errors.Count);
       Assert.AreEqual("[0] - 0 - Could not convert string to integer: a. Path '[0]', line 1, position 4.", errors[0]);
@@ -340,18 +438,39 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
     }
 
     [Test]
+    public void HandlingMultidimensionalArrayErrors()
+    {
+      string json = "[[\"a\",\"45\"],[\"b\",34]]";
+
+      List<string> errors = new List<string>();
+
+      JsonSerializer serializer = new JsonSerializer();
+      serializer.Error += delegate(object sender, ErrorEventArgs args)
+        {
+          errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
+          args.ErrorContext.Handled = true;
+        };
+
+      serializer.Deserialize(new JsonTextReader(new StringReader(json)), typeof (int[,]));
+
+      Assert.AreEqual(2, errors.Count);
+      Assert.AreEqual("[0][0] - 0 - Could not convert string to integer: a. Path '[0][0]', line 1, position 5.", errors[0]);
+      Assert.AreEqual("[1][0] - 0 - Could not convert string to integer: b. Path '[1][0]', line 1, position 16.", errors[1]);
+    }
+
+    [Test]
     public void ErrorHandlingAndAvoidingRecursiveDepthError()
     {
       string json = "{'A':{'A':{'A':{'A':{'A':{}}}}}}";
-      JsonSerializer serializer = new JsonSerializer() { };
+      JsonSerializer serializer = new JsonSerializer() {};
       IList<string> errors = new List<string>();
       serializer.Error += (sender, e) =>
-      {
-        e.ErrorContext.Handled = true;
-        errors.Add(e.ErrorContext.Path);
-      };
+        {
+          e.ErrorContext.Handled = true;
+          errors.Add(e.ErrorContext.Path);
+        };
 
-      serializer.Deserialize<Nest>(new JsonTextReader(new StringReader(json)) { MaxDepth = 3 });
+      serializer.Deserialize<Nest>(new JsonTextReader(new StringReader(json)) {MaxDepth = 3});
 
       Assert.AreEqual(1, errors.Count);
       Assert.AreEqual("A.A.A", errors[0]);
@@ -401,7 +520,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
           });
 
       Assert.IsNull(o);
-      
+
       Assert.AreEqual(3, errors.Count);
       Assert.AreEqual("Unexpected character encountered while parsing value: x. Path '[0]', line 1, position 3.", errors[0]);
       Assert.AreEqual("Unexpected character encountered while parsing value: x. Path '[0]', line 1, position 3.", errors[1]);
@@ -416,13 +535,13 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
       Dictionary<string, int[]> o = JsonConvert.DeserializeObject<Dictionary<string, int[]>>(
         "{'badarray':[0,x,2],'goodarray':[0,1,2]}",
         new JsonSerializerSettings
-        {
-          Error = (sender, arg) =>
           {
-            errors.Add(arg.ErrorContext.Error.Message);
-            arg.ErrorContext.Handled = true;
-          }
-        });
+            Error = (sender, arg) =>
+              {
+                errors.Add(arg.ErrorContext.Error.Message);
+                arg.ErrorContext.Handled = true;
+              }
+          });
 
       Assert.IsNull(o);
 
@@ -433,48 +552,198 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
       Assert.AreEqual("Unexpected character encountered while parsing value: x. Path 'badarray[0]', line 1, position 15.", errors[3]);
     }
 
-    public class ThrowingReader : TextReader
+    [Test]
+    public void ErrorHandlingEndOfContent()
     {
-      int _position = 0;
-      static string element = "{\"FirstName\":\"Din\",\"LastName\":\"Rav\",\"Item\":{\"ItemName\":\"temp\"}}";
-      bool _firstRead = true;
-      bool _readComma = false;
+      IList<string> errors = new List<string>();
 
-      public ThrowingReader()
+      const string input = "{\"events\":[{\"code\":64411},{\"code\":64411,\"prio";
+
+      const int maxDepth = 256;
+      using (var jsonTextReader = new JsonTextReader(new StringReader(input)) {MaxDepth = maxDepth})
       {
+        JsonSerializer jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings {MaxDepth = maxDepth});
+        jsonSerializer.Error += (sender, e) =>
+          {
+            errors.Add(e.ErrorContext.Error.Message);
+            e.ErrorContext.Handled = true;
+          };
+
+        LogMessage logMessage = jsonSerializer.Deserialize<LogMessage>(jsonTextReader);
+
+        Assert.IsNotNull(logMessage.Events);
+        Assert.AreEqual(1, logMessage.Events.Count);
+        Assert.AreEqual("64411", logMessage.Events[0].Code);
       }
 
-      public override int Read(char[] buffer, int index, int count)
+      Assert.AreEqual(3, errors.Count);
+      Assert.AreEqual(@"Unterminated string. Expected delimiter: "". Path 'events[1].code', line 1, position 45.", errors[0]);
+      Assert.AreEqual(@"Unexpected end when deserializing array. Path 'events[1].code', line 1, position 45.", errors[1]);
+      Assert.AreEqual(@"Unexpected end when deserializing object. Path 'events[1].code', line 1, position 45.", errors[2]);
+    }
+
+    [Test]
+    public void ErrorHandlingEndOfContentDictionary()
+    {
+      IList<string> errors = new List<string>();
+
+      const string input = "{\"events\":{\"code\":64411},\"events2\":{\"code\":64412,";
+
+      const int maxDepth = 256;
+      using (var jsonTextReader = new JsonTextReader(new StringReader(input)) {MaxDepth = maxDepth})
       {
-        char[] temp = new char[buffer.Length];
-        int charsRead = 0;
-        if (_firstRead)
+        JsonSerializer jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings {MaxDepth = maxDepth});
+        jsonSerializer.Error += (sender, e) =>
+          {
+            errors.Add(e.ErrorContext.Error.Message);
+            e.ErrorContext.Handled = true;
+          };
+
+        IDictionary<string, LogEvent> logEvents = jsonSerializer.Deserialize<IDictionary<string, LogEvent>>(jsonTextReader);
+
+        Assert.IsNotNull(logEvents);
+        Assert.AreEqual(2, logEvents.Count);
+        Assert.AreEqual("64411", logEvents["events"].Code);
+        Assert.AreEqual("64412", logEvents["events2"].Code);
+      }
+
+      Assert.AreEqual(2, errors.Count);
+      Assert.AreEqual(@"Unexpected end when deserializing object. Path 'events2.code', line 1, position 49.", errors[0]);
+      Assert.AreEqual(@"Unexpected end when deserializing object. Path 'events2.code', line 1, position 49.", errors[1]);
+    }
+
+#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
+    [Test]
+    public void ErrorHandlingEndOfContentDynamic()
+    {
+      IList<string> errors = new List<string>();
+
+      string json = @"{
+  ""Explicit"": true,
+  ""Decimal"": 99.9,
+  ""Int"": 1,
+  ""ChildObject"": {
+    ""Integer"": 123";
+
+      TestDynamicObject newDynamicObject = JsonConvert.DeserializeObject<TestDynamicObject>(json, new JsonSerializerSettings
         {
-          charsRead = new StringReader("[").Read(temp, index, count);
-          _firstRead = false;
+          Error = (sender, e) =>
+          {
+            errors.Add(e.ErrorContext.Error.Message);
+            e.ErrorContext.Handled = true;
+          }
+        });
+      Assert.AreEqual(true, newDynamicObject.Explicit);
+
+      dynamic d = newDynamicObject;
+
+      Assert.AreEqual(99.9, d.Decimal);
+      Assert.AreEqual(1, d.Int);
+      Assert.AreEqual(123, d.ChildObject.Integer);
+
+      Assert.AreEqual(2, errors.Count);
+      Assert.AreEqual(@"Unexpected end when deserializing object. Path 'ChildObject.Integer', line 6, position 19.", errors[0]);
+      Assert.AreEqual(@"Unexpected end when deserializing object. Path 'ChildObject.Integer', line 6, position 19.", errors[1]);
+    }
+#endif
+
+    [Test]
+    public void WriteEndOnPropertyState()
+    {
+      JsonSerializerSettings settings = new JsonSerializerSettings();
+      settings.Error += (obj, args) =>
+      {
+        args.ErrorContext.Handled = true;
+      };
+
+      var data = new List<ErrorPerson2>()
+                          {
+                              new ErrorPerson2{FirstName = "Scott", LastName = "Hanselman"},
+                              new ErrorPerson2{FirstName = "Scott", LastName = "Hunter"},
+                              new ErrorPerson2{FirstName = "Scott", LastName = "Guthrie"},
+                          };
+
+      var dictionary = data.GroupBy(person => person.FirstName).ToDictionary(group => @group.Key, group => @group.Cast<IErrorPerson2>());
+      var output = JsonConvert.SerializeObject(dictionary, Formatting.None, settings);
+      Assert.AreEqual(@"{""Scott"":null}", output);
+    }
+
+    [Test]
+    public void WriteEndOnPropertyState2()
+    {
+      JsonSerializerSettings settings = new JsonSerializerSettings();
+      settings.Error += (obj, args) =>
+        {
+          args.ErrorContext.Handled = true;
+        };
+
+      var data = new List<ErrorPerson2>
+        {
+          new ErrorPerson2 {FirstName = "Scott", LastName = "Hanselman"},
+          new ErrorPerson2 {FirstName = "Scott", LastName = "Hunter"},
+          new ErrorPerson2 {FirstName = "Scott", LastName = "Guthrie"},
+          new ErrorPerson2 {FirstName = "James", LastName = "Newton-King"},
+        };
+
+      var dictionary = data.GroupBy(person => person.FirstName).ToDictionary(group => @group.Key, group => @group.Cast<IErrorPerson2>());
+      var output = JsonConvert.SerializeObject(dictionary, Formatting.None, settings);
+
+      Assert.AreEqual(@"{""Scott"":null,""James"":null}", output);
+    }
+  }
+
+  interface IErrorPerson2
+  {
+
+  }
+
+  class ErrorPerson2//:IPerson - oops! Forgot to implement the person interface
+  {
+    public string LastName { get; set; }
+    public string FirstName { get; set; }
+  }
+
+  public class ThrowingReader : TextReader
+  {
+    private int _position = 0;
+    private static string element = "{\"FirstName\":\"Din\",\"LastName\":\"Rav\",\"Item\":{\"ItemName\":\"temp\"}}";
+    private bool _firstRead = true;
+    private bool _readComma = false;
+
+    public ThrowingReader()
+    {
+    }
+
+    public override int Read(char[] buffer, int index, int count)
+    {
+      char[] temp = new char[buffer.Length];
+      int charsRead = 0;
+      if (_firstRead)
+      {
+        charsRead = new StringReader("[").Read(temp, index, count);
+        _firstRead = false;
+      }
+      else
+      {
+        if (_readComma)
+        {
+          charsRead = new StringReader(",").Read(temp, index, count);
+          _readComma = false;
         }
         else
         {
-          if (_readComma)
-          {
-            charsRead = new StringReader(",").Read(temp, index, count);
-            _readComma = false;
-          }
-          else
-          {
-            charsRead = new StringReader(element).Read(temp, index, count);
-            _readComma = true;
-          }
+          charsRead = new StringReader(element).Read(temp, index, count);
+          _readComma = true;
         }
-
-        _position += charsRead;
-        if (_position > 65536)
-        {
-          throw new Exception("too far");
-        }
-        Array.Copy(temp, index, buffer, index, charsRead);
-        return charsRead;
       }
+
+      _position += charsRead;
+      if (_position > 65536)
+      {
+        throw new Exception("too far");
+      }
+      Array.Copy(temp, index, buffer, index, charsRead);
+      return charsRead;
     }
   }
 
@@ -493,9 +762,19 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
   [JsonObject]
   public class MyTypeWithRequiredMembers
   {
-    [JsonProperty(Required = Required.AllowNull)]
-    public string Required1;
-    [JsonProperty(Required = Required.AllowNull)]
-    public string Required2;
+    [JsonProperty(Required = Required.AllowNull)] public string Required1;
+    [JsonProperty(Required = Required.AllowNull)] public string Required2;
+  }
+
+  public class LogMessage
+  {
+    public string DeviceId { get; set; }
+    public IList<LogEvent> Events { get; set; }
+  }
+
+  public class LogEvent
+  {
+    public string Code { get; set; }
+    public int Priority { get; set; }
   }
 }

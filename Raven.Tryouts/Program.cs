@@ -96,7 +96,7 @@ namespace BulkStressTest
 											 {
 												 Console.Write("\r" + s);
 											 }
-											 if (s.StartsWith("Done ", StringComparison.InvariantCultureIgnoreCase))
+											 if (s.StartsWith("Done ", StringComparison.OrdinalIgnoreCase))
 											 {
 												 //stopWatch.Stop();
 												 Console.WriteLine("Operation took: " + stopWatch.Elapsed);

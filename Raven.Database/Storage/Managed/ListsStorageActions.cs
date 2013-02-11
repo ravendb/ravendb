@@ -55,7 +55,7 @@ namespace Raven.Storage.Managed
 				{ "name", name },
 				{ "etag", start.ToByteArray() }
 			})
-			.TakeWhile(x=> StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("name"), name))
+			.TakeWhile(x=> StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("name"), name))
 			.Select(result =>
 			{
 				var readResult = storage.Lists.Read(result);
@@ -77,7 +77,7 @@ namespace Raven.Storage.Managed
 				{"name", name},
 				{"etag", Guid.Empty.ToByteArray()}
 			})
-				.TakeWhile(x => String.Equals(x.Value<string>("name"), name, StringComparison.InvariantCultureIgnoreCase) &&
+				.TakeWhile(x => String.Equals(x.Value<string>("name"), name, StringComparison.OrdinalIgnoreCase) &&
 				                comparable.CompareTo(x.Value<byte[]>("etag")) >= 0);
 
 			foreach (var result in results)

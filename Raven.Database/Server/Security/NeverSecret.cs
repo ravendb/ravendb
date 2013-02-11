@@ -5,7 +5,7 @@ namespace Raven.Database.Server.Security
 {
 	public class NeverSecret
 	{
-		public static readonly HashSet<string> Urls = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+		public static readonly HashSet<string> Urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 			{
 				// allow to get files that are static and are never secret, for example, the studio, the cross domain
 				// policy and the fav icon

@@ -98,7 +98,7 @@ namespace Raven.Studio.Commands
 
                 foreach (var versioningConfiguration in versioningSettings.VersioningConfigurations)
 				{
-					if (versioningConfiguration.Id.StartsWith("Raven/Versioning/",StringComparison.InvariantCultureIgnoreCase) == false)
+					if (versioningConfiguration.Id.StartsWith("Raven/Versioning/",StringComparison.OrdinalIgnoreCase) == false)
 						versioningConfiguration.Id = "Raven/Versioning/" + versioningConfiguration.Id;
 					session.Store(versioningConfiguration);
 				}

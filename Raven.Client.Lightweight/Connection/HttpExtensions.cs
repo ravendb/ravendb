@@ -6,10 +6,10 @@
 using System;
 using System.Net;
 using Raven.Abstractions.Data;
-using System.Linq;
-
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Connection
@@ -18,7 +18,7 @@ namespace Raven.Client.Connection
 	{
 		public static Etag GetEtagHeader(this HttpWebResponse response)
 		{
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 			return EtagHeaderToEtag(response.Headers["ETag"]);
 #else
 			return EtagHeaderToEtag(response.GetResponseHeader("ETag"));

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Linq
 {
@@ -107,7 +108,7 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
-				if (type.IsEnum && (value is IEnumerable == false) && // skip arrays, lists
+				if (type.IsEnum() && (value is IEnumerable == false) && // skip arrays, lists
 					conventions.SaveEnumsAsIntegers == false)
 				{
 					return Enum.GetName(type, value);

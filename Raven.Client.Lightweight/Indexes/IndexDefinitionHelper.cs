@@ -49,7 +49,7 @@ namespace Raven.Client.Indexes
 
 			var querySourceName = expr.Parameters.First(x => x.Type != typeof(IClientSideDatabase)).Name;
 
-			var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.InvariantCulture);
+			var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.Ordinal);
 			if (indexOfQuerySource == -1)
 				throw new InvalidOperationException("Cannot understand how to parse the query");
 

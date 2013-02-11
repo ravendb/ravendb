@@ -18,6 +18,10 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 
+#if NETFX_CORE
+using Raven.Client.WinRT.Connection;
+#endif
+
 namespace Raven.Client.Shard
 {
 	/// <summary>
@@ -27,7 +31,7 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardedDocumentStore : DocumentStoreBase
 	{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
@@ -137,7 +141,7 @@ namespace Raven.Client.Shard
 		}
 
 		private readonly AtomicDictionary<IDatabaseChanges> changes =
-			new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+			new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 		public override IDatabaseChanges Changes(string database = null)
 		{
 			return changes.GetOrAdd(database, 
@@ -187,7 +191,7 @@ namespace Raven.Client.Shard
 			});
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Opens the session.
@@ -258,7 +262,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
 			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions());
@@ -305,6 +309,7 @@ namespace Raven.Client.Shard
 			return this;
 		}
 
+#if !NETFX_CORE
 		public IDatabaseCommands DatabaseCommandsFor(string shardId)
 		{
 			IDocumentStore store;
@@ -313,6 +318,7 @@ namespace Raven.Client.Shard
 
 			return store.DatabaseCommands;
 		}
+#endif
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommandsFor(string shardId)
 		{
@@ -323,6 +329,7 @@ namespace Raven.Client.Shard
 			return store.AsyncDatabaseCommands;
 		}
 
+#if !NETFX_CORE
 		/// <summary>
 		/// Executes the index creation against each of the shards.
 		/// </summary>
@@ -337,5 +344,6 @@ namespace Raven.Client.Shard
 																return (object)null;
 															});
 		}
+#endif
 	}
 }

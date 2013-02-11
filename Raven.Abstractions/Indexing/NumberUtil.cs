@@ -53,8 +53,8 @@ namespace Raven.Abstractions.Indexing
 			if (number == null)
 				return null;
 
-			if ("NULL".Equals(number, StringComparison.InvariantCultureIgnoreCase) || 
-				"*".Equals(number,StringComparison.InvariantCultureIgnoreCase))
+			if ("NULL".Equals(number, StringComparison.OrdinalIgnoreCase) || 
+				"*".Equals(number,StringComparison.OrdinalIgnoreCase))
 				return null;
 			if(number.Length <= 2)
 				throw new ArgumentException("String must be greater than 2 characters");

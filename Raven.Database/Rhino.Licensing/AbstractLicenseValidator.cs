@@ -172,7 +172,7 @@ namespace Rhino.Licensing
 		{
 			LeaseTimeout = TimeSpan.FromMinutes(5);
 			discoveryHost = new DiscoveryHost();
-			LicenseAttributes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+			LicenseAttributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			this.publicKey = publicKey;
 			discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
 		}

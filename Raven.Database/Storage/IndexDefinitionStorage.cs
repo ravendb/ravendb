@@ -33,9 +33,9 @@ namespace Raven.Database.Storage
 		private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
 
 		private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
-			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.OrdinalIgnoreCase);
 		private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
-			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.OrdinalIgnoreCase);
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly string path;
