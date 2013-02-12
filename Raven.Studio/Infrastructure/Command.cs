@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Models;
@@ -23,7 +24,14 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
-		public abstract void Execute(object parameter);
+		public virtual void Execute(object parameter)
+		{
+			ExecuteAsync(parameter).Catch();
+		}
+
+		protected virtual async Task ExecuteAsync(object parameter)
+		{
+		}
 
 		public event EventHandler CanExecuteChanged = delegate { };
 
