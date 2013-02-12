@@ -522,8 +522,22 @@ namespace Raven.Database
 		public void StopIndexingWorkers()
 		{
 			workContext.StopIndexing();
-			indexingBackgroundTask.Wait();
-			reducingBackgroundTask.Wait();
+			try
+			{
+				indexingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background indexing", e);
+			}
+			try
+			{
+				reducingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background reducing", e);
+			}
 
 			backgroundWorkersSpun = false;
 		}
@@ -741,6 +755,8 @@ namespace Raven.Database
 				actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
 				if (preTouchEtag == null || afterTouchEtag == null)
 					continue;
+
+                actions.General.MaybePulseTransaction();
 
 				recentTouches.Set(key, new TouchedDocumentInfo
 				{

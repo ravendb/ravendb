@@ -1103,7 +1103,7 @@ namespace Raven.Client.Connection
 
 
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			req.Write(jArray.ToString(Formatting.None));
+			req.Write(jArray.ToString(Formatting.None, Default.Converters));
 
 			RavenJArray response;
 			try
