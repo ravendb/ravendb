@@ -119,7 +119,14 @@ namespace Raven.Database.Indexing
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
-						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
+					    IndexStats indexStats = accessor.Indexing.GetIndexStats(indexName);
+                        if (indexStats != null)
+                        {
+                            indexImplementation.Priority = indexStats.Priority;
+                        }
+
+
+					    var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
 						if (read == null)
 							return;
 
@@ -195,7 +202,7 @@ namespace Raven.Database.Indexing
 			bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (indexDefinition.IsTemp || configuration.RunInMemory)
+            if (indexDefinitionStorage.IsNewThisSession(indexDefinition) || configuration.RunInMemory)
 			{
 				directory = new RAMDirectory();
 				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
@@ -417,9 +424,25 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 
+            if (value.Priority.HasFlag(IndexingPriority.Idle) && value.Priority.HasFlag(IndexingPriority.Forced) == false)
+            {
+                documentDatabase.TransactionalStorage.Batch(accessor =>
+                {
+                    value.Priority = IndexingPriority.Normal;
+                    accessor.Indexing.SetIndexPriority(index, IndexingPriority.Normal);
+                    documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
+                    documentDatabase.RaiseNotifications(new IndexChangeNotification() {
+                        Name = value.name,
+                        Type = IndexChangeTypes.IndexPromotedFromIdle
+                    });
+                });
+            }
+
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery();
+
+		
 			return indexQueryOperation.Query();
 		}
 
@@ -561,28 +584,107 @@ namespace Raven.Database.Indexing
 				value.Flush();
 			}
 
-			documentDatabase.TransactionalStorage.Batch(accessor =>
-			{
-				var maxDate = latestPersistedQueryTime;
-				foreach (var index in indexes)
-				{
-					var lastQueryTime = index.Value.LastQueryTime ?? DateTime.MinValue;
-					if (lastQueryTime <= latestPersistedQueryTime)
-						continue;
-
-					accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
-					{
-						{"LastQueryTime", lastQueryTime}
-					}, UuidType.Indexing);
-
-					if (lastQueryTime > maxDate)
-						maxDate = lastQueryTime;
-				}
-				latestPersistedQueryTime = maxDate;
-			});
+		    SetUnusedIndexesToIdle();
+			UpdateLatestPersistedQueryTime();
 		}
 
-		public void FlushMapIndexes()
+	    private void UpdateLatestPersistedQueryTime()
+	    {
+	        documentDatabase.TransactionalStorage.Batch(accessor =>
+	        {
+	            var maxDate = latestPersistedQueryTime;
+	            foreach (var index in indexes)
+	            {
+	                var lastQueryTime = index.Value.LastQueryTime ?? DateTime.MinValue;
+	                if (lastQueryTime <= latestPersistedQueryTime)
+	                    continue;
+
+	                accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
+	                {
+	                    {"LastQueryTime", lastQueryTime}
+	                }, UuidType.Indexing);
+
+	                if (lastQueryTime > maxDate)
+	                    maxDate = lastQueryTime;
+	            }
+	            latestPersistedQueryTime = maxDate;
+	        });
+	    }
+
+	    private void SetUnusedIndexesToIdle()
+	    {
+	        documentDatabase.TransactionalStorage.Batch(accessor =>
+	        {
+	            var autoIndexesSortedByLastQueryTime =
+	                (from index in indexes
+	                 let stats = accessor.Indexing.GetIndexStats(index.Key)
+	                 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
+	                 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
+	                 orderby lastQueryTime
+	                 select new
+	                 {
+	                     LastQueryTime = lastQueryTime,
+	                     Index = index.Value,
+	                     Name = index.Key,
+	                     stats.Priority,
+                         CreationDate = stats.CreatedTimestamp
+	                 }).ToArray();
+
+	            var idleChecks = 0;
+	            for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
+	            {
+	                var thisItem = autoIndexesSortedByLastQueryTime[i];
+	                var age = (SystemTime.UtcNow - thisItem.CreationDate).TotalMinutes;
+                    var lastQuery = (SystemTime.UtcNow - thisItem.LastQueryTime).TotalMinutes;
+                    
+                    if(age < 15)
+                        continue; // too young to make decisions about this one yet
+                    
+                    if ((age < 25 && lastQuery > 15) || 
+                        (age < 60 && lastQuery > 25))
+                    {
+                        accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+                        thisItem.Index.Priority = IndexingPriority.Idle;
+                        documentDatabase.RaiseNotifications(new IndexChangeNotification() {
+                            Name = thisItem.Name,
+                            Type = IndexChangeTypes.IndexDemotedToIdle
+                        });
+                        
+                        continue;
+                    }
+
+                    if(age < 90 && lastQuery > 30 &&
+                        thisItem.Priority.HasFlag(IndexingPriority.Idle))
+	                {
+                        // relatively young index, haven't been queried for a while already
+                        // can be safely removed, probably
+	                    accessor.Indexing.DeleteIndex(thisItem.Name);
+	                    continue;
+	                }
+
+	                if (thisItem.Priority.HasFlag(IndexingPriority.Idle))
+	                    continue;
+                    
+                    // If it's a fairly established query then we need to determine whether there is any activity currently
+                    // If there is activity and this has not been queried against 'recently' it needs idling
+	                if (++idleChecks < 2 && i < autoIndexesSortedByLastQueryTime.Length-1)
+	                {
+	                    var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
+	                    if ((nextItem.LastQueryTime - thisItem.LastQueryTime) > documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle)
+	                    {
+	                        accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+	                        thisItem.Index.Priority = IndexingPriority.Idle;
+                            documentDatabase.RaiseNotifications(new IndexChangeNotification() {
+                                Name = thisItem.Name,
+                                Type = IndexChangeTypes.IndexDemotedToIdle
+                            });
+	                    }
+	                }
+	            }
+	        });
+	    }
+
+	    public void FlushMapIndexes()
 		{
 			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
 			{

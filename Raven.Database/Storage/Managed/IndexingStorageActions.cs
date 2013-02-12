@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -71,7 +72,9 @@ namespace Raven.Storage.Managed
 				ReduceIndexingSuccesses = readResult.Key.Value<int?>("reduce_successes"),
 				Name = readResult.Key.Value<string>("index"),
 				LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
+                Priority = (IndexingPriority)readResult.Key.Value<int>("priority"),
 				LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
+                CreatedTimestamp = readResult.Key.Value<DateTime>("createdTimestamp"),
 				LastReducedEtag =
 					readResult.Key.Value<byte[]>("lastReducedEtag") != null
 						? (Guid?)new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
@@ -92,10 +95,11 @@ namespace Raven.Storage.Managed
 				{"attempts", 0},
 				{"successes", 0},
 				{"failures", 0},
+                {"priority", 0},
 				{"touches", 0},
 				{"lastEtag", Guid.Empty.ToByteArray()},
 				{"lastTimestamp", DateTime.MinValue},
-				
+				{"createdTimestamp", SystemTime.UtcNow},
 				{"reduce_attempts", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
 				{"reduce_successes",createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
 				{"reduce_failures", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
@@ -205,7 +209,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IndexFailureInformation GetFailureRate(string index)
+	    public IndexFailureInformation GetFailureRate(string index)
 		{
 			var readResult = storage.IndexingStats.Read(index);
 			if (readResult == null)
@@ -232,6 +236,18 @@ namespace Raven.Storage.Managed
 			key["touches"] = key.Value<int>("touches") + 1;
 			storage.IndexingStats.UpdateKey(key);
 		}
+
+        public void SetIndexPriority(string index, IndexingPriority priority)
+        {
+            var readResult = storage.IndexingStats.Read(index);
+            if (readResult == null)
+                throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
+            var key = (RavenJObject)readResult.Key.CloneToken();
+            key["priority"] = (int) priority;
+            storage.IndexingStats.UpdateKey(key);
+        }
+
+       
 
 		public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
 		{

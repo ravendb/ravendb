@@ -21,7 +21,10 @@ namespace Raven.Database.Queries
 
 		public static string FindDynamicIndexName(this DocumentDatabase self, string entityName, IndexQuery query)
 		{
-			return new DynamicQueryOptimizer(self).SelectAppropriateIndex(entityName, query.Clone());
+            var result = new DynamicQueryOptimizer(self).SelectAppropriateIndex(entityName, query.Clone());
+		    if (result.MatchType == DynamicQueryMatchType.Complete)
+		        return result.IndexName;
+		    return null;
 		}
 
 
