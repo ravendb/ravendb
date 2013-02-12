@@ -171,7 +171,9 @@ namespace Raven.Database.Indexing
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 						var reduceTimeWatcher = Stopwatch.StartNew();
-				
+
+						context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
+
 						var batchDuration = batchTimeWatcher.Elapsed;
 						Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration,
 								  results.Length, index.IndexName, reduceTimeWatcher.Elapsed, level);
