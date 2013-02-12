@@ -90,9 +90,19 @@ namespace Raven.Database.Indexing
 							autoTuner.OutOfMemoryExceptionHappened();
 						}
 					}
-					if (foundWork == false)
+					if (foundWork == false && context.RunIndexing)
 					{
-						context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
+						context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, () =>
+						{
+							try
+							{
+								FlushIndexes();
+							}
+							catch (Exception e)
+							{
+								Log.WarnException("Could not flush indexes properly", e);
+							}
+						}, name);
 					}
 					else // notify the tasks executer that it has work to do
 					{
