@@ -102,13 +102,13 @@ namespace Raven.Database.Indexing
 
 				var reduceParams = new GetItemsToReduceParams(
 					index.IndexName, 
-					keysToReduce.ToArray(), 
+					keysToReduce, 
 					level,
 					true,
 					itemsToDelete);
 
 				bool retry = true;
-				while (retry)
+				while (retry && reduceParams.ReduceKeys.Count > 0)
 				{
 					transactionalStorage.Batch(actions =>
 					{
