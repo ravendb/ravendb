@@ -1171,6 +1171,9 @@
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\Dynamic.snk">
+      <Link>Imports\Imports\Newtonsoft.Json\Dynamic.snk</Link>
+    </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>Imports\RavenDB.snk</Link>
     </None>
