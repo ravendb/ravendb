@@ -72,7 +72,8 @@ namespace Raven.Client.Linq
 			get { return customizeQuery; }
 		}
 
-		/// <summary>
+
+	    /// <summary>
 		/// Gets the name of the index.
 		/// </summary>
 		/// <value>The name of the index.</value>
@@ -208,6 +209,11 @@ namespace Raven.Client.Linq
 				return;
 			customizeQuery += action;
 		}
+
+	    public void TransformWith(string transformerName)
+	    {
+	        throw new NotImplementedException();
+	    }
 
 		/// <summary>
 		/// Move the registered after query actions

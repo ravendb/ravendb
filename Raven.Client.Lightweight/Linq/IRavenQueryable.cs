@@ -30,8 +30,9 @@ namespace Raven.Client.Linq
         /// Specifies a result transformer to use on the results
         /// </summary>
         /// <typeparam name="TTransformer"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
         /// <returns></returns>
-	    IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractResultsTransformer<T>;
+	    IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractResultsTransformer<T>, new();
 
 	}
 }

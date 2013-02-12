@@ -1042,6 +1042,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractMultiMapIndexCreationTask.cs">
       <Link>Imports\Indexes\AbstractMultiMapIndexCreationTask.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractResultsTransformer.cs">
+      <Link>Imports\Indexes\AbstractResultsTransformer.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
     </Compile>

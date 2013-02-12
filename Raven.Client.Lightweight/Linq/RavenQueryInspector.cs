@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Connection.Async;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Linq
 {
@@ -127,7 +128,14 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-		/// <summary>
+	    public IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractResultsTransformer<T>, new()
+	    {
+	        var transformer = new TTransformer();
+	        provider.TransformWith(transformer.IndexName);
+	        return this.AsProjection<TResult>();
+	    }
+
+	    /// <summary>
 		/// Returns a <see cref="System.String"/> that represents this instance.
 		/// </summary>
 		/// <returns>
