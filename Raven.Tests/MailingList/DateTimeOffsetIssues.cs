@@ -15,11 +15,11 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void WhenAddingDateTimeToTheMetadaDataThenItIsAddedAsDateTimeOffset()
 		{
-			using(var _documentStore = NewDocumentStore())
+			using(var _documentStore = NewRemoteDocumentStore())
 			{
 				// Arrange
 				string bookId;
-				var expectedDateTime = DateTime.Parse("2011-11-05T13:09:17.540277"); //this does not work!
+				var expectedDateTime =   DateTime.Parse("2011-11-05T13:09:17.540277"); //this does not work!
 				//var expectedDateTime = DateTime.Parse("2011-11-05T13:09:17.5402774"); //this works!
 
 				using (var session = _documentStore.OpenSession())
