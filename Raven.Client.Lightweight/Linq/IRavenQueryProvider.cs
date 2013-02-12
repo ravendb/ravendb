@@ -77,5 +77,9 @@ namespace Raven.Client.Linq
 		/// </summary>
 		HashSet<string> FieldsToFetch { get; }
 
+        /// <summary>
+        /// The result transformer to use
+        /// </summary>
+	    string ResultTransformer { get; }
 	}
 }

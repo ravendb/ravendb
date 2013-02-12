@@ -20,7 +20,7 @@ namespace Raven.Client.Indexes
             return new IndexDefinitionBuilder<TFrom>()
             {
                 TransformResults = TransformResults
-            }.ToIndexDefinition(Conventions ?? new DocumentConvention());
+            }.ToIndexDefinition(Conventions ?? new DocumentConvention(), false);
         }
     }
 }

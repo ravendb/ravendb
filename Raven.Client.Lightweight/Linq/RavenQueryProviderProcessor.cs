@@ -39,6 +39,7 @@ namespace Raven.Client.Linq
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
 		private int subClauseDepth;
+	    private string resultsTransformer;
 
 		private LinqPathProvider linqPathProvider;
 		/// <summary>
@@ -70,7 +71,8 @@ namespace Raven.Client.Linq
 			string indexName,
 			HashSet<string> fieldsToFetch,
 			List<RenamedField> fieldsTRename,
-			bool isMapReduce)
+			bool isMapReduce,
+            string resultsTransformer)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
@@ -80,6 +82,7 @@ namespace Raven.Client.Linq
 			this.isMapReduce = isMapReduce;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
+		    this.resultsTransformer = resultsTransformer;
 			linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
 		}
 
@@ -1117,7 +1120,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		private bool insideSelect;
 		private readonly bool isMapReduce;
 
-		private void VisitSelect(Expression operand)
+	    private void VisitSelect(Expression operand)
 		{
 			var lambdaExpression = operand as LambdaExpression;
 			var body = lambdaExpression != null ? lambdaExpression.Body : operand;
@@ -1376,6 +1379,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			var finalQuery = ((IDocumentQuery<T>) luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
 
+		    finalQuery.SetResultTransformer(this.resultsTransformer);
 
 			if (FieldsToRename.Count > 0)
 			{

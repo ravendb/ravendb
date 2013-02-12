@@ -21,7 +21,8 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
-		/// <summary>
+
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
@@ -56,7 +57,13 @@ namespace Raven.Client.Document
 			return SelectFields<TProjection>(props, props);
 		}
 
-		/// <summary>
+	    public IDocumentQuery<T> SetResultTransformer(string resultsTransformer)
+	    {
+	        this.resultsTransformer = resultsTransformer;
+	        return this;
+	    }
+
+	    /// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
@@ -108,7 +115,8 @@ namespace Raven.Client.Document
 				afterQueryExecutedCallback = afterQueryExecutedCallback,
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
-				highlighterPostTags = highlighterPostTags
+				highlighterPostTags = highlighterPostTags,
+                resultsTransformer = resultsTransformer
 			};
 			return documentQuery;
 		}
