@@ -427,7 +427,8 @@ namespace Raven.Database.Server
 				}
 
 				var database = databaseTask.Result;
-				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 5)
+				if (skipIfActive &&
+					(SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 10)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
