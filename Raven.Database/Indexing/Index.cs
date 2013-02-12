@@ -313,7 +313,7 @@ namespace Raven.Database.Indexing
 				bool shouldRecreateSearcher;
 				var toDispose = new List<Action>();
 				Analyzer searchAnalyzer = null;
-				WritingDocumentsInfo info;
+				var writingDocsInfo = WritingDocumentsInfo.Empty();
 				try
 				{
 					waitReason = "Write";
@@ -335,17 +335,18 @@ namespace Raven.Database.Indexing
 					var locker = directory.MakeLock("writing-to-index.lock");
 					try
 					{
-						if (locker.Obtain() == false)
-						{
-							logIndexing.Warn("Could not obtain the 'writing-to-index' lock of '{0}' index", name);
-						}
-
-						
 						var stats = new IndexingWorkStats();
+
 						try
 						{
-							info = action(indexWriter, searchAnalyzer, stats);
-							shouldRecreateSearcher = info.ChangedDocs > 0;
+							if (locker.Obtain() == false)
+							{
+								throw new InvalidOperationException(string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
+																				  name));
+							}
+
+							writingDocsInfo = action(indexWriter, searchAnalyzer, stats);
+							shouldRecreateSearcher = writingDocsInfo.ChangedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
 								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
@@ -357,7 +358,7 @@ namespace Raven.Database.Indexing
 							throw;
 						}
 
-						if (info.ChangedDocs > 0)
+						if (writingDocsInfo.ChangedDocs > 0)
 						{
 							UpdateIndexingStats(context, stats);
 							WriteTempIndexToDiskIfNeeded(context);
@@ -383,9 +384,9 @@ namespace Raven.Database.Indexing
 					LastIndexTime = SystemTime.UtcNow;
 				}
 
-				if (info.ShouldStoreCommitPoint && info.HighestETag != null)
+				if (writingDocsInfo.ShouldStoreCommitPoint && writingDocsInfo.HighestETag != null)
 				{
-					StoreCommitPoint(info.HighestETag.Value);
+					StoreCommitPoint(writingDocsInfo.HighestETag.Value);
 				}
 
 				if (shouldRecreateSearcher)
@@ -393,12 +394,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void StoreCommitPoint(Guid latestIndexedETag)
+		private void StoreCommitPoint(Guid highestCommitedEtag)
 		{
 			var indexCommit = new IndexCommitPoint
 			{
-				LastIndexedETag = latestIndexedETag,
-				TimeStamp = SystemTime.UtcNow,
+				HighestCommitedETag = highestCommitedEtag,
+				TimeStamp = LastIndexTime,
 				SegmentsInfo = GetCurrentSegmentsInfo()
 			};
 
@@ -415,12 +416,12 @@ namespace Raven.Database.Indexing
 				segmentInfos.Read(directory);
 
 				result.Generation = segmentInfos.Generation;
-				result.CurrentSegmentFileName = segmentInfos.GetCurrentSegmentFileName();
+				result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
 				result.ReferencedFiles = segmentInfos.Files(directory, false);
 			}
 			catch (CorruptIndexException ex)
 			{
-				logIndexing.WarnException(string.Format("Could not read segment information for index '{0}'", name), ex);
+				logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
 
 				result.IsIndexCorrupted = true;
 			}
@@ -1331,7 +1332,7 @@ namespace Raven.Database.Indexing
 							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
 							allFilesWriter.WriteLine(fileName);
 						}
-						return WritingDocumentsInfo.WithoutCommitPoint(0);
+						return WritingDocumentsInfo.ChangedDocsOnly(0);
 					});
 
 					var commit = snapshotter.Snapshot();

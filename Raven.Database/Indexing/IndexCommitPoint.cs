@@ -9,7 +9,7 @@ namespace Raven.Database.Indexing
 {
 	public class IndexCommitPoint
 	{
-		public Guid LastIndexedETag { get; set; }
+		public Guid HighestCommitedETag { get; set; }
 
 		public IndexSegmentsInfo SegmentsInfo { get; set; }
 

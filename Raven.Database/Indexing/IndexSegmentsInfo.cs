@@ -12,7 +12,7 @@ namespace Raven.Database.Indexing
 	{
 		public long Generation { get; set; }
 
-		public string CurrentSegmentFileName { get; set; }
+		public string SegmentsFileName { get; set; }
 
 		public ICollection<string> ReferencedFiles { get; set; }
 
@@ -33,7 +33,7 @@ namespace Raven.Database.Indexing
 
 			return theSameReferencedFiles &&
 				Generation == other.Generation &&
-				string.Equals(CurrentSegmentFileName, other.CurrentSegmentFileName) &&
+				string.Equals(SegmentsFileName, other.SegmentsFileName) &&
 				IsIndexCorrupted.Equals(other.IsIndexCorrupted);
 		}
 
@@ -42,7 +42,7 @@ namespace Raven.Database.Indexing
 			unchecked
 			{
 				var hashCode = Generation.GetHashCode();
-				hashCode = (hashCode * 397) ^ (CurrentSegmentFileName != null ? CurrentSegmentFileName.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (SegmentsFileName != null ? SegmentsFileName.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ (ReferencedFiles != null ? ReferencedFiles.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ IsIndexCorrupted.GetHashCode();
 				return hashCode;

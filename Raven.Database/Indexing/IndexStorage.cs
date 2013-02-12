@@ -46,8 +46,7 @@ namespace Raven.Database.Indexing
 	{
 		private readonly DocumentDatabase documentDatabase;
 		private const string IndexVersion = "2.0.0.1";
-		private const string LastCommitPointDirectory = "CommitPoint";
-		private const string LastCommitPointFile = "index.commitPoint";
+		private const int MaxNumberOfStoredCommitPoints = 5;
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -235,18 +234,15 @@ namespace Raven.Database.Indexing
 
 						IndexCommitPoint lastCommitPoint;
 
-						if (TryReuseLastCommitPointToRecoverIndex(indexDefinition, indexFullPath, out lastCommitPoint) == false)
+						if (TryReusePreviousCommitPointsToRecoverIndex(directory, indexDefinition, path, out lastCommitPoint) == false)
 						{
 							CheckIndexAndRecover(directory, indexDirectory);
 						}
 						else
 						{
-							if (lastCommitPoint == null)
-								throw new InvalidOperationException("Index '" + indexDefinition.Name + "' reused previous segment files after in order to recover, but NULL commit point was returned.");
-
 							documentDatabase.TransactionalStorage.Batch(
 								accessor =>
-								accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.LastIndexedETag,
+								accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.HighestCommitedETag,
 								                                    lastCommitPoint.TimeStamp));
 
 						}
@@ -315,44 +311,20 @@ namespace Raven.Database.Indexing
 			startupLog.Warn("Fixed index {0} in {1}", indexDirectory, sp.Elapsed);
 		}
 
-		public static void StoreCommitPoint(IndexCommitPoint indexCommit, string indexDirectory)
-		{
-			var commitPointDirectoryFullPath = Path.Combine(indexDirectory, LastCommitPointDirectory);
-
-			if (Directory.Exists(commitPointDirectoryFullPath))
-			{
-				Directory.Delete(commitPointDirectoryFullPath);
-			}
-
-			Directory.CreateDirectory(commitPointDirectoryFullPath);
-
-			using (var commitPointFile = File.Create(Path.Combine(commitPointDirectoryFullPath, LastCommitPointFile)))
-			{
-				var jsonSerializer = new JsonSerializer();
-				var textWriter = new JsonTextWriter(new StreamWriter(commitPointFile));
-
-				jsonSerializer.Serialize(textWriter, indexCommit);
-			}
-
-			File.Copy(Path.Combine(indexDirectory, indexCommit.SegmentsInfo.CurrentSegmentFileName), Path.Combine(commitPointDirectoryFullPath, indexCommit.SegmentsInfo.CurrentSegmentFileName));
-		}
-
 		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
 		{
-			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
-
 			if (indexCommit.SegmentsInfo != null && indexCommit.SegmentsInfo.IsIndexCorrupted == false)
 			{
-				var commitPointDirectoryFullPath = Path.Combine(indexFullPath, LastCommitPointDirectory);
+				var commitPointDirectory = new IndexCommitPointDirectory(path, indexName, indexCommit.SegmentsInfo.Generation.ToString(CultureInfo.InvariantCulture));
 
-				if (Directory.Exists(commitPointDirectoryFullPath))
+				if (Directory.Exists(commitPointDirectory.AllCommitPointsFullPath) == false)
 				{
-					IOExtensions.DeleteDirectory(commitPointDirectoryFullPath);
-				}
+					Directory.CreateDirectory(commitPointDirectory.AllCommitPointsFullPath);
+				}	
 
-				Directory.CreateDirectory(commitPointDirectoryFullPath);
+				Directory.CreateDirectory(commitPointDirectory.FullPath);
 
-				using (var commitPointFile = File.Create(Path.Combine(commitPointDirectoryFullPath, LastCommitPointFile)))
+				using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
 				{
 					using (var sw = new StreamWriter(commitPointFile))
 					{
@@ -365,54 +337,110 @@ namespace Raven.Database.Indexing
 					}
 				}
 
-				File.Copy(Path.Combine(indexFullPath, indexCommit.SegmentsInfo.CurrentSegmentFileName), Path.Combine(commitPointDirectoryFullPath, indexCommit.SegmentsInfo.CurrentSegmentFileName));
+				var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
+
+				File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
+				          Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName));
+
+				var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
+
+				if (storedCommitPoints.Length > MaxNumberOfStoredCommitPoints)
+				{
+					var commitPointsToDelete =
+						storedCommitPoints.OrderBy(x => long.Parse(Path.GetFileName(x)))
+						                  .Take(storedCommitPoints.Length - MaxNumberOfStoredCommitPoints)
+						                  .ToArray();
+
+					foreach (var toDelete in commitPointsToDelete)
+					{
+						IOExtensions.DeleteDirectory(toDelete);
+					}
+				}
 			}
 		}
 
-		private static bool TryReuseLastCommitPointToRecoverIndex(IndexDefinition indexDefinition, string fullIndexPath, out IndexCommitPoint indexCommit)
+		private static bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit)
 		{
 			indexCommit = null;
 
-			try
-			{
-				if (indexDefinition.IsMapReduce == false)
-					return false;
-
-				var commitPointDirectoryFullPath = Path.Combine(fullIndexPath, LastCommitPointDirectory);
-
-				if (Directory.Exists(commitPointDirectoryFullPath) == false)
-					return false;
-
-				using (var commitPointFile = File.Open(Path.Combine(commitPointDirectoryFullPath, LastCommitPointFile), FileMode.Open))
-				{
-					var jsonSerializer = new JsonSerializer();
-					var textReader = new JsonTextReader(new StreamReader(commitPointFile));
-
-					indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
-				}
-
-				var filesInIndexDirectory = Directory.GetFiles(fullIndexPath);
-
-				var missingFile =
-					indexCommit.SegmentsInfo.ReferencedFiles.Any(
-						referencedFile => filesInIndexDirectory.Contains(referencedFile) == false);
-
-				if (missingFile)
-				{
-					return false;
-				}
-
-				File.Copy(Path.Combine(commitPointDirectoryFullPath, indexCommit.SegmentsInfo.CurrentSegmentFileName), Path.Combine(fullIndexPath, indexCommit.SegmentsInfo.CurrentSegmentFileName), true);
-
-				return true;
-			}
-			catch (Exception ex)
-			{
-				log.ErrorException("Error occured during an attempt to recover an index named '" + indexDefinition.Name +
-				                   "'from last segment files", ex);
-
+			if (indexDefinition.IsMapReduce)
 				return false;
+
+			var indexFullPath = Path.Combine(indexStoragePath, MonoHttpUtility.UrlEncode(indexDefinition.Name));
+
+			var allCommitPointsFullPath = IndexCommitPointDirectory.GetAllCommitPointsFullPath(indexFullPath);
+
+			if (Directory.Exists(allCommitPointsFullPath) == false)
+				return false;
+
+			var filesInIndexDirectory = Directory.GetFiles(indexFullPath).Select(Path.GetFileName);
+
+			var existingCommitPoints =
+				IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath)
+										 .OrderByDescending(x => long.Parse(Path.GetFileName(x))) // start from the highest generation
+										 .ToArray();
+
+			foreach (var commitPointDirectoryName in existingCommitPoints)
+			{
+				try
+				{
+					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexDefinition.Name,
+																				commitPointDirectoryName);
+
+					using (var commitPointFile = File.Open(commitPointDirectory.FileFullPath, FileMode.Open))
+					{
+						var jsonSerializer = new JsonSerializer();
+						var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+
+						indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+					}
+
+					var missingFile =
+						indexCommit.SegmentsInfo.ReferencedFiles.Any(
+							referencedFile => filesInIndexDirectory.Contains(referencedFile) == false);
+
+					if (missingFile)
+					{
+						continue; // there are some missing files, try another commit point
+					}
+
+					var storedSegmentsFile = indexCommit.SegmentsInfo.SegmentsFileName;
+
+					// here there should be only one segments_N file, however remove all if there is more
+					foreach (var currentSegmentsFile in Directory.GetFiles(commitPointDirectory.IndexFullPath, "segments_*"))
+					{
+						File.Delete(currentSegmentsFile);
+					}
+
+					// copy old segments_N file
+					File.Copy(Path.Combine(commitPointDirectory.FullPath, storedSegmentsFile),
+					          Path.Combine(commitPointDirectory.IndexFullPath, storedSegmentsFile), true);
+
+					try
+					{
+						// update segments.gen file
+						using (var genOutput = directory.CreateOutput(IndexFileNames.SEGMENTS_GEN))
+						{
+							genOutput.WriteInt(SegmentInfos.FORMAT_LOCKLESS);
+							genOutput.WriteLong(indexCommit.SegmentsInfo.Generation);
+							genOutput.WriteLong(indexCommit.SegmentsInfo.Generation);
+						}
+					}
+					catch (Exception)
+					{
+						// here we can ignore, segments.gen is used only as fallback
+					}
+
+					return true;
+				}
+				catch (Exception ex)
+				{
+					log.DebugException("Could not recover an index named '" + indexDefinition.Name +
+					                   "'from segments of the following generation " + commitPointDirectoryName, ex);
+				}
 			}
+
+			return false;
 		}
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)

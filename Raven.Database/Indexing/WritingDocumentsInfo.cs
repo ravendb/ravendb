@@ -9,19 +9,43 @@ namespace Raven.Database.Indexing
 {
 	public class WritingDocumentsInfo
 	{
-		public int ChangedDocs { get; set; }
+		private WritingDocumentsInfo()
+		{
+		}
 
-		public Guid? HighestETag { get; set; }
+		public int ChangedDocs { get; private set; }
 
-		public bool ShouldStoreCommitPoint { get; set; }
+		public Guid? HighestETag { get; private set; }
 
-		public static WritingDocumentsInfo WithoutCommitPoint(int changedDocs)
+		public bool ShouldStoreCommitPoint { get; private set; }
+
+		public static WritingDocumentsInfo Empty()
+		{
+			return new WritingDocumentsInfo
+			{
+				ChangedDocs = 0,
+				HighestETag = null,
+				ShouldStoreCommitPoint = false
+			};
+		}
+
+		public static WritingDocumentsInfo ChangedDocsOnly(int changedDocs)
 		{
 			return new WritingDocumentsInfo
 			{
 				ChangedDocs = changedDocs,
 				HighestETag = null,
 				ShouldStoreCommitPoint = false
+			};
+		}
+
+		public static WritingDocumentsInfo StoredCommitPoint(int changedDocs, Guid highestCommitedETag)
+		{
+			return new WritingDocumentsInfo
+			{
+				ChangedDocs = changedDocs,
+				HighestETag = highestCommitedETag,
+				ShouldStoreCommitPoint = true
 			};
 		}
 	}
