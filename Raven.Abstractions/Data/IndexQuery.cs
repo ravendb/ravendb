@@ -141,6 +141,11 @@ namespace Raven.Abstractions.Data
         /// </summary>
 	    public string[] HighlighterPostTags { get; set; }
 
+        /// <summary>
+        /// Gets or sets the results transformer
+        /// </summary>
+	    public string ResultsTransformer { get; set; }
+
 	    /// <summary>
 		/// Gets the index query URL.
 		/// </summary>
@@ -206,6 +211,11 @@ namespace Raven.Abstractions.Data
             if (SkipTransformResults)
             {
                 path.Append("&skipTransformResults=true");
+            }
+
+            if (ResultsTransformer != null)
+            {
+                path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
             }
 
 			if (Cutoff != null)

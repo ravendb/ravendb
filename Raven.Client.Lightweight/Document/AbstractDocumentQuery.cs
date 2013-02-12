@@ -181,6 +181,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
 
+        /// <summary>
+        /// The name of the results transformer to use after executing this query
+        /// </summary>
+	    protected string resultsTransformer;
+
+
 		/// <summary>
 		///   Get the name of the index being queried
 		/// </summary>
@@ -1630,7 +1636,8 @@ If you really want to do in memory filtering on the data returned from the query
 					DefaultOperator = defaultOperator,
 					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 					HighlighterPreTags = highlighterPreTags.ToArray(),
-					HighlighterPostTags = highlighterPostTags.ToArray()
+					HighlighterPostTags = highlighterPostTags.ToArray(),
+                    ResultsTransformer = this.resultsTransformer
 				};
 			}
 
@@ -1649,7 +1656,8 @@ If you really want to do in memory filtering on the data returned from the query
 				DefaultOperator = defaultOperator,
 				HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 				HighlighterPreTags = highlighterPreTags.ToArray(),
-				HighlighterPostTags = highlighterPostTags.ToArray()
+				HighlighterPostTags = highlighterPostTags.ToArray(),
+                ResultsTransformer = this.resultsTransformer
 			};
 		}
 
