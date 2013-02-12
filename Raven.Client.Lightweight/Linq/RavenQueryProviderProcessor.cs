@@ -775,8 +775,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 				search = search.Arguments[0] as MethodCallExpression;
 				if (search == null ||
-				    searchExpression.Method.Name != "Search" ||
-				    searchExpression.Method.DeclaringType != typeof (LinqExtensions))
+					search.Method.Name != "Search" ||
+					search.Method.DeclaringType != typeof(LinqExtensions))
 					break;
 
 				target = search.Arguments[0];
