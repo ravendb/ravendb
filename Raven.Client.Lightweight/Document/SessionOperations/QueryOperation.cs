@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
@@ -315,32 +314,8 @@ namespace Raven.Client.Document.SessionOperations
 
 				setOperationHeaders(
 					string.Format("SortHint-{0}", Uri.EscapeDataString(sortByHint.Key.Trim('-'))),
-					FromPrimitiveTypestring(sortByHint.Value.Name).ToString());
+					sessionOperations.Conventions.GetDefaultSortOption(sortByHint.Value.Name).ToString());
 			}
 		}
-
-		private static SortOptions FromPrimitiveTypestring(string type)
-		{
-			switch (type)
-			{
-				case "Int16":
-					return SortOptions.Short;
-				case "Int32":
-					return SortOptions.Int;
-				case "Int64":
-				case "TimeSpan":
-					return SortOptions.Long;
-				case "Double":
-				case "Decimal":
-					return SortOptions.Double;
-				case "Single":
-					return SortOptions.Float;
-				case "String":
-					return SortOptions.String;
-				default:
-					return SortOptions.String;
-			}
-		}
-
 	}
 }

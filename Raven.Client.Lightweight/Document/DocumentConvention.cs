@@ -13,6 +13,7 @@ using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
@@ -642,13 +643,15 @@ namespace Raven.Client.Document
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
-		private readonly List<Tuple<Type,TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters	 = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
+		private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
+		private readonly Dictionary<string, SortOptions> customDefaultSortOptions = new Dictionary<string, SortOptions>();
+		private readonly List<Type> customRangeTypes = new List<Type>();
 
-		public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
+		public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption = SortOptions.String, bool usesRangeField = false)
 		{
 			TryConvertValueForQueryDelegate<object> actual = (string name, object value, QueryValueConvertionType convertionType, out string strValue) =>
 			{
-				if(value is T)
+				if (value is T)
 					return converter(name, (T)value, convertionType, out strValue);
 				strValue = null;
 				return false;
@@ -665,8 +668,13 @@ namespace Raven.Client.Document
 			}
 
 			listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
-		}
 
+			if (defaultSortOption != SortOptions.String)
+				customDefaultSortOptions.Add(typeof(T).Name, defaultSortOption);
+
+			if (usesRangeField)
+				customRangeTypes.Add(typeof(T));
+		}
 
 
 		public bool TryConvertValueForQuery(string fieldName, object value, QueryValueConvertionType convertionType, out string strValue)
@@ -678,6 +686,39 @@ namespace Raven.Client.Document
 			}
 			strValue = null;
 			return false;
+		}
+
+		public SortOptions GetDefaultSortOption(string typeName)
+		{
+			switch (typeName)
+			{
+				case "Int16":
+					return SortOptions.Short;
+				case "Int32":
+					return SortOptions.Int;
+				case "Int64":
+				case "TimeSpan":
+					return SortOptions.Long;
+				case "Double":
+				case "Decimal":
+					return SortOptions.Double;
+				case "Single":
+					return SortOptions.Float;
+				case "String":
+					return SortOptions.String;
+				default:
+					return customDefaultSortOptions.ContainsKey(typeName)
+						       ? customDefaultSortOptions[typeName]
+						       : SortOptions.String;
+			}
+		}
+
+		public bool UsesRangeType(Object o)
+		{
+			if (o is int || o is long || o is double || o is float || o is decimal || o is TimeSpan)
+				return true;
+
+			return customRangeTypes.Contains(o.GetType());
 		}
 	}
 
