@@ -96,17 +96,13 @@ namespace Raven.Database.Indexing
 					foreach (var currentDoc in mapResults)
 					{
 						var documentId = GetDocumentId(currentDoc);
-						if (documentId == currentKey)
+						if (documentId != currentKey)
 						{
-							currentDocumentResults.Add(currentDoc);
-							continue;
+							count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, items);
+							currentDocumentResults.Clear();
+							currentKey = documentId; 
 						}
-
-						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, items);
-
-						currentDocumentResults.Clear();
-						currentKey = documentId;
-						currentDocumentResults.Add(currentDoc);
+						currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
 					}
 					count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, items);
 				}
