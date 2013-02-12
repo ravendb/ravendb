@@ -102,7 +102,7 @@ namespace Raven.Database.Indexing
 
 				var reduceParams = new GetItemsToReduceParams(
 					index.IndexName, 
-					keysToReduce, 
+					keysToReduce.ToArray(), 
 					level,
 					true,
 					itemsToDelete);
