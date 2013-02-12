@@ -132,7 +132,7 @@ namespace Raven.Client.Linq
 	    {
 	        var transformer = new TTransformer();
 	        provider.TransformWith(transformer.IndexName);
-	        return this.AsProjection<TResult>();
+	        return (IRavenQueryable<TResult>)this.As<TResult>();
 	    }
 
 	    /// <summary>

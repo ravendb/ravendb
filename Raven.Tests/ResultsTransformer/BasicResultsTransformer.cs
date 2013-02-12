@@ -83,15 +83,18 @@ namespace Raven.Tests.ResultsTransformer
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(order => order.CustomerId == "customers/bob")
                         .TransformWith<OrderWithProductInformation, OrderWithProductInformation.Result>()
+                        .ToList()
+                        // client side!
+                        .OrderBy(x => x.ProductName)
                         .ToList();
 
                     Assert.Equal(2, results.Count);
 
-                    Assert.Equal("Milk", results[0].ProductName);
-                    Assert.Equal("products/milk", results[0].ProductId);
+                    Assert.Equal("Milk", results[1].ProductName);
+                    Assert.Equal("products/milk", results[1].ProductId);
 
-                    Assert.Equal("Bear", results[1].ProductName);
-                    Assert.Equal("products/bear", results[1].ProductId);
+                    Assert.Equal("Bear", results[0].ProductName);
+                    Assert.Equal("products/bear", results[0].ProductId);
                 }
             }
         }
