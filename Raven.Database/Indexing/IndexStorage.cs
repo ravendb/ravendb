@@ -232,19 +232,22 @@ namespace Raven.Database.Indexing
 						if (configuration.ResetIndexOnUncleanShutdown)
 							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
 
-						IndexCommitPoint lastCommitPoint;
-
-						if (TryReusePreviousCommitPointsToRecoverIndex(directory, indexDefinition, path, out lastCommitPoint) == false)
+						if (indexDefinition.IsMapReduce == false)
 						{
-							CheckIndexAndRecover(directory, indexDirectory);
+							IndexCommitPoint commitUsedToRestore;
+
+							if (TryReusePreviousCommitPointsToRecoverIndex(directory, indexDefinition, path, out commitUsedToRestore) == false)
+							{
+								CheckIndexAndRecover(directory, indexDirectory);
+							}
+							else
+							{
+								ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
+							}
 						}
 						else
 						{
-							documentDatabase.TransactionalStorage.Batch(
-								accessor =>
-								accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.HighestCommitedETag,
-								                                    lastCommitPoint.TimeStamp));
-
+							RegenerateMapReduceIndex(directory, indexDefinition.Name);
 						}
 
 						directory.DeleteFile("writing-to-index.lock");
@@ -254,6 +257,56 @@ namespace Raven.Database.Indexing
 
 			return directory;
 
+		}
+
+		private void RegenerateMapReduceIndex(Lucene.Net.Store.Directory directory, string indexName)
+		{
+			// remove old index data
+			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+			IOExtensions.DeleteDirectory(dirOnDisk);
+
+			// initialize by new index
+			Directory.CreateDirectory(dirOnDisk);
+			WriteIndexVersion(directory);
+			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
+
+			IList<ReduceTypePerKey> reduceKeysAndTypes = null;
+
+			documentDatabase.TransactionalStorage.Batch(actions =>
+			{
+				reduceKeysAndTypes = actions.MapReduce.GetReduceKeysAndTypes(indexName).ToList();
+			});
+
+			var keysToScheduleOnLevel2 = reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.MultiStep).ToList();
+			var keysToScheduleOnLevel0 = reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).ToList();
+
+			var itemsToScheduleOnLevel2 = keysToScheduleOnLevel2.Select(x => new ReduceKeyAndBucket(0, x.ReduceKey)).ToList();
+			var itemsToScheduleOn0Level = new List<ReduceKeyAndBucket>();
+
+			foreach (var reduceKey in keysToScheduleOnLevel0.Select(x => x.ReduceKey))
+			{
+				documentDatabase.TransactionalStorage.Batch(accessor =>
+				{
+					var mappedBuckets = accessor.MapReduce.GetMappedBuckets(indexName, reduceKey).Distinct();
+
+					itemsToScheduleOn0Level.AddRange(mappedBuckets.Select(x => new ReduceKeyAndBucket(x, reduceKey)));
+				});
+			}
+
+			documentDatabase.TransactionalStorage.Batch(actions =>
+			{
+				actions.MapReduce.ScheduleReductions(indexName, 2, itemsToScheduleOnLevel2);
+				actions.MapReduce.ScheduleReductions(indexName, 0, itemsToScheduleOn0Level);
+			});
+		}
+
+		private void ResetLastIndexedEtagAccordingToRestoredCommitPoint(IndexDefinition indexDefinition,
+		                                                                IndexCommitPoint lastCommitPoint)
+		{
+			documentDatabase.TransactionalStorage.Batch(
+				accessor =>
+				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.HighestCommitedETag,
+				                                    lastCommitPoint.TimeStamp));
 		}
 
 		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)

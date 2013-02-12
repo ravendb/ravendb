@@ -530,6 +530,13 @@ namespace Raven.Storage.Managed
 				});
 		}
 
+		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view)
+		{
+			return storage.ReduceKeys["ByView"].SkipTo(new RavenJObject { { "view", view } })
+				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view))
+				.Select(token => new ReduceTypePerKey(token.Value<string>("reduceKey"), (ReduceType)token.Value<int>("reduceType")));
+		}
+
 		Dictionary<Tuple<string, string>, int> reduceKeyChanges;
 		private void IncrementReduceKeyCounter(string view, string reduceKey, int val)
 		{
