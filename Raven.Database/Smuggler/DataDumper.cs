@@ -42,8 +42,8 @@ namespace Raven.Database.Smuggler
 				if (array.Length == 0)
 				{
 					var databaseStatistics = GetStats();
-					var lastEtagComparable = new ComparableByteArray(lastEtag);
-					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+					if (lastEtag == null) lastEtag = Etag.Empty;
+					if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
 						lastEtag = EtagUtil.Increment(lastEtag, smugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
