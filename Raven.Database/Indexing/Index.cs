@@ -488,8 +488,7 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs,
-															IStorageActionsAccessor actions, IndexingWorkStats stats)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs, IndexingWorkStats stats)
 		{
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
@@ -538,8 +537,7 @@ namespace Raven.Database.Indexing
 
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
-		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions, WorkContext context)
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
