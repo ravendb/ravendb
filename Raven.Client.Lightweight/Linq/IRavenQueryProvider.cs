@@ -28,6 +28,12 @@ namespace Raven.Client.Linq
 		/// </summary>
 		void Customize(Action<IDocumentQueryCustomization> action);
 
+        /// <summary>
+        /// The name of the transformer to use with this query
+        /// </summary>
+        /// <param name="transformerName"></param>
+	    void TransformWith(string transformerName);
+
 		/// <summary>
 		/// Gets the name of the index.
 		/// </summary>

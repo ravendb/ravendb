@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 using Raven.Client;
@@ -50,6 +51,7 @@ namespace Raven.Tests.ResultsTransformer
                                                              ProductName = product.Name
                                                          };
             }
+
         }
 
 
