@@ -125,6 +125,7 @@ namespace Raven.Client.Linq
 				, asyncDatabaseCommands,
 				isMapReduce
 			);
+		    ravenQueryProvider.ResultTransformer = ResultTransformer;
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
 		}

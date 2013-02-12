@@ -91,7 +91,7 @@ namespace Raven.Tests.ResultsTransformer
                     Assert.Equal("products/milk", results[0].ProductId);
 
                     Assert.Equal("Bear", results[1].ProductName);
-                    Assert.Equal("products/bear", results[2].ProductId);
+                    Assert.Equal("products/bear", results[1].ProductId);
                 }
             }
         }

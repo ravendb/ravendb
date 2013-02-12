@@ -1175,39 +1175,55 @@ namespace Raven.Database
 						select docWithFragments;
 
 					var transformerErrors = new List<string>();
-					IEnumerable<RavenJObject> results;
-					if (query.SkipTransformResults == false &&
-						query.PageSize > 0 && // maybe they just want the stats?
-						viewGenerator.TransformResultsDefinition != null)
-					{
-						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.Document.ToJson())).ToArray();
-						var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
-						{
-							OnError =
-								(exception, o) =>
-								transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
-														 exception.Message))
-						};
-						results =
-							robustEnumerator.RobustEnumeration(
-								dynamicJsonObjects.Cast<object>().GetEnumerator(),
-								source => viewGenerator.TransformResultsDefinition(docRetriever, source))
-								.Select(JsonExtensions.ToJObject);
-					}
-					else
-					{
-						var resultList = new List<RavenJObject>();
-						foreach (var docWithFragments in collection)
-						{
-							resultList.Add(docWithFragments.Document.ToJson());
+					IEnumerable<RavenJObject> results = null;
+                    if(query.PageSize > 0) // maybe they just want the stats? 
+				    {
+				        TranslatorFunc transformFunc = null;
 
-							if (docWithFragments.Fragments != null && docWithFragments.Document.Key != null)
-								highlightings.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
-						}
-						results = resultList;
-					}
+				        // Check an explicitly declared one first
+				        if (query.ResultsTransformer != null)
+				        {
+				            var transformGenerator = IndexDefinitionStorage.GetViewGenerator(query.ResultsTransformer);
+				            if (transformGenerator != null && transformGenerator.TransformResultsDefinition != null)
+				                transformFunc = transformGenerator.TransformResultsDefinition;
+				        }
+				        else if (query.SkipTransformResults == false && viewGenerator.TransformResultsDefinition != null)
+				        {
+				            transformFunc = viewGenerator.TransformResultsDefinition;
+				        }
 
-					list.AddRange(results);
+				        if (transformFunc != null)
+				        {
+				            var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.Document.ToJson())).ToArray();
+				            var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
+				            {
+				                OnError =
+				                    (exception, o) =>
+				                    transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
+				                                                        exception.Message))
+				            };
+				            results =
+				                robustEnumerator.RobustEnumeration(
+				                    dynamicJsonObjects.Cast<object>().GetEnumerator(),
+				                    source => transformFunc(docRetriever, source))
+				                                .Select(JsonExtensions.ToJObject);
+				        }
+                    }
+
+				    if (results == null)
+				    {
+				        var resultList = new List<RavenJObject>();
+				        foreach (var docWithFragments in collection)
+				        {
+				            resultList.Add(docWithFragments.Document.ToJson());
+
+				            if (docWithFragments.Fragments != null && docWithFragments.Document.Key != null)
+				                highlightings.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
+				        }
+				        results = resultList;
+				    }
+
+				    list.AddRange(results);
 
 					if (transformerErrors.Count > 0)
 					{
