@@ -93,7 +93,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						CreatedAt = SystemTime.UtcNow,
 						Message = ex.Message,
 						Title = "Error in Periodic Backup",
-						Exception = ex
+						Exception = ex.ToString()
 					});
 				}
 			}
@@ -161,14 +161,15 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						}
 						catch (Exception e)
 						{
-							Database.AddAlert(new Alert
-							{
-								AlertLevel = AlertLevel.Error,
-								CreatedAt = SystemTime.UtcNow,
-								Message = e.Message,
-								Title = "Error in Periodic Backup",
-								Exception = e
-							});
+								Database.AddAlert(new Alert
+								{
+									AlertLevel = AlertLevel.Error,
+									CreatedAt = SystemTime.UtcNow,
+									Message = e.Message,
+									Title = "Error in Periodic Backup",
+									Exception = e.ToString()
+								});
+
 							logger.ErrorException("Error when performing periodic backup", e);
 						}
 					}

@@ -22,5 +22,11 @@ namespace Raven.Abstractions.Data
 
 		public Guid LastDocsEtag { get; set; }
 		public Guid LastAttachmentsEtag { get; set; }
+
+		public PeriodicBackupSetup()
+		{
+			LastAttachmentsEtag = Guid.Empty;
+			LastDocsEtag = Guid.Empty;
+		}
 	}
 }
