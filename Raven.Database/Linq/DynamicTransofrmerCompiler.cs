@@ -104,6 +104,7 @@ namespace Raven.Database.Linq
 			CompiledQueryText = QueryParsingUtils.GenerateText(type, extensions);
 			var sb = new StringBuilder("@\"");
 			sb.AppendLine(transformerDefinition.TransformResults.Replace("\"", "\"\""));
+			sb.Append("\"");
 			CompiledQueryText = CompiledQueryText.Replace('"' + uniqueTextToken + '"', sb.ToString());
 		}
 	}

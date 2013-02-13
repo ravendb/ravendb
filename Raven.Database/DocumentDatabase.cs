@@ -1063,15 +1063,16 @@ namespace Raven.Database
 		{
 			if (name == null)
 				throw new ArgumentNullException("name");
+			if (definition == null) throw new ArgumentNullException("definition");
 
 			name = name.Trim();
 
-			var transformerDefinition = IndexDefinitionStorage.GetTransformerDefinition(name);
-			if (transformerDefinition != null && transformerDefinition.Equals(definition))
+			var existingDefintition = IndexDefinitionStorage.GetTransformerDefinition(name);
+			if (existingDefintition != null && existingDefintition.Equals(definition))
 				return name; // no op for the same transformer
 
-			IndexDefinitionStorage.CreateAndPersistTransform(transformerDefinition);
-			IndexDefinitionStorage.AddTransform(name, transformerDefinition);
+			IndexDefinitionStorage.CreateAndPersistTransform(definition);
+			IndexDefinitionStorage.AddTransform(name, definition);
 
 			return name;
 		}
@@ -1242,21 +1243,21 @@ namespace Raven.Database
 
 				        if (transformFunc != null)
 				        {
-				            var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.Document.ToJson())).ToArray();
-				            var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
-				            {
-				                OnError =
-				                    (exception, o) =>
-				                    transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
-				                                                        exception.Message))
-				            };
-				            results =
-				                robustEnumerator.RobustEnumeration(
-				                    dynamicJsonObjects.Cast<object>().GetEnumerator(),
-				                    transformFunc)
-									.Select(JsonExtensions.ToJObject);
+					        var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.Document.ToJson())).ToArray();
+					        var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
+					        {
+						        OnError =
+							        (exception, o) =>
+							        transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
+							                                            exception.Message))
+					        };
+					        results =
+						        robustEnumerator.RobustEnumeration(
+							        dynamicJsonObjects.Cast<object>().GetEnumerator(),
+							        transformFunc)
+							        .Select(JsonExtensions.ToJObject);
 				        }
-                    }
+				    }
 
 				    if (results == null)
 				    {
@@ -1270,6 +1271,8 @@ namespace Raven.Database
 				        }
 				        results = resultList;
 				    }
+
+					using (new CurrentTransformationScope(docRetriever))
 					if (headerInfo != null)
 					{
 						headerInfo(new QueryHeaderInformation
