@@ -76,6 +76,7 @@ namespace Raven.Abstractions.Json
 					if (arrays[i].Length == 0)
 					{
 						arrays.RemoveAt(i);
+						i -= 1;
 						continue;
 					}
 					set.Add(arrays[i][0]);
