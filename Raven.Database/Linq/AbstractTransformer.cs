@@ -11,12 +11,23 @@ namespace Raven.Database.Linq
 		public IndexingFunc TransformResultsDefinition { get; set; }
 		public string SourceCode { get; set; }
 
-		protected dynamic LoadDocument(string key)
-		{
-			if (CurrentIndexingScope.Current == null)
-				throw new InvalidOperationException("LoadDocument may only be called from the map portion of the index. Was called with: " + key);
+		public string ViewText { get; set; }
 
-			return CurrentIndexingScope.Current.LoadDocument(key);
+		protected dynamic LoadDocument(object key)
+		{
+			if (CurrentTransformationScope.Current == null)
+				throw new InvalidOperationException("LoadDocument was called without CurrentTransformationScope.Current being set: " + key);
+
+			return CurrentTransformationScope.Current.Load(key);
+		}
+
+		public object Include(object key)
+		{
+			if (CurrentTransformationScope.Current == null)
+				throw new InvalidOperationException("Include was called without CurrentTransformationScope.Current being set: " + key);
+
+			return CurrentTransformationScope.Current.Include(key);
+	
 		}
 
 		protected IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)

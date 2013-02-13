@@ -26,10 +26,7 @@ namespace Raven.Database.Linq
 
 		public DynamicCompilerBase(InMemoryRavenConfiguration configuration, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string name, string basePath)
 		{
-			this.extensions = extensions;
 			this.name = name;
-			this.basePath = basePath;
-
 			this.extensions = extensions;
 			if (configuration.RunInMemory == false)
 			{

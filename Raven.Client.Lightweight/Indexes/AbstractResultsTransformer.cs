@@ -87,6 +87,15 @@ namespace Raven.Client.Indexes
     {
 		protected Expression<Func<IEnumerable<TFrom>, IEnumerable>> TransformResults { get; set; }
 
+		public object Include(string key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		public object Include(IEnumerable<string> key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
       
 	    public override TransformerDefinition CreateTransformerDefinition()
 	    {
