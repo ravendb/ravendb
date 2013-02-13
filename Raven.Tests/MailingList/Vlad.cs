@@ -101,9 +101,9 @@ namespace Raven.Tests.MailingList
 					var selectGood = session.Query<SampleDoc>().ToList();
 					Assert.Equal(2, selectGood.Count);
 
-					var selectBad = session.Query<SampleDoc>().Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+					var selectBad = session.Query<SampleDoc>().Customize(x => x.WaitForNonStaleResults())
 						.Select(x => new { x.Name, x.Number }).ToList();
-					var count = session.Query<SampleDoc>().Customize(x => x.WaitForNonStaleResultsAsOfLastWrite()).Count();
+					var count = session.Query<SampleDoc>().Customize(x => x.WaitForNonStaleResults()).Count();
 
 					Assert.Equal(2, selectBad.Count);
 					Assert.Equal(2, count);
