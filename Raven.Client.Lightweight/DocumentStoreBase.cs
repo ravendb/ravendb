@@ -87,6 +87,14 @@ namespace Raven.Client
 		{
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
+
+		/// <summary>
+		/// Executes the transformer creation
+		/// </summary>
+		public virtual void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
+		{
+			transformerCreationTask.Execute(DatabaseCommands, Conventions);
+		}
 #endif
 
 		private DocumentConvention conventions;

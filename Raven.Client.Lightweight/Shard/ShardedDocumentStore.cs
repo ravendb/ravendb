@@ -332,6 +332,21 @@ namespace Raven.Client.Shard
 
 #if !NETFX_CORE
 		/// <summary>
+		/// Executes the transformer creation
+		/// </summary>
+		public override void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
+		{
+			var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();
+			ShardStrategy.ShardAccessStrategy.Apply(list,
+															new ShardRequestData()
+															, (commands, i) =>
+															{
+																transformerCreationTask.Execute(commands, Conventions);
+																return (object)null;
+															});
+		}
+
+		/// <summary>
 		/// Executes the index creation against each of the shards.
 		/// </summary>
 		public override void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)

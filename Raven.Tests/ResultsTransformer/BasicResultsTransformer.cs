@@ -30,7 +30,7 @@ namespace Raven.Tests.ResultsTransformer
             public string ZipCode { get; set; }
         }
 
-        public class OrderWithProductInformation : AbstractResultsTransformer<Order>
+        public class OrderWithProductInformation : AbstractTransformerCreationTask<Order>
         {
             public class Result
             {
@@ -41,17 +41,17 @@ namespace Raven.Tests.ResultsTransformer
             }
             public OrderWithProductInformation()
             {
-                TransformResults = (database, orders) => from doc in orders
-                                                         from productid in doc.ProductIds
-                                                         let product = database.Load<Product>(productid)
-                                                         select new
-                                                         {
-                                                             OrderId = doc.Id,
-                                                             ProductId = product.Id,
-                                                             ProductName = product.Name
-                                                         };
+	            TransformResults = orders => from index in orders
+											 let doc = LoadDocument<Order>(index.Id)
+	                                         from productid in doc.ProductIds
+	                                         let product = LoadDocument<Product>(productid)
+	                                         select new
+	                                         {
+		                                         OrderId = doc.Id,
+		                                         ProductId = product.Id,
+		                                         ProductName = product.Name
+	                                         };
             }
-
         }
 
 

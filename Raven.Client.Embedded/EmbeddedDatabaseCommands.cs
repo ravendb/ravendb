@@ -327,6 +327,15 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Creates a transformer with the specified name, based on an transfomer definition
+		/// </summary>
+		public string PutTransformer(string name, TransformerDefinition indexDef)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database.PutTransform(name, indexDef);
+		}
+
+		/// <summary>
 		/// Puts the index for the specified name
 		/// </summary>
 		/// <param name="name">The name.</param>

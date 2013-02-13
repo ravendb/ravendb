@@ -187,6 +187,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<string>(databaseCommands.PutIndex(name, indexDef, overwrite));
 		}
 
+		public Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition)
+		{
+			return new CompletedTask<string>(databaseCommands.PutTransformer(name, transformerDefinition));
+		}
+
 		public Task DeleteIndexAsync(string name)
 		{
 			databaseCommands.DeleteIndex(name);
