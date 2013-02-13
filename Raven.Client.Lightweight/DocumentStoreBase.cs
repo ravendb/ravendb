@@ -49,7 +49,7 @@ namespace Raven.Client
 		/// Subscribe to change notifications from the server
 		/// </summary>
 
-		public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
+		public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, bool trackChanges = false);
 
 		public abstract IDatabaseChanges Changes(string database = null);
 

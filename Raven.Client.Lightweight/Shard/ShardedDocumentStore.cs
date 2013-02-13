@@ -153,9 +153,10 @@ namespace Raven.Client.Shard
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
+		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, bool trackChanges = false)
 		{
-			var disposables = ShardStrategy.Shards.Select(shard => shard.Value.AggressivelyCacheFor(cacheDuration)).ToList();
+			var disposables =
+				ShardStrategy.Shards.Select(shard => shard.Value.AggressivelyCacheFor(cacheDuration, trackChanges)).ToList();
 
 			return new DisposableAction(() =>
 			{

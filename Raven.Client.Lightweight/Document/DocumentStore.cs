@@ -707,7 +707,7 @@ namespace Raven.Client.Document
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
+		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, bool trackChanges = false)
 		{
 			AssertInitialized();
 #if !SILVERLIGHT
@@ -717,7 +717,23 @@ namespace Raven.Client.Document
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
+			RebuildCacheBasedOnChanges observeChangesAndRebuildCache = null;
+			
+			if (trackChanges)
+			{
+				observeChangesAndRebuildCache = new RebuildCacheBasedOnChanges(CreateDatabaseChanges(DefaultDatabase),
+				                                                               jsonRequestFactory.RebuildCache, 
+																			   Credentials,
+																			   Conventions);
+			}
+
+			return new DisposableAction(() =>
+			{
+				jsonRequestFactory.AggressiveCacheDuration = old;
+
+				if (observeChangesAndRebuildCache != null)
+					observeChangesAndRebuildCache.Dispose();
+			});
 #else
 			// TODO: with silverlight, we don't currently support aggressive caching
 			return new DisposableAction(() => { });

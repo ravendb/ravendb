@@ -186,7 +186,10 @@ namespace Raven.Client.Changes
 
 					sendUrl = sendUrl.NoCache();
 
-					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions)
+					{
+						AvoidCachingRequest = true
+					};
 					var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
 					return lastSendTask =
 						httpJsonRequest.ExecuteRequestAsync()

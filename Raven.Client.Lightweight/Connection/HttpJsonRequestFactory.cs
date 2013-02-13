@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
@@ -105,7 +106,26 @@ namespace Raven.Client.Connection
 			NumOfCachedRequests = 0;
 		}
 
+		public void RebuildCache(DateTimeOffset time, ICredentials credentials, DocumentConvention conventions)
+		{
+			var urlsToForce = cache.GetOutdatedRequestUrls(time);
 
+			foreach (var url in urlsToForce)
+			{
+				var request = CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", credentials, conventions));
+				request.SkipServerCheck = false; // force a server check
+
+				request.ExecuteRequest();
+			}
+
+			NumberOfCacheRebuilds++;
+		}
+
+		/// <summary>
+		/// The number of cache rebuilds forced by
+		/// tracking changes if aggressive cache was enabled
+		/// </summary>
+		public int NumberOfCacheRebuilds { get; private set; }
 
 		/// <summary>
 		/// The number of requests that we got 304 for 
