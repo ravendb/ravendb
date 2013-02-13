@@ -28,6 +28,12 @@ namespace Raven.Client.Linq
 		/// </summary>
 		void Customize(Action<IDocumentQueryCustomization> action);
 
+        /// <summary>
+        /// The name of the transformer to use with this query
+        /// </summary>
+        /// <param name="transformerName"></param>
+	    void TransformWith(string transformerName);
+
 		/// <summary>
 		/// Gets the name of the index.
 		/// </summary>
@@ -71,5 +77,9 @@ namespace Raven.Client.Linq
 		/// </summary>
 		HashSet<string> FieldsToFetch { get; }
 
+        /// <summary>
+        /// The result transformer to use
+        /// </summary>
+	    string ResultTransformer { get; }
 	}
 }

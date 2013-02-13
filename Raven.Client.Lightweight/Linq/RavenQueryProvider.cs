@@ -35,7 +35,7 @@ namespace Raven.Client.Linq
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly bool isMapReduce;
 
-		/// <summary>
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
 		/// </summary>
 		public RavenQueryProvider(
@@ -72,7 +72,8 @@ namespace Raven.Client.Linq
 			get { return customizeQuery; }
 		}
 
-		/// <summary>
+
+	    /// <summary>
 		/// Gets the name of the index.
 		/// </summary>
 		/// <value>The name of the index.</value>
@@ -99,7 +100,12 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public HashSet<string> FieldsToFetch { get; private set; }
 
-		/// <summary>
+        /// <summary>
+        /// Gets the results transformer to use
+        /// </summary>
+	    public string ResultTransformer { get; private set; }
+
+	    /// <summary>
 		/// Set the fields to rename
 		/// </summary>
 		public List<RenamedField> FieldsToRename { get; private set; }
@@ -119,6 +125,7 @@ namespace Raven.Client.Linq
 				, asyncDatabaseCommands,
 				isMapReduce
 			);
+		    ravenQueryProvider.ResultTransformer = ResultTransformer;
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
 		}
@@ -209,6 +216,11 @@ namespace Raven.Client.Linq
 			customizeQuery += action;
 		}
 
+	    public void TransformWith(string transformerName)
+	    {
+	        this.ResultTransformer = transformerName;
+	    }
+
 		/// <summary>
 		/// Move the registered after query actions
 		/// </summary>
@@ -260,7 +272,7 @@ namespace Raven.Client.Linq
 			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName,
 				FieldsToFetch, 
 				FieldsToRename,
-				isMapReduce);
+				isMapReduce, ResultTransformer);
 		}
 
 		/// <summary>
