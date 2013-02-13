@@ -232,7 +232,7 @@ namespace Raven.Tests.Helpers
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
-			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests, TimeSpan.FromMinutes(15)));
+			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
