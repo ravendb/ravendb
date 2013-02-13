@@ -2043,6 +2043,10 @@ namespace Raven.Database
 					metadata = alertsDoc.Metadata;
 				}
 
+				var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
+				if (withSameUniqe != null)
+					alertsDocument.Alerts.Remove(withSameUniqe);
+
 				alertsDocument.Alerts.Add(alert);
 				var document = RavenJObject.FromObject(alertsDocument);
 				document.Remove("Id");
