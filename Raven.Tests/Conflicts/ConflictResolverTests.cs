@@ -31,6 +31,39 @@ namespace Raven.Tests.Conflicts
 		}
 
 		[Fact]
+		public void CanResolveTwoEmptyArrays()
+		{
+			var conflictsResolver = new ConflictsResolver(new RavenJObject
+			{
+				{"Name", new RavenJArray()}
+			}, new RavenJObject
+			{
+				{"Name",new RavenJArray()}
+			});
+			Assert.Equal(new RavenJObject
+			{
+				{"Name",new RavenJArray()}
+			}.ToString(Formatting.Indented), conflictsResolver.Resolve());
+		}
+
+		[Fact]
+		public void CanResolveOneEmptyArraysAndOneWithValue()
+		{
+			var conflictsResolver = new ConflictsResolver(new RavenJObject
+			{
+				{"Name", new RavenJArray()}
+			}, new RavenJObject
+			{
+				{"Name",new RavenJArray{1}}
+			});
+			Assert.Equal(@"{
+  ""Name"": /*>>>> auto merged array start*/ [
+    1
+  ]/*<<<< auto merged array end*/
+}", conflictsResolver.Resolve());
+		}
+
+		[Fact]
 		public void CanMergeAdditionalProperties()
 		{
 			var conflictsResolver = new ConflictsResolver(new RavenJObject

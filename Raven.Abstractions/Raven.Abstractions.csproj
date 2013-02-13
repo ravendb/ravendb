@@ -656,7 +656,6 @@
     <Compile Include="Json\ConflictsResolver.cs" />
     <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
-    <Compile Include="Json\JsonFloatConverter.cs" />
     <Compile Include="Json\Linq\DictionaryWithParentSnapshot.cs" />
     <Compile Include="Json\Linq\Extensions.cs" />
     <Compile Include="Json\Linq\RavenJArray.cs" />
