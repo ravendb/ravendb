@@ -73,10 +73,13 @@ namespace Raven.Abstractions.Json
 				var set = new HashSet<RavenJToken>(ravenJTokenEqualityComparer);
 				for (var i = 0; i < arrays.Count; i++)
 				{
+					if (arrays[i].Length == 0)
+					{
+						arrays.RemoveAt(i);
+						continue;
+					}
 					set.Add(arrays[i][0]);
 					arrays[i].RemoveAt(0);
-					if(arrays[i].Length == 0)
-						arrays.RemoveAt(i);
 				}
 
 				foreach (var ravenJToken in set)
