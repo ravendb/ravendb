@@ -195,7 +195,7 @@ namespace Raven.Storage.Managed
 						getItemsToReduceParams.ItemsToDelete.Add(result);
 
 					if (getItemsToReduceParams.Take <= 0)
-						break;
+						yield break;
 				}
 
 				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
