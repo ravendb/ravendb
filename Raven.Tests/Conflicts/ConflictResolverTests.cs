@@ -56,10 +56,11 @@ namespace Raven.Tests.Conflicts
 			{
 				{"Name",new RavenJArray{1}}
 			});
-			Assert.Equal(new RavenJObject
-			{
-				{"Name",new RavenJArray{1}}
-			}.ToString(Formatting.Indented), conflictsResolver.Resolve());
+			Assert.Equal(@"{
+  ""Name"": /*>>>> auto merged array start*/ [
+    1
+  ]/*<<<< auto merged array end*/
+}", conflictsResolver.Resolve());
 		}
 
 		[Fact]
