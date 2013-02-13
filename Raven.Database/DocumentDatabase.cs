@@ -1059,6 +1059,24 @@ namespace Raven.Database
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		public string PutTransform(string name, TransformerDefinition definition)
+		{
+			if (name == null)
+				throw new ArgumentNullException("name");
+
+			name = name.Trim();
+
+			var transformerDefinition = IndexDefinitionStorage.GetTransformerDefinition(name);
+			if (transformerDefinition != null && transformerDefinition.Equals(definition))
+				return name; // no op for the same transformer
+
+			IndexDefinitionStorage.CreateAndPersistTransform(transformerDefinition);
+			IndexDefinitionStorage.AddTransform(name, transformerDefinition);
+
+			return name;
+		}
+
 		// only one index can be created at any given time
 		// the method already handle attempts to create the same index, so we don't have to 
 		// worry about this.
@@ -1153,6 +1171,12 @@ namespace Raven.Database
 			Guid resultEtag = Guid.Empty;
 			var nonAuthoritativeInformation = false;
 			var idsToLoad = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+			if (string.IsNullOrEmpty(query.ResultsTransformer))
+			{
+				query.FieldsToFetch = new[] { Constants.AllFields };
+			}
+
 			TransactionalStorage.Batch(
 				actions =>
 				{
@@ -1195,18 +1219,18 @@ namespace Raven.Database
 					IEnumerable<RavenJObject> results = null;
                     if(query.PageSize > 0) // maybe they just want the stats? 
 				    {
-				        TranslatorFunc transformFunc = null;
+				        IndexingFunc transformFunc = null;
 
 				        // Check an explicitly declared one first
 				        if (query.ResultsTransformer != null)
 				        {
-				            var transformGenerator = IndexDefinitionStorage.GetViewGenerator(query.ResultsTransformer);
+				            var transformGenerator = IndexDefinitionStorage.GetTransfomer(query.ResultsTransformer);
 				            if (transformGenerator != null && transformGenerator.TransformResultsDefinition != null)
 				                transformFunc = transformGenerator.TransformResultsDefinition;
 				        }
 				        else if (query.SkipTransformResults == false && viewGenerator.TransformResultsDefinition != null)
 				        {
-				            transformFunc = viewGenerator.TransformResultsDefinition;
+				            transformFunc = source => viewGenerator.TransformResultsDefinition(docRetriever, source);
 				        }
 
 				        if (transformFunc != null)
@@ -1222,8 +1246,8 @@ namespace Raven.Database
 				            results =
 				                robustEnumerator.RobustEnumeration(
 				                    dynamicJsonObjects.Cast<object>().GetEnumerator(),
-				                    source => transformFunc(docRetriever, source))
-				                                .Select(JsonExtensions.ToJObject);
+				                    transformFunc)
+									.Select(JsonExtensions.ToJObject);
 				        }
                     }
 
@@ -1284,6 +1308,13 @@ namespace Raven.Database
 				});
 			stale = isStale;
 			return loadedIds;
+		}
+
+
+		public void DeleteTransfom(string name)
+		{
+			name = IndexDefinitionStorage.FixupIndexName(name);
+			IndexDefinitionStorage.RemoveTransfomer(name);
 		}
 
 		public void DeleteIndex(string name)
@@ -2153,6 +2184,27 @@ namespace Raven.Database
 			if (pendingTasks.TryGetValue(id, out value))
 				return value.State;
 			return null;
+		}
+
+		public RavenJArray GetTransformerNames(int start, int pageSize)
+		{
+			return new RavenJArray(
+			IndexDefinitionStorage.TransformerNames.Skip(start).Take(pageSize)
+				.Select(s => new RavenJValue(s))
+			);
+		}
+
+		public RavenJArray GetTransformers(int start, int pageSize)
+		{
+			return new RavenJArray(
+			IndexDefinitionStorage.TransformerNames.Skip(start).Take(pageSize)
+				.Select(
+					indexName => new RavenJObject
+							{
+								{"name", new RavenJValue(indexName) },
+								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetTransformerDefinition(indexName))}
+							}));
+
 		}
 	}
 }

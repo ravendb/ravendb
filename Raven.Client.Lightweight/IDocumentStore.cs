@@ -123,11 +123,15 @@ namespace Raven.Client
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
 
-		
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
 		void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
+
+		/// <summary>
+		/// Executes the transformer creation
+		/// </summary>
+		void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask);
 #endif
 
 		/// <summary>

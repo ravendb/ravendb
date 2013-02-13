@@ -826,6 +826,14 @@ namespace Raven.Client.Connection
 			return PutIndex(name, definition, false);
 		}
 
+		public string PutTransformer(string name, TransformerDefinition indexDef)
+		{
+			EnsureIsNotNullOrEmpty(name, "name");
+
+			return ExecuteWithReplication("PUT", operationUrl => DirectPutTransfomer(name, operationUrl, indexDef));
+	
+		}
+
 		/// <summary>
 		/// Puts the index.
 		/// </summary>
@@ -838,6 +846,22 @@ namespace Raven.Client.Connection
 			EnsureIsNotNullOrEmpty(name, "name");
 
 			return ExecuteWithReplication("PUT", operationUrl => DirectPutIndex(name, operationUrl, overwrite, definition));
+		}
+
+		public string DirectPutTransfomer(string name, string operationUrl, TransformerDefinition definition)
+		{
+			string requestUri = operationUrl + "/transformers/" + name;
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
+
+
+			var responseJson = (RavenJObject)request.ReadResponseJson();
+			return responseJson.Value<string>("Transfomer");
 		}
 
 		public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
@@ -873,7 +897,7 @@ namespace Raven.Client.Connection
 
 
 			var responseJson = (RavenJObject)request.ReadResponseJson();
-			return responseJson.Value<string>("index");
+			return responseJson.Value<string>("Index");
 		}
 
 		/// <summary>
