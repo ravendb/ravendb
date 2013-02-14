@@ -366,48 +366,44 @@ namespace Raven.Database.Indexing
 
 		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
 		{
-			if (indexCommit.SegmentsInfo != null && indexCommit.SegmentsInfo.IsIndexCorrupted == false)
+			if (indexCommit.SegmentsInfo == null || indexCommit.SegmentsInfo.IsIndexCorrupted) 
+				return;
+
+			var directoryName = indexCommit.SegmentsInfo.Generation.ToString("0000000000000000000", CultureInfo.InvariantCulture);
+			var commitPointDirectory = new IndexCommitPointDirectory(path, indexName, directoryName);
+
+			if (Directory.Exists(commitPointDirectory.AllCommitPointsFullPath) == false)
 			{
-				var commitPointDirectory = new IndexCommitPointDirectory(path, indexName, indexCommit.SegmentsInfo.Generation.ToString(CultureInfo.InvariantCulture));
+				Directory.CreateDirectory(commitPointDirectory.AllCommitPointsFullPath);
+			}	
 
-				if (Directory.Exists(commitPointDirectory.AllCommitPointsFullPath) == false)
+			Directory.CreateDirectory(commitPointDirectory.FullPath);
+
+			using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
+			{
+				using (var sw = new StreamWriter(commitPointFile))
 				{
-					Directory.CreateDirectory(commitPointDirectory.AllCommitPointsFullPath);
-				}	
+					var jsonSerializer = new JsonSerializer();
+					var textWriter = new JsonTextWriter(sw);
 
-				Directory.CreateDirectory(commitPointDirectory.FullPath);
-
-				using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
-				{
-					using (var sw = new StreamWriter(commitPointFile))
-					{
-						var jsonSerializer = new JsonSerializer();
-						var textWriter = new JsonTextWriter(sw);
-
-						jsonSerializer.Serialize(textWriter, indexCommit);
+					jsonSerializer.Serialize(textWriter, indexCommit);
 						
-						sw.Flush();
-					}
+					sw.Flush();
 				}
+			}
 
-				var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
+			var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
 
-				File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
-				          Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName));
+			File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
+			          Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName));
 
-				var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
+			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 
-				if (storedCommitPoints.Length > MaxNumberOfStoredCommitPoints)
+			if (storedCommitPoints.Length > MaxNumberOfStoredCommitPoints)
+			{
+				foreach (var toDelete in storedCommitPoints.Take(storedCommitPoints.Length - MaxNumberOfStoredCommitPoints))
 				{
-					var commitPointsToDelete =
-						storedCommitPoints.OrderBy(x => long.Parse(Path.GetFileName(x)))
-						                  .Take(storedCommitPoints.Length - MaxNumberOfStoredCommitPoints)
-						                  .ToArray();
-
-					foreach (var toDelete in commitPointsToDelete)
-					{
-						IOExtensions.DeleteDirectory(toDelete);
-					}
+					IOExtensions.DeleteDirectory(toDelete);
 				}
 			}
 		}
@@ -429,9 +425,9 @@ namespace Raven.Database.Indexing
 			var filesInIndexDirectory = Directory.GetFiles(indexFullPath).Select(Path.GetFileName);
 
 			var existingCommitPoints =
-				IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath)
-										 .OrderByDescending(x => long.Parse(Path.GetFileName(x))) // start from the highest generation
-										 .ToArray();
+				IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
+
+			Array.Reverse(existingCommitPoints); // start from the highest generation
 
 			foreach (var commitPointDirectoryName in existingCommitPoints)
 			{

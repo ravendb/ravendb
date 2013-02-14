@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.Indexing
@@ -40,7 +42,10 @@ namespace Raven.Database.Indexing
 
 		public static string[] ScanAllCommitPointsDirectory(string indexFullPath)
 		{
-			return Directory.GetDirectories(Path.Combine(indexFullPath, DirectoryName));
+			return
+				Directory.GetDirectories(Path.Combine(indexFullPath, DirectoryName))
+				         .Where(x => Regex.IsMatch(Path.GetFileName(x), "^[0-9]{19,19}$"))
+				         .ToArray();
 		}
 	}
 }
