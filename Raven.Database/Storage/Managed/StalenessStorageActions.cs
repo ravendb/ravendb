@@ -86,7 +86,8 @@ namespace Raven.Storage.Managed
             if (isIdle == false)
             {
                 var indexingPriority = (IndexingPriority)readResult.Key.Value<int>("priority");
-                if (indexingPriority.HasFlag(IndexingPriority.Idle))
+                if (indexingPriority.HasFlag(IndexingPriority.Idle) || 
+					indexingPriority.HasFlag(IndexingPriority.Disabled))
                     return false;
             }
 

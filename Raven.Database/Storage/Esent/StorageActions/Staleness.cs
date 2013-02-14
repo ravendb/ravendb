@@ -96,7 +96,7 @@ namespace Raven.Storage.Esent.StorageActions
             {
                 var priority = (IndexingPriority)Api.RetrieveColumnAsInt32(session, IndexesStats,
                                                  tableColumnsCache.IndexesStatsColumns["priority"]).Value;
-                if (priority.HasFlag(IndexingPriority.Idle))
+                if (priority.HasFlag(IndexingPriority.Idle) || priority.HasFlag(IndexingPriority.Disabled))
                     return false;
             }
 
