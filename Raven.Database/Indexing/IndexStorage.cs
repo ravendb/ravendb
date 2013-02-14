@@ -634,6 +634,10 @@ namespace Raven.Database.Indexing
 	            for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
 	            {
 	                var thisItem = autoIndexesSortedByLastQueryTime[i];
+
+					if(thisItem.Priority.HasFlag(IndexingPriority.Disabled))
+						continue; // we don't really have much to say about those in here
+
 	                var age = (SystemTime.UtcNow - thisItem.CreationDate).TotalMinutes;
                     var lastQuery = (SystemTime.UtcNow - thisItem.LastQueryTime).TotalMinutes;
                     
