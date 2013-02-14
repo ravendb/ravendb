@@ -34,10 +34,15 @@ namespace Raven.Client.Linq
 		public Result GetPath(Expression expression)
 		{
 			expression = SimplifyExpression(expression);
+
 			var callExpression = expression as MethodCallExpression;
 			if (callExpression != null)
 			{
-				if(callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
+				var customMethodResult = conventions.TranslateCustomQueryExpression(this, callExpression);
+				if (customMethodResult != null)
+					return customMethodResult;
+
+				if (callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
 				{
 					if(callExpression.Arguments.Count != 1)
 						throw new ArgumentException("Invalid computation: " + callExpression +
@@ -51,20 +56,28 @@ namespace Raven.Client.Linq
 						Path = target.Path + @".Count\(\)"
 					};
 				}
-				if (callExpression.Method.Name != "get_Item")
-					throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
 
-				var parent = GetPath(callExpression.Object);
-
-				return new Result
+				if (callExpression.Method.Name == "get_Item")
 				{
-					MemberType = callExpression.Method.ReturnType,
-					IsNestedPath = false,
-					Path = parent.Path + "." +
-					       GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
-				};
+					var parent = GetPath(callExpression.Object);
+
+					return new Result
+					       {
+						       MemberType = callExpression.Method.ReturnType,
+						       IsNestedPath = false,
+						       Path = parent.Path + "." +
+						              GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
+					       };
+				}
+
+				throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
 			}
+
 			var memberExpression = GetMemberExpression(expression);
+
+			var customMemberResult = conventions.TranslateCustomQueryExpression(this, memberExpression);
+			if (customMemberResult != null)
+				return customMemberResult;
 
 			// we truncate the nullable .Value because in json all values are nullable
 			if (memberExpression.Member.Name == "Value" &&
