@@ -63,6 +63,8 @@ namespace Raven.Database.Storage
 
 			//compiled view generators always overwrite dynamic views
 			ReadIndexesFromCatalog(compiledGenerators, transactionalStorage);
+			
+			newDefinitionsThisSession.Clear();
 		}
 
         public bool IsNewThisSession(IndexDefinition definition)
