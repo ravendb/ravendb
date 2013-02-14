@@ -739,9 +739,6 @@
     <Compile Include="..\Raven.Abstractions\Json\JsonDictionaryDateTimeKeysConverter.cs">
       <Link>Imports\Json\JsonDictionaryDateTimeKeysConverter.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonFloatConverter.cs">
-      <Link>Imports\Json\JsonFloatConverter.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonNumericConverter.cs">
       <Link>Imports\Json\JsonNumericConverter.cs</Link>
     </Compile>

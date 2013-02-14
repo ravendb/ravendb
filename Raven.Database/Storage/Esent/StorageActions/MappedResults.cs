@@ -265,7 +265,7 @@ namespace Raven.Storage.Esent.StorageActions
 					}
 
 					if (getItemsToReduceParams.Take <= 0)
-						break;
+						yield break;
 				} while (Api.TryMoveNext(session, ScheduledReductions));
 
                 getItemsToReduceParams.ReduceKeys.Remove(reduceKey);

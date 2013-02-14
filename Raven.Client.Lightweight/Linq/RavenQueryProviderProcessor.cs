@@ -1301,10 +1301,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
 		{
-			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof (T));
+			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof(T));
 			if (identityProperty != null && identityProperty.Name == expression.Path)
 				return Constants.DocumentIdFieldName;
-			if (value is int || value is long || value is double || value is float || value is decimal)
+			if (luceneQuery.DocumentConvention.UsesRangeType(value) && !expression.Path.EndsWith("_Range"))
 				return expression.Path + "_Range";
 			return expression.Path;
 		}
