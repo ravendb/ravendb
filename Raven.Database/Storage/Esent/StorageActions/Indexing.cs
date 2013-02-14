@@ -130,6 +130,7 @@ namespace Raven.Storage.Esent.StorageActions
                 Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["priority"], 0);
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue.ToBinary());
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"], DateTime.MinValue.ToBinary());
                 Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["created_timestamp"], SystemTime.UtcNow.ToBinary());
 				update.Save();
 			}

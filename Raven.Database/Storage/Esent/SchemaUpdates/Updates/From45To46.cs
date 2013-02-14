@@ -34,14 +34,14 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                     cbMax = 8, //64 bits
                     coltyp = JET_coltyp.Binary,
                     grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-                }, null, 0, out columnid);
+				}, defaultValue, defaultValue.Length, out columnid);
 
 				Api.JetAddColumn(session, table, "last_indexing_time", new JET_COLUMNDEF
 				{
 					cbMax = 8, //64 bits
 					coltyp = JET_coltyp.Binary,
 					grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-				}, null, 0, out columnid);
+				}, defaultValue, defaultValue.Length, out columnid);
             }
 
             SchemaCreator.UpdateVersion(session,   dbid, "4.6");
