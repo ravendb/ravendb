@@ -1173,7 +1173,7 @@ namespace Raven.Database
             var nonAuthoritativeInformation = false;
             var idsToLoad = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-            if (string.IsNullOrEmpty(query.ResultsTransformer))
+            if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
             {
                 query.FieldsToFetch = new[] { Constants.AllFields };
             }
@@ -1236,7 +1236,7 @@ namespace Raven.Database
 
                         if (transformFunc != null)
                         {
-                            var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.Document.ToJson())).ToArray();
+                            var dynamicJsonObjects = collection.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.Document.ToJson())).ToArray();
                             var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
                             {
                                 OnError =

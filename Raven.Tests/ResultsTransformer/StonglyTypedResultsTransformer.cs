@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 using Raven.Client;
@@ -40,8 +37,7 @@ namespace Raven.Tests.ResultsTransformer
             }
             public OrderWithProductInformationMultipleReturns()
             {
-                TransformResults = orders => from index in orders
-                                             let doc = LoadDocument<Order>(index.Id)
+                TransformResults = orders => from doc in orders
                                              from productid in doc.ProductIds
                                              let product = LoadDocument<Product>(productid)
                                              select new
@@ -68,8 +64,7 @@ namespace Raven.Tests.ResultsTransformer
             }
             public OrderWithProductInformation()
             {
-	            TransformResults = orders => from index in orders
-											 let doc = LoadDocument<Order>(index.Id)
+	            TransformResults = orders => from doc in orders
 	                                         select new
 	                                         {
 		                                         OrderId = doc.Id,
@@ -83,6 +78,7 @@ namespace Raven.Tests.ResultsTransformer
 	                                         };
             }
         }
+
         [Fact]
         public void CanUseResultsTransformerOnLoadWithRemoteDatabase()
         {
