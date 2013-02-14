@@ -14,6 +14,7 @@ namespace Raven.Studio.Features.Tasks
 			TaskInputs.Add(new TaskInput("Backup Location", @"C:\path-to-your-backup-folder"));
 			TaskInputs.Add(new TaskInput("Database Location", ""));
 			TaskInputs.Add(new TaskInput("Database Name", ""));
+			TaskInputs.Add(new TaskCheckBox("Defrag", false));
 		}
 
 		public override ICommand Action
