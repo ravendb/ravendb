@@ -17,6 +17,8 @@ namespace Raven.Client.Util
 		private readonly Action<DateTimeOffset, ICredentials, DocumentConvention> rebuildCache;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention conventions;
+		private readonly IDisposable documentsSubscription;
+		private readonly IDisposable indexesSubscription;
 
 		public RebuildCacheBasedOnChanges(IDatabaseChanges changes, Action<DateTimeOffset, ICredentials, DocumentConvention> rebuildCache, ICredentials credentials, DocumentConvention conventions)
 		{
@@ -26,8 +28,8 @@ namespace Raven.Client.Util
 			this.conventions = conventions;
 			LastNotificationTime = DateTimeOffset.Now;
 
-			changes.ForAllDocuments().Subscribe(this);
-			changes.ForAllIndexes().Subscribe(this);
+			documentsSubscription = changes.ForAllDocuments().Subscribe(this);
+			indexesSubscription = changes.ForAllIndexes().Subscribe(this);
 		}
 
 		public DateTimeOffset LastNotificationTime { get; private set; }
@@ -69,6 +71,9 @@ namespace Raven.Client.Util
 
 		public void Dispose()
 		{
+			documentsSubscription.Dispose();
+			indexesSubscription.Dispose();
+
 			using (changes as IDisposable)
 			{
 			}
