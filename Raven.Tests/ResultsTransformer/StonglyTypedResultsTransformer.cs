@@ -30,6 +30,28 @@ namespace Raven.Tests.ResultsTransformer
             public string ZipCode { get; set; }
         }
 
+        public class OrderWithProductInformationMultipleReturns : AbstractTransformerCreationTask<Order>
+        {
+            public class Result
+            {
+                public string OrderId { get; set; }
+                public string ProductId { get; set; }
+                public string ProductName { get; set; }
+            }
+            public OrderWithProductInformationMultipleReturns()
+            {
+                TransformResults = orders => from index in orders
+                                             let doc = LoadDocument<Order>(index.Id)
+                                             from productid in doc.ProductIds
+                                             let product = LoadDocument<Product>(productid)
+                                             select new
+                                             {
+                                                 OrderId = doc.Id,
+                                                 ProductId = product.Id,
+                                                 ProductName = product.Name
+                                             };
+            }
+        }
         public class OrderWithProductInformation : AbstractTransformerCreationTask<Order>
         {
             public class Result
@@ -61,7 +83,6 @@ namespace Raven.Tests.ResultsTransformer
 	                                         };
             }
         }
-
         [Fact]
         public void CanUseResultsTransformerOnLoadWithRemoteDatabase()
         {
@@ -77,6 +98,119 @@ namespace Raven.Tests.ResultsTransformer
             using (var store = NewDocumentStore())
             {
                 PerformLoadingTest(store);
+            }
+        }
+
+        [Fact]
+        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabase()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                PerformLoadingTestArray(store);
+            }
+        }
+
+        [Fact]
+        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabase()
+        {
+            using (var store = NewDocumentStore())
+            {
+                PerformLoadingTestArray(store);
+            }
+        }
+
+        [Fact]
+        public void CannotUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabaseWithSingleExpectation()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                Assert.Throws<InvalidOperationException>(() =>
+                {
+                    PerformLoadingTestArrayWithSingleExpectation(store);
+                });
+            }
+        }
+
+        [Fact]
+        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabaseWithSingleExpectation()
+        {
+            using (var store = NewDocumentStore())
+            {
+                Assert.Throws<InvalidOperationException>(() =>
+                {
+                    PerformLoadingTestArrayWithSingleExpectation(store);
+                });
+            }
+        }
+
+
+        [Fact]
+        public void CanUseResultsTransformerOnDynamicQueryWithRemoteDatabase()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                PerformBasicTestWithDynamicQuery(store);
+            }
+        }
+
+        [Fact]
+        public void CanUseResultsTransformerOnDynamicQueryWithInMemoryDatabase()
+        {
+            using (var store = NewDocumentStore())
+            {
+                 PerformBasicTestWithDynamicQuery(store);
+            }
+        }
+
+        private void PerformLoadingTestArrayWithSingleExpectation(IDocumentStore store)
+        {
+            new OrderWithProductInformationMultipleReturns().Execute(store);
+            
+            using (var session = store.OpenSession())
+            {
+            session.Store(new Product {Name = "Milk", Id = "products/milk"});
+            session.Store(new Product {Name = "Bear", Id = "products/bear"});
+            
+            session.Store(new Order
+            {
+            Id = "orders/1",
+            CustomerId = "customers/ayende",
+            ProductIds = new[] {"products/milk", "products/bear"}
+            });
+            session.SaveChanges();
+            }
+            
+            using (var session = store.OpenSession())
+            {
+                var products = session.Load<OrderWithProductInformationMultipleReturns, OrderWithProductInformationMultipleReturns.Result>("orders/1");
+            }
+        }
+
+        private void PerformLoadingTestArray(IDocumentStore store)
+        {
+            new OrderWithProductInformationMultipleReturns().Execute(store);
+            
+            using (var session = store.OpenSession())
+            {
+            session.Store(new Product {Name = "Milk", Id = "products/milk"});
+            session.Store(new Product {Name = "Bear", Id = "products/bear"});
+            
+            session.Store(new Order
+            {
+            Id = "orders/1",
+            CustomerId = "customers/ayende",
+            ProductIds = new[] {"products/milk", "products/bear"}
+            });
+            session.SaveChanges();
+            }
+            
+            using (var session = store.OpenSession())
+            {
+            var products = session.Load<OrderWithProductInformationMultipleReturns, OrderWithProductInformationMultipleReturns.Result[]>("orders/1");
+            products = products.OrderBy(x => x.ProductId).ToArray();
+            
+            Assert.Equal("products/bear", products[0].ProductId);
+            Assert.Equal("products/milk", products[1].ProductId);
             }
         }
 
@@ -108,24 +242,6 @@ namespace Raven.Tests.ResultsTransformer
                 Assert.Equal("Milk", order.Products[0].ProductName);
                 Assert.Equal("products/milk", order.Products[0].ProductId);
          }
-        }
-
-        [Fact]
-        public void CanUseResultsTransformerOnDynamicQueryWithRemoteDatabase()
-        {
-            using (var store = NewRemoteDocumentStore())
-            {
-                PerformBasicTestWithDynamicQuery(store);
-            }
-        }
-
-        [Fact]
-        public void CanUseResultsTransformerOnDynamicQueryWithInMemoryDatabase()
-        {
-            using (var store = NewDocumentStore())
-            {
-                 PerformBasicTestWithDynamicQuery(store);
-            }
         }
 
         private void PerformBasicTestWithDynamicQuery(IDocumentStore store)
