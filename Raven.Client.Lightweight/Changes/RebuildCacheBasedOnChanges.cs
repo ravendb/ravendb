@@ -16,7 +16,6 @@ namespace Raven.Client.Changes
 		private readonly Action<DateTimeOffset, ICredentials, DocumentConvention> rebuildCache;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention conventions;
-		private bool rebuildInProgess = false;
 
 		public RebuildCacheBasedOnChanges(IDatabaseChanges changes, Action<DateTimeOffset, ICredentials, DocumentConvention> rebuildCache, ICredentials credentials, DocumentConvention conventions)
 		{
@@ -50,19 +49,12 @@ namespace Raven.Client.Changes
 
 		private void Rebuild()
 		{
-			if(rebuildInProgess)
-				return;
+			var currentNotificationTime = DateTimeOffset.Now;
 
-			rebuildInProgess = true;
-			try
+			lock (this)
 			{
-				var currentNotificationTime = DateTimeOffset.Now;
 				rebuildCache(LastNotificationTime, credentials, conventions);
 				LastNotificationTime = currentNotificationTime;
-			}
-			finally
-			{
-				rebuildInProgess = false;
 			}
 		}
 
