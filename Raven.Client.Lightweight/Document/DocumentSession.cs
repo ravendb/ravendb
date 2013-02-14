@@ -313,21 +313,33 @@ namespace Raven.Client.Document
 
             if (typeof (T).IsArray)
             {
-                return DatabaseCommands.Get(ids, new string[] {}, transformer)
-                                       .Results
-                                       .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
-                                       .Select(JsonExtensions.ToJObject)
-                                       .Select(x => x.Deserialize(typeof (T).GetElementType(), Conventions))
-                                       .Cast<T>().ToArray();
+                // REturns array of arrays, public APIs don't surface that yet though as we only support Transform
+                // With a single Id
+                var arrayOfArrays = DatabaseCommands.Get(ids, new string[] {}, transformer)
+                                            .Results
+                                            .Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
+                                            .Select(values =>
+                                            {
+                                                var array = values.Select(y => y.Deserialize(typeof(T).GetElementType(), Conventions)).ToArray();
+                                                var newArray = Array.CreateInstance(typeof (T).GetElementType(), array.Length);
+                                                Array.Copy(array, newArray, array.Length);
+                                                return newArray;
+                                            })
+                                            .Cast<T>()
+                                            .ToArray();
+                
+                return arrayOfArrays;
             }
             else
             {
                 var items = DatabaseCommands.Get(ids, new string[] {}, transformer)
-                                       .Results
-                                       .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
-                                       .Select(JsonExtensions.ToJObject)
-                                       .Select(x => x.Deserialize(typeof (T), Conventions))
-                                       .Cast<T>().ToArray();
+                                            .Results
+                                            .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
+                                            .Select(JsonExtensions.ToJObject)
+                                            .Select(x => x.Deserialize(typeof (T), Conventions))
+                                            .Cast<T>()
+                                            .ToArray();
+                
                 if (items.Length > ids.Length)
                 {
                     throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
