@@ -774,11 +774,14 @@ namespace Raven.Storage.Esent.StorageActions
 			return (ReduceType)reduceType;
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view)
+		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take)
 		{
 			Api.JetSetCurrentIndex(session, ReduceKeysStatus, "by_view_and_hashed_reduce_key");
 			Api.MakeKey(session, ReduceKeysStatus, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, ReduceKeysStatus, SeekGrbit.SeekGE) == false)
+				yield break;
+
+			if (TryMoveTableRecords(MappedResults, start, false))
 				yield break;
 
 			do
@@ -795,9 +798,10 @@ namespace Raven.Storage.Esent.StorageActions
 
 				var reduceType = Api.RetrieveColumnAsInt32(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"]).Value;
 
+				take--;
 				yield return new ReduceTypePerKey(reduceKey, (ReduceType) reduceType);
 
-			} while (Api.TryMoveNext(session, ReduceKeysStatus));
+			} while (Api.TryMoveNext(session, ReduceKeysStatus) && take > 0);
 		}
 
 		public IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey)

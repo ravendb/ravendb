@@ -279,33 +279,40 @@ namespace Raven.Database.Indexing
 			WriteIndexVersion(directory);
 			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
 
-			IList<ReduceTypePerKey> reduceKeysAndTypes = null;
+			var start = 0;
+			const int take = 100;
 
 			documentDatabase.TransactionalStorage.Batch(actions =>
 			{
-				reduceKeysAndTypes = actions.MapReduce.GetReduceKeysAndTypes(indexName).ToList();
-			});
+				IList<ReduceTypePerKey> reduceKeysAndTypes;
 
-			var keysToScheduleOnLevel2 = reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.MultiStep).ToList();
-			var keysToScheduleOnLevel0 = reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).ToList();
-
-			var itemsToScheduleOnLevel2 = keysToScheduleOnLevel2.Select(x => new ReduceKeyAndBucket(0, x.ReduceKey)).ToList();
-			var itemsToScheduleOn0Level = new List<ReduceKeyAndBucket>();
-
-			foreach (var reduceKey in keysToScheduleOnLevel0.Select(x => x.ReduceKey))
-			{
-				documentDatabase.TransactionalStorage.Batch(accessor =>
+				do
 				{
-					var mappedBuckets = accessor.MapReduce.GetMappedBuckets(indexName, reduceKey).Distinct();
+					reduceKeysAndTypes = actions.MapReduce.GetReduceKeysAndTypes(indexName, start, take).ToList();
+					start += take;
 
-					itemsToScheduleOn0Level.AddRange(mappedBuckets.Select(x => new ReduceKeyAndBucket(x, reduceKey)));
-				});
-			}
+					var keysToScheduleOnLevel2 =
+						reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.MultiStep).ToList();
+					var keysToScheduleOnLevel0 =
+						reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).ToList();
 
-			documentDatabase.TransactionalStorage.Batch(actions =>
-			{
-				actions.MapReduce.ScheduleReductions(indexName, 2, itemsToScheduleOnLevel2);
-				actions.MapReduce.ScheduleReductions(indexName, 0, itemsToScheduleOn0Level);
+					var itemsToScheduleOnLevel2 = keysToScheduleOnLevel2.Select(x => new ReduceKeyAndBucket(0, x.ReduceKey)).ToList();
+					var itemsToScheduleOn0Level = new List<ReduceKeyAndBucket>();
+
+					foreach (var reduceKey in keysToScheduleOnLevel0.Select(x => x.ReduceKey))
+					{
+						var mappedBuckets = actions.MapReduce.GetMappedBuckets(indexName, reduceKey).Distinct();
+
+						itemsToScheduleOn0Level.AddRange(mappedBuckets.Select(x => new ReduceKeyAndBucket(x, reduceKey)));
+
+						actions.General.MaybePulseTransaction();
+					}
+
+					actions.MapReduce.ScheduleReductions(indexName, 2, itemsToScheduleOnLevel2);
+					actions.MapReduce.ScheduleReductions(indexName, 0, itemsToScheduleOn0Level);
+
+					actions.General.MaybePulseTransaction();
+				} while (reduceKeysAndTypes.Count > 0);
 			});
 		}
 

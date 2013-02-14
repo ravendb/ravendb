@@ -35,7 +35,7 @@ namespace Raven.Database.Storage
 		ReduceType GetLastPerformedReduceType(string indexName, string reduceKey);
 		IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey);
 		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData);
-		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view);
+		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take);
 	}
 
 	public class GetItemsToReduceParams
