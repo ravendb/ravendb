@@ -135,8 +135,12 @@ namespace Raven.Database.Config
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
-		    TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
+		    
+			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
 		    TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
+
+			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
+			TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
 
 			ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
 
@@ -188,7 +192,12 @@ namespace Raven.Database.Config
 		}
 
 	    public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
-        public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; } 
+		
+		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
+        
+		public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
+
+		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; } 
 
 	    private void FilterActiveBundles()
 		{

@@ -34,7 +34,7 @@ namespace Raven.Storage.Managed
 				return false;// index does not exists
 
 
-			if (IsMapStale(name, isIdle: true) || IsReduceStale(name))
+			if (IsMapStale(name) || IsReduceStale(name))
 			{
 				if (cutOff != null)
 				{
@@ -76,27 +76,23 @@ namespace Raven.Storage.Managed
 			.Any();
 		}
 
-		public bool IsMapStale(string name, bool isIdle)
+		public bool IsMapStale(string name)
 		{
 			var readResult = storage.IndexingStats.Read(name);
 
 			if (readResult == null)
-				return false;// index does not exists
+				return false;
 
-            if (isIdle == false)
-            {
-                var indexingPriority = (IndexingPriority)readResult.Key.Value<int>("priority");
-                if (indexingPriority.HasFlag(IndexingPriority.Idle) || 
-					indexingPriority.HasFlag(IndexingPriority.Disabled))
-                    return false;
-            }
+			var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
 
-		    var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
-
-			return storage.Documents["ByEtag"].SkipFromEnd(0)
+			var isStale =
+				storage.Documents["ByEtag"]
+				.SkipFromEnd(0)
 				.Select(doc => doc.Value<byte[]>("etag"))
 				.Select(docEtag => Buffers.Compare(docEtag, lastIndexedEtag) > 0)
 				.FirstOrDefault();
+
+			return isStale;
 		}
 
 		public Tuple<DateTime,Etag> IndexLastUpdatedAt(string name)

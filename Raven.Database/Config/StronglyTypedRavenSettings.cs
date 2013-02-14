@@ -89,8 +89,14 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/TaskScheduler"], (string) null);
 			AllowLocalAccessWithoutAuthorization =
 				new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
-            TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
-            TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
+            
+			TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
+            
+			TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
+
+			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned"], TimeSpan.FromHours(72), TimeSpanArgumentType.FromParse);
+
+			TimeToWaitBeforeRunningAbandonedIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningAbandonedIndexes"], TimeSpan.FromHours(3), TimeSpanArgumentType.FromParse);
 		}
 
 	    
@@ -175,6 +181,11 @@ namespace Raven.Database.Config
 		public BooleanSetting AllowLocalAccessWithoutAuthorization { get; private set; }
 
         public TimeSpanSetting TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+
 	    public TimeSpanSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
+
+		public TimeSpanSetting TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
+
+		public TimeSpanSetting TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
 	}
 }

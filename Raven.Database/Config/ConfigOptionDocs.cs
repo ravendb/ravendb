@@ -58,6 +58,10 @@ namespace Raven.Database.Config
             {"Raven/TimeToWaitBeforeRunningIdleIndexes", "TimeSpan", "00:10:00", "How long the database should be idle for before updating low priority indexes, default: 10 minutes"},
             {"Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle", "TimeSpan", "1:00:00", "How long the database should wait before marking an index with the idle flag, default: 1 hour"},
 
+			{"Raven/TimeToWaitBeforeRunningAbandonedIndexes", "TimeSpan", "3:00:00", "How long the database should be idle for before updating abandoned indexes, default: 3 hours"},
+            {"Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned", "TimeSpan", "72:00:00", "How long the database should wait before marking an index with the abandoned flag, default: 72 hours"},
+
+
 			// Auto Indexing
 			{"Raven/CreateAutoIndexesForAdHocQueriesIfNeeded", "bool", "true", "Whatever we allow creation of auto indexes on dynamic queries"},
 			

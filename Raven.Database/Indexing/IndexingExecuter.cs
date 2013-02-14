@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -34,7 +35,28 @@ namespace Raven.Database.Indexing
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle)
 		{
-			return actions.Staleness.IsMapStale(indexesStat.Name, isIdle);
+			var isStale = actions.Staleness.IsMapStale(indexesStat.Name);
+			var indexingPriority = indexesStat.Priority;
+			if (isStale == false || indexingPriority == IndexingPriority.Normal)
+				return isStale;
+
+			if (indexingPriority.HasFlag(IndexingPriority.Disabled))
+				return false;
+
+			if (isIdle == false)
+				return false; // everything else is only valid on idle runs
+
+			if (indexingPriority.HasFlag(IndexingPriority.Idle))
+				return true;
+
+			if (indexingPriority.HasFlag(IndexingPriority.Abandoned))
+			{
+				var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
+
+				return (timeSinceLastIndexing > context.Configuration.TimeToWaitBeforeRunningAbandonedIndexes);
+			}
+
+			throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Name + ": " + indexesStat.Priority);
 		}
 
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
@@ -160,7 +182,7 @@ namespace Raven.Database.Indexing
 						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
 						indexToWorkOn.Index.CurrentMapIndexingTask = null;
 					}
-					finally 
+					finally
 					{
 						indexingSemaphore.Release();
 						indexingCompletedEvent.Set();
@@ -171,7 +193,7 @@ namespace Raven.Database.Indexing
 							context.NotifyAboutWork();
 						}
 					}
-					
+
 				});
 
 				indexingSemaphore.Wait();
@@ -196,7 +218,7 @@ namespace Raven.Database.Indexing
 			var totalWaitTime = Stopwatch.StartNew();
 			while (indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks)
 			{
-				int timeout = timeToWait - (int) totalWaitTime.ElapsedMilliseconds;
+				int timeout = timeToWait - (int)totalWaitTime.ElapsedMilliseconds;
 				if (timeout <= 0)
 					break;
 				indexingCompletedEvent.Reset();

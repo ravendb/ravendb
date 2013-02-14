@@ -38,9 +38,12 @@ namespace Raven.Abstractions.Data
     public enum IndexingPriority
     {
         Normal = 0,
-        Idle = 32,
-        Forced = 64,
-		Disabled = 128
+		
+		Disabled = 1,
+        Idle = 2,
+		Abandoned = 4,
+
+        Forced = 256,
     }
 
     public class IndexingPerformanceStats
