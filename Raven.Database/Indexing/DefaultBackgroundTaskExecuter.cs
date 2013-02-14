@@ -88,18 +88,23 @@ namespace Raven.Database.Indexing
 		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
 		{
 			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
-			var size = Math.Max(source.Count/maxNumberOfParallelIndexTasks, 256);
+			var size = Math.Max(source.Count / maxNumberOfParallelIndexTasks, 256);
 			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= size)
 			{
 				using (var e = source.GetEnumerator())
 					action(e);
 				return;
 			}
+			int remaining = source.Count;
+			int iteration = 0;
 			var parts = new List<IEnumerator<T>>();
-			for (int i = 0; i < source.Count; i+=size)
+			while (remaining > 0)
 			{
-				parts.Add(Yield(source, i*size, size));
+				parts.Add(Yield(source, iteration * size, size));
+				iteration++;
+				remaining -= size;
 			}
+
 			ExecuteAllInterleaved(context, parts, action);
 		}
 
@@ -143,7 +148,7 @@ namespace Raven.Database.Indexing
 					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
 				}, (item, _, index) =>
 				{
-					using(LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
+					using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
 					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 					{
 						LogContext.DatabaseName.Value = context.DatabaseName;
