@@ -43,7 +43,7 @@ namespace Raven.Client
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, bool trackChanges = false);
+		IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
 
 		/// <summary>
 		/// Setup the context for no aggressive caching

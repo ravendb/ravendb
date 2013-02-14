@@ -90,6 +90,7 @@ namespace Raven.Client.Document
 			ReplicationInformerFactory = url => new ReplicationInformer(this);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
+			ShouldAggressiveCacheTrackChanges = false;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -436,6 +437,14 @@ namespace Raven.Client.Document
 		/// when handling lazy requests
 		/// </summary>
 		public bool UseParallelMultiGet { get; set; }
+
+		/// <summary>
+		/// Whatever or not RavenDB should in the aggressive cache mode use Changes API to track
+		/// changes and rebuild the cache. This will make that outdated data will be revalidated
+		/// to make the cache more updated, however it is still possible to get a state result because of the time
+		/// needed to receive the notification and forcing to check for cached data.
+		/// </summary>
+		public bool ShouldAggressiveCacheTrackChanges { get; set; }
 #if !SILVERLIGHT
 		/// <summary>
 		/// Register an id convention for a single type (and all of its derived types.

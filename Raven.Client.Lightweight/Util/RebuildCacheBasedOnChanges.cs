@@ -6,9 +6,10 @@
 using System;
 using System.Net;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Client.Document;
 
-namespace Raven.Client.Changes
+namespace Raven.Client.Util
 {
 	public class RebuildCacheBasedOnChanges : IObserver<DocumentChangeNotification>, IObserver<IndexChangeNotification>, IDisposable
 	{

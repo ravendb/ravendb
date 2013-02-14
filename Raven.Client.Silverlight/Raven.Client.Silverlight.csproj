@@ -1060,6 +1060,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\ObjectReferenceEqualityComparer.cs">
       <Link>Imports\Util\ObjectReferenceEqualityComparer.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\RebuildCacheBasedOnChanges.cs">
+      <Link>Imports\Util\RebuildCacheBasedOnChanges.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\SimpleCache.cs">
       <Link>Connection\SimpleCache.cs</Link>
     </Compile>

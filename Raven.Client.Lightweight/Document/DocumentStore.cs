@@ -22,6 +22,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Async;
+using Raven.Client.Util;
 #if SILVERLIGHT
 using System.Net.Browser;
 using Raven.Client.Silverlight.Connection;
@@ -70,6 +71,7 @@ namespace Raven.Client.Document
 			  new HttpJsonRequestFactory();
 #endif
 
+		private RebuildCacheBasedOnChanges observeChangesAndRebuildCache;
 
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -707,7 +709,7 @@ namespace Raven.Client.Document
 		/// we provide is current or not, but will serve the information directly from the local cache
 		/// without touching the server.
 		/// </remarks>
-		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, bool trackChanges = false)
+		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
 			AssertInitialized();
 #if !SILVERLIGHT
@@ -717,14 +719,12 @@ namespace Raven.Client.Document
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			RebuildCacheBasedOnChanges observeChangesAndRebuildCache = null;
-			
-			if (trackChanges)
+			if (Conventions.ShouldAggressiveCacheTrackChanges && observeChangesAndRebuildCache == null)
 			{
 				observeChangesAndRebuildCache = new RebuildCacheBasedOnChanges(CreateDatabaseChanges(DefaultDatabase),
-				                                                               jsonRequestFactory.RebuildCache, 
-																			   Credentials,
-																			   Conventions);
+				                                                               jsonRequestFactory.RebuildCache,
+				                                                               Credentials,
+				                                                               Conventions);
 			}
 
 			return new DisposableAction(() =>

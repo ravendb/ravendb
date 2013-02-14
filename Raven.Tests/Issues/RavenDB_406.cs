@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Tests.Linq;
 using Xunit;
 
@@ -20,7 +21,7 @@ namespace Raven.Tests.Issues
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
-				store.Conventions.ShouldCacheRequest = x => true; // default option
+				store.Conventions.ShouldAggressiveCacheTrackChanges = true;
 
 				using (var session = store.OpenSession())
 				{
@@ -32,7 +33,7 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5), true))
+				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 				{
 					// make sure that object is cached
 					using (var session = store.OpenSession())
@@ -54,7 +55,7 @@ namespace Raven.Tests.Issues
 					}
 
 
-					SpinWait.SpinUntil(() =>store.JsonRequestFactory.NumberOfCacheRebuilds > 0, 10000);
+					Assert.True(SpinWait.SpinUntil(() =>store.JsonRequestFactory.NumberOfCacheRebuilds > 0, 10000));
 
 					using (var session = store.OpenSession())
 					{
@@ -72,7 +73,9 @@ namespace Raven.Tests.Issues
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
-				store.Conventions.ShouldCacheRequest = x => true; // default option
+				store.Conventions.ShouldAggressiveCacheTrackChanges = true;
+
+				new RavenDocumentsByEntityName().Execute(store);
 
 				using (var session = store.OpenSession())
 				{
@@ -84,12 +87,15 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5), true))
+				WaitForIndexing(store);
+
+				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 				{
 					// make sure that object is cached
 					using (var session = store.OpenSession())
 					{
-						var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).ToList();
+						var users = session.Query<User>()
+							.ToList(); 
 
 						Assert.Equal("John", users[0].Name);
 					}
@@ -106,11 +112,11 @@ namespace Raven.Tests.Issues
 					}
 
 
-					SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheRebuilds > 0, 10000);
+					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheRebuilds > 0, 10000));
 
 					using (var session = store.OpenSession())
 					{
-						var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).ToList();
+						var users = session.Query<User>().ToList();
 
 						Assert.Equal("Adam", users[0].Name);
 					}
