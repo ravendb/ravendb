@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
@@ -33,12 +34,18 @@ namespace Raven.Database.Indexing
 			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle)
+		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
 			var isStale = actions.Staleness.IsMapStale(indexesStat.Name);
 			var indexingPriority = indexesStat.Priority;
-			if (isStale == false || indexingPriority == IndexingPriority.Normal)
-				return isStale;
+			if (isStale == false)
+				return false;
+
+			if (indexingPriority == IndexingPriority.Normal)
+			{
+				onlyFoundIdleWork.Value = false;
+				return true;
+			}
 
 			if (indexingPriority.HasFlag(IndexingPriority.Disabled))
 				return false;

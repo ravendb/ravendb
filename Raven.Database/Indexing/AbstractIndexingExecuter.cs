@@ -39,12 +39,16 @@ namespace Raven.Database.Indexing
 				var name = GetType().Name;
 				var workComment = "WORK BY " + name;
 			    bool isIdle = false;
-                while (context.RunIndexing)
+				while (context.RunIndexing)
 				{
 					bool foundWork;
 					try
 					{
-						foundWork = ExecuteIndexing(isIdle);
+						bool onlyFoundIdleWork;
+						foundWork = ExecuteIndexing(isIdle, out onlyFoundIdleWork);
+						if (foundWork && onlyFoundIdleWork == false)
+							isIdle = false;
+
 						while (context.RunIndexing) // we want to drain all of the pending tasks before the next run
 						{
 							if (ExecuteTasks() == false)
@@ -191,9 +195,10 @@ namespace Raven.Database.Indexing
 
 		protected abstract void FlushAllIndexes();
 
-		protected bool ExecuteIndexing(bool isIdle)
+		protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
 		{
 			var indexesToWorkOn = new List<IndexToWorkOn>();
+			var localFoundOnlyIdleWork = new Reference<bool>{Value = true};
 			transactionalStorage.Batch(actions =>
 			{
 				foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
@@ -206,7 +211,7 @@ namespace Raven.Database.Indexing
 									   failureRate.FailureRate);
 						continue;
 					}
-					if (IsIndexStale(indexesStat, actions, isIdle) == false)
+					if (IsIndexStale(indexesStat, actions, isIdle, localFoundOnlyIdleWork) == false)
 						continue;
 					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
 					var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
@@ -217,7 +222,7 @@ namespace Raven.Database.Indexing
 					indexesToWorkOn.Add(indexToWorkOn);
 				}
 			});
-
+			onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
@@ -232,7 +237,7 @@ namespace Raven.Database.Indexing
 
 		protected abstract IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat);
 
-		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle);
+		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork);
 
 		protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn);
 

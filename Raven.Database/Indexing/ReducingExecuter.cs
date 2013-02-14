@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -271,8 +272,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle)
+		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
+			onlyFoundIdleWork.Value = false;
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
 
