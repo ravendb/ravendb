@@ -108,7 +108,7 @@ namespace Raven.Database.Indexing
 					itemsToDelete);
 
 				bool retry = true;
-				while (retry)
+				while (retry && reduceParams.ReduceKeys.Count > 0)
 				{
 					transactionalStorage.Batch(actions =>
 					{
