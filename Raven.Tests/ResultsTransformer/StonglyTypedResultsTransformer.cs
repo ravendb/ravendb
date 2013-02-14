@@ -35,23 +35,79 @@ namespace Raven.Tests.ResultsTransformer
             public class Result
             {
                 public string OrderId { get; set; }
-                public string ProductId { get; set; }
                 public string CustomerId { get; set; }
+                public ResultProduct[] Products { get; set; }
+            }
+            
+            public class ResultProduct
+            {
+                public string ProductId { get; set; }
                 public string ProductName { get; set; }
             }
             public OrderWithProductInformation()
             {
 	            TransformResults = orders => from index in orders
 											 let doc = LoadDocument<Order>(index.Id)
-	                                         from productid in doc.ProductIds
-	                                         let product = LoadDocument<Product>(productid)
 	                                         select new
 	                                         {
 		                                         OrderId = doc.Id,
-		                                         ProductId = product.Id,
-		                                         ProductName = product.Name
+                                                 Products = from productid in doc.ProductIds
+                                                            let product = LoadDocument<Product>(productid)
+                                                            select new
+                                                            {
+                                                                 ProductId = product.Id,
+                                                                 ProductName = product.Name
+                                                            }
 	                                         };
             }
+        }
+
+        [Fact]
+        public void CanUseResultsTransformerOnLoadWithRemoteDatabase()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                PerformLoadingTest(store);
+            }
+        }
+
+        [Fact]
+        public void CanUseResultsTransformerOnLoadWithLocalDatabase()
+        {
+            using (var store = NewDocumentStore())
+            {
+                PerformLoadingTest(store);
+            }
+        }
+
+        private void PerformLoadingTest(IDocumentStore store)
+        {
+
+            new OrderWithProductInformation().Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Product {Name = "Milk", Id = "products/milk"});
+                session.Store(new Product {Name = "Bear", Id = "products/bear"});
+
+                session.Store(new Order
+                {
+                    Id = "orders/1",
+                    CustomerId = "customers/ayende",
+                    ProductIds = new[] {"products/milk"}
+                });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var order = session.Load<OrderWithProductInformation, OrderWithProductInformation.Result>("orders/1");
+
+                order.Products = order.Products.OrderBy(x => x.ProductName).ToArray();
+
+                Assert.Equal("Milk", order.Products[0].ProductName);
+                Assert.Equal("products/milk", order.Products[0].ProductId);
+         }
         }
 
         [Fact]
@@ -93,22 +149,19 @@ namespace Raven.Tests.ResultsTransformer
 
             using (var session = store.OpenSession())
             {
-                var results = session.Query<Order>()
+                var customer = session.Query<Order>()
                     .Customize(x => x.WaitForNonStaleResults())
                     .Where(order => order.CustomerId == "customers/bob")
                     .TransformWith<OrderWithProductInformation, OrderWithProductInformation.Result>()
-                    .ToList()
-                    // client side!
-                    .OrderBy(x => x.ProductName)
-                    .ToList();
+                    .Single();
 
-                Assert.Equal(2, results.Count);
+                customer.Products = customer.Products.OrderBy(x => x.ProductName).ToArray();
 
-                Assert.Equal("Milk", results[1].ProductName);
-                Assert.Equal("products/milk", results[1].ProductId);
+                Assert.Equal("Milk", customer.Products[1].ProductName);
+                Assert.Equal("products/milk", customer.Products[1].ProductId);
 
-                Assert.Equal("Bear", results[0].ProductName);
-                Assert.Equal("products/bear", results[0].ProductId);
+                Assert.Equal("Bear", customer.Products[0].ProductName);
+                Assert.Equal("products/bear", customer.Products[0].ProductId);
             }
         }
     }

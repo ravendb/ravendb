@@ -122,7 +122,18 @@ namespace Raven.Client.Embedded
 			return database.Get(key, TransactionInformation);
 		}
 
-		/// <summary>
+	    /// <summary>
+	    /// Retrieves the document with the specified key and performs the transform operation specified on that document
+	    /// </summary>
+	    /// <param name="key">The key</param>
+	    /// <param name="transformer">The transformer to use</param>
+	    /// <returns></returns>
+	    public JsonDocument Get(string key, string transformer)
+	    {
+			return database.GetWithTransformer(key, transformer, TransactionInformation);
+	    }
+
+	    /// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -435,14 +446,15 @@ namespace Raven.Client.Embedded
 			database.DeleteIndex(name);
 		}
 
-		/// <summary>
-		/// Gets the results for the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="includes">The includes.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
+	    /// <summary>
+	    /// Gets the results for the specified ids.
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="metadataOnly">Load just the document metadata</param>
+	    /// <returns></returns>
+	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer, bool metadataOnly = false)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
@@ -451,7 +463,12 @@ namespace Raven.Client.Embedded
 			var multiLoadResult = new MultiLoadResult
 			                      {
 				                      Results = ids
-					                      .Select(id => database.Get(id, TransactionInformation))
+					                      .Select(id =>
+					                      {
+					                          if (string.IsNullOrEmpty(transformer))
+					                              return database.Get(id, TransactionInformation);
+                                              return database.GetWithTransformer(id, transformer, TransactionInformation);
+					                      })
 					                      .ToArray()
 					                      .Select(x => x == null ? null : x.ToJson())
 					                      .ToList(),
