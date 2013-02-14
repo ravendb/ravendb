@@ -22,7 +22,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Async;
-using Raven.Client.Util;
 #if SILVERLIGHT
 using System.Net.Browser;
 using Raven.Client.Silverlight.Connection;
@@ -31,6 +30,7 @@ using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
+using Raven.Client.Util;
 #endif
 
 
@@ -71,8 +71,9 @@ namespace Raven.Client.Document
 			  new HttpJsonRequestFactory();
 #endif
 
+#if !SILVERLIGHT
 		private RebuildCacheBasedOnChanges observeChangesAndRebuildCache;
-
+#endif
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
 		///</summary>
