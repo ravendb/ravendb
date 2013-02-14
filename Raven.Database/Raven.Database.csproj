@@ -236,6 +236,7 @@
     <Compile Include="Indexing\CurrentTransformationScope.cs" />
     <Compile Include="Indexing\IndexCommitPoint.cs" />
     <Compile Include="Indexing\IndexCommitPointDirectory.cs" />
+    <Compile Include="Indexing\DynamicLuceneOrDocumntObject.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
