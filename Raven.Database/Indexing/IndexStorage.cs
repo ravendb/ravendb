@@ -643,9 +643,9 @@ namespace Raven.Database.Indexing
                     
                     if(age < 15)
                         continue; // too young to make decisions about this one yet
-                    
-                    if ((age < 25 && lastQuery > 15) || 
-                        (age < 60 && lastQuery > 25))
+
+					if (thisItem.Priority.HasFlag(IndexingPriority.Idle) == false && 
+						((age < 25 && lastQuery > 15) ||  (age < 60 && lastQuery > 25)))
                     {
                         accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
                         thisItem.Index.Priority = IndexingPriority.Idle;
