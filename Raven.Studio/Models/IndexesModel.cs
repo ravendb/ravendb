@@ -20,6 +20,9 @@ namespace Raven.Studio.Models
 		public IndexesModel()
 		{
 			ModelUrl = "/indexes";
+			ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+																	   "/indexes";
 			GroupedIndexes =
 				new ObservableCollection<IndexListItem>();
 			ItemSelection = new ItemSelection<IndexItem>();
@@ -64,9 +67,9 @@ namespace Raven.Studio.Models
 
 		private Tuple<string, int> GetIndexGroup(string indexName)
 		{
-			if (indexName.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase))
+			if (indexName.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase))
 				return Tuple.Create("Temp Indexes", 1);
-			if (indexName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase))
+			if (indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
 				return Tuple.Create("Auto Indexes", 2);
 			return Tuple.Create("Indexes", 3);
 		}

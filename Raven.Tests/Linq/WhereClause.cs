@@ -225,7 +225,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from user in indexedUsers
-					where user.Name.Equals("ayende", StringComparison.InvariantCultureIgnoreCase)
+					where user.Name.Equals("ayende", StringComparison.OrdinalIgnoreCase)
 					select user;
 			Assert.Equal("Name:ayende", q.ToString());
 		}
@@ -479,7 +479,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void NegatingSubClauses()
 		{
-			var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null, null)).Not
+			var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null, null, false)).Not
 				.OpenSubclause()
 				.WhereEquals("IsPublished", true)
 				.AndAlso()

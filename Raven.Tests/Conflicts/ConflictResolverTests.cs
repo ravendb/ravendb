@@ -82,7 +82,7 @@ namespace Raven.Tests.Conflicts
 					}}
 			});
 			Assert.Equal(@"{
-  ""Name"":{
+  ""Name"": {
     ""First"": ""Oren"",
     ""Last"": ""Eini""
   }

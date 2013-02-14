@@ -129,7 +129,7 @@ namespace Raven.Storage.Managed
 			var indexStats = GetCurrentIndex(index);
 			indexStats["reduce_attempts"] = indexStats.Value<int>("reduce_attempts") + stats.ReduceAttempts;
 			indexStats["reduce_successes"] = indexStats.Value<int>("reduce_successes") + stats.ReduceSuccesses;
-			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceSuccesses;
+			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceErrors;
 			storage.IndexingStats.UpdateKey(indexStats);
 
 		}
@@ -170,7 +170,17 @@ namespace Raven.Storage.Managed
 			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject { { "ref", key } })
 				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase))
 				.Select(x => x.Value<string>("key"))
-				.Distinct(StringComparer.InvariantCultureIgnoreCase);
+				.Distinct(StringComparer.OrdinalIgnoreCase);
+		}
+
+		public int GetCountOfDocumentsReferencing(string key)
+		{
+			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject {{"ref", key}})
+			                                          .TakeWhile(
+				                                          x =>
+				                                          key.Equals(x.Value<string>("ref"),
+				                                                     StringComparison.CurrentCultureIgnoreCase))
+			                                          .Count();
 		}
 
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
@@ -178,7 +188,7 @@ namespace Raven.Storage.Managed
 			return storage.DocumentReferences["ByKey"].SkipTo(new RavenJObject { { "ref", key } })
 				.TakeWhile(x => key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase))
 				.Select(x => x.Value<string>("ref"))
-				.Distinct(StringComparer.InvariantCultureIgnoreCase);
+				.Distinct(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public void DeleteIndex(string name)
@@ -188,7 +198,7 @@ namespace Raven.Storage.Managed
 			foreach (var table in new[] { storage.MappedResults, storage.ReduceResults, storage.ScheduleReductions, storage.ReduceKeys, storage.DocumentReferences })
 			{
 				foreach (var key in table["ByView"].SkipTo(new RavenJObject { { "view", name } })
-					.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), name)))
+					.TakeWhile(x => StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("view"), name)))
 				{
 					table.Remove(key);
 				}

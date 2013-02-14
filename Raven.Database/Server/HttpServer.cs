@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -62,12 +63,12 @@ namespace Raven.Database.Server
 		private readonly ThreadLocal<InMemoryRavenConfiguration> currentConfiguration = new ThreadLocal<InMemoryRavenConfiguration>();
 
 		protected readonly ConcurrentSet<string> LockedDatabases =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		protected readonly AtomicDictionary<Task<DocumentDatabase>> ResourcesStoresCache =
-			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.InvariantCultureIgnoreCase);
+			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 
-		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
 		public int NumberOfRequests
@@ -206,7 +207,7 @@ namespace Raven.Database.Server
 					Memory = new
 					{
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
-						ManagedMemorySizeInMB = ConvertBytesToMBs(GC.GetTotalMemory(false)),
+						ManagedMemorySizeInMB = ConvertBytesToMBs(GetCurrentManagedMemorySize()),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
 						Databases = allDbs.Select(db => new
 						{
@@ -216,8 +217,10 @@ namespace Raven.Database.Server
 					},
 					LoadedDatabases =
 						from documentDatabase in allDbs
-						let totalSizeOnDisk = documentDatabase.Database.GetTotalSizeOnDisk()
-						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
+						let indexStorageSize = documentDatabase.Database.GetIndexStorageSizeOnDisk()
+						let transactionalStorageSize = documentDatabase.Database.GetTransactionalStorageSizeOnDisk()
+						let totalDatabaseSize = indexStorageSize + transactionalStorageSize
+						let lastUsed = databaseLastRecentlyUsed.GetOrDefault( documentDatabase.Name )
 						select new
 						{
 							documentDatabase.Name,
@@ -226,8 +229,12 @@ namespace Raven.Database.Server
 								lastUsed, 
 								documentDatabase.Database.WorkContext.LastWorkTime
 							}.Max(),
-							Size = totalSizeOnDisk,
-							HumaneSize = DatabaseSize.Humane(totalSizeOnDisk),
+							TransactionalStorageSize = transactionalStorageSize,
+							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane( transactionalStorageSize ),
+							IndexStorageSize = indexStorageSize,
+							IndexStorageHumaneSize = DatabaseSize.Humane( indexStorageSize ),
+							TotalDatabaseSize = totalDatabaseSize,
+							TotalDatabaseHumaneSize = DatabaseSize.Humane( totalDatabaseSize ),
 							documentDatabase.Database.Statistics.CountOfDocuments,
 							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
 							documentDatabase.Database.WorkContext.ConcurrentRequests
@@ -246,6 +253,19 @@ namespace Raven.Database.Server
 			using (var p = Process.GetCurrentProcess())
 				return p.PrivateMemorySize64;
 		}
+
+		private static long GetCurrentManagedMemorySize()
+		{
+			var safelyGetPerformanceCounter = PerformanceCountersUtils.SafelyGetPerformanceCounter(
+				".NET CLR Memory", "# Total committed Bytes", CurrentProcessName.Value);
+			return safelyGetPerformanceCounter ?? GC.GetTotalMemory(false);
+		}
+
+		private static readonly Lazy<string> CurrentProcessName = new Lazy<string>(() =>
+		{
+			using (var p = Process.GetCurrentProcess())
+				return p.ProcessName;
+		});
 
 		public void Dispose()
 		{
@@ -1114,7 +1134,7 @@ namespace Raven.Database.Server
 			string maxDatabases;
 			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfDatabases", out maxDatabases))
 			{
-				if (string.Equals(maxDatabases, "unlimited", StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(maxDatabases, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
 				{
 					var numberOfAllowedDbs = int.Parse(maxDatabases);
 
@@ -1239,7 +1259,7 @@ namespace Raven.Database.Server
 
 			// The Studio xap is already a compressed file, it's a waste of time to try to compress it further.
 			var requestUrl = ctx.GetRequestUrl();
-			if (String.Equals(requestUrl, "/silverlight/Raven.Studio.xap", StringComparison.InvariantCultureIgnoreCase))
+			if (String.Equals(requestUrl, "/silverlight/Raven.Studio.xap", StringComparison.OrdinalIgnoreCase))
 				return;
 
 			// gzip must be first, because chrome has an issue accepting deflate data
@@ -1265,7 +1285,7 @@ namespace Raven.Database.Server
 
 		public Task<DocumentDatabase> GetDatabaseInternal(string name)
 		{
-			if (string.Equals("System", name, StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals("System", name, StringComparison.OrdinalIgnoreCase))
 				return new CompletedTask<DocumentDatabase>(SystemDatabase);
 
 			Task<DocumentDatabase> db;
@@ -1278,7 +1298,7 @@ namespace Raven.Database.Server
 		{
 			if (databaseDocument.SecuredSettings == null)
 			{
-				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 				return;
 			}
 
@@ -1295,7 +1315,7 @@ namespace Raven.Database.Server
 		{
 			if (databaseDocument.SecuredSettings == null)
 			{
-				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 				return;
 			}
 

@@ -27,6 +27,7 @@ using Raven.Database.Bundles.Replication;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Tasks
@@ -41,7 +42,7 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
-			new ConcurrentDictionary<string, DestinationStats>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
 
 		private DocumentDatabase docDb;
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -184,7 +185,7 @@ namespace Raven.Bundles.Replication.Tasks
 					var match = replicationDestinations.FirstOrDefault(x =>
 														   string.Equals(x.ConnectionStringOptions.Url,
 																		 sourceReplicationInformation.Source,
-																		 StringComparison.InvariantCultureIgnoreCase));
+																		 StringComparison.OrdinalIgnoreCase));
 
 					if (match != null)
 					{
@@ -618,17 +619,7 @@ namespace Raven.Bundles.Replication.Tasks
 					result.LastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 					while (true)
 					{
-						docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024*1024*25)
-							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, 1024)
-								        .Select(x => new JsonDocument
-								        {
-									        Etag = x.Etag,
-									        Key = x.Key,
-									        Metadata = x.Data,
-									        DataAsJson = new RavenJObject()
-								        }))
-							.OrderBy(x => x.Etag)
-							.ToList();
+						docsToReplicate = GetDocsToReplicate(actions, result);
 
 						filteredDocsToReplicate =
 							docsToReplicate
@@ -702,6 +693,26 @@ namespace Raven.Bundles.Replication.Tasks
 			return result;
 		}
 
+		private static List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, JsonDocumentsToReplicate result)
+		{
+			var docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024*1024*25).ToList();
+			Etag lastEtag = null;
+			if (docsToReplicate.Count > 0)
+			{
+				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
+			}
+			return docsToReplicate.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, lastEtag, 1024)
+					        .Select(x => new JsonDocument
+					        {
+						        Etag = x.Etag,
+						        Key = x.Key,
+						        Metadata = x.Data,
+						        DataAsJson = new RavenJObject()
+					        }))
+				.OrderBy(x => x.Etag)
+				.ToList();
+		}
+
 
 		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
 		{
@@ -719,18 +730,7 @@ namespace Raven.Bundles.Replication.Tasks
 					lastAttachmentEtag = destinationsReplicationInformationForSource.LastAttachmentEtag;
 					while (true)
 					{
-						attachmentsToReplicate = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024 * 1024 * 10)
-							.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, 100)
-										.Select(x => new AttachmentInformation
-										{
-											Key = x.Key,
-											Etag = x.Etag,
-											Metadata = x.Data,
-											Size = 0,
-										}))
-							.OrderBy(x => x.Etag)
-
-							.ToList();
+						attachmentsToReplicate = GetAttachmentsToReplicate(actions, lastAttachmentEtag);
 
 						filteredAttachmentsToReplicate = attachmentsToReplicate.Where(attachment => destination.FilterAttachments(attachment, destinationId)).ToList();
 
@@ -792,6 +792,27 @@ namespace Raven.Bundles.Replication.Tasks
 				log.WarnException("Could not get attachments to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
 			}
 			return Tuple.Create(attachments, lastAttachmentEtag);
+		}
+
+		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag)
+		{
+			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024*1024*10).ToList();
+
+			Etag lastEtag = null;
+			if (attachmentInformations.Count > 0)
+				lastEtag = attachmentInformations[attachmentInformations.Count - 1].Etag;
+
+			return attachmentInformations
+				.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, 100)
+					        .Select(x => new AttachmentInformation
+					        {
+						        Key = x.Key,
+						        Etag = x.Etag,
+						        Metadata = x.Data,
+						        Size = 0,
+					        }))
+				.OrderBy(x => new ComparableByteArray(x.Etag))
+				.ToList();
 		}
 
 		private SourceReplicationInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
@@ -930,6 +951,6 @@ namespace Raven.Bundles.Replication.Tasks
 			docDb.WorkContext.NotifyAboutWork();
 		}
 
-		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 	}
 }

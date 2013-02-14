@@ -1,16 +1,18 @@
-﻿#if !SILVERLIGHT
+﻿#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Listeners;
 using Raven.Client.Connection.Async;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
 {
@@ -26,12 +28,12 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif 
-			, IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+			, IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
 			: base(session
 #if !SILVERLIGHT
 			, databaseCommands
 #endif
-			, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners)
+			, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
 
@@ -50,7 +52,7 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			var props = typeof (TProjection).GetProperties().Select(x => x.Name).ToArray();
+			var props = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Select(x => x.Name).ToArray();
 			return SelectFields<TProjection>(props, props);
 		}
 
@@ -71,13 +73,14 @@ namespace Raven.Client.Document
 		{
 			var documentQuery = new DocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
-			                                                   theDatabaseCommands,
+															   theDatabaseCommands,
 #endif
-			                                                   theAsyncDatabaseCommands,
-			                                                   indexName, 
+															   theAsyncDatabaseCommands,
+															   indexName, 
 															   fields,
 															   projections,
-			                                                   queryListeners)
+															   queryListeners, 
+															   isMapReduce)
 			{
 				pageSize = pageSize,
 				queryText = new StringBuilder(queryText.ToString()),
@@ -103,6 +106,9 @@ namespace Raven.Client.Document
 				defaultField = defaultField,
 				beforeQueryExecutionAction = beforeQueryExecutionAction,
 				afterQueryExecutedCallback = afterQueryExecutedCallback,
+				highlightedFields = new List<HighlightedField>(highlightedFields),
+				highlighterPreTags = highlighterPreTags,
+				highlighterPostTags = highlighterPostTags
 			};
 			return documentQuery;
 		}
@@ -742,6 +748,60 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
 			OrderByDescending(propertySelectors.Select(GetMemberQueryPath).ToArray());
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
+			string fieldName, 
+			int fragmentLength, 
+			int fragmentCount, 
+			string fragmentsField)
+		{
+			Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
+			string fieldName, 
+			int fragmentLength, 
+			int fragmentCount, 
+			out FieldHighlightings highlightings)
+		{
+			this.Highlight(fieldName, fragmentLength, fragmentCount, out highlightings);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			Expression<Func<T, IEnumerable>> fragmentsPropertySelector)
+		{
+			var fieldName = this.GetMemberQueryPath(propertySelector);
+			var fragmentsField = this.GetMemberQueryPath(fragmentsPropertySelector);
+			this.Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			out FieldHighlightings fieldHighlightings)
+		{
+			this.Highlight(this.GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
+		{
+			this.SetHighlighterTags(new[]{preTag},new[]{postTag});
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string[] preTags, string[] postTags)
+		{
+			this.SetHighlighterTags(preTags, postTags);
 			return this;
 		}
 

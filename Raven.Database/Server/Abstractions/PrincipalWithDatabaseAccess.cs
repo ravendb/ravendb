@@ -12,9 +12,9 @@ namespace Raven.Database.Server.Abstractions
 		{
 			Principal = principal;
 			Identity = principal.Identity;
-			AdminDatabases = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-			ReadOnlyDatabases = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-			ReadWriteDatabases = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			AdminDatabases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			ReadOnlyDatabases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			ReadWriteDatabases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public bool IsInRole(string role)
@@ -22,7 +22,6 @@ namespace Raven.Database.Server.Abstractions
 			return Principal.IsInRole(role);
 		}
 
-		public bool? ExplicitlyConfigured { get; set; }
 		public IIdentity Identity { get; private set; }
 		public HashSet<string> AdminDatabases { get; private set; }
 		public HashSet<string> ReadOnlyDatabases { get; private set; }

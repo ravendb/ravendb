@@ -28,9 +28,9 @@ using Raven.Imports.Newtonsoft.Json.Converters;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
@@ -112,6 +112,19 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
       DeserializeVersionClass("1.2", "2.3");
       DeserializeVersionClass("1.2.3", "2.3.4");
       DeserializeVersionClass("1.2.3.4", "2.3.4.5");
+    }
+
+    [Test]
+    public void RoundtripImplicitConverter()
+    {
+      var version = new Version(1, 0, 0, 0);
+      string reportJSON = JsonConvert.SerializeObject(version);
+
+      //Test
+      Version report2 = JsonConvert.DeserializeObject<Version>(reportJSON);
+      string reportJSON2 = JsonConvert.SerializeObject(report2);
+
+      Assert.AreEqual(reportJSON, reportJSON2);
     }
   }
 }

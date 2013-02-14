@@ -15,7 +15,10 @@ namespace Raven.Abstractions.Data
 		public string GlacierVaultName { get; set; }
 		public string S3BucketName { get; set; }
 		public string AwsRegionEndpoint { get; set; }
-		public int Interval { get; set; }
+
+		public string LocalFolderName { get; set; }
+
+		public int IntervalMilliseconds { get; set; }
 
 		public Etag LastDocsEtag { get; set; }
 		public Etag LastAttachmentsEtag { get; set; }

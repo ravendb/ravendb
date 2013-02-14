@@ -24,7 +24,7 @@ namespace Raven.Studio.Commands
             if (index == null)
                 return false;
 
-			return index.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase);
+			return index.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase);
 		}
 
         protected override void ExecuteOverride(IEnumerable<IndexItem> items)

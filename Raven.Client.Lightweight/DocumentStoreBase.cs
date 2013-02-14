@@ -17,6 +17,8 @@ using Raven.Client.Listeners;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
@@ -54,8 +56,8 @@ namespace Raven.Client
 		public abstract IDatabaseChanges Changes(string database = null);
 
 		public abstract IDisposable DisableAggressiveCaching();
-		
-#if !SILVERLIGHT
+
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
@@ -72,7 +74,7 @@ namespace Raven.Client
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
@@ -138,7 +140,7 @@ namespace Raven.Client
 			return LastEtagHolder.GetLastWrittenEtag();
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 		protected void EnsureNotClosed()

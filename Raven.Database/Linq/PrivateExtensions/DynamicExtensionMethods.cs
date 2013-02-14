@@ -24,7 +24,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 
 		public static object IfEntityIs(dynamic o, string entityName)
 		{
-			if (string.Equals(o[Constants.Metadata][Constants.RavenEntityName], entityName, StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(o[Constants.Metadata][Constants.RavenEntityName], entityName, StringComparison.OrdinalIgnoreCase))
 				return o;
 			return new DynamicNullObject();
 		}

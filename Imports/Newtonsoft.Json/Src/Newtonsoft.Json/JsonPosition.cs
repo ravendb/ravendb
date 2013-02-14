@@ -23,8 +23,11 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -39,45 +42,39 @@ namespace Raven.Imports.Newtonsoft.Json
   internal struct JsonPosition
   {
     internal JsonContainerType Type;
-    internal int? Position;
+    internal int Position;
     internal string PropertyName;
+    internal bool HasIndex;
+
+    public JsonPosition(JsonContainerType type)
+    {
+      Type = type;
+      HasIndex = TypeHasIndex(type);
+      Position = -1;
+      PropertyName = null;
+    }
 
     internal void WriteTo(StringBuilder sb)
     {
       switch (Type)
       {
         case JsonContainerType.Object:
-          if (PropertyName != null)
-          {
-            if (sb.Length > 0)
-              sb.Append(".");
-            sb.Append(PropertyName);
-          }
+          if (sb.Length > 0)
+            sb.Append(".");
+          sb.Append(PropertyName);
           break;
         case JsonContainerType.Array:
         case JsonContainerType.Constructor:
-          if (Position != null)
-          {
-            sb.Append("[");
-            sb.Append(Position);
-            sb.Append("]");
-          }
+          sb.Append("[");
+          sb.Append(Position);
+          sb.Append("]");
           break;
       }
     }
 
-    internal bool InsideContainer()
+    internal static bool TypeHasIndex(JsonContainerType type)
     {
-      switch (Type)
-      {
-        case JsonContainerType.Object:
-          return (PropertyName != null);
-        case JsonContainerType.Array:
-        case JsonContainerType.Constructor:
-          return (Position != null);
-      }
-
-      return false;
+      return (type == JsonContainerType.Array || type == JsonContainerType.Constructor);
     }
 
     internal static string BuildPath(IEnumerable<JsonPosition> positions)
@@ -90,6 +87,29 @@ namespace Raven.Imports.Newtonsoft.Json
       }
 
       return sb.ToString();
+    }
+
+    internal static string FormatMessage(IJsonLineInfo lineInfo, string path, string message)
+    {
+      // don't add a fullstop and space when message ends with a new line
+      if (!message.EndsWith(Environment.NewLine))
+      {
+        message = message.Trim();
+
+        if (!message.EndsWith("."))
+          message += ".";
+
+        message += " ";
+      }
+
+      message += "Path '{0}'".FormatWith(CultureInfo.InvariantCulture, path);
+
+      if (lineInfo != null && lineInfo.HasLineInfo())
+        message += ", line {0}, position {1}".FormatWith(CultureInfo.InvariantCulture, lineInfo.LineNumber, lineInfo.LinePosition);
+
+      message += ".";
+
+      return message;
     }
   }
 }

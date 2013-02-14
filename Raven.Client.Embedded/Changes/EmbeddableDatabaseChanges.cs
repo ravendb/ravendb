@@ -15,12 +15,12 @@ namespace Raven.Client.Embedded.Changes
 		private readonly EmbeddableObservableWithTask<DocumentChangeNotification> documentsObservable;
 
 		private readonly BlockingCollection<Action> enqueuedActions = new BlockingCollection<Action>();
-		private Task enqueuedTask;
+		private readonly Task enqueuedTask;
 
 		public EmbeddableDatabaseChanges(EmbeddableDocumentStore embeddableDocumentStore, Action onDispose)
 		{
 			this.onDispose = onDispose;
-			Task = new CompletedTask();
+			Task = new CompletedTask<IDatabaseChanges>(this);
 			indexesObservable = new EmbeddableObservableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObservableWithTask<DocumentChangeNotification>();
 
@@ -29,7 +29,7 @@ namespace Raven.Client.Embedded.Changes
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnDocumentChangeNotification += (o, notification) =>
 				 enqueuedActions.Add(() => documentsObservable.Notify(o, notification));
 
-			enqueuedTask = Task.Factory.StartNew(() =>
+			enqueuedTask = System.Threading.Tasks.Task.Factory.StartNew(() =>
 			{
 				while (true)
 				{
@@ -43,12 +43,12 @@ namespace Raven.Client.Embedded.Changes
 
 		public bool Connected { get; private set; }
 		public event EventHandler ConnectionStatusChanged = delegate {  };
-		public Task Task { get; private set; }
+		public Task<IDatabaseChanges>  Task { get; private set; }
 
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{
 			return new FilteringObservableWithTask<IndexChangeNotification>(indexesObservable,
-				notification => string.Equals(indexName, notification.Name, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(indexName, notification.Name, StringComparison.OrdinalIgnoreCase));
 		}
 
 		public IObservableWithTask<DocumentChangeNotification> ForAllDocuments()
@@ -66,7 +66,7 @@ namespace Raven.Client.Embedded.Changes
 		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
 		{
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
-				notification => string.Equals(docId, notification.Id, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(docId, notification.Id, StringComparison.OrdinalIgnoreCase));
 		}
 
 		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
@@ -74,7 +74,7 @@ namespace Raven.Client.Embedded.Changes
 			if (docIdPrefix == null) throw new ArgumentNullException("docIdPrefix");
 
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
-				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 		}
 
 		public void Dispose()

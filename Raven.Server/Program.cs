@@ -85,8 +85,8 @@ namespace Raven.Server
 
 			Console.Error.WriteLine(msg);
 
-			if(args.Contains("--msgbox", StringComparer.InvariantCultureIgnoreCase) || 
-				args.Contains("/msgbox", StringComparer.InvariantCultureIgnoreCase))
+			if(args.Contains("--msgbox", StringComparer.OrdinalIgnoreCase) || 
+				args.Contains("/msgbox", StringComparer.OrdinalIgnoreCase))
 		{
 				MessageBox.Show(msg, "RavenDB Startup failure");
 			}
@@ -210,6 +210,14 @@ namespace Raven.Server
 
 		}
 
+		public static void DumpToCsv(RavenConfiguration ravenConfiguration)
+		{
+			using (var db = new DocumentDatabase(ravenConfiguration))
+			{
+				db.TransactionalStorage.DumpAllStorageTables();
+			}
+		}
+
 		private static void SetupPerfCounters(string user)
 		{
 			user = user ?? WindowsIdentity.GetCurrent().Name;
@@ -222,7 +230,7 @@ namespace Raven.Server
 
 		private static void ProtectConfiguration(string file)
 		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);
@@ -239,7 +247,7 @@ namespace Raven.Server
 
 		private static void UnprotectConfiguration(string file)
 		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);
@@ -280,13 +288,11 @@ Configuration options:
 				var ravenConfiguration = new RavenConfiguration();
 				if (File.Exists(Path.Combine(backupLocation, "Raven.ravendb")))
 				{
-					ravenConfiguration.DefaultStorageTypeName =
-						"Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
 				else if (Directory.Exists(Path.Combine(backupLocation, "new")))
 				{
-					ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
-
+					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 				}
 				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, Console.WriteLine, defrag);
 			}

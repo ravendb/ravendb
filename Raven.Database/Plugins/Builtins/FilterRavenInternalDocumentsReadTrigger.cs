@@ -15,7 +15,7 @@ namespace Raven.Database.Plugins.Builtins
 		{
 			if(key == null)
 				return ReadVetoResult.Allowed;
-			if (key.StartsWith("Raven/",StringComparison.InvariantCultureIgnoreCase))
+			if (key.StartsWith("Raven/",StringComparison.OrdinalIgnoreCase))
 			{
 				switch (operation)
 				{

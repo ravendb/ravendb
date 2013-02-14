@@ -63,7 +63,7 @@ namespace Raven.Database.Linq
 			RequiresSelectNewAnonymousType = true;
 		}
 
-		private static readonly ConcurrentSet<string> paths = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private static readonly ConcurrentSet<string> paths = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		private static void MaybeCleanupDirectory(string path)
 		{
@@ -462,7 +462,7 @@ Reduce only fields: {2}
 					new List<Expression> { new StringLiteralExpression(Constants.RavenEntityName) }
 					);
 
-				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
+				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.OrdinalIgnoreCase)
 				var binaryOperatorExpression =
 					new InvocationExpression(
 						new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
@@ -509,7 +509,7 @@ Reduce only fields: {2}
 					new List<Expression> { new StringLiteralExpression(Constants.RavenEntityName) }
 					);
 
-				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
+				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.OrdinalIgnoreCase)
 				var binaryOperatorExpression =
 					new InvocationExpression(
 						new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
@@ -526,11 +526,16 @@ Reduce only fields: {2}
 														 Condition = binaryOperatorExpression
 													 });
 			}
-			var projection = queryExpression.Clauses.OfType<QuerySelectClause>().First().Expression;
-			if (projection is AnonymousTypeCreateExpression == false)
+			var projection = 
+				QueryParsingUtils.GetAnonymousCreateExpression(
+					queryExpression.Clauses.OfType<QuerySelectClause>().First().Expression);
+
+			var anonymousTypeCreateExpression = projection as AnonymousTypeCreateExpression;
+
+			if (anonymousTypeCreateExpression == null)
 				return variableDeclaration;
 
-			var objectInitializer = ((AnonymousTypeCreateExpression)projection).Initializers;
+			var objectInitializer = anonymousTypeCreateExpression.Initializers;
 
 			var identifierExpression = new IdentifierExpression(fromClause.Identifier);
 

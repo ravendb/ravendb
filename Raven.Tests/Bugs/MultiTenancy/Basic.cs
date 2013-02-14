@@ -15,6 +15,7 @@ using Raven.Server;
 using Xunit;
 using Raven.Client.Extensions;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
@@ -205,6 +206,41 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				{
 					Assert.NotNull(s.Load<User>(userId));
 				}
+			}
+		}
+
+		[Fact]
+		public void RavenDocumentsByEntityNameIndexCreated()
+		{
+			using (GetNewServer(8079))
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+				var index = store.DatabaseCommands.ForDatabase("Northwind").GetIndex("Raven/DocumentsByEntityName");
+				Assert.NotNull(index);
+			}
+		}
+
+		[Fact]
+		public void RavenDocumentsByEntityNameIndexCreatedAsync()
+		{
+			using (GetNewServer(8079))
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				 Task task = store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync("Northwind").ContinueWith(x =>
+ 				{
+					var index = store.DatabaseCommands.ForDatabase("Northwind").GetIndex("Raven/DocumentsByEntityName");
+					Assert.NotNull(index);
+ 				});
+ 
+ 				task.Wait();
+
 			}
 		}
 

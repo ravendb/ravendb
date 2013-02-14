@@ -36,7 +36,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
   public class JConstructor : JContainer
   {
     private string _name;
-    private readonly IList<JToken> _values = new List<JToken>();
+    private readonly List<JToken> _values = new List<JToken>();
 
     /// <summary>
     /// Gets the container's children tokens.
@@ -185,6 +185,11 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       {
         if (!reader.Read())
           throw JsonReaderException.Create(reader, "Error reading JConstructor from JsonReader.");
+      }
+
+      while (reader.TokenType == JsonToken.Comment)
+      {
+        reader.Read();
       }
 
       if (reader.TokenType != JsonToken.StartConstructor)

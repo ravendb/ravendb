@@ -3,10 +3,17 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Extensions;
+#if NETFX_CORE
+using Raven.Client.WinRT.Connection;
+#else
+using Raven.Client.Connection;
+using Raven.Imports.Newtonsoft.Json;
+#endif
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
@@ -24,6 +31,8 @@ namespace Raven.Client.Document
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
+		private readonly BulkInsertOptions options;
+		private readonly ServerClient client;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 		private readonly HttpJsonRequest httpJsonRequest;
 		private readonly BlockingCollection<RavenJObject> items;
@@ -32,6 +41,8 @@ namespace Raven.Client.Document
 
 		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client)
 		{
+			this.options = options;
+			this.client = client;
 			items = new BlockingCollection<RavenJObject>(options.BatchSize*8);
 			string requestUrl = "/bulkInsert?";
 			if (options.CheckForUpdates)
@@ -39,35 +50,52 @@ namespace Raven.Client.Document
 			if (options.CheckReferencesInIndexes)
 				requestUrl += "&checkReferencesInIndexes=true";
 
+			var expect100Continue = client.Expect100Continue();
+
 			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
 			HttpJsonRequest req = client.CreateRequest("POST", requestUrl + "&no-op=for-auth-only",
 			                                           disableRequestCompression: true);
+			req.PrepareForLongRequest();
 			req.ExecuteRequest();
 
 
 			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
+			// the request may take a long time to process, so we need to set a large timeout value
+			httpJsonRequest.PrepareForLongRequest();
 			nextTask = httpJsonRequest.GetRawRequestStream()
 			                          .ContinueWith(task =>
 			                          {
-				                          Stream requestStream = task.Result;
-				                          while (true)
+				                          try
 				                          {
-					                          var batch = new List<RavenJObject>();
-					                          RavenJObject item;
-					                          while (items.TryTake(out item, 200))
-					                          {
-						                          if (item == null) // marker
-						                          {
-							                          FlushBatch(requestStream, batch);
-							                          return;
-						                          }
-						                          batch.Add(item);
-						                          if (batch.Count >= options.BatchSize)
-							                          break;
-					                          }
-					                          FlushBatch(requestStream, batch);
+					                          expect100Continue.Dispose();
 				                          }
+				                          catch (Exception)
+				                          {
+				                          }
+										  WriteQueueToServer(task);
 			                          });
+		}
+
+		private void WriteQueueToServer(Task<Stream> task)
+		{
+			Stream requestStream = task.Result;
+			while (true)
+			{
+				var batch = new List<RavenJObject>();
+				RavenJObject item;
+				while (items.TryTake(out item, 200))
+				{
+					if (item == null) // marker
+					{
+						FlushBatch(requestStream, batch);
+						return;
+					}
+					batch.Add(item);
+					if (batch.Count >= options.BatchSize)
+						break;
+				}
+				FlushBatch(requestStream, batch);
+			}
 		}
 
 		public event Action<string> Report;
@@ -97,7 +125,26 @@ namespace Raven.Client.Document
 				{
 					report("Finished writing all results to server");
 				}
-				httpJsonRequest.RawExecuteRequest();
+				long id;
+
+				using (var response = httpJsonRequest.RawExecuteRequest())
+				using(var stream = response.GetResponseStream())
+				using(var streamReader = new StreamReader(stream))
+				{
+					var result = RavenJObject.Load(new JsonTextReader(streamReader));
+					id = result.Value<long>("OperationId");
+				}
+
+				while (true)
+				{
+					var status = client.GetOperationStatus(id);
+					if (status == null)
+						break;
+					if (status.Value<bool>("Completed"))
+						break;
+					Thread.Sleep(500);
+				}
+
 				if (report != null)
 				{
 					report("Done writing to server");

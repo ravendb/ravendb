@@ -153,6 +153,11 @@ namespace Raven.Database.Json
 				document[propName] = token;
 			}
 			var array = GetArray(token, propName);
+			if (array.IsSnapshot)
+			{
+				array = new RavenJArray(array);
+				document[propName] = array;
+			}
 
 			var position = patchCmd.Position;
 			var value = patchCmd.Value;
@@ -207,8 +212,13 @@ namespace Raven.Database.Json
 				document[propName] = token;
 			}
 			var array = GetArray(token, propName);
-
+			if (array.IsSnapshot)
+			{
+				array = new RavenJArray(array);
+				document[propName] = array;
+			}
 			array.Add(patchCmd.Value);
+
 		}
 
 		private static RavenJArray GetArray(RavenJToken property, string propName)

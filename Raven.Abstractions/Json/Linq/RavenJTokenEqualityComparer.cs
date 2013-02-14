@@ -5,8 +5,10 @@ namespace Raven.Json.Linq
 	/// <summary>
 	/// Compares tokens to determine whether they are equal.
 	/// </summary>
-	public class RavenJTokenEqualityComparer : IEqualityComparer<RavenJToken>
+	public class RavenJTokenEqualityComparer : IEqualityComparer<RavenJToken>, IEqualityComparer<object>
 	{
+		public readonly static RavenJTokenEqualityComparer Default = new RavenJTokenEqualityComparer();
+
 		/// <summary>
 		/// Determines whether the specified objects are equal.
 		/// </summary>
@@ -32,6 +34,16 @@ namespace Raven.Json.Linq
 				return 0;
 
 			return obj.GetDeepHashCode();
+		}
+
+		public new bool Equals(object x, object y)
+		{
+			return this.Equals((RavenJToken) x, (RavenJToken) y);
+		}
+
+		public int GetHashCode(object obj)
+		{
+			return GetHashCode((RavenJToken) obj);
 		}
 	}
 }

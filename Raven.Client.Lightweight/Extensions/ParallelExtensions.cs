@@ -8,6 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+#if NETFX_CORE
+using Raven.Imports.Newtonsoft.Json.Utilities;
+#endif
 
 namespace Raven.Client.Extensions
 {
@@ -36,8 +39,10 @@ namespace Raven.Client.Extensions
 
 		private static Exception PreserveStackTrace(Exception exception)
 		{
+#if !NETFX_CORE
 			typeof (Exception).InvokeMember("InternalPreserveStackTrace", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null,
 			                                exception, null);
+#endif
 			return exception;
 		}
 	}

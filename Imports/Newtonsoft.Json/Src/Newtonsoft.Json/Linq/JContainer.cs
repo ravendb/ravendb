@@ -56,21 +56,38 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
 #endif
   {
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+    internal ListChangedEventHandler _listChanged;
+    internal AddingNewEventHandler _addingNew;
+
     /// <summary>
     /// Occurs when the list changes or an item in the list changes.
     /// </summary>
-    public event ListChangedEventHandler ListChanged;
+    public event ListChangedEventHandler ListChanged
+    {
+      add { _listChanged += value; }
+      remove { _listChanged -= value; }
+    }
 
     /// <summary>
     /// Occurs before an item is added to the collection.
     /// </summary>
-    public event AddingNewEventHandler AddingNew;
+    public event AddingNewEventHandler AddingNew
+    {
+      add { _addingNew += value; }
+      remove { _addingNew -= value; }
+    }
 #endif
 #if SILVERLIGHT || !(NET20 || NET35 || PORTABLE)
+    internal NotifyCollectionChangedEventHandler _collectionChanged;
+
     /// <summary>
     /// Occurs when the items list of the collection has changed, or the collection is reset.
     /// </summary>
-    public event NotifyCollectionChangedEventHandler CollectionChanged;
+    public event NotifyCollectionChangedEventHandler CollectionChanged
+    {
+      add { _collectionChanged += value; }
+      remove { _collectionChanged -= value; }
+    }
 #endif
 
     /// <summary>
@@ -87,6 +104,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     }
 
     internal JContainer(JContainer other)
+      : this()
     {
       ValidationUtils.ArgumentNotNull(other, "c");
 
@@ -102,6 +120,11 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         throw new InvalidOperationException("Cannot change {0} during a collection change event.".FormatWith(CultureInfo.InvariantCulture, GetType()));
     }
 
+    internal virtual IList<JToken> CreateChildrenCollection()
+    {
+      return new List<JToken>();
+    }
+
  #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
     /// <summary>
     /// Raises the <see cref="AddingNew"/> event.
@@ -109,7 +132,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="e">The <see cref="AddingNewEventArgs"/> instance containing the event data.</param>
     protected virtual void OnAddingNew(AddingNewEventArgs e)
     {
-      AddingNewEventHandler handler = AddingNew;
+      AddingNewEventHandler handler = _addingNew;
       if (handler != null)
         handler(this, e);
     }
@@ -120,7 +143,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="e">The <see cref="ListChangedEventArgs"/> instance containing the event data.</param>
     protected virtual void OnListChanged(ListChangedEventArgs e)
     {
-      ListChangedEventHandler handler = ListChanged;
+      ListChangedEventHandler handler = _listChanged;
 
       if (handler != null)
       {
@@ -143,7 +166,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="e">The <see cref="NotifyCollectionChangedEventArgs"/> instance containing the event data.</param>
     protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
     {
-      NotifyCollectionChangedEventHandler handler = CollectionChanged;
+      NotifyCollectionChangedEventHandler handler = _collectionChanged;
 
       if (handler != null)
       {
@@ -330,11 +353,11 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       ChildrenTokens.Insert(index, item);
 
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
-      if (ListChanged != null)
+      if (_listChanged != null)
         OnListChanged(new ListChangedEventArgs(ListChangedType.ItemAdded, index));
 #endif
 #if SILVERLIGHT || !(NET20 || NET35 || PORTABLE)
-      if (CollectionChanged != null)
+      if (_collectionChanged != null)
         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
 #endif
     }
@@ -364,10 +387,12 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       ChildrenTokens.RemoveAt(index);
 
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
-      OnListChanged(new ListChangedEventArgs(ListChangedType.ItemDeleted, index));
+      if (_listChanged != null)
+        OnListChanged(new ListChangedEventArgs(ListChangedType.ItemDeleted, index));
 #endif
 #if SILVERLIGHT || !(NET20 || NET35 || PORTABLE)
-      OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index));
+      if (_collectionChanged != null)
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index));
 #endif
     }
 
@@ -426,10 +451,12 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       existing.Next = null;
 
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
-      OnListChanged(new ListChangedEventArgs(ListChangedType.ItemChanged, index));
+      if (_listChanged != null)
+        OnListChanged(new ListChangedEventArgs(ListChangedType.ItemChanged, index));
 #endif
 #if SILVERLIGHT || !(NET20 || NET35 || PORTABLE)
-      OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, item, existing, index));
+      if (_collectionChanged != null)
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, item, existing, index));
 #endif
     }
 
@@ -447,10 +474,12 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       ChildrenTokens.Clear();
 
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
-      OnListChanged(new ListChangedEventArgs(ListChangedType.Reset, -1));
+      if (_listChanged != null)
+        OnListChanged(new ListChangedEventArgs(ListChangedType.Reset, -1));
 #endif
 #if SILVERLIGHT || !(NET20 || NET35 || PORTABLE)
-      OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+      if (_collectionChanged != null)
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 #endif
     }
 
@@ -474,7 +503,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         throw new ArgumentNullException("array");
       if (arrayIndex < 0)
         throw new ArgumentOutOfRangeException("arrayIndex", "arrayIndex is less than 0.");
-      if (arrayIndex >= array.Length)
+      if (arrayIndex >= array.Length && arrayIndex != 0)
         throw new ArgumentException("arrayIndex is equal to or greater than the length of array.");
       if (Count > array.Length - arrayIndex)
         throw new ArgumentException("The number of elements in the source JObject is greater than the available space from arrayIndex to the end of the destination array.");

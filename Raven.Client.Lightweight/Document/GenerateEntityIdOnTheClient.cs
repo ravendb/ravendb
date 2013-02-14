@@ -3,6 +3,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
 {
@@ -129,7 +130,9 @@ namespace Raven.Client.Document
 				if (fieldInfo == null)
 					return;
 
+#if !NETFX_CORE
 				SetPropertyOrField(identityProperty.PropertyType, entity, val => fieldInfo.SetValue(entity, val), id);
+#endif
 			}
 		}
 

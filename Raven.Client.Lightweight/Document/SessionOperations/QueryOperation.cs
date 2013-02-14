@@ -9,6 +9,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.SessionOperations
@@ -63,17 +64,17 @@ namespace Raven.Client.Document.SessionOperations
 			AddOperationHeaders();
 		}
 
-		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $", 
-#if !SILVERLIGHT
+		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
+#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled|
 #endif
-			RegexOptions.IgnorePatternWhitespace);
+ RegexOptions.IgnorePatternWhitespace);
 
 		private void AssertNotQueryById()
 		{
 			// this applies to dynamic indexes only
-			if (!indexName.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
-			    !string.Equals(indexName, "dynamic", StringComparison.InvariantCultureIgnoreCase))
+			if (!indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) &&
+			    !string.Equals(indexName, "dynamic", StringComparison.OrdinalIgnoreCase))
 				return;
 
 			var match = idOnly.Match(IndexQuery.Query);
@@ -200,7 +201,7 @@ namespace Raven.Client.Document.SessionOperations
 			if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
 			{
 				var type = typeof(T);
-				if (type == typeof(string) || typeof(T).IsValueType || typeof(T).IsEnum)
+				if (type == typeof(string) || typeof(T).IsValueType() || typeof(T).IsEnum())
 				{
 					return result.Value<T>(projectionFields[0]);
 				}
@@ -328,6 +329,7 @@ namespace Raven.Client.Document.SessionOperations
 				case "Int32":
 					return SortOptions.Int;
 				case "Int64":
+				case "TimeSpan":
 					return SortOptions.Long;
 				case "Double":
 				case "Decimal":

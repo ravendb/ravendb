@@ -464,7 +464,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
     /// <summary>
     /// Writes a <see cref="T:Byte[]"/> value that represents a BSON object id.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The Object ID value to write.</param>
     public void WriteObjectId(byte[] value)
     {
       ValidationUtils.ArgumentNotNull(value, "value");
@@ -473,6 +473,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         throw JsonWriterException.Create(this, "An object id must be 12 bytes", null);
 
       // hack to update the writer state
+      UpdateScopeWithFinishedValue();
       AutoComplete(JsonToken.Undefined);
       AddValue(value, BsonType.Oid);
     }
@@ -487,6 +488,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
       ValidationUtils.ArgumentNotNull(pattern, "pattern");
 
       // hack to update the writer state
+      UpdateScopeWithFinishedValue();
       AutoComplete(JsonToken.Undefined);
       AddToken(new BsonRegex(pattern, options));
     }

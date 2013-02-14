@@ -8,15 +8,24 @@ namespace Raven.Client.Silverlight.MissingFromSilverlight
 {
 	public class NameValueCollection : IEnumerable
 	{
-		private Dictionary<string, List<string>> inner =
-			new Dictionary<string, List<string>>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly Dictionary<string, List<string>> inner =
+			new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
 		public NameValueCollection()
 		{
-			inner = new Dictionary<string, List<string>>(StringComparer.InvariantCultureIgnoreCase);
+			inner = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public Dictionary<string, List<string>> Headers { get { return inner; } }
+		
+		public int Count
+		{
+			get { return inner.Count; }
+		}
+		public IEnumerable<string> Keys
+		{
+			get { return inner.Keys; }
+		}
 
 		public IEnumerator GetEnumerator()
 		{

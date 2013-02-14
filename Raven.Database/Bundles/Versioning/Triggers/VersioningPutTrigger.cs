@@ -88,7 +88,7 @@ namespace Raven.Bundles.Versioning.Triggers
 												   out VersioningConfiguration versioningConfiguration)
 		{
 			versioningConfiguration = null;
-			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 				return false;
 
 			if (metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")

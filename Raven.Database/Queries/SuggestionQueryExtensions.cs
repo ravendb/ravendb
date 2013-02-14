@@ -13,7 +13,7 @@ namespace Raven.Database.Queries
 	{
 		public static SuggestionQueryResult ExecuteSuggestionQuery(this DocumentDatabase self, string index, SuggestionQuery suggestionQuery)
 		{
-			if (index == "dynamic" || index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
+			if (index == "dynamic" || index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
 			{
 				var entitName = index == "dynamic" ? null : index.Remove(0, "dynamic/".Length);
 				index = self.FindDynamicIndexName(entitName, new IndexQuery

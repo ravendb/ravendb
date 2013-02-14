@@ -48,6 +48,9 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
   /// <summary>
   /// Represents a JSON object.
   /// </summary>
+  /// <example>
+  ///   <code lang="cs" source="..\Src\Newtonsoft.Json.Tests\Documentation\LinqToJsonTests.cs" region="LinqToJsonCreateParse" title="Parsing a JSON Object from Text" />
+  /// </example>
   public class JObject : JContainer, IDictionary<string, JToken>, INotifyPropertyChanged
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
     , ICustomTypeDescriptor
@@ -156,10 +159,12 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     {
       OnPropertyChanged(childProperty.Name);
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
-      OnListChanged(new ListChangedEventArgs(ListChangedType.ItemChanged, IndexOfItem(childProperty)));
+      if (_listChanged != null)
+        OnListChanged(new ListChangedEventArgs(ListChangedType.ItemChanged, IndexOfItem(childProperty)));
 #endif
 #if SILVERLIGHT || !(NET20 || NET35 || PORTABLE)
-      OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, childProperty, childProperty, IndexOfItem(childProperty)));
+      if (_collectionChanged != null)
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, childProperty, childProperty, IndexOfItem(childProperty)));
 #endif
     }
 
@@ -190,7 +195,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <returns>An <see cref="IEnumerable{JProperty}"/> of this object's properties.</returns>
     public IEnumerable<JProperty> Properties()
     {
-      return ChildrenTokens.Cast<JProperty>();
+      return _properties.Cast<JProperty>();
     }
 
     /// <summary>
@@ -292,6 +297,11 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
           throw JsonReaderException.Create(reader, "Error reading JObject from JsonReader.");
       }
 
+      while (reader.TokenType == JsonToken.Comment)
+      {
+        reader.Read();
+      }
+
       if (reader.TokenType != JsonToken.StartObject)
       {
         throw JsonReaderException.Create(reader, "Error reading JObject from JsonReader. Current JsonReader item is not an object: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
@@ -310,6 +320,9 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// </summary>
     /// <param name="json">A <see cref="String"/> that contains JSON.</param>
     /// <returns>A <see cref="JObject"/> populated from the string that contains JSON.</returns>
+    /// <example>
+    ///   <code lang="cs" source="..\Src\Newtonsoft.Json.Tests\Documentation\LinqToJsonTests.cs" region="LinqToJsonCreateParse" title="Parsing a JSON Object from Text" />
+    /// </example>
     public static new JObject Parse(string json)
     {
       JsonReader reader = new JsonTextReader(new StringReader(json));
@@ -357,12 +370,68 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     {
       writer.WriteStartObject();
 
-      foreach (JProperty property in ChildrenTokens)
+      for (int i = 0; i < _properties.Count; i++)
       {
-        property.WriteTo(writer, converters);
+        _properties[i].WriteTo(writer, converters);
       }
 
       writer.WriteEndObject();
+    }
+
+    /// <summary>
+    /// Gets the <see cref="Newtonsoft.Json.Linq.JToken"/> with the specified property name.
+    /// </summary>
+    /// <param name="propertyName">Name of the property.</param>
+    /// <value>The <see cref="Newtonsoft.Json.Linq.JToken"/> with the specified property name.</value>
+    public JToken GetValue(string propertyName)
+    {
+      return GetValue(propertyName, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Gets the <see cref="Newtonsoft.Json.Linq.JToken"/> with the specified property name.
+    /// The exact property name will be searched for first and if no matching property is found then
+    /// the <see cref="StringComparison"/> will be used to match a property.
+    /// </summary>
+    /// <param name="propertyName">Name of the property.</param>
+    /// <param name="comparison">One of the enumeration values that specifies how the strings will be compared.</param>
+    /// <value>The <see cref="Newtonsoft.Json.Linq.JToken"/> with the specified property name.</value>
+    public JToken GetValue(string propertyName, StringComparison comparison)
+    {
+      if (propertyName == null)
+        return null;
+
+      // attempt to get value via dictionary first for performance
+      JProperty property = Property(propertyName);
+      if (property != null)
+        return property.Value;
+
+      // test above already uses this comparison so no need to repeat
+      if (comparison != StringComparison.Ordinal)
+      {
+        foreach (JProperty p in _properties)
+        {
+          if (string.Equals(p.Name, propertyName, comparison))
+            return p.Value;
+        }
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Tries to get the <see cref="Newtonsoft.Json.Linq.JToken"/> with the specified property name.
+    /// The exact property name will be searched for first and if no matching property is found then
+    /// the <see cref="StringComparison"/> will be used to match a property.
+    /// </summary>
+    /// <param name="propertyName">Name of the property.</param>
+    /// <param name="value">The value.</param>
+    /// <param name="comparison">One of the enumeration values that specifies how the strings will be compared.</param>
+    /// <returns>true if a value was successfully retrieved; otherwise, false.</returns>
+    public bool TryGetValue(string propertyName, StringComparison comparison, out JToken value)
+    {
+      value = GetValue(propertyName, comparison);
+      return (value != null);
     }
 
     #region IDictionary<string,JToken> Members
@@ -459,13 +528,13 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         throw new ArgumentNullException("array");
       if (arrayIndex < 0)
         throw new ArgumentOutOfRangeException("arrayIndex", "arrayIndex is less than 0.");
-      if (arrayIndex >= array.Length)
+      if (arrayIndex >= array.Length && arrayIndex != 0)
         throw new ArgumentException("arrayIndex is equal to or greater than the length of array.");
       if (Count > array.Length - arrayIndex)
         throw new ArgumentException("The number of elements in the source JObject is greater than the available space from arrayIndex to the end of the destination array.");
 
       int index = 0;
-      foreach (JProperty property in ChildrenTokens)
+      foreach (JProperty property in _properties)
       {
         array[arrayIndex + index] = new KeyValuePair<string, JToken>(property.Name, property.Value);
         index++;
@@ -501,7 +570,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// </returns>
     public IEnumerator<KeyValuePair<string, JToken>> GetEnumerator()
     {
-      foreach (JProperty property in ChildrenTokens)
+      foreach (JProperty property in _properties)
       {
         yield return new KeyValuePair<string, JToken>(property.Name, property.Value);
       }

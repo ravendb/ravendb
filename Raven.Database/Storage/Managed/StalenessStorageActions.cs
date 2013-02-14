@@ -72,7 +72,7 @@ namespace Raven.Storage.Managed
 			{
 				{ "view", name }
 			})
-			.TakeWhile(token => string.Equals(name, token.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase))
+			.TakeWhile(token => string.Equals(name, token.Value<string>("view"), StringComparison.OrdinalIgnoreCase))
 			.Any();
 		}
 

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Security;
 using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Util

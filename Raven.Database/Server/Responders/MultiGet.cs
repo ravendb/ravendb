@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Responders
 			// Need to create this here to preserve any current TLS data that we have to copy
 			var contexts = requests.Select(request => new MultiGetHttpContext(ravenHttpConfiguration, context, request, TenantId))
 				.ToArray();
-			if ("yes".Equals(context.Request.QueryString["parallel"], StringComparison.InvariantCultureIgnoreCase))
+			if ("yes".Equals(context.Request.QueryString["parallel"], StringComparison.OrdinalIgnoreCase))
 			{
 				Parallel.For(0, requests.Length, position =>
 					HandleRequest(requests, results, position, context, ravenHttpConfiguration, contexts)
@@ -238,6 +238,16 @@ namespace Raven.Database.Server.Responders
 			{
 				return InputStream;
 			}
+
+			public bool HasCookie(string name)
+			{
+				return false;
+			}
+
+			public string GetCookie(string name)
+			{
+				return null;
+			}
 		}
 
 		public void Dispose()
@@ -325,6 +335,11 @@ namespace Raven.Database.Server.Responders
 			public Task WriteAsync(string data)
 			{
 				throw new NotSupportedException();
+			}
+
+			public void SetCookie(string name, string val)
+			{
+				// cookies are not supported
 			}
 		}
 	}

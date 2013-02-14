@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -53,7 +54,7 @@ namespace Raven.Smuggler
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
 			var builder = new StringBuilder();
-			if (url.StartsWith("http", StringComparison.InvariantCultureIgnoreCase) == false)
+			if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase) == false)
 			{
 				builder.Append(ConnectionStringOptions.Url);
 				if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
@@ -195,7 +196,8 @@ namespace Raven.Smuggler
 			foreach (var doc in batch)
 			{
 				var metadata = doc.Value<RavenJObject>("@metadata");
-				doc.Remove("@metadata");
+
+			    doc.Remove("@metadata");
 				commands.Add(new RavenJObject
 								{
 									{"Method", "PUT"},

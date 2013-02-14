@@ -134,6 +134,7 @@
     <Compile Include="Serialization\DefaultValueHandlingTests.cs" />
     <Compile Include="Serialization\DynamicTests.cs" />
     <Compile Include="Serialization\ReferenceLoopHandlingTests.cs" />
+    <Compile Include="Serialization\TraceWriterTests.cs" />
     <Compile Include="Serialization\WebApiIntegrationTests.cs" />
     <Compile Include="Serialization\JsonPropertyCollectionTests.cs" />
     <Compile Include="Serialization\NullValueHandlingTests.cs" />
@@ -274,6 +275,7 @@
     <Compile Include="TestObjects\UserNullable.cs" />
     <Compile Include="Utilities\DynamicReflectionDelegateFactoryTests.cs" />
     <Compile Include="Utilities\ReflectionUtilsTests.cs" />
+    <Compile Include="Utilities\StringUtilsTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{3259AA49-8AA1-44D3-9025-A0B520596A8C}" />

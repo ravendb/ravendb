@@ -1,5 +1,4 @@
 using System;
-using System.Security.Cryptography;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -12,7 +11,7 @@ namespace Raven.Abstractions.Data
 			{
 				{"Text", "The encryption is correct."}
 			};
-			InDatabaseKeyVerificationDocumentContents.EnsureSnapshot();
+			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 		
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
@@ -71,7 +70,9 @@ namespace Raven.Abstractions.Data
 
 		public const int DefaultIndexFileBlockSize = 12 * 1024;
 
-		public static readonly Type DefaultCryptoServiceProvider = typeof(AesManaged);
+#if !NETFX_CORE
+		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesManaged);
+#endif
 
 		//Quotas
 		public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";

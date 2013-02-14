@@ -54,7 +54,7 @@ namespace Raven.Client.Shard
 														// by default we assume that if you have a separator in the value we got back
 														// the shard id is the very first value up until the first separator
 			                                      		var str = result.ToString();
-														var start = str.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.InvariantCultureIgnoreCase);
+														var start = str.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.OrdinalIgnoreCase);
 														if (start == -1)
 															return str;
 			                                      		return str.Substring(0, start);
@@ -73,7 +73,11 @@ namespace Raven.Client.Shard
 {0}: \s* (?<Open>"")(?<shardId>[^""]+)(?<Close-Open>"") |
 {0}: \s* (?<shardId>[^""][^\s]*)", Regex.Escape(shardFieldForQuerying));
 
-			regexToCaptureShardIdFromQueriesByType[typeof(TEntity)] = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+			regexToCaptureShardIdFromQueriesByType[typeof(TEntity)] = new Regex(pattern,
+#if !NETFX_CORE
+				RegexOptions.Compiled |
+#endif			
+				RegexOptions.IgnorePatternWhitespace);
 
 			var compiled = shardingProperty.Compile();
 
@@ -130,7 +134,7 @@ namespace Raven.Client.Shard
 
 				var potentialShardsFor = collection.Cast<Match>().Select(match => translateQueryValueToShardId(match.Groups["shardId"].Value)).ToList();
 
-				if (potentialShardsFor.Any(queryShardId => ShardIds.Contains(queryShardId, StringComparer.InvariantCultureIgnoreCase)) == false)
+				if (potentialShardsFor.Any(queryShardId => ShardIds.Contains(queryShardId, StringComparer.OrdinalIgnoreCase)) == false)
 					return null; // we couldn't find the shard ids here, maybe there is something wrong in the query, sending to all shards
 
 				return potentialShardsFor;
@@ -145,13 +149,13 @@ namespace Raven.Client.Shard
 			var list = new List<string>();
 			foreach (var key in requestData.Keys)
 			{
-				var start = key.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.InvariantCultureIgnoreCase);
+				var start = key.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.OrdinalIgnoreCase);
 				if (start == -1)
 					return null; // if we couldn't figure it out, select from all
 
 				var maybeShardId = key.Substring(0, start);
 
-				if (ShardIds.Any(x => string.Equals(maybeShardId, x, StringComparison.InvariantCultureIgnoreCase)))
+				if (ShardIds.Any(x => string.Equals(maybeShardId, x, StringComparison.OrdinalIgnoreCase)))
 					list.Add(maybeShardId);
 				else
 					return null; // we couldn't find it there, select from all

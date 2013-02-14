@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "HEAD":
-					if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
+					if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.OrdinalIgnoreCase) == false)
 						context.SetStatusToNotFound();
 					break;
 				case "GET":
@@ -184,8 +184,8 @@ namespace Raven.Database.Server.Responders
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 			var totalResults = new Reference<int>();
 
-			var isDynamic = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase)
-			                || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase);
+			var isDynamic = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
+			                || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase);
 
 			if (isDynamic)
 			{
@@ -247,8 +247,8 @@ namespace Raven.Database.Server.Responders
 
 		private void GetExplanation(IHttpContext context, string index)
 		{
-			var dynamicIndex = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ||
-			                   index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase);
+			var dynamicIndex = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
+			                   index.Equals("dynamic", StringComparison.OrdinalIgnoreCase);
 
 			if(dynamicIndex == false)
 			{
@@ -262,7 +262,7 @@ namespace Raven.Database.Server.Responders
 
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 			string entityName = null;
-			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
+			if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
 				entityName = index.Substring("dynamic/".Length);
 
 			var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
@@ -299,7 +299,7 @@ namespace Raven.Database.Server.Responders
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MapReduce.GetMappedResultsForDebug(index, key, context.GetPageSize(Settings.MaxPageSize))
+				mappedResult = accessor.MapReduce.GetMappedResultsForDebug(index, key, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
 					.ToList();
 			});
 			context.WriteJson(new
@@ -341,7 +341,7 @@ namespace Raven.Database.Server.Responders
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MapReduce.GetReducedResultsForDebug(index, key, level, context.GetPageSize(Settings.MaxPageSize))
+				mappedResult = accessor.MapReduce.GetReducedResultsForDebug(index, key, level, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
 					.ToList();
 			});
 			context.WriteJson(new
@@ -415,7 +415,7 @@ namespace Raven.Database.Server.Responders
 			RewriteDateQueriesFromOldClients(context,indexQuery);
 
 			var sp = Stopwatch.StartNew();
-			var result = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
+			var result = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ? 
 				PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) : 
 				PerformQueryAgainstExistingIndex(context, index, indexQuery, out indexEtag);
 
@@ -530,7 +530,7 @@ namespace Raven.Database.Server.Responders
 		private string GetDynamicIndexName(string index, IndexQuery indexQuery, out string entityName)
 		{
 			entityName = null;
-			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
+			if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
 				entityName = index.Substring("dynamic/".Length);
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);

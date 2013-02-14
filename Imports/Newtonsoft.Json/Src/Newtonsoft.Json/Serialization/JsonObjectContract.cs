@@ -24,7 +24,11 @@
 #endregion
 
 using System;
+using System.Globalization;
 using System.Reflection;
+using System.Runtime.Serialization;
+using System.Security;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Imports.Newtonsoft.Json.Serialization
 {
@@ -114,5 +118,19 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       Properties = new JsonPropertyCollection(UnderlyingType);
       ConstructorParameters = new JsonPropertyCollection(UnderlyingType);
     }
+
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+#if !(NET20 || NET35)
+    [SecuritySafeCritical]
+#endif
+    internal object GetUninitializedObject()
+    {
+      // we should never get here if the environment is not fully trusted, check just in case
+      if (!JsonTypeReflector.FullyTrusted)
+        throw new JsonException("Insufficient permissions. Creating an uninitialized '{0}' type requires full trust.".FormatWith(CultureInfo.InvariantCulture, NonNullableUnderlyingType));
+
+      return FormatterServices.GetUninitializedObject(NonNullableUnderlyingType);
+    }
+#endif
   }
 }

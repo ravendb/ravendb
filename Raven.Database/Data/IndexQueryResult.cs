@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Data
@@ -14,8 +15,9 @@ namespace Raven.Database.Data
 		public RavenJObject Projection { get; set; }
 
 		public float Score { get; set; }
+	    public Dictionary<string, string[]> Highligtings { get; set; }
 
-		public bool Equals(IndexQueryResult other)
+	    public bool Equals(IndexQueryResult other)
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;

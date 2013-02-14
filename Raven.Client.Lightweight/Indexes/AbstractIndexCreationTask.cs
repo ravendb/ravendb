@@ -28,7 +28,9 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
+#if !NETFX_CORE
 	[System.ComponentModel.Composition.InheritedExport]
+#endif
 	public abstract class AbstractIndexCreationTask
 	{
 		/// <summary>
@@ -41,6 +43,8 @@ namespace Raven.Client.Indexes
 		{
 			return enumerable.Take(indexQuery.PageSize);
 		}
+
+		public virtual bool IsMapReduce { get { return false; } }
 
 		/// <summary>
 		/// Gets the name of the index.
@@ -76,7 +80,7 @@ namespace Raven.Client.Indexes
 		/// <param name="lat">Latitude</param>
 		/// <param name="lng">Longitude</param>
 		/// <returns></returns>
-		public static object SpatialGenerate(double lat, double lng)
+		public static object SpatialGenerate(double? lat, double? lng)
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
@@ -88,7 +92,7 @@ namespace Raven.Client.Indexes
 		/// <param name="lat">Latitude</param>
 		/// <param name="lng">Longitude</param>
 		/// <returns></returns>
-		public static object SpatialGenerate(string fieldName, double lat, double lng)
+		public static object SpatialGenerate(string fieldName, double? lat, double? lng)
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
@@ -101,7 +105,7 @@ namespace Raven.Client.Indexes
 			/// <param name="fieldName">The field name, will be used for querying</param>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
-			public static object Generate(string fieldName, double lat, double lng)
+			public static object Generate(string fieldName, double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 			}
@@ -111,7 +115,7 @@ namespace Raven.Client.Indexes
 			/// </summary>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
-			public static object Generate(double lat, double lng)
+			public static object Generate(double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 			}
@@ -251,7 +255,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This is here as a marker only");
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
@@ -399,8 +403,15 @@ namespace Raven.Client.Indexes
 				Reduce = Reduce,
 				TransformResults = TransformResults,
 				Stores = Stores,
-				StoresStrings = StoresStrings
+				StoresStrings = StoresStrings,
+				Suggestions = IndexSuggestions,
+				TermVectors = TermVectors
 			}.ToIndexDefinition(Conventions);
+		}
+
+		public override bool IsMapReduce
+		{
+			get { return Reduce != null; }
 		}
 
 		/// <summary>

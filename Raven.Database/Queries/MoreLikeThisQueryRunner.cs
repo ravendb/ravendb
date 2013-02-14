@@ -77,7 +77,7 @@ namespace Raven.Database.Queries
 					if (stopWordsSetup.StopWords != null)
 					{
 						var stopWords = stopWordsSetup.StopWords;
-						var ht = new Hashtable(StringComparer.InvariantCultureIgnoreCase);
+						var ht = new Hashtable(StringComparer.OrdinalIgnoreCase);
 						foreach (var stopWord in stopWords)
 						{
 							ht[stopWord] = stopWord;
@@ -90,7 +90,7 @@ namespace Raven.Database.Queries
 				mlt.SetFieldNames(fieldNames);
 
 				var toDispose = new List<Action>();
-				PerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
+				RavenPerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
 				try
 				{
 					perFieldAnalyzerWrapper = index.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);

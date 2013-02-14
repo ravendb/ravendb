@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Transactions;
@@ -55,6 +55,8 @@ namespace Raven.Client.Connection
 			return new DisposableAction(() => CurrentRavenTransactions.Pop());
 		}
 		
+		public static TimeSpan? DefaultTimeout { get; set; }
+
 		/// <summary>
 		/// Gets the transaction information for the current transaction
 		/// </summary>
@@ -68,7 +70,7 @@ namespace Raven.Client.Connection
 			return new TransactionInformation
 			{
 				Id = PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
-				Timeout = TransactionManager.DefaultTimeout
+				Timeout = DefaultTimeout ?? TransactionManager.DefaultTimeout
 			};
 		}
 	}

@@ -120,9 +120,14 @@ namespace Raven.Abstractions.Linq
 
 		public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
 		{
-			if(binder.Name == "Value" && args.Length == 1 && args[0] is string)
+			if (binder.Name == "Count" && args.Length == 0)
 			{
-				result = GetValue((string) args[0]);
+				result = inner.Count;
+				return true;
+			}
+			if (binder.Name == "Value" && args.Length == 1 && args[0] is string)
+			{
+				result = GetValue((string)args[0]);
 				return true;
 			}
 			return base.TryInvokeMember(binder, args, out result);
@@ -151,7 +156,7 @@ namespace Raven.Abstractions.Linq
 			{
 				case JTokenType.Object:
 					var jObject = (RavenJObject)jToken;
-					if(jObject.ContainsKey("$values"))
+					if (jObject.ContainsKey("$values"))
 					{
 						var values = jObject.Value<RavenJArray>("$values");
 						return new DynamicList(this, values.Select(TransformToValue).ToArray());
@@ -168,7 +173,7 @@ namespace Raven.Abstractions.Linq
 					var ar = (RavenJArray)jToken;
 					return new DynamicList(this, ar.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
-					var ravenJValue = ((RavenJValue) jToken);
+					var ravenJValue = ((RavenJValue)jToken);
 					return ravenJValue.Value;
 				case JTokenType.Null:
 					return new DynamicNullObject { IsExplicitNull = true };
@@ -180,7 +185,7 @@ namespace Raven.Abstractions.Linq
 						if (l > int.MinValue && int.MaxValue > l)
 							return (int)l;
 					}
-					if(value is Guid)
+					if (value is Guid)
 					{
 						return value.ToString();
 					}
@@ -188,18 +193,18 @@ namespace Raven.Abstractions.Linq
 					if (s != null)
 					{
 						//optimizations, don't try to call TryParse if empty
-						if(s.Length == 0)
+						if (s.Length == 0)
 							return s;
 
-						//optimizations, don't try to call TryParse if first char isn't a digit
-						if(char.IsDigit(s[0]) == false)
+						//optimizations, don't try to call TryParse if first char isn't a digit or '-'
+						if (char.IsDigit(s[0]) == false && s[0] != '-')
 							return s;
 
 
 						DateTime dateTime;
 						if (DateTime.TryParseExact(s, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
 						{
-							if(s.EndsWith("Z"))
+							if (s.EndsWith("Z"))
 								return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 							return dateTime;
 						}
@@ -208,6 +213,13 @@ namespace Raven.Abstractions.Linq
 						{
 							return dateTimeOffset;
 						}
+						TimeSpan timeSpan;
+						if (s.Contains(":")  && 
+							TimeSpan.TryParseExact(s,"c", CultureInfo.InvariantCulture, out timeSpan))
+						{
+							return timeSpan;
+						}
+
 					}
 					return value ?? new DynamicNullObject { IsExplicitNull = true };
 			}
@@ -215,11 +227,15 @@ namespace Raven.Abstractions.Linq
 
 		private RavenJObject FindReference(string refId)
 		{
+			return GetRootParentOrSelf().Scan().FirstOrDefault(x => x.Value<string>("$id") == refId);
+		}
+
+		public DynamicJsonObject GetRootParentOrSelf()
+		{
 			var p = this;
 			while (p.parent != null)
 				p = p.parent;
-
-			return p.Scan().FirstOrDefault(x => x.Value<string>("$id") == refId);
+			return p;
 		}
 
 		private IEnumerable<RavenJObject> Scan()
@@ -289,7 +305,7 @@ namespace Raven.Abstractions.Linq
 		{
 			if (name == Constants.DocumentIdFieldName)
 			{
-				return GetDocumentId();
+				return GetRootParentOrSelf().GetDocumentId();
 			}
 			RavenJToken value;
 			if (inner.TryGetValue(name, out value))
@@ -305,13 +321,13 @@ namespace Raven.Abstractions.Linq
 			}
 			if (name == "Id")
 			{
-				return GetDocumentId();
+				return GetRootParentOrSelf().GetDocumentId();
 			}
 			if (name == "Inner")
 			{
 				return inner;
 			}
-			if(name == "Count" || name == "Count()")
+			if (name == "Count" || name == "Count()")
 			{
 				return inner.Count;
 			}
