@@ -500,7 +500,7 @@ namespace Raven.Database.Server.Responders
 			}
 
 			if (dynamicIndexName == null && // would have to create a dynamic index
-				Database.Configuration.CreateTemporaryIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
+				Database.Configuration.CreateAutoIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
 			{
 				indexEtag = Etag.InvalidEtag;
 				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);

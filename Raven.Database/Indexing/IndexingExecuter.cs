@@ -32,9 +32,9 @@ namespace Raven.Database.Indexing
 			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle)
 		{
-			return actions.Staleness.IsMapStale(indexesStat.Name);
+			return actions.Staleness.IsMapStale(indexesStat.Name, isIdle);
 		}
 
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)

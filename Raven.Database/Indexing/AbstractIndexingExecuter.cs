@@ -38,12 +38,13 @@ namespace Raven.Database.Indexing
 				LogContext.DatabaseName.Value = context.DatabaseName;
 				var name = GetType().Name;
 				var workComment = "WORK BY " + name;
-				while (context.RunIndexing)
+			    bool isIdle = false;
+                while (context.RunIndexing)
 				{
 					bool foundWork;
 					try
 					{
-						foundWork = ExecuteIndexing();
+						foundWork = ExecuteIndexing(isIdle);
 						while (context.RunIndexing) // we want to drain all of the pending tasks before the next run
 						{
 							if (ExecuteTasks() == false)
@@ -92,7 +93,7 @@ namespace Raven.Database.Indexing
 					}
 					if (foundWork == false && context.RunIndexing)
 					{
-						context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, () =>
+						isIdle = context.WaitForWork(context.Configuration.TimeToWaitBeforeRunningIdleIndexes, ref workCounter, () =>
 						{
 							try
 							{
@@ -190,7 +191,7 @@ namespace Raven.Database.Indexing
 
 		protected abstract void FlushAllIndexes();
 
-		protected bool ExecuteIndexing()
+		protected bool ExecuteIndexing(bool isIdle)
 		{
 			var indexesToWorkOn = new List<IndexToWorkOn>();
 			transactionalStorage.Batch(actions =>
@@ -205,7 +206,7 @@ namespace Raven.Database.Indexing
 									   failureRate.FailureRate);
 						continue;
 					}
-					if (IsIndexStale(indexesStat, actions) == false)
+					if (IsIndexStale(indexesStat, actions, isIdle) == false)
 						continue;
 					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
 					var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
@@ -231,7 +232,7 @@ namespace Raven.Database.Indexing
 
 		protected abstract IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat);
 
-		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
+		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle);
 
 		protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn);
 

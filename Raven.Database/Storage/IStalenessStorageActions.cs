@@ -13,7 +13,7 @@ namespace Raven.Database.Storage
 		bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag);
 
 		bool IsReduceStale(string name);
-		bool IsMapStale(string name);
+		bool IsMapStale(string name, bool isIdle);
 
 		Tuple<DateTime, Etag> IndexLastUpdatedAt(string name);
 		Etag GetMostRecentDocumentEtag();
