@@ -1266,8 +1266,8 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
-				if (indexDefinition.IsTemp)
-					return; // we don't backup temp indexes
+				if (directory is RAMDirectory)
+					return; // we don't backup in memory indexes
 				var existingFiles = new List<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
