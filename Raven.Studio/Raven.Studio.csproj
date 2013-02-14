@@ -244,6 +244,9 @@
     <Compile Include="Controls\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\ResetReplication.xaml.cs">
+      <DependentUpon>ResetReplication.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
@@ -878,6 +881,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\RecentQueriesButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ResetReplication.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
