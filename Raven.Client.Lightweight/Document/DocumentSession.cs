@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document.Batches;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
@@ -303,8 +304,42 @@ namespace Raven.Client.Document
 			return Load<T>(documentKeys);
 		}
 
-		public T[] LoadInternal<T>(string[] ids, string[] includes)
-		{
+	    private T[] LoadInternal<T>(string[] ids, string transformer)
+	    {
+	        if (ids.Length == 0)
+	            return new T[0];
+
+	        IncrementRequestCount();
+
+            if (typeof (T).IsArray)
+            {
+                return DatabaseCommands.Get(ids, new string[] {}, transformer)
+                                       .Results
+                                       .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
+                                       .Select(JsonExtensions.ToJObject)
+                                       .Select(x => x.Deserialize(typeof (T).GetElementType(), Conventions))
+                                       .Cast<T>().ToArray();
+            }
+            else
+            {
+                var items = DatabaseCommands.Get(ids, new string[] {}, transformer)
+                                       .Results
+                                       .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
+                                       .Select(JsonExtensions.ToJObject)
+                                       .Select(x => x.Deserialize(typeof (T), Conventions))
+                                       .Cast<T>().ToArray();
+                if (items.Length > ids.Length)
+                {
+                    throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
+                        transformer,
+                        typeof(T).Name));
+                }
+                return items;
+            }
+	    }
+
+	    public T[] LoadInternal<T>(string[] ids, string[] includes)
+	    {
 			if (ids.Length == 0)
 				return new T[0];
 
@@ -321,7 +356,7 @@ namespace Raven.Client.Document
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 
 			return multiLoadOperation.Complete<T>();
-		}
+	    }
 
 		public T[] LoadInternal<T>(string[] ids)
 		{
@@ -463,7 +498,14 @@ namespace Raven.Client.Document
 			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
 		}
 
-		/// <summary>
+	    public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+	    {
+	        var transformer = new TTransformer().TransfomerName;
+	        return this.LoadInternal<TResult>(new string[] {id}, transformer).FirstOrDefault();
+	    }
+
+
+	    /// <summary>
 		/// Gets the document URL for the specified entity.
 		/// </summary>
 		/// <param name="entity">The entity.</param>

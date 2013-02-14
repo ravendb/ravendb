@@ -138,7 +138,7 @@ namespace Raven.Client.Embedded
 
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false)
 		{
-			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, metadataOnly));
+			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, metadataOnly: metadataOnly));
 		}
 
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)

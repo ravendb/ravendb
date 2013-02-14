@@ -47,14 +47,15 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		JsonDocument Get(string key);
 
-		/// <summary>
-		/// Retrieves documents with the specified ids, optionally specifying includes to fetch along
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="includes">The includes.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
-		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
+	    /// <summary>
+	    /// Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the transformer
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="metadataOnly">Load just the document metadata</param>
+	    /// <returns></returns>
+	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Get documents from server

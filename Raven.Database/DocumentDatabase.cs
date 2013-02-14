@@ -200,7 +200,7 @@ namespace Raven.Database
 				try
 				{
 
-					TransactionalStorage.Batch(actions =>
+					TransactionalStorage.Batch(actions => 
 						sequentialUuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
 					TransportState = new TransportState();
@@ -317,7 +317,7 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
+            using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
 				LogContext.DatabaseName.Value = Name;
@@ -391,7 +391,7 @@ namespace Raven.Database
 			}
 		}
 
-
+	
 		private decimal ConvertBytesToMBs(long bytes)
 		{
 			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
@@ -756,7 +756,10 @@ namespace Raven.Database
 				if (preTouchEtag == null || afterTouchEtag == null)
 					continue;
 
-                actions.General.MaybePulseTransaction();
+				actions.General.MaybePulseTransaction();
+
+                if (preTouchEtag == null || afterTouchEtag == null)
+                    continue;
 
 				recentTouches.Set(key, new TouchedDocumentInfo
 				{
@@ -935,7 +938,7 @@ namespace Raven.Database
 								});
 								task.Keys.Add(key);
 							}
-							if (deletedETag != null)
+						    if (deletedETag != null)
 								indexingExecuter.PrefetchingBehavior.AfterDelete(key, deletedETag);
 							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 						}
@@ -1225,11 +1228,11 @@ namespace Raven.Database
 
 					var transformerErrors = new List<string>();
 					IEnumerable<RavenJObject> results = null;
-                    if(query.PageSize > 0) // maybe they just want the stats? 
+                    if (query.PageSize > 0) // maybe they just want the stats? 
 				    {
 				        IndexingFunc transformFunc = null;
 
-						// Check an explicitly declared one first
+				        // Check an explicitly declared one first
 				        if (query.ResultsTransformer != null)
 				        {
 				            var transformGenerator = IndexDefinitionStorage.GetTransfomer(query.ResultsTransformer);
@@ -1276,7 +1279,7 @@ namespace Raven.Database
 					if (headerInfo != null)
 					{
 						headerInfo(new QueryHeaderInformation
-						{
+					{
 							Index = index,
 							IsStable = stale,
 							ResultEtag = resultEtag,
@@ -1656,7 +1659,7 @@ namespace Raven.Database
 					foreach (var doc in documents)
 					{
 						docCount++;
-						if (etag != null)
+                        if (etag != null)
 							etag = doc.Etag;
 						DocumentRetriever.EnsureIdInMetadata(doc);
 						var document = documentRetriever
@@ -1715,7 +1718,7 @@ namespace Raven.Database
 		{
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-				(jsonDoc,size) =>
+                (jsonDoc, size) =>
 				{
 					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
@@ -2037,19 +2040,20 @@ namespace Raven.Database
 		/// </remarks>
 		public long GetIndexStorageSizeOnDisk()
 		{
-			if( Configuration.RunInMemory )
+            if (Configuration.RunInMemory)
 				return 0;
-			var indexes = Directory.GetFiles( Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories );
-			var totalIndexSize = indexes.Sum( file =>
+            var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
+            var totalIndexSize = indexes.Sum(file =>
 			{
 				try
 				{
-					return new FileInfo( file ).Length;
-				} catch( FileNotFoundException )
+                    return new FileInfo(file).Length;
+                }
+                catch (FileNotFoundException)
 				{
 					return 0;
 				}
-			} );
+            });
 
 			return totalIndexSize;
 		}
@@ -2095,7 +2099,7 @@ namespace Raven.Database
 				isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 				var indexStats = accessor.Indexing.GetIndexStats(indexName);
-				if (indexStats != null)
+                if (indexStats != null)
 				{
 					lastReducedEtag = indexStats.LastReducedEtag;
 				}
@@ -2160,15 +2164,15 @@ namespace Raven.Database
 					WorkContext.CancellationToken.ThrowIfCancellationRequested();
 					lock (putSerialLock)
 					{
-						var inserts = 0;
-						var batch = 0;
+                        var inserts = 0;
+					    var batch = 0;
 						var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 						foreach (var doc in docs)
 						{
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
 							documents++;
-							batch++;
+						    batch++;
 							AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
 							foreach (var trigger in PutTriggers)
 							{
@@ -2191,8 +2195,8 @@ namespace Raven.Database
 						}
 						accessor.Documents.IncrementDocumentCount(inserts);
 						accessor.General.PulseTransaction();
-						workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
-						workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+                        workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
+                        workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
 					}
 				}
 				RaiseNotifications(new DocumentChangeNotification
@@ -2253,5 +2257,41 @@ namespace Raven.Database
 							}));
 
 		}
+
+        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation)
+        {
+            JsonDocument result = null;
+            TransactionalStorage.Batch(
+            actions =>
+            {
+                var docRetriever = new DocumentRetriever(actions, ReadTriggers);
+                using (new CurrentTransformationScope(docRetriever))
+                {
+                    var document = Get(key, transactionInformation);
+                    if (document == null)
+                        return;
+
+                    var storedTransformer = IndexDefinitionStorage.GetTransfomer(transformer);
+                    if (storedTransformer == null)
+                        throw new InvalidOperationException("No transfomer with the name: " + transformer);
+
+                    var transformed = storedTransformer.TransformResultsDefinition(new[] {new DynamicJsonObject(document.ToJson())})
+                                     .Select(x=> JsonExtensions.ToJObject(x))
+                                     .ToArray();
+
+                    if (transformed.Length == 0)
+                        return;
+                    
+                    result = new JsonDocument
+                    {
+                        Etag = document.Etag,
+                        NonAuthoritativeInformation = document.NonAuthoritativeInformation,
+                        LastModified = document.LastModified,
+                    };
+                    result.DataAsJson = new RavenJObject {{"$values", new RavenJArray(transformed)}};
+                }
+            });
+            return result;
+        }
 	}
 }
