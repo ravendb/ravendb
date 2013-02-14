@@ -75,6 +75,7 @@ namespace Raven.Storage.Managed
 				LastIndexedEtag = Etag.Parse(readResult.Key.Value<byte[]>("lastEtag")),
 				LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp"),
                 CreatedTimestamp = readResult.Key.Value<DateTime>("createdTimestamp"),
+				LastIndexingTime = readResult.Key.Value<DateTime>("lastIndexingTime"),
 				LastReducedEtag =
 					readResult.Key.Value<byte[]>("lastReducedEtag") != null
 						? Etag.Parse(readResult.Key.Value<byte[]>("lastReducedEtag"))
@@ -100,6 +101,7 @@ namespace Raven.Storage.Managed
 				{"lastEtag", Guid.Empty.ToByteArray()},
 				{"lastTimestamp", DateTime.MinValue},
 				{"createdTimestamp", SystemTime.UtcNow},
+				{"lastIndexingTime", SystemTime.UtcNow},
 				{"reduce_attempts", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
 				{"reduce_successes",createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
 				{"reduce_failures", createMapReduce? 0 : (RavenJToken)RavenJValue.Null},
@@ -124,6 +126,7 @@ namespace Raven.Storage.Managed
 			indexStats["attempts"] = indexStats.Value<int>("attempts") + stats.IndexingAttempts;
 			indexStats["successes"] = indexStats.Value<int>("successes") + stats.IndexingSuccesses;
 			indexStats["failures"] = indexStats.Value<int>("failures") + stats.IndexingErrors;
+			indexStats["lastIndexingTime"] = SystemTime.UtcNow;
 			storage.IndexingStats.UpdateKey(indexStats);
 
 		}

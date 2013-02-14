@@ -72,6 +72,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			var lastIndexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
             var createdTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["created_timestamp"]).Value;
+			var lastIndexingTime = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"]).Value;
 			return new IndexStats
 			{
 				Name = indexName,
@@ -86,6 +87,7 @@ namespace Raven.Storage.Esent.StorageActions
 				LastIndexedEtag = Etag.Parse(Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])),
 				LastIndexedTimestamp = DateTime.FromBinary(lastIndexedTimestamp),
                 CreatedTimestamp = DateTime.FromBinary(createdTimestamp),
+				LastIndexingTime = DateTime.FromBinary(lastIndexingTime),
 				ReduceIndexingAttempts =
 					hasReduce == false
 						? null
@@ -265,6 +267,9 @@ namespace Raven.Storage.Esent.StorageActions
 				var olsSuccesses = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]) ?? 0;
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"],
 					olsSuccesses + stats.IndexingSuccesses);
+
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"],
+					SystemTime.UtcNow.ToBinary());
 
 				update.Save();
 			}

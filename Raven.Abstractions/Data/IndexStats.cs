@@ -24,6 +24,7 @@ namespace Raven.Abstractions.Data
 		public Etag LastReducedEtag { get; set; }
 		public DateTime? LastReducedTimestamp { get; set; }
         public DateTime CreatedTimestamp { get; set; }
+		public DateTime LastIndexingTime { get; set; }
 
 		public IndexingPerformanceStats[] Performance { get; set; }
 
