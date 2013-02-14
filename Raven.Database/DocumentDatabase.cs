@@ -2123,6 +2123,8 @@ namespace Raven.Database
 
 		public void AddTask(Task task, RavenJToken state, out long id)
 		{
+			if (task.Status == TaskStatus.Created)
+				throw new ArgumentException("Task must be started before it gets added to the database.", "task");
 			var localId = id = Interlocked.Increment(ref pendingTaskCounter);
 			pendingTasks.TryAdd(localId, new PendingTaskAndState
 			{
