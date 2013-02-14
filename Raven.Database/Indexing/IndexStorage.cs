@@ -112,11 +112,13 @@ namespace Raven.Database.Indexing
 
 			Index indexImplementation;
 			bool resetTried = false;
+			bool recoveryTried = false;
 			while (true)
 			{
+				Lucene.Net.Store.Directory luceneDirectory = null;
 				try
 				{
-					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
+					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
@@ -136,23 +138,47 @@ namespace Raven.Database.Indexing
 				{
 					if (resetTried)
 						throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
-					resetTried = true;
-					startupLog.WarnException("Could not open index " + indexName + ", forcibly resetting index", e);
-					try
-					{
-						documentDatabase.TransactionalStorage.Batch(accessor =>
-						{
-							accessor.Indexing.DeleteIndex(indexName);
-							accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
-						});
 
-						var indexDirectory = indexName;
-						var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
-						IOExtensions.DeleteDirectory(indexFullPath);
-					}
-					catch (Exception exception)
+					if (recoveryTried == false)
 					{
-						throw new InvalidOperationException("Could not reset index " + indexName, exception);
+						recoveryTried = true;
+
+						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
+
+						if (indexDefinition.IsMapReduce == false)
+						{
+							IndexCommitPoint commitUsedToRestore;
+
+							if (TryReusePreviousCommitPointsToRecoverIndex(luceneDirectory, indexDefinition, path, out commitUsedToRestore))
+							{
+								ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
+							}
+						}
+						else
+						{
+							RegenerateMapReduceIndex(luceneDirectory, indexDefinition.Name);
+						}
+					}
+					else
+					{
+						resetTried = true;
+						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, orcibly resetting index", e);
+						try
+						{
+							documentDatabase.TransactionalStorage.Batch(accessor =>
+							{
+								accessor.Indexing.DeleteIndex(indexName);
+								accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
+							});
+
+							var indexDirectory = indexName;
+							var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
+							IOExtensions.DeleteDirectory(indexFullPath);
+						}
+						catch (Exception exception)
+						{
+							throw new InvalidOperationException("Could not reset index " + indexName, exception);
+						}
 					}
 				}
 			}
@@ -232,24 +258,7 @@ namespace Raven.Database.Indexing
 						if (configuration.ResetIndexOnUncleanShutdown)
 							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
 
-						if (indexDefinition.IsMapReduce == false)
-						{
-							IndexCommitPoint commitUsedToRestore;
-
-							if (TryReusePreviousCommitPointsToRecoverIndex(directory, indexDefinition, path, out commitUsedToRestore) == false)
-							{
-								CheckIndexAndRecover(directory, indexDirectory);
-							}
-							else
-							{
-								ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
-							}
-						}
-						else
-						{
-							RegenerateMapReduceIndex(directory, indexDefinition.Name);
-						}
-
+						CheckIndexAndTryToFix(directory, indexDirectory);
 						directory.DeleteFile("writing-to-index.lock");
 					}
 				}
@@ -333,7 +342,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static void CheckIndexAndRecover(Lucene.Net.Store.Directory directory, string indexDirectory)
+		private static void CheckIndexAndTryToFix(Lucene.Net.Store.Directory directory, string indexDirectory)
 		{
 			startupLog.Warn("Unclean shutdown detected on {0}, checking the index for errors. This may take a while.", indexDirectory);
 
