@@ -87,18 +87,20 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
 		{
-			const int bufferSize = 256;
 			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
-			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= bufferSize)
+			var size = Math.Max(source.Count/maxNumberOfParallelIndexTasks, 256);
+			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= size)
 			{
 				using (var e = source.GetEnumerator())
 					action(e);
 				return;
 			}
-			var steps = source.Count/maxNumberOfParallelIndexTasks;
-			Parallel.For(0, steps,
-			             new ParallelOptions {MaxDegreeOfParallelism = maxNumberOfParallelIndexTasks},
-			             i => action(Yield(source, i*bufferSize, bufferSize)));
+			var parts = new List<IEnumerator<T>>();
+			for (int i = 0; i < source.Count; i+=size)
+			{
+				parts.Add(Yield(source, i*size, size));
+			}
+			ExecuteAllInterleaved(context, parts, action);
 		}
 
 		private IEnumerator<T> Yield<T>(IList<T> source, int start, int end)

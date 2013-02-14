@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -79,32 +80,41 @@ namespace Raven.Database.Indexing
 			})
 				.Where(x => x is FilteredDocument == false)
 				.ToList();
-			var items = new ConcurrentQueue<MapResultItem>();
-			var stats = new IndexingWorkStats();
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 
 			if (documentsWrapped.Count > 0)
 				actions.MapReduce.UpdateRemovedMapReduceStats(name, changed);
 
+			var allState = new ConcurrentQueue<Tuple<HashSet<ReduceKeyAndBucket>, IndexingWorkStats>>();
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
 			{
+				var localStats = new IndexingWorkStats();
+				var localChanges = new HashSet<ReduceKeyAndBucket>();
+				allState.Enqueue(Tuple.Create(localChanges, localStats));
+
 				using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 				{
-					var mapResults = RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats);
-					var currentDocumentResults = new List<object>();
-					string currentKey = null;
-					foreach (var currentDoc in mapResults)
+					// we are writing to the transactional store from multiple threads here, and in a streaming fashion
+					// should result in less memory and better perf
+					context.TransactionalStorage.Batch(accessor =>
 					{
-						var documentId = GetDocumentId(currentDoc);
-						if (documentId != currentKey)
+						var mapResults = RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, localStats);
+						var currentDocumentResults = new List<object>();
+						string currentKey = null;
+						foreach (var currentDoc in mapResults)
 						{
-							count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, items);
-							currentDocumentResults.Clear();
-							currentKey = documentId; 
+							var documentId = GetDocumentId(currentDoc);
+							if (documentId != currentKey)
+							{
+								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor);
+								currentDocumentResults.Clear();
+								currentKey = documentId;
+							}
+							currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
+							Interlocked.Increment(ref localStats.IndexingSuccesses);
 						}
-						currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
-					}
-					count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, items);
+						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor);
+					});
 				}
 			});
 			
@@ -119,12 +129,9 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			foreach (var mapResultItem in items)
-			{
-				changed.Add(new ReduceKeyAndBucket(mapResultItem.Bucket, mapResultItem.ReduceKey));
-				actions.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
-				actions.General.MaybePulseTransaction();
-			}
+			changed.UnionWith(allState.SelectMany(x => x.Item1));
+
+			var stats = new IndexingWorkStats(allState.Select(x=>x.Item2));
 
 			UpdateIndexingStats(context, stats);
 			actions.MapReduce.ScheduleReductions(name, 0, changed);
@@ -143,7 +150,8 @@ namespace Raven.Database.Indexing
 			AbstractViewGenerator viewGenerator,
 		    List<object> currentDocumentResults, 
 			string currentKey, 
-			ConcurrentQueue<MapResultItem> items)
+			 HashSet<ReduceKeyAndBucket> changes,
+			IStorageActionsAccessor actions)
 		{
 			if (currentKey == null || currentDocumentResults.Count == 0)
 				return 0;
@@ -165,13 +173,9 @@ namespace Raven.Database.Indexing
 
 				var data = GetMappedData(doc);
 
-				items.Enqueue(new MapResultItem
-				{
-					Data = data,
-					DocId = currentKey,
-					ReduceKey = reduceKey,
-					Bucket = IndexingUtil.MapBucket(currentKey)
-				});
+				actions.MapReduce.PutMappedResult(name, currentKey, reduceKey, data);
+				actions.General.MaybePulseTransaction();
+				changes.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(currentKey), reduceKey));
 			}
 			return count;
 		}
