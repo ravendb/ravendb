@@ -301,24 +301,24 @@ namespace Raven.Database.Queries
 		        DynamicQueryOptimizerResult[] prioritizedResults = null;
 		        database.TransactionalStorage.Batch(accessor =>
 		        {
-		            prioritizedResults = optimizerResults.OrderByDescending(result =>
-		            {
-		                var stats = accessor.Indexing.GetIndexStats(result.IndexName);
-		                if (stats == null)
-		                    return new ComparableByteArray(Guid.Empty);
+			        prioritizedResults = optimizerResults.OrderByDescending(result =>
+			        {
+				        var stats = accessor.Indexing.GetIndexStats(result.IndexName);
+				        if (stats == null)
+							return Etag.Empty;
 
-		                return new ComparableByteArray(stats.LastIndexedEtag);
-		            })
-		                                                 .ThenByDescending(result =>
-		                                                 {
-		                                                     var abstractViewGenerator =
-		                                                         database.IndexDefinitionStorage.GetViewGenerator(
-		                                                             result.IndexName);
-		                                                     if (abstractViewGenerator == null)
-		                                                         return -1;
-		                                                     return abstractViewGenerator.CountOfFields;
-		                                                 })
-		                                                 .ToArray();
+						return stats.LastIndexedEtag;
+			        })
+				        .ThenByDescending(result =>
+				        {
+					        var abstractViewGenerator =
+						        database.IndexDefinitionStorage.GetViewGenerator(
+							        result.IndexName);
+					        if (abstractViewGenerator == null)
+						        return -1;
+					        return abstractViewGenerator.CountOfFields;
+				        })
+				        .ToArray();
 		        });
 		        for (int i = 1; i < prioritizedResults.Length; i++)
 		        {
