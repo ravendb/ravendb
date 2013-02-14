@@ -430,7 +430,17 @@ namespace Raven.Database.Indexing
 				documentDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					value.Priority = IndexingPriority.Normal;
-					accessor.Indexing.SetIndexPriority(index, IndexingPriority.Normal);
+					try
+					{
+						accessor.Indexing.SetIndexPriority(index, IndexingPriority.Normal);
+					}
+					catch (Exception e)
+					{
+						if (accessor.IsWriteConflict(e) == false)
+							throw;
+
+						// we explciitly ignore write conflicts here, it is okay if we got set twice (two concurrent queries, or setting while indexing).
+					}
 					documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
 					documentDatabase.RaiseNotifications(new IndexChangeNotification()
 					{
