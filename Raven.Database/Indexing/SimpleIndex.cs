@@ -36,6 +36,8 @@ namespace Raven.Database.Indexing
 			get { return false; }
 		}
 
+		public DateTime LastCommitPointStoreTime { get; private set; }
+
 		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
@@ -162,7 +164,7 @@ namespace Raven.Database.Indexing
 						},
 						x => x.Dispose());
 				}
-				return new WritingDocumentsInfo
+				return new IndexedItemsInfo
 				{
 					ChangedDocs = sourceCount,
 					HighestETag = batch.HighestEtagInBatch
@@ -178,6 +180,54 @@ namespace Raven.Database.Indexing
 				Started = start
 			});
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
+		}
+
+		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
+		{
+			if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
+			{
+				context.IndexStorage.StoreCommitPoint(name, new IndexCommitPoint
+				{
+					HighestCommitedETag = itemsInfo.HighestETag.Value,
+					TimeStamp = LastIndexTime,
+					SegmentsInfo = GetCurrentSegmentsInfo()
+				});
+
+				LastCommitPointStoreTime = SystemTime.UtcNow;
+			}
+			else if (itemsInfo.DeletedKeys != null)
+			{
+				context.IndexStorage.AddDeletedKeysToCommitPoints(name, itemsInfo.DeletedKeys);
+			}
+		}
+
+		private IndexSegmentsInfo GetCurrentSegmentsInfo()
+		{
+			var segmentInfos = new SegmentInfos();
+			var result = new IndexSegmentsInfo();
+
+			try
+			{
+				segmentInfos.Read(directory);
+
+				result.Generation = segmentInfos.Generation;
+				result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
+				result.ReferencedFiles = segmentInfos.Files(directory, false);
+			}
+			catch (CorruptIndexException ex)
+			{
+				logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
+
+				result.IsIndexCorrupted = true;
+			}
+
+			return result;
+		}
+
+		private bool ShouldStoreCommitPoint()
+		{
+			return (LastIndexTime - PreviousIndexTime > TimeSpan.FromMinutes(1) || // no often than 1 minute
+					LastIndexTime - LastCommitPointStoreTime > context.MaxIndexCommitPointStoreTimeInterval); // at least once for specified time interval
 		}
 
 		private IndexingResult GetIndexingResult(object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
@@ -278,18 +328,13 @@ namespace Raven.Database.Indexing
 				IndexStats currentIndexStats = null;
 				context.TransactionalStorage.Batch(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(name));
 
-				return new WritingDocumentsInfo
+				return new IndexedItemsInfo
 				{
 					ChangedDocs = keys.Length,
 					HighestETag = currentIndexStats.LastIndexedEtag,
+					DeletedKeys = keys
 				};
 			});
-		}
-
-		protected override bool ShouldStoreCommitPoint()
-		{
-			return (LastIndexTime - PreviousIndexTime > TimeSpan.FromMinutes(1) || // no often than 1 minute
-					LastIndexTime - LastCommitPointStoreTime >  context.MaxIndexCommitPointStoreTimeInterval); // at least once for specified time interval
 		}
 	}
 }

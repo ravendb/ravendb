@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis;
@@ -421,6 +422,30 @@ namespace Raven.Database.Indexing
 				{
 					IOExtensions.DeleteDirectory(toDelete);
 				}
+			}
+		}
+
+		public void AddDeletedKeysToCommitPoints(string indexName, string[] deletedKeys)
+		{
+			var sb = new StringBuilder();
+
+			foreach (var deletedKey in deletedKeys)
+			{
+				sb.AppendLine(deletedKey);
+			}
+
+			var keysToDeleteAfterRecovery = sb.ToString();
+
+			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+
+			var existingCommitPoints =
+				IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
+
+			foreach (var commitPoint in existingCommitPoints)
+			{
+				var commitPointDirectory = new IndexCommitPointDirectory(path, indexName, commitPoint);
+
+				File.AppendAllText(commitPointDirectory.DeletedKeysFile, keysToDeleteAfterRecovery);
 			}
 		}
 

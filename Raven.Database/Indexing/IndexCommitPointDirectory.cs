@@ -15,6 +15,7 @@ namespace Raven.Database.Indexing
 	{
 		private const string DirectoryName = "CommitPoints";
 		private const string File = "index.commitPoint";
+		private const string KeysToDeleteFile = "to-delete.commitPoint";
 
 		public IndexCommitPointDirectory(string indexStoragePath, string indexName, string name)
 		{
@@ -23,6 +24,7 @@ namespace Raven.Database.Indexing
 			Name = name;
 			FullPath = Path.Combine(AllCommitPointsFullPath, Name);
 			FileFullPath = Path.Combine(FullPath, File);
+			DeletedKeysFile = Path.Combine(FullPath, KeysToDeleteFile);
 		}
 
 		public string IndexFullPath { get; private set; }
@@ -34,6 +36,8 @@ namespace Raven.Database.Indexing
 		public string FullPath { get; private set; }
 
 		public string FileFullPath { get; private set; }
+
+		public string DeletedKeysFile { get; private set; }
 
 		public static string GetAllCommitPointsFullPath(string indexFullPath)
 		{

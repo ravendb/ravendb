@@ -225,7 +225,7 @@
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
-    <Compile Include="Indexing\WritingDocumentsInfo.cs" />
+    <Compile Include="Indexing\IndexedItemsInfo.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
     <Compile Include="Indexing\IndexSegmentsInfo.cs" />
     <Compile Include="Indexing\LowerCaseKeywordTokenizer.cs" />

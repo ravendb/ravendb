@@ -7,10 +7,12 @@ using System;
 
 namespace Raven.Database.Indexing
 {
-	public class WritingDocumentsInfo
+	public class IndexedItemsInfo
 	{
 		public int ChangedDocs { get; set; }
 
 		public Guid? HighestETag { get; set; }
+
+		public string[] DeletedKeys { get; set; }
 	}
 }

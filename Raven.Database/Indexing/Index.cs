@@ -47,7 +47,7 @@ namespace Raven.Database.Indexing
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
-		private Directory directory;
+		protected Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
 		/// <summary>
@@ -112,8 +112,6 @@ namespace Raven.Database.Indexing
 		public DateTime LastIndexTime { get; set; }
 
 		protected DateTime PreviousIndexTime { get; set; }
-
-		protected DateTime LastCommitPointStoreTime { get; set; }
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
@@ -307,7 +305,7 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
-		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, WritingDocumentsInfo> action)
+		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
@@ -320,7 +318,7 @@ namespace Raven.Database.Indexing
 				bool shouldRecreateSearcher;
 				var toDispose = new List<Action>();
 				Analyzer searchAnalyzer = null;
-				var writingDocsInfo = new WritingDocumentsInfo();
+				var itemsInfo = new IndexedItemsInfo();
 
 				try
 				{
@@ -353,8 +351,8 @@ namespace Raven.Database.Indexing
 																				  name));
 							}
 
-							writingDocsInfo = action(indexWriter, searchAnalyzer, stats);
-							shouldRecreateSearcher = writingDocsInfo.ChangedDocs > 0;
+							itemsInfo = action(indexWriter, searchAnalyzer, stats);
+							shouldRecreateSearcher = itemsInfo.ChangedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
 								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
@@ -366,7 +364,7 @@ namespace Raven.Database.Indexing
 							throw;
 						}
 
-						if (writingDocsInfo.ChangedDocs > 0)
+						if (itemsInfo.ChangedDocs > 0)
 						{
 							UpdateIndexingStats(context, stats);
 							WriteTempIndexToDiskIfNeeded(context);
@@ -392,54 +390,14 @@ namespace Raven.Database.Indexing
 					LastIndexTime = SystemTime.UtcNow;
 				}
 
-				if (ShouldStoreCommitPoint() && writingDocsInfo.HighestETag != null)
-				{
-					StoreCommitPoint(writingDocsInfo.HighestETag.Value);
-				}
+				HandleCommitPoints(itemsInfo);
 
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
 			}
 		}
 
-		private void StoreCommitPoint(Guid highestCommitedEtag)
-		{
-			var indexCommit = new IndexCommitPoint
-			{
-				HighestCommitedETag = highestCommitedEtag,
-				TimeStamp = LastIndexTime,
-				SegmentsInfo = GetCurrentSegmentsInfo()
-			};
-
-			context.IndexStorage.StoreCommitPoint(name, indexCommit);
-
-			LastCommitPointStoreTime = SystemTime.UtcNow;
-		}
-
-		private IndexSegmentsInfo GetCurrentSegmentsInfo()
-		{
-			var segmentInfos = new SegmentInfos();
-			var result = new IndexSegmentsInfo();
-
-			try
-			{
-				segmentInfos.Read(directory);
-
-				result.Generation = segmentInfos.Generation;
-				result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
-				result.ReferencedFiles = segmentInfos.Files(directory, false);
-			}
-			catch (CorruptIndexException ex)
-			{
-				logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
-
-				result.IsIndexCorrupted = true;
-			}
-
-			return result;
-		}
-
-		
+		protected abstract void HandleCommitPoints(IndexedItemsInfo itemsInfo);
 
 		protected void UpdateIndexingStats(WorkContext context, IndexingWorkStats stats)
 		{
@@ -629,8 +587,6 @@ namespace Raven.Database.Indexing
 		}
 
 		public abstract void Remove(string[] keys, WorkContext context);
-
-		protected abstract bool ShouldStoreCommitPoint();
 
 		internal IDisposable GetSearcher(out IndexSearcher searcher)
 		{
@@ -1346,7 +1302,7 @@ namespace Raven.Database.Indexing
 							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
 							allFilesWriter.WriteLine(fileName);
 						}
-						return new WritingDocumentsInfo
+						return new IndexedItemsInfo
 						{
 							ChangedDocs = 0
 						};
