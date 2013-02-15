@@ -1346,7 +1346,10 @@ namespace Raven.Database.Indexing
 							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
 							allFilesWriter.WriteLine(fileName);
 						}
-						return WritingDocumentsInfo.ChangedDocsOnly(0);
+						return new WritingDocumentsInfo
+						{
+							ChangedDocs = 0
+						};
 					});
 
 					var commit = snapshotter.Snapshot();
