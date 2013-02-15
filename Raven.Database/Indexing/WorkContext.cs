@@ -80,6 +80,11 @@ namespace Raven.Database.Indexing
 			get { return Configuration.NumberOfItemsToExecuteReduceInSingleStep; }
 		}
 
+		public TimeSpan MaxIndexCommitPointStoreTimeInterval
+		{
+			get { return Configuration.MaxIndexCommitPointStoreTimeInterval; }
+		}
+
 		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, string name)
 		{
 			return WaitForWork(timeout, ref workerWorkCounter, null, name);

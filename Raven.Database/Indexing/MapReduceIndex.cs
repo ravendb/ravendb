@@ -246,8 +246,16 @@ namespace Raven.Database.Indexing
 				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
 				writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
-				return WritingDocumentsInfo.ChangedDocsOnly(keys.Length);
+				return new WritingDocumentsInfo
+				{
+					ChangedDocs = keys.Length
+				};
 			});
+		}
+
+		protected override bool ShouldStoreCommitPoint()
+		{
+			return false;
 		}
 
 		public class ReduceDocuments
@@ -435,7 +443,10 @@ namespace Raven.Database.Indexing
 								x => x.Dispose());
 						}
 					}
-					return WritingDocumentsInfo.ChangedDocsOnly(count + ReduceKeys.Count);
+					return new WritingDocumentsInfo
+					{
+						ChangedDocs = count + ReduceKeys.Count
+					};
 				});
 				parent.AddindexingPerformanceStat(new IndexingPerformanceStats
 				{

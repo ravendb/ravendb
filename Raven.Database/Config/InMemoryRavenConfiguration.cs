@@ -134,6 +134,8 @@ namespace Raven.Database.Config
 
 			TempIndexInMemoryMaxBytes = ravenSettings.TempIndexInMemoryMaxMb.Value;
 
+			MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
+
 			// Data settings
 			RunInMemory = ravenSettings.RunInMemory.Value;
 
@@ -669,6 +671,13 @@ namespace Raven.Database.Config
 		/// </summary>
 		public bool CreateTemporaryIndexesForAdHocQueriesIfNeeded { get; set; }
 
+		/// <summary>
+		/// Maximum time interval for storing commit points for map indexes when new items were added.
+		/// The commit points are used to restore index if unclean shutdown was detected.
+		/// Default: 00:05:00 
+		/// </summary>
+		public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
+
 		public string IndexStoragePath
 		{
 			get
@@ -685,6 +694,7 @@ namespace Raven.Database.Config
 		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
+
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

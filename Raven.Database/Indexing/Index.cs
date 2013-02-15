@@ -111,6 +111,10 @@ namespace Raven.Database.Indexing
 
 		public DateTime LastIndexTime { get; set; }
 
+		protected DateTime PreviousIndexTime { get; set; }
+
+		protected DateTime LastCommitPointStoreTime { get; set; }
+
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
@@ -307,13 +311,17 @@ namespace Raven.Database.Indexing
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
+
+			PreviousIndexTime = LastIndexTime;
 			LastIndexTime = SystemTime.UtcNow;
+
 			lock (writeLock)
 			{
 				bool shouldRecreateSearcher;
 				var toDispose = new List<Action>();
 				Analyzer searchAnalyzer = null;
-				var writingDocsInfo = WritingDocumentsInfo.Empty();
+				var writingDocsInfo = new WritingDocumentsInfo();
+
 				try
 				{
 					waitReason = "Write";
@@ -384,7 +392,7 @@ namespace Raven.Database.Indexing
 					LastIndexTime = SystemTime.UtcNow;
 				}
 
-				if (writingDocsInfo.ShouldStoreCommitPoint && writingDocsInfo.HighestETag != null)
+				if (ShouldStoreCommitPoint() && writingDocsInfo.HighestETag != null)
 				{
 					StoreCommitPoint(writingDocsInfo.HighestETag.Value);
 				}
@@ -404,6 +412,8 @@ namespace Raven.Database.Indexing
 			};
 
 			context.IndexStorage.StoreCommitPoint(name, indexCommit);
+
+			LastCommitPointStoreTime = SystemTime.UtcNow;
 		}
 
 		private IndexSegmentsInfo GetCurrentSegmentsInfo()
@@ -428,6 +438,8 @@ namespace Raven.Database.Indexing
 
 			return result;
 		}
+
+		
 
 		protected void UpdateIndexingStats(WorkContext context, IndexingWorkStats stats)
 		{
@@ -617,6 +629,8 @@ namespace Raven.Database.Indexing
 		}
 
 		public abstract void Remove(string[] keys, WorkContext context);
+
+		protected abstract bool ShouldStoreCommitPoint();
 
 		internal IDisposable GetSearcher(out IndexSearcher searcher)
 		{
