@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -9,6 +10,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 #if SILVERLIGHT
 using System.Net.Browser;
+using Raven.Client.Changes;
+
 #endif
 
 namespace Raven.Abstractions.OAuth
@@ -22,7 +25,7 @@ namespace Raven.Abstractions.OAuth
 			this.apiKey = apiKey;
 		}
 
-		public override void ConfigureRequest(object sender, Connection.WebRequestEventArgs e)
+		public override void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
 			if (CurrentOauthToken != null)
 			{
@@ -157,12 +160,12 @@ namespace Raven.Abstractions.OAuth
 		}
 #endif
 
-		public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource)
+		public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource)
 		{
-			return DoOAuthRequestAsync(oauthSource, null, null, null, 0);
+			return DoOAuthRequestAsync(baseUrl, oauthSource, null, null, null, 0);
 		}
 
-		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
+		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
 		{
 			if (oauthSource == null) throw new ArgumentNullException("oauthSource");
 
@@ -197,7 +200,11 @@ namespace Raven.Abstractions.OAuth
 							using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
 							using (var reader = new StreamReader(stream))
 							{
-								CurrentOauthToken = "Bearer " + reader.ReadToEnd();
+								var currentOauthToken = "Bearer " + reader.ReadToEnd();
+								CurrentOauthToken = currentOauthToken;
+#if SILVERLIGHT
+								BrowserCookieToAllowUserToUseStandardRequests(baseUrl, currentOauthToken);
+#endif
 								return
 									CompletedTask.With(
 										(Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken)));
@@ -226,7 +233,7 @@ namespace Raven.Abstractions.OAuth
 							var challengeDictionary =
 								OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
 
-							return DoOAuthRequestAsync(oauthSource,
+							return DoOAuthRequestAsync(baseUrl, oauthSource,
 													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
 													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
 													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
@@ -235,5 +242,36 @@ namespace Raven.Abstractions.OAuth
 					}).Unwrap();
 			}).Unwrap();
 		}
+#if SILVERLIGHT
+		private void BrowserCookieToAllowUserToUseStandardRequests(string baseUrl, string currentOauthToken)
+		{
+			var webRequest = WebRequestCreator.BrowserHttp.Create(new Uri(baseUrl + "/OAuth/Cookie"));
+			webRequest.Headers["Authorization"] = currentOauthToken;
+			webRequest.Headers["Has-Api-Key"] = "True";
+			webRequest.Method = "POST";
+			webRequest.BeginGetResponse(ar =>
+			{
+				try
+				{
+					using (webRequest.EndGetResponse(ar))
+					{
+
+					}
+				}
+				catch (WebException we)
+				{
+					Debug.WriteLine("Failed to set browser cookie: " + we.Message);
+					using(we.Response)
+					{
+						
+					}
+				}
+				catch (Exception e)
+				{
+					Debug.WriteLine("Failed to set browser cookie: " + e.Message);
+				}
+			}, null);
+		}
+#endif
 	}
 }

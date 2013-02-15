@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -56,6 +57,7 @@ namespace Raven.Database.Indexing
 			public string DocId;
 			public RavenJObject Data;
 			public string ReduceKey;
+			public int Bucket;
 		}
 
 		public override void IndexDocuments(
@@ -76,52 +78,46 @@ namespace Raven.Database.Indexing
 				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, name, changed);
 				return doc;
 			})
-				.Where(x => x is FilteredDocument == false);
-			var items = new List<MapResultItem>();
-			var stats = new IndexingWorkStats();
+				.Where(x => x is FilteredDocument == false)
+				.ToList();
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
-			using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
-			{
-				var mapResults = RobustEnumerationIndex(
-						documentsWrapped.GetEnumerator(), 
-						viewGenerator.MapDefinitions, 
-						actions, 
-						stats)
-					.ToList();
+
+			if (documentsWrapped.Count > 0)
 				actions.MapReduce.UpdateRemovedMapReduceStats(name, changed);
 
-				foreach (var mappedResultFromDocument in mapResults.GroupBy(GetDocumentId))
+			var allState = new ConcurrentQueue<Tuple<HashSet<ReduceKeyAndBucket>, IndexingWorkStats>>();
+			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
+			{
+				var localStats = new IndexingWorkStats();
+				var localChanges = new HashSet<ReduceKeyAndBucket>();
+				allState.Enqueue(Tuple.Create(localChanges, localStats));
+
+				using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 				{
-					var dynamicResults = mappedResultFromDocument.Select(x => (object)new DynamicJsonObject(RavenJObject.FromObject(x, jsonSerializer))).ToList();
-					foreach (
-						var doc in
-							RobustEnumerationReduceDuringMapPhase(dynamicResults.GetEnumerator(), viewGenerator.ReduceDefinition, actions, context))
+					// we are writing to the transactional store from multiple threads here, and in a streaming fashion
+					// should result in less memory and better perf
+					context.TransactionalStorage.Batch(accessor =>
 					{
-						count++;
-
-						var reduceValue = viewGenerator.GroupByExtraction(doc);
-						if (reduceValue == null)
+						var mapResults = RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, localStats);
+						var currentDocumentResults = new List<object>();
+						string currentKey = null;
+						foreach (var currentDoc in mapResults)
 						{
-							logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
-											  viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
-							continue;
+							var documentId = GetDocumentId(currentDoc);
+							if (documentId != currentKey)
+							{
+								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor);
+								currentDocumentResults.Clear();
+								currentKey = documentId;
+							}
+							currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
+							Interlocked.Increment(ref localStats.IndexingSuccesses);
 						}
-						var reduceKey = ReduceKeyToString(reduceValue);
-						var docId = mappedResultFromDocument.Key.ToString();
-
-						var data = GetMappedData(doc);
-
-						items.Add(new MapResultItem
-						{
-							Data = data,
-							DocId = docId,
-							ReduceKey = reduceKey
-						});
-
-						changed.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), reduceKey));
-					}
+						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor);
+					});
 				}
-			}
+			});
+			
 
 			IDictionary<string, HashSet<string>> result;
 			while (allReferencedDocs.TryDequeue(out result))
@@ -133,11 +129,9 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			foreach (var mapResultItem in items)
-			{
-				actions.MapReduce.PutMappedResult(name, mapResultItem.DocId, mapResultItem.ReduceKey, mapResultItem.Data);
-				actions.General.MaybePulseTransaction();
-			}
+			changed.UnionWith(allState.SelectMany(x => x.Item1));
+
+			var stats = new IndexingWorkStats(allState.Select(x=>x.Item2));
 
 			UpdateIndexingStats(context, stats);
 			actions.MapReduce.ScheduleReductions(name, 0, changed);
@@ -150,6 +144,40 @@ namespace Raven.Database.Indexing
 				Started = start
 			});
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
+		}
+
+		private int ProcessBatch(
+			AbstractViewGenerator viewGenerator,
+		    List<object> currentDocumentResults, 
+			string currentKey, 
+			 HashSet<ReduceKeyAndBucket> changes,
+			IStorageActionsAccessor actions)
+		{
+			if (currentKey == null || currentDocumentResults.Count == 0)
+				return 0;
+
+			int count = 0;
+			var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition);
+			foreach (var doc in results)
+			{
+				count++;
+
+				var reduceValue = viewGenerator.GroupByExtraction(doc);
+				if (reduceValue == null)
+				{
+					logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
+					                  viewGenerator.GroupByExtraction, currentKey);
+					continue;
+				}
+				var reduceKey = ReduceKeyToString(reduceValue);
+
+				var data = GetMappedData(doc);
+
+				actions.MapReduce.PutMappedResult(name, currentKey, reduceKey, data);
+				actions.General.MaybePulseTransaction();
+				changes.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(currentKey), reduceKey));
+			}
+			return count;
 		}
 
 		private RavenJObject GetMappedData(object doc)
@@ -165,7 +193,7 @@ namespace Raven.Database.Indexing
 		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache =
 			new ConcurrentDictionary<Type, Func<object, object>>();
 
-		private static object GetDocumentId(object doc)
+		private static string GetDocumentId(object doc)
 		{
 			var docIdFetcher = documentIdFetcherCache.GetOrAdd(doc.GetType(), type =>
 			{
@@ -183,7 +211,7 @@ namespace Raven.Database.Indexing
 			if (documentId == null || documentId is DynamicNullObject)
 				throw new InvalidOperationException("Could not getdocument id fetcher for this document");
 
-			return documentId;
+			return (string)documentId;
 		}
 
 		internal static string ReduceKeyToString(object reduceValue)

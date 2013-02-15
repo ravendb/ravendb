@@ -5,6 +5,9 @@
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
                          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:models="clr-namespace:Raven.Studio.Models"
+                         xmlns:system="clr-namespace:System;assembly=mscorlib"
+                         xmlns:local="clr-namespace:Raven.Studio.Infrastructure.TemplateSelectors"
                          Title="TaskView Page"
                          DataContext="{Binding Path=SelectedTask.Value}">
 
@@ -23,22 +26,43 @@
 		<StackPanel Grid.Row="1">
 			<ItemsControl ItemsSource="{Binding TaskInputs}">
 				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<TextBlock Grid.Column="0" Text="{Binding Name}"
+                    <DataTemplate>
+                        <local:TaskUITemplateSelector Content="{Binding}">
+                            <local:TaskUITemplateSelector.Input>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}"
 									   Width="{Binding DataContext.LongestInput, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"
 									   Padding="5"
 									   VerticalAlignment="Center" />
-							<TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}"
+                                        <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}"
 									 VerticalAlignment="Center"
 									 Margin="5"
 									 MinWidth="150" />
-						</Grid>
-					</DataTemplate>
+                                    </Grid>
+                                </DataTemplate>
+                            </local:TaskUITemplateSelector.Input>
+                            <local:TaskUITemplateSelector.CheckBox>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding Value, Mode=TwoWay}" VerticalAlignment="Center" Margin="5"></CheckBox>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}"
+									   Width="{Binding DataContext.LongestInput, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"
+									   Padding="5"
+									   VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </local:TaskUITemplateSelector.CheckBox>
+                        </local:TaskUITemplateSelector>
+                    </DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
 

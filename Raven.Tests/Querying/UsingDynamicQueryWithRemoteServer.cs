@@ -43,20 +43,20 @@ namespace Raven.Tests.Querying
 		public void CanPerformDynamicQueryUsingClientLinqQuery()
 		{
 			var blogOne = new Blog
-			{
-				Title = "one",
-				Category = "Ravens"
-			};
+			              	{
+			              		Title = "one",
+			              		Category = "Ravens"
+			              	};
 			var blogTwo = new Blog
-			{
-				Title = "two",
-				Category = "Rhinos"
-			};
+			              	{
+			              		Title = "two",
+			              		Category = "Rhinos"
+			              	};
 			var blogThree = new Blog
-			{
-				Title = "three",
-				Category = "Rhinos"
-			};
+			                	{
+			                		Title = "three",
+			                		Category = "Rhinos"
+			                	};
 
 			using (var s = this.documentStore.OpenSession())
 			{
@@ -69,13 +69,13 @@ namespace Raven.Tests.Querying
 			using (var s = this.documentStore.OpenSession())
 			{
 				var results = s.Query<Blog>()
-							   .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-							   .Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
-							   .ToArray();
+					.Customize(x => x.WaitForNonStaleResultsAsOfNow())
+					.Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
+					.ToArray();
 
 				var blogs = s.Advanced.LuceneQuery<Blog>()
-							 .Where("Category:Rhinos AND Title.Length:3")
-							 .ToArray();
+					.Where("Category:Rhinos AND Title.Length:3")
+					.ToArray();
 
 				Assert.Equal(1, results.Length);
 				Assert.Equal("two", results[0].Title);
@@ -87,20 +87,20 @@ namespace Raven.Tests.Querying
 		public void CanPerformDynamicQueryUsingClientLuceneQuery()
 		{
 			var blogOne = new Blog
-			{
-				Title = "one",
-				Category = "Ravens"
-			};
+			              	{
+			              		Title = "one",
+			              		Category = "Ravens"
+			              	};
 			var blogTwo = new Blog
-			{
-				Title = "two",
-				Category = "Rhinos"
-			};
+			              	{
+			              		Title = "two",
+			              		Category = "Rhinos"
+			              	};
 			var blogThree = new Blog
-			{
-				Title = "three",
-				Category = "Rhinos"
-			};
+			                	{
+			                		Title = "three",
+			                		Category = "Rhinos"
+			                	};
 
 			using (var s = this.documentStore.OpenSession())
 			{
@@ -113,8 +113,8 @@ namespace Raven.Tests.Querying
 			using (var s = this.documentStore.OpenSession())
 			{
 				var results = s.Advanced.LuceneQuery<Blog>()
-							   .Where("Title.Length:3 AND Category:Rhinos")
-							   .WaitForNonStaleResultsAsOfNow().ToArray();
+					.Where("Title.Length:3 AND Category:Rhinos")
+					.WaitForNonStaleResultsAsOfNow().ToArray();
 
 				Assert.Equal(1, results.Length);
 				Assert.Equal("two", results[0].Title);
@@ -126,15 +126,15 @@ namespace Raven.Tests.Querying
 		public void CanPerformProjectionUsingClientLinqQuery()
 		{
 			var blogOne = new Blog
-			{
-				Title = "one",
-				Category = "Ravens",
+			              	{
+			              		Title = "one",
+			              		Category = "Ravens",
 				Tags = new[]
-				{
+			              		       	{
 					new Tag {Name = "tagOne"},
 					new Tag {Name = "tagTwo"}
-				}
-			};
+			              		       	}
+			              	};
 
 			using (var s = this.documentStore.OpenSession())
 			{
@@ -145,13 +145,13 @@ namespace Raven.Tests.Querying
 			using (var s = this.documentStore.OpenSession())
 			{
 				var results = s.Query<Blog>()
-							   .Where(x => x.Title == "one" && x.Tags.Any(y => y.Name == "tagTwo"))
-							   .Select(x => new
-							   {
-								   x.Category,
-								   x.Title
-							   })
-							   .Single();
+					.Where(x => x.Title == "one" && x.Tags.Any(y => y.Name == "tagTwo"))
+					.Select(x => new
+					             	{
+					             		x.Category,
+					             		x.Title
+					             	})
+					.Single();
 
 				Assert.Equal("one", results.Title);
 				Assert.Equal("Ravens", results.Category);
@@ -170,8 +170,8 @@ namespace Raven.Tests.Querying
 			using (var s = this.documentStore.OpenSession())
 			{
 				var results = s.Query<Blog>()
-							   .Select(b => new {b.Category})
-							   .ToArray();
+					.Select(b => new {b.Category})
+					.ToArray();
 				Assert.Equal(0, results.Length);
 			}
 		}
@@ -180,19 +180,19 @@ namespace Raven.Tests.Querying
 		public void CanPerformLinqOrderByOnNumericField()
 		{
 			var blogOne = new Blog
-			{
-				SortWeight = 2
-			};
+			              	{
+			              		SortWeight = 2
+			              	};
 
 			var blogTwo = new Blog
-			{
-				SortWeight = 4
-			};
+			              	{
+			              		SortWeight = 4
+			              	};
 
 			var blogThree = new Blog
-			{
-				SortWeight = 1
-			};
+			                	{
+			                		SortWeight = 1
+			                	};
 
 			using (var s = this.documentStore.OpenSession())
 			{
@@ -205,12 +205,12 @@ namespace Raven.Tests.Querying
 			using (var s = this.documentStore.OpenSession())
 			{
 				var resultDescending = (from blog in s.Query<Blog>()
-										orderby blog.SortWeight descending
-										select blog).ToArray();
+				                        orderby blog.SortWeight descending
+				                        select blog).ToArray();
 
 				var resultAscending = (from blog in s.Query<Blog>()
-									   orderby blog.SortWeight ascending
-									   select blog).ToArray();
+				                       orderby blog.SortWeight ascending
+				                       select blog).ToArray();
 
 				Assert.Equal(4, resultDescending[0].SortWeight);
 				Assert.Equal(2, resultDescending[1].SortWeight);
@@ -226,19 +226,19 @@ namespace Raven.Tests.Querying
 		public void CanPerformLinqOrderByOnTextField()
 		{
 			var blogOne = new Blog
-			{
-				Title = "aaaaa"
-			};
+			              	{
+			              		Title = "aaaaa"
+			              	};
 
 			var blogTwo = new Blog
-			{
-				Title = "ccccc"
-			};
+			              	{
+			              		Title = "ccccc"
+			              	};
 
 			var blogThree = new Blog
-			{
-				Title = "bbbbb"
-			};
+			                	{
+			                		Title = "bbbbb"
+			                	};
 
 			using (var s = this.documentStore.OpenSession())
 			{
@@ -251,12 +251,12 @@ namespace Raven.Tests.Querying
 			using (var s = this.documentStore.OpenSession())
 			{
 				var resultDescending = (from blog in s.Query<Blog>()
-										orderby blog.Title descending
-										select blog).ToArray();
+				                        orderby blog.Title descending
+				                        select blog).ToArray();
 
 				var resultAscending = (from blog in s.Query<Blog>()
-									   orderby blog.Title ascending
-									   select blog).ToArray();
+				                       orderby blog.Title ascending
+				                       select blog).ToArray();
 
 				Assert.Equal("ccccc", resultDescending[0].Title);
 				Assert.Equal("bbbbb", resultDescending[1].Title);
@@ -398,7 +398,12 @@ namespace Raven.Tests.Querying
 					{
 						{"Title", FieldIndexing.Analyzed},
 						{"Category", FieldIndexing.Analyzed}
-					}
+					},
+					TermVectors =
+						{
+							{"Title", FieldTermVector.WithPositionsAndOffsets},
+							{"Category", FieldTermVector.WithPositionsAndOffsets}							
+						}
 				});
 
 			var blogOne = new Blog
@@ -473,7 +478,12 @@ namespace Raven.Tests.Querying
 					{
 						{"Title", FieldIndexing.Analyzed},
 						{"Category", FieldIndexing.Analyzed}
-					}
+					},
+					TermVectors =
+						{
+							{"Title", FieldTermVector.WithPositionsAndOffsets},
+							{"Category", FieldTermVector.WithPositionsAndOffsets}							
+						}
 				});
 
 			var blogOne = new Blog
@@ -540,7 +550,12 @@ namespace Raven.Tests.Querying
 					{
 						{"Title", FieldIndexing.Analyzed},
 						{"Category", FieldIndexing.Analyzed}
-					}
+					},
+					TermVectors =
+						{
+							{"Title", FieldTermVector.WithPositionsAndOffsets},
+							{"Category", FieldTermVector.WithPositionsAndOffsets}							
+						}
 				});
 
 			var blogOne = new Blog

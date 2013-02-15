@@ -26,6 +26,8 @@ namespace Raven.Client.Indexes
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
 			IndexSuggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
+			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
+			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
 		}
 
 		public override bool IsMapReduce
@@ -81,6 +83,17 @@ namespace Raven.Client.Indexes
 		/// Index sort options
 		/// </summary>
 		protected IDictionary<string, string> AnalyzersStrings { get; set; }
+
+		/// <summary>
+		/// Index term vector options
+		/// </summary>		
+		protected IDictionary<Expression<Func<TReduceResult, object>>, FieldTermVector> TermVectors { get; set; }
+
+		/// <summary>
+		/// Index term vector options
+		/// </summary>		
+		protected IDictionary<string, FieldTermVector> TermVectorsStrings { get; set; }
+
 
 		/// <summary>
 		/// Indexing options
@@ -143,6 +156,22 @@ namespace Raven.Client.Indexes
 		protected void Analyze(string field, string analyzer)
 		{
 			AnalyzersStrings.Add(field, analyzer);
+		}
+
+		/// <summary>
+		/// Register a field to have term vectors
+		/// </summary>
+		protected void TermVector(Expression<Func<TReduceResult, object>> field, FieldTermVector termVector)
+		{
+			TermVectors.Add(field, termVector);
+		}
+
+		/// <summary>
+		/// Register a field to have term vectors
+		/// </summary>
+		protected void TermVector(string field, FieldTermVector termVector)
+		{
+			TermVectorsStrings.Add(field, termVector);
 		}
 
 		/// <summary>

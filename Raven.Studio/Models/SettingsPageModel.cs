@@ -4,6 +4,7 @@ using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -33,7 +34,6 @@ namespace Raven.Studio.Models
 				Settings.Sections.Add(apiKeys);
 				Settings.SelectedSection.Value = apiKeys;
 				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
-				Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
 				return; 
 			}
@@ -85,6 +85,20 @@ namespace Raven.Studio.Models
 			        {
 				        settingsSectionModel.LoadFor(databaseDocument);
 			        }
+
+					var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/plugins/status".NoCache(), "GET");
+
+					req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(item =>
+					{
+						var plugins = ((RavenJObject)item).Deserialize<PluginsStatus>(new DocumentConvention());
+
+						if (plugins == null || plugins.Plugins.Contains("Raven.Bundles.Authorization", StringComparer.InvariantCultureIgnoreCase) == false)
+							return;
+
+						var authSection = new AuthorizationSettingsSectionModel();
+						Settings.Sections.Add(authSection);
+						authSection.LoadFor(databaseDocument);
+					});
 		        });
         }
 

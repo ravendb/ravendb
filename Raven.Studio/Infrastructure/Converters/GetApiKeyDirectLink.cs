@@ -17,8 +17,11 @@ namespace Raven.Studio.Infrastructure.Converters
 				if (fullApiKey.Contains("/") == false)
 					return "Must set both name and secret to get a direct link";
 
-				return string.Format(@"{0}/raven/studio.html#/databases?api-key={1}",
-													 ApplicationModel.Current.Server.Value.Url, fullApiKey);
+				var url = ApplicationModel.Current.Server.Value.Url;
+				return string.Format(@"{0}{1}raven/studio.html#?api-key={2}",
+													 url, 
+													 url.EndsWith("/") ? "" : "/",
+													 fullApiKey);
 			}
 
 			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

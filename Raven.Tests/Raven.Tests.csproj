@@ -90,6 +90,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Raven.Database\bin\Debug\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
@@ -194,6 +198,7 @@
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
     <Compile Include="Bugs\CreatingIndexes.cs" />
     <Compile Include="Bugs\CS1977.cs" />
+    <Compile Include="Bugs\DamianPutSnapshot.cs" />
     <Compile Include="Bugs\DanTurner.cs" />
     <Compile Include="Bugs\DeserializationAcrossTypes.cs" />
     <Compile Include="Bugs\DictionaryOfDateTime.cs" />
@@ -228,6 +233,8 @@
     <Compile Include="Bugs\LiveProjections\Entities\User.cs" />
     <Compile Include="Bugs\LiveProjections\Indexes\TaskSummaryIndex.cs" />
     <Compile Include="Bugs\LiveProjections\LiveProjectionOnTasks.cs" />
+    <Compile Include="Bugs\LoadAllStartingWith.cs" />
+    <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
     <Compile Include="Bugs\MapRedue\Chris.cs" />
@@ -494,6 +501,7 @@
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
+    <Compile Include="Bundles\IndexedProperties\Alexander.cs" />
     <Compile Include="Bundles\IndexedProperties\IndexedProperties.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
@@ -505,6 +513,8 @@
     <Compile Include="Bundles\SqlReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
+    <Compile Include="Indexes\HighlightTesting.cs" />
+    <Compile Include="Indexes\WithNullableDateTime.cs" />
     <Compile Include="InflectorTests.cs" />
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
@@ -514,7 +524,9 @@
     <Compile Include="Issues\RavenDB741.cs" />
     <Compile Include="Issues\RavenDB814.cs" />
     <Compile Include="Issues\RavenDB845.cs" />
+    <Compile Include="Issues\RavenDB903.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
+    <Compile Include="Issues\RavenDB_806.cs" />
     <Compile Include="Issues\RavenDB_851.cs" />
     <Compile Include="Issues\RavenDB_863.cs" />
     <Compile Include="Issues\RavenDB_863_2.cs" />
@@ -576,6 +588,7 @@
     <Compile Include="Linq\IsNullOrEmpty.cs" />
     <Compile Include="Issues\RavenDB_556.cs" />
     <Compile Include="Issues\RavenDB_579.cs" />
+    <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="MailingList\Accounts.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
@@ -584,6 +597,7 @@
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
+    <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
     <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
@@ -609,8 +623,10 @@
     <Compile Include="MailingList\linmouhong3.cs" />
     <Compile Include="MailingList\LinqInExtensionTests.cs" />
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />
+    <Compile Include="MailingList\LuceneSearchSample.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />
+    <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
     <Compile Include="MailingList\Nullables.cs" />
@@ -624,10 +640,14 @@
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\RavenDbRecoveryTests.cs" />
     <Compile Include="MailingList\RavenDB_859.cs" />
+    <Compile Include="MailingList\RavenCannotQueryAgainstFloatProperty.cs" />
+    <Compile Include="MailingList\LateBoundValue.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
+    <Compile Include="MailingList\SnapshotBug.cs" />
     <Compile Include="MailingList\Stif.cs" />
+    <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
     <Compile Include="MailingList\Tamir.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />

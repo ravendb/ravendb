@@ -685,6 +685,9 @@
     <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\Absdtractions\TaskExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\FieldTermVector.cs">
+      <Link>Imports\Indexing\FieldTermVector.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptions.cs">
       <Link>Imports\Indexing\SpatialOptions.cs</Link>
     </Compile>
@@ -699,9 +702,6 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDictionaryDateTimeKeysConverter.cs">
       <Link>Imports\Json\JsonDictionaryDateTimeKeysConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonFloatConverter.cs">
-      <Link>Imports\Json\JsonFloatConverter.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonNumericConverter.cs">
       <Link>Imports\Json\JsonNumericConverter.cs</Link>
@@ -955,6 +955,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Exceptions\ServerRequestError.cs">
       <Link>Data\ServerRequestError.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\AsyncDocumentSessionExtesions.cs">
+      <Link>Imports\Extensions\AsyncDocumentSessionExtesions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>
@@ -1039,6 +1042,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\CSharpClassName.cs">
+      <Link>Imports\Util\CSharpClassName.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\GlobalLastEtagHolder.cs">
       <Link>Imports\Util\GlobalLastEtagHolder.cs</Link>
     </Compile>
@@ -1068,6 +1074,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationStatus.cs">
       <Link>Imports\SqlReplication\SqlReplicationStatus.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Plugins\PluginsStatus.cs">
+      <Link>Imports\Plugins\PluginsStatus.cs</Link>
     </Compile>
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />

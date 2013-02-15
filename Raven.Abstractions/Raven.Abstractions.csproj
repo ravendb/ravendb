@@ -628,12 +628,12 @@
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="Indexing\FieldTermVector.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />
     <Compile Include="Indexing\SuggestionOptions.cs" />
     <Compile Include="Json\ConflictsResolver.cs" />
     <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
-    <Compile Include="Json\JsonFloatConverter.cs" />
     <Compile Include="Json\Linq\DictionaryWithParentSnapshot.cs" />
     <Compile Include="Json\Linq\Extensions.cs" />
     <Compile Include="Json\Linq\RavenJArray.cs" />

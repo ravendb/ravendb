@@ -17,7 +17,7 @@ namespace Raven.Studio.Models
 			SelectedOption = new Observable<int>();
 			ShowPeriodicBackup = new Observable<bool>();
 
-			var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/license/status", "GET");
+			var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/license/status".NoCache(), "GET");
 
 			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{

@@ -10,6 +10,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
@@ -128,6 +129,16 @@ namespace Raven.Database.Server.Abstractions
 			{
 				return new CompletedTask(e);
 			}
+		}
+
+		public void SetCookie(string name, string val)
+		{
+			response.SetCookie(new Cookie(name,val)
+			{
+				Expires = SystemTime.UtcNow.AddHours(1),
+				HttpOnly = true,
+				Path = "/"
+			});
 		}
 
 		public void SetPublicCacheability()

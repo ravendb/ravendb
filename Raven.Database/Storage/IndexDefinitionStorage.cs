@@ -90,6 +90,7 @@ namespace Raven.Database.Storage
 					Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
 					Indexes = generator.Indexes,
 					Stores = generator.Stores,
+					TermVectors = generator.TermVectors,
 					IsCompiled = true
 				};
 				indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);

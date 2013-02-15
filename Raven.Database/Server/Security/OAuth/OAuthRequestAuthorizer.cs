@@ -89,9 +89,15 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			const string bearerPrefix = "Bearer ";
 
-
 			var auth = ctx.Request.Headers["Authorization"];
-			if (auth == null || auth.Length <= bearerPrefix.Length || !auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+			if(auth == null)
+			{
+				auth = ctx.Request.GetCookie("OAuth-Token");
+				if (auth != null)
+					auth = Uri.UnescapeDataString(auth);
+			}
+			if (auth == null || auth.Length <= bearerPrefix.Length ||
+				!auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
 				return null;
 
 			var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);

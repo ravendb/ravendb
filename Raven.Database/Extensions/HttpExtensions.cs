@@ -212,7 +212,10 @@ namespace Raven.Database.Extensions
 							var rfc1123 = GetDateString(header.Value, "r");
 							var iso8601 = GetDateString(header.Value, "o");
 							context.Response.AddHeader(header.Key, rfc1123);
-							context.Response.AddHeader("Raven-" + header.Key, iso8601);
+							if (header.Key.StartsWith("Raven-") == false)
+							{
+								context.Response.AddHeader("Raven-" + header.Key, iso8601);
+							}
 						}
 						else
 						{

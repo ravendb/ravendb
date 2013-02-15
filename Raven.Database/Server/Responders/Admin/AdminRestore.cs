@@ -47,6 +47,14 @@ namespace Raven.Database.Server.Responders.Admin
 				IsTenantDatabase = true
 			};
 
+			if(databaseDocument != null)
+			{
+				foreach (var setting in databaseDocument.Settings)
+				{
+					ravenConfiguration.Settings[setting.Key] = setting.Value;
+				}
+			}
+
 			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Raven.ravendb")))
 			{
 				ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
@@ -65,13 +73,14 @@ namespace Raven.Database.Server.Responders.Admin
 
 			var restoreStatus = new List<string>();
 			SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, new TransactionInformation());
+			var defrag = "true".Equals(context.Request.QueryString["defrag"], StringComparison.InvariantCultureIgnoreCase);
 			DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
 			                         msg =>
 			                         {
 				                         restoreStatus.Add(msg);
 				                         SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 											 RavenJObject.FromObject(new {restoreStatus}), new RavenJObject(), null);
-			                         });
+			                         }, defrag);
 
 			if (databaseDocument == null)
 				return;

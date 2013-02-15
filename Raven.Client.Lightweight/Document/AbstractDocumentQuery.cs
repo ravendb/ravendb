@@ -1161,7 +1161,7 @@ If you really want to do in memory filtering on the data returned from the query
 				return fieldName;
 
 			var val = (start ?? end);
-			var isNumeric = val is int || val is long || val is decimal || val is double || val is float;
+			var isNumeric = val is int || val is long || val is decimal || val is double || val is float || val is TimeSpan;
 
 			if (isNumeric && fieldName.EndsWith("_Range") == false)
 				fieldName = fieldName + "_Range";
@@ -1712,16 +1712,11 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				return (bool)whereParams.Value ? "true" : "false";
 			}
-			if (type == typeof (TimeSpan))
-			{
-				var val = (TimeSpan) whereParams.Value;
-				return val.ToString(Default.TimeSpanLexicalFormat);
-			}
 			if (type == typeof(DateTime))
 			{
 				var val = (DateTime)whereParams.Value;
 				var s = val.ToString(Default.DateTimeFormatsToWrite);
-				if(val.Kind == DateTimeKind.Utc)
+				if (val.Kind == DateTimeKind.Utc)
 					s += "Z";
 				return s;
 			}
@@ -1792,14 +1787,15 @@ If you really want to do in memory filtering on the data returned from the query
 				return null;
 
 			Func<object, string> value;
-			if(implicitStringsCache.TryGetValue(type,out value))
+			var localStringsCache = implicitStringsCache;
+			if(localStringsCache.TryGetValue(type,out value))
 				return value;
 
 			var methodInfo = type.GetMethod("op_Implicit", new[] {type});
 
 			if (methodInfo == null || methodInfo.ReturnType != typeof(string))
 			{
-				implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+				implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
 				{
 					{type, null}
 				};
@@ -1810,7 +1806,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			var func = (Func<object, string>) Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
 
-			implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+			implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
 				{
 					{type, func}
 				};
@@ -1847,6 +1843,8 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((double)(decimal)whereParams.Value);
 			if (whereParams.Value is double)
 				return NumberUtil.NumberToString((double)whereParams.Value);
+			if (whereParams.Value is TimeSpan)
+				return NumberUtil.NumberToString(((TimeSpan) whereParams.Value).Ticks);
 			if (whereParams.Value is float)
 				return NumberUtil.NumberToString((float)whereParams.Value);
 			if(whereParams.Value is string)

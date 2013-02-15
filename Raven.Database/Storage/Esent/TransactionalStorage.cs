@@ -227,7 +227,7 @@ namespace Raven.Storage.Esent
 
 		void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
 		{
-			Compact(cfg);
+			Compact(cfg, (sesid, snp, snt, data) => JET_err.Success);
 		}
 
 		private static void RecoverFromFailedCompact(string file)
@@ -249,7 +249,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public static void Compact(InMemoryRavenConfiguration ravenConfiguration)
+		public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
 		{
 			var src = Path.Combine(ravenConfiguration.DataDirectory, "Data");
 			var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Data.Compact");
@@ -272,7 +272,7 @@ namespace Raven.Storage.Esent
 					Api.JetAttachDatabase(session, src, AttachDatabaseGrbit.None);
 					try
 					{
-						Api.JetCompact(session, src, compactPath, null, null,
+						Api.JetCompact(session, src, compactPath, statusCallback, null,
 								   CompactGrbit.None);
 					}
 					finally
@@ -586,10 +586,15 @@ namespace Raven.Storage.Esent
 
 		public static void DisableIndexChecking(JET_INSTANCE jetInstance)
 		{
-			const int JET_paramEnableIndexCleanup = 54;
-
 			Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, JET_param.EnableIndexChecking, 0, null);
-			Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param)JET_paramEnableIndexCleanup, 0, null);	
+			if (Environment.OSVersion.Version >= new Version(5, 2))
+			{
+				// JET_paramEnableIndexCleanup is not supported on WindowsXP
+
+				const int JET_paramEnableIndexCleanup = 54;
+
+				Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param) JET_paramEnableIndexCleanup, 0, null);
+			}
 		}
 	}
 }

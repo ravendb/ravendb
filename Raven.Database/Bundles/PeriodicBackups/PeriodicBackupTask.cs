@@ -73,7 +73,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 					backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
 					if (backupConfigs.IntervalMilliseconds <= 0)
 					{
-						logger.Warn("Peridoic backup interval is set to zero or less, periodic backup is now disabled");
+						logger.Warn("Periodic backup interval is set to zero or less, periodic backup is now disabled");
 						return;
 					}
 

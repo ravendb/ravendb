@@ -11,7 +11,7 @@ namespace Raven.Database.Storage
 		
 		void Remove(string name, string key);
 
-		IEnumerable<ListItem> Read(string name, Guid start, int take);
+		IEnumerable<ListItem> Read(string name, Guid start, Guid? end, int take);
 
 		ListItem Read(string name, string key);
 

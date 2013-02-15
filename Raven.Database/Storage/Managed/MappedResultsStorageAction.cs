@@ -149,19 +149,15 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData,
-				int take,
-				List<object> itemsToDelete,
-				HashSet<Tuple<string, int>> itemsAlreadySeen
-			)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			var seenLocally = new HashSet<Tuple<string, int>>();
-			foreach (var reduceKey in reduceKeys)
+			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
 				var keyCriteria = new RavenJObject
 			                  {
-				                  {"view", index},
-				                  {"level", level},
+				                  {"view", getItemsToReduceParams.Index},
+				                  {"level", getItemsToReduceParams.Level},
 								  {"reduceKey", reduceKey}
 			                  };
 
@@ -171,8 +167,8 @@ namespace Raven.Storage.Managed
 					var levelFromDb = result.Value<int>("level");
 					var reduceKeyFromDb = result.Value<string>("reduceKey");
 
-					if (string.Equals(indexFromDb, index, StringComparison.InvariantCultureIgnoreCase) == false ||
-						levelFromDb != level)
+					if (string.Equals(indexFromDb, getItemsToReduceParams.Index, StringComparison.InvariantCultureIgnoreCase) == false ||
+						levelFromDb != getItemsToReduceParams.Level)
 						break;
 
 					if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
@@ -183,27 +179,29 @@ namespace Raven.Storage.Managed
 					var bucket = result.Value<int>("bucket");
 
 					var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
-					var thisIsNewScheduledReductionRow = itemsToDelete.Contains(result, RavenJTokenEqualityComparer.Default) == false;
-					var neverSeenThisKeyAndBucket = itemsAlreadySeen.Add(rowKey);
+					var thisIsNewScheduledReductionRow = getItemsToReduceParams.ItemsToDelete.Contains(result, RavenJTokenEqualityComparer.Default) == false;
+					var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 					{
 						if (seenLocally.Add(rowKey))
 						{
-							foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
+							foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData))
 							{
-								take--;
+								getItemsToReduceParams.Take--;
 								yield return mappedResultInfo;
 							}
 						}
 					}
 					if(thisIsNewScheduledReductionRow)
-						itemsToDelete.Add(result);
+						getItemsToReduceParams.ItemsToDelete.Add(result);
 
-					if (take <= 0)
+					if (getItemsToReduceParams.Take <= 0)
 						break;
 				}
 
-				if (take <= 0)
+				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
+
+				if (getItemsToReduceParams.Take <= 0)
 					break;
 			}
 		}

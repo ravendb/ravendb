@@ -522,8 +522,22 @@ namespace Raven.Database
 		public void StopIndexingWorkers()
 		{
 			workContext.StopIndexing();
-			indexingBackgroundTask.Wait();
-			reducingBackgroundTask.Wait();
+			try
+			{
+				indexingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background indexing", e);
+			}
+			try
+			{
+				reducingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background reducing", e);
+			}
 
 			backgroundWorkersSpun = false;
 		}
@@ -739,6 +753,9 @@ namespace Raven.Database
 				Guid? preTouchEtag;
 				Guid? afterTouchEtag;
 				actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+
+				actions.General.MaybePulseTransaction();
+
 				if(preTouchEtag == null || afterTouchEtag == null)
 					continue;
 
@@ -1799,7 +1816,7 @@ namespace Raven.Database
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup, databaseDocument);
 		}
 
-		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag = true)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
@@ -1921,6 +1938,46 @@ namespace Raven.Database
 		public TransportState TransportState { get; private set; }
 
 		/// <summary>
+		/// Get the total index storage size taken by the indexes on the disk.
+		/// This explicitly does NOT include in memory indexes.
+		/// </summary>
+		/// <remarks>
+		/// This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetIndexStorageSizeOnDisk()
+		{
+			if( Configuration.RunInMemory )
+				return 0;
+			var indexes = Directory.GetFiles( Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories );
+			var totalIndexSize = indexes.Sum( file =>
+			{
+				try
+				{
+					return new FileInfo( file ).Length;
+				} catch( FileNotFoundException )
+				{
+					return 0;
+				}
+			} );
+
+			return totalIndexSize;
+		}
+
+		/// <summary>
+		/// Get the total size taken by the database on the disk.
+		/// This explicitly does NOT include in memory database.
+		/// It does include any reserved space on the file system, which may significantly increase
+		/// the database size.
+		/// </summary>
+		/// <remarks>
+		/// This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetTransactionalStorageSizeOnDisk()
+		{
+			return Configuration.RunInMemory ? 0 : TransactionalStorage.GetDatabaseSizeInBytes();
+		}
+
+		/// <summary>
 		/// Get the total size taken by the database on the disk.
 		/// This explicitly does NOT include in memory indexes or in memory database.
 		/// It does include any reserved space on the file system, which may significantly increase
@@ -1933,20 +1990,7 @@ namespace Raven.Database
 		{
 			if (Configuration.RunInMemory)
 				return 0;
-			var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
-			var totalIndexSize = indexes.Sum(file =>
-			{
-				try
-				{
-					return new FileInfo(file).Length;
-				}
-				catch (FileNotFoundException)
-				{
-					return 0;
-				}
-			});
-
-			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
+			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk();
 		}
 
 		public Guid GetIndexEtag(string indexName, Guid? previousEtag)

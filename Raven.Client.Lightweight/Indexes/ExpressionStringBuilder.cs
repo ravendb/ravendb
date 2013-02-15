@@ -289,6 +289,7 @@ namespace Raven.Client.Indexes
 				memberType == typeof(decimal?) ||
 				memberType == typeof(double?) ||
 				memberType == typeof(long?) ||
+				memberType == typeof(DateTime?) ||
 				memberType == typeof(float?))
 			{
 				Out(")");
@@ -298,7 +299,11 @@ namespace Raven.Client.Indexes
 		private void OutputTypeIfNeeded(MemberInfo member)
 		{
 			var memberType = GetMemberType(member);
-			if (memberType == typeof(decimal))
+			if (memberType == typeof (DateTime?)) 
+			{
+				Out("((DateTime?)");
+			}
+			else if (memberType == typeof(decimal))
 			{
 				Out("((decimal)");
 			}
@@ -1690,7 +1695,7 @@ namespace Raven.Client.Indexes
 				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
 		}
 
-		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
+		public static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
 		{
 			"abstract",
 			"as",
