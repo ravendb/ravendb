@@ -192,6 +192,7 @@
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
+    <Compile Include="Behaviors\ClosePopupAction.cs" />
     <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
@@ -200,6 +201,7 @@
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\FocusElementAction.cs" />
+    <Compile Include="Behaviors\HandledMouseLeftButtonUpTrigger.cs" />
     <Compile Include="Behaviors\HighlightSyntaxErrorAction.cs" />
     <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
@@ -251,6 +253,7 @@
     </Compile>
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
+    <Compile Include="Impl\SplitButton\SplitHyperlinkButtonPopup.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToToolTipCoverter.cs" />
     <Compile Include="Infrastructure\Converters\FromEnumWithDescription.cs" />
@@ -812,6 +815,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Assets\SplitButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\SplitHyperlinkButtonPopupStyle.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

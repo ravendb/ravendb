@@ -50,14 +50,20 @@ namespace Raven.Studio
 
 		private static bool HyperlinkMatchesUri(string uri, HyperlinkButton link)
 		{
+		    var queryStart = uri.IndexOf('?');
+            if (queryStart > 0)
+            {
+                uri = uri.Substring(0, queryStart);
+            }
+
 			if (link.CommandParameter != null &&
-				uri.StartsWith(link.CommandParameter.ToString(), StringComparison.InvariantCultureIgnoreCase))
+				uri.Equals(link.CommandParameter.ToString(), StringComparison.InvariantCultureIgnoreCase))
 			{
 				return true;
 			}
 
 			var alternativeUris = LinkHighlighter.GetAlternativeUris(link);
-			if (alternativeUris != null && alternativeUris.Any(alternative => uri.StartsWith(alternative, StringComparison.InvariantCultureIgnoreCase)))
+			if (alternativeUris != null && alternativeUris.Any(alternative => uri.Equals(alternative, StringComparison.InvariantCultureIgnoreCase)))
 			{
 				return true;
 			}
