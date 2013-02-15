@@ -114,13 +114,23 @@ namespace Raven.Database.Indexing
 			Index indexImplementation;
 			bool resetTried = false;
 			bool recoveryTried = false;
+			string[] keysToDeleteAfterRecovery = null;
 			while (true)
 			{
 				Lucene.Net.Store.Directory luceneDirectory = null;
+				
 				try
 				{
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
+
+					if (indexImplementation is SimpleIndex && keysToDeleteAfterRecovery != null)
+					{
+						// remove keys from index that were deleted after creating commit point
+						// this will also create a new commit point with included deletes
+						indexImplementation.Remove(keysToDeleteAfterRecovery, documentDatabase.WorkContext);
+					}
+
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
@@ -150,7 +160,10 @@ namespace Raven.Database.Indexing
 						{
 							IndexCommitPoint commitUsedToRestore;
 
-							if (TryReusePreviousCommitPointsToRecoverIndex(luceneDirectory, indexDefinition, path, out commitUsedToRestore))
+							if (TryReusePreviousCommitPointsToRecoverIndex(luceneDirectory,
+							                                               indexDefinition, path,
+							                                               out commitUsedToRestore,
+							                                               out keysToDeleteAfterRecovery))
 							{
 								ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
 							}
@@ -449,9 +462,10 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit)
+		private static bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
 		{
 			indexCommit = null;
+			keysToDelete = null;
 
 			if (indexDefinition.IsMapReduce)
 				return false;
@@ -520,6 +534,9 @@ namespace Raven.Database.Indexing
 					{
 						// here we can ignore, segments.gen is used only as fallback
 					}
+
+					if (File.Exists(commitPointDirectory.DeletedKeysFile))
+						keysToDelete = File.ReadLines(commitPointDirectory.DeletedKeysFile).ToArray();
 
 					return true;
 				}
