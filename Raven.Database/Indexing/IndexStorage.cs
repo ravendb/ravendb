@@ -47,7 +47,6 @@ namespace Raven.Database.Indexing
 	{
 		private readonly DocumentDatabase documentDatabase;
 		private const string IndexVersion = "2.0.0.1";
-		private const int MaxNumberOfStoredCommitPoints = 5;
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -429,9 +428,9 @@ namespace Raven.Database.Indexing
 
 			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 
-			if (storedCommitPoints.Length > MaxNumberOfStoredCommitPoints)
+			if (storedCommitPoints.Length > configuration.MaxNumberOfStoredCommitPoints)
 			{
-				foreach (var toDelete in storedCommitPoints.Take(storedCommitPoints.Length - MaxNumberOfStoredCommitPoints))
+				foreach (var toDelete in storedCommitPoints.Take(storedCommitPoints.Length - configuration.MaxNumberOfStoredCommitPoints))
 				{
 					IOExtensions.DeleteDirectory(toDelete);
 				}

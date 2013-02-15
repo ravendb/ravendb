@@ -136,6 +136,10 @@ namespace Raven.Database.Config
 
 			MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
 
+			MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
+
+			MaxNumberOfStoredCommitPoints = ravenSettings.MaxNumberOfStoredCommitPoints.Value;
+
 			// Data settings
 			RunInMemory = ravenSettings.RunInMemory.Value;
 
@@ -678,6 +682,18 @@ namespace Raven.Database.Config
 		/// </summary>
 		public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
 
+		/// <summary>
+		/// Minumum interval between between successive indexing that will allow to store a  commit point
+		/// Default: 00:01:00
+		/// </summary>
+		public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
+
+		/// <summary>
+		/// Maximum number of kept commit points to restore map index after unclean shutdown
+		/// Default: 5
+		/// </summary>
+		public int MaxNumberOfStoredCommitPoints { get; set; }
+
 		public string IndexStoragePath
 		{
 			get
@@ -694,7 +710,6 @@ namespace Raven.Database.Config
 		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
-
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

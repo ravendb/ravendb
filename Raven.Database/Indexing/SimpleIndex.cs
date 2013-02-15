@@ -226,8 +226,10 @@ namespace Raven.Database.Indexing
 
 		private bool ShouldStoreCommitPoint()
 		{
-			return (LastIndexTime - PreviousIndexTime > TimeSpan.FromMinutes(1) || // no often than 1 minute
-					LastIndexTime - LastCommitPointStoreTime > context.MaxIndexCommitPointStoreTimeInterval); // at least once for specified time interval
+					// no often than specified indexing interval
+			return (LastIndexTime - PreviousIndexTime > context.Configuration.MinIndexingTimeIntervalToStoreCommitPoint ||
+					// at least once for specified time interval
+					LastIndexTime - LastCommitPointStoreTime > context.Configuration.MaxIndexCommitPointStoreTimeInterval); 
 		}
 
 		private IndexingResult GetIndexingResult(object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)

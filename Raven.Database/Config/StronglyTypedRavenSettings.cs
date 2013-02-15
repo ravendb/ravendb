@@ -101,6 +101,11 @@ namespace Raven.Database.Config
 			MaxIndexCommitPointStoreTimeInterval =
 				new TimeSpanSetting(settings["Raven/MaxIndexCommitPointStoreTimeInterval"], TimeSpan.FromMinutes(5),
 				                    TimeSpanArgumentType.FromParse);
+			MaxNumberOfStoredCommitPoints =
+				new IntegerSetting(settings["Raven/MaxNumberOfStoredCommitPoints"], 5);
+			MinIndexingTimeIntervalToStoreCommitPoint =
+				new TimeSpanSetting(settings["Raven/MinIndexingTimeIntervalToStoreCommitPoint"], TimeSpan.FromMinutes(1),
+				                    TimeSpanArgumentType.FromParse);
 		}
 
 		private string GetDefaultWebDir()
@@ -192,5 +197,9 @@ namespace Raven.Database.Config
 		public BooleanSetting AllowLocalAccessWithoutAuthorization { get; private set; }
 
 		public TimeSpanSetting MaxIndexCommitPointStoreTimeInterval { get; private set; }
+
+		public TimeSpanSetting MinIndexingTimeIntervalToStoreCommitPoint { get; private set; }
+
+		public IntegerSetting MaxNumberOfStoredCommitPoints { get; private set; }
 	}
 }
