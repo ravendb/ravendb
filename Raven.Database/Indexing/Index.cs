@@ -399,24 +399,21 @@ namespace Raven.Database.Indexing
 
 		protected abstract void HandleCommitPoints(IndexedItemsInfo itemsInfo);
 
-		protected void UpdateIndexingStats(WorkContext context, IndexingWorkStats stats)
+		protected void UpdateIndexingStats(WorkContext workContext, IndexingWorkStats stats)
 		{
-			context.TransactionalStorage.Batch(accessor =>
+			switch (stats.Operation)
 			{
-				switch (stats.Operation)
-				{
-					case IndexingWorkStats.Status.Map:
-						accessor.Indexing.UpdateIndexingStats(name, stats);
-						break;
-					case IndexingWorkStats.Status.Reduce:
-						accessor.Indexing.UpdateReduceStats(name, stats);
-						break;
-					case IndexingWorkStats.Status.Ignore:
-						break;
-					default:
-						throw new ArgumentOutOfRangeException();
-				}
-			});
+				case IndexingWorkStats.Status.Map:
+					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateIndexingStats(name, stats));
+					break;
+				case IndexingWorkStats.Status.Reduce:
+					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateReduceStats(name, stats));
+					break;
+				case IndexingWorkStats.Status.Ignore:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
 		}
 
 		private void CreateIndexWriter()

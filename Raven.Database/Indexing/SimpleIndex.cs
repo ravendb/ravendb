@@ -338,5 +338,23 @@ namespace Raven.Database.Indexing
 				};
 			});
 		}
+
+		/// <summary>
+		/// For index recovery purposes
+		/// </summary>
+		internal void RemoveDirectlyFromIndex(string[] keys)
+		{
+			Write((writer, analyzer, stats) =>
+			{
+				stats.Operation = IndexingWorkStats.Status.Ignore;
+
+				writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
+
+				return new IndexedItemsInfo // just commit, don't create commit point and add any infor about deleted keys
+				{
+					ChangedDocs = keys.Length
+				};
+			});
+		}
 	}
 }

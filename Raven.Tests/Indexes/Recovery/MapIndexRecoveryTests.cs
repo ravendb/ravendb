@@ -86,7 +86,7 @@ namespace Raven.Tests.Indexes.Recovery
 		}
 
 		[Fact]
-		public void ShouldNotKeepLimitedNumberOfCommitPoints()
+		public void ShouldKeepLimitedNumberOfCommitPoints()
 		{
 			var index = new MapRecoveryTestIndex();
 
@@ -192,7 +192,7 @@ namespace Raven.Tests.Indexes.Recovery
 			}
 		}
 
-		[Fact(Skip = "Problems with work context initialization")]
+		[Fact]
 		public void ShouldRecoverDeletes()
 		{
 			string indexFullPath;
@@ -252,19 +252,16 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (GetNewServer(runInMemory: false, dataDirectory: DataDir, deleteDirectory: false)) // do not delete previous directory
 			{
-				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+				using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 				{
 					using (var session = store.OpenSession())
 					{
 						var result =
-							session.Query<Recovery, MapRecoveryTestIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
+							session.Query<Recovery, MapRecoveryTestIndex>().ToArray();
 
-						Assert.Equal(2, result.Count);
+						Assert.Equal(2, result.Length);
 					}
 				}
-
-				// here we should have another commit point because missing document after restore were indexed again
-				Assert.Equal(2, Directory.GetDirectories(commitPointsDirectory).Length);
 			}
 		}
 	}

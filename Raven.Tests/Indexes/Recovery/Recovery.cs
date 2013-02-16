@@ -7,6 +7,8 @@ namespace Raven.Tests.Indexes.Recovery
 {
 	public class Recovery
 	{
+		public string Id { get; set; }
+
 		public string Name { get; set; }
 
 		public int Number { get; set; }

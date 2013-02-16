@@ -126,8 +126,7 @@ namespace Raven.Database.Indexing
 					if (indexImplementation is SimpleIndex && keysToDeleteAfterRecovery != null)
 					{
 						// remove keys from index that were deleted after creating commit point
-						// this will also create a new commit point with included deletes
-						indexImplementation.Remove(keysToDeleteAfterRecovery, documentDatabase.WorkContext);
+						((SimpleIndex) indexImplementation).RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
 					}
 
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
