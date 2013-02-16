@@ -117,6 +117,9 @@ namespace Raven.Database.Server.Responders
 				case "reduce":
 					GetIndexReducedResult(context, index);
 					break;
+				case "schedules":
+					GetIndexScheduledReduces(context, index);
+					break;
 				case "keys":
 					GetIndexKeysStats(context, index);
 					break;
@@ -134,6 +137,21 @@ namespace Raven.Database.Server.Responders
 					context.SetStatusToBadRequest();
 					break;
 			}
+		}
+
+		private void GetIndexScheduledReduces(IHttpContext context, string index)
+		{
+			List<ScheduledReductionDebugInfo> mappedResult = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				mappedResult = accessor.MapReduce.GetScheduledReductionForDebug(index, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
+					.ToList();
+			});
+			context.WriteJson(new
+			{
+				mappedResult.Count,
+				Results = mappedResult
+			});
 		}
 
 		private void GetIndexKeysStats(IHttpContext context, string index)

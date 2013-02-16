@@ -208,6 +208,7 @@
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
     <Compile Include="Bugs\CreatingIndexes.cs" />
     <Compile Include="Bugs\CS1977.cs" />
+    <Compile Include="Bugs\DamianPutSnapshot.cs" />
     <Compile Include="Bugs\DanTurner.cs" />
     <Compile Include="Bugs\DeserializationAcrossTypes.cs" />
     <Compile Include="Bugs\DictionaryOfDateTime.cs" />
@@ -243,6 +244,7 @@
     <Compile Include="Bugs\LiveProjections\Indexes\TaskSummaryIndex.cs" />
     <Compile Include="Bugs\LiveProjections\LiveProjectionOnTasks.cs" />
     <Compile Include="Bugs\LoadAllStartingWith.cs" />
+    <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
     <Compile Include="Bugs\MapRedue\Chris.cs" />
@@ -652,6 +654,7 @@
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
+    <Compile Include="MailingList\SnapshotBug.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
