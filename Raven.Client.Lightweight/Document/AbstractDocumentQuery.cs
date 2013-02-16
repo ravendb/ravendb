@@ -1637,12 +1637,11 @@ If you really want to do in memory filtering on the data returned from the query
 				};
 			}
 
-			return new IndexQuery
+			var indexQuery = new IndexQuery
 			{
 				GroupBy = groupByFields,
 				AggregationOperation = aggregationOp,
 				Query = query,
-				PageSize = pageSize ?? 128,
 				Start = start,
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
@@ -1654,6 +1653,11 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPreTags = highlighterPreTags.ToArray(),
 				HighlighterPostTags = highlighterPostTags.ToArray()
 			};
+
+			if (pageSize != null)
+				indexQuery.PageSize = pageSize.Value;
+
+			return indexQuery;
 		}
 
 		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",

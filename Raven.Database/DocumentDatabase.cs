@@ -1144,8 +1144,15 @@ namespace Raven.Database
 
 		public QueryResultWithIncludes Query(string index, IndexQuery query)
 		{
-			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
+			var result = Query(index, query, null, list.Add);
+			result.Results = list;
+			return result;
+		}
+
+		public QueryResultWithIncludes Query(string index, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
+		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
 			var stale = false;
 			Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
@@ -1222,8 +1229,22 @@ namespace Raven.Database
 						}
 						results = resultList;
 					}
-
-					list.AddRange(results);
+					if (headerInfo != null)
+					{
+						headerInfo(new QueryHeaderInformation
+						{
+							Index = index,
+							IsStable = stale,
+							ResultEtag = resultEtag,
+							IndexTimestamp= indexTimestamp.Item1,
+							IndexEtag = indexTimestamp.Item2,
+							TotalResults = query.TotalSize.Value
+						});
+					}
+					foreach (var result in results)
+					{
+						onResult(result);
+					}
 
 					if (transformerErrors.Count > 0)
 					{
@@ -1233,7 +1254,6 @@ namespace Raven.Database
 			return new QueryResultWithIncludes
 			{
 				IndexName = index,
-				Results = list,
 				IsStale = stale,
 				NonAuthoritativeInformation = nonAuthoritativeInformation,
 				SkippedResults = query.SkippedResults.Value,
