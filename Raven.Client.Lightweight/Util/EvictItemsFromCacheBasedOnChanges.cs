@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RebuildCacheBasedOnChanges.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="EvictItemsFromCacheBasedOnChanges.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -10,14 +10,14 @@ using Raven.Client.Changes;
 
 namespace Raven.Client.Util
 {
-	public class RebuildCacheBasedOnChanges : IObserver<DocumentChangeNotification>, IObserver<IndexChangeNotification>, IDisposable
+	public class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChangeNotification>, IObserver<IndexChangeNotification>, IDisposable
 	{
 		private readonly IDatabaseChanges changes;
 		private readonly Action evictCacheOldItems;
 		private readonly IDisposable documentsSubscription;
 		private readonly IDisposable indexesSubscription;
 
-		public RebuildCacheBasedOnChanges(IDatabaseChanges changes, Action evictCacheOldItems)
+		public EvictItemsFromCacheBasedOnChanges(IDatabaseChanges changes, Action evictCacheOldItems)
 		{
 			this.changes = changes;
 			this.evictCacheOldItems = evictCacheOldItems;

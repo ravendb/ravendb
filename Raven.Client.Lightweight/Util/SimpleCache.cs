@@ -108,6 +108,12 @@ namespace Raven.Client.Util
 			}
 		}
 
+		public void ClearAllItems()
+		{
+			lruKeys.Clear();
+			actualCache.Clear();
+		}
+
 		public T Get(string key)
 		{
 			T value;

@@ -99,7 +99,7 @@ namespace Raven.Client.Document
 			ReplicationInformerFactory = url => new ReplicationInformer(this);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
-			ShouldAggressiveCacheTrackChanges = false;
+			ShouldAggressiveCacheTrackChanges = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(

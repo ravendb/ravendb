@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
 					}
 
 
-					Assert.True(SpinWait.SpinUntil(() =>store.JsonRequestFactory.NumberOfCacheEvictions > 0, 10000));
+					Assert.True(SpinWait.SpinUntil(() =>store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
 
 					using (var session = store.OpenSession())
 					{
@@ -108,7 +108,7 @@ namespace Raven.Tests.Issues
 					}
 
 
-					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheEvictions > 0, 10000));
+					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
 
 					using (var session = store.OpenSession())
 					{

@@ -47,6 +47,7 @@ namespace Raven.Client.Document
 		protected static Guid? currentSessionId;
 		private const int DefaultNumberOfCachedRequests = 2048;
 		private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
+		private bool aggressiveCachingUsed;
 
 
 #if SILVERLIGHT
@@ -63,15 +64,15 @@ namespace Raven.Client.Document
 
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
-		private HttpJsonRequestFactory jsonRequestFactory = 
+		private HttpJsonRequestFactory jsonRequestFactory =
 #if !SILVERLIGHT
-			  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+ new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();
 #endif
 
 #if !SILVERLIGHT
-		private RebuildCacheBasedOnChanges observeChangesAndRebuildCache;
+		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 #endif
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -255,6 +256,12 @@ namespace Raven.Client.Document
 			GC.SuppressFinalize(this);
 #endif
 
+#if !SILVERLIGHT
+			foreach (var observeChangesAndEvictItemsFromCacheForDatabase in observeChangesAndEvictItemsFromCacheForDatabases)
+			{
+				observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
+			}
+#endif
 
 			var tasks = new List<Task>();
 			foreach (var databaseChange in databaseChanges)
@@ -531,7 +538,7 @@ namespace Raven.Client.Document
 				}
 				oauthSource = Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequestAsync(Url,oauthSource);
+				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource);
 			};
 
 		}
@@ -719,18 +726,11 @@ namespace Raven.Client.Document
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			if (Conventions.ShouldAggressiveCacheTrackChanges && observeChangesAndRebuildCache == null)
-			{
-				observeChangesAndRebuildCache = new RebuildCacheBasedOnChanges(CreateDatabaseChanges(DefaultDatabase),
-				                                                               jsonRequestFactory.ExpireItemsFromCache);
-			}
+			aggressiveCachingUsed = true;
 
 			return new DisposableAction(() =>
 			{
 				jsonRequestFactory.AggressiveCacheDuration = old;
-
-				if (observeChangesAndRebuildCache != null)
-					observeChangesAndRebuildCache.Dispose();
 			});
 #else
 			// TODO: with silverlight, we don't currently support aggressive caching
@@ -814,6 +814,21 @@ namespace Raven.Client.Document
 		{
 			return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions());
 		}
+
+		protected override void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+		{
+			if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
+			{
+				var databaseName = session.DatabaseName;
+				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
+																		  _ => new EvictItemsFromCacheBasedOnChanges(
+																			  CreateDatabaseChanges(databaseName),
+																			  () => jsonRequestFactory.ExpireItemsFromCache(databaseName)));
+			}
+
+			base.AfterSessionCreated(session);
+		}
 #endif
+
 	}
 }
