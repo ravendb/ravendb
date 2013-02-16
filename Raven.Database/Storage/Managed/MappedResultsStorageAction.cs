@@ -495,6 +495,30 @@ namespace Raven.Storage.Managed
 					   };
 		}
 
+		public IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string indexName, int start, int take)
+		{
+			var keyCriteria = new RavenJObject
+			{
+				{"view", indexName},
+			};
+
+			foreach (var result in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(keyCriteria)
+				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), indexName))
+				.Skip(start)
+				.Take(take)
+			)
+			{
+				yield return new ScheduledReductionDebugInfo
+				{
+					Key = result.Value<string>("reduceKey"),
+					Bucket = result.Value<int>("bucket"),
+					Etag = new Guid(result.Value<byte[]>("etag")),
+					Level = result.Value<int>("level"),
+					Timestamp = result.Value<DateTime>("timestamp"),
+				};
+			}
+		}
+
 		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take)
 		{
 			var results = storage.ReduceResults["ByViewReduceKeyLevelAndBucket"].SkipTo(new RavenJObject

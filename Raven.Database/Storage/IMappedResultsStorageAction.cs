@@ -25,6 +25,7 @@ namespace Raven.Database.Storage
 
 		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int start, int take);
 		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take);
+		IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string indexName, int start, int take);
 
 		void ScheduleReductions(string view, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
 		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams);
@@ -103,6 +104,15 @@ namespace Raven.Database.Storage
 	{
 		public DateTime Timestamp { get; set; }
 		public Guid Etag { get; set; }
+	}
+
+	public class ScheduledReductionDebugInfo
+	{
+		public DateTime Timestamp { get; set; }
+		public Guid Etag { get; set; }
+		public string Key { get; set; }
+		public int Level { get; set; }
+		public int Bucket { get; set; }
 	}
 
 	public class MappedResultInfo
