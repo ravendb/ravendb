@@ -32,12 +32,8 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "C", "c" } });
 					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "D", "d" } });
 
-					accessor.MapReduce.ScheduleReductions("test", 0,
-														  new List<ReduceKeyAndBucket>()
-														  {
-															  new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"),
-															  new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b")
-														  });
+					accessor.MapReduce.ScheduleReductions("test", 0,new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"));
+					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
 				});
 
 				storage.Batch(accessor =>
@@ -65,12 +61,8 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "C", "c" } });
 					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "D", "d" } });
 
-					accessor.MapReduce.ScheduleReductions("test", 0,
-														  new List<ReduceKeyAndBucket>()
-														  {
-															  new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"),
-															  new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b")
-														  });
+					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"));
+					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
 				});
 
 				storage.Batch(accessor =>

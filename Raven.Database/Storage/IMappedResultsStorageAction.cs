@@ -16,6 +16,7 @@ namespace Raven.Database.Storage
 		IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize);
 
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
+		void IncrementReduceKeyCounter(string view, string reduceKey, int val);
 		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
 		void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
@@ -25,7 +26,7 @@ namespace Raven.Database.Storage
 		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int start, int take);
 		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take);
 
-		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets);
+		void ScheduleReductions(string view, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
 		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams);
 		ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete);
 		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
@@ -34,7 +35,7 @@ namespace Raven.Database.Storage
 		void UpdatePerformedReduceType(string indexName, string reduceKey, ReduceType performedReduceType);
 		ReduceType GetLastPerformedReduceType(string indexName, string reduceKey);
 		IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey);
-		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData);
+		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, IEnumerable<string> keysToReduce, bool loadData);
 	}
 
 	public class GetItemsToReduceParams
