@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Issues
 {
@@ -13,6 +15,7 @@ namespace Raven.Tests.Issues
 	{
 		public class User
 		{
+			public bool Active { get; set; }
 		}
 
 		[Fact]
@@ -69,6 +72,48 @@ namespace Raven.Tests.Issues
 				using (var session = store.OpenSession())
 				{
 					var enumerator = session.Advanced.Stream(session.Query<User>(new RavenDocumentsByEntityName().IndexName));
+					int count = 0;
+					while (enumerator.MoveNext())
+					{
+						Assert.IsType<User>(enumerator.Current.Document);
+						count++;
+					}
+
+					Assert.Equal(1500, count);
+				}
+			}
+		}
+
+		[Fact]
+		public void HighLevelLocalStreamWithFilter()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("Users/ByActive",
+				                                new IndexDefinition
+				                                {
+					                                Map = "from u in docs.Users select new { u.Active}"
+				                                });
+
+				using (var session = store.OpenSession())
+				{
+					for (int i = 0; i < 3000; i++)
+					{
+						session.Store(new User
+						{
+							Active = i % 2 == 0
+						});
+					}
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+
+				using (var session = store.OpenSession())
+				{
+					var query = session.Query<User>("Users/ByActive")
+					                   .Where(x => x.Active);
+					var enumerator = session.Advanced.Stream(query);
 					int count = 0;
 					while (enumerator.MoveNext())
 					{
