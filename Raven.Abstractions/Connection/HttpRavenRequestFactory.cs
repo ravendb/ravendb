@@ -33,9 +33,7 @@ namespace Raven.Abstractions.Connection
 			}
 			else
 			{
-				// TODO: Not sure where to get this or if it's needed
-				bool enableBasicAuthenticationOverUnsecuredHttp = false;
-				var basicAuthenticator = new BasicAuthenticator(options.ApiKey, enableBasicAuthenticationOverUnsecuredHttp);
+				var basicAuthenticator = new BasicAuthenticator(options.ApiKey, enableBasicAuthenticationOverUnsecuredHttp: false);
 				var securedAuthenticator = new SecuredAuthenticator(options.ApiKey);
 
 				basicAuthenticator.ConfigureRequest(this, webRequestEventArgs);
@@ -65,9 +63,7 @@ namespace Raven.Abstractions.Connection
 				{
 					if (useBasicAuthenticator)
 					{
-						// TODO: Not sure where to get this or if it's needed
-						bool enableBasicAuthenticationOverUnsecuredHttp = false;
-						return new BasicAuthenticator(apiKey, enableBasicAuthenticationOverUnsecuredHttp);
+						return new BasicAuthenticator(apiKey, enableBasicAuthenticationOverUnsecuredHttp: false);
 					}
 
 					return new SecuredAuthenticator(apiKey);
