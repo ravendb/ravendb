@@ -722,9 +722,7 @@ namespace Raven.Client.Document
 			if (Conventions.ShouldAggressiveCacheTrackChanges && observeChangesAndRebuildCache == null)
 			{
 				observeChangesAndRebuildCache = new RebuildCacheBasedOnChanges(CreateDatabaseChanges(DefaultDatabase),
-				                                                               jsonRequestFactory.RebuildCache,
-				                                                               Credentials,
-				                                                               Conventions);
+				                                                               jsonRequestFactory.ExpireItemsFromCache);
 			}
 
 			return new DisposableAction(() =>

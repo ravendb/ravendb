@@ -4,29 +4,23 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Net;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
-using Raven.Client.Document;
 
 namespace Raven.Client.Util
 {
 	public class RebuildCacheBasedOnChanges : IObserver<DocumentChangeNotification>, IObserver<IndexChangeNotification>, IDisposable
 	{
 		private readonly IDatabaseChanges changes;
-		private readonly Action<DateTimeOffset, ICredentials, DocumentConvention> rebuildCache;
-		private readonly ICredentials credentials;
-		private readonly DocumentConvention conventions;
+		private readonly Action evictCacheOldItems;
 		private readonly IDisposable documentsSubscription;
 		private readonly IDisposable indexesSubscription;
 
-		public RebuildCacheBasedOnChanges(IDatabaseChanges changes, Action<DateTimeOffset, ICredentials, DocumentConvention> rebuildCache, ICredentials credentials, DocumentConvention conventions)
+		public RebuildCacheBasedOnChanges(IDatabaseChanges changes, Action evictCacheOldItems)
 		{
 			this.changes = changes;
-			this.rebuildCache = rebuildCache;
-			this.credentials = credentials;
-			this.conventions = conventions;
-			LastNotificationTime = DateTimeOffset.Now;
+			this.evictCacheOldItems = evictCacheOldItems;
 
 			documentsSubscription = changes.ForAllDocuments().Subscribe(this);
 			indexesSubscription = changes.ForAllIndexes().Subscribe(this);
@@ -38,26 +32,17 @@ namespace Raven.Client.Util
 		{
 			if (change.Type == DocumentChangeTypes.Put || change.Type == DocumentChangeTypes.Delete)
 			{
-				Rebuild();
+				evictCacheOldItems();
 			}
 		}
 
 		public void OnNext(IndexChangeNotification change)
 		{
-			if (change.Type != IndexChangeTypes.IndexAdded) // if new index was added it isn't already in cache
+			if (change.Type == IndexChangeTypes.MapCompleted || 
+				change.Type == IndexChangeTypes.ReduceCompleted || 
+				change.Type == IndexChangeTypes.IndexRemoved)
 			{
-				Rebuild();
-			}
-		}
-
-		private void Rebuild()
-		{
-			var currentNotificationTime = DateTimeOffset.Now;
-
-			lock (this)
-			{
-				rebuildCache(LastNotificationTime, credentials, conventions);
-				LastNotificationTime = currentNotificationTime;
+				evictCacheOldItems();
 			}
 		}
 

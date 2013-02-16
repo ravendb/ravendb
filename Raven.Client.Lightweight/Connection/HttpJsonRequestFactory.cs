@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 #endif
 using System.Net;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -106,26 +107,17 @@ namespace Raven.Client.Connection
 			NumOfCachedRequests = 0;
 		}
 
-		public void RebuildCache(DateTimeOffset time, ICredentials credentials, DocumentConvention conventions)
+		public void ExpireItemsFromCache()
 		{
-			var urlsToForce = cache.GetOutdatedRequestUrls(time);
-
-			foreach (var url in urlsToForce)
-			{
-				var request = CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", credentials, conventions));
-				request.SkipServerCheck = false; // force a server check
-
-				request.ExecuteRequest();
-			}
-
-			NumberOfCacheRebuilds++;
+			cache.ClearOutdatedRequestUrls(SystemTime.UtcNow);
+			NumberOfCacheEvictions++;
 		}
 
 		/// <summary>
-		/// The number of cache rebuilds forced by
+		/// The number of cache evictions forced by
 		/// tracking changes if aggressive cache was enabled
 		/// </summary>
-		public int NumberOfCacheRebuilds { get; private set; }
+		public int NumberOfCacheEvictions { get; private set; }
 
 		/// <summary>
 		/// The number of requests that we got 304 for 

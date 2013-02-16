@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Connection;
 
@@ -12,9 +11,13 @@ namespace Raven.Client.Util
 {
 	internal static class RequestsCacheExtensions
 	{
-		internal static IList<string> GetOutdatedRequestUrls(this SimpleCache<CachedRequest> cache, DateTimeOffset time)
+		internal static void ClearOutdatedRequestUrls(this SimpleCache<CachedRequest> cache, DateTimeOffset time)
 		{
-			return cache.actualCache.Where(x => x.Value.Time > time).Select(x => x.Key).ToList();
+			foreach (var item in cache.actualCache.Where(x => x.Value.Time > time))
+			{
+				CachedRequest _;
+				cache.actualCache.TryRemove(item.Key, out _);
+			}
 		}
 	}
 }

@@ -21,8 +21,6 @@ namespace Raven.Tests.Issues
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
-				store.Conventions.ShouldAggressiveCacheTrackChanges = true;
-
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User()
@@ -55,7 +53,7 @@ namespace Raven.Tests.Issues
 					}
 
 
-					Assert.True(SpinWait.SpinUntil(() =>store.JsonRequestFactory.NumberOfCacheRebuilds > 0, 10000));
+					Assert.True(SpinWait.SpinUntil(() =>store.JsonRequestFactory.NumberOfCacheEvictions > 0, 10000));
 
 					using (var session = store.OpenSession())
 					{
@@ -73,8 +71,6 @@ namespace Raven.Tests.Issues
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
-				store.Conventions.ShouldAggressiveCacheTrackChanges = true;
-
 				new RavenDocumentsByEntityName().Execute(store);
 
 				using (var session = store.OpenSession())
@@ -112,7 +108,7 @@ namespace Raven.Tests.Issues
 					}
 
 
-					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheRebuilds > 0, 10000));
+					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheEvictions > 0, 10000));
 
 					using (var session = store.OpenSession())
 					{
