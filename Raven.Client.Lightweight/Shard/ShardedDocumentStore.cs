@@ -159,7 +159,8 @@ namespace Raven.Client.Shard
 		/// </remarks>
 		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
-			var disposables = ShardStrategy.Shards.Select(shard => shard.Value.AggressivelyCacheFor(cacheDuration)).ToList();
+			var disposables =
+				ShardStrategy.Shards.Select(shard => shard.Value.AggressivelyCacheFor(cacheDuration)).ToList();
 
 			return new DisposableAction(() =>
 			{

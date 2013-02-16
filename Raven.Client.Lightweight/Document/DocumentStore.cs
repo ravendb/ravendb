@@ -29,6 +29,7 @@ using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
+using Raven.Client.Util;
 #endif
 
 
@@ -69,7 +70,9 @@ namespace Raven.Client.Document
 			  new HttpJsonRequestFactory();
 #endif
 
-
+#if !SILVERLIGHT
+		private RebuildCacheBasedOnChanges observeChangesAndRebuildCache;
+#endif
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
 		///</summary>
@@ -716,7 +719,21 @@ namespace Raven.Client.Document
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
+			if (Conventions.ShouldAggressiveCacheTrackChanges && observeChangesAndRebuildCache == null)
+			{
+				observeChangesAndRebuildCache = new RebuildCacheBasedOnChanges(CreateDatabaseChanges(DefaultDatabase),
+				                                                               jsonRequestFactory.RebuildCache,
+				                                                               Credentials,
+				                                                               Conventions);
+			}
+
+			return new DisposableAction(() =>
+			{
+				jsonRequestFactory.AggressiveCacheDuration = old;
+
+				if (observeChangesAndRebuildCache != null)
+					observeChangesAndRebuildCache.Dispose();
+			});
 #else
 			// TODO: with silverlight, we don't currently support aggressive caching
 			return new DisposableAction(() => { });

@@ -65,6 +65,7 @@
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Util\RebuildCacheBasedOnChanges.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
     <Compile Include="Changes\LocalConnectionState.cs" />
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
@@ -236,6 +237,7 @@
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\LastEtagHolder.cs" />
     <Compile Include="Util\ObjectReferenceEqualityComparer.cs" />
+    <Compile Include="Util\RequestsCacheExtensions.cs" />
     <Compile Include="Util\SimpleCache.cs" />
     <Compile Include="Util\Types.cs" />
     <Compile Include="WhereEqualsParams.cs" />
