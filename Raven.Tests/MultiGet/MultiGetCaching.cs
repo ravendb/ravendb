@@ -16,7 +16,11 @@ namespace Raven.Tests.MultiGet
 		public void CanAggressivelyCacheLoads()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions = { ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -51,7 +55,11 @@ namespace Raven.Tests.MultiGet
 		public void CanAggressivelyCachePartOfMultiGet_SimpleFirst()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions = { ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -93,7 +101,11 @@ namespace Raven.Tests.MultiGet
 		public void CanAggressivelyCachePartOfMultiGet_DirectLoad()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions = { ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -133,7 +145,11 @@ namespace Raven.Tests.MultiGet
 		public void CanAggressivelyCachePartOfMultiGet_BatchFirst()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions = { ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -175,7 +191,11 @@ namespace Raven.Tests.MultiGet
 		public void CanCacheLazyQueryResults()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions = { ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -226,7 +246,11 @@ namespace Raven.Tests.MultiGet
 		public void CanCacheLazyQueryAndMultiLoadResults()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions = { ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -279,7 +303,11 @@ namespace Raven.Tests.MultiGet
 		public void CanMixCachingForBatchAndNonBatched_BatchedFirst()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions = { ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -322,7 +350,11 @@ namespace Raven.Tests.MultiGet
 		public void CanMixCachingForBatchAndNonBatched_IndividualFirst()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions = { ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
