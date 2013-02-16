@@ -710,6 +710,20 @@ namespace Raven.Client.Embedded
 			return database.ExecuteGetTermsQuery( index, query, facetSetupDoc, start, pageSize );
 		}
 
+        /// <summary>
+        /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+        /// </summary>
+        /// <param name="index">Name of the index</param>
+        /// <param name="query">Query to build facet results</param>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
+        {
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            return database.ExecuteGetTermsQuery(index, query, facets, start, pageSize);
+        }
+
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>

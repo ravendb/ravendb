@@ -1617,6 +1617,36 @@ namespace Raven.Client.Connection
 			});
 		}
 
+        /// <summary>
+        /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+        /// </summary>
+        /// <param name="index">Name of the index</param>
+        /// <param name="query">Query to build facet results</param>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
+        {
+            return ExecuteWithReplication("POST", operationUrl =>
+            {
+                var requestUri = operationUrl + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
+                                                                Uri.EscapeUriString(index),
+                                                                query.GetMinimalQueryString(),
+                                                                start,
+                                                                pageSize);
+
+                var request = jsonRequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, requestUri, "POST", credentials, convention)
+                        .AddOperationHeaders(OperationsHeaders))
+                        .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+                request.Write(JsonConvert.SerializeObject(facets));
+
+                var json = (RavenJObject)request.ReadResponseJson();
+                return json.JsonDeserialization<FacetResults>();
+            });
+        }
+
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>

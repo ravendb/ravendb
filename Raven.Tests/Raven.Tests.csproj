@@ -512,7 +512,10 @@
     <Compile Include="Bundles\SqlReplication\CanReplicate.cs" />
     <Compile Include="Bundles\SqlReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
+    <Compile Include="Faceted\ConditionalGetHelper.cs" />
+    <Compile Include="Faceted\DynamicFacets.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
+    <Compile Include="Faceted\FacetTestBase.cs" />
     <Compile Include="Indexes\HighlightTesting.cs" />
     <Compile Include="Indexes\WithNullableDateTime.cs" />
     <Compile Include="InflectorTests.cs" />
@@ -812,7 +815,6 @@
     <Compile Include="Indexes\AnalyzerResolution.cs" />
     <Compile Include="Faceted\Camera.cs" />
     <Compile Include="Faceted\FacetedIndex.cs" />
-    <Compile Include="Faceted\FacetedIndexTestHelper.cs" />
     <Compile Include="Indexes\BoostingDuringIndexing.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />

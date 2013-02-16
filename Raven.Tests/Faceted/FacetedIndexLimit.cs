@@ -14,14 +14,14 @@ using Raven.Abstractions.Indexing;
 
 namespace Raven.Tests.Faceted
 {
-	public class FacetedIndexLimit : RavenTest
+	public class FacetedIndexLimit : FacetTestBase
 	{
 		private readonly IList<Camera> _data;
 		private const int NumCameras = 1000;
 
 		public FacetedIndexLimit()
 		{
-			_data = FacetedIndexTestHelper.GetCameras(NumCameras);
+			_data = GetCameras(NumCameras);
 		}
 
 		[Fact]
