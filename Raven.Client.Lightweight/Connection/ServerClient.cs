@@ -1729,7 +1729,9 @@ namespace Raven.Client.Connection
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
         {
-            return ExecuteWithReplication("POST", operationUrl =>
+			string facetsJson = JsonConvert.SerializeObject(facets);
+	        var method = facetsJson.Length > 1024 ? "POST" : "GET";
+			return ExecuteWithReplication(method, operationUrl =>
             {
                 var requestUri = operationUrl + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
                                                                 Uri.EscapeUriString(index),
@@ -1737,12 +1739,16 @@ namespace Raven.Client.Connection
                                                                 start,
                                                                 pageSize);
 
+				if(method == "GET")
+					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
+
                 var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, requestUri, "POST", credentials, convention)
+                    new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
                         .AddOperationHeaders(OperationsHeaders))
                         .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-                request.Write(JsonConvert.SerializeObject(facets));
+				if (method != "GET")
+					request.Write(facetsJson);
 
                 var json = (RavenJObject)request.ReadResponseJson();
                 return json.JsonDeserialization<FacetResults>();

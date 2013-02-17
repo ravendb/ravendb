@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
-using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Faceted
@@ -111,7 +108,7 @@ namespace Raven.Tests.Faceted
 
                 var jsonFacets = JsonConvert.SerializeObject(facets);
 
-                Guid? firstEtag;
+                Etag firstEtag;
 
                 var queryUrl = store.Url + "/facets/CameraCost?query=Manufacturer%253A{0}&facetStart=0&facetPageSize=";
 
@@ -125,7 +122,7 @@ namespace Raven.Tests.Faceted
                 //change index etag by inserting new doc
                 InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
 
-                Guid? secondEtag;
+				Etag secondEtag;
 
                 //changing the index should give 200 OK
                 Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(requestUrl, jsonFacets, firstEtag, out secondEtag));

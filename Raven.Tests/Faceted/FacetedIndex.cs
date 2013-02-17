@@ -89,7 +89,7 @@ namespace Raven.Tests.Faceted
             {
                 Setup(store, _stronglyTypedFacets);
 
-                Guid? firstEtag;
+				Etag firstEtag;
 
                 var queryUrl = store.Url + "/facets/CameraCost?facetDoc=facets%2FCameraFacets&query=Manufacturer%253A{0}&facetStart=0&facetPageSize=";
 
@@ -103,7 +103,7 @@ namespace Raven.Tests.Faceted
                 //change index etag by inserting new doc
                 InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
 
-                Guid? secondEtag;
+				Etag secondEtag;
 
                 //changing the index should give 200 OK
                 Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(url, firstEtag, out secondEtag));

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Xunit;
 
@@ -28,7 +29,7 @@ namespace Raven.Tests.Faceted
             }
         }
 
-        public static HttpStatusCode PerformGet(string url, Guid? requestEtag, out Guid? responseEtag)
+		public static HttpStatusCode PerformGet(string url, Etag requestEtag, out Etag responseEtag)
         {
             var getRequest = WebRequest.Create(url);
 
@@ -50,7 +51,7 @@ namespace Raven.Tests.Faceted
             }
         }
 
-        public static HttpStatusCode PerformPost(string url, string payload, Guid? requestEtag, out Guid? responseEtag)
+		public static HttpStatusCode PerformPost(string url, string payload, Etag requestEtag, out Etag responseEtag)
         {
             var request = WebRequest.Create(url);
             

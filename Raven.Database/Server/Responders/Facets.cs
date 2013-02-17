@@ -28,68 +28,86 @@ namespace Raven.Database.Server.Responders
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
 
-			var facetSetupDoc = context.GetFacetSetupDocFromHttpContext();
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 			var facetStart = context.GetFacetStartFromHttpContext();
 			var facetPageSize = context.GetFacetPageSizeFromHttpContext();
 
 		    List<Facet> facets;
 
-		    Guid etag;
+		    Etag etag;
 
-            if (context.Request.HttpMethod == "GET")
-            {
-                JsonDocument jsonDocument = Database.Get(facetSetupDoc, null);
+            if (TryGetFacets(context, index, out etag, out facets) == false) 
+				return;
 
-                if (jsonDocument == null)
-                {
-                    context.SetStatusToNotFound();
-                    context.Write("Could not find facet document: " + facetSetupDoc);
-                    return;
-                }
-
-                etag = GetFacetsEtag(jsonDocument, index);
-
-                if (context.MatchEtag(etag))
-                {
-                    context.SetStatusToNotModified();
-                    return;
-                }
-
-                facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
-
-                if (facets == null || !facets.Any())
-                {
-                    context.SetStatusToNotFound();
-                    context.Write("No facets found in facets setup document:" + facetSetupDoc);
-                    return;
-                }
-            }
-            else
-            {
-                var facetsJson = context.ReadString();
-                
-                etag = GetFacetsEtag(facetsJson, index);
-
-                if (context.MatchEtag(etag))
-                {
-                    context.SetStatusToNotModified();
-                    return;
-                }
-
-                facets = JsonConvert.DeserializeObject<List<Facet>>(facetsJson);
-
-                if (facets == null || !facets.Any())
-                {
-                    context.SetStatusToNotFound();
-                    context.Write("No facets found in request body");
-                    return;
-                }
-            }
+			if (context.MatchEtag(etag))
+			{
+				context.SetStatusToNotModified();
+				return;
+			}
 
             context.WriteETag(etag);
 
             context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize));
+		}
+
+		private bool TryGetFacets(IHttpContext context, string index, out Etag etag, out List<Facet> facets)
+		{
+			etag = null;
+			facets = null;
+			switch (context.Request.HttpMethod)
+			{
+				case "GET":
+					var facetSetupDoc = context.GetFacetSetupDocFromHttpContext();
+					if (string.IsNullOrEmpty(facetSetupDoc))
+					{
+						var facetsJson = context.Request.QueryString["facets"];
+						if (string.IsNullOrEmpty(facetsJson) == false)
+							return TryGetFacetsFromString(context, index, out etag, out facets, facetsJson);
+					}
+
+					JsonDocument jsonDocument = Database.Get(facetSetupDoc, null);
+					if (jsonDocument == null)
+					{
+						context.SetStatusToNotFound();
+						context.Write("Could not find facet document: " + facetSetupDoc);
+						return false;
+					}
+
+					etag = GetFacetsEtag(jsonDocument, index);
+
+					facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
+
+					if (facets == null || !facets.Any())
+					{
+						context.SetStatusToNotFound();
+						context.Write("No facets found in facets setup document:" + facetSetupDoc);
+						return false;
+					}
+					break;
+				case "POST":
+					return TryGetFacetsFromString(context, index, out etag, out facets, context.ReadString());
+				default:
+					context.SetStatusToBadRequest();
+					context.Write("No idea how to handle this request");
+					break;
+			}
+			return true;
+		}
+
+		private bool TryGetFacetsFromString(IHttpContext context, string index, out Etag etag, out List<Facet> facets,
+		                                    string facetsJson)
+		{
+			etag = GetFacetsEtag(facetsJson, index);
+
+			facets = JsonConvert.DeserializeObject<List<Facet>>(facetsJson);
+
+			if (facets == null || !facets.Any())
+			{
+				context.SetStatusToBadRequest();
+				context.Write("No facets found in request body");
+				return false;
+			}
+			return true;
 		}
 
 		private Etag GetFacetsEtag(JsonDocument jsonDocument, string index)
@@ -97,15 +115,13 @@ namespace Raven.Database.Server.Responders
 			return jsonDocument.Etag.HashWith(Database.GetIndexEtag(index, null));
 		}
 
-        private Guid GetFacetsEtag(string jsonFacets, string index)
+		private Etag GetFacetsEtag(string jsonFacets, string index)
         {
-            Guid etag;
             using (var md5 = MD5.Create())
             {
                 var etagBytes = md5.ComputeHash(Database.GetIndexEtag(index, null).ToByteArray().Concat(Encoding.UTF8.GetBytes(jsonFacets)).ToArray());
-                etag = new Guid(etagBytes);
+	            return Etag.Parse(etagBytes);
             }
-            return etag;
         }
 	}
 }
