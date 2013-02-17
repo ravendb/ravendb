@@ -833,7 +833,7 @@ namespace Raven.Client.Connection
 					.Append(httpWebResponse.StatusDescription)
 					.AppendLine();
 
-				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()))
 				{
 					string line;
 					while ((line = reader.ReadLine()) != null)
