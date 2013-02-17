@@ -505,6 +505,12 @@ namespace Raven.Client.Document
 			return YieldStream<T>(enumerator);
 		}
 
+		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+		{
+			var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+			return YieldStream<T>(enumerator);
+		}
+
 		private IEnumerator<StreamResult<T>> YieldStream<T>(IEnumerator<RavenJObject> enumerator)
 		{
 			while (enumerator.MoveNext())

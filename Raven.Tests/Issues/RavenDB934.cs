@@ -57,5 +57,35 @@ namespace Raven.Tests.Issues
 				Assert.Equal(1500, count);
 			}
 		}
+
+		[Fact]
+		public void HighLevelExportsByDocPrefixRemote()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					for (int i = 0; i < 1500; i++)
+					{
+						session.Store(new User());
+					}
+					session.SaveChanges();
+				}
+
+				int count = 0;
+				using (var session = store.OpenSession())
+				{
+					using (var reader = session.Advanced.Stream<User>(startsWith: "users/"))
+					{
+						while (reader.MoveNext())
+						{
+							count++;
+							Assert.IsType<User>(reader.Current.Document);
+						}
+					}
+				}
+				Assert.Equal(1500, count);
+			}
+		}
 	}
 }
