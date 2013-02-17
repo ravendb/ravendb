@@ -112,7 +112,7 @@
 					<ColumnDefinition Width="*"/>
 				</Grid.ColumnDefinitions>
 
-				<ComboBox x:Name="ViewSelect" ItemsSource="{Binding ViewOptions}" SelectedIndex="0" SelectedValue="{Binding SeletedViewOption.Value, Mode=TwoWay}"/>
+				<ComboBox x:Name="ViewSelect" ItemsSource="{Binding ViewOptions}" SelectedValue="{Binding SelectedViewOption.Value, Mode=TwoWay}"/>
 
 				<ListBox Grid.Row="1"
 						 Grid.ColumnSpan="2"
