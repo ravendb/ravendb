@@ -84,6 +84,8 @@ namespace Raven.Client.Document
 
 		private KeyValuePair<string, string> lastEquality;
 
+        protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+
 		/// <summary>
 		///   The list of fields to project directly from the results
 		/// </summary>
@@ -339,6 +341,7 @@ namespace Raven.Client.Document
 			highlightedFields = other.highlightedFields;
 			highlighterPreTags = other.highlighterPreTags;
 			highlighterPostTags = other.highlighterPostTags;
+		    queryInputs = other.queryInputs;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -1640,7 +1643,8 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 					HighlighterPreTags = highlighterPreTags.ToArray(),
 					HighlighterPostTags = highlighterPostTags.ToArray(),
-                    ResultsTransformer = this.resultsTransformer
+                    ResultsTransformer = resultsTransformer,
+                    QueryInputs  = queryInputs
 				};
 			}
 
@@ -1659,7 +1663,8 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 				HighlighterPreTags = highlighterPreTags.ToArray(),
 				HighlighterPostTags = highlighterPostTags.ToArray(),
-                ResultsTransformer = this.resultsTransformer
+                ResultsTransformer = this.resultsTransformer,
+                QueryInputs = queryInputs
 			};
 
 			if (pageSize != null)

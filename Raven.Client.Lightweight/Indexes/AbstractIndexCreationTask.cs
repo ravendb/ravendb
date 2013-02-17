@@ -279,7 +279,8 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-		/// <summary>
+
+	    /// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
 		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IEnumerable<TResult>> func)

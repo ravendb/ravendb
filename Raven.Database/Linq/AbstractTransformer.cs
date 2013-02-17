@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Linq
 {
@@ -21,7 +22,16 @@ namespace Raven.Database.Linq
 			return CurrentTransformationScope.Current.Load(key);
 		}
 
-		public object Include(object key)
+	    protected RavenJToken Query(string key)
+	    {
+            if (CurrentTransformationScope.Current == null)
+                throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
+
+	        return CurrentTransformationScope.Current.QueryInputs[key];
+
+	    }
+
+	    public object Include(object key)
 		{
 			if (CurrentTransformationScope.Current == null)
 				throw new InvalidOperationException("Include was called without CurrentTransformationScope.Current being set: " + key);

@@ -9,6 +9,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Server.Abstractions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Extensions
 {
@@ -98,10 +99,18 @@ namespace Raven.Database.Extensions
 				HighlightedFields = context.GetHighlightedFields().ToArray(),
 				HighlighterPreTags = context.Request.QueryString.GetValues("preTags"),
 				HighlighterPostTags = context.Request.QueryString.GetValues("postTags"),
-                ResultsTransformer = context.Request.QueryString["resultsTransformer"]
-                
-			};
+                ResultsTransformer = context.Request.QueryString["resultsTransformer"],
+                QueryInputs =  new Dictionary<string,RavenJToken>()
+                };
 
+		    foreach (var key in context.Request.QueryString.AllKeys)
+		    {
+		        if (key.StartsWith("qp-"))
+		        {
+		            var realkey = key.Substring(3);
+		            query.QueryInputs[realkey] = context.Request.QueryString[key];
+		        }
+		    }
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
 			var queryShape = context.Request.QueryString["queryShape"];
 			double distanceErrorPct;

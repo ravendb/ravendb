@@ -4,9 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -43,6 +45,11 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
+
+        /// <summary>
+        /// Additional query inputs
+        /// </summary>
+        public Dictionary<string, RavenJToken> QueryInputs { get; set; }
 
 		/// <summary>
 		/// Gets or sets the start of records to read.
@@ -231,6 +238,11 @@ namespace Raven.Abstractions.Data
             {
                 path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
             }
+
+		    foreach (var input in QueryInputs)
+		    {
+		        path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
+		    }
 
 			if (Cutoff != null)
 			{

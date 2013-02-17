@@ -32,14 +32,17 @@ namespace Raven.Database.Impl
 		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
-		private readonly HashSet<string> itemsToInclude;
+	    private readonly Dictionary<string, RavenJToken> queryInputs;
+	    private readonly HashSet<string> itemsToInclude;
 
-		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
-			HashSet<string> itemsToInclude = null)
+		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
+            Dictionary<string, RavenJToken> queryInputs = null,
+            HashSet<string> itemsToInclude = null)
 		{
 			this.actions = actions;
 			this.triggers = triggers;
-			this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
+		    this.queryInputs = queryInputs ?? new Dictionary<string, RavenJToken>();
+		    this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
 		}
 
 		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
@@ -325,5 +328,7 @@ namespace Raven.Database.Impl
 			}
 			return new DynamicList(items.Select(x => (object)x).ToArray());
 		}
+
+        public Dictionary<string, RavenJToken> QueryInputs { get { return this.queryInputs; } } 
 	}
 }
