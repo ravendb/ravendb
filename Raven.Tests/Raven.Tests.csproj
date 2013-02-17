@@ -663,6 +663,7 @@
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
+    <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Spatial\Nick.cs" />

@@ -11,6 +11,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -29,6 +30,11 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <value>The name of the index.</value>
 		public virtual string TransfomerName { get { return GetType().Name.Replace("_", "/"); } }
+
+        protected RavenJToken Query(string key)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
 
 		/// <summary>
 		/// Gets or sets the document store.

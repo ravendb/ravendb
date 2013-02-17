@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
 {
@@ -81,5 +82,18 @@ namespace Raven.Client.Linq
         /// The result transformer to use
         /// </summary>
 	    string ResultTransformer { get; }
+        
+
+        /// <summary>
+        /// Gets the query inputs being supplied to
+        /// </summary>
+        Dictionary<string, RavenJToken> QueryInputs { get; } 
+	    
+        /// <summary>
+        /// Adds input to this query via a key/value pair
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="foo"></param>
+        void AddQueryInput(string input, RavenJToken foo);
 	}
 }

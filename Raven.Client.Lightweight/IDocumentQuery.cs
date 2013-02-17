@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -40,6 +41,12 @@ namespace Raven.Client
         /// <param name="resultsTransformer"></param>
 	    IDocumentQuery<T> SetResultTransformer(string resultsTransformer);
 
+        /// <summary>
+        /// Sets user defined inputs to the query
+        /// </summary>
+        /// <param name="queryInputs"></param>
+        void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+
 #if !SILVERLIGHT
 		/// <summary>
 		/// Gets the query result
@@ -66,6 +73,7 @@ namespace Raven.Client
 		/// Create the index query object for this query
 		/// </summary>
 		IndexQuery GetIndexQuery(bool isAsync);
+
 
 	}
 }

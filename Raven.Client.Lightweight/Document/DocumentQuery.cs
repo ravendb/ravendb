@@ -11,6 +11,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Listeners;
 using Raven.Client.Connection.Async;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -19,6 +20,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
+
 
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
@@ -59,6 +61,11 @@ namespace Raven.Client.Document
 	    {
 	        this.resultsTransformer = resultsTransformer;
 	        return this;
+	    }
+
+        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+	    {
+	        this.queryInputs = queryInputs;
 	    }
 
 	    /// <summary>
@@ -114,7 +121,8 @@ namespace Raven.Client.Document
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
-                resultsTransformer = resultsTransformer
+                resultsTransformer = resultsTransformer,
+                queryInputs = queryInputs
 			};
 			return documentQuery;
 		}

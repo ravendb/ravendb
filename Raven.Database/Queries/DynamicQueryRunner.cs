@@ -99,7 +99,8 @@ namespace Raven.Database.Queries
 													HighlighterPreTags = query.HighlighterPreTags,
 													HighlighterPostTags = query.HighlighterPostTags,
 													HighlightedFields = query.HighlightedFields,
-                                                    ResultsTransformer = query.ResultsTransformer
+                                                    ResultsTransformer = query.ResultsTransformer,
+                                                    QueryInputs = query.QueryInputs
 												});
 
 				if (!touchTemporaryIndexResult.Item2 ||

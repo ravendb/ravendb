@@ -1195,7 +1195,7 @@ namespace Raven.Database
                     {
                         throw new IndexDisabledException(indexFailureInformation);
                     }
-                    var docRetriever = new DocumentRetriever(actions, ReadTriggers, idsToLoad);
+                    var docRetriever = new DocumentRetriever(actions, ReadTriggers, query.QueryInputs, idsToLoad);
                     var indexDefinition = GetIndexDefinition(index);
                     var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
                                                           viewGenerator.ReduceDefinition == null
