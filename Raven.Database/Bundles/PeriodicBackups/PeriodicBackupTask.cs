@@ -31,7 +31,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		private volatile Task currentTask;
 		private string awsAccessKey, awsSecretKey;
 
-		PeriodicBackupSetup backupConfigs;
+		private volatile PeriodicBackupSetup backupConfigs;
 
 		public void Execute(DocumentDatabase database)
 		{
