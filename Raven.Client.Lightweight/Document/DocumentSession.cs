@@ -304,7 +304,7 @@ namespace Raven.Client.Document
 			return Load<T>(documentKeys);
 		}
 
-	    private T[] LoadInternal<T>(string[] ids, string transformer)
+	    private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
 	    {
 	        if (ids.Length == 0)
 	            return new T[0];
@@ -315,7 +315,7 @@ namespace Raven.Client.Document
             {
                 // REturns array of arrays, public APIs don't surface that yet though as we only support Transform
                 // With a single Id
-                var arrayOfArrays = DatabaseCommands.Get(ids, new string[] {}, transformer)
+                var arrayOfArrays = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
                                             .Results
                                             .Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
                                             .Select(values =>
@@ -332,7 +332,7 @@ namespace Raven.Client.Document
             }
             else
             {
-                var items = DatabaseCommands.Get(ids, new string[] {}, transformer)
+                var items = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
                                             .Results
                                             .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
                                             .Select(JsonExtensions.ToJObject)
@@ -514,6 +514,14 @@ namespace Raven.Client.Document
 	    {
 	        var transformer = new TTransformer().TransfomerName;
 	        return this.LoadInternal<TResult>(new string[] {id}, transformer).FirstOrDefault();
+	    }
+
+	    public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+	    {
+            var transformer = new TTransformer().TransfomerName;
+	        var configuration = new RavenLoadConfiguration();
+	        configure(configuration);
+            return this.LoadInternal<TResult>(new string[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
 	    }
 
 

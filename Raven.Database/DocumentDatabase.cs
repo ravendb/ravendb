@@ -2258,13 +2258,13 @@ namespace Raven.Database
 
         }
 
-        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation)
+        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> queryInputs)
         {
             JsonDocument result = null;
             TransactionalStorage.Batch(
             actions =>
             {
-                var docRetriever = new DocumentRetriever(actions, ReadTriggers);
+                var docRetriever = new DocumentRetriever(actions, ReadTriggers, queryInputs);
                 using (new CurrentTransformationScope(docRetriever))
                 {
                     var document = Get(key, transactionInformation);

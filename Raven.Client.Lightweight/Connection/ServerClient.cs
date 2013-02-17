@@ -1108,16 +1108,18 @@ namespace Raven.Client.Connection
 			request.ExecuteRequest();
 		}
 
-		/// <summary>
-		/// Gets the results for the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="includes">The includes.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, bool metadataOnly = false)
+	    /// <summary>
+	    /// Gets the results for the specified ids.
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="queryInputs"></param>
+	    /// <param name="metadataOnly">Load just the document metadata</param>
+	    /// <returns></returns>
+	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, transformer, metadataOnly));
+			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, transformer, queryInputs ?? new Dictionary<string, RavenJToken>(), metadataOnly));
 		}
 
 	    /// <summary>
@@ -1129,7 +1131,7 @@ namespace Raven.Client.Connection
 	    /// <param name="transformer"></param>
 	    /// <param name="metadataOnly"></param>
 	    /// <returns></returns>
-	    public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, string transformer, bool metadataOnly)
+	    public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
 		{
 			var path = operationUrl + "/queries/?";
 			if (metadataOnly)
@@ -1140,6 +1142,12 @@ namespace Raven.Client.Connection
 			}
 	        if (!string.IsNullOrEmpty(transformer))
 	            path += "&transformer=" + transformer;
+
+
+            foreach (var queryInput in queryInputs)
+            {
+                path += "&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value);
+            }
 
 			var uniqueIds = new HashSet<string>(ids);
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
@@ -1181,9 +1189,10 @@ namespace Raven.Client.Connection
                 multiLoadResult.Results = results;
             }
 
+
 			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
 
-			return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationUrl, includes, transformer, metadataOnly));
+			return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationUrl, includes, transformer, queryInputs, metadataOnly));
 		}
 
 		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
