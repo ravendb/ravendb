@@ -19,10 +19,22 @@
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
-		<TextBlock Text="Collections"
-				   Grid.Row="0"
-				   Style="{StaticResource Style_Text_Header}" />
-		
+		<StackPanel Orientation="Horizontal">
+			<HyperlinkButton Content="Documents"
+                                Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                Command="{StaticResource NavigateToCommand}"
+                                CommandParameter="/documents"
+                                VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                Margin="6"/>
+			<TextBlock x:Name="Arrow" Text=">"
+							       VerticalAlignment="Center"
+							       Margin="4,0" />
+			<TextBlock Text="Collections"
+					   Grid.Row="0"
+					   Style="{StaticResource Style_Text_Header}" />
+		</StackPanel>
+
+
 		<ListBox x:Name="CollectionsList" 
 				 Grid.Row="1"
 				 Style="{StaticResource Collections_FluidList}"
@@ -50,7 +62,7 @@
                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 				</ContextMenu:ContextMenu>
 			</ContextMenu:ContextMenuService.ContextMenu>
-			
+
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
 					<Grid Margin="0,2,2,2">
@@ -78,7 +90,7 @@
                                    RadiusX="1"
                                    RadiusY="1"
                                    Grid.RowSpan="3">
-                        </Rectangle>
+						</Rectangle>
 
 						<StackPanel Margin="12,10,10,10">
 							<TextBlock Text="{Binding Name}"
@@ -102,7 +114,7 @@
 			<LineBreak/>
 			<Run Foreground="Gray" FontStyle="Italic" Text="Add &quot;Raven-Entity-Name&quot;: &quot;[Desired Collection Name]&quot; to a document's metadata to include it in a collection"/>
 		</TextBlock>
-		
+
 		<sdk:GridSplitter Grid.Row="2" HorizontalAlignment="Stretch"/>
 	</Grid>
 </Infrastructure:PageView>
