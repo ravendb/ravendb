@@ -37,6 +37,8 @@ namespace Raven.Database.Storage
 		private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
 			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.OrdinalIgnoreCase);
 
+        private readonly ConcurrentDictionary<string, IndexDefinition> newDefinitionsThisSession = new ConcurrentDictionary<string, IndexDefinition>();
+
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly string path;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -61,7 +63,14 @@ namespace Raven.Database.Storage
 
 			//compiled view generators always overwrite dynamic views
 			ReadIndexesFromCatalog(compiledGenerators, transactionalStorage);
+			
+			newDefinitionsThisSession.Clear();
 		}
+
+        public bool IsNewThisSession(IndexDefinition definition)
+        {
+            return this.newDefinitionsThisSession.ContainsKey(definition.Name);
+        }
 
 		private void ReadIndexesFromCatalog(IEnumerable<AbstractViewGenerator> compiledGenerators, ITransactionalStorage transactionalStorage)
 		{
@@ -166,6 +175,7 @@ namespace Raven.Database.Storage
 					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
 				return definition;
 			});
+		    newDefinitionsThisSession.TryAdd(name, definition);
 		}
 
 		public void RemoveIndex(string name)
@@ -174,6 +184,7 @@ namespace Raven.Database.Storage
 			indexCache.TryRemove(name, out ignoredViewGenerator);
 			IndexDefinition ignoredIndexDefinition;
 			indexDefinitions.TryRemove(name, out ignoredIndexDefinition);
+            newDefinitionsThisSession.TryRemove(name, out ignoredIndexDefinition);
 			if (configuration.RunInMemory)
 				return;
 			File.Delete(GetIndexPath(name));

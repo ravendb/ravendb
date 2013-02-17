@@ -205,6 +205,12 @@ namespace Raven.Client.Connection
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
+		
+		/// <summary>
+		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+		/// of the number of items that might be returned.
+		/// </summary>
+		IEnumerator<RavenJObject> Query(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo);
 
 		/// <summary>
 		/// Deletes the specified index

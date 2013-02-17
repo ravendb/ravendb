@@ -296,9 +296,11 @@ namespace Raven.Client.Indexes
 
 			foreach (var replicationDestination in replicationDocument.Destinations)
 			{
+				if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
+					continue;
 				try
 				{
-					serverClient.DirectPutIndex(IndexName, replicationDestination.Url, true, indexDefinition);
+					serverClient.DirectPutIndex(IndexName, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url, true, indexDefinition);
 				}
 				catch (Exception e)
 				{
@@ -341,7 +343,9 @@ namespace Raven.Client.Indexes
 				var tasks = new List<Task>();
 				foreach (var replicationDestination in replicationDocument.Destinations)
 				{
-					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.Url));
+					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
+						continue;
+					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url));
 				}
 				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
 				{

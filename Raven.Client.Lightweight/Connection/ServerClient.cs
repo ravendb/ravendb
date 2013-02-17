@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -916,6 +917,64 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes, metadataOnly, indexEntriesOnly));
 		}
 
+		/// <summary>
+		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+		/// of the number of items that might be returned.
+		/// </summary>
+		public IEnumerator<RavenJObject> Query(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
+		{
+			EnsureIsNotNullOrEmpty(index, "index");
+			string path = query.GetIndexQueryUrl(url, index, "streams", includePageSizeEvenIfNotExplicitlySet: false);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+											.AddReplicationStatusHeaders(Url, url, replicationInformer,
+																		 convention.FailoverBehavior,
+																		 HandleReplicationStatusChanges);
+
+			var webResponse = request.RawExecuteRequest();
+			queryHeaderInfo = new QueryHeaderInformation
+			{
+				Index = webResponse.Headers["Raven-Index"],
+				IndexTimestamp = DateTime.ParseExact(webResponse.Headers["Raven-Index-Timestamp"], Default.DateTimeFormatsToRead,
+										CultureInfo.InvariantCulture, DateTimeStyles.None),
+				IndexEtag = Etag.Parse(webResponse.Headers["Raven-Index-Etag"]),
+				ResultEtag = Etag.Parse(webResponse.Headers["Raven-Result-Etag"]),
+				IsStable = bool.Parse(webResponse.Headers["Raven-Is-Stale"]),
+				TotalResults = int.Parse(webResponse.Headers["Raven-Total-Results"])
+			};
+
+			return YieldStreamResults(webResponse);
+		}
+
+		private static IEnumerator<RavenJObject> YieldStreamResults(WebResponse webResponse)
+		{
+			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
+			using (var streamReader = new StreamReader(stream))
+			using (var reader = new JsonTextReader(streamReader))
+			{
+				if (reader.Read() == false || reader.TokenType != JsonToken.StartObject)
+					throw new InvalidOperationException("Unexpected data at start of stream");
+
+				if (reader.Read() == false || reader.TokenType != JsonToken.PropertyName || Equals("Results", reader.Value) == false)
+					throw new InvalidOperationException("Unexpected data at stream 'Results' property name");
+
+				if (reader.Read() == false || reader.TokenType != JsonToken.StartArray)
+					throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array");
+
+				while (true)
+				{
+					if(reader.Read() == false)
+						throw new InvalidOperationException("Unexpected end of data");
+
+					if (reader.TokenType == JsonToken.EndArray)
+						break;
+
+					yield return (RavenJObject)RavenJToken.ReadFrom(reader);
+				}
+			}
+		}
+
 		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly, bool includeEntries)
 		{
 			string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
@@ -1103,7 +1162,7 @@ namespace Raven.Client.Connection
 
 
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			req.Write(jArray.ToString(Formatting.None));
+			req.Write(jArray.ToString(Formatting.None, Default.Converters));
 
 			RavenJArray response;
 			try

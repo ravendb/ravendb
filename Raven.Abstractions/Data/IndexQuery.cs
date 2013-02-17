@@ -15,6 +15,8 @@ namespace Raven.Abstractions.Data
 	/// </summary>
 	public class IndexQuery
 	{
+		private int pageSize;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexQuery"/> class.
 		/// </summary>
@@ -22,8 +24,13 @@ namespace Raven.Abstractions.Data
 		{
 			TotalSize = new Reference<int>();
 			SkippedResults = new Reference<int>();
-			PageSize = 128;
+			pageSize = 128;
 		}
+
+		/// <summary>
+		/// Whatever the page size was explicitly set or still at its default value
+		/// </summary>
+		public bool PageSizeSet { get; private set; }
 
 		/// <summary>
 		/// Gets or sets the query.
@@ -47,7 +54,15 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the size of the page.
 		/// </summary>
 		/// <value>The size of the page.</value>
-		public int PageSize { get; set; }
+		public int PageSize
+		{
+			get { return pageSize; }
+			set
+			{
+				pageSize = value;
+				PageSizeSet = true;
+			}
+		}
 
 		/// <summary>
 		/// The aggregation operation for this query
@@ -148,7 +163,7 @@ namespace Raven.Abstractions.Data
 		/// <param name="index">The index.</param>
 		/// <param name="operationName">Name of the operation.</param>
 		/// <returns></returns>
-		public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
+		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true)
 		{
 			if (operationUrl.EndsWith("/"))
 				operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
@@ -159,9 +174,7 @@ namespace Raven.Abstractions.Data
 				.Append("/")
 				.Append(index);
 
-			AppendQueryString(path);
-
-
+			AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet);
 
 			return path.ToString();
 		}
@@ -181,7 +194,7 @@ namespace Raven.Abstractions.Data
 			return sb.ToString();
 		}
 
-		public void AppendQueryString(StringBuilder path)
+		public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true)
 		{
 			path.Append("?");
 
@@ -190,7 +203,8 @@ namespace Raven.Abstractions.Data
 			if (Start != 0)
 				path.Append("&start=").Append(Start);
 
-			path.Append("&pageSize=").Append(PageSize);
+			if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
+				path.Append("&pageSize=").Append(PageSize);
 			
 
 			if(AggregationOperation != AggregationOperation.None)

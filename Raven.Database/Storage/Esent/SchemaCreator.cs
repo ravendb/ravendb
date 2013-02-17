@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "4.5";
+		public const string SchemaVersion = "4.6";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -123,11 +123,32 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
+
+            Api.JetAddColumn(session, tableid, "created_timestamp", new JET_COLUMNDEF
+            {
+                cbMax = 8, //64 bits
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "last_indexing_time", new JET_COLUMNDEF
+			{
+				cbMax = 8, //64 bits
+				coltyp = JET_coltyp.Binary,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "attempts", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.Long,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
 			}, defaultValue, defaultValue.Length, out columnid);
+
+            Api.JetAddColumn(session, tableid, "priority", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "errors", new JET_COLUMNDEF
 			{

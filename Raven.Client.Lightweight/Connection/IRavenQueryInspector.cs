@@ -45,6 +45,6 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Get the index query for this query
 		/// </summary>
-		IndexQuery GetIndexQuery(bool isAsync );
+		IndexQuery GetIndexQuery(bool isAsync);
 	}
 }

@@ -141,7 +141,7 @@ namespace Raven.Studio.Models
         private object value;
         public object Value
         {
-            get { return Value; }
+            get { return this.value; }
             set { this.value = value; OnPropertyChanged(() => Value); }
         }
     }

@@ -522,8 +522,22 @@ namespace Raven.Database
 		public void StopIndexingWorkers()
 		{
 			workContext.StopIndexing();
-			indexingBackgroundTask.Wait();
-			reducingBackgroundTask.Wait();
+			try
+			{
+				indexingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background indexing", e);
+			}
+			try
+			{
+				reducingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background reducing", e);
+			}
 
 			backgroundWorkersSpun = false;
 		}
@@ -741,6 +755,8 @@ namespace Raven.Database
 				actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
 				if (preTouchEtag == null || afterTouchEtag == null)
 					continue;
+
+                actions.General.MaybePulseTransaction();
 
 				recentTouches.Set(key, new TouchedDocumentInfo
 				{
@@ -1128,8 +1144,15 @@ namespace Raven.Database
 
 		public QueryResultWithIncludes Query(string index, IndexQuery query)
 		{
-			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
+			var result = Query(index, query, null, list.Add);
+			result.Results = list;
+			return result;
+		}
+
+		public QueryResultWithIncludes Query(string index, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
+		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
 			var stale = false;
 			Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
@@ -1206,8 +1229,22 @@ namespace Raven.Database
 						}
 						results = resultList;
 					}
-
-					list.AddRange(results);
+					if (headerInfo != null)
+					{
+						headerInfo(new QueryHeaderInformation
+						{
+							Index = index,
+							IsStable = stale,
+							ResultEtag = resultEtag,
+							IndexTimestamp= indexTimestamp.Item1,
+							IndexEtag = indexTimestamp.Item2,
+							TotalResults = query.TotalSize.Value
+						});
+					}
+					foreach (var result in results)
+					{
+						onResult(result);
+					}
 
 					if (transformerErrors.Count > 0)
 					{
@@ -1217,7 +1254,6 @@ namespace Raven.Database
 			return new QueryResultWithIncludes
 			{
 				IndexName = index,
-				Results = list,
 				IsStale = stale,
 				NonAuthoritativeInformation = nonAuthoritativeInformation,
 				SkippedResults = query.SkippedResults.Value,
@@ -2107,6 +2143,8 @@ namespace Raven.Database
 
 		public void AddTask(Task task, RavenJToken state, out long id)
 		{
+			if (task.Status == TaskStatus.Created)
+				throw new ArgumentException("Task must be started before it gets added to the database.", "task");
 			var localId = id = Interlocked.Increment(ref pendingTaskCounter);
 			pendingTasks.TryAdd(localId, new PendingTaskAndState
 			{

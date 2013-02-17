@@ -3,21 +3,24 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Raven.Database.Plugins.Builtins
 {
 	public class DeleteRemovedIndexes : IStartupTask
 	{
+		#region IStartupTask Members
+
 		public void Execute(DocumentDatabase database)
 		{
 			database.TransactionalStorage.Batch(actions =>
 			{
-				var indexNames = actions.Indexing.GetIndexesStats().Select(x => x.Name).ToList();
-				foreach (var indexName in indexNames)
+				List<string> indexNames = actions.Indexing.GetIndexesStats().Select(x => x.Name).ToList();
+				foreach (string indexName in indexNames)
 				{
-					if(database.IndexDefinitionStorage.Contains(indexName) )
+					if (database.IndexDefinitionStorage.Contains(indexName))
 						continue;
 
 					// index is not found on disk, better kill for good
@@ -28,5 +31,7 @@ namespace Raven.Database.Plugins.Builtins
 				}
 			});
 		}
+
+		#endregion
 	}
 }

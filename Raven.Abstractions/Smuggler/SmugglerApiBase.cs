@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
@@ -128,16 +129,26 @@ namespace Raven.Abstractions.Smuggler
 
 		public static void ReadLastEtagsFromFile(SmugglerOptions options)
 		{
+			var log = LogManager.GetCurrentClassLogger();
 			var etagFileLocation = Path.Combine(options.BackupPath, IncrementalExportStateFile);
-			if (File.Exists(etagFileLocation))
+			if (!File.Exists(etagFileLocation)) 
+				return;
+
+			using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
+			using (var jsonReader = new JsonTextReader(streamReader))
 			{
-				using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
-				using (var jsonReader = new JsonTextReader(streamReader))
+				RavenJObject ravenJObject;
+				try
 				{
-					var ravenJObject = RavenJObject.Load(jsonReader);
-					options.LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
-					options.LastAttachmentEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
+					ravenJObject = RavenJObject.Load(jsonReader);
 				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not parse etag document from file : " + etagFileLocation + ", ignoring, will start from scratch", e);
+					return;
+				}
+				options.LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
+				options.LastAttachmentEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
 			}
 		}
 
@@ -168,8 +179,8 @@ namespace Raven.Abstractions.Smuggler
 				if (documents.Length == 0)
 				{
 					var databaseStatistics = GetStats();
-					var lastEtagComparable = new ComparableByteArray(lastEtag);
-					if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
+					if (lastEtag == null) lastEtag = Etag.Empty;
+					if (lastEtag.CompareTo(databaseStatistics.LastDocEtag) < 0)
 					{
 						lastEtag = EtagUtil.Increment(lastEtag, smugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}",lastEtag);

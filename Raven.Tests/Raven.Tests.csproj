@@ -99,18 +99,6 @@
       <HintPath>..\Raven.Database\bin\Debug\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions.Desktop, Version=1.0.14.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.VisualStudio.DebuggerVisualizers, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
@@ -157,13 +145,7 @@
     <Reference Include="System.Reactive.PlatformServices">
       <HintPath>..\packages\Rx-PlatformServices.2.0.21114\lib\Net40\System.Reactive.PlatformServices.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime">
-      <HintPath>..\packages\Microsoft.Bcl.1.0.16-rc\lib\net40\System.Runtime.dll</HintPath>
-    </Reference>
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Threading.Tasks">
-      <HintPath>..\packages\Microsoft.Bcl.1.0.16-rc\lib\net40\System.Threading.Tasks.dll</HintPath>
-    </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Abstractions" />
@@ -226,6 +208,7 @@
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
     <Compile Include="Bugs\CreatingIndexes.cs" />
     <Compile Include="Bugs\CS1977.cs" />
+    <Compile Include="Bugs\DamianPutSnapshot.cs" />
     <Compile Include="Bugs\DanTurner.cs" />
     <Compile Include="Bugs\DeserializationAcrossTypes.cs" />
     <Compile Include="Bugs\DictionaryOfDateTime.cs" />
@@ -261,6 +244,7 @@
     <Compile Include="Bugs\LiveProjections\Indexes\TaskSummaryIndex.cs" />
     <Compile Include="Bugs\LiveProjections\LiveProjectionOnTasks.cs" />
     <Compile Include="Bugs\LoadAllStartingWith.cs" />
+    <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
     <Compile Include="Bugs\MapRedue\Chris.cs" />
@@ -485,7 +469,6 @@
     <Compile Include="Bugs\Queries\TermsLocal.cs" />
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\Queries\WithAs.cs" />
-    <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryByTypeOnly.cs" />
     <Compile Include="Bugs\QueryByTypeOnlyRemote.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
@@ -527,6 +510,7 @@
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
+    <Compile Include="Bundles\IndexedProperties\Alexander.cs" />
     <Compile Include="Bundles\IndexedProperties\IndexedProperties.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
@@ -549,6 +533,9 @@
     <Compile Include="Issues\RavenDB741.cs" />
     <Compile Include="Issues\RavenDB814.cs" />
     <Compile Include="Issues\RavenDB845.cs" />
+    <Compile Include="Issues\RavenDB903.cs" />
+    <Compile Include="Issues\RavenDB921.cs" />
+    <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
     <Compile Include="Issues\RavenDB_806.cs" />
     <Compile Include="Issues\RavenDB_851.cs" />
@@ -621,6 +608,7 @@
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
+    <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
     <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
@@ -646,8 +634,10 @@
     <Compile Include="MailingList\linmouhong3.cs" />
     <Compile Include="MailingList\LinqInExtensionTests.cs" />
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />
+    <Compile Include="MailingList\LuceneSearchSample.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />
+    <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
     <Compile Include="MailingList\Nullables.cs" />
@@ -661,9 +651,12 @@
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\RavenDbRecoveryTests.cs" />
     <Compile Include="MailingList\RavenDB_859.cs" />
+    <Compile Include="MailingList\RavenCannotQueryAgainstFloatProperty.cs" />
+    <Compile Include="MailingList\LateBoundValue.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
+    <Compile Include="MailingList\SnapshotBug.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
@@ -1306,7 +1299,6 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-	<Import Project="..\SharedLibs\Microsoft.Bcl\Microsoft.Bcl.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

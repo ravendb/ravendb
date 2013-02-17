@@ -36,7 +36,7 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
-			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
+			CreateAutoIndexesForAdHocQueriesIfNeeded = true;
 
 			CreatePluginsDirectoryIfNotExisting = true;
 			CreateAnalyzersDirectoryIfNotExisting = true;
@@ -124,15 +124,7 @@ namespace Raven.Database.Config
 
 			MaxNumberOfParallelIndexTasks = ravenSettings.MaxNumberOfParallelIndexTasks.Value;
 
-			TempIndexPromotionMinimumQueryCount = ravenSettings.TempIndexPromotionMinimumQueryCount.Value;
-
-			TempIndexPromotionThreshold = ravenSettings.TempIndexPromotionThreshold.Value;
-
-			TempIndexCleanupPeriod = ravenSettings.TempIndexCleanupPeriod.Value;
-
-			TempIndexCleanupThreshold = ravenSettings.TempIndexCleanupThreshold.Value;
-
-			TempIndexInMemoryMaxBytes = ravenSettings.TempIndexInMemoryMaxMb.Value;
+			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
 
 			// Data settings
 			RunInMemory = ravenSettings.RunInMemory.Value;
@@ -142,7 +134,13 @@ namespace Raven.Database.Config
 				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 			}
 
-			CreateTemporaryIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateTemporaryIndexesForAdHocQueriesIfNeeded.Value;
+			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
+		    
+			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
+		    TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
+
+			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
+			TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
 
 			ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
 
@@ -193,7 +191,15 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-		private void FilterActiveBundles()
+	    public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+		
+		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
+        
+		public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
+
+		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; } 
+
+	    private void FilterActiveBundles()
 		{
 			var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
 
@@ -405,38 +411,11 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
-		/// Time (in milliseconds) the index has to be queried at least once in order for it to
-		/// become permanent
-		/// Default: 60000 (once per minute)
-		/// </summary>
-		public int TempIndexPromotionThreshold { get; set; }
-
-		/// <summary>
-		/// How many times a temporary, auto-generated index has to be accessed before it can
-		/// be promoted to be a permanent one
-		/// Default: 100
-		/// </summary>
-		public int TempIndexPromotionMinimumQueryCount { get; set; }
-
-		/// <summary>
-		/// How often to run the temporary index cleanup process (in seconds)
-		/// Default: 600 (10 minutes)
-		/// </summary>
-		public TimeSpan TempIndexCleanupPeriod { get; set; }
-
-		/// <summary>
-		/// How much time in seconds to wait after a temporary index has been used before removing it if no further
-		/// calls were made to it during that time
-		/// Default: 1200 (20 minutes)
-		/// </summary>
-		public TimeSpan TempIndexCleanupThreshold { get; set; }
-
-		/// <summary>
-		/// Temp indexes are kept in memory until they reach this integer value in bytes
+		/// New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale
 		/// Default: 25 MB
 		/// Minimum: 1 MB
 		/// </summary>
-		public int TempIndexInMemoryMaxBytes { get; set; }
+		public int NewIndexInMemoryMaxBytes { get; set; }
 
 		#endregion
 
@@ -667,7 +646,7 @@ namespace Raven.Database.Config
 		/// Controls whatever RavenDB will create temporary indexes 
 		/// for queries that cannot be directed to standard indexes
 		/// </summary>
-		public bool CreateTemporaryIndexesForAdHocQueriesIfNeeded { get; set; }
+		public bool CreateAutoIndexesForAdHocQueriesIfNeeded { get; set; }
 
 		public string IndexStoragePath
 		{
@@ -686,7 +665,7 @@ namespace Raven.Database.Config
 
 		internal bool IsTenantDatabase { get; set; }
 
-		[Browsable(false)]
+	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{

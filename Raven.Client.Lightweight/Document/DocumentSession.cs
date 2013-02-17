@@ -477,6 +477,50 @@ namespace Raven.Client.Document
 			return DatabaseCommands.UrlFor(value.Key);
 		}
 
+		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
+		{
+			QueryHeaderInformation _;
+			return Stream(query, out _);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector) query);
+			var indexQuery = ravenQueryInspector.GetIndexQuery(false);
+			var enumerator = DatabaseCommands.Query(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			return YieldStream<T>(enumerator);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
+		{
+			QueryHeaderInformation _;
+			return Stream<T>(query, out _);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)query);
+			var indexQuery = ravenQueryInspector.GetIndexQuery(false);
+			var enumerator = DatabaseCommands.Query(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			return YieldStream<T>(enumerator);
+		}
+
+		private IEnumerator<StreamResult<T>> YieldStream<T>(IEnumerator<RavenJObject> enumerator)
+		{
+			while (enumerator.MoveNext())
+			{
+				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
+
+				yield return new StreamResult<T>
+				{
+					Document = (T) ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+					Etag = document.Etag,
+					Key = document.Key,
+					Metdata = document.Metadata
+				};
+			}
+		}
+
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>

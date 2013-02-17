@@ -19,6 +19,8 @@ namespace Raven.Database.Storage
 		void AddIndex(string name, bool createMapReduce);
 		void DeleteIndex(string name);
 
+	    void SetIndexPriority(string name, IndexingPriority priority);
+
 
 		IndexFailureInformation GetFailureRate(string index);
 

@@ -556,7 +556,6 @@ namespace Raven.Storage.Esent
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
-				pht.FlushMapReduceUpdates();
 
 				if (pht.UsingLazyCommit)
 				{

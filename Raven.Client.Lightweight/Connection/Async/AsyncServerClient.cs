@@ -681,7 +681,7 @@ namespace Raven.Client.Connection.Async
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
-			var result = await request.ReadResponseJsonAsync();
+			RavenJToken result = await request.ReadResponseJsonAsync();
 			return new BuildNumber
 			{
 				BuildVersion = result.Value<string>("BuildVersion"),

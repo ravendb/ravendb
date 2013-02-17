@@ -11,7 +11,7 @@ namespace Raven.Client.Util
 	public class SimpleCache<T> : IDisposable
 	{
 		readonly ConcurrentLruLSet<string> lruKeys;
-		readonly ConcurrentDictionary<string, T> actualCache;
+		internal readonly ConcurrentDictionary<string, T> actualCache;
 
 		public SimpleCache(int maxNumberOfCacheEntries)
 		{
@@ -106,6 +106,12 @@ namespace Raven.Client.Util
 			{
 				lruKeys.ClearHalf();
 			}
+		}
+
+		public void ClearAllItems()
+		{
+			lruKeys.Clear();
+			actualCache.Clear();
 		}
 
 		public T Get(string key)

@@ -107,19 +107,10 @@
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4">
+      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions.Desktop, Version=1.0.14.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\net40\Microsoft.Threading.Tasks.Extensions.Desktop.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Mono.Cecil">
       <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.dll</HintPath>
@@ -140,15 +131,9 @@
     <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Management" />
     <Reference Include="System.Net" />
-    <Reference Include="System.Runtime">
-      <HintPath>..\packages\Microsoft.Bcl.1.0.16-rc\lib\net40\System.Runtime.dll</HintPath>
-    </Reference>
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Threading.Tasks">
-      <HintPath>..\packages\Microsoft.Bcl.1.0.16-rc\lib\net40\System.Threading.Tasks.dll</HintPath>
-    </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Data" />
@@ -407,6 +392,7 @@
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
+    <Compile Include="Server\Responders\Streams.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
@@ -610,7 +596,6 @@
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
-    <Compile Include="Plugins\Builtins\CleanupOldDynamicIndexes.cs" />
     <Compile Include="Plugins\Builtins\CreateFolderIcon.cs" />
     <Compile Include="Plugins\Builtins\DeleteRemovedIndexes.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
@@ -618,7 +603,6 @@
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
     <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
-    <Compile Include="Plugins\Builtins\DeleteTemporaryIndexes.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
@@ -699,6 +683,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From40To41.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From43To44.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
@@ -707,6 +692,7 @@
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />
     <Compile Include="Storage\Esent\StorageActions\MappedResults.cs" />
+    <Compile Include="Storage\Esent\StorageActions\OptimizedDeleter.cs" />
     <Compile Include="Storage\Esent\StorageActions\OptimizedIndexReader.cs" />
     <Compile Include="Storage\Esent\StorageActions\Queue.cs" />
     <Compile Include="Storage\Esent\StorageActions\Staleness.cs" />
@@ -893,7 +879,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
-    <None Include="app.config" />
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
@@ -924,5 +909,4 @@
     </CreateItem>
   </Target>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-	<Import Project="..\SharedLibs\Microsoft.Bcl\Microsoft.Bcl.targets" />
 </Project>

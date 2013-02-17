@@ -40,26 +40,33 @@ namespace Raven.Client.Connection
 					list.Add(null);
 					continue;
 				}
-				var metadata = (RavenJObject)doc["@metadata"];
-				doc.Remove("@metadata");
-				var key = Extract(metadata, "@id", string.Empty);
-
-				var lastModified = GetLastModified(metadata);
-
-				var etag = Extract(metadata, "@etag", Etag.Empty, (string g) => HttpExtensions.EtagHeaderToEtag(g));
-				var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
-				list.Add(new JsonDocument
-				{
-					Key = key,
-					LastModified = lastModified,
-					Etag = etag,
-					TempIndexScore = metadata == null ? null : metadata.Value<float?>(Constants.TemporaryScoreValue),
-					NonAuthoritativeInformation = nai,
-					Metadata = metadata.FilterHeaders(),
-					DataAsJson = doc,
-				});
+				var jsonDocument = RavenJObjectToJsonDocument(doc);
+				list.Add(jsonDocument);
 			}
 			return list;
+		}
+
+		public static JsonDocument RavenJObjectToJsonDocument(RavenJObject doc)
+		{
+			var metadata = (RavenJObject) doc["@metadata"];
+			doc.Remove("@metadata");
+			var key = Extract(metadata, "@id", string.Empty);
+
+			var lastModified = GetLastModified(metadata);
+
+			var etag = Extract(metadata, "@etag", Etag.Empty, (string g) => HttpExtensions.EtagHeaderToEtag(g));
+			var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
+			var jsonDocument = new JsonDocument
+			{
+				Key = key,
+				LastModified = lastModified,
+				Etag = etag,
+				TempIndexScore = metadata == null ? null : metadata.Value<float?>(Constants.TemporaryScoreValue),
+				NonAuthoritativeInformation = nai,
+				Metadata = metadata.FilterHeaders(),
+				DataAsJson = doc,
+			};
+			return jsonDocument;
 		}
 
 		private static DateTime GetLastModified(RavenJObject metadata)

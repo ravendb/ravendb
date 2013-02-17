@@ -9,12 +9,19 @@ using Raven.Client.Silverlight.MissingFromSilverlight;
 using System.Security.Cryptography;
 #endif
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
 	public class Etag : IEquatable<Etag>, IComparable<Etag>
 	{
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return (restarts.GetHashCode()*397) ^ changes.GetHashCode();
+			}
+		}
+
 		long restarts;
 		long changes;
 
@@ -43,6 +50,14 @@ namespace Raven.Abstractions.Data
 			this.changes = changes;
 		}
 
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != GetType()) return false;
+			return Equals((Etag) obj);
+		}
+
 		public static bool operator ==(Etag a, Etag b)
 		{
 			if (ReferenceEquals(a, null) && ReferenceEquals(b, null))
@@ -59,10 +74,9 @@ namespace Raven.Abstractions.Data
 
 		public bool Equals(Etag other)
 		{
-			if (ReferenceEquals(other, null))
-				return false;
-			return CompareTo(other) == 0;
-			//return other.changes == changes && other.restarts == restarts;
+			if (ReferenceEquals(null, other)) return false;
+			if (ReferenceEquals(this, other)) return true;
+			return restarts == other.restarts && changes == other.changes;
 		}
 
 		public int CompareTo(Etag other)
@@ -156,7 +170,7 @@ namespace Raven.Abstractions.Data
 				byte.Parse(str.Substring(26, 2), NumberStyles.HexNumber),
 				byte.Parse(str.Substring(24, 2), NumberStyles.HexNumber),
 				byte.Parse(str.Substring(21, 2), NumberStyles.HexNumber),
-				byte.Parse(str.Substring(19, 2), NumberStyles.HexNumber),
+				byte.Parse(str.Substring(19, 2), NumberStyles.HexNumber)
 			};
 
 			return new Etag

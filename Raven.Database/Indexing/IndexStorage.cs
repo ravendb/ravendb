@@ -88,7 +88,7 @@ namespace Raven.Database.Indexing
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
 
-				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext, 
+				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,
 					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
 			}
 			catch
@@ -119,6 +119,13 @@ namespace Raven.Database.Indexing
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
+						IndexStats indexStats = accessor.Indexing.GetIndexStats(indexName);
+						if (indexStats != null)
+						{
+							indexImplementation.Priority = indexStats.Priority;
+						}
+
+
 						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
 						if (read == null)
 							return;
@@ -178,7 +185,7 @@ namespace Raven.Database.Indexing
 								  true, out distanceType);
 					var field = decodedKey.Substring(0, lastIndexOfDistance);
 					var extension = new SuggestionQueryIndexExtension(
-						documentDatabase.WorkContext, 
+						documentDatabase.WorkContext,
 						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader.Directory() is RAMDirectory,
 						SuggestionQueryRunner.GetStringDistance(distanceType),
 						field,
@@ -195,7 +202,7 @@ namespace Raven.Database.Indexing
 			bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (indexDefinition.IsTemp || configuration.RunInMemory)
+			if (indexDefinitionStorage.IsNewThisSession(indexDefinition) || configuration.RunInMemory)
 			{
 				directory = new RAMDirectory();
 				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
@@ -224,7 +231,7 @@ namespace Raven.Database.Indexing
 						IndexWriter.Unlock(directory);
 						// for some reason, just calling unlock doesn't remove this file
 						directory.DeleteFile("write.lock");
-					} 
+					}
 					if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
 					{
 						if (configuration.ResetIndexOnUncleanShutdown)
@@ -242,7 +249,7 @@ namespace Raven.Database.Indexing
 
 		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)
 		{
-			using(var indexOutput = directory.CreateOutput("index.version"))
+			using (var indexOutput = directory.CreateOutput("index.version"))
 			{
 				indexOutput.WriteString(IndexVersion);
 				indexOutput.Flush();
@@ -255,7 +262,7 @@ namespace Raven.Database.Indexing
 			{
 				throw new InvalidOperationException("Could not find index.version " + indexName + ", resetting index");
 			}
-			using(var indexInput = directory.OpenInput("index.version"))
+			using (var indexInput = directory.OpenInput("index.version"))
 			{
 				var versionFromDisk = indexInput.ReadString();
 				if (versionFromDisk != IndexVersion)
@@ -417,9 +424,37 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 
+			if ((value.Priority.HasFlag(IndexingPriority.Idle) || value.Priority.HasFlag(IndexingPriority.Abandoned)) &&
+				value.Priority.HasFlag(IndexingPriority.Forced) == false)
+			{
+				documentDatabase.TransactionalStorage.Batch(accessor =>
+				{
+					value.Priority = IndexingPriority.Normal;
+					try
+					{
+						accessor.Indexing.SetIndexPriority(index, IndexingPriority.Normal);
+					}
+					catch (Exception e)
+					{
+						if (accessor.IsWriteConflict(e) == false)
+							throw;
+
+						// we explciitly ignore write conflicts here, it is okay if we got set twice (two concurrent queries, or setting while indexing).
+					}
+					documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
+					documentDatabase.RaiseNotifications(new IndexChangeNotification()
+					{
+						Name = value.name,
+						Type = IndexChangeTypes.IndexPromotedFromIdle
+					});
+				});
+			}
+
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery();
+
+
 			return indexQueryOperation.Query();
 		}
 
@@ -436,7 +471,7 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 
-			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null,AggregationOperation.None, null), indexQueryTriggers);
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, AggregationOperation.None, null), indexQueryTriggers);
 			return indexQueryOperation.IndexEntries(totalResults);
 		}
 
@@ -499,11 +534,11 @@ namespace Raven.Database.Indexing
 		}
 
 		public void Reduce(
-			string index, 
-			AbstractViewGenerator viewGenerator, 
+			string index,
+			AbstractViewGenerator viewGenerator,
 			IEnumerable<IGrouping<int, object>> mappedResults,
 			int level,
-			WorkContext context, 
+			WorkContext context,
 			IStorageActionsAccessor actions,
 			HashSet<string> reduceKeys)
 		{
@@ -561,6 +596,12 @@ namespace Raven.Database.Indexing
 				value.Flush();
 			}
 
+			SetUnusedIndexesToIdle();
+			UpdateLatestPersistedQueryTime();
+		}
+
+		private void UpdateLatestPersistedQueryTime()
+		{
 			documentDatabase.TransactionalStorage.Batch(accessor =>
 			{
 				var maxDate = latestPersistedQueryTime;
@@ -571,14 +612,144 @@ namespace Raven.Database.Indexing
 						continue;
 
 					accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
-					{
-						{"LastQueryTime", lastQueryTime}
-					}, UuidType.Indexing);
+	                {
+	                    {"LastQueryTime", lastQueryTime}
+	                }, UuidType.Indexing);
 
 					if (lastQueryTime > maxDate)
 						maxDate = lastQueryTime;
 				}
 				latestPersistedQueryTime = maxDate;
+			});
+		}
+
+		public class UnusedIndexState
+		{
+			public DateTime LastQueryTime { get; set; }
+			public Index Index { get; set; }
+			public string Name { get; set; }
+			public IndexingPriority Priority { get; set; }
+			public DateTime CreationDate { get; set; }
+		}
+
+		private void SetUnusedIndexesToIdle()
+		{
+			documentDatabase.TransactionalStorage.Batch(accessor =>
+			{
+				var autoIndexesSortedByLastQueryTime =
+					(from index in indexes
+					 let stats = accessor.Indexing.GetIndexStats(index.Key)
+					 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
+					 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
+					 orderby lastQueryTime
+					 select new UnusedIndexState
+						 {
+							 LastQueryTime = lastQueryTime,
+							 Index = index.Value,
+							 Name = index.Key,
+							 Priority = stats.Priority,
+							 CreationDate = stats.CreatedTimestamp
+						 }).ToArray();
+
+				var idleChecks = 0;
+				for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
+				{
+					var thisItem = autoIndexesSortedByLastQueryTime[i];
+
+					if (thisItem.Priority.HasFlag(IndexingPriority.Disabled) || // we don't really have much to say about those in here
+						thisItem.Priority.HasFlag(IndexingPriority.Forced))// if it is forced, we can't change it
+						continue;
+
+					var age = (SystemTime.UtcNow - thisItem.CreationDate).TotalMinutes;
+					var lastQuery = (SystemTime.UtcNow - thisItem.LastQueryTime).TotalMinutes;
+
+					if (thisItem.Priority.HasFlag(IndexingPriority.Normal))
+					{
+						var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
+						var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
+						if (age < timeToWaitForIdleMinutes)
+						{
+							HandleActiveIndex(thisItem, age, lastQuery, accessor, timeToWaitForIdleMinutes);
+						}
+						else if (++idleChecks < 2)
+						{
+							// If it's a fairly established query then we need to determine whether there is any activity currently
+							// If there is activity and this has not been queried against 'recently' it needs idling
+							if (i < autoIndexesSortedByLastQueryTime.Length - 1)
+							{
+								var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
+								if ((nextItem.LastQueryTime - thisItem.LastQueryTime).TotalMinutes > timeToWaitForIdleMinutes)
+								{
+									accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+									thisItem.Index.Priority = IndexingPriority.Idle;
+									documentDatabase.RaiseNotifications(new IndexChangeNotification()
+									{
+										Name = thisItem.Name,
+										Type = IndexChangeTypes.IndexDemotedToIdle
+									});
+								}
+							}
+						}
+
+						continue;
+					}
+
+					if (thisItem.Priority.HasFlag(IndexingPriority.Idle))
+					{
+						HandleIdleIndex(age, lastQuery, thisItem, accessor);
+						continue;
+					}
+				}
+			});
+		}
+
+
+		private void HandleIdleIndex(double age, double lastQuery, UnusedIndexState thisItem,
+											IStorageActionsAccessor accessor)
+		{
+			// relatively young index, haven't been queried for a while already
+			// can be safely removed, probably
+			if (age < 90 && lastQuery < 30)
+			{
+				accessor.Indexing.DeleteIndex(thisItem.Name);
+				return;
+			}
+
+			if (lastQuery < configuration.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.TotalMinutes)
+				return;
+
+			// old enough, and haven't been queried for a while, mark it as abandoned
+
+			accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Abandoned);
+
+			thisItem.Index.Priority = IndexingPriority.Abandoned;
+
+			documentDatabase.RaiseNotifications(new IndexChangeNotification()
+			{
+				Name = thisItem.Name,
+				Type = IndexChangeTypes.IndexDemotedToIdle
+			});
+		}
+
+		private void HandleActiveIndex(UnusedIndexState thisItem, double age, double lastQuery, IStorageActionsAccessor accessor, double timeToWaitForIdle)
+		{
+			if (age < timeToWaitForIdle)
+				return; // there isn't even a point in checking here further
+
+			if (age < (timeToWaitForIdle * 2.5) && lastQuery < (1.5 * timeToWaitForIdle))
+				return;
+
+			if (age < (timeToWaitForIdle * 6) && lastQuery < (2.5 * timeToWaitForIdle))
+				return;
+
+			accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+
+			thisItem.Index.Priority = IndexingPriority.Idle;
+
+			documentDatabase.RaiseNotifications(new IndexChangeNotification()
+			{
+				Name = thisItem.Name,
+				Type = IndexChangeTypes.IndexDemotedToIdle
 			});
 		}
 
@@ -637,14 +808,14 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string directory, string incrementalTag = null)
 		{
-			Parallel.ForEach(indexes.Values, index => 
+			Parallel.ForEach(indexes.Values, index =>
 				index.Backup(directory, path, incrementalTag));
 		}
 
 		public void MergeAllIndexes()
 		{
 			Parallel.ForEach(indexes.Values, index =>
-			                                 index.MergeSegments());
+											 index.MergeSegments());
 		}
 	}
 }
