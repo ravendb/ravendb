@@ -72,6 +72,21 @@ namespace Raven.Database.Extensions
 			return null;
 		}
 
+        public static Dictionary<string, RavenJToken> ExtractQueryInputs(this IHttpContext context)
+        {
+            var result = new Dictionary<string, RavenJToken>();
+            foreach (var key in context.Request.QueryString.AllKeys)
+            {
+                if (string.IsNullOrEmpty(key)) continue;
+                if (key.StartsWith("qp-"))
+                {
+                    var realkey = key.Substring(3);
+                    result[realkey] = context.Request.QueryString[key];
+                }
+            }
+            return result;
+        }
+
 		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
 		{
 			var query = new IndexQuery
@@ -100,17 +115,10 @@ namespace Raven.Database.Extensions
 				HighlighterPreTags = context.Request.QueryString.GetValues("preTags"),
 				HighlighterPostTags = context.Request.QueryString.GetValues("postTags"),
                 ResultsTransformer = context.Request.QueryString["resultsTransformer"],
-                QueryInputs =  new Dictionary<string,RavenJToken>()
+                QueryInputs = context.ExtractQueryInputs()
                 };
 
-		    foreach (var key in context.Request.QueryString.AllKeys)
-		    {
-		        if (key.StartsWith("qp-"))
-		        {
-		            var realkey = key.Substring(3);
-		            query.QueryInputs[realkey] = context.Request.QueryString[key];
-		        }
-		    }
+	
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
 			var queryShape = context.Request.QueryString["queryShape"];
 			double distanceErrorPct;

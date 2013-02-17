@@ -48,9 +48,10 @@ namespace Raven.Client.Connection
 	    /// <param name="ids">The ids.</param>
 	    /// <param name="includes">The includes.</param>
 	    /// <param name="transformer"></param>
+	    /// <param name="queryInputs"></param>
 	    /// <param name="metadataOnly">Load just the document metadata</param>
 	    /// <returns></returns>
-	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, bool metadataOnly = false);
+	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Get documents from server

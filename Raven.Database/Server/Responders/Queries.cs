@@ -39,6 +39,9 @@ namespace Raven.Database.Server.Responders
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
 		    var transfomer = context.Request.QueryString["transformer"];
+
+		    var queryInputs = context.ExtractQueryInputs();
+            
             var transactionInformation = GetRequestTransaction(context);
 		    var includedEtags = new List<byte>();
 			Database.TransactionalStorage.Batch(actions =>
@@ -50,7 +53,7 @@ namespace Raven.Database.Server.Responders
 						continue;
 					JsonDocument documentByKey = string.IsNullOrEmpty(transfomer)
 				                        ? Database.Get(value, transactionInformation)
-				                        : Database.GetWithTransformer(value, transfomer, transactionInformation);
+                                        : Database.GetWithTransformer(value, transfomer, transactionInformation, queryInputs);
 				    if (documentByKey == null)
 						continue;
 					result.Results.Add(documentByKey.ToJson());

@@ -127,10 +127,11 @@ namespace Raven.Client.Embedded
 	    /// </summary>
 	    /// <param name="key">The key</param>
 	    /// <param name="transformer">The transformer to use</param>
+	    /// <param name="queryInputs">Inputs to the transformer</param>
 	    /// <returns></returns>
-	    public JsonDocument Get(string key, string transformer)
+	    public JsonDocument Get(string key, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
 	    {
-			return database.GetWithTransformer(key, transformer, TransactionInformation);
+            return database.GetWithTransformer(key, transformer, TransactionInformation, queryInputs);
 	    }
 
 	    /// <summary>
@@ -452,9 +453,10 @@ namespace Raven.Client.Embedded
 	    /// <param name="ids">The ids.</param>
 	    /// <param name="includes">The includes.</param>
 	    /// <param name="transformer"></param>
+	    /// <param name="queryInputs"></param>
 	    /// <param name="metadataOnly">Load just the document metadata</param>
 	    /// <returns></returns>
-	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer, bool metadataOnly = false)
+	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
@@ -467,7 +469,7 @@ namespace Raven.Client.Embedded
 					                      {
 					                          if (string.IsNullOrEmpty(transformer))
 					                              return database.Get(id, TransactionInformation);
-                                              return database.GetWithTransformer(id, transformer, TransactionInformation);
+                                              return database.GetWithTransformer(id, transformer, TransactionInformation,  queryInputs);
 					                      })
 					                      .ToArray()
 					                      .Select(x => x == null ? null : x.ToJson())
