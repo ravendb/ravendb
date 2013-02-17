@@ -30,7 +30,11 @@ namespace Raven.Studio.Features.Documents
 			var collection = new GradientStopCollection();
 			var numberOfSections = (colors.Count - 2) / AllColors.Count + 1;
 			var stops = new List<GradientStop>();
-			var stepSize = 1/(double)numberOfSections;
+			double stepSize;
+			if(numberOfSections == 1)
+				stepSize = 0;
+			else
+				stepSize = 1/((double)numberOfSections - 1);
 
 			for (int i = 0; i < numberOfSections; i++)
 			{
