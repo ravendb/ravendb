@@ -11,7 +11,6 @@ namespace Raven.Studio.Infrastructure
 	{
 		public List<string> ModelUrlIgnoreList { get; private set; }
 		public string ModelUrl { get; set; }
-		public new bool IsLoaded { get; protected set; }
 
 		public PageViewModel()
 		{
@@ -20,7 +19,6 @@ namespace Raven.Studio.Infrastructure
 
 		public void LoadModel(string state)
 		{
-			IsLoaded = true;
 			if (string.IsNullOrWhiteSpace(state) == false &&
 				state.StartsWith(ModelUrl, StringComparison.OrdinalIgnoreCase) &&
 				ModelUrlIgnoreList.Any(state.StartsWith) == false)

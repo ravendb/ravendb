@@ -203,6 +203,7 @@
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
+    <Compile Include="Behaviors\ClosePopupAction.cs" />
     <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
@@ -211,6 +212,7 @@
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\FocusElementAction.cs" />
+    <Compile Include="Behaviors\HandledMouseLeftButtonUpTrigger.cs" />
     <Compile Include="Behaviors\HighlightSyntaxErrorAction.cs" />
     <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
@@ -245,6 +247,11 @@
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
+    <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Documents\ConflictsView.xaml.cs">
+      <DependentUpon>ConflictsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\ConflictDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
@@ -257,6 +264,7 @@
     </Compile>
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
+    <Compile Include="Impl\SplitButton\SplitHyperlinkButtonPopup.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToToolTipCoverter.cs" />
     <Compile Include="Infrastructure\Converters\FromEnumWithDescription.cs" />
@@ -265,6 +273,7 @@
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\MillisecondsToMinutesConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibilityByParamInEqualityConverter.cs" />
+    <Compile Include="Models\ConflictsModel.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\TaskUITemplateSelector.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
@@ -536,6 +545,9 @@
     <Compile Include="Models\VersioningSettingsSectionModel.cs" />
     <Compile Include="Views\Alerts.xaml.cs">
       <DependentUpon>Alerts.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Conflicts.xaml.cs">
+      <DependentUpon>Conflicts.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Patch.xaml.cs">
       <DependentUpon>Patch.xaml</DependentUpon>
@@ -817,6 +829,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Assets\SplitHyperlinkButtonPopupStyle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Assets\TextBoxStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -890,6 +906,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Alerts\AlertsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\ConflictsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -992,6 +1012,10 @@
     <Page Include="Views\Alerts.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Conflicts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Patch.xaml">
       <SubType>Designer</SubType>
