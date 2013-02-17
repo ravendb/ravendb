@@ -487,7 +487,7 @@ namespace Raven.Client.Document
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector) query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(false);
-			var enumerator = DatabaseCommands.Query(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
 			return YieldStream<T>(enumerator);
 		}
 
@@ -501,7 +501,7 @@ namespace Raven.Client.Document
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(false);
-			var enumerator = DatabaseCommands.Query(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
 			return YieldStream<T>(enumerator);
 		}
 

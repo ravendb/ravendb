@@ -1537,12 +1537,19 @@ namespace Raven.Database
 
 		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize)
 		{
+			var list = new RavenJArray();
+			GetDocumentsWithIdStartingWith(idPrefix, matches, start, pageSize, list.Add);
+			return list;
+		}
+
+		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize, Action<RavenJObject> addDoc)
+		{
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
 			idPrefix = idPrefix.Trim();
-			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
+				bool returnedDocs = false;
 				while (true)
 				{
 					int docCount = 0;
@@ -1559,26 +1566,33 @@ namespace Raven.Database
 						if (document == null)
 							continue;
 
-						list.Add(document.ToJson());
+						addDoc(document.ToJson());
+						returnedDocs = true;
 					}
-					if (list.Length != 0 || docCount == 0)
+					if (returnedDocs || docCount == 0)
 						break;
 					start += docCount;
 				}
 			});
-			return list;
 		}
 
 		public RavenJArray GetDocuments(int start, int pageSize, Etag etag)
 		{
 			var list = new RavenJArray();
+			GetDocuments(start, pageSize, etag, list.Add);
+			return list;
+		}
+
+		public void GetDocuments(int start, int pageSize, Etag etag, Action<RavenJObject> addDocument)
+		{
 			TransactionalStorage.Batch(actions =>
 			{
+				bool returnedDocs = false;
 				while (true)
 				{
-					var documents = etag == null ?
-						actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) :
-						actions.Documents.GetDocumentsAfter(etag, pageSize);
+					var documents = etag == null
+						                ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
+						                : actions.Documents.GetDocumentsAfter(etag, pageSize);
 					var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 					int docCount = 0;
 					foreach (var doc in documents)
@@ -1592,14 +1606,14 @@ namespace Raven.Database
 						if (document == null)
 							continue;
 
-						list.Add(document.ToJson());
+						addDocument(document.ToJson());
+						returnedDocs = true;
 					}
-					if (list.Length != 0 || docCount == 0)
+					if (returnedDocs || docCount == 0)
 						break;
 					start += docCount;
 				}
 			});
-			return list;
 		}
 
 		public AttachmentInformation[] GetAttachments(int start, int pageSize, Etag etag, string startsWith, long maxSize)

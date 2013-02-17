@@ -35,7 +35,7 @@ namespace Raven.Tests.Issues
 				WaitForIndexing(store);
 				
 				QueryHeaderInformation queryHeaders;
-				var enumerator = store.DatabaseCommands.Query(new RavenDocumentsByEntityName().IndexName, new IndexQuery
+				var enumerator = store.DatabaseCommands.StreamQuery(new RavenDocumentsByEntityName().IndexName, new IndexQuery
 				{
 					Query = "",
 					SortedFields = new[]{new SortedField(Constants.DocumentIdFieldName), }
@@ -143,7 +143,7 @@ namespace Raven.Tests.Issues
 				WaitForIndexing(store);
 
 				QueryHeaderInformation queryHeaders;
-				var enumerator = store.DatabaseCommands.Query(new RavenDocumentsByEntityName().IndexName, new IndexQuery
+				var enumerator = store.DatabaseCommands.StreamQuery(new RavenDocumentsByEntityName().IndexName, new IndexQuery
 				{
 					Query = "",
 					SortedFields = new[] { new SortedField(Constants.DocumentIdFieldName), }

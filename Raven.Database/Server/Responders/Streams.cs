@@ -15,16 +15,16 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Streams : AbstractRequestResponder
+	public class QueryStreams : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
-			get { return @"^/streams/(.+)"; }
+			get { return @"^/streams/query(.+)"; }
 		}
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "GET", "HEAD" }; }
+			get { return new[] {"GET", "HEAD"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -45,7 +45,9 @@ namespace Raven.Database.Server.Responders
 				context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
 				context.Response.AddHeader("Raven-Index", information.Index);
 				context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
-				context.Response.AddHeader("Raven-Index-Timestamp", information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,CultureInfo.InvariantCulture));
+				context.Response.AddHeader("Raven-Index-Timestamp",
+				                           information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
+				                                                               CultureInfo.InvariantCulture));
 
 				if (query.PageSize == 0)
 					return;

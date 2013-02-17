@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using Raven.Abstractions.Json;
 using Raven.Client.Listeners;
 using Raven.Imports.Newtonsoft.Json;
@@ -921,10 +922,10 @@ namespace Raven.Client.Connection
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
 		/// of the number of items that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> Query(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
+		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
-			string path = query.GetIndexQueryUrl(url, index, "streams", includePageSizeEvenIfNotExplicitlySet: false);
+			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
@@ -944,6 +945,49 @@ namespace Raven.Client.Connection
 				TotalResults = int.Parse(webResponse.Headers["Raven-Total-Results"])
 			};
 
+			return YieldStreamResults(webResponse);
+		}
+
+
+		/// <summary>
+		/// Streams the documents by etag OR starts with the prefix and match the matches
+		/// Will return *all* results, regardless of the number of itmes that might be returned.
+		/// </summary>
+		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+		{
+			if (fromEtag != null && startsWith != null)
+				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
+
+			var sb = new StringBuilder(url).Append("/streams/docs?");
+
+			if (fromEtag != null)
+			{
+				sb.Append("etag=")
+					.Append(fromEtag)
+					.Append("&");
+			}
+			else
+			{
+				if (startsWith != null)
+				{
+					sb.Append("startsWith=").Append(Uri.EscapeDataString(startsWith)).Append("&");
+				}
+				if(matches != null)
+				{
+					sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
+				}
+			}
+			if (start != 0)
+				sb.Append("start=").Append(start).Append("&");
+			if(pageSize!=int.MaxValue)
+				sb.Append("start=").Append(pageSize).Append("&");
+
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+				.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			var webResponse = request.RawExecuteRequest();
 			return YieldStreamResults(webResponse);
 		}
 

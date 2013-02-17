@@ -423,7 +423,7 @@ namespace Raven.Client.Embedded
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
 		/// of the number of items that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> Query(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
+		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
 		{
 			if (query.PageSizeSet == false)
 				query.PageSize = int.MaxValue;
@@ -432,30 +432,61 @@ namespace Raven.Client.Embedded
 			using (var waitForHeaders = new ManualResetEventSlim(false))
 			{
 				QueryHeaderInformation localQueryHeaderInfo = null;
-				Task.Factory.StartNew(() =>
+				var task = Task.Factory.StartNew(() =>
 				{
 					database.Query(index, query, information =>
 					{
 						localQueryHeaderInfo = information;
 						waitForHeaders.Set();
 					}, items.Add);
-					items.Add(null);
 				});
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
+				return YieldUntilDone(items, task);
 			}
-			return YieldUntilDone(items);
 		}
 
-		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items)
+		/// <summary>
+		/// Streams the documents by etag OR starts with the prefix and match the matches
+		/// Will return *all* results, regardless of the number of itmes that might be returned.
+		/// </summary>
+		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
 		{
+			if(fromEtag != null && startsWith != null)
+				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
+
+			var items = new BlockingCollection<RavenJObject>();
+			var task = Task.Factory.StartNew(() =>
+			{
+				if (string.IsNullOrEmpty(startsWith))
+				{
+					database.GetDocuments(start, pageSize, fromEtag,
+					                      items.Add);
+				}
+				else
+				{
+					database.GetDocumentsWithIdStartingWith(
+						startsWith,
+						matches,
+						start,
+						pageSize,
+						items.Add);
+				}
+			});
+			return YieldUntilDone(items, task);
+		}
+
+		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
+		{
+			task.ContinueWith(_ => items.Add(null));
 			while (true)
 			{
 				var ravenJObject = items.Take();
 				if (ravenJObject == null)
-					yield break;
+					break;
 				yield return ravenJObject;
 			}
+			task.Wait();
 		}
 
 		/// <summary>
