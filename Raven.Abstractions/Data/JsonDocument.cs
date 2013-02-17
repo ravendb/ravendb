@@ -100,7 +100,7 @@ namespace Raven.Abstractions.Data
 
 			if (LastModified != null)
 			{
-				metadata[Constants.LastModified] = LastModified.Value.ToString(Default.DateTimeFormatsToWrite);
+				metadata[Constants.LastModified] = LastModified.Value;
 				metadata[Constants.RavenLastModified] = LastModified.Value.ToString(Default.DateTimeFormatsToWrite);
 			}
 			if (Etag != null)

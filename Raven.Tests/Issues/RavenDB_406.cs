@@ -36,6 +36,8 @@ namespace Raven.Tests.Issues
 					// make sure that object is cached
 					using (var session = store.OpenSession())
 					{
+						store.Changes().Task.Result.WaitForAllPendingSubscriptions();
+
 						var users = session.Load<User>(new[] {"users/1"});
 
 						Assert.Equal("John", users[0].Name);
