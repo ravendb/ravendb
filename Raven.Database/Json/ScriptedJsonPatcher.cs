@@ -313,9 +313,13 @@ function ExecutePatchScript(docInner){{
 
 			jintEngine.SetFunction("LoadDocument", ((Func<string, object>)(value =>
 			{
+                if (value == null)
+                    return null;
+
 				var loadedDoc = loadDocumentStatic(value);
 				if (loadedDoc == null)
 					return null;
+
 				loadedDoc[Constants.DocumentIdFieldName] = value;
 				return ToJsObject(jintEngine.Global, loadedDoc);
 			})));
@@ -323,8 +327,9 @@ function ExecutePatchScript(docInner){{
             jintEngine.SetFunction("PutDocument", ((Action<string, object>)((id, doc) =>
             {
                 var jObject = doc as JsObject;                
-                if (jObject == null)
+                if (jObject == null || id == null)
                     return;
+
                 var ravenDoc = ToRavenJObject(jObject);
                 var metadata = ravenDoc["@metadata"] as RavenJObject;
                 ravenDoc.Remove("@metadata");

@@ -97,20 +97,21 @@ namespace Raven.Tests.Bundles.IndexedProperties
 // 'this' is the source doc, i.e. 'customer/1', 
 // 'metadata' is the metadata of the source doc
 // 'result' is the Lucene doc that is the output of the Map/Reduce indexing
-output(result.CustomerId);
 var document = LoadDocument(result.CustomerId);
-output(document.Name);
-output(document['@metadata']['@etag']);
 document.TotalAmount = result.TotalAmount;
 document.AverageOrderAmount = result.AverageOrderAmount;
 document.OrderCount = result.OrderCount;
 document['@metadata'].Foo = 'whatever';
 PutDocument(result.CustomerId, document);
+", 
+                 CleanupScript = @"
+output(deleteDocId);
+var document = LoadDocument(deleteDocId);
+delete document.TotalAmount;
+delete document.AverageOrderAmount;
+delete document.OrderCount;
+PutDocument(deleteDocId, document);
 "
-                //                 Script = @"
-                //this.TotalAmount = parseFloat(TotalAmount);
-//this.AverageOrderAmount = parseFloat(AverageOrderAmount);
-//this.OrderCount = parseInt(OrderCount);"
             };
 
             RunIndexedProperties(indexPropsSetup);
@@ -160,7 +161,7 @@ PutDocument(result.CustomerId, document);
                     Assert.Equal(3, customer2.TotalAmount);                    
                 }
 
-                // now delete one of the source docs, orders/4 and see if the results are correct
+                // now delete one of the source docs, "orders/4" and see if the results are correct
                 store.DatabaseCommands.Delete("orders/4", null);
                 WaitForIndexing(store);                
 
@@ -178,7 +179,7 @@ PutDocument(result.CustomerId, document);
                     Assert.Equal(2m, customer2.TotalAmount);
                 }                
 
-                // now orders/5 and see if customers/2 has all its results removed
+                // now delete "orders/5" and see if customers/2 has all its results removed
                 store.DatabaseCommands.Delete("orders/5", null);
                 WaitForIndexing(store);                                
 
@@ -189,19 +190,15 @@ PutDocument(result.CustomerId, document);
 
                     Assert.Equal(6m, customer1.AverageOrderAmount);
                     Assert.Equal(3, customer1.OrderCount);
-                    Assert.Equal(18m, customer1.TotalAmount);
-
-                    Assert.Equal(2m, customer2.AverageOrderAmount);
-                    Assert.Equal(1, customer2.OrderCount);
-                    Assert.Equal(2m, customer2.TotalAmount);
+                    Assert.Equal(18m, customer1.TotalAmount);                    
                 }
 
-                // ensue the delete behaviour, i.e. the fields that were mapped are removed
+                // ensure the delete behaviour, i.e. the fields that were mapped are removed
                 var rawDoc1 = store.DatabaseCommands.Get("customers/1").DataAsJson;
-                var rawDoc2 = store.DatabaseCommands.Get("customers/2").DataAsJson;                
-                //Assert.False(rawDoc2.ContainsKey("OrderCount"));
-                //Assert.False(rawDoc2.ContainsKey("AverageOrderAmount"));
-                //Assert.False(rawDoc2.ContainsKey("TotalAmount"));
+                var rawDoc2 = store.DatabaseCommands.Get("customers/2").DataAsJson;
+                Assert.False(rawDoc2.ContainsKey("OrderCount"));
+                Assert.False(rawDoc2.ContainsKey("AverageOrderAmount"));
+                Assert.False(rawDoc2.ContainsKey("TotalAmount"));
 
                 using (var session = store.OpenSession())
                 {

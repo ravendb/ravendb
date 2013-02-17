@@ -134,13 +134,9 @@ namespace Raven.Bundles.IndexedProperties
                 };
                 var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = values };                                
                 try
-                {                    
-                    var timer = Stopwatch.StartNew();
-                    var fieldNamesBefore = resultDoc.DataAsJson.Select(x => x.Key).ToList();
+                {                                                            
                     var result = scriptedJsonPatcher.Apply(resultDoc.DataAsJson, patchRequest);                    
-                    resultDoc.DataAsJson = RavenJObject.FromObject(result);
-                    timer.Stop();
-                    var msecs = timer.Elapsed.TotalMilliseconds;                 
+                    resultDoc.DataAsJson = RavenJObject.FromObject(result);                    
                 }
                 catch (Exception e)
                 {
@@ -199,7 +195,19 @@ namespace Raven.Bundles.IndexedProperties
                         if (setupDoc.CleanupScript == null)
                             continue;
 
-                        // TODO apply the CleanupScript 
+                        var scriptedJsonPatcher = new ScriptedJsonPatcher(database);
+
+                        var values = new Dictionary<string, object> { { "deleteDocId", documentId } };
+                        var patchRequest = new ScriptedPatchRequest { Script = setupDoc.CleanupScript, Values = values };
+                        try
+                        {                            
+                            var result = scriptedJsonPatcher.Apply(resultDoc.DataAsJson, patchRequest);
+                            resultDoc.DataAsJson = RavenJObject.FromObject(result);                         
+                        }
+                        catch (Exception e)
+                        {
+                            log.WarnException("Could not process Indexed Properties script for " + resultDoc.Key + ", skipping this document", e);
+                        }         
                     }
 
 					if (changesMade)
