@@ -25,7 +25,7 @@ namespace Raven.Studio.Features.Documents
         public string UrlForLast { get; set; }
         public bool IsConflicted { get { return ConflictingVersionIds != null && ConflictingVersionIds.Count > 0; } }
         public IList<string> ConflictingVersionIds { get; set; }
-        public Guid ConflictEtag { get; set; }
+        public Etag ConflictEtag { get; set; }
         public string ConflictDocumentId { get; set; }
     }
 
@@ -136,7 +136,7 @@ namespace Raven.Studio.Features.Documents
                 return new DocumentAndNavigationInfo()
                 {
                     ConflictingVersionIds = idsArray.Values<string>().ToArray(),
-                    ConflictEtag = document.Etag ?? Guid.Empty,
+                    ConflictEtag = document.Etag ?? Etag.Empty,
                     ConflictDocumentId = document.Key,
                 };
             }
