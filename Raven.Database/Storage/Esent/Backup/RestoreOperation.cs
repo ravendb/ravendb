@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -18,12 +19,11 @@ namespace Raven.Storage.Esent.Backup
 
 	public class RestoreOperation
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		private readonly Action<string> output;
 		private readonly bool defrag;
 		private readonly string backupLocation;
-
-		private bool defragmentationCompleted;
-
 
 		private readonly InMemoryRavenConfiguration configuration;
 		private string databaseLocation { get { return configuration.DataDirectory.ToFullPath(); } }
@@ -90,7 +90,7 @@ namespace Raven.Storage.Esent.Backup
 			try
 			{
 				new TransactionalStorageConfigurator(configuration, null).ConfigureInstance(instance, databaseLocation);
-				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
+				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
 						Path.Combine(
@@ -105,11 +105,16 @@ namespace Raven.Storage.Esent.Backup
 
 				if (defrag)
 				{
-					TransactionalStorage.Compact(configuration);
+					output("Esent Restore: Begin Database Compaction");
+					TransactionalStorage.Compact(configuration, CompactStatusCallback);
+					output("Esent Restore: Database Compaction Completed");
 				}
 			}
-			catch(Exception)
+			catch(Exception e)
 			{
+				output("Esent Restore: Failure! Could not restore database!");
+				output(e.ToString());
+				log.WarnException("Could not complete restore", e);
 				hideTerminationException = true;
 				throw;
 			}
@@ -195,10 +200,17 @@ namespace Raven.Storage.Esent.Backup
 			}
 		}
 
-		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+		private JET_err RestoreStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
 		{
 			output(string.Format("Esent Restore: {0} {1} {2}", snp, snt, data));
 			Console.WriteLine("Esent Restore: {0} {1} {2}", snp, snt, data);
+			return JET_err.Success;
+		}
+
+		private JET_err CompactStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+		{
+			output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
+			Console.WriteLine("Esent Compact: {0} {1} {2}", snp, snt, data);
 			return JET_err.Success;
 		}
 

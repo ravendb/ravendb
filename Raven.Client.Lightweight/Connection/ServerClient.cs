@@ -116,13 +116,12 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false)
 		{
 			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
-
 			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, matches, start, pageSize, metadataOnly));
 
 		}
@@ -189,12 +188,16 @@ namespace Raven.Client.Connection
 		/// <param name="serverUrl">The server URL.</param>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		public JsonDocument DirectGet(string serverUrl, string key)
+		public JsonDocument DirectGet(string serverUrl, string key, string transform = null)
 		{
 			var metadata = new RavenJObject();
+		    var actualUrl = serverUrl + "/docs/" + Uri.EscapeDataString(key);
+		    if (!string.IsNullOrEmpty(transform))
+		        actualUrl += "?=" + Uri.EscapeDataString(transform);
+
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + Uri.EscapeDataString(key), "GET", metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -826,6 +829,14 @@ namespace Raven.Client.Connection
 			return PutIndex(name, definition, false);
 		}
 
+		public string PutTransformer(string name, TransformerDefinition indexDef)
+		{
+			EnsureIsNotNullOrEmpty(name, "name");
+
+			return ExecuteWithReplication("PUT", operationUrl => DirectPutTransfomer(name, operationUrl, indexDef));
+	
+		}
+
 		/// <summary>
 		/// Puts the index.
 		/// </summary>
@@ -838,6 +849,22 @@ namespace Raven.Client.Connection
 			EnsureIsNotNullOrEmpty(name, "name");
 
 			return ExecuteWithReplication("PUT", operationUrl => DirectPutIndex(name, operationUrl, overwrite, definition));
+		}
+
+		public string DirectPutTransfomer(string name, string operationUrl, TransformerDefinition definition)
+		{
+			string requestUri = operationUrl + "/transformers/" + name;
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
+
+
+			var responseJson = (RavenJObject)request.ReadResponseJson();
+			return responseJson.Value<string>("Transfomer");
 		}
 
 		public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
@@ -873,7 +900,7 @@ namespace Raven.Client.Connection
 
 
 			var responseJson = (RavenJObject)request.ReadResponseJson();
-			return responseJson.Value<string>("index");
+			return responseJson.Value<string>("Index");
 		}
 
 		/// <summary>
@@ -979,26 +1006,30 @@ namespace Raven.Client.Connection
 			request.ExecuteRequest();
 		}
 
-		/// <summary>
-		/// Gets the results for the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="includes">The includes.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
+	    /// <summary>
+	    /// Gets the results for the specified ids.
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="queryInputs"></param>
+	    /// <param name="metadataOnly">Load just the document metadata</param>
+	    /// <returns></returns>
+	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, metadataOnly));
+			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, transformer, queryInputs ?? new Dictionary<string, RavenJToken>(), metadataOnly));
 		}
 
-		/// <summary>
-		/// Perform a direct get for loading multiple ids in one request
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="operationUrl">The operation URL.</param>
-		/// <param name="includes">The includes.</param>
-		/// <returns></returns>
-		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, bool metadataOnly)
+	    /// <summary>
+	    /// Perform a direct get for loading multiple ids in one request
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="operationUrl">The operation URL.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="metadataOnly"></param>
+	    /// <returns></returns>
+	    public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
 		{
 			var path = operationUrl + "/queries/?";
 			if (metadataOnly)
@@ -1007,6 +1038,15 @@ namespace Raven.Client.Connection
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
+	        if (!string.IsNullOrEmpty(transformer))
+	            path += "&transformer=" + transformer;
+
+
+            foreach (var queryInput in queryInputs)
+            {
+                path += "&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value);
+            }
+
 			var uniqueIds = new HashSet<string>(ids);
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load that many items are probably going to be rare
@@ -1034,15 +1074,23 @@ namespace Raven.Client.Connection
 			var result = (RavenJObject)request.ReadResponseJson();
 
 			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
-			var multiLoadResult = new MultiLoadResult
-			{
-				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase))).ToList()
-			};
+	        var multiLoadResult = new MultiLoadResult
+	        {
+	            Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList()
+	        };
+
+            if(String.IsNullOrEmpty(transformer)) {
+                multiLoadResult.Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase))).ToList();
+			} 
+            else
+            {
+                multiLoadResult.Results = results;
+            }
+
 
 			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
 
-			return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationUrl, includes, metadataOnly));
+			return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationUrl, includes, transformer, queryInputs, metadataOnly));
 		}
 
 		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
@@ -1104,7 +1152,7 @@ namespace Raven.Client.Connection
 
 
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			req.Write(jArray.ToString(Formatting.None));
+			req.Write(jArray.ToString(Formatting.None, Default.Converters));
 
 			RavenJArray response;
 			try

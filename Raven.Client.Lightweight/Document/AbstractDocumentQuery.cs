@@ -82,6 +82,8 @@ namespace Raven.Client.Document
 
 		private KeyValuePair<string, string> lastEquality;
 
+        protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+
 		/// <summary>
 		///   The list of fields to project directly from the results
 		/// </summary>
@@ -180,6 +182,12 @@ namespace Raven.Client.Document
 		/// Holds the query highlightings
 		/// </summary>
 		protected RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
+
+        /// <summary>
+        /// The name of the results transformer to use after executing this query
+        /// </summary>
+	    protected string resultsTransformer;
+
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -331,6 +339,7 @@ namespace Raven.Client.Document
 			highlightedFields = other.highlightedFields;
 			highlighterPreTags = other.highlighterPreTags;
 			highlighterPostTags = other.highlighterPostTags;
+		    queryInputs = other.queryInputs;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -1630,7 +1639,9 @@ If you really want to do in memory filtering on the data returned from the query
 					DefaultOperator = defaultOperator,
 					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 					HighlighterPreTags = highlighterPreTags.ToArray(),
-					HighlighterPostTags = highlighterPostTags.ToArray()
+					HighlighterPostTags = highlighterPostTags.ToArray(),
+                    ResultsTransformer = resultsTransformer,
+                    QueryInputs  = queryInputs
 				};
 			}
 
@@ -1649,7 +1660,9 @@ If you really want to do in memory filtering on the data returned from the query
 				DefaultOperator = defaultOperator,
 				HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 				HighlighterPreTags = highlighterPreTags.ToArray(),
-				HighlighterPostTags = highlighterPostTags.ToArray()
+				HighlighterPostTags = highlighterPostTags.ToArray(),
+                ResultsTransformer = this.resultsTransformer,
+                QueryInputs = queryInputs
 			};
 		}
 
@@ -1787,14 +1800,15 @@ If you really want to do in memory filtering on the data returned from the query
 				return null;
 
 			Func<object, string> value;
-			if(implicitStringsCache.TryGetValue(type,out value))
+			var localStringsCache = implicitStringsCache;
+			if(localStringsCache.TryGetValue(type,out value))
 				return value;
 
 			var methodInfo = type.GetMethod("op_Implicit", new[] {type});
 
 			if (methodInfo == null || methodInfo.ReturnType != typeof(string))
 			{
-				implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+				implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
 				{
 					{type, null}
 				};
@@ -1805,7 +1819,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			var func = (Func<object, string>) Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
 
-			implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+			implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
 				{
 					{type, func}
 				};

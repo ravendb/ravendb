@@ -126,6 +126,16 @@ namespace Raven.Database.Indexing
 		{
 			if (result.Count == 0)
 				return;
+			/*
+			This is EXPLICILTY not here, we always want to allow this to run additional indexes
+			if we still have free spots to run them from threading perspective.
+			 
+			if (result.Count == 1)
+			{
+				action(result[0]);
+				return;
+			}
+			*/
 
 			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
 
@@ -192,13 +202,14 @@ namespace Raven.Database.Indexing
 				indexingCompletedEvent.Reset();
 				indexingCompletedEvent.Wait(timeout);
 			}
-			Interlocked.Increment(ref isSlowIndex);
-
-			if (Log.IsDebugEnabled == false)
-				return;
 
 			var creatingNewBatch = indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks;
 			if (creatingNewBatch == false)
+				return;
+
+			Interlocked.Increment(ref isSlowIndex);
+
+			if (Log.IsDebugEnabled == false)
 				return;
 
 			var slowIndexes = result.Where(x =>
@@ -208,6 +219,7 @@ namespace Raven.Database.Indexing
 			})
 				.Select(x => x.IndexName)
 				.ToArray();
+
 			Log.Debug("Indexing is now split because there are {0:#,#} slow indexes [{1}], memory usage may increase, and those indexing may experience longer stale times (but other indexes will be faster)",
 					 slowIndexes.Length,
 					 string.Join(", ", slowIndexes));

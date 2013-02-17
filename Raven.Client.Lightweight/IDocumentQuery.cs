@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -34,6 +35,17 @@ namespace Raven.Client
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		IDocumentQuery<TProjection> SelectFields<TProjection>();
 
+        /// <summary>
+        /// Sets a transformer to use after executing a query
+        /// </summary>
+        /// <param name="resultsTransformer"></param>
+	    IDocumentQuery<T> SetResultTransformer(string resultsTransformer);
+
+        /// <summary>
+        /// Sets user defined inputs to the query
+        /// </summary>
+        /// <param name="queryInputs"></param>
+        void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -61,5 +73,7 @@ namespace Raven.Client
 		/// Create the index query object for this query
 		/// </summary>
 		IndexQuery GetIndexQuery(bool isAsync);
+
+
 	}
 }

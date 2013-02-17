@@ -98,7 +98,7 @@
 				</Grid>
 			</Grid>
 			<Grid Visibility="{Binding ShowPeriodicBackup.Value, Converter={StaticResource BooleanToOppositeVisibility}}">
-				<TextBlock Text="Your license does not approve the use of periodic backups, to enable this feature you need to perchuse a license with periodic backups bundle"/>
+				<TextBlock Text="Your license does not allow the use of periodic backups, to enable this feature you need to perchuse a license with periodic backups bundle"/>
 			</Grid>
 		</Grid>
 

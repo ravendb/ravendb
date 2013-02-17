@@ -997,6 +997,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractMultiMapIndexCreationTask.cs">
       <Link>Imports\Indexes\AbstractMultiMapIndexCreationTask.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractResultsTransformer.cs">
+      <Link>Imports\Indexes\AbstractResultsTransformer.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
     </Compile>
@@ -1077,6 +1080,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationStatus.cs">
       <Link>Imports\SqlReplication\SqlReplicationStatus.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Plugins\PluginsStatus.cs">
+      <Link>Imports\Plugins\PluginsStatus.cs</Link>
     </Compile>
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />

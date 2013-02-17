@@ -46,7 +46,7 @@ namespace Raven.Client.Document
 		}
 
 		private IndexQuery indexQuery;
-		private IndexQuery IndexQuery
+	    private IndexQuery IndexQuery
 		{
 			get { return indexQuery ?? (indexQuery = GenerateIndexQuery(queryText.ToString())); }
 		}

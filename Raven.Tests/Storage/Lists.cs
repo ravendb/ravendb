@@ -84,7 +84,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var list = actions.Lists.Read("items", Guid.Empty, 100).ToList();
+				var list = actions.Lists.Read("items", Guid.Empty, null, 100).ToList();
 				Assert.Equal(10, list.Count);
 				for (int i = 0; i < 10; i++)
 				{
@@ -108,14 +108,14 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var list = actions.Lists.Read("items", Guid.Empty, 5).ToList();
+				var list = actions.Lists.Read("items", Guid.Empty, null, 5).ToList();
 				Assert.Equal(5, list.Count);
 				for (int i = 0; i < 5; i++)
 				{
 					Assert.Equal(i, list[i].Data.Value<int>("i"));
 				}
 
-				list = actions.Lists.Read("items", list.Last().Etag, 5).ToList();
+				list = actions.Lists.Read("items", list.Last().Etag, null, 5).ToList();
 				Assert.Equal(5, list.Count);
 				for (int i = 0; i < 5; i++)
 				{
@@ -123,6 +123,30 @@ namespace Raven.Tests.Storage
 				}
 			});
 		}
+
+		[Fact]
+		public void CanStopReadingAtEnd()
+		{
+			for (int i = 0; i < 10; i++)
+			{
+				db.TransactionalStorage.Batch(
+					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
+					{
+						{"i", i}
+					}, UuidType.Indexing));
+			}
+
+
+			db.TransactionalStorage.Batch(actions =>
+			{
+				var list = actions.Lists.Read("items", Guid.Empty, null, 5).ToList();
+
+				list = actions.Lists.Read("items", list.Last().Etag, list.Last().Etag, 5).ToList();
+				Assert.Equal(0, list.Count);
+			});
+		}
+
+
 
 		[Fact]
 		public void WillOnlyReadItemsFromTheSameList()
@@ -144,7 +168,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var list = actions.Lists.Read("items", Guid.Empty, 100).ToList();
+				var list = actions.Lists.Read("items", Guid.Empty, null, 100).ToList();
 				Assert.Equal(10, list.Count);
 				for (int i = 0; i < 10; i++)
 				{

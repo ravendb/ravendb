@@ -20,7 +20,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			 store1.DatabaseCommands.Delete("ayende", null);
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.NotEmpty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, 10));
+				 Assert.NotEmpty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, null, 10));
 			 });
 
 			 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
@@ -34,7 +34,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Empty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, 10));
+				 Assert.Empty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, null, 10));
 			 });
 		 }
 
@@ -48,7 +48,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			 store1.DatabaseCommands.Delete("rahien", null);
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Equal(2, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, 10).Count());
+				 Assert.Equal(2, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, null, 10).Count());
 			 });
 
 			 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
@@ -62,7 +62,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Equal(1, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, 10).Count());
+				 Assert.Equal(1, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, null, 10).Count());
 			 });
 		 }
 	}

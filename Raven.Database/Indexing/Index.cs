@@ -19,6 +19,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -29,14 +30,12 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing.Sorting;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
-using Lucene.Net.Search.Vectorhighlight;
 
 namespace Raven.Database.Indexing
 {
@@ -489,8 +488,7 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs,
-															IStorageActionsAccessor actions, IndexingWorkStats stats)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs, IndexingWorkStats stats)
 		{
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
@@ -539,8 +537,7 @@ namespace Raven.Database.Indexing
 
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
-		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions, WorkContext context)
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
@@ -848,7 +845,7 @@ namespace Raven.Database.Indexing
 								highlighter = new FastVectorHighlighter(
 									FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
 									FastVectorHighlighter.DEFAULT_FIELD_MATCH,
-									new SimpleFragListBuilder(),
+									new SimpleFragListBuilder(), 
 									new SimpleFragmentsBuilder(
 										indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
 											? indexQuery.HighlighterPreTags
@@ -1259,6 +1256,8 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
+				if (indexDefinition.IsTemp)
+					return; // we don't backup temp indexes
 				var existingFiles = new List<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);

@@ -138,7 +138,7 @@ namespace Raven.Client.Embedded
 
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false)
 		{
-			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, metadataOnly));
+			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, metadataOnly: metadataOnly));
 		}
 
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
@@ -185,6 +185,11 @@ namespace Raven.Client.Embedded
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
 			return new CompletedTask<string>(databaseCommands.PutIndex(name, indexDef, overwrite));
+		}
+
+		public Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition)
+		{
+			return new CompletedTask<string>(databaseCommands.PutTransformer(name, transformerDefinition));
 		}
 
 		public Task DeleteIndexAsync(string name)

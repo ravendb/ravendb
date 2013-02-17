@@ -106,7 +106,21 @@ namespace Raven.Client.Shard
 
 		#region Synchronous
 
-		public T Load<T>(string id)
+	    public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+	    {
+	        var transformer = new TTransformer().TransfomerName;
+	        return LoadInternal<TResult>(new[] {id}, new string[] {}, transformer).FirstOrDefault();
+	    }
+
+        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var transformer = new TTransformer().TransfomerName;
+            var configuration = new RavenLoadConfiguration();
+            configure(configuration);
+            return LoadInternal<TResult>(new[] { id }, new string[] { }, transformer, configuration.QueryInputs).FirstOrDefault();
+        }
+
+	    public T Load<T>(string id)
 		{
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
@@ -179,8 +193,8 @@ namespace Raven.Client.Shard
 			return LoadInternal<T>(ids, new string[0]);
 		}
 
-		public T[] LoadInternal<T>(string[] ids, string[] includes)
-		{
+	    private T[] LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+	    {
 			var results = new T[ids.Length];
 			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includes);
 
@@ -205,7 +219,7 @@ namespace Raven.Client.Shard
 						multiLoadOperation.LogOperation();
 						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-							multiLoadResult = dbCmd.Get(currentShardIds, includes);
+							multiLoadResult = dbCmd.Get(currentShardIds, includes, transformer, queryInputs);
 						}
 					} while (multiLoadOperation.SetResult(multiLoadResult));
 					return multiLoadOperation;
@@ -234,6 +248,11 @@ namespace Raven.Client.Shard
 				entitiesByKey.TryGetValue(id, out val);
 				return (T) val;
 			}).ToArray();
+	    }
+
+		public T[] LoadInternal<T>(string[] ids, string[] includes)
+		{
+		    return LoadInternal<T>(ids, includes, null);
 		}
 
 		public ILoaderWithInclude<object> Include(string path)
@@ -251,7 +270,8 @@ namespace Raven.Client.Shard
 			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
 		}
 
-		#endregion
+
+	    #endregion
 
 		#region Lazy loads
 

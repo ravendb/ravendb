@@ -42,14 +42,16 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		JsonDocument Get(string key);
 
-		/// <summary>
-		/// Retrieves documents with the specified ids, optionally specifying includes to fetch along
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="includes">The includes.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
-		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
+	    /// <summary>
+	    /// Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the transformer
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="queryInputs"></param>
+	    /// <param name="metadataOnly">Load just the document metadata</param>
+	    /// <returns></returns>
+	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Get documents from server
@@ -162,6 +164,11 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		string PutIndex(string name, IndexDefinition indexDef);
+
+		/// <summary>
+		/// Creates a transformer with the specified name, based on an transfomer definition
+		/// </summary>
+		string PutTransformer(string name, TransformerDefinition indexDef);
 
 		/// <summary>
 		/// Creates an index with the specified name, based on an index definition
@@ -413,6 +420,7 @@ namespace Raven.Client.Connection
 		/// Get the low level  bulk insert operation
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
+
 	}
 }
 #endif
