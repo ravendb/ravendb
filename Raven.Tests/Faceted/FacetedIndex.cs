@@ -100,16 +100,8 @@ namespace Raven.Tests.Faceted
                 //second request should give 304 not modified
                 Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(url, firstEtag, out firstEtag));
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(GetCameras(1).First());
-
-                    session.SaveChanges();
-
-                    session.Query<Camera>(new CameraCostIndex().IndexName)
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .ToList();
-                }
+                //change index etag by inserting new doc
+                InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
 
                 Guid? secondEtag;
 
