@@ -27,5 +27,9 @@ namespace Raven.Abstractions.OAuth
 				throw new InvalidOperationException("Could not set '" + key + "' = '" + value + "'", e);
 			}
 		}
+
+		#if !SILVERLIGHT
+		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource);
+		#endif
 	}
 }

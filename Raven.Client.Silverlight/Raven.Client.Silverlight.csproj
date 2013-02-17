@@ -793,6 +793,9 @@
     <Compile Include="..\Raven.Abstractions\OAuth\AbstractAuthenticator.cs">
       <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\BasicAuthenticator.cs">
+      <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\OAuth\SecuredAuthenticator.cs">
       <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
     </Compile>
@@ -1082,7 +1085,6 @@
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
     <Compile Include="Imports\Connection\WebRequestEventArgs.cs" />
-    <Compile Include="Imports\Document\OAuth\BasicAuthenticator.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
