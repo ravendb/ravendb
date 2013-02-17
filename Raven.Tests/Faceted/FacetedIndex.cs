@@ -62,7 +62,7 @@ namespace Raven.Tests.Faceted
 			                    }
 			            };
 
-		    _stronglyTypedFacets = GetFacetSetup();
+		    _stronglyTypedFacets = GetFacets();
 		}
 
 		[Fact]

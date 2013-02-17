@@ -28,7 +28,7 @@ namespace Raven.Tests.Faceted
 
                 InsertCameraDataAndWaitForNonStaleResults(store, cameras);
 
-                var facets = GetFacetSetup();
+                var facets = GetFacets();
 
                 using (var s = store.OpenSession())
                 {
@@ -67,7 +67,7 @@ namespace Raven.Tests.Faceted
 
                     InsertCameraDataAndWaitForNonStaleResults(store, cameras);
 
-                    var facets = GetFacetSetup();
+                    var facets = GetFacets();
 
                     using (var s = store.OpenSession())
                     {
@@ -107,7 +107,7 @@ namespace Raven.Tests.Faceted
 
                 InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
 
-                var facets = GetFacetSetup();
+                var facets = GetFacets();
 
                 var jsonFacets = JsonConvert.SerializeObject(facets);
 

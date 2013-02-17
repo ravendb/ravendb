@@ -60,7 +60,7 @@ namespace Raven.Tests.Faceted
             }
         }
 
-        public static List<Facet> GetFacetSetup()
+        public static List<Facet> GetFacets()
         {
             return new List<Facet>
 			{
