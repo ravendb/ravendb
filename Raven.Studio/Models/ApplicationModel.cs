@@ -101,7 +101,16 @@ namespace Raven.Studio.Models
 					var httpWebResponse = webException.Response as HttpWebResponse;
 					if (httpWebResponse != null)
 					{
-						message = httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription;
+						if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden && webException.Data.Contains("Url"))
+						{
+							var url = webException.Data["Url"].ToString();
+							if (string.IsNullOrWhiteSpace(url) == false && url.Contains("/admin/"))
+							{
+								message = "It seems you are trying to run an admin command but you are not an admin";
+							}
+						}
+						if(message == null)
+							message = httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription;
 						var stream = httpWebResponse.GetResponseStream();
 						if (stream != null)
 						{
