@@ -7,18 +7,22 @@
                          xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                         xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         xmlns:sdk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+                         mc:Ignorable="d"
                          d:DataContext="{d:DesignInstance Models:CollectionsModel}">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="100"/>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 		<TextBlock Text="Collections"
 				   Grid.Row="0"
 				   Style="{StaticResource Style_Text_Header}" />
-
+		
 		<ListBox x:Name="CollectionsList" 
 				 Grid.Row="1"
 				 Style="{StaticResource Collections_FluidList}"
@@ -98,5 +102,7 @@
 			<LineBreak/>
 			<Run Foreground="Gray" FontStyle="Italic" Text="Add &quot;Raven-Entity-Name&quot;: &quot;[Desired Collection Name]&quot; to a document's metadata to include it in a collection"/>
 		</TextBlock>
+		
+		<sdk:GridSplitter Grid.Row="2" HorizontalAlignment="Stretch"/>
 	</Grid>
 </Infrastructure:PageView>
