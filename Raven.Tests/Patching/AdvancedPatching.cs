@@ -110,7 +110,7 @@ this.Parts = this.Email.split('@');";
 		{
 			const string email = "somebody@somewhere.com";
 			var doc = RavenJObject.Parse("{\"Contact\":null}");
-			const string script = "this.Contact = contact;";
+			const string script = "this.Contact = contact.Email;";
 			var patch = new ScriptedPatchRequest()
 			{
 				Script = script,
@@ -316,6 +316,35 @@ this.Value = another.Value;
 			}
 		}
 
+        public void CanPatchMetadata()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new CustomType { Value = 2 });
+                    s.Store(new CustomType { Value = 1 });
+                    s.SaveChanges();
+                }
+
+                store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+                {
+                    Script = @"
+this.Owner = this['@metadata']['Raven-Clr-Type'];
+this['@metadata']['Raven-Entity-Name'] = 'New-Entity';
+",                   
+                });
+
+                var resultDoc = store.DatabaseCommands.Get("CustomTypes/1");
+                var resultJson = resultDoc.DataAsJson;
+                var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+                var metadata = resultDoc.Metadata;
+
+                Assert.Equal(metadata["Raven-Clr-Type"], result.Owner);
+                Assert.Equal("New-Entity", metadata["Raven-Entity-Name"]);
+            }
+        }
+
 		[Fact]
 		public void CanUpdateOnMissingProperty()
 		{
@@ -436,6 +465,6 @@ this.Value = another.Value;
 			public string Owner { get; set; }
 			public int Value { get; set; }
 			public List<string> Comments { get; set; }
-		}
-	}
+		}        
+    }
 }

@@ -37,6 +37,8 @@ namespace Raven.Abstractions.Data
                 }
             }
         }
+
+        public string CleanupScript { get; set; }
         
 		public IndexedPropertiesSetupDoc()
 		{

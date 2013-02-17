@@ -38,7 +38,7 @@ namespace Raven.Bundles.IndexedProperties
 		{
 			private readonly DocumentDatabase database;
             private readonly JsonDocument rawSetupDoc;
-            private readonly SetupDocInternal setupDoc;
+            private readonly IndexedPropertiesSetupDoc setupDoc;
 			private readonly string indexName;
 			private readonly AbstractViewGenerator viewGenerator;
             
@@ -51,18 +51,12 @@ namespace Raven.Bundles.IndexedProperties
 				this.rawSetupDoc = rawSetupDoc;
 				this.indexName = indexName;
 				this.viewGenerator = viewGenerator;
-                this.setupDoc = this.rawSetupDoc.DataAsJson.JsonDeserialization<SetupDocInternal>();
+                if (rawSetupDoc != null && rawSetupDoc.DataAsJson != null)
+                    this.setupDoc = this.rawSetupDoc.DataAsJson.JsonDeserialization<IndexedPropertiesSetupDoc>();
 			}
 
 			public override void OnIndexEntryDeleted(string entryKey)
-			{
-				//Want to handle this scenario:
-				// - Customer/1 has 2 orders (order/3 & order/5)
-				// - Map/Reduce runs and AvgOrderCost in "customer/1" is set to the average cost of "order/3" and "order/5" (8.56 for example)
-				// - "order/3" and "order/5" are deleted (so customer/1 will no longer be included in the results of the Map/Reduce
-				// - I think we need to write back to the "customer/1" doc and delete the AvgOrderCost field in the Json,
-                //   otherwise it'll still have the last value of 8.56
-
+			{				
                 if (String.IsNullOrEmpty(entryKey))
                 {
                     log.Warn("Null or empty \"entryKey\" provided, '{0}' for index '{1}'", setupDoc.DocumentKey, indexName);
@@ -82,7 +76,6 @@ namespace Raven.Bundles.IndexedProperties
 				}
 
 				var documentId = resultDocId.StringValue;
-
 				itemsToRemove.TryRemove(documentId);
 
 				var resultDoc = database.Get(documentId, null);
@@ -107,20 +100,23 @@ namespace Raven.Bundles.IndexedProperties
 						documentId, indexName);
 					return;
 				}
-
-				var changesMade = false;
-                if (setupDoc.Type == IndexedPropertiesType.FieldMapping)                
-                    changesMade = ApplySimpleFieldMappings(document, resultDoc);                
-                else if (setupDoc.Type == IndexedPropertiesType.Scripted)                
-                    changesMade = ApplyScript(document, resultDoc);
-                
-                if (changesMade)                
-                    database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+				
+                if (setupDoc.Type == IndexedPropertiesType.FieldMapping)
+                {
+                    var changesMade = ApplySimpleFieldMappings(document, resultDoc);
+                    if (changesMade)
+                        database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+                }
+                else if (setupDoc.Type == IndexedPropertiesType.Scripted)
+                {
+                    // We don't store any docs here, it's upto the script to use Put if it wants to
+                    ApplyScript(document, resultDoc);
+                }                                
 			}
 
-            private bool ApplyScript(Document document, JsonDocument resultDoc)
+            private void ApplyScript(Document document, JsonDocument resultDoc)
             {                                                
-                // Make all the fields inside the Lucene doc, available as variables inside the script
+                // Make all the fields from inside the Lucene doc, available as variables inside the script
                 var fields = new Dictionary<string, object>();
                 foreach (var field in document.GetFields()
                     .Where(f => f.Name.EndsWith("_Range") == false && f.Name != Constants.ReduceKeyFieldName))
@@ -129,14 +125,14 @@ namespace Raven.Bundles.IndexedProperties
                     // Try and confirm this, if so we don't need to worry about NumericField, StringField etc
                     fields.Add(field.Name, field.StringValue);
                 }
-
-                var changesMade = false;
+                
                 var scriptedJsonPatcher = new ScriptedJsonPatcher(database);
-
-                // TODO fix this so we can namespace the values we pass in, so they can be accessed via "mapReduce." or "inputDoc."
-                var values = new Dictionary<string, object> {{ "inputDoc", RavenJToken.FromObject(fields) }};
-                var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = values };
-                //var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = fields };
+                
+                var values = new Dictionary<string, object> {
+                    { "result", fields },
+                    { "metadata", resultDoc.Metadata }
+                };
+                var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = values };                                
                 try
                 {                    
                     var timer = Stopwatch.StartNew();
@@ -144,31 +140,12 @@ namespace Raven.Bundles.IndexedProperties
                     var result = scriptedJsonPatcher.Apply(resultDoc.DataAsJson, patchRequest);                    
                     resultDoc.DataAsJson = RavenJObject.FromObject(result);
                     timer.Stop();
-                    var msecs = timer.Elapsed.TotalMilliseconds;
-                    changesMade = true;                    
-
-                    // Maybe we should do this once per batch, instead of one per index? Then we'd have fresher values?
-                    // Is there ever a scenario when these fields could change, without the index changing?
-                    if (setupDoc.ScriptFieldNames == null)
-                    {                                             
-                        // This is only the fields on the Lucene doc that is the input to the script, however we 
-                        // really want the fields that out outputted from the script, i.e. the ones it creates
-                        setupDoc.ScriptFieldNames = fields.Select(x => x.Key).ToList(); 
-
-                        // How do we ensure that we only use the field names that were added?
-                        // TODO fix this, it doesn't work because the fields can be present on the doc before we patch it!!
-                        // To be accurate, we need a way for the patcher to tell us which items were written to during execution?
-                        //setupDoc.ScriptFieldNames = resultDoc.DataAsJson.Select(x => x.Key).Except(fieldNamesBefore).ToList();
-
-                        rawSetupDoc.DataAsJson = RavenJObject.FromObject(setupDoc);
-                        database.Put(IndexedPropertiesSetupDoc.IdPrefix + indexName, rawSetupDoc.Etag, rawSetupDoc.DataAsJson, rawSetupDoc.Metadata, null);
-                    }
+                    var msecs = timer.Elapsed.TotalMilliseconds;                 
                 }
                 catch (Exception e)
                 {
                     log.WarnException("Could not process Indexed Properties script for " + resultDoc.Key + ", skipping this document", e);
-                }
-                return changesMade;
+                }               
             }
 
             private bool ApplySimpleFieldMappings(Document document, JsonDocument resultDoc)
@@ -219,17 +196,10 @@ namespace Raven.Bundles.IndexedProperties
                     }
                     else if (setupDoc.Type == IndexedPropertiesType.Scripted)
                     {                        
-                        if (setupDoc.ScriptFieldNames == null)
+                        if (setupDoc.CleanupScript == null)
                             continue;
 
-                        foreach (var field in setupDoc.ScriptFieldNames)                
-                        {
-                            if (resultDoc.DataAsJson.ContainsKey(field))
-                            {
-                                resultDoc.DataAsJson.Remove(field);
-                                changesMade = true;
-                            }
-                        }
+                        // TODO apply the CleanupScript 
                     }
 
 					if (changesMade)
@@ -239,10 +209,5 @@ namespace Raven.Bundles.IndexedProperties
 				base.Dispose();
 			}
 		}
-	}
-
-    internal class SetupDocInternal : IndexedPropertiesSetupDoc
-    {
-        public List<string> ScriptFieldNames { get; set; }
-    }
+	}    
 }

@@ -108,7 +108,7 @@ namespace Raven.Database.Json
 					}
 				}
 
-                var jsObject = ToJsObject(jintEngine.Global, doc);
+                var jsObject = ToJsObject(jintEngine.Global, doc);                
 				jintEngine.ResetSteps();
 				if (size != 0)
 				{
@@ -142,6 +142,7 @@ namespace Raven.Database.Json
 			finally
 			{
 				loadDocumentStatic = null;
+                putDocumentStatic = null;
 			}
 		}
 
@@ -288,13 +289,15 @@ namespace Raven.Database.Json
 		private JintEngine CreateEngine(ScriptedPatchRequest patch)
 		{
 			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
+
+            // this is some funky JS, it's done like this so that docInner becomes "this" inside the inner function?
+            // see http://odetocode.com/blogs/scott/archive/2007/07/05/function-apply-and-function-call-in-javascript.aspx
+            // and http://stackoverflow.com/questions/1986896/what-is-the-difference-between-call-and-apply
 			var wrapperScript = String.Format(@"
-//Nice hack from http://stackoverflow.com/questions/3277182/how-to-get-the-global-object-in-javascript
-var global = Function('return this')();
 function ExecutePatchScript(docInner){{
   (function(doc){{
-	{0}
-  }}).apply(docInner);
+  	{0}
+  }}).apply(docInner);  
 }};
 ", scriptWithProperLines);
 
@@ -316,6 +319,18 @@ function ExecutePatchScript(docInner){{
 				loadedDoc[Constants.DocumentIdFieldName] = value;
 				return ToJsObject(jintEngine.Global, loadedDoc);
 			})));
+
+            jintEngine.SetFunction("PutDocument", ((Action<string, object>)((id, doc) =>
+            {
+                var jObject = doc as JsObject;                
+                if (jObject == null)
+                    return;
+                var ravenDoc = ToRavenJObject(jObject);
+                var metadata = ravenDoc["@metadata"] as RavenJObject;
+                ravenDoc.Remove("@metadata");
+                ravenDoc.Remove(Constants.DocumentIdFieldName);
+                putDocumentStatic(id, null, ravenDoc, metadata);                
+            })));
 
 			jintEngine.Run(wrapperScript);
 
