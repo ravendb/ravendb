@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Responders
 	{
 		public override string UrlPattern
 		{
-			get { return @"^/streams/query(.+)"; }
+			get { return @"^/streams/query/(.+)"; }
 		}
 
 		public override string[] SupportedVerbs
