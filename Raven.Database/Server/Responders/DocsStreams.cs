@@ -20,6 +20,8 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
+			context.Response.BufferOutput = false;
+		
 			using (var writer = new JsonTextWriter(new StreamWriter(context.Response.OutputStream)))
 			{
 				writer.WriteStartObject();

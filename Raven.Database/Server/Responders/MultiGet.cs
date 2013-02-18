@@ -303,6 +303,7 @@ namespace Raven.Database.Server.Responders
 				get;
 				set;
 			}
+			public bool BufferOutput { get; set; }
 
 			public void Redirect(string url)
 			{
