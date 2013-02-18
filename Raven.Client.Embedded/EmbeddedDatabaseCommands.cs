@@ -442,7 +442,7 @@ namespace Raven.Client.Embedded
 				});
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
-				return YieldUntilDone(items, task);
+				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
 			}
 		}
 
@@ -473,7 +473,7 @@ namespace Raven.Client.Embedded
 						items.Add);
 				}
 			});
-			return YieldUntilDone(items, task);
+			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
 		}
 
 		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
