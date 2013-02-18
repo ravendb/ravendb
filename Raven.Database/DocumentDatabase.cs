@@ -1219,6 +1219,7 @@ namespace Raven.Database
 					Func<IndexQueryResult, bool> shouldIncludeInResults =
 						result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
 					var indexQueryResults = IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers);
+					indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
 
 					var transformerErrors = new List<string>();
 					var results = GetQueryResults(query, viewGenerator, docRetriever,
