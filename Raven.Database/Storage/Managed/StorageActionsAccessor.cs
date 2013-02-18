@@ -116,10 +116,5 @@ namespace Raven.Storage.Managed
 		{
 			Indexing.Dispose();
 		}
-
-		public void InvokePreCommit()
-		{
-			mappedResultsStorageAction.PreCommit();
-		}
 	}
 }

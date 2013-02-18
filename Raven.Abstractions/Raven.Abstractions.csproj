@@ -685,6 +685,7 @@
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="OAuth\AbstractAuthenticator.cs" />
+    <Compile Include="OAuth\BasicAuthenticator.cs" />
     <Compile Include="OAuth\SecuredAuthenticator.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />

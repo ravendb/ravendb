@@ -692,6 +692,7 @@
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />
     <Compile Include="Storage\Esent\StorageActions\MappedResults.cs" />
+    <Compile Include="Storage\Esent\StorageActions\OptimizedDeleter.cs" />
     <Compile Include="Storage\Esent\StorageActions\OptimizedIndexReader.cs" />
     <Compile Include="Storage\Esent\StorageActions\Queue.cs" />
     <Compile Include="Storage\Esent\StorageActions\Staleness.cs" />
