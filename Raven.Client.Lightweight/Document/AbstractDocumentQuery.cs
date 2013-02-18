@@ -1738,6 +1738,10 @@ If you really want to do in memory filtering on the data returned from the query
 				return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false);
 			}
 
+			if (type == typeof(double))
+			{
+				return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false);
+			}
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
 				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, 

@@ -61,6 +61,15 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
+		public void HandleDoubleRangeSearch()
+		{
+			var indexedUsers = GetRavenQueryInspector();
+			double min = 1246.434565380224, max = 1246.434565380226;
+			var q = indexedUsers.Where(x => x.Rate >= min && x.Rate <= max);
+			Assert.Equal("Rate_Range:[Dx1246.43456538022 TO Dx1246.43456538023]", q.ToString());
+		}
+
+		[Fact]
 		public void CanHandleCasts()
 		{
 			var indexedUsers = GetRavenQueryInspector();
@@ -682,6 +691,7 @@ namespace Raven.Tests.Linq
 			public UserProperty[] Properties { get; set; }
 			public bool IsActive { get; set; }
 			public IAnimal Animal { get; set; }
+			public double Rate { get; set; }
 		}
 
 		public interface IAnimal
