@@ -52,7 +52,7 @@ namespace Raven.Database.Config
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1);
 
 			NewIndexInMemoryMaxMb =
-				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 25, 1), 1024*1024);
+				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024*1024);
 			RunInMemory =
 				new BooleanSetting(settings["Raven/RunInMemory"], false);
 			CreateAutoIndexesForAdHocQueriesIfNeeded =

@@ -412,7 +412,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale
-		/// Default: 25 MB
+		/// Default: 64 MB
 		/// Minimum: 1 MB
 		/// </summary>
 		public int NewIndexInMemoryMaxBytes { get; set; }
