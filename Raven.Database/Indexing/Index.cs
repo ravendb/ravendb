@@ -51,9 +51,9 @@ namespace Raven.Database.Indexing
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
 
-        public IndexingPriority Priority { get; set; }
+		public IndexingPriority Priority { get; set; }
 
-	    /// <summary>
+		/// <summary>
 		/// Note, this might be written to be multiple threads at the same time
 		/// We don't actually care for exact timing, it is more about general feeling
 		/// </summary>
@@ -77,7 +77,7 @@ namespace Raven.Database.Indexing
 
 		public TimeSpan LastIndexingDuration { get; set; }
 		public long TimePerDoc { get; set; }
-		public Task CurrentMapIndexingTask { get; set; } 
+		public Task CurrentMapIndexingTask { get; set; }
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
@@ -422,28 +422,28 @@ namespace Raven.Database.Indexing
 				context.IndexDefinitionStorage.IsNewThisSession(indexDefinition) == false)
 				return;
 
-            var dir = indexWriter.Directory as RAMDirectory;
-		    if (dir == null) 
+			var dir = indexWriter.Directory as RAMDirectory;
+			if (dir == null)
 				return;
 
-		    var stale = false;
-            var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
+			var stale = false;
+			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
 
-            context.Database.TransactionalStorage.Batch(accessor =>
-            {
-                stale = accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
-            });
-   	
-            if (toobig || !stale)
-            {
-                indexWriter.Commit();
-			    var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
-			    directory = fsDir;
+			context.Database.TransactionalStorage.Batch(accessor =>
+			{
+				stale = accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
+			});
 
-			    indexWriter.Analyzer.Close();
-			    indexWriter.Dispose(true);
-			    CreateIndexWriter();       
-            }
+			if (toobig || !stale)
+			{
+				indexWriter.Commit();
+				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+				directory = fsDir;
+
+				indexWriter.Analyzer.Close();
+				indexWriter.Dispose(true);
+				CreateIndexWriter();
+			}
 		}
 
 		public RavenPerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
@@ -752,6 +752,9 @@ namespace Raven.Database.Indexing
 
 		internal class IndexQueryOperation
 		{
+			FastVectorHighlighter highlighter;
+			FieldQuery fieldQuery;
+
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
@@ -849,25 +852,7 @@ namespace Raven.Database.Indexing
 							indexQuery.TotalSize.Value = search.TotalHits;
 							adjustStart = false;
 
-							FastVectorHighlighter highlighter = null;
-							FieldQuery fieldQuery = null;
-
-							if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
-							{
-								highlighter = new FastVectorHighlighter(
-									FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
-									FastVectorHighlighter.DEFAULT_FIELD_MATCH,
-									new SimpleFragListBuilder(), 
-									new SimpleFragmentsBuilder(
-										indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
-											? indexQuery.HighlighterPreTags
-											: BaseFragmentsBuilder.COLORED_PRE_TAGS,
-										indexQuery.HighlighterPostTags != null && indexQuery.HighlighterPostTags.Any()
-											? indexQuery.HighlighterPostTags
-											: BaseFragmentsBuilder.COLORED_POST_TAGS));
-
-								fieldQuery = highlighter.GetFieldQuery(luceneQuery);
-							}
+							SetupHighlighter(luceneQuery);
 
 							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
@@ -881,37 +866,7 @@ namespace Raven.Database.Indexing
 									continue;
 								}
 
-								if (highlighter != null)
-								{
-									var highlightings =
-										from highlightedField in this.indexQuery.HighlightedFields
-										select new
-										{
-											highlightedField.Field,
-											highlightedField.FragmentsField,
-											Fragments = highlighter.GetBestFragments(
-												fieldQuery,
-												indexSearcher.IndexReader,
-												scoreDoc.Doc,
-												highlightedField.Field,
-												highlightedField.FragmentLength,
-												highlightedField.FragmentCount)
-										}
-										into fieldHighlitings
-										where fieldHighlitings.Fragments != null &&
-											  fieldHighlitings.Fragments.Length > 0
-										select fieldHighlitings;
-
-									if (fieldsToFetch.IsProjection || parent.IsMapReduce)
-									{
-										foreach (var highlighting in highlightings)
-											if (!string.IsNullOrEmpty(highlighting.FragmentsField))
-												indexQueryResult.Projection[highlighting.FragmentsField]
-													= new RavenJArray(highlighting.Fragments);
-									} else
-										indexQueryResult.Highligtings = highlightings
-											.ToDictionary(x => x.Field, x => x.Fragments);
-								}
+								AddHighlighterResults(indexSearcher, scoreDoc, indexQueryResult);
 
 								returnedResults++;
 								yield return indexQueryResult;
@@ -921,6 +876,66 @@ namespace Raven.Database.Indexing
 							readAll = search.TotalHits == search.ScoreDocs.Length;
 						} while (returnedResults < indexQuery.PageSize && readAll == false);
 					}
+				}
+			}
+
+			private void AddHighlighterResults(IndexSearcher indexSearcher, ScoreDoc scoreDoc, IndexQueryResult indexQueryResult)
+			{
+				if (highlighter == null)
+					return;
+
+				var highlightings =
+					from highlightedField in this.indexQuery.HighlightedFields
+					select new
+					{
+						highlightedField.Field,
+						highlightedField.FragmentsField,
+						Fragments = highlighter.GetBestFragments(
+							fieldQuery,
+							indexSearcher.IndexReader,
+							scoreDoc.Doc,
+							highlightedField.Field,
+							highlightedField.FragmentLength,
+							highlightedField.FragmentCount)
+					}
+						into fieldHighlitings
+						where fieldHighlitings.Fragments != null &&
+							  fieldHighlitings.Fragments.Length > 0
+						select fieldHighlitings;
+
+				if (fieldsToFetch.IsProjection || parent.IsMapReduce)
+				{
+					foreach (var highlighting in highlightings)
+					{
+						if (!string.IsNullOrEmpty(highlighting.FragmentsField))
+						{
+							indexQueryResult.Projection[highlighting.FragmentsField] = new RavenJArray(highlighting.Fragments);
+						}
+					}
+				}
+				else
+				{
+					indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
+				}
+			}
+
+			private void SetupHighlighter(Query luceneQuery)
+			{
+				if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
+				{
+					highlighter = new FastVectorHighlighter(
+						FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
+						FastVectorHighlighter.DEFAULT_FIELD_MATCH,
+						new SimpleFragListBuilder(),
+						new SimpleFragmentsBuilder(
+							indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
+								? indexQuery.HighlighterPreTags
+								: BaseFragmentsBuilder.COLORED_PRE_TAGS,
+							indexQuery.HighlighterPostTags != null && indexQuery.HighlighterPostTags.Any()
+								? indexQuery.HighlighterPostTags
+								: BaseFragmentsBuilder.COLORED_POST_TAGS));
+
+					fieldQuery = highlighter.GetFieldQuery(luceneQuery);
 				}
 			}
 
@@ -1273,7 +1288,7 @@ namespace Raven.Database.Indexing
 				var existingFiles = new List<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
-				
+
 				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
 				var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
 				System.IO.Directory.CreateDirectory(saveToFolder);
