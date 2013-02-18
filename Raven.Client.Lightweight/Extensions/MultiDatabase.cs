@@ -48,5 +48,18 @@ namespace Raven.Client.Extensions
 				return databaseUrl.Substring(0, databaseUrl.Length - 1);
 			return databaseUrl;
 		}
+
+		public static string GetDatabaseName(string url)
+		{
+			var databaseUrl = url;
+			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
+			if (indexOfDatabases != -1)
+			{
+				databaseUrl = databaseUrl.Substring(indexOfDatabases  + "/databases/".Length);
+				return Regex.Match(databaseUrl, validDbNameChars).Value;
+			}
+
+			return Constants.SystemDatabase;
+		}
 	}
 }

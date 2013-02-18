@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using System.Linq;
@@ -110,7 +111,7 @@ namespace Raven.Client.Connection
 
 		public void ExpireItemsFromCache(string db)
 		{
-			cache.actualCache.Clear();
+			cache.ClearItemsForDatabase(db);
 			NumberOfCacheResets++;
 		}
 
@@ -205,11 +206,13 @@ namespace Raven.Client.Connection
 
 			var clone = data.CloneToken();
 			clone.EnsureCannotBeChangeAndEnableSnapshotting();
+
 			cache.Set(url, new CachedRequest
 			{
 				Data = clone,
 				Time = SystemTime.UtcNow,
-				Headers = new NameValueCollection(headers)
+				Headers = new NameValueCollection(headers),
+				Database = MultiDatabase.GetDatabaseName(url)
 			});
 		}
 
