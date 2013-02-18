@@ -15,6 +15,7 @@ using Raven.Database.Config;
 using System.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Plugins;
+using Raven.Database.Util;
 
 namespace Raven.Database.Linq
 {

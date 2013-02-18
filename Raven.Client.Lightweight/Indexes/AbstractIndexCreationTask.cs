@@ -28,10 +28,8 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !NETFX_CORE
 	[System.ComponentModel.Composition.InheritedExport]
 	public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexesAndTransformers
-#endif
 	{
 		/// <summary>
 		/// Creates the index definition.
@@ -157,7 +155,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
-	
+
 
 #if !SILVERLIGHT
 
@@ -181,7 +179,7 @@ namespace Raven.Client.Indexes
 			// the new definition.
 			databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
-			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) => 
+			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
 				commands.DirectPutIndex(IndexName, url, true, indexDefinition));
 		}
 
@@ -280,7 +278,7 @@ namespace Raven.Client.Indexes
 		}
 
 
-	    /// <summary>
+		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
 		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IEnumerable<TResult>> func)
@@ -378,84 +376,8 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This is here as a marker only");
 		}
 
-#if !SILVERLIGHT
-
-		/// <summary>
-		/// Executes the index creation against the specified document store.
-		/// </summary>
-		public void Execute(IDocumentStore store)
 		internal Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
 												   DocumentConvention documentConvention, Func<AsyncServerClient, string, Task> action)
-#if !SILVERLIGHT && !NETFX_CORE
-
-		/// <summary>
-		/// Executes the index creation against the specified document store.
-		/// </summary>
-		public void Execute(IDocumentStore store)
-		{
-				try
-				{
-					serverClient.DirectPutIndex(IndexName, replicationDestination.Url, true, indexDefinition);
-				}
-				catch (Exception e)
-				{
-					Logger.WarnException("Could not put index in replication server", e);
-				}
-			}
-		}
-#endif
-
-		/// <summary>
-		/// Executes the index creation against the specified document store.
-		/// </summary>
-		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
-		{
-			Conventions = documentConvention;
-			var indexDefinition = CreateIndexDefinition();
-			// This code take advantage on the fact that RavenDB will turn an index PUT
-			// to a noop of the index already exists and the stored definition matches
-			// the new definition.
-			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, indexDefinition))
-				.Unwrap();
-		}
-
-		private ILog Logger = LogManager.GetCurrentClassLogger();
-		private Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
-												   DocumentConvention documentConvention, IndexDefinition indexDefinition)
-		{
-				if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
-					continue;
-				try
-				{
-					serverClient.DirectPutIndex(IndexName, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url, true, indexDefinition);
-				}
-				catch (Exception e)
-				{
-					Logger.WarnException("Could not put index in replication server", e);
-				}
-			}
-		}
-#endif
-
-		/// <summary>
-		/// Executes the index creation against the specified document store.
-		/// </summary>
-		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
-		{
-			Conventions = documentConvention;
-			var indexDefinition = CreateIndexDefinition();
-			// This code take advantage on the fact that RavenDB will turn an index PUT
-			// to a noop of the index already exists and the stored definition matches
-			// the new definition.
-			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, indexDefinition))
-				.Unwrap();
-		}
-
-		private ILog Logger = LogManager.GetCurrentClassLogger();
-		private Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
-												   DocumentConvention documentConvention, IndexDefinition indexDefinition)
 		{
 			var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 			if (asyncServerClient == null)
@@ -471,11 +393,9 @@ namespace Raven.Client.Indexes
 				var tasks = new List<Task>();
 				foreach (var replicationDestination in replicationDocument.Destinations)
 				{
-					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.Url));
-					tasks.Add(action(asyncServerClient, replicationDestination.Url));
 					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
 						continue;
-					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url));
+					tasks.Add(action(asyncServerClient, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url));
 				}
 				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
 				{
@@ -509,7 +429,9 @@ namespace Raven.Client.Indexes
 			{
 				try
 				{
-					action(serverClient, replicationDestination.Url);
+					if(replicationDestination.Disabled || replicationDestination.IgnoredClient)
+						continue;
+					action(serverClient, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url);
 				}
 				catch (Exception e)
 				{

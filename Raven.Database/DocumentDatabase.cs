@@ -1180,7 +1180,6 @@ namespace Raven.Database
 			Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
 			Etag resultEtag = Etag.Empty;
             var nonAuthoritativeInformation = false;
-			var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 			if (string.IsNullOrEmpty(query.ResultsTransformer))
             {
@@ -1275,26 +1274,20 @@ namespace Raven.Database
                         results = resultList;
                     }
 
-                    using (new CurrentTransformationScope(docRetriever))
 					if (headerInfo != null)
 					{
-						headerInfo(new QueryHeaderInformation
-					{
-							Index = index,
-							IsStable = stale,
-							ResultEtag = resultEtag,
-							IndexTimestamp= indexTimestamp.Item1					if (headerInfo != null)
-                    {
 						headerInfo(new QueryHeaderInformation
 						{
 							Index = index,
 							IsStable = stale,
 							ResultEtag = resultEtag,
-							IndexTimestamp= indexTimestamp.Item1,
+							IndexTimestamp = indexTimestamp.Item1,
 							IndexEtag = indexTimestamp.Item2,
 							TotalResults = query.TotalSize.Value
 						});
 					}
+
+                    using (new CurrentTransformationScope(docRetriever))	
 					foreach (var result in results)
 					{
 						onResult(result);
