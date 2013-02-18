@@ -4,10 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Json.Linq;
 using Xunit;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Security.OAuth
 {
@@ -29,8 +31,8 @@ namespace Raven.Tests.Security.OAuth
 				Enabled = true,
 				Databases = new List<DatabaseAccess>
 				{
-					new DatabaseAccess{TenantId = "*"}, 
-					new DatabaseAccess{TenantId = Constants.SystemDatabase}, 
+					new DatabaseAccess{TenantId = "*", Admin = true}, 
+					new DatabaseAccess{TenantId = Constants.SystemDatabase, Admin = true}, 
 				}
 			}), new RavenJObject(), null);
 		}
@@ -60,6 +62,19 @@ namespace Raven.Tests.Security.OAuth
 				{
 					Assert.Equal(name, session.Load<TestClass>(id).Name);
 				}
+			}
+		}
+
+		[Fact]
+		public void CanAuthAsAdminAgainstTenantDb()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				store.DatabaseCommands.EnsureDatabaseExists("test");
+
+				var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", "POST", null, store.Conventions));
+
+				httpJsonRequest.ExecuteRequest();
 			}
 		}
 

@@ -6,9 +6,11 @@ using System.Linq;
 using System.Security.Principal;
 using System.Threading;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Security.OAuth;
 
 namespace Raven.Database.Extensions
 {
@@ -176,11 +178,31 @@ namespace Raven.Database.Extensions
 			if (databaseAccessPrincipal != null)
 			{
 				if (databaseAccessPrincipal.AdminDatabases.Any(name => name == "*")
-				    && database.Name != null && database.Name != "<system>")
+				    && database.Name != null && database.Name != Constants.SystemDatabase)
 					return true;
 				if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, database.Name, StringComparison.InvariantCultureIgnoreCase)))
 					return true;
+				if (database.Name == null &&
+				    databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase)))
+					return true;
+				return false;
 			}
+
+			var oauthPrincipal = principal as OAuthPrincipal;
+			if (oauthPrincipal != null)
+			{
+				foreach (var dbAccess in oauthPrincipal.TokenBody.AuthorizedDatabases.Where(x => x.Admin))
+				{
+					if (dbAccess.TenantId == "*" && database.Name != null && database.Name != Constants.SystemDatabase)
+						return true;
+					if (string.Equals(dbAccess.TenantId, database.Name, StringComparison.InvariantCultureIgnoreCase))
+						return true;
+					if (database.Name == null && string.Equals(dbAccess.TenantId, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))
+						return true;
+					return false;
+				}
+			}
+			
 
 			return false;
 		}
