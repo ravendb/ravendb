@@ -53,6 +53,7 @@ namespace Raven.Database.Server.Responders
 
 				writer.WriteEndArray();
 				writer.WriteEndObject();
+				writer.Flush();
 			}
 		}
 	}

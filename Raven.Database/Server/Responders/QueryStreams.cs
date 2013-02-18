@@ -3,15 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -66,7 +63,10 @@ namespace Raven.Database.Server.Responders
 			writer.WriteEndArray();
 			writer.WriteEndObject();
 			if (writer != null)
+			{
+				writer.Flush();
 				writer.Close();
+			}
 
 		}
 	}

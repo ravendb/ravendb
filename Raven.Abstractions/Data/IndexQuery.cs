@@ -239,10 +239,13 @@ namespace Raven.Abstractions.Data
                 path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
             }
 
-		    foreach (var input in QueryInputs)
-		    {
-		        path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
-		    }
+			if (QueryInputs != null)
+			{
+				foreach (var input in QueryInputs)
+				{
+					path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
+				}
+			}
 
 			if (Cutoff != null)
 			{
