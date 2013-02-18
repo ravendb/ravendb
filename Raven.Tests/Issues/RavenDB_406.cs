@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Tests.Linq;
 using Xunit;
@@ -117,6 +118,87 @@ namespace Raven.Tests.Issues
 						var users = session.Query<User>().ToList();
 
 						Assert.Equal("Adam", users[0].Name);
+					}
+				}
+			}
+		}
+
+		[Fact]
+		public void CacheClearingShouldTakeIntoAccountTenantDatabases()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8079"}.Initialize())
+			{
+				store.DatabaseCommands.EnsureDatabaseExists("Northwind_1");
+				store.DatabaseCommands.EnsureDatabaseExists("Northwind_2");
+
+				using (var session = store.OpenSession("Northwind_1"))
+				{
+					session.Store(new User()
+					{
+						Id = "users/1",
+						Name = "John"
+					});
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession("Northwind_2"))
+				{
+					session.Store(new User()
+					{
+						Id = "users/1",
+						Name = "John"
+					});
+					session.SaveChanges();
+				}
+
+				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+				{
+					// make sure that object is cached
+					using (var session = store.OpenSession("Northwind_1"))
+					{
+						store.Changes().Task.Result.WaitForAllPendingSubscriptions();
+
+						var users = session.Load<User>(new[] { "users/1" });
+
+						Assert.Equal("John", users[0].Name);
+					}
+
+					using (var session = store.OpenSession("Northwind_2"))
+					{
+						store.Changes().Task.Result.WaitForAllPendingSubscriptions();
+
+						var users = session.Load<User>(new[] { "users/1" });
+
+						Assert.Equal("John", users[0].Name);
+					}
+
+					// change object on Northwind_1 ONLY
+					using (var session = store.OpenSession("Northwind_1"))
+					{
+						session.Store(new User()
+						{
+							Id = "users/1",
+							Name = "Adam"
+						});
+						session.SaveChanges();
+					}
+
+
+					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
+
+					using (var session = store.OpenSession("Northwind_1"))
+					{
+						var users = session.Load<User>(new[] { "users/1" });
+
+						Assert.Equal("Adam", users[0].Name);
+					}
+
+					using (var session = store.OpenSession("Northwind_2"))
+					{
+						var users = session.Load<User>(new[] { "users/1" });
+
+						Assert.Equal("John", users[0].Name);
 					}
 				}
 			}

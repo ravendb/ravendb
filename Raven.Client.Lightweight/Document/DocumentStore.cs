@@ -822,8 +822,9 @@ namespace Raven.Client.Document
 				var databaseName = session.DatabaseName;
 				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
 																		  _ => new EvictItemsFromCacheBasedOnChanges(
+																			  databaseName ?? Constants.SystemDatabase,
 																			  CreateDatabaseChanges(databaseName),
-																			  () => jsonRequestFactory.ExpireItemsFromCache(databaseName)));
+																			  jsonRequestFactory.ExpireItemsFromCache));
 			}
 
 			base.AfterSessionCreated(session);

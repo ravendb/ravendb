@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 
@@ -12,13 +11,15 @@ namespace Raven.Client.Util
 {
 	public class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChangeNotification>, IObserver<IndexChangeNotification>, IDisposable
 	{
+		private readonly string databaseName;
 		private readonly IDatabaseChanges changes;
-		private readonly Action evictCacheOldItems;
+		private readonly Action<string> evictCacheOldItems;
 		private readonly IDisposable documentsSubscription;
 		private readonly IDisposable indexesSubscription;
 
-		public EvictItemsFromCacheBasedOnChanges(IDatabaseChanges changes, Action evictCacheOldItems)
+		public EvictItemsFromCacheBasedOnChanges(string databaseName, IDatabaseChanges changes, Action<string> evictCacheOldItems)
 		{
+			this.databaseName = databaseName;
 			this.changes = changes;
 			this.evictCacheOldItems = evictCacheOldItems;
 
@@ -26,13 +27,11 @@ namespace Raven.Client.Util
 			indexesSubscription = changes.ForAllIndexes().Subscribe(this);
 		}
 
-		public DateTimeOffset LastNotificationTime { get; private set; }
-
 		public void OnNext(DocumentChangeNotification change)
 		{
 			if (change.Type == DocumentChangeTypes.Put || change.Type == DocumentChangeTypes.Delete)
 			{
-				evictCacheOldItems();
+				evictCacheOldItems(databaseName);
 			}
 		}
 
@@ -42,7 +41,7 @@ namespace Raven.Client.Util
 				change.Type == IndexChangeTypes.ReduceCompleted || 
 				change.Type == IndexChangeTypes.IndexRemoved)
 			{
-				evictCacheOldItems();
+				evictCacheOldItems(databaseName);
 			}
 		}
 
