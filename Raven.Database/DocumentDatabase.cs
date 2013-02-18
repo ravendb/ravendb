@@ -1246,13 +1246,14 @@ namespace Raven.Database
 					{
 						foreach (var result in results)
 						{
-							if (transformerErrors.Count > 0)
-							{
-								throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
-							}
-
 							onResult(result);
 						}
+
+						if (transformerErrors.Count > 0)
+						{
+							throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
+						}
+
 					}
 
 
