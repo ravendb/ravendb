@@ -503,6 +503,7 @@ namespace Raven.Database.Indexing
 
 					if (missingFile)
 					{
+						IOExtensions.DeleteDirectory(commitPointDirectory.FullPath);
 						continue; // there are some missing files, try another commit point
 					}
 

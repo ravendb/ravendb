@@ -9,13 +9,15 @@ using System.Linq;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing;
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
 namespace Raven.Tests.Indexes.Recovery
 {
 	public class MapIndexRecoveryTests : RavenTest
 	{
-		private void CommitPointAfterEachCommitOnly(InMemoryRavenConfiguration configuration)
+		private void CommitPointAfterEachCommit(InMemoryRavenConfiguration configuration)
 		{
 			// force commit point creation after each commit
 			configuration.MinIndexingTimeIntervalToStoreCommitPoint = TimeSpan.FromSeconds(0);
@@ -36,7 +38,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
 			{
-				CommitPointAfterEachCommitOnly(server.Database.Configuration);
+				CommitPointAfterEachCommit(server.Database.Configuration);
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -92,7 +94,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
 			{
-				CommitPointAfterEachCommitOnly(server.Database.Configuration);
+				CommitPointAfterEachCommit(server.Database.Configuration);
 
 				var maxNumberOfStoredCommitPoints = server.Database.Configuration.MaxNumberOfStoredCommitPoints;
 
@@ -263,6 +265,127 @@ namespace Raven.Tests.Indexes.Recovery
 					}
 				}
 			}
+		}
+
+		[Fact]
+		public void ShouldDeleteCommitPointIfCouldNotRecoverFromIt()
+		{
+			string indexFullPath;
+			string commitPointsDirectory;
+			var index = new MapRecoveryTestIndex();
+
+			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
+			{
+				CommitPointAfterEachCommit(server.Database.Configuration);
+
+				indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
+											 MonoHttpUtility.UrlEncode(index.IndexName));
+
+				commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
+													 MonoHttpUtility.UrlEncode(index.IndexName) + "\\CommitPoints");
+
+				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+				{
+					index.Execute(store);
+
+					using (var session = store.OpenSession())
+					{
+						session.Store(new Recovery
+						{
+							Name = "One",
+							Number = 1
+						});
+
+						session.SaveChanges(); // first commit point
+						WaitForIndexing(store);
+
+						session.Store(new Recovery
+						{
+							Name = "Two",
+							Number = 2
+						});
+
+						session.SaveChanges(); // second commit point
+						WaitForIndexing(store);
+
+						session.Store(new Recovery
+						{
+							Name = "Three",
+							Number = 3
+						});
+
+						session.SaveChanges(); // second commit point
+						WaitForIndexing(store);
+					}
+				}
+			}
+
+			// make sure that there are 3 commit points
+			var directories = Directory.GetDirectories(commitPointsDirectory);
+			Assert.Equal(3, directories.Length);
+
+			// mess "index.CommitPoint" file in the SECOND commit point by adding additional files required to recover from it
+			using (var commitPointFile = File.Open(Path.Combine(directories[1], "index.CommitPoint"), FileMode.Open))
+			{
+				var jsonSerializer = new JsonSerializer();
+				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+
+				var indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+				indexCommit.SegmentsInfo.ReferencedFiles.Add("file-that-doesnt-exist");
+
+				commitPointFile.Position = 0;
+
+				using (var sw = new StreamWriter(commitPointFile))
+				{
+					var textWriter = new JsonTextWriter(sw);
+
+					jsonSerializer.Serialize(textWriter, indexCommit);
+
+					sw.Flush();
+				}
+			}
+
+			// mess "index.CommitPoint" file in the THIRD commit point by adding additional files required to recover from it
+			using (var commitPointFile = File.Open(Path.Combine(directories[2], "index.CommitPoint"), FileMode.Open))
+			{
+				var jsonSerializer = new JsonSerializer();
+				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+
+				var indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+				indexCommit.SegmentsInfo.ReferencedFiles.Add("file-that-doesnt-exist");
+
+				commitPointFile.Position = 0;
+
+				using (var sw = new StreamWriter(commitPointFile))
+				{
+					var textWriter = new JsonTextWriter(sw);
+
+					jsonSerializer.Serialize(textWriter, indexCommit);
+
+					sw.Flush();
+				}
+			}
+
+			IndexMessing.MessSegmentsFile(indexFullPath);
+
+			using (GetNewServer(runInMemory: false, dataDirectory: DataDir, deleteDirectory: false)) // do not delete previous directory
+			{
+				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+				{
+					using (var session = store.OpenSession())
+					{
+						var result =
+							session.Query<Recovery, MapRecoveryTestIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
+						
+						Assert.Equal(3, result.Count);
+					}
+				}
+			}
+
+			// there should be exactly 2 commit points:
+			// the first one which we used to recover
+			// and the second one created because of indexing after recovery
+			Assert.Equal(2, Directory.GetDirectories(commitPointsDirectory).Length);
 		}
 	}
 }
