@@ -34,7 +34,8 @@ namespace Raven.Database.Server.Responders
 			var query = context.GetIndexQueryFromHttpContext(int.MaxValue);
 			if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
 				query.PageSize = int.MaxValue;
-			if (context.Request.HttpMethod == "HEAD")
+			var isHeadRequest = context.Request.HttpMethod == "HEAD";
+			if (isHeadRequest)
 				query.PageSize = 0;
 			JsonWriter writer = null;
 			Database.Query(index, query, information =>
@@ -48,7 +49,7 @@ namespace Raven.Database.Server.Responders
 				                           information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
 				                                                               CultureInfo.InvariantCulture));
 
-				if (query.PageSize == 0)
+				if (isHeadRequest)
 					return;
 
 				writer = new JsonTextWriter(new StreamWriter(context.Response.OutputStream));
@@ -57,7 +58,7 @@ namespace Raven.Database.Server.Responders
 				writer.WriteStartArray();
 			}, result => result.WriteTo(writer, Default.Converters));
 
-			if (query.PageSize == 0)
+			if (isHeadRequest)
 				return;
 
 			writer.WriteEndArray();

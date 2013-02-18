@@ -43,7 +43,9 @@ namespace Raven.Database.Util
 				first = default(T);
 				return isNotEmpty;
 			}
-			return enumerator.MoveNext();
+			var moveNext = enumerator.MoveNext();
+			Current = moveNext ? enumerator.Current : default (T);
+			return moveNext;
 		}
 
 		public void Reset()
