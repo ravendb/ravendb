@@ -46,7 +46,7 @@
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{MarkupExtensions:ResourceKeyBinding Path=IconResource}" Stretch="None"/>
-                        <TextBlock Text="{Binding Name}" Margin="2,0,0,0" />
+                        <TextBlock Text="{Binding Name}" FontSize="13" Margin="2,0,0,0" />
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>

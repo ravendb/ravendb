@@ -22,6 +22,7 @@ namespace Raven.Studio.Models
 			ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 																	   "/stats";
+			IndexesGraphData = new Dictionary<string, PerformanceStats>();
 		    Breadcrumb = "Documents";
 			Statistics = new Dictionary<string, StatInfo>();
 			StatisticsToView = new Dictionary<string, StatInfo>();
@@ -196,24 +197,7 @@ namespace Raven.Studio.Models
 					if (performance == null || performance.Length == 0)
 						continue;
 
-					var performanceMessage = "";
-
-					foreach (var indexingPerformanceStats in performance)
-					{
-						performanceMessage += string.Format(@"
-Operation:         {0}
-Input:              {1:#,#}
-Output:              {2:#,#}
-Duration:          {3}
-Duration in ms: {4:#,#}
-", indexingPerformanceStats.Operation,
-						                                    indexingPerformanceStats.InputCount,
-						                                    indexingPerformanceStats.OutputCount,
-						                                    indexingPerformanceStats.Duration,
-						                                    indexingPerformanceStats.DurationMilliseconds);
-					}
-
-					statInfoItem.ItemData.Add("Performance", performanceMessage);
+					UpdateGraphDate(performance, statInfoItem);
 
 					continue;
 				}
@@ -230,12 +214,94 @@ Duration in ms: {4:#,#}
 			}
 		}
 
+		private void UpdateGraphDate(IEnumerable<IndexingPerformanceStats> performance, StatInfoItem statInfoItem)
+		{
+			if(IndexesGraphData.ContainsKey( statInfoItem.Title) == false)
+				IndexesGraphData.Add(statInfoItem.Title, new PerformanceStats());
+
+			foreach (var indexingPerformanceStat in performance)
+			{
+				switch (indexingPerformanceStat.Operation)
+				{
+					case "Index":
+						if (IndexesGraphData[statInfoItem.Title].IndexData.Contains(indexingPerformanceStat) == false)
+							IndexesGraphData[statInfoItem.Title].IndexData.Add(indexingPerformanceStat);
+						break;
+					case "Map":
+						if (IndexesGraphData[statInfoItem.Title].MapData.Contains(indexingPerformanceStat) == false)
+							IndexesGraphData[statInfoItem.Title].MapData.Add(indexingPerformanceStat);
+						break;
+					case "Reduce Level 0":
+						if (IndexesGraphData[statInfoItem.Title].Level0Data.Contains(indexingPerformanceStat) == false)
+							IndexesGraphData[statInfoItem.Title].Level0Data.Add(indexingPerformanceStat);
+						break;
+					case "Reduce Level 1":
+						if (IndexesGraphData[statInfoItem.Title].Level1Data.Contains(indexingPerformanceStat) == false)
+							IndexesGraphData[statInfoItem.Title].Level1Data.Add(indexingPerformanceStat);
+						break;
+					case "Reduce Level 2":
+						if (IndexesGraphData[statInfoItem.Title].Level2Data.Contains(indexingPerformanceStat) == false)
+							IndexesGraphData[statInfoItem.Title].Level2Data.Add(indexingPerformanceStat);
+						break;
+				}
+			}
+
+			UpdateStatInfoFromGraphData(statInfoItem);
+		}
+
+		private void UpdateStatInfoFromGraphData(StatInfoItem statInfoItem)
+		{
+			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].IndexData)
+			{
+				statInfoItem.IndexData.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+			}
+
+			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].MapData)
+			{
+				statInfoItem.MapData.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+			}
+
+			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].Level0Data)
+			{
+				statInfoItem.Level0Data.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+			}
+
+			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].Level1Data)
+			{
+				statInfoItem.Level1Data.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+			}
+
+			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].Level2Data)
+			{
+				statInfoItem.Level2Data.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+			}
+		}
+
 		public Observable<DatabaseStatistics> StatsData { get; set; }
 		public Dictionary<string, StatInfo> Statistics { get; set; }
 		public Dictionary<string, StatInfo> StatisticsToView { get; set; }
 		public List<string> ViewOptions { get; set; }
+		public Dictionary<string, PerformanceStats> IndexesGraphData { get; set; } 
 		public Observable<string> SelectedViewOption { get; set; }
         public string Breadcrumb { get; set; }
+	}
+
+	public class PerformanceStats
+	{
+		public List<IndexingPerformanceStats> MapData { get; set; }
+		public List<IndexingPerformanceStats> IndexData { get; set; }
+		public List<IndexingPerformanceStats> Level0Data { get; set; }
+		public List<IndexingPerformanceStats> Level1Data { get; set; }
+		public List<IndexingPerformanceStats> Level2Data { get; set; }
+
+		public PerformanceStats()
+		{
+			MapData = new List<IndexingPerformanceStats>();
+			IndexData = new List<IndexingPerformanceStats>();
+			Level0Data = new List<IndexingPerformanceStats>();
+			Level1Data = new List<IndexingPerformanceStats>();
+			Level2Data = new List<IndexingPerformanceStats>();
+		}
 	}
 
 	public class StatInfo
@@ -251,12 +317,24 @@ Duration in ms: {4:#,#}
 		public Type ItemType { get; private set; }
 		public string Title { get; set; }
 		public Dictionary<string, string> ItemData { get; private set; }
+		public Dictionary<DateTime, IndexingPerformanceStats> MapData { get; set; }
+		public Dictionary<DateTime, IndexingPerformanceStats> IndexData { get; set; }
+		public Dictionary<DateTime, IndexingPerformanceStats> Level0Data { get; set; }
+		public Dictionary<DateTime, IndexingPerformanceStats> Level1Data { get; set; }
+		public Dictionary<DateTime, IndexingPerformanceStats> Level2Data { get; set; }
+
+		public bool ShowChart { get { return MapData.Count != 0  || Level0Data.Count != 0|| Level1Data.Count != 0 || Level2Data.Count != 0 || IndexData.Count != 0; } }
 
 		public StatInfoItem(object item)
 		{
 			Item = item;
 			ItemType = item.GetType();
 			ItemData = new Dictionary<string, string>();
+			MapData = new Dictionary<DateTime, IndexingPerformanceStats>();
+			Level0Data = new Dictionary<DateTime, IndexingPerformanceStats>();
+			Level1Data = new Dictionary<DateTime, IndexingPerformanceStats>();
+			Level2Data = new Dictionary<DateTime, IndexingPerformanceStats>();
+			IndexData = new Dictionary<DateTime, IndexingPerformanceStats>();
 		}
 	}
 }

@@ -33,6 +33,7 @@
 									<Grid.RowDefinitions>
 										<RowDefinition Height="Auto"/>
 										<RowDefinition Height="Auto"/>
+										<RowDefinition Height="Auto"/>
 									</Grid.RowDefinitions>
 
 									<TextBlock Text="{Binding Title}" Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
@@ -52,7 +53,7 @@
 															   Text="{Binding Key}" 
 															   Style="{StaticResource Style_TextBlock_InlineSubHeader}"
 															   VerticalAlignment="Top"/>
-													
+
 													<TextBlock Grid.Row="1" 
 															   Grid.Column="1" 
 															   Text="{Binding Value}"/>
@@ -61,6 +62,45 @@
 											</DataTemplate>
 										</ListBox.ItemTemplate>
 									</ListBox>
+
+									<toolkit:Chart Grid.Row="2" 
+												   Visibility="{Binding ShowChart, Converter={StaticResource BooleanToVisibility}}"
+												   Width="500"
+												   Height="250"
+												   Title="Performance"
+												   Margin="5">
+										<toolkit:LineSeries ItemsSource="{Binding IndexData}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformanceDeepSkyBlue}"
+															Title="Index"/>
+										
+										<toolkit:LineSeries ItemsSource="{Binding MapData}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformanceGreen}"
+															Title="Map"/>
+
+										<toolkit:LineSeries ItemsSource="{Binding Level0Data}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformanceRed}"
+															Title="Reduce 0"/>
+
+										<toolkit:LineSeries ItemsSource="{Binding Level1Data}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformancePurple}"
+															Title="Reduce 1"/>
+										
+										<toolkit:LineSeries ItemsSource="{Binding Level2Data}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformanceOrange}"
+															Title="Reduce 2">
+										</toolkit:LineSeries>
+									</toolkit:Chart>
+
 								</Grid>
 							</Grid>
 						</DataTemplate>
