@@ -174,7 +174,7 @@
 							       VerticalAlignment="Center"
 							       Margin="4,0" />
 						<TextBlock x:Name="HeaderText"
-								   Style="{StaticResource }"
+								   Style="{StaticResource Style_Text_Header}"
 								   Text="Alerts"
 								   toolkit:DockPanel.Dock="Left"
 								   VerticalAlignment="Center"
