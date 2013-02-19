@@ -11,8 +11,10 @@ using Raven.Abstractions.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Extensions;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
+using TaskStatus = Raven.Studio.Models.TaskStatus;
 
 namespace Raven.Studio.Commands
 {
@@ -20,10 +22,12 @@ namespace Raven.Studio.Commands
 	{
 		private readonly Observable<DatabaseModel> database;
 		private IObservable<Unit> databaseChanged;
+		private readonly SampleDataTask sampleDataTask;
 		private Action<string> output;
 
-		public CreateSampleDataCommand(Action<string> output)
+		public CreateSampleDataCommand(SampleDataTask sampleDataTask, Action<string> output)
 		{
+			this.sampleDataTask = sampleDataTask;
 			this.output = output;
 			database = ApplicationModel.Current.Server.Value.SelectedDatabase;
 
@@ -61,8 +65,10 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
+			sampleDataTask.TaskStatus = TaskStatus.Started;
 			CreateSampleData().ProcessTasks()
-				.ContinueOnSuccessInTheUIThread(() => output("Sample Data Created") );
+			                  .ContinueOnSuccessInTheUIThread(() => output("Sample Data Created"))
+							  .Finally(() => sampleDataTask.TaskStatus = TaskStatus.Ended);
 		}
 
 		private IEnumerable<Task> CreateSampleData()
