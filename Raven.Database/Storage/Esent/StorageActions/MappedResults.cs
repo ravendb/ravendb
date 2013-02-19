@@ -804,6 +804,36 @@ namespace Raven.Storage.Esent.StorageActions
 			return (ReduceType)reduceType;
 		}
 
+		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take)
+		{
+			Api.JetSetCurrentIndex(session, ReduceKeysStatus, "by_view_and_hashed_reduce_key");
+			Api.MakeKey(session, ReduceKeysStatus, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, ReduceKeysStatus, SeekGrbit.SeekGE) == false)
+				yield break;
+
+			if (TryMoveTableRecords(MappedResults, start, false))
+				yield break;
+
+			do
+			{
+				var indexFromDb = Api.RetrieveColumnAsString(session, ReduceKeysStatus,
+															 tableColumnsCache.ReduceKeysStatusColumns["view"], Encoding.Unicode,
+															 RetrieveColumnGrbit.RetrieveFromIndex);
+
+				if (StringComparer.InvariantCultureIgnoreCase.Equals(view, indexFromDb) == false)
+					break;
+
+				var reduceKey = Api.RetrieveColumnAsString(session, ReduceKeysStatus,
+											   tableColumnsCache.ReduceKeysStatusColumns["reduce_key"]);
+
+				var reduceType = Api.RetrieveColumnAsInt32(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"]).Value;
+
+				take--;
+				yield return new ReduceTypePerKey(reduceKey, (ReduceType) reduceType);
+
+			} while (Api.TryMoveNext(session, ReduceKeysStatus) && take > 0);
+		}
+
 		public IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_hashed_reduce_key_and_bucket");

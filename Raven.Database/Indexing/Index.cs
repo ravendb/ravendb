@@ -47,7 +47,7 @@ namespace Raven.Database.Indexing
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
-		private Directory directory;
+		protected Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
 
@@ -113,6 +113,8 @@ namespace Raven.Database.Indexing
 		}
 
 		public DateTime LastIndexTime { get; set; }
+
+		protected DateTime PreviousIndexTime { get; set; }
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
@@ -245,7 +247,6 @@ namespace Raven.Database.Indexing
 
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
-
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
 			return new IndexQueryResult
@@ -307,16 +308,21 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
-		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, int> action)
+		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
+
+			PreviousIndexTime = LastIndexTime;
 			LastIndexTime = SystemTime.UtcNow;
+
 			lock (writeLock)
 			{
 				bool shouldRecreateSearcher;
 				var toDispose = new List<Action>();
 				Analyzer searchAnalyzer = null;
+				var itemsInfo = new IndexedItemsInfo();
+
 				try
 				{
 					waitReason = "Write";
@@ -338,12 +344,18 @@ namespace Raven.Database.Indexing
 					var locker = directory.MakeLock("writing-to-index.lock");
 					try
 					{
-						int changedDocs;
 						var stats = new IndexingWorkStats();
+
 						try
 						{
-							changedDocs = action(indexWriter, searchAnalyzer, stats);
-							shouldRecreateSearcher = changedDocs > 0;
+							if (locker.Obtain() == false)
+							{
+								throw new InvalidOperationException(string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
+																				  name));
+							}
+
+							itemsInfo = action(indexWriter, searchAnalyzer, stats);
+							shouldRecreateSearcher = itemsInfo.ChangedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
 								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
@@ -355,7 +367,7 @@ namespace Raven.Database.Indexing
 							throw;
 						}
 
-						if (changedDocs > 0)
+						if (itemsInfo.ChangedDocs > 0)
 						{
 							UpdateIndexingStats(context, stats);
 							WriteInMemoryIndexToDiskIfNecessary();
@@ -379,29 +391,31 @@ namespace Raven.Database.Indexing
 					waitReason = null;
 					LastIndexTime = SystemTime.UtcNow;
 				}
+
+				HandleCommitPoints(itemsInfo);
+
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
 			}
 		}
 
-		protected void UpdateIndexingStats(WorkContext context, IndexingWorkStats stats)
+		protected abstract void HandleCommitPoints(IndexedItemsInfo itemsInfo);
+
+		protected void UpdateIndexingStats(WorkContext workContext, IndexingWorkStats stats)
 		{
-			context.TransactionalStorage.Batch(accessor =>
+			switch (stats.Operation)
 			{
-				switch (stats.Operation)
-				{
-					case IndexingWorkStats.Status.Map:
-						accessor.Indexing.UpdateIndexingStats(name, stats);
-						break;
-					case IndexingWorkStats.Status.Reduce:
-						accessor.Indexing.UpdateReduceStats(name, stats);
-						break;
-					case IndexingWorkStats.Status.Ignore:
-						break;
-					default:
-						throw new ArgumentOutOfRangeException();
-				}
-			});
+				case IndexingWorkStats.Status.Map:
+					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateIndexingStats(name, stats));
+					break;
+				case IndexingWorkStats.Status.Reduce:
+					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateReduceStats(name, stats));
+					break;
+				case IndexingWorkStats.Status.Ignore:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
 		}
 
 		private void CreateIndexWriter()
@@ -1312,7 +1326,10 @@ namespace Raven.Database.Indexing
 							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
 							allFilesWriter.WriteLine(fileName);
 						}
-						return 0;
+						return new IndexedItemsInfo
+						{
+							ChangedDocs = 0
+						};
 					});
 
 					var commit = snapshotter.Snapshot();

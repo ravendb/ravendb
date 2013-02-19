@@ -526,6 +526,12 @@
     <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="Faceted\FacetTestBase.cs" />
     <Compile Include="Indexes\HighlightTesting.cs" />
+    <Compile Include="Indexes\Recovery\MapReduceRecoveryTestIndex.cs" />
+    <Compile Include="Indexes\Recovery\IndexMessing.cs" />
+    <Compile Include="Indexes\Recovery\MapIndexRecoveryTests.cs" />
+    <Compile Include="Indexes\Recovery\MapReduceIndexRecoveryTests.cs" />
+    <Compile Include="Indexes\Recovery\Recovery.cs" />
+    <Compile Include="Indexes\Recovery\MapRecoveryTestIndex.cs" />
     <Compile Include="Indexes\WithNullableDateTime.cs" />
     <Compile Include="InflectorTests.cs" />
     <Compile Include="Issues\BulkInsertAuth.cs" />

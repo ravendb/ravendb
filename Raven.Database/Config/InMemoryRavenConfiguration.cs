@@ -126,6 +126,12 @@ namespace Raven.Database.Config
 
 			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
 
+			MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
+
+			MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
+
+			MaxNumberOfStoredCommitPoints = ravenSettings.MaxNumberOfStoredCommitPoints.Value;
+
 			// Data settings
 			RunInMemory = ravenSettings.RunInMemory.Value;
 
@@ -647,6 +653,25 @@ namespace Raven.Database.Config
 		/// for queries that cannot be directed to standard indexes
 		/// </summary>
 		public bool CreateAutoIndexesForAdHocQueriesIfNeeded { get; set; }
+
+		/// <summary>
+		/// Maximum time interval for storing commit points for map indexes when new items were added.
+		/// The commit points are used to restore index if unclean shutdown was detected.
+		/// Default: 00:05:00 
+		/// </summary>
+		public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
+
+		/// <summary>
+		/// Minumum interval between between successive indexing that will allow to store a  commit point
+		/// Default: 00:01:00
+		/// </summary>
+		public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
+
+		/// <summary>
+		/// Maximum number of kept commit points to restore map index after unclean shutdown
+		/// Default: 5
+		/// </summary>
+		public int MaxNumberOfStoredCommitPoints { get; set; }
 
 		public string IndexStoragePath
 		{

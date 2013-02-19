@@ -225,10 +225,14 @@
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\CurrentIndexingScope.cs" />
     <Compile Include="Indexing\CurrentTransformationScope.cs" />
+    <Compile Include="Indexing\IndexCommitPoint.cs" />
+    <Compile Include="Indexing\IndexCommitPointDirectory.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
+    <Compile Include="Indexing\IndexedItemsInfo.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
+    <Compile Include="Indexing\IndexSegmentsInfo.cs" />
     <Compile Include="Indexing\LowerCaseKeywordTokenizer.cs" />
     <Compile Include="Indexing\LowerCaseWhitespaceAnalyzer.cs" />
     <Compile Include="Indexing\LowerCaseWhitespaceTokenizer.cs" />
