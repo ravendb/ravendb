@@ -158,50 +158,62 @@ namespace Raven.Database.Indexing
 					if (recoveryTried == false)
 					{
 						recoveryTried = true;
-
 						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
 
-						if (indexDefinition.IsMapReduce == false)
-						{
-							IndexCommitPoint commitUsedToRestore;
-
-							if (TryReusePreviousCommitPointsToRecoverIndex(luceneDirectory,
-							                                               indexDefinition, path,
-							                                               out commitUsedToRestore,
-							                                               out keysToDeleteAfterRecovery))
-							{
-								ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
-							}
-						}
-						else
-						{
-							RegenerateMapReduceIndex(luceneDirectory, indexDefinition.Name);
-						}
+						keysToDeleteAfterRecovery = TryRecoveringIndex(indexName, indexDefinition, luceneDirectory);
 					}
 					else
 					{
 						resetTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, orcibly resetting index", e);
-						try
-						{
-							documentDatabase.TransactionalStorage.Batch(accessor =>
-							{
-								accessor.Indexing.DeleteIndex(indexName);
-								accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
-							});
-
-							var indexDirectory = indexName;
-							var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
-							IOExtensions.DeleteDirectory(indexFullPath);
-						}
-						catch (Exception exception)
-						{
-							throw new InvalidOperationException("Could not reset index " + indexName, exception);
-						}
+						TryResettingIndex(indexName, indexDefinition);
 					}
 				}
 			}
 			indexes.TryAdd(indexName, indexImplementation);
+		}
+
+		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
+		{
+			try
+			{
+				documentDatabase.TransactionalStorage.Batch(accessor =>
+				{
+					accessor.Indexing.DeleteIndex(indexName);
+					accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
+				});
+
+				var indexDirectory = indexName;
+				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
+				IOExtensions.DeleteDirectory(indexFullPath);
+			}
+			catch (Exception exception)
+			{
+				throw new InvalidOperationException("Could not reset index " + indexName, exception);
+			}
+		}
+
+		private string[] TryRecoveringIndex(string indexName, IndexDefinition indexDefinition,
+		                                    Lucene.Net.Store.Directory luceneDirectory)
+		{
+			string[] keysToDeleteAfterRecovery = null;
+			if (indexDefinition.IsMapReduce == false)
+			{
+				IndexCommitPoint commitUsedToRestore;
+
+				if (TryReusePreviousCommitPointsToRecoverIndex(luceneDirectory,
+				                                               indexDefinition, path,
+				                                               out commitUsedToRestore,
+				                                               out keysToDeleteAfterRecovery))
+				{
+					ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
+				}
+			}
+			else
+			{
+				RegenerateMapReduceIndex(luceneDirectory, indexDefinition.Name);
+			}
+			return keysToDeleteAfterRecovery;
 		}
 
 		private void LoadExistingSuggestionsExtentions(string indexName, Index indexImplementation)
@@ -556,7 +568,7 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception ex)
 				{
-					log.DebugException("Could not recover an index named '" + indexDefinition.Name +
+					startupLog.WarnException("Could not recover an index named '" + indexDefinition.Name +
 					                   "'from segments of the following generation " + commitPointDirectoryName, ex);
 				}
 			}
