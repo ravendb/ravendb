@@ -433,6 +433,7 @@ namespace Raven.Database.Indexing
 		private void WriteInMemoryIndexToDiskIfNecessary()
 		{
 			if (context.Configuration.RunInMemory ||
+				context.IndexDefinitionStorage == null || // may happen during index startup
 				context.IndexDefinitionStorage.IsNewThisSession(indexDefinition) == false)
 				return;
 
