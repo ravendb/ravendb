@@ -117,7 +117,7 @@ namespace Raven.Database.Indexing
 			while (true)
 			{
 				Lucene.Net.Store.Directory luceneDirectory = null;
-				
+
 				try
 				{
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
@@ -126,7 +126,7 @@ namespace Raven.Database.Indexing
 					if (indexImplementation is SimpleIndex && keysToDeleteAfterRecovery != null)
 					{
 						// remove keys from index that were deleted after creating commit point
-						((SimpleIndex) indexImplementation).RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
+						((SimpleIndex)indexImplementation).RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
 					}
 
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
@@ -194,7 +194,7 @@ namespace Raven.Database.Indexing
 		}
 
 		private string[] TryRecoveringIndex(string indexName, IndexDefinition indexDefinition,
-		                                    Lucene.Net.Store.Directory luceneDirectory)
+											Lucene.Net.Store.Directory luceneDirectory)
 		{
 			string[] keysToDeleteAfterRecovery = null;
 			if (indexDefinition.IsMapReduce == false)
@@ -202,9 +202,9 @@ namespace Raven.Database.Indexing
 				IndexCommitPoint commitUsedToRestore;
 
 				if (TryReusePreviousCommitPointsToRecoverIndex(luceneDirectory,
-				                                               indexDefinition, path,
-				                                               out commitUsedToRestore,
-				                                               out keysToDeleteAfterRecovery))
+															   indexDefinition, path,
+															   out commitUsedToRestore,
+															   out keysToDeleteAfterRecovery))
 				{
 					ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
 				}
@@ -350,18 +350,18 @@ namespace Raven.Database.Indexing
 						actions.MapReduce.ScheduleReductions(indexName, 0, itemToReduce);
 						actions.General.MaybePulseTransaction();
 					}
-					
+
 				} while (reduceKeysAndTypes.Count > 0);
 			});
 		}
 
 		private void ResetLastIndexedEtagAccordingToRestoredCommitPoint(IndexDefinition indexDefinition,
-		                                                                IndexCommitPoint lastCommitPoint)
+																		IndexCommitPoint lastCommitPoint)
 		{
 			documentDatabase.TransactionalStorage.Batch(
 				accessor =>
 				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.HighestCommitedETag,
-				                                    lastCommitPoint.TimeStamp));
+													lastCommitPoint.TimeStamp));
 		}
 
 		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)
@@ -421,7 +421,7 @@ namespace Raven.Database.Indexing
 
 		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
 		{
-			if (indexCommit.SegmentsInfo == null || indexCommit.SegmentsInfo.IsIndexCorrupted) 
+			if (indexCommit.SegmentsInfo == null || indexCommit.SegmentsInfo.IsIndexCorrupted)
 				return;
 
 			var directoryName = indexCommit.SegmentsInfo.Generation.ToString("0000000000000000000", CultureInfo.InvariantCulture);
@@ -430,7 +430,7 @@ namespace Raven.Database.Indexing
 			if (Directory.Exists(commitPointDirectory.AllCommitPointsFullPath) == false)
 			{
 				Directory.CreateDirectory(commitPointDirectory.AllCommitPointsFullPath);
-			}	
+			}
 
 			Directory.CreateDirectory(commitPointDirectory.FullPath);
 
@@ -442,7 +442,7 @@ namespace Raven.Database.Indexing
 					var textWriter = new JsonTextWriter(sw);
 
 					jsonSerializer.Serialize(textWriter, indexCommit);
-						
+
 					sw.Flush();
 				}
 			}
@@ -450,7 +450,7 @@ namespace Raven.Database.Indexing
 			var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
 
 			File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
-			          Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName));
+					  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName));
 
 			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 
@@ -465,25 +465,23 @@ namespace Raven.Database.Indexing
 
 		public void AddDeletedKeysToCommitPoints(string indexName, string[] deletedKeys)
 		{
-			var sb = new StringBuilder();
-
-			foreach (var deletedKey in deletedKeys)
-			{
-				sb.AppendLine(deletedKey);
-			}
-
-			var keysToDeleteAfterRecovery = sb.ToString();
-
 			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
 
-			var existingCommitPoints =
-				IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
+			var existingCommitPoints = IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
 
-			foreach (var commitPoint in existingCommitPoints)
+			foreach (var commitPointDirectory in existingCommitPoints.Select(commitPoint => new IndexCommitPointDirectory(path, indexName, commitPoint)))
 			{
-				var commitPointDirectory = new IndexCommitPointDirectory(path, indexName, commitPoint);
-
-				File.AppendAllText(commitPointDirectory.DeletedKeysFile, keysToDeleteAfterRecovery);
+				using (var stream = File.Open(commitPointDirectory.DeletedKeysFile, FileMode.OpenOrCreate))
+				{
+					stream.Seek(0, SeekOrigin.End);
+					using (var writer = new StreamWriter(stream))
+					{
+						foreach (var deletedKey in deletedKeys)
+						{
+							writer.WriteLine(deletedKey);	
+						}
+					}
+				}
 			}
 		}
 
@@ -544,7 +542,7 @@ namespace Raven.Database.Indexing
 
 					// copy old segments_N file
 					File.Copy(Path.Combine(commitPointDirectory.FullPath, storedSegmentsFile),
-					          Path.Combine(commitPointDirectory.IndexFullPath, storedSegmentsFile), true);
+							  Path.Combine(commitPointDirectory.IndexFullPath, storedSegmentsFile), true);
 
 					try
 					{
@@ -569,7 +567,7 @@ namespace Raven.Database.Indexing
 				catch (Exception ex)
 				{
 					startupLog.WarnException("Could not recover an index named '" + indexDefinition.Name +
-					                   "'from segments of the following generation " + commitPointDirectoryName, ex);
+									   "'from segments of the following generation " + commitPointDirectoryName, ex);
 				}
 			}
 
