@@ -16,7 +16,7 @@ namespace Raven.Studio.Models
 	}
 
 
-	public abstract class TaskModel : Model
+	public abstract class TaskModel : ViewModel
 	{
 		private const int PixelsPerLetter = 7;
 

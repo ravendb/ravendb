@@ -184,11 +184,55 @@
                 </Delay:SplitHyperlinkButtonPopup>
 				
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-
-				<HyperlinkButton Content="Tasks"
+				<Delay:SplitHyperlinkButtonPopup Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/tasks"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
+								 CommandParameter="/import">
+					<Behaviors:LinkHighlighter.AlternativeUris>
+						<Behaviors:StringCollection>
+							<System:String>/import</System:String>
+							<System:String>/export</System:String>
+							<System:String>/backup</System:String>
+							<System:String>/restore</System:String>
+							<System:String>/toggleindexing</System:String>
+							<System:String>/sample</System:String>
+							<System:String>/csvimport</System:String>
+						</Behaviors:StringCollection>
+					</Behaviors:LinkHighlighter.AlternativeUris>
+					<Delay:SplitHyperlinkButtonPopup.PopupContent>
+						<Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
+							<StackPanel>
+								<HyperlinkButton Content="Import Database"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/import"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Export Database"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/export"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Backup Database"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/backup"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Restore Databases"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/restore"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Toggle Indexing"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/toggleindexing"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Create Sample Data"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/sampledata"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Csv Import"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/csvimport"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+							</StackPanel>
+						</Border>
+					</Delay:SplitHyperlinkButtonPopup.PopupContent>
+				</Delay:SplitHyperlinkButtonPopup>
 				
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
 

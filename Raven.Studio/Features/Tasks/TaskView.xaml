@@ -5,29 +5,48 @@
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
                          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-                         xmlns:models="clr-namespace:Raven.Studio.Models"
-                         xmlns:system="clr-namespace:System;assembly=mscorlib"
                          xmlns:local="clr-namespace:Raven.Studio.Infrastructure.TemplateSelectors"
-                         Title="TaskView Page"
-                         DataContext="{Binding Path=SelectedTask.Value}">
+                         Title="TaskView Page">
 
-	<Grid x:Name="LayoutRoot">
+	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
+		<Border Background="{StaticResource Brush_HeaderBackground}"
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1,1,1,0"
+                CornerRadius="4,4,0,0">
+		</Border>
+		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+			<Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Tasks_Small}"/>
+
+			<TextBlock Text="Tasks"
+					   Style="{StaticResource Style_Text_Header}"
+					   VerticalAlignment="Center" 
+					   Margin="6"/>
+			
+			<TextBlock x:Name="Arrow" Text=">"
+							       VerticalAlignment="Center"
+							       Margin="4,0" />
+
+			<TextBlock Text="{Binding Value.Name}"
+					   Style="{StaticResource Style_Text_Header}" />
+		</StackPanel>
 
 		<TextBlock FontSize="13"
 				   TextWrapping="Wrap"
-				   Text="{Binding Path=Description}"
+				   Grid.Row="1"
+				   Text="{Binding Value.Description}"
 				   Margin="0,10" />
 
-		<StackPanel Grid.Row="1">
-			<ItemsControl ItemsSource="{Binding TaskInputs}">
+		<StackPanel Grid.Row="2">
+			<ItemsControl ItemsSource="{Binding Value.TaskInputs}">
 				<ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <local:TaskUITemplateSelector Content="{Binding}">
+						<local:TaskUITemplateSelector Content="{Binding}">
                             <local:TaskUITemplateSelector.Input>
                                 <DataTemplate>
                                     <Grid>
@@ -66,7 +85,7 @@
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
 
-			<ItemsControl ItemsSource="{Binding TaskDatas}">
+			<ItemsControl ItemsSource="{Binding Value.TaskDatas}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
 						<StackPanel Orientation="Horizontal">
@@ -81,15 +100,15 @@
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
 			<StackPanel Orientation="Horizontal">
-			<Button Content="{Binding Name}"
+				<Button Content="{Binding Value.Name}"
 					Width="Auto"
 					HorizontalAlignment="Left"
-					Command="{Binding Action}"
-					IsEnabled="{Binding CanExecute.Value}"
+					Command="{Binding Value.Action}"
+					IsEnabled="{Binding Value.CanExecute.Value}"
 					Padding="8,4"
 					MinWidth="100"
 					Margin="0,10" />
-				<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
+				<TextBlock Text="{Binding Value.TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
 						   VerticalAlignment="Center" 
 						   FontSize="21.333" 
 						   Margin="100,0,0,0"/>
@@ -98,13 +117,13 @@
 							 Width="200" 
 							 Height="25"
 							 FlowDirection="LeftToRight" 
-							 IsIndeterminate="{Binding StatusBarActive}" 
-							 Visibility="{Binding TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
+							 IsIndeterminate="{Binding Value.StatusBarActive}" 
+							 Visibility="{Binding Value.TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
 			</StackPanel>
 		</StackPanel>
 
-		<ItemsControl Grid.Row="2"
-					  ItemsSource="{Binding Output}"
+		<ItemsControl Grid.Row="3"
+					  ItemsSource="{Binding Value.Output}"
 					  BorderBrush="#FFEAE7E4"
 					  Background="{StaticResource Brush_SubtleBackground2}"
 					  BorderThickness="1"
