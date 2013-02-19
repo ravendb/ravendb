@@ -10,6 +10,7 @@
              xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
              xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+             xmlns:controls="clr-namespace:Raven.Studio.Controls"
              mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance models:ConflictsModel}">
     
@@ -24,10 +25,8 @@
                                 CommandParameter="/documents"
                                 VerticalAlignment="Center" VerticalContentAlignment="Center"
                                 Margin="6"/>
-                <TextBlock x:Name="Arrow" Text=">"
-							       VerticalAlignment="Center"
-							       Margin="4,0" />
-                <TextBlock Text="Conflicts"
+				<controls:NavTriangle/>
+				<TextBlock Text="Conflicts"
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
                            VerticalAlignment="Center" />
             </StackPanel>

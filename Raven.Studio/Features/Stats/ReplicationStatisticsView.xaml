@@ -6,7 +6,8 @@
                          mc:Ignorable="d"
 						 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
-                         xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" d:DesignWidth="640" d:DesignHeight="480"
+                         xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls" d:DesignWidth="640" d:DesignHeight="480"
                          Title="ReplicationStatisticsView Page">
 	<UserControl.Resources>
 		<DataTemplate x:Key="Replication_Statistics_Item_Tamplate">
@@ -71,9 +72,7 @@
                                 CommandParameter="/statistics"
                                 VerticalAlignment="Center" VerticalContentAlignment="Center"
                                 Margin="6"/>
-					<TextBlock x:Name="Arrow" Text=">"
-							       VerticalAlignment="Center"
-							       Margin="4,0" />
+					<controls:NavTriangle/>
 					<TextBlock Text="Replication Statistics" Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center"/>
 				</StackPanel>
 				<StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">

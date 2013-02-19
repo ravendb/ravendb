@@ -5,6 +5,7 @@
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          mc:Ignorable="d">
 
 	<UserControl.Resources>
@@ -126,7 +127,7 @@
 									 Style="{StaticResource Style_Link_Breadcrumb_Header}"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="{Binding Breadcrumb, StringFormat='/\{0\}'}"/>
-					<TextBlock Text=">" VerticalAlignment="Center" Margin="4,0"/>
+					<controls:NavTriangle/>
 					<TextBlock Text="Statistics" Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center"/>
 				</StackPanel>
 				<StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">

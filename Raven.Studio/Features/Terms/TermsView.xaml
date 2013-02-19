@@ -6,6 +6,7 @@
                          mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
                          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          Title="TermsView Page">
         <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" Margin="{StaticResource Margin_ContentPage}" >
             <toolkit:HeaderedContentControl.Header>
@@ -16,22 +17,18 @@
                                      Command="{StaticResource NavigateToCommand}"
                                      CommandParameter="/Indexes"
                                      VerticalAlignment="Center" />
-                    <TextBlock Text=">"
-                               VerticalAlignment="Center"
-                               Margin="4,0" />
+				<controls:NavTriangle/>
 
-                <HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
+				<HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
                                  ToolTipService.ToolTip="{Binding IndexName}"
                                  Style="{StaticResource Style_Link_Breadcrumb_Initial}"
                                  Command="{StaticResource NavigateToCommand}"
                                  CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
                                  VerticalAlignment="Center" />
 
-                <TextBlock Text=">"
-                           VerticalAlignment="Center"
-                           Margin="4,0" />
-                    
-                <TextBlock Text="Terms"
+				<controls:NavTriangle/>
+
+				<TextBlock Text="Terms"
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
                            VerticalAlignment="Center" />
                 </StackPanel>

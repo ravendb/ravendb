@@ -3474,6 +3474,11 @@
 		<Setter Property="FontSize" Value="12"/>
 	</Style>
 
+	<Style x:Key="Style_TextBlock_NavTriangle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="Gray"/>
+		<Setter Property="FontSize" Value="12"/>
+	</Style>
+
 	<Style x:Key="Style_TextBlock_FieldName" TargetType="TextBlock">
 		<Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
 		<Setter Property="FontStyle" Value="Italic"/>

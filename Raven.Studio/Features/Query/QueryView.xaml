@@ -48,11 +48,9 @@
                                  Command="{StaticResource NavigateToCommand}"
                                  CommandParameter="/Indexes"
                                  VerticalAlignment="Center" />
-				<TextBlock Text=">"
-                           VerticalAlignment="Center"
-                           Margin="4,0" />
+			<Controls1:NavTriangle/>
 
-				<StackPanel Orientation="Horizontal"
+			<StackPanel Orientation="Horizontal"
                             Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToVisibility}}">
 					<TextBlock Text="Dynamic/"
                                Margin="0,0,0,0"
@@ -73,10 +71,8 @@
                                      VerticalAlignment="Center" />
 				</StackPanel>
 
-				<TextBlock Text=">"
-                           VerticalAlignment="Center"
-                           Margin="4,0" />
-				<TextBlock Text="Query"
+			<Controls1:NavTriangle/>
+			<TextBlock Text="Query"
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
                            VerticalAlignment="Center" />
 			</StackPanel>

@@ -6,7 +6,8 @@
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
+                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls">
 
     <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}"
                                     Margin="{StaticResource Margin_ContentPage}">
@@ -20,12 +21,10 @@
 
                 <StackPanel Orientation="Horizontal"
                             Visibility="{Binding IsShowingErrorForASpecificIndex, Converter={StaticResource BooleanToVisibility}}">
-                    
-                    <TextBlock Text=">"
-							   VerticalAlignment="Center"
-							   Margin="4,0" />
-                    
-                    <HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
+
+					<controls:NavTriangle/>
+
+					<HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
                                      ToolTipService.ToolTip="{Binding IndexName}"
                                      Style="{StaticResource Style_Link_Breadcrumb_Header}"
                                      Command="{StaticResource NavigateToCommand}"
@@ -33,10 +32,8 @@
                                      VerticalAlignment="Center" />
                 </StackPanel>
 
-                <TextBlock Text=">"
-                           VerticalAlignment="Center"
-                           Margin="4,0" />
-                <TextBlock Text="Errors"
+				<controls:NavTriangle/>
+				<TextBlock Text="Errors"
                            Style="{StaticResource Style_Text_Header}"
                            VerticalAlignment="Center" />
 

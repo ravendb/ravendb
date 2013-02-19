@@ -244,6 +244,9 @@
     <Compile Include="Controls\DateTimePicker.xaml.cs">
       <DependentUpon>DateTimePicker.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\NavTriangle.xaml.cs">
+      <DependentUpon>NavTriangle.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
@@ -894,6 +897,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\GoToDocumentControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\NavTriangle.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

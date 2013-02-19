@@ -10,7 +10,8 @@
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                          xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" 
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          mc:Ignorable="d" d:DataContext="{d:DesignInstance Logs:LogsModel}">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}">
@@ -33,9 +34,7 @@
                                 CommandParameter="/statistics"
                                 VerticalAlignment="Center" VerticalContentAlignment="Center"
                                 Margin="6"/>
-				<TextBlock x:Name="Arrow" Text=">"
-							       VerticalAlignment="Center"
-							       Margin="4,0" />
+				<controls:NavTriangle/>
 				<TextBlock Text="Logs"
 							   Style="{StaticResource Style_Text_Header}" />
 					<TextBlock Text="{Binding Path=DisplayedLogs.Count, StringFormat='(\{0\} Entries)'}"

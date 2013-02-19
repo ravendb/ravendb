@@ -9,6 +9,7 @@
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
                          xmlns:sdk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          mc:Ignorable="d"
                          d:DataContext="{d:DesignInstance Models:CollectionsModel}">
 
@@ -31,9 +32,7 @@
                                 CommandParameter="/documents"
                                 VerticalAlignment="Center" VerticalContentAlignment="Center"
                                 Margin="6"/>
-			<TextBlock x:Name="Arrow" Text=">"
-							       VerticalAlignment="Center"
-							       Margin="4,0" />
+			<controls:NavTriangle/>
 			<TextBlock Text="Collections"
 					   Grid.Row="0"
 					   Style="{StaticResource Style_Text_Header}" />

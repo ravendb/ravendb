@@ -6,6 +6,7 @@
                          mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
                          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                          xmlns:local="clr-namespace:Raven.Studio.Infrastructure.TemplateSelectors"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          Title="TaskView Page">
 
 	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Value}">
@@ -27,11 +28,7 @@
 					   Style="{StaticResource Style_Text_Header}"
 					   VerticalAlignment="Center" 
 					   Margin="6"/>
-			
-			<TextBlock x:Name="Arrow" Text=">"
-							       VerticalAlignment="Center"
-							       Margin="4,0" />
-
+			<controls:NavTriangle/>
 			<TextBlock Text="{Binding Name}"
 					   Style="{StaticResource Style_Text_Header}" />
 		</StackPanel>

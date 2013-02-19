@@ -42,14 +42,5 @@ namespace Raven.Studio.Models
 			get { return isGeneratingSampleData; }
 			set { isGeneratingSampleData = value; OnPropertyChanged(() => IsGeneratingSampleData); }
 		}
-
-		#region Commands
-
-		public ICommand CreateSampleData
-		{
-			get { return new CreateSampleDataCommand(null); }
-		}
-
-		#endregion
 	}
 }
