@@ -195,7 +195,7 @@ namespace Raven.Database.Indexing
 
 				LastCommitPointStoreTime = SystemTime.UtcNow;
 			}
-			else if (itemsInfo.DeletedKeys != null)
+			else if (itemsInfo.DeletedKeys != null && directory is RAMDirectory == false)
 			{
 				context.IndexStorage.AddDeletedKeysToCommitPoints(name, itemsInfo.DeletedKeys);
 			}
@@ -226,6 +226,8 @@ namespace Raven.Database.Indexing
 
 		private bool ShouldStoreCommitPoint()
 		{
+			if (directory is RAMDirectory) // no point in trying to store commits for ram index
+				return false;
 					// no often than specified indexing interval
 			return (LastIndexTime - PreviousIndexTime > context.Configuration.MinIndexingTimeIntervalToStoreCommitPoint ||
 					// at least once for specified time interval
