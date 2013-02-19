@@ -35,13 +35,13 @@
             <TextBlock Text="{Binding CurrentDatabase}"
 					   Margin="0,0,0,0"
 					   VerticalAlignment="Center"
-					   Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}" />
+					   Style="{StaticResource Style_Text_Header}" />
 
             <TextBlock Text=">"
                        VerticalAlignment="Center"
                        Margin="4,0" />
             <TextBlock Text="Settings"
-                       Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                       Style="{StaticResource Style_Text_Header}"
                        VerticalAlignment="Center" />
         </StackPanel>
         <Border Background="{StaticResource Brush_ToolbarBackground}"

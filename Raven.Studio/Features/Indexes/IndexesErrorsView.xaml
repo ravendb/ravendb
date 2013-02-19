@@ -27,7 +27,7 @@
                     
                     <HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
                                      ToolTipService.ToolTip="{Binding IndexName}"
-                                     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+                                     Style="{StaticResource Style_Link_Breadcrumb_Header}"
                                      Command="{StaticResource NavigateToCommand}"
                                      CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
                                      VerticalAlignment="Center" />
@@ -37,7 +37,7 @@
                            VerticalAlignment="Center"
                            Margin="4,0" />
                 <TextBlock Text="Errors"
-                           Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                           Style="{StaticResource Style_Text_Header}"
                            VerticalAlignment="Center" />
 
                 <TextBlock Text="{Binding Path=Errors.Length, StringFormat='(\{0\} Errors)'}"

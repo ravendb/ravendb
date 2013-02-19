@@ -19,6 +19,11 @@
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
+		<Border Background="{StaticResource Brush_HeaderBackground}"
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1,1,1,0"
+                CornerRadius="4,4,0,0">
+		</Border>
 		<StackPanel Orientation="Horizontal">
 			<HyperlinkButton Content="Documents"
                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"

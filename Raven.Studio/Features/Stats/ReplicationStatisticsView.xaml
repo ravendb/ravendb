@@ -53,7 +53,7 @@
 		</DataTemplate>
 	</UserControl.Resources>
 
-	<Grid x:Name="LayoutRoot">
+	<Grid x:Name="LayoutRoot"  Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
