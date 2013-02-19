@@ -6,7 +6,7 @@ namespace Raven.Database.Indexing
 {
 	public class IndexingBatch
 	{
-		public IndexingBatch(Guid highestEtagInBatch)
+		public IndexingBatch(Etag highestEtagInBatch)
 		{
 			HighestEtagInBatch = highestEtagInBatch;
 			Ids = new List<string>();
@@ -18,7 +18,7 @@ namespace Raven.Database.Indexing
 		public readonly List<dynamic> Docs;
 		public readonly List<bool> SkipDeleteFromIndex;
 		public DateTime? DateTime;
-		public readonly Guid HighestEtagInBatch;
+		public readonly Etag HighestEtagInBatch;
 
 		public void Add(JsonDocument doc, object asJson, bool skipDeleteFromIndex)
 		{

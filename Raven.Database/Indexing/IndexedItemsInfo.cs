@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
@@ -11,7 +12,7 @@ namespace Raven.Database.Indexing
 	{
 		public int ChangedDocs { get; set; }
 
-		public Guid? HighestETag { get; set; }
+		public Etag HighestETag { get; set; }
 
 		public string[] DeletedKeys { get; set; }
 	}

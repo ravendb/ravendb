@@ -313,7 +313,7 @@ namespace Raven.Database.Indexing
 			public IndexingBatch Batch { get; set; }
 		}
 
-		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs, Guid highestETagInBatch)
+		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs, Etag highestETagInBatch)
 		{
 			var last = jsonDocs.Last();
 

@@ -188,7 +188,7 @@ namespace Raven.Database.Indexing
 			{
 				context.IndexStorage.StoreCommitPoint(name, new IndexCommitPoint
 				{
-					HighestCommitedETag = itemsInfo.HighestETag.Value,
+					HighestCommitedETag = itemsInfo.HighestETag,
 					TimeStamp = LastIndexTime,
 					SegmentsInfo = GetCurrentSegmentsInfo()
 				});

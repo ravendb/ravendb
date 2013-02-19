@@ -4,12 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
 	public class IndexCommitPoint
 	{
-		public Guid HighestCommitedETag { get; set; }
+		public Etag HighestCommitedETag { get; set; }
 
 		public IndexSegmentsInfo SegmentsInfo { get; set; }
 
