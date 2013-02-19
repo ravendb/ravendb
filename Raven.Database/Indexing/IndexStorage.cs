@@ -123,10 +123,11 @@ namespace Raven.Database.Indexing
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
 
-					if (indexImplementation is SimpleIndex && keysToDeleteAfterRecovery != null)
+					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
+					if (simpleIndex != null && keysToDeleteAfterRecovery != null)
 					{
 						// remove keys from index that were deleted after creating commit point
-						((SimpleIndex)indexImplementation).RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
+						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
 					}
 
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
