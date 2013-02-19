@@ -174,16 +174,24 @@ namespace Raven.Database.Extensions
 
 		public static bool IsAdministrator(this IPrincipal principal, DocumentDatabase database)
 		{
+			return IsAdministrator(principal, database.Name);
+		}
+
+		public static bool IsAdministrator(this IPrincipal principal, string databaseNane)
+		{
 			var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 			if (databaseAccessPrincipal != null)
 			{
 				if (databaseAccessPrincipal.AdminDatabases.Any(name => name == "*")
-				    && database.Name != null && database.Name != Constants.SystemDatabase)
+				    && databaseNane != null && databaseNane != Constants.SystemDatabase)
 					return true;
-				if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, database.Name, StringComparison.InvariantCultureIgnoreCase)))
+				if (
+					databaseAccessPrincipal.AdminDatabases.Any(
+						name => string.Equals(name, databaseNane, StringComparison.InvariantCultureIgnoreCase)))
 					return true;
-				if (database.Name == null &&
-				    databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase)))
+				if (databaseNane == null &&
+				    databaseAccessPrincipal.AdminDatabases.Any(
+					    name => string.Equals(name, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase)))
 					return true;
 				return false;
 			}
@@ -193,16 +201,17 @@ namespace Raven.Database.Extensions
 			{
 				foreach (var dbAccess in oauthPrincipal.TokenBody.AuthorizedDatabases.Where(x => x.Admin))
 				{
-					if (dbAccess.TenantId == "*" && database.Name != null && database.Name != Constants.SystemDatabase)
+					if (dbAccess.TenantId == "*" && databaseNane != null && databaseNane != Constants.SystemDatabase)
 						return true;
-					if (string.Equals(dbAccess.TenantId, database.Name, StringComparison.InvariantCultureIgnoreCase))
+					if (string.Equals(dbAccess.TenantId, databaseNane, StringComparison.InvariantCultureIgnoreCase))
 						return true;
-					if (database.Name == null && string.Equals(dbAccess.TenantId, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))
+					if (databaseNane == null &&
+					    string.Equals(dbAccess.TenantId, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))
 						return true;
 					return false;
 				}
 			}
-			
+
 
 			return false;
 		}

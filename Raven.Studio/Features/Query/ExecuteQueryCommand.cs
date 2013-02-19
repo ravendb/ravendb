@@ -19,7 +19,6 @@ namespace Raven.Studio.Features.Query
 	public class ExecuteQueryCommand : Command
 	{
 		private readonly QueryModel model;
-		private string query;
 
 		public ExecuteQueryCommand(QueryModel model)
 		{
@@ -28,7 +27,6 @@ namespace Raven.Studio.Features.Query
 
 		public override void Execute(object parameter)
 		{
-			query = model.Query;
 			ClearRecentQuery();
 			model.RememberHistory();
 
