@@ -330,14 +330,15 @@ namespace Raven.Database.Indexing
 					foreach (var itemToReduce in itemsToScheduleOnLevel2)
 					{
 						actions.MapReduce.ScheduleReductions(indexName, 2, itemToReduce);
+						actions.General.MaybePulseTransaction();
 					}
 
 					foreach (var itemToReduce in itemsToScheduleOnLevel0)
 					{
 						actions.MapReduce.ScheduleReductions(indexName, 0, itemToReduce);
+						actions.General.MaybePulseTransaction();
 					}
 					
-					actions.General.MaybePulseTransaction();
 				} while (reduceKeysAndTypes.Count > 0);
 			});
 		}
