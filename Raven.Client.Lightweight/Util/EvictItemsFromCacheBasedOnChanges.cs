@@ -13,11 +13,11 @@ namespace Raven.Client.Util
 	{
 		private readonly string databaseName;
 		private readonly IDatabaseChanges changes;
-		private readonly Action<string> evictCacheOldItems;
+		private readonly Action<string, string> evictCacheOldItems;
 		private readonly IDisposable documentsSubscription;
 		private readonly IDisposable indexesSubscription;
 
-		public EvictItemsFromCacheBasedOnChanges(string databaseName, IDatabaseChanges changes, Action<string> evictCacheOldItems)
+		public EvictItemsFromCacheBasedOnChanges(string databaseName, IDatabaseChanges changes, Action<string, string> evictCacheOldItems)
 		{
 			this.databaseName = databaseName;
 			this.changes = changes;
@@ -31,7 +31,7 @@ namespace Raven.Client.Util
 		{
 			if (change.Type == DocumentChangeTypes.Put || change.Type == DocumentChangeTypes.Delete)
 			{
-				evictCacheOldItems(databaseName);
+				evictCacheOldItems(databaseName, change.Id);
 			}
 		}
 
@@ -41,7 +41,7 @@ namespace Raven.Client.Util
 				change.Type == IndexChangeTypes.ReduceCompleted || 
 				change.Type == IndexChangeTypes.IndexRemoved)
 			{
-				evictCacheOldItems(databaseName);
+				evictCacheOldItems(databaseName, change.Name);
 			}
 		}
 
@@ -58,8 +58,14 @@ namespace Raven.Client.Util
 			documentsSubscription.Dispose();
 			indexesSubscription.Dispose();
 
-			using (changes as IDisposable)
+			var remoteDatabaseChanges = changes as RemoteDatabaseChanges;
+			if (remoteDatabaseChanges != null)
 			{
+				remoteDatabaseChanges.DisposeAsync().Wait(TimeSpan.FromSeconds(3));
+			}
+			else
+			{
+				using (changes as IDisposable) { }
 			}
 		}
 	}

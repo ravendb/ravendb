@@ -109,17 +109,18 @@ namespace Raven.Client.Connection
 			NumOfCachedRequests = 0;
 		}
 
-		public void ExpireItemsFromCache(string db)
+		public void ExpireItemsFromCache(string databaseName, string changesInfo)
 		{
-			cache.ClearItemsForDatabase(db);
-			NumberOfCacheResets++;
+			var removedItems = cache.ClearItemsForDatabase(databaseName, changesInfo);
+			if (removedItems > 0)
+				NumberOfCacheEvictions++;
 		}
 
 		/// <summary>
 		/// The number of cache evictions forced by
 		/// tracking changes if aggressive cache was enabled
 		/// </summary>
-		public int NumberOfCacheResets { get; private set; }
+		public int NumberOfCacheEvictions { get; private set; }
 
 		/// <summary>
 		/// The number of requests that we got 304 for 
