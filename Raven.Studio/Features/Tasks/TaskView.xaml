@@ -8,7 +8,7 @@
                          xmlns:local="clr-namespace:Raven.Studio.Infrastructure.TemplateSelectors"
                          Title="TaskView Page">
 
-	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
+	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
@@ -32,18 +32,18 @@
 							       VerticalAlignment="Center"
 							       Margin="4,0" />
 
-			<TextBlock Text="{Binding Value.Name}"
+			<TextBlock Text="{Binding Name}"
 					   Style="{StaticResource Style_Text_Header}" />
 		</StackPanel>
 
 		<TextBlock FontSize="13"
 				   TextWrapping="Wrap"
 				   Grid.Row="1"
-				   Text="{Binding Value.Description}"
+				   Text="{Binding Description}"
 				   Margin="0,10" />
 
 		<StackPanel Grid.Row="2">
-			<ItemsControl ItemsSource="{Binding Value.TaskInputs}">
+			<ItemsControl ItemsSource="{Binding TaskInputs}">
 				<ItemsControl.ItemTemplate>
                     <DataTemplate>
 						<local:TaskUITemplateSelector Content="{Binding}">
@@ -85,7 +85,7 @@
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
 
-			<ItemsControl ItemsSource="{Binding Value.TaskDatas}">
+			<ItemsControl ItemsSource="{Binding TaskDatas}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
 						<StackPanel Orientation="Horizontal">
@@ -100,15 +100,15 @@
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
 			<StackPanel Orientation="Horizontal">
-				<Button Content="{Binding Value.Name}"
+				<Button Content="{Binding Name}"
 					Width="Auto"
 					HorizontalAlignment="Left"
-					Command="{Binding Value.Action}"
-					IsEnabled="{Binding Value.CanExecute.Value}"
+					Command="{Binding Action}"
+					IsEnabled="{Binding CanExecute.Value}"
 					Padding="8,4"
 					MinWidth="100"
 					Margin="0,10" />
-				<TextBlock Text="{Binding Value.TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
+				<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
 						   VerticalAlignment="Center" 
 						   FontSize="21.333" 
 						   Margin="100,0,0,0"/>
@@ -117,13 +117,13 @@
 							 Width="200" 
 							 Height="25"
 							 FlowDirection="LeftToRight" 
-							 IsIndeterminate="{Binding Value.StatusBarActive}" 
-							 Visibility="{Binding Value.TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
+							 IsIndeterminate="{Binding StatusBarActive}" 
+							 Visibility="{Binding TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
 			</StackPanel>
 		</StackPanel>
 
 		<ItemsControl Grid.Row="3"
-					  ItemsSource="{Binding Value.Output}"
+					  ItemsSource="{Binding Output}"
 					  BorderBrush="#FFEAE7E4"
 					  Background="{StaticResource Brush_SubtleBackground2}"
 					  BorderThickness="1"
