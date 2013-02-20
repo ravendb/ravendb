@@ -10,7 +10,7 @@ namespace Raven.Client.Util
 {
 	public class SimpleCache<T> : IDisposable
 	{
-		internal readonly ConcurrentLruLSet<string> lruKeys;
+		readonly ConcurrentLruLSet<string> lruKeys;
 		internal readonly ConcurrentDictionary<string, T> actualCache;
 
 		public SimpleCache(int maxNumberOfCacheEntries)
