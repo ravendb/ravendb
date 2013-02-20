@@ -57,9 +57,13 @@ namespace Raven.Client.Util
 		{
 			documentsSubscription.Dispose();
 			indexesSubscription.Dispose();
-
 			using (changes as IDisposable)
 			{
+				var remoteDatabaseChanges = changes as RemoteDatabaseChanges;
+				if (remoteDatabaseChanges != null)
+				{
+					remoteDatabaseChanges.DisposeAsync().Wait(TimeSpan.FromSeconds(3));
+				}
 			}
 		}
 	}
