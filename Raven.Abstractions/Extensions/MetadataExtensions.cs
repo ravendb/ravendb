@@ -107,6 +107,12 @@ namespace Raven.Abstractions.Extensions
 			"Upgrade",
 			"Via",
 			"Warning",
+
+			// IIS Application Request Routing Module
+			"X-ARR-LOG-ID",
+			"X-ARR-SSL",
+			"X-Forwarded-For",
+			"X-Original-URL"
 		};
 
 		/// <summary>
