@@ -87,8 +87,10 @@ namespace Raven.Client.Connection
 				if(duration.TotalSeconds > 0)
 					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
-				if ((SystemTime.UtcNow- cachedRequest.Time) < duration) // can serve directly from local cache
+				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow- cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
+
+				cachedRequest.ForceServerCheck = false;
 			}
 
 			setHeader("If-None-Match", cachedRequest.Headers["ETag"]);
@@ -111,7 +113,7 @@ namespace Raven.Client.Connection
 
 		public void ExpireItemsFromCache(string db)
 		{
-			cache.ClearItemsForDatabase(db);
+			cache.ForceServerCheckOfCachedItemsForDatabase(db);
 			NumberOfCacheResets++;
 		}
 

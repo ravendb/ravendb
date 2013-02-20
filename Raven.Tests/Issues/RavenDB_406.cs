@@ -203,5 +203,66 @@ namespace Raven.Tests.Issues
 				}
 			}
 		}
+
+		[Fact]
+		public void ShouldServeFromCacheIfThereWasNoChange()
+		{
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User()
+					{
+						Id = "users/1",
+						Name = "John"
+					});
+
+					session.SaveChanges();
+				}
+
+				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+				{
+					// make sure that object is cached
+					using (var session = store.OpenSession())
+					{
+						var user = session.Load<User>(new[] {"users/1"}).First();
+						Assert.Equal("John", user.Name);
+					}
+
+					// change object
+					using (var session = store.OpenSession())
+					{
+						session.Store(new User()
+						{
+							Id = "users/1",
+							Name = "Adam"
+						});
+
+						session.SaveChanges();
+					}
+
+					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
+
+					server.Server.ResetNumberOfRequests();
+
+					using (var session = store.OpenSession())
+					{
+						var user = session.Load<User>(new[] {"users/1"}).First(); // will create a request
+						Assert.Equal("Adam", user.Name);
+					}
+
+					using (var session = store.OpenSession())
+					{
+						var user = session.Load<User>(new[] { "users/1" }).First(); // will be taken from a cache
+						Assert.Equal("Adam", user.Name);
+					}
+
+					WaitForAllRequestsToComplete(server);
+
+					Assert.Equal(1, server.Server.NumberOfRequests);
+				}
+			}
+		}
 	}
 }
