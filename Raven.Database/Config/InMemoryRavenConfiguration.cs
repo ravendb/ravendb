@@ -22,6 +22,7 @@ using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
@@ -95,8 +96,6 @@ namespace Raven.Database.Config
 				InitialNumberOfItemsToIndexInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default ?
 				 defaultInitialNumberOfItemsToIndexInSingleBatch :
 				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
-
-		
 			}
 			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
 
@@ -638,6 +637,7 @@ namespace Raven.Database.Config
 
 		#endregion
 
+		[JsonIgnore]
 		public CompositionContainer Container
 		{
 			get { return container ?? (container = new CompositionContainer(Catalog)); }
@@ -650,6 +650,7 @@ namespace Raven.Database.Config
 
 		public bool DisableDocumentPreFetchingForIndexing { get; set; }
 
+		[JsonIgnore]
 		public AggregateCatalog Catalog { get; set; }
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
