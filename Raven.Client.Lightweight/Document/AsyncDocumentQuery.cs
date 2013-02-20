@@ -734,7 +734,8 @@ namespace Raven.Client.Document
 											rootTypes = {typeof(T)},
 											highlightedFields = new List<HighlightedField>(highlightedFields),
 											highlighterPreTags = highlighterPreTags,
-											highlighterPostTags = highlighterPostTags
+											highlighterPostTags = highlighterPostTags,
+											disableEntitiesTracking = disableEntitiesTracking
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;

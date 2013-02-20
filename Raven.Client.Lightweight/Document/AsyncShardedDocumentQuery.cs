@@ -112,7 +112,8 @@ namespace Raven.Client.Document
 				includes = new HashSet<string>(includes),
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
-				highlighterPostTags = highlighterPostTags
+				highlighterPostTags = highlighterPostTags,
+				disableEntitiesTracking = disableEntitiesTracking
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;

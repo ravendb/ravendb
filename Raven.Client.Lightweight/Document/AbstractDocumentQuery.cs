@@ -190,6 +190,10 @@ namespace Raven.Client.Document
         /// </summary>
 	    protected string resultsTransformer;
 
+		/// <summary>
+		/// Determines if entities should be tracked and kept in memory
+		/// </summary>
+		protected bool disableEntitiesTracking;
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -342,6 +346,7 @@ namespace Raven.Client.Document
 			highlighterPreTags = other.highlighterPreTags;
 			highlighterPostTags = other.highlighterPostTags;
 		    queryInputs = other.queryInputs;
+			disableEntitiesTracking = other.disableEntitiesTracking;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -490,7 +495,8 @@ namespace Raven.Client.Document
 									  setOperationHeaders,
 									  timeout,
 									  transformResultsFunc,
-									  includes);
+									  includes,
+									  disableEntitiesTracking);
 		}
 
 		public IndexQuery GetIndexQuery(bool isAsync)
@@ -690,6 +696,12 @@ namespace Raven.Client.Document
 		IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string[] preTags, string[] postTags)
 		{
 			this.SetHighlighterTags(preTags, postTags);
+			return this;
+		}
+
+		public IDocumentQueryCustomization NoTracking()
+		{
+			disableEntitiesTracking = true;
 			return this;
 		}
 

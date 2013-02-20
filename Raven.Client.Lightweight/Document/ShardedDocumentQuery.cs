@@ -129,6 +129,7 @@ namespace Raven.Client.Document
 				spatialRelation = spatialRelation,
 				databaseCommands = databaseCommands,
 				indexQuery = indexQuery,
+				disableEntitiesTracking = disableEntitiesTracking
 			};
 			return documentQuery;
 		}

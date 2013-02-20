@@ -193,5 +193,11 @@ namespace Raven.Client
 		/// <param name="preTags">Prefix tags.</param>
 		/// <param name="postTags">Postfix tags.</param>
 		IDocumentQueryCustomization SetHighlighterTags(string[] preTags, string[] postTags);
+
+		/// <summary>
+		/// TODO arek
+		/// </summary>
+		/// <returns></returns>
+		IDocumentQueryCustomization NoTracking();
 	}
 }
