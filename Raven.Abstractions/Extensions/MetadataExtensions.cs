@@ -33,6 +33,7 @@ namespace Raven.Abstractions.Extensions
 			"Raven-Timer-Request",
 			"Raven-Authenticated-User",
 			"Raven-Last-Modified",
+			"Has-Api-Key",
 
 			// COTS
 			"Access-Control-Allow-Origin",
