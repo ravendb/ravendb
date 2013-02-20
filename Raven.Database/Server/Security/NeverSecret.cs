@@ -18,6 +18,7 @@ namespace Raven.Database.Server.Security
 				"/build/version",
 				"/OAuth/AccessToken",
 				"/OAuth/API-Key",
+				"/OAuth/Cookie",
 			};
 	}
 }
