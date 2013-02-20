@@ -79,6 +79,7 @@ namespace Raven.Studio.Features.Documents
             var query = new IndexQuery();
             query.Start = itemIndex;
             query.PageSize = 1;
+            query.SkipTransformResults = true;
 
             return DatabaseCommands.QueryAsync(ConflictsIndexName, query, null);
         }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Reactive.Linq;
 using System.Windows;
@@ -17,6 +18,7 @@ using Raven.Studio.Extensions;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -27,11 +29,23 @@ namespace Raven.Studio.Models
         private ICommand deleteSelectedDocuments;
         private ICommand copyIdsToClipboard;
         private ICommand editDocument;
+        private IDictionary<Guid, string> replicationSourcesLookup;
         private static ConcurrentSet<string> performedIndexChecks = new ConcurrentSet<string>();
+        private IDisposable replicationSourcesChanges;
 
         public VirtualCollection<ViewableDocument> ConflictDocuments { get; private set; }
 
         public ItemSelection<VirtualItem<ViewableDocument>> ItemSelection { get; private set; }
+
+        public IDictionary<Guid, string> ReplicationSourcesLookup
+        {
+            get { return replicationSourcesLookup; }
+            private set
+            {
+                replicationSourcesLookup = value;
+                OnPropertyChanged(() => ReplicationSourcesLookup);
+            }
+        }
 
         public ConflictsModel()
         {
@@ -73,8 +87,18 @@ namespace Raven.Studio.Models
 
             ObserveSourceChanges();
             ConflictDocuments.Refresh(RefreshMode.ClearStaleData);
-
+            LoadReplicationSources();
             EnsureIndexExists();
+        }
+
+        private void LoadReplicationSources()
+        {
+            ApplicationModel.DatabaseCommands.StartsWithAsync("Raven/Replication/Sources", 0, 1024)
+                            .ContinueOnSuccessInTheUIThread(
+                                docs =>
+                                ReplicationSourcesLookup =
+                                docs.ToDictionary(d => d.DataAsJson.Value<Guid>("ServerInstanceId"),
+                                                  d => d.DataAsJson.Value<string>("Source")));
         }
 
         private void EnsureIndexExists()
@@ -89,19 +113,7 @@ namespace Raven.Studio.Models
                 return;
             }
 
-            ApplicationModel.DatabaseCommands.QueryAsync(ConflictsIndexName, new IndexQuery() {PageSize = 0},
-                                                         new string[0])
-                            .ContinueWith(task =>
-                            {
-                                if (task.IsFaulted)
-                                {
-                                    var exception = task.Exception.ExtractSingleInnerException() as WebException;
-                                    if (exception != null && (exception.Response as HttpWebResponse).StatusCode == HttpStatusCode.NotFound)
-                                    {
-                                        CreateIndex();
-                                    }
-                                }
-                            });
+            CreateIndex();
         }
 
         private void CreateIndex()
@@ -112,6 +124,12 @@ namespace Raven.Studio.Models
                         let id = doc[""@metadata""][""@id""]
                         where doc[""@metadata""][""Raven-Replication-Conflict""] == true && (id.Length < 47 || !id.Substring(id.Length - 47).StartsWith(""/conflicts/"", StringComparison.OrdinalIgnoreCase))
                         select new { ConflictDetectedAt = (DateTime)doc[""@metadata""][""Last-Modified""]}",
+                TransformResults = @"from result in results
+                                    select new { 
+	                                    Id = result[""@metadata""][""@id""], 
+	                                    ConflictDetectedAt = (DateTime)result[""@metadata""][""Last-Modified""], 
+	                                    Versions = result.Conflicts.Select(versionId => { var version = Database.Load(versionId); return new { Id = versionId, SourceId = version[""@metadata""][""Raven-Replication-Source""]}; })
+                                    }"
             };
 
             ApplicationModel.DatabaseCommands.PutIndexAsync(ConflictsIndexName, index, true).CatchIgnore();
@@ -138,6 +156,13 @@ namespace Raven.Studio.Models
                     .SampleResponsive(TimeSpan.FromSeconds(1))
                     .ObserveOnDispatcher()
                     .Subscribe(_ => ConflictDocuments.Refresh(RefreshMode.PermitStaleDataWhilstRefreshing));
+
+                replicationSourcesChanges =
+                    databaseModel.DocumentChanges.Where(
+                        d => d.Id.StartsWith("Raven/Replication/Sources/", StringComparison.OrdinalIgnoreCase))
+                                 .SampleResponsive(TimeSpan.FromSeconds(1))
+                                 .ObserveOnDispatcher()
+                                 .Subscribe(_ => LoadReplicationSources());
             }
         }
 
@@ -145,6 +170,9 @@ namespace Raven.Studio.Models
         {
             if (changesSubscription != null)
                 changesSubscription.Dispose();
+
+            if (replicationSourcesChanges != null)
+                replicationSourcesChanges.Dispose();
         }
     }
 }
