@@ -195,9 +195,9 @@ namespace Raven.Client
 		IDocumentQueryCustomization SetHighlighterTags(string[] preTags, string[] postTags);
 
 		/// <summary>
-		/// TODO arek
+		/// Disables tracking for queried entities by Raven's Unit of Work.
+		/// Using this option will prevent holding query results in memory.
 		/// </summary>
-		/// <returns></returns>
 		IDocumentQueryCustomization NoTracking();
 	}
 }

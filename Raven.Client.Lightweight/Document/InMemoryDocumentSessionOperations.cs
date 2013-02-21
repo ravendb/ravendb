@@ -111,6 +111,17 @@ namespace Raven.Client.Document
 		public int NumberOfRequests { get; private set; }
 
 		/// <summary>
+		/// Gets the number of entities held in memory to manage Unit of Work
+		/// </summary>
+		public int NumberOfEntitiesInUnitOfWork
+		{
+			get
+			{
+				return entitiesAndMetadata.Count;
+			}
+		}
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
@@ -348,7 +359,7 @@ more responsive application.
 				documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
 			}
 
-			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, false);
+			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, noTracking: false);
 		}
 
 		/// <summary>
