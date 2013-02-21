@@ -7,8 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Jint.Native;
+using Raven.Database.Exceptions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Reflection;
@@ -70,17 +70,17 @@ namespace Raven.Database.Json
 			{
 				jintEngine = scriptsCache.CheckoutScript(CreateEngine, patch);
 			}
-			catch (NotSupportedException)
+			catch (NotSupportedException e)
 			{
-				throw new ParseExeption();
+				throw new ParseException("Could not parse script", e);
 			}
-			catch (JintException)
+			catch (JintException e)
 			{
-				throw new ParseExeption();
+				throw new ParseException("Could not parse script", e);
 			}
 			catch (Exception e)
 			{
-				throw new ParseExeption("Could not parse: " + Environment.NewLine + patch.Script, e);
+				throw new ParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
 			}
 
 			loadDocumentStatic = loadDocument;
