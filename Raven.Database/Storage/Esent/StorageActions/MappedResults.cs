@@ -779,7 +779,6 @@ namespace Raven.Storage.Esent.StorageActions
 					insertAction();
 					update.SaveAndGotoBookmark();
 				}
-				updateAction();
 				return;
 			}
 
