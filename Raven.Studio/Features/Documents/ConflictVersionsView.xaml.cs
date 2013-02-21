@@ -28,14 +28,14 @@ namespace Raven.Studio.Features.Documents
             set { SetValue(ConflictVersionInfoProperty, value); }
         }
 
-        public IDictionary<Guid,string> ReplicationSourcesLookup
+        public IDictionary<string,string> ReplicationSourcesLookup
         {
-            get { return (IDictionary<Guid,string>)GetValue(ReplicationSourcesLookupProperty); }
+            get { return (IDictionary<string,string>)GetValue(ReplicationSourcesLookupProperty); }
             set { SetValue(ReplicationSourcesLookupProperty, value); }
         }
 
         public static readonly DependencyProperty ReplicationSourcesLookupProperty =
-            DependencyProperty.Register("ReplicationSourcesLookup", typeof(IDictionary<Guid,string>), typeof(ConflictVersionsView), new PropertyMetadata(null, OnVersionsChanged));
+            DependencyProperty.Register("ReplicationSourcesLookup", typeof(IDictionary<string,string>), typeof(ConflictVersionsView), new PropertyMetadata(null, OnVersionsChanged));
 
         public static readonly DependencyProperty ConflictVersionInfoProperty =
             DependencyProperty.Register("ConflictVersionInfo", typeof(RavenJArray), typeof(ConflictVersionsView), new PropertyMetadata(null, OnVersionsChanged));
@@ -61,7 +61,7 @@ namespace Raven.Studio.Features.Documents
             foreach (var version in ConflictVersionInfo)
             {
                 var versionId = version.Value<string>("Id");
-                var sourceId = version.Value<Guid>("SourceId");
+                var sourceId = version.Value<string>("SourceId");
 
                 var hyperlink = new InlineUIContainer()
                 {
@@ -86,7 +86,7 @@ namespace Raven.Studio.Features.Documents
             TextBlock.Blocks.Add(para);
         }
 
-        private object CreateToolTip(string versionId, Guid sourceId)
+        private object CreateToolTip(string versionId, string sourceId)
         {
             string serverUrl = string.Empty;
 

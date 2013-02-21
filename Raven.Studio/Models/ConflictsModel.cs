@@ -29,7 +29,7 @@ namespace Raven.Studio.Models
         private ICommand deleteSelectedDocuments;
         private ICommand copyIdsToClipboard;
         private ICommand editDocument;
-        private IDictionary<Guid, string> replicationSourcesLookup;
+        private IDictionary<string, string> replicationSourcesLookup;
         private static ConcurrentSet<string> performedIndexChecks = new ConcurrentSet<string>();
         private IDisposable replicationSourcesChanges;
 
@@ -37,7 +37,7 @@ namespace Raven.Studio.Models
 
         public ItemSelection<VirtualItem<ViewableDocument>> ItemSelection { get; private set; }
 
-        public IDictionary<Guid, string> ReplicationSourcesLookup
+        public IDictionary<string, string> ReplicationSourcesLookup
         {
             get { return replicationSourcesLookup; }
             private set
@@ -96,9 +96,10 @@ namespace Raven.Studio.Models
             ApplicationModel.DatabaseCommands.StartsWithAsync("Raven/Replication/Sources", 0, 1024)
                             .ContinueOnSuccessInTheUIThread(
                                 docs =>
-                                ReplicationSourcesLookup =
-                                docs.ToDictionary(d => d.DataAsJson.Value<Guid>("ServerInstanceId"),
-                                                  d => d.DataAsJson.Value<string>("Source")));
+                                {
+                                    ReplicationSourcesLookup =
+                                        docs.ToDictionary(d => d.DataAsJson.Value<string>("ServerInstanceId"), d => d.DataAsJson.Value<string>("Source"));
+                                });
         }
 
         private void EnsureIndexExists()
