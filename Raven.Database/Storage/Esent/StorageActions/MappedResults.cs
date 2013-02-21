@@ -21,6 +21,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -748,8 +749,8 @@ namespace Raven.Storage.Esent.StorageActions
 
 					update.Save();
 				}
-			},() => Api.SetColumn(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"],
-			                      (int)performedReduceType));
+			}, () => Api.SetColumn(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"],
+								  (int)performedReduceType));
 		}
 
 		private void ExecuteOnReduceKey(string view, string reduceKey,
@@ -913,9 +914,23 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void IncrementReduceKeyCounter(string view, string reduceKey, int val)
 		{
-			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
-				() => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val),
-				() => Api.SetColumn(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val));
+			try
+			{
+				ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
+								   () => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val),
+								   () => Api.SetColumn(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val));
+			}
+			catch (EsentErrorException e)
+			{
+				// we should NOT be getting this error, we still got it, and while I think I fixed the reason for that...
+				// if we do, it is okay to ignore it in this specific instance, since it will just skew the number for reduce counts a bit
+				// and it will all fix itself one way or the other
+				if (e.Error != JET_err.WriteConflict)
+					throw;
+				logger.WarnException(
+					"Could not update the reduce key counter for index " + view + ", key: " + reduceKey +
+					". Ignoring this, multi step reduce promotion may be delayed for this value.", e);
+			}
 		}
 
 		private void DecrementReduceKeyCounter(string view, string reduceKey)
