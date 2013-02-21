@@ -11,15 +11,11 @@ namespace Raven.Client.Util
 {
 	internal static class RequestsCacheExtensions
 	{
-		internal static void ClearItemsForDatabase(this SimpleCache<CachedRequest> cache, string databaseName)
+		internal static void ForceServerCheckOfCachedItemsForDatabase(this SimpleCache<CachedRequest> cache, string databaseName)
 		{
 			foreach (var item in cache.actualCache.Where(x => x.Value.Database.Equals(databaseName, StringComparison.Ordinal)))
 			{
-				CachedRequest _;
-				if (cache.actualCache.TryRemove(item.Key, out _))
-				{
-					cache.lruKeys.Remove(item.Key);
-				}
+				item.Value.ForceServerCheck = true;
 			}
 		}
 	}
