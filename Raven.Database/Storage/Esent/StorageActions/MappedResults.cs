@@ -748,15 +748,15 @@ namespace Raven.Storage.Esent.StorageActions
 
 					update.Save();
 				}
-			},
-			createIfMissing: true);
+			},() => Api.SetColumn(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"],
+			                      (int)performedReduceType));
 		}
 
 		private void ExecuteOnReduceKey(string view, string reduceKey,
 			Table table,
 			IDictionary<string, JET_COLUMNID> columnids,
-			Action action,
-			bool createIfMissing)
+			Action updateAction,
+			Action insertAction)
 		{
 			var hashReduceKey = HashReduceKey(reduceKey);
 
@@ -767,7 +767,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			if (Api.TrySeek(session, table, SeekGrbit.SeekEQ) == false)
 			{
-				if (createIfMissing == false)
+				if (insertAction == null)
 					return;
 				using (var update = new Update(session, table, JET_prep.Insert))
 				{
@@ -775,9 +775,10 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.SetColumn(session, table, columnids["reduce_key"], reduceKey, Encoding.Unicode);
 					Api.SetColumn(session, table, columnids["hashed_reduce_key"], hashReduceKey);
 
+					insertAction();
 					update.SaveAndGotoBookmark();
 				}
-				action();
+				updateAction();
 				return;
 			}
 
@@ -792,9 +793,25 @@ namespace Raven.Storage.Esent.StorageActions
 				if (StringComparer.Ordinal.Equals(reduceKey, reduceKeyFromDb) == false)
 					continue;
 
-				action();
+				updateAction();
 				return;
 			} while (Api.TryMoveNext(session, table));
+
+			// couldn't find it...
+
+			if (insertAction == null)
+				return;
+
+			using (var update = new Update(session, table, JET_prep.Insert))
+			{
+				Api.SetColumn(session, table, columnids["view"], view, Encoding.Unicode);
+				Api.SetColumn(session, table, columnids["reduce_key"], reduceKey, Encoding.Unicode);
+				Api.SetColumn(session, table, columnids["hashed_reduce_key"], hashReduceKey);
+
+				insertAction();
+
+				update.SaveAndGotoBookmark();
+			}
 		}
 
 		public ReduceType GetLastPerformedReduceType(string indexName, string reduceKey)
@@ -803,7 +820,7 @@ namespace Raven.Storage.Esent.StorageActions
 			ExecuteOnReduceKey(indexName, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns, () =>
 			{
 				reduceType = Api.RetrieveColumnAsInt32(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"]).Value;
-			}, createIfMissing: false);
+			}, null);
 			return (ReduceType)reduceType;
 		}
 
@@ -898,7 +915,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
 				() => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val),
-				createIfMissing: true);
+				() => Api.SetColumn(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val));
 		}
 
 		private void DecrementReduceKeyCounter(string view, string reduceKey)
@@ -914,12 +931,12 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.JetDelete(session, ReduceKeysCounts);
 						removeReducedKeyStatus = true;
 					}
-				}, createIfMissing: false);
+				}, null);
 
 			if (removeReducedKeyStatus)
 			{
 				ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns,
-								   () => Api.JetDelete(session, ReduceKeysStatus), createIfMissing: false);
+								   () => Api.JetDelete(session, ReduceKeysStatus), null);
 			}
 		}
 
@@ -929,7 +946,7 @@ namespace Raven.Storage.Esent.StorageActions
 			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, () =>
 			{
 				numberOfMappedItemsPerReduceKey = Api.RetrieveColumnAsInt32(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
-			}, createIfMissing: false);
+			}, null);
 
 			return numberOfMappedItemsPerReduceKey;
 		}
