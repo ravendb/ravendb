@@ -882,7 +882,10 @@ namespace Raven.Client.Connection.Async
 			}
 			var request =
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
-																						 convention));
+				                                                                         convention)
+				{
+					AvoidCachingRequest = query.DisableCaching
+				});
 
 			request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 

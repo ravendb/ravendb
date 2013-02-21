@@ -168,6 +168,11 @@ namespace Raven.Abstractions.Data
         /// </summary>
 	    public string ResultsTransformer { get; set; }
 
+		/// <summary>
+		/// Whatever we should disable caching of query results
+		/// </summary>
+		public bool DisableCaching { get; set; }
+
 	    /// <summary>
 		/// Gets the index query URL.
 		/// </summary>

@@ -196,8 +196,13 @@ namespace Raven.Client
 
 		/// <summary>
 		/// Disables tracking for queried entities by Raven's Unit of Work.
-		/// Using this option will prevent holding query results in memory.
+		/// Usage of this option will prevent holding query results in memory.
 		/// </summary>
 		IDocumentQueryCustomization NoTracking();
+
+		/// <summary>
+		/// Disables caching for query results.
+		/// </summary>
+		IDocumentQueryCustomization NoCaching();
 	}
 }

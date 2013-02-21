@@ -3,11 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Xunit;
@@ -19,7 +17,7 @@ namespace Raven.Tests.Issues
 		private class Item { }
 
 		[Fact]
-		public void CanDisableQueryResultsTrackingForDocumentSession()
+		public void CanDisableQueryResultsTrackingForDocumentQuery()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -42,7 +40,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void CanDisableQueryResultsTrackingForAsyncDocumentSession()
+		public void CanDisableQueryResultsTrackingForAsyncDocumentQuery()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -66,7 +64,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void CanDisableQueryResultsTrackingForShardedDocumentSession()
+		public void CanDisableQueryResultsTrackingForShardedDocumentQuery()
 		{
 
 			using (GetNewServer(8079))
@@ -98,7 +96,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void CanDisableQueryResultsTrackingForAsyncShardedDocumentSession()
+		public void CanDisableQueryResultsTrackingForAsyncShardedDocumentQuery()
 		{
 
 			using (GetNewServer(8079))
@@ -127,6 +125,135 @@ namespace Raven.Tests.Issues
 					Assert.Equal(2, asyncQuery.Result.Count);
 					Assert.Equal(0, ((InMemoryDocumentSessionOperations)asyncSession).NumberOfEntitiesInUnitOfWork);
 				}
+			}
+		}
+
+		[Fact]
+		public void CanDisableQueryResultsCachingForDocumentQuery()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item());
+					session.Store(new Item());
+
+					session.SaveChanges();
+				}
+
+				store.JsonRequestFactory.ResetCache();
+
+				using (var session = store.OpenSession())
+				{
+					var items = session.Query<Item>().Customize(x => x.NoCaching().WaitForNonStaleResults()).ToList();
+
+					Assert.Equal(2, items.Count);
+				}
+
+				Assert.Equal(0, store.JsonRequestFactory.CurrentCacheSize);
+			}
+		}
+
+		[Fact]
+		public void CanDisableQueryResultsCachingForAsyncDocumentQuery()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item());
+					session.Store(new Item());
+
+					session.SaveChanges();
+				}
+
+				store.JsonRequestFactory.ResetCache();
+
+				using (var asyncSession = store.OpenAsyncSession())
+				{
+					var asyncQuery = asyncSession.Query<Item>().Customize(x => x.NoCaching().WaitForNonStaleResults()).ToListAsync();
+
+					asyncQuery.Wait();
+					Assert.Equal(2, asyncQuery.Result.Count);
+				}
+
+				Assert.Equal(0, store.JsonRequestFactory.CurrentCacheSize);
+			}
+		}
+
+		[Fact]
+		public void CanDisableQueryResultsCachingForShardedDocumentQuery()
+		{
+			using (GetNewServer(8079))
+			using (GetNewServer(8078))
+			using (var store = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
+			{
+				{"1", CreateDocumentStore(8079)},
+				{"2", CreateDocumentStore(8078)},
+			})))
+			{
+				store.Initialize();
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item());
+					session.Store(new Item());
+
+					session.SaveChanges();
+				}
+
+				store.ShardStrategy.Shards["1"].JsonRequestFactory.ResetCache();
+				store.ShardStrategy.Shards["2"].JsonRequestFactory.ResetCache();
+
+				using (var session = store.OpenSession())
+				{
+					var items = session.Query<Item>().Customize(x => x.NoCaching().WaitForNonStaleResults()).ToList();
+
+					Assert.Equal(2, items.Count);
+				}
+
+				Assert.Equal(0, store.ShardStrategy.Shards["1"].JsonRequestFactory.CurrentCacheSize);
+				Assert.Equal(0, store.ShardStrategy.Shards["2"].JsonRequestFactory.CurrentCacheSize);
+			}
+		}
+
+		[Fact]
+		public void CanDisableQueryResultsCachingForAsyncShardedDocumentQuery()
+		{
+
+			using (GetNewServer(8079))
+			using (GetNewServer(8078))
+			using (var store = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
+			{
+				{"1", CreateDocumentStore(8079)},
+				{"2", CreateDocumentStore(8078)},
+			})))
+			{
+				store.Initialize();
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item());
+					session.Store(new Item());
+
+					session.SaveChanges();
+				}
+
+				store.ShardStrategy.Shards["1"].JsonRequestFactory.ResetCache();
+				store.ShardStrategy.Shards["2"].JsonRequestFactory.ResetCache();
+
+				using (var asyncSession = store.OpenAsyncSession())
+				{
+					var asyncQuery = asyncSession.Query<Item>().Customize(x => x.NoCaching().WaitForNonStaleResults()).ToListAsync();
+
+					asyncQuery.Wait();
+					Assert.Equal(2, asyncQuery.Result.Count);
+				}
+
+				Assert.Equal(0, store.ShardStrategy.Shards["1"].JsonRequestFactory.CurrentCacheSize);
+				Assert.Equal(0, store.ShardStrategy.Shards["2"].JsonRequestFactory.CurrentCacheSize);
 			}
 		}
 

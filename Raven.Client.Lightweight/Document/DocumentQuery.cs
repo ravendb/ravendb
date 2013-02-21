@@ -125,7 +125,8 @@ namespace Raven.Client.Document
 				highlighterPostTags = highlighterPostTags,
                 resultsTransformer = resultsTransformer,
                 queryInputs = queryInputs,
-				disableEntitiesTracking = disableEntitiesTracking
+				disableEntitiesTracking = disableEntitiesTracking,
+				disableCaching = disableCaching
 			};
 			return documentQuery;
 		}

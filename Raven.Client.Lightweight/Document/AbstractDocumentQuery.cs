@@ -196,6 +196,11 @@ namespace Raven.Client.Document
 		protected bool disableEntitiesTracking;
 
 		/// <summary>
+		/// Determine if query results should be cached.
+		/// </summary>
+		protected bool disableCaching;
+
+		/// <summary>
 		///   Get the name of the index being queried
 		/// </summary>
 		public string IndexQueried
@@ -347,6 +352,7 @@ namespace Raven.Client.Document
 			highlighterPostTags = other.highlighterPostTags;
 		    queryInputs = other.queryInputs;
 			disableEntitiesTracking = other.disableEntitiesTracking;
+			disableCaching = other.disableCaching;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -702,6 +708,12 @@ namespace Raven.Client.Document
 		public IDocumentQueryCustomization NoTracking()
 		{
 			disableEntitiesTracking = true;
+			return this;
+		}
+
+		public IDocumentQueryCustomization NoCaching()
+		{
+			disableCaching = true;
 			return this;
 		}
 
@@ -1656,7 +1668,8 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlighterPreTags = highlighterPreTags.ToArray(),
 					HighlighterPostTags = highlighterPostTags.ToArray(),
                     ResultsTransformer = resultsTransformer,
-                    QueryInputs  = queryInputs
+                    QueryInputs  = queryInputs,
+					DisableCaching = disableCaching
 				};
 			}
 
@@ -1676,7 +1689,8 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPreTags = highlighterPreTags.ToArray(),
 				HighlighterPostTags = highlighterPostTags.ToArray(),
                 ResultsTransformer = this.resultsTransformer,
-                QueryInputs = queryInputs
+                QueryInputs = queryInputs,
+				DisableCaching = disableCaching
 			};
 
 			if (pageSize != null)

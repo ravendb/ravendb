@@ -133,6 +133,14 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// The number of currently held requests in the cache
+		/// </summary>
+		public int CurrentCacheSize
+		{
+			get { return cache.CurrentSize; }
+		}
+
+		/// <summary>
 		/// Determine whether to use compression or not 
 		/// </summary>
 		public bool DisableRequestCompression { get; set; }
