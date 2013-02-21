@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
@@ -32,9 +34,36 @@ namespace Raven.Database.Indexing
 			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
-			return actions.Staleness.IsMapStale(indexesStat.Name);
+			var isStale = actions.Staleness.IsMapStale(indexesStat.Name);
+			var indexingPriority = indexesStat.Priority;
+			if (isStale == false)
+				return false;
+
+			if (indexingPriority == IndexingPriority.Normal)
+			{
+				onlyFoundIdleWork.Value = false;
+				return true;
+			}
+
+			if (indexingPriority.HasFlag(IndexingPriority.Disabled))
+				return false;
+
+			if (isIdle == false)
+				return false; // everything else is only valid on idle runs
+
+			if (indexingPriority.HasFlag(IndexingPriority.Idle))
+				return true;
+
+			if (indexingPriority.HasFlag(IndexingPriority.Abandoned))
+			{
+				var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
+
+				return (timeSinceLastIndexing > context.Configuration.TimeToWaitBeforeRunningAbandonedIndexes);
+			}
+
+			throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Name + ": " + indexesStat.Priority);
 		}
 
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
@@ -126,12 +155,16 @@ namespace Raven.Database.Indexing
 		{
 			if (result.Count == 0)
 				return;
-
+			/*
+			This is EXPLICILTY not here, we always want to allow this to run additional indexes
+			if we still have free spots to run them from threading perspective.
+			 
 			if (result.Count == 1)
 			{
 				action(result[0]);
 				return;
 			}
+			*/
 
 			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
 
@@ -156,7 +189,7 @@ namespace Raven.Database.Indexing
 						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
 						indexToWorkOn.Index.CurrentMapIndexingTask = null;
 					}
-					finally 
+					finally
 					{
 						indexingSemaphore.Release();
 						indexingCompletedEvent.Set();
@@ -167,7 +200,7 @@ namespace Raven.Database.Indexing
 							context.NotifyAboutWork();
 						}
 					}
-					
+
 				});
 
 				indexingSemaphore.Wait();
@@ -192,19 +225,20 @@ namespace Raven.Database.Indexing
 			var totalWaitTime = Stopwatch.StartNew();
 			while (indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks)
 			{
-				int timeout = timeToWait - (int) totalWaitTime.ElapsedMilliseconds;
+				int timeout = timeToWait - (int)totalWaitTime.ElapsedMilliseconds;
 				if (timeout <= 0)
 					break;
 				indexingCompletedEvent.Reset();
 				indexingCompletedEvent.Wait(timeout);
 			}
-			Interlocked.Increment(ref isSlowIndex);
-
-			if (Log.IsDebugEnabled == false)
-				return;
 
 			var creatingNewBatch = indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks;
 			if (creatingNewBatch == false)
+				return;
+
+			Interlocked.Increment(ref isSlowIndex);
+
+			if (Log.IsDebugEnabled == false)
 				return;
 
 			var slowIndexes = result.Where(x =>
@@ -214,6 +248,7 @@ namespace Raven.Database.Indexing
 			})
 				.Select(x => x.IndexName)
 				.ToArray();
+
 			Log.Debug("Indexing is now split because there are {0:#,#} slow indexes [{1}], memory usage may increase, and those indexing may experience longer stale times (but other indexes will be faster)",
 					 slowIndexes.Length,
 					 string.Join(", ", slowIndexes));

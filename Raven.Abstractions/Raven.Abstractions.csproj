@@ -587,6 +587,7 @@
     <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
+    <Compile Include="Data\QueryHeaderInformation.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
     <Compile Include="Data\AggregationOperation.cs" />
@@ -629,6 +630,7 @@
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Data\StopWordsSetup.cs" />
+    <Compile Include="Data\StreamResult.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
@@ -656,7 +658,6 @@
     <Compile Include="Json\ConflictsResolver.cs" />
     <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
     <Compile Include="Json\JsonDateTimeISO8601Converter.cs" />
-    <Compile Include="Json\JsonFloatConverter.cs" />
     <Compile Include="Json\Linq\DictionaryWithParentSnapshot.cs" />
     <Compile Include="Json\Linq\Extensions.cs" />
     <Compile Include="Json\Linq\RavenJArray.cs" />
@@ -709,6 +710,7 @@
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="MissingFromBCL\WinRTCompetability.cs" />
     <Compile Include="OAuth\AbstractAuthenticator.cs" />
+    <Compile Include="OAuth\BasicAuthenticator.cs" />
     <Compile Include="OAuth\SecuredAuthenticator.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />

@@ -34,7 +34,7 @@ namespace Raven.Database.Extensions
 				if (ctors != null)
 					return (Analyzer)Activator.CreateInstance(analyzerType);
 
-				ctors = analyzerType.GetConstructor(new[] {typeof (Lucene.Net.Util.Version)});
+				ctors = analyzerType.GetConstructor(new[] { typeof(Lucene.Net.Util.Version) });
 				if (ctors != null)
 					return (Analyzer)Activator.CreateInstance(analyzerType, Lucene.Net.Util.Version.LUCENE_30);
 			}
@@ -56,7 +56,7 @@ namespace Raven.Database.Extensions
 			FieldIndexing value;
 			if (self.Indexes.TryGetValue(name, out value) == false)
 			{
-				if(self.Indexes.TryGetValue(Constants.AllFields, out value) == false)
+				if (self.Indexes.TryGetValue(Constants.AllFields, out value) == false)
 				{
 					string ignored;
 					if (self.Analyzers.TryGetValue(name, out ignored) ||
@@ -138,22 +138,24 @@ namespace Raven.Database.Extensions
 		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition)
 		{
 			var spatialQuery = self as SpatialIndexQuery;
-			if (self.SortedFields == null || self.SortedFields.Length <= 0)
+			var sortedFields = self.SortedFields;
+			if (sortedFields == null || sortedFields.Length <= 0)
 			{
-				return null;
+				if (spatialQuery == null || string.IsNullOrEmpty(self.Query) == false)
+					return null;
+				sortedFields = new[] { new SortedField(Constants.DistanceFieldName), };
 			}
 
-
-			return new Sort(self.SortedFields
+			return new Sort(sortedFields
 							.Select(sortedField =>
 							{
 								if (sortedField.Field == Constants.TemporaryScoreValue)
 								{
 									return SortField.FIELD_SCORE;
 								}
-								if(sortedField.Field.StartsWith(Constants.RandomFieldName))
+								if (sortedField.Field.StartsWith(Constants.RandomFieldName))
 								{
-									var parts = sortedField.Field.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
+									var parts = sortedField.Field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 									if (parts.Length < 2) // truly random
 										return new RandomSortField(Guid.NewGuid().ToString());
 									return new RandomSortField(parts[1]);
@@ -167,9 +169,9 @@ namespace Raven.Database.Extensions
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
-							
+
 								return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
-							
+
 							})
 							.ToArray());
 		}

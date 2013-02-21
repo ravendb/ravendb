@@ -101,7 +101,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return false;
 			}
 			var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
-			return Buffers.Compare(lastEtag, lastIndexedEtag) > 0;
+			return (Buffers.Compare(lastEtag, lastIndexedEtag) > 0);
 		}
 
 		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)

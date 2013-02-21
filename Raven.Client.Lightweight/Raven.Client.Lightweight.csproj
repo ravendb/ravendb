@@ -65,6 +65,7 @@
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Util\EvictItemsFromCacheBasedOnChanges.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
     <Compile Include="Changes\LocalConnectionState.cs" />
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
@@ -111,7 +112,6 @@
     <Compile Include="Document\GenerateEntityIdOnTheClient.cs" />
     <Compile Include="Document\EntityToJson.cs" />
     <Compile Include="Document\MultiDatabaseHiLoGenerator.cs" />
-    <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
     <Compile Include="Document\RemoteBulkInsertOperation.cs" />
     <Compile Include="Document\BulkInsertOperation.cs" />
     <Compile Include="Exceptions\ServerRequestError.cs" />

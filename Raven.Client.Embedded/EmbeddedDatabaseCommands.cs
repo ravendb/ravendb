@@ -4,11 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Json;
 using Raven.Database.Data;
 using Raven.Abstractions.Commands;
@@ -414,6 +417,45 @@ namespace Raven.Client.Embedded
 			}
 
 			return queryResult;
+		}
+
+		/// <summary>
+		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+		/// of the number of items that might be returned.
+		/// </summary>
+		public IEnumerator<RavenJObject> Query(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
+		{
+			if (query.PageSizeSet == false)
+				query.PageSize = int.MaxValue;
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var items = new BlockingCollection<RavenJObject>();
+			using (var waitForHeaders = new ManualResetEventSlim(false))
+			{
+				QueryHeaderInformation localQueryHeaderInfo = null;
+				Task.Factory.StartNew(() =>
+				{
+					database.Query(index, query, information =>
+					{
+						localQueryHeaderInfo = information;
+						waitForHeaders.Set();
+					}, items.Add);
+					items.Add(null);
+				});
+				waitForHeaders.Wait();
+				queryHeaderInfo = localQueryHeaderInfo;
+			}
+			return YieldUntilDone(items);
+		}
+
+		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items)
+		{
+			while (true)
+			{
+				var ravenJObject = items.Take();
+				if (ravenJObject == null)
+					yield break;
+				yield return ravenJObject;
+			}
 		}
 
 		/// <summary>

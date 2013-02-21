@@ -24,7 +24,8 @@ namespace Raven.Database.Plugins.Builtins
 				SetIconForFolder(dataDirectory);
 
 				var tenantsPath = Directory.GetParent(dataDirectory);
-				if (tenantsPath.Name == "Tenants")
+				if (tenantsPath.Name == "Tenants" ||
+					tenantsPath.Name == "Databases")
 					SetIconForFolder(dataDirectory);
 			}
 			catch (Exception e)

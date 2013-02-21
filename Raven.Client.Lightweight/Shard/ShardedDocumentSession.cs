@@ -645,6 +645,28 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
 			return commands.UrlFor(value.Key);
 		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
+		{
+			QueryHeaderInformation _;
+			return Stream<T>(query, out _);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
+		{
+			QueryHeaderInformation _;
+			return Stream<T>(query, out _);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
 	}
 }
 

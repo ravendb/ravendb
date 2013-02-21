@@ -5,7 +5,8 @@
                      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                      xmlns:Settings="clr-namespace:Raven.Studio.Features.Settings"
                      xmlns:Models="clr-namespace:Raven.Studio.Models"
-                     xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" 
+                     xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     xmlns:controls="clr-namespace:Raven.Studio.Controls"
                      mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400" 
                      d:DataContext="{d:DesignInstance Models:SettingsPageModel}">
     
@@ -28,20 +29,16 @@
                              Command="{StaticResource NavigateToCommand}"
                              CommandParameter="/Databases"
                              VerticalAlignment="Center" />
-            <TextBlock Text=">"
-                       VerticalAlignment="Center"
-                       Margin="4,0" />
+			<controls:NavTriangle/>
 
             <TextBlock Text="{Binding CurrentDatabase}"
 					   Margin="0,0,0,0"
 					   VerticalAlignment="Center"
-					   Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}" />
+					   Style="{StaticResource Style_Text_Header}" />
 
-            <TextBlock Text=">"
-                       VerticalAlignment="Center"
-                       Margin="4,0" />
-            <TextBlock Text="Settings"
-                       Style="{StaticResource Style_TextBlock_Breadcrumb}"
+			<controls:NavTriangle/>
+			<TextBlock Text="Settings"
+                       Style="{StaticResource Style_Text_Header}"
                        VerticalAlignment="Center" />
         </StackPanel>
         <Border Background="{StaticResource Brush_ToolbarBackground}"

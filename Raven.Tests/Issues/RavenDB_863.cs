@@ -32,17 +32,13 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "C", "c" } });
 					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "D", "d" } });
 
-					accessor.MapReduce.ScheduleReductions("test", 0,
-														  new List<ReduceKeyAndBucket>()
-														  {
-															  new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"),
-															  new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b")
-														  });
+					accessor.MapReduce.ScheduleReductions("test", 0,new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"));
+					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
 				});
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce("test", new[] { "a", "b" }, 0, true, 2, new List<object>(), new HashSet<Tuple<string, int>>()).ToList();
+					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("test", new[] { "a", "b" }, 0, true, new List<object>()){Take = 2}).ToList();
 					Assert.Equal(2, results.Count);
 					Assert.Equal(results[0].Bucket, results[1].Bucket);
 				});
@@ -65,17 +61,13 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "C", "c" } });
 					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "D", "d" } });
 
-					accessor.MapReduce.ScheduleReductions("test", 0,
-														  new List<ReduceKeyAndBucket>()
-														  {
-															  new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"),
-															  new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b")
-														  });
+					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"));
+					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
 				});
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce("test", new[] { "a", "b" }, 0, true, 3, new List<object>(), new HashSet<Tuple<string, int>>()).ToList();
+					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("test", new[] { "a", "b" }, 0, true, new List<object>()){Take = 3}).ToList();
 					Assert.Equal(4, results.Count);
 				});
 			}

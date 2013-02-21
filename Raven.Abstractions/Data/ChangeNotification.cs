@@ -44,7 +44,12 @@ namespace Raven.Abstractions.Data
 		RemoveFromIndex = 4,
 
 		IndexAdded = 8,
-		IndexRemoved = 16
+		IndexRemoved = 16,
+
+        IndexDemotedToIdle = 32,
+        IndexPromotedFromIdle = 64,
+
+		IndexDemotedToAbandoned = 128,
 	}
 
 	public class IndexChangeNotification : EventArgs

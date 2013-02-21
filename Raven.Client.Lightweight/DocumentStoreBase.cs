@@ -246,7 +246,7 @@ namespace Raven.Client
 			get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
 		}
 
-		protected void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+		protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
 		{
 			var onSessionCreatedInternal = SessionCreatedInternal;
 			if (onSessionCreatedInternal != null)

@@ -227,39 +227,38 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0);
+			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(10)));
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
-			while (server.Server.HasPendingRequests)
-			{
-				Thread.Sleep(25);
-			}
+			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
-			while (true)
+			var done = SpinWait.SpinUntil(() =>
 			{
 				var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 				if (jsonDocument == null)
-					break;
+					return true;
 
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				if (backupStatus.IsRunning == false)
 				{
 					if (checkError)
 					{
-						var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+						var firstOrDefault =
+							backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
 						if (firstOrDefault != null)
 							Assert.False(true, firstOrDefault.Message);
 					}
 
-					return;
+					return true;
 				}
-				Thread.Sleep(50);
-			}
+				return false;
+			}, TimeSpan.FromMinutes(15));
+			Assert.True(done);
 		}
 
 		public static void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore, bool debug = true)

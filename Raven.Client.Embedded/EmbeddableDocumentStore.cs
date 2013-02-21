@@ -119,11 +119,22 @@ namespace Raven.Client.Embedded
 				lock(this)
 				{
 					Thread.MemoryBarrier();
-					if(databaseChanges == null)
-						databaseChanges = new EmbeddableDatabaseChanges(this, () => databaseChanges = null);
+					if (databaseChanges == null)
+						databaseChanges = (EmbeddableDatabaseChanges) CreateDatabaseChanges(null);
 				}
 			}
 			return databaseChanges;
+		}
+
+		/// <summary>
+		/// Creates embeddable instance of document changes
+		/// </summary>
+		/// <param name="database">Database name is ignored in embeddable document store</param>
+		protected override IDatabaseChanges CreateDatabaseChanges(string database)
+		{
+			IDatabaseChanges result = null;
+			result = new EmbeddableDatabaseChanges(this, () => result = null);
+			return result;
 		}
 
 		///<summary>

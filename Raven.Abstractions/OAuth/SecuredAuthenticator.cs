@@ -96,7 +96,7 @@ namespace Raven.Abstractions.OAuth
 
 
 #if !SILVERLIGHT && !NETFX_CORE
-		public Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
+		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
 		{
 			string serverRSAExponent = null;
 			string serverRSAModulus = null;

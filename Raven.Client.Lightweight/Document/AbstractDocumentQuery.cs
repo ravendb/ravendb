@@ -1156,15 +1156,13 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
 		{
-			fieldName = EnsureValidFieldName(new WhereParams {FieldName = fieldName});
+			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
 
-			if(fieldName == Constants.DocumentIdFieldName)
+			if (fieldName == Constants.DocumentIdFieldName)
 				return fieldName;
 
 			var val = (start ?? end);
-			var isNumeric = val is int || val is long || val is decimal || val is double || val is float || val is TimeSpan;
-
-			if (isNumeric && fieldName.EndsWith("_Range") == false)
+			if (conventions.UsesRangeType(val) && !fieldName.EndsWith("_Range"))
 				fieldName = fieldName + "_Range";
 			return fieldName;
 		}
@@ -1639,12 +1637,11 @@ If you really want to do in memory filtering on the data returned from the query
 				};
 			}
 
-			return new IndexQuery
+			var indexQuery = new IndexQuery
 			{
 				GroupBy = groupByFields,
 				AggregationOperation = aggregationOp,
 				Query = query,
-				PageSize = pageSize ?? 128,
 				Start = start,
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
@@ -1656,6 +1653,11 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPreTags = highlighterPreTags.ToArray(),
 				HighlighterPostTags = highlighterPostTags.ToArray()
 			};
+
+			if (pageSize != null)
+				indexQuery.PageSize = pageSize.Value;
+
+			return indexQuery;
 		}
 
 		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",

@@ -16,7 +16,7 @@ namespace Raven.Studio.Features.Tasks
 
 		public override ICommand Action
 		{
-			get { return new CreateSampleDataCommand(line => Execute.OnTheUI(() => Output.Add(line))); }
+			get { return new CreateSampleDataCommand(this, line => Execute.OnTheUI(() => Output.Add(line))); }
 		}
 	}
 }

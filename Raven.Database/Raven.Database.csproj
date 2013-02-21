@@ -392,6 +392,7 @@
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
+    <Compile Include="Server\Responders\Streams.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
@@ -595,7 +596,6 @@
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
-    <Compile Include="Plugins\Builtins\CleanupOldDynamicIndexes.cs" />
     <Compile Include="Plugins\Builtins\CreateFolderIcon.cs" />
     <Compile Include="Plugins\Builtins\DeleteRemovedIndexes.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
@@ -603,7 +603,6 @@
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
     <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
-    <Compile Include="Plugins\Builtins\DeleteTemporaryIndexes.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
@@ -684,6 +683,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From40To41.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From43To44.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
@@ -692,6 +692,7 @@
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />
     <Compile Include="Storage\Esent\StorageActions\MappedResults.cs" />
+    <Compile Include="Storage\Esent\StorageActions\OptimizedDeleter.cs" />
     <Compile Include="Storage\Esent\StorageActions\OptimizedIndexReader.cs" />
     <Compile Include="Storage\Esent\StorageActions\Queue.cs" />
     <Compile Include="Storage\Esent\StorageActions\Staleness.cs" />

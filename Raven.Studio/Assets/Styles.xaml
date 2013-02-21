@@ -27,6 +27,7 @@
 		<ResourceDictionary Source="ComboBoxStyles.xaml" />
 		<ResourceDictionary Source="ProgressBarStyles.xaml" />
 		<ResourceDictionary Source="NumericUpDown.xaml" />
+		<ResourceDictionary Source="SplitHyperlinkButtonPopupStyle.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
@@ -1728,7 +1729,100 @@
 		</Setter>
 	</Style>
 
-	<Style x:Key="Style_Separator_HeaderLink" TargetType="ContextMenu:Separator">
+    <Style x:Key="Style_Border_HyperlinkPopupDropdown" TargetType="Border">
+        <Setter Property="Background" Value="#F2F2F2"/>
+        <Setter Property="MinWidth" Value="175"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect Opacity="0.4"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Style_Hyperlink_InDropdown" TargetType="HyperlinkButton">
+        <Setter Property="FontFamily" Value="Arial"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="#FF666666"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="14,8"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="HyperlinkButton">
+                    <Grid Cursor="{TemplateBinding Cursor}"
+						  Background="{TemplateBinding Background}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="MouseOver">
+                                        <Storyboard>
+                                            <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="HighlightBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="HighlightBorder">
+                                                <DiscreteObjectKeyFrame KeyTime="0">
+                                                    <DiscreteObjectKeyFrame.Value>
+                                                        <Visibility>Visible</Visibility>
+                                                    </DiscreteObjectKeyFrame.Value>
+                                                </DiscreteObjectKeyFrame>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ColorAnimation Duration="0" To="White" Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" Storyboard.TargetName="Content" d:IsOptimized="True"/>
+                                        </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="HighlightBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                            <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="1"/>
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="HighlightBorder">
+                                            <DiscreteObjectKeyFrame KeyTime="0">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Visibility>Visible</Visibility>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ColorAnimation Duration="0" To="White" Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" Storyboard.TargetName="Content" d:IsOptimized="True"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="LinkStates">
+                                <VisualState x:Name="ActiveLink">
+                                    
+                                </VisualState>
+                                <VisualState x:Name="InactiveLink"/>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused"/>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <Border x:Name="HighlightBorder" Visibility="Collapsed" Background="#A82146" BorderBrush="#841D3A" BorderThickness="0,1">
+                            <Border BorderBrush="#8D1F3F" BorderThickness="0,1">
+                                <Border BorderBrush="#952041" BorderThickness="0,1"/>
+                            </Border>
+                        </Border>
+                        <TextBlock x:Name="Content"
+								   Text="{TemplateBinding Content}"
+								   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+								   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+								   Margin="{TemplateBinding Padding}" />
+
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_Separator_HeaderLink" TargetType="ContextMenu:Separator">
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ContextMenu:Separator">
@@ -3380,6 +3474,11 @@
 		<Setter Property="FontSize" Value="12"/>
 	</Style>
 
+	<Style x:Key="Style_TextBlock_NavTriangle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="Gray"/>
+		<Setter Property="FontSize" Value="12"/>
+	</Style>
+
 	<Style x:Key="Style_TextBlock_FieldName" TargetType="TextBlock">
 		<Setter Property="Foreground" Value="{StaticResource Brush_ContrastColor}"/>
 		<Setter Property="FontStyle" Value="Italic"/>
@@ -4345,4 +4444,376 @@
         <Setter Property="Behaviors:FadeTrimming.IsEnabled" Value="True"/>
         <Setter Property="Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed" Value="True"/>
     </Style>
+
+	<Style x:Key="LineDataPointStylePerformanceDeepSkyBlue" TargetType="toolkit:LineDataPoint">
+		<Setter Property="Background" Value="DeepSkyBlue" />
+		<Setter Property="BorderBrush" Value="Gray"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="IsTabStop" Value="False"/>
+		<Setter Property="Width" Value="8" />
+		<Setter Property="Height" Value="8" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="toolkit:LineDataPoint">
+					<Grid x:Name="Root" Opacity="0">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal"/>
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="MouseOverHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.24"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Unselected"/>
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="SelectionHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.18"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="RevealStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.5"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Shown">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="1"/>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Hidden">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0"/>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<ToolTipService.ToolTip>
+							<ContentControl Content="{Binding Value}"/>
+						</ToolTipService.ToolTip>
+						<Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}"/>
+						<Ellipse RenderTransformOrigin="0.661,0.321">
+							<Ellipse.Fill>
+								<RadialGradientBrush GradientOrigin="0.681,0.308">
+									<GradientStop Color="#00FFFFFF"/>
+									<GradientStop Color="#FF3D3A3A" Offset="1"/>
+								</RadialGradientBrush>
+							</Ellipse.Fill>
+						</Ellipse>
+						<Ellipse x:Name="SelectionHighlight" Opacity="0" Fill="Red"/>
+						<Ellipse x:Name="MouseOverHighlight" Opacity="0" Fill="White"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="LineDataPointStylePerformanceRed" TargetType="toolkit:LineDataPoint">
+		<Setter Property="Background" Value="Red" />
+		<Setter Property="BorderBrush" Value="Gray"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="IsTabStop" Value="False"/>
+		<Setter Property="Width" Value="8" />
+		<Setter Property="Height" Value="8" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="toolkit:LineDataPoint">
+					<Grid x:Name="Root" Opacity="0">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal"/>
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="MouseOverHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.24"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Unselected"/>
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="SelectionHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.18"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="RevealStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.5"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Shown">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="1"/>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Hidden">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0"/>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<ToolTipService.ToolTip>
+							<ContentControl Content="{Binding Value}"/>
+						</ToolTipService.ToolTip>
+						<Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}"/>
+						<Ellipse RenderTransformOrigin="0.661,0.321">
+							<Ellipse.Fill>
+								<RadialGradientBrush GradientOrigin="0.681,0.308">
+									<GradientStop Color="#00FFFFFF"/>
+									<GradientStop Color="#FF3D3A3A" Offset="1"/>
+								</RadialGradientBrush>
+							</Ellipse.Fill>
+						</Ellipse>
+						<Ellipse x:Name="SelectionHighlight" Opacity="0" Fill="Red"/>
+						<Ellipse x:Name="MouseOverHighlight" Opacity="0" Fill="White"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="LineDataPointStylePerformanceGreen" TargetType="toolkit:LineDataPoint">
+		<Setter Property="Background" Value="Green" />
+		<Setter Property="BorderBrush" Value="Gray"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="IsTabStop" Value="False"/>
+		<Setter Property="Width" Value="8" />
+		<Setter Property="Height" Value="8" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="toolkit:LineDataPoint">
+					<Grid x:Name="Root" Opacity="0">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal"/>
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="MouseOverHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.24"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Unselected"/>
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="SelectionHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.18"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="RevealStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.5"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Shown">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="1"/>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Hidden">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0"/>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<ToolTipService.ToolTip>
+							<ContentControl Content="{Binding Value}"/>
+						</ToolTipService.ToolTip>
+						<Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}"/>
+						<Ellipse RenderTransformOrigin="0.661,0.321">
+							<Ellipse.Fill>
+								<RadialGradientBrush GradientOrigin="0.681,0.308">
+									<GradientStop Color="#00FFFFFF"/>
+									<GradientStop Color="#FF3D3A3A" Offset="1"/>
+								</RadialGradientBrush>
+							</Ellipse.Fill>
+						</Ellipse>
+						<Ellipse x:Name="SelectionHighlight" Opacity="0" Fill="Red"/>
+						<Ellipse x:Name="MouseOverHighlight" Opacity="0" Fill="White"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="LineDataPointStylePerformanceOrange" TargetType="toolkit:LineDataPoint">
+		<Setter Property="Background" Value="Orange" />
+		<Setter Property="BorderBrush" Value="Gray"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="IsTabStop" Value="False"/>
+		<Setter Property="Width" Value="8" />
+		<Setter Property="Height" Value="8" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="toolkit:LineDataPoint">
+					<Grid x:Name="Root" Opacity="0">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal"/>
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="MouseOverHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.24"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Unselected"/>
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="SelectionHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.18"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="RevealStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.5"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Shown">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="1"/>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Hidden">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0"/>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<ToolTipService.ToolTip>
+							<ContentControl Content="{Binding Value}"/>
+						</ToolTipService.ToolTip>
+						<Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}"/>
+						<Ellipse RenderTransformOrigin="0.661,0.321">
+							<Ellipse.Fill>
+								<RadialGradientBrush GradientOrigin="0.681,0.308">
+									<GradientStop Color="#00FFFFFF"/>
+									<GradientStop Color="#FF3D3A3A" Offset="1"/>
+								</RadialGradientBrush>
+							</Ellipse.Fill>
+						</Ellipse>
+						<Ellipse x:Name="SelectionHighlight" Opacity="0" Fill="Red"/>
+						<Ellipse x:Name="MouseOverHighlight" Opacity="0" Fill="White"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="LineDataPointStylePerformancePurple" TargetType="toolkit:LineDataPoint">
+		<Setter Property="Background" Value="Purple" />
+		<Setter Property="BorderBrush" Value="Gray"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="IsTabStop" Value="False"/>
+		<Setter Property="Width" Value="8" />
+		<Setter Property="Height" Value="8" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="toolkit:LineDataPoint">
+					<Grid x:Name="Root" Opacity="0">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Normal"/>
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="MouseOverHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.24"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="SelectionStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Unselected"/>
+								<VisualState x:Name="Selected">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="SelectionHighlight" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<SplineDoubleKeyFrame KeyTime="00:00:00" Value="0.18"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="RevealStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.5"/>
+								</VisualStateGroup.Transitions>
+								<VisualState x:Name="Shown">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="1"/>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Hidden">
+									<Storyboard>
+										<DoubleAnimation Duration="0" Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0"/>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<ToolTipService.ToolTip>
+							<ContentControl Content="{Binding Value}"/>
+						</ToolTipService.ToolTip>
+						<Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}"/>
+						<Ellipse RenderTransformOrigin="0.661,0.321">
+							<Ellipse.Fill>
+								<RadialGradientBrush GradientOrigin="0.681,0.308">
+									<GradientStop Color="#00FFFFFF"/>
+									<GradientStop Color="#FF3D3A3A" Offset="1"/>
+								</RadialGradientBrush>
+							</Ellipse.Fill>
+						</Ellipse>
+						<Ellipse x:Name="SelectionHighlight" Opacity="0" Fill="Red"/>
+						<Ellipse x:Name="MouseOverHighlight" Opacity="0" Fill="White"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+
 </ResourceDictionary>

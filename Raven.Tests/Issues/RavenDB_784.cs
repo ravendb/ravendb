@@ -25,6 +25,9 @@
 					accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("b", "a/1", "b", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("b", "a/1", "b", new RavenJObject());
+
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "a", 2);
+					accessor.MapReduce.IncrementReduceKeyCounter("b", "b", 2);
 				});
 
 				storage.Batch(accessor =>
@@ -68,6 +71,10 @@
 					accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("a", "a/3", "b", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("a", "a/4", "b", new RavenJObject());
+
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "a", 2);
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "b", 2);
+
 				});
 
 				storage.Batch(accessor =>
@@ -112,6 +119,9 @@
 					accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("a", "a/3", "b", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("a", "a/4", "b", new RavenJObject());
+
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "a", 2);
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "b", 2);
 				});
 
 				storage.Batch(accessor =>
@@ -148,6 +158,9 @@
 					accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("b", "a/1", "b", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("b", "a/1", "b", new RavenJObject());
+
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "a", 2);
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "b", 2);
 				});
 
 				storage.Batch(accessor =>
@@ -185,6 +198,9 @@
 					accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("a", "a/3", "b", new RavenJObject());
 					accessor.MapReduce.PutMappedResult("a", "a/4", "b", new RavenJObject());
+
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "a", 2);
+					accessor.MapReduce.IncrementReduceKeyCounter("a", "b", 2);
 				});
 
 				storage.Batch(accessor =>

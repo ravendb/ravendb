@@ -81,14 +81,18 @@ namespace Raven.Storage.Managed
 			var readResult = storage.IndexingStats.Read(name);
 
 			if (readResult == null)
-				return false;// index does not exists
+				return false;
 
 			var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
 
-			return storage.Documents["ByEtag"].SkipFromEnd(0)
+			var isStale =
+				storage.Documents["ByEtag"]
+				.SkipFromEnd(0)
 				.Select(doc => doc.Value<byte[]>("etag"))
 				.Select(docEtag => Buffers.Compare(docEtag, lastIndexedEtag) > 0)
 				.FirstOrDefault();
+
+			return isStale;
 		}
 
 		public Tuple<DateTime,Etag> IndexLastUpdatedAt(string name)

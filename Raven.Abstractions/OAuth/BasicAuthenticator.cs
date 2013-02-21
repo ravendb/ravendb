@@ -4,25 +4,26 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.OAuth;
-using Raven.Client.Connection;
-using Raven.Client.Extensions;
+
 #if SILVERLIGHT
+using Raven.Client.Connection;
 using Raven.Client.Silverlight.Connection;
 using System.Net.Browser;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
-namespace Raven.Client.Document.OAuth
+namespace Raven.Abstractions.OAuth
 {
 	public class BasicAuthenticator : AbstractAuthenticator
 	{
 		private readonly string apiKey;
-		private readonly HttpJsonRequestFactory jsonRequestFactory;
+		private readonly bool enableBasicAuthenticationOverUnsecuredHttp;
 	
-		public BasicAuthenticator(string apiKey, HttpJsonRequestFactory jsonRequestFactory)
+		public BasicAuthenticator(string apiKey, bool enableBasicAuthenticationOverUnsecuredHttp)
 		{
 			this.apiKey = apiKey;
-			this.jsonRequestFactory = jsonRequestFactory;
+			this.enableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp;
 		}
 
 
@@ -47,8 +48,8 @@ namespace Raven.Client.Document.OAuth
 				});
 		}
 
-#if !SILVERLIGHT
-		public Action<HttpWebRequest> HandleOAuthResponse(string oauthSource)
+#if !SILVERLIGHT && !NETFX_CORE
+		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
 		{
 			var authRequest = PrepareOAuthRequest(oauthSource);
 			using (var response = authRequest.GetResponse())
@@ -71,15 +72,16 @@ namespace Raven.Client.Document.OAuth
 #else
 			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource.NoCache()));
 #endif
+
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
 
 			if (String.IsNullOrEmpty(apiKey) == false)
 				SetHeader(authRequest.Headers, "Api-Key", apiKey);
 
-			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
-			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
+			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
+
 			return authRequest;
 		}
 

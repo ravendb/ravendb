@@ -47,6 +47,8 @@ namespace Raven.Client.Indexes
 			var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
 			foreach (var child in children)
 			{
+				if (child.IsGenericTypeDefinition)
+					continue;
 				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child.AsType());
 				var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
 				var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));

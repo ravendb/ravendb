@@ -50,7 +50,10 @@ namespace Raven.Database.Indexing
 		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
-		/// <summary>
+
+        public IndexingPriority Priority { get; set; }
+
+	    /// <summary>
 		/// Note, this might be written to be multiple threads at the same time
 		/// We don't actually care for exact timing, it is more about general feeling
 		/// </summary>
@@ -355,8 +358,7 @@ namespace Raven.Database.Indexing
 						if (changedDocs > 0)
 						{
 							UpdateIndexingStats(context, stats);
-							WriteTempIndexToDiskIfNeeded(context);
-
+							WriteInMemoryIndexToDiskIfNecessary();
 							Flush(); // just make sure changes are flushed to disk
 						}
 					}
@@ -414,24 +416,34 @@ namespace Raven.Database.Indexing
 			indexWriter.SetRAMBufferSizeMB(1024);
 		}
 
-		private void WriteTempIndexToDiskIfNeeded(WorkContext context)
+		private void WriteInMemoryIndexToDiskIfNecessary()
 		{
-			if (context.Configuration.RunInMemory || !indexDefinition.IsTemp)
+			if (context.Configuration.RunInMemory ||
+				context.IndexDefinitionStorage.IsNewThisSession(indexDefinition) == false)
 				return;
 
-			var dir = indexWriter.Directory as RAMDirectory;
-			if (dir == null ||
-				dir.SizeInBytes() < context.Configuration.TempIndexInMemoryMaxBytes)
+            var dir = indexWriter.Directory as RAMDirectory;
+		    if (dir == null) 
 				return;
 
-			indexWriter.Commit();
-			var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
-			directory = fsDir;
+		    var stale = false;
+            var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
 
-			indexWriter.Analyzer.Close();
-			indexWriter.Dispose(true);
+            context.Database.TransactionalStorage.Batch(accessor =>
+            {
+                stale = accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
+            });
+   	
+            if (toobig || !stale)
+            {
+                indexWriter.Commit();
+			    var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+			    directory = fsDir;
 
-			CreateIndexWriter();
+			    indexWriter.Analyzer.Close();
+			    indexWriter.Dispose(true);
+			    CreateIndexWriter();       
+            }
 		}
 
 		public RavenPerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
@@ -488,8 +500,7 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs,
-															IStorageActionsAccessor actions, IndexingWorkStats stats)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs, IndexingWorkStats stats)
 		{
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
@@ -538,8 +549,7 @@ namespace Raven.Database.Indexing
 
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
-		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions, WorkContext context)
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
@@ -1258,6 +1268,8 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
+				if (directory is RAMDirectory)
+					return; // we don't backup in memory indexes
 				var existingFiles = new List<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
