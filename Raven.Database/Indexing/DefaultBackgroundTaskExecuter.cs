@@ -189,7 +189,11 @@ namespace Raven.Database.Indexing
 					var indexToWorkOn = index;
 
 					var task = new Task(() => action(indexToWorkOn));
-					tasks[i] = task.ContinueWith(_ => semaphoreSlim.Release());
+					tasks[i] = task.ContinueWith(done =>
+					{
+						semaphoreSlim.Release();
+						return done;
+					}).Unwrap();
 
 					semaphoreSlim.Wait();
 

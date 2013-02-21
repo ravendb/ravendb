@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -151,16 +152,24 @@ namespace Raven.Database.Indexing
 
 				var sp = Stopwatch.StartNew();
 				var task = new System.Threading.Tasks.Task(() => action(indexToWorkOn));
-				indexToWorkOn.Index.CurrentMapIndexingTask = tasks[i] = task.ContinueWith(_ =>
+				indexToWorkOn.Index.CurrentMapIndexingTask = tasks[i] = task.ContinueWith(done =>
 				{
 					try
 					{
 						sp.Stop();
+
+						if (done.IsFaulted) // this observe the exception
+						{
+							Log.WarnException("Failed to execute indexing task", done.Exception);
+						}
+
 						indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
-						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
+						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds/Math.Max(1, indexToWorkOn.Batch.Docs.Count);
 						indexToWorkOn.Index.CurrentMapIndexingTask = null;
+
+						return done;
 					}
-					finally 
+					finally
 					{
 						indexingSemaphore.Release();
 						indexingCompletedEvent.Set();
@@ -171,8 +180,7 @@ namespace Raven.Database.Indexing
 							context.NotifyAboutWork();
 						}
 					}
-					
-				});
+				}).Unwrap();
 
 				indexingSemaphore.Wait();
 
