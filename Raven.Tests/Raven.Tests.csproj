@@ -548,6 +548,7 @@
     <Compile Include="Issues\RavenDB934.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
+    <Compile Include="Issues\RavenDB_790.cs" />
     <Compile Include="Issues\RavenDB_806.cs" />
     <Compile Include="Issues\RavenDB_851.cs" />
     <Compile Include="Issues\RavenDB_863.cs" />

@@ -124,7 +124,9 @@ namespace Raven.Client.Document
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
                 resultsTransformer = resultsTransformer,
-                queryInputs = queryInputs
+                queryInputs = queryInputs,
+				disableEntitiesTracking = disableEntitiesTracking,
+				disableCaching = disableCaching
 			};
 			return documentQuery;
 		}
@@ -285,6 +287,18 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
 		{
 			UsingDefaultOperator(queryOperator);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoTracking()
+		{
+			NoTracking();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoCaching()
+		{
+			NoCaching();
 			return this;
 		}
 

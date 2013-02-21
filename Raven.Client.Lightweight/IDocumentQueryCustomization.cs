@@ -193,5 +193,16 @@ namespace Raven.Client
 		/// <param name="preTags">Prefix tags.</param>
 		/// <param name="postTags">Postfix tags.</param>
 		IDocumentQueryCustomization SetHighlighterTags(string[] preTags, string[] postTags);
+
+		/// <summary>
+		/// Disables tracking for queried entities by Raven's Unit of Work.
+		/// Usage of this option will prevent holding query results in memory.
+		/// </summary>
+		IDocumentQueryCustomization NoTracking();
+
+		/// <summary>
+		/// Disables caching for query results.
+		/// </summary>
+		IDocumentQueryCustomization NoCaching();
 	}
 }

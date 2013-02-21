@@ -122,6 +122,11 @@ namespace Raven.Client.Util
 			return value;
 		}
 
+		public int CurrentSize
+		{
+			get { return actualCache.Count; }
+		}
+
 		public void Dispose()
 		{
 			lruKeys.Clear();
