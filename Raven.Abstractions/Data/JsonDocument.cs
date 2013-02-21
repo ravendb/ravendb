@@ -92,8 +92,8 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
-			DataAsJson.EnsureSnapshot();
-			Metadata.EnsureSnapshot();
+			DataAsJson.EnsureCannotBeChangeAndEnableSnapshotting();
+			Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
 
 			var doc = (RavenJObject)DataAsJson.CreateSnapshot();
 			var metadata = (RavenJObject)Metadata.CreateSnapshot();

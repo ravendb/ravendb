@@ -43,7 +43,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			else
 			{
-				if(data == null)
+				if (data == null)
 					throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
 
 				if (Api.TryMoveFirst(session, Details))
@@ -54,14 +54,19 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
-				if(data != null)
+				if (data != null)
 				{
 					long written;
-					using (var stream = new BufferedStream(new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"])))
+					using (var columnStream = new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"]))
 					{
-						data.CopyTo(stream);
-						written = stream.Position;
-						stream.Flush();
+						if (isUpdate)
+							columnStream.SetLength(0);
+						using (var stream = new BufferedStream(columnStream))
+						{
+							data.CopyTo(stream);
+							written = stream.Position;
+							stream.Flush();
+						}
 					}
 					if (written == 0) // empty attachment
 					{
@@ -75,7 +80,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			logger.Debug("Adding attachment {0}", key);
 
-		    return newETag;
+			return newETag;
 		}
 
 		public void DeleteAttachment(string key, Guid? etag)
@@ -100,7 +105,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			Api.JetDelete(session, Files);
-			
+
 			if (Api.TryMoveFirst(session, Details))
 				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], -1);
 			logger.Debug("Attachment with key '{0}' was deleted", key);
@@ -147,7 +152,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, Files) && optimizer.Count < pageSize);
 
 			return optimizer.Select(Session, Files, ReadCurrentAttachmentInformation);
-		
+
 		}
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag, int take, long maxTotalSize)
@@ -168,7 +173,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return optimizer
 				.Where(_ => totalSize <= maxTotalSize)
 				.Select(Session, Files, o => ReadCurrentAttachmentInformation())
-				.Select(x=>
+				.Select(x =>
 				{
 					totalSize += x.Size;
 					return x;
@@ -184,7 +189,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 				Metadata =
 					RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"],
-					                                              Encoding.Unicode))
+																  Encoding.Unicode))
 			};
 		}
 
@@ -206,7 +211,7 @@ namespace Raven.Storage.Esent.StorageActions
 					StorageActionsAccessor storageActionsAccessor = transactionalStorage.GetCurrentBatch();
 					var documentStorageActions = ((DocumentStorageActions)storageActionsAccessor.Attachments);
 					return documentStorageActions.GetAttachmentStream(key);
-				}, 
+				},
 				Size = (int)GetAttachmentStream(key).Length,
 				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 				Metadata = RavenJObject.Parse(metadata)

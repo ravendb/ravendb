@@ -12,7 +12,9 @@ using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Database;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
@@ -28,19 +30,19 @@ namespace Raven.Tests.Bundles.Replication
 		private const int PortRangeStart = 8079;
 		protected int RetriesCount = 500;
 
-		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null)
+		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
 		{
 			var port = PortRangeStart - servers.Count;
-			return CreateStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore);
+			return CreateStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode);
 		}
 
-		private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null)
+		private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
 		{
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
 									  {
 										  Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
-										  AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
+										  AnonymousUserAccessMode = anonymousUserAccessMode,
 										  DataDirectory = "Data #" + servers.Count,
 										  RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 										  RunInMemory = true,
@@ -64,11 +66,18 @@ namespace Raven.Tests.Bundles.Replication
 			documentStore.Initialize();
 
 			stores.Add(documentStore);
+
+			ConfigureDatbase(ravenDbServer.Database);
 			return documentStore;
 		}
 
 		protected virtual void ConfigureServer(Raven.Database.Config.RavenConfiguration serverConfiguration)
 		{
+		}
+
+		protected virtual void ConfigureDatbase(DocumentDatabase database)
+		{
+			
 		}
 
 		protected virtual void ConfigureStore(DocumentStore documentStore)
@@ -147,9 +156,9 @@ namespace Raven.Tests.Bundles.Replication
 			return CreateStoreAtPort(previousServer.Database.Configuration.Port);
 		}
 
-		protected void TellFirstInstanceToReplicateToSecondInstance()
+		protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null)
 		{
-			TellInstanceToReplicateToAnotherInstance(0, 1);
+			TellInstanceToReplicateToAnotherInstance(0, 1, apiKey);
 		}
 
 		protected void TellSecondInstanceToReplicateToFirstInstance()
@@ -157,15 +166,16 @@ namespace Raven.Tests.Bundles.Replication
 			TellInstanceToReplicateToAnotherInstance(1, 0);
 		}
 
-		protected void TellInstanceToReplicateToAnotherInstance(int src, int dest)
+		protected void TellInstanceToReplicateToAnotherInstance(int src, int dest, string apiKey = null)
 		{
-			RunReplication(stores[src], stores[dest]);
+			RunReplication(stores[src], stores[dest], apiKey: apiKey);
 		}
 
 		protected void RunReplication(IDocumentStore source, IDocumentStore destination,
 			TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None,
 			bool disabled = false,
-			bool ignoredClient = false)
+			bool ignoredClient = false,
+			string apiKey = null)
 		{
 			Console.WriteLine("Replicating from {0} to {1}.", source.Url, destination.Url);
 			using (var session = source.OpenSession())
@@ -177,6 +187,8 @@ namespace Raven.Tests.Bundles.Replication
 					Disabled = disabled,
 					IgnoredClient = ignoredClient
 				};
+				if (apiKey != null)
+					replicationDestination.ApiKey = apiKey;
 				SetupDestination(replicationDestination);
 				session.Store(new ReplicationDocument
 				{

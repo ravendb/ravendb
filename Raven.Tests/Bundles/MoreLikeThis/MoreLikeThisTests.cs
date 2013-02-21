@@ -37,18 +37,11 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 			return output.ToString();
 		}
 
-		[Fact]
-		public void CanGetResults()
+		private static List<Data> GetDataList()
 		{
-			string id;
+			var dataQueriedFor = new Data { Body = "This is a test. Isn't it great? I hope I pass my test!" };
 
-			using (var session = store.OpenSession())
-			{
-				new DataIndex().Execute(store);
-
-				var dataQueriedFor = new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"};
-
-				var list = new List<Data>
+			var list = new List<Data>
 				{
 					dataQueriedFor,
 					new Data {Body = "I have a test tomorrow. I hate having a test"},
@@ -59,10 +52,64 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 					new Data {Body = "test"},
 					new Data {Body = "test"}
 				};
+
+			return list;
+		}
+			
+		[Fact]
+		public void CanGetResultsUsingTermVectors()
+		{
+			string id;
+
+			using (var session = store.OpenSession())
+			{
+				new DataIndex(true, false).Execute(store);
+
+				var list = GetDataList();
 				list.ForEach(session.Store);
 				session.SaveChanges();
 
-				id = session.Advanced.GetDocumentId(dataQueriedFor);
+				id = session.Advanced.GetDocumentId(list.First());
+				WaitForIndexing(store);
+			}
+
+			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
+		}
+
+		[Fact]
+		public void CanGetResultsUsingStorage()
+		{
+			string id;
+
+			using (var session = store.OpenSession())
+			{
+				new DataIndex(false, true).Execute(store);
+
+				var list = GetDataList();
+				list.ForEach(session.Store);
+				session.SaveChanges();
+
+				id = session.Advanced.GetDocumentId(list.First());
+				WaitForIndexing(store);
+			}
+
+			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
+		}
+
+		[Fact]
+		public void CanGetResultsUsingTermVectorsAndStorage()
+		{
+			string id;
+
+			using (var session = store.OpenSession())
+			{
+				new DataIndex(true, true).Execute(store);
+
+				var list = GetDataList();
+				list.ForEach(session.Store);
+				session.SaveChanges();
+
+				id = session.Advanced.GetDocumentId(list.First());
 				WaitForIndexing(store);
 			}
 
@@ -442,10 +489,15 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 		public class DataIndex : AbstractIndexCreationTask<Data>
 		{
-			public DataIndex()
+			public DataIndex() : this(true, false)
+			{
+				
+			}
+
+			public DataIndex(bool termVector, bool store)
 			{
 				Map = docs => from doc in docs
-				              select new {doc.Body, doc.WhitespaceAnalyzerField};
+							  select new { doc.Body, doc.WhitespaceAnalyzerField };
 
 				Analyzers = new Dictionary<Expression<Func<Data, object>>, string>
 				{
@@ -459,16 +511,32 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 					}
 				};
 
-				Stores = new Dictionary<Expression<Func<Data, object>>, FieldStorage>
-				{
-					{
-						x => x.Body, FieldStorage.Yes
-					},
-					{
-						x => x.WhitespaceAnalyzerField, FieldStorage.Yes
-					}
-				};
 
+				if (store)
+				{
+					Stores = new Dictionary<Expression<Func<Data, object>>, FieldStorage>
+							{
+								{
+									x => x.Body, FieldStorage.Yes
+								},
+								{
+									x => x.WhitespaceAnalyzerField, FieldStorage.Yes
+								}
+							};
+				}
+
+				if (termVector)
+				{
+					TermVectors = new Dictionary<Expression<Func<Data, object>>, FieldTermVector>
+								{
+									{
+										x => x.Body, FieldTermVector.Yes
+									},
+									{
+										x => x.WhitespaceAnalyzerField, FieldTermVector.Yes
+									}
+								};
+				}
 			}
 		}
 
@@ -487,10 +555,10 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 					}
 				};
 
-				Stores = new Dictionary<Expression<Func<DataWithIntegerId, object>>, FieldStorage>
+				TermVectors = new Dictionary<Expression<Func<DataWithIntegerId, object>>, FieldTermVector>
 				{
 					{
-						x => x.Body, FieldStorage.Yes
+						x => x.Body, FieldTermVector.Yes
 					}
 				};
 

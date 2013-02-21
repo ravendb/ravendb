@@ -19,7 +19,10 @@
         <DataTemplate DataType="Models:ReplicationSettingsSectionModel">
             <Settings:ReplicationsSettingsSectionView/>
         </DataTemplate>
-        <DataTemplate DataType="Models:VersioningSettingsSectionModel">
+		<DataTemplate DataType="Models:SqlReplicationSettingsSectionModel">
+			<Settings:SqlReplicationsSettingsSectionView/>
+		</DataTemplate>
+		<DataTemplate DataType="Models:VersioningSettingsSectionModel">
             <Settings:VersioningSettingsView/>
         </DataTemplate>
         <DataTemplate DataType="Models:AuthorizationSettingsSectionModel">

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Raven.Database.Indexing
 {
 	public class IndexingWorkStats
@@ -11,6 +13,25 @@ namespace Raven.Database.Indexing
 		public int ReduceErrors;
 
 		public Status Operation;
+
+		public IndexingWorkStats(IEnumerable<IndexingWorkStats> stream)
+		{
+			foreach (var other in stream)
+			{
+				IndexingAttempts += other.IndexingAttempts;
+				IndexingSuccesses += other.IndexingSuccesses;
+				IndexingErrors += other.IndexingErrors;
+				ReduceAttempts += other.ReduceAttempts;
+				ReduceSuccesses += other.ReduceSuccesses;
+				ReduceErrors += other.ReduceErrors;
+				Operation = other.Operation;
+			}
+		}
+
+		public IndexingWorkStats()
+		{
+			
+		}
 
 		public enum Status
 		{

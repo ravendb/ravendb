@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Connection.Async;
@@ -22,12 +23,14 @@ namespace Raven.Client.Linq
 		private readonly Expression expression;
 		private readonly IRavenQueryProvider provider;
 		private readonly RavenQueryStatistics queryStats;
+		private readonly RavenQueryHighlightings highlightings;
 		private readonly string indexName;
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private InMemoryDocumentSessionOperations session;
+		private readonly bool isMapReduce;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
@@ -35,13 +38,15 @@ namespace Raven.Client.Linq
 		public RavenQueryInspector(
 			IRavenQueryProvider provider, 
 			RavenQueryStatistics queryStats,
+			RavenQueryHighlightings highlightings,
 			string indexName,
 			Expression expression,
 			InMemoryDocumentSessionOperations session
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif
-			, IAsyncDatabaseCommands asyncDatabaseCommands
+			, IAsyncDatabaseCommands asyncDatabaseCommands,
+			bool isMapReduce
 			)
 		{
 			if (provider == null)
@@ -50,17 +55,23 @@ namespace Raven.Client.Linq
 			}
 			this.provider = provider.For<T>();
 			this.queryStats = queryStats;
+			this.highlightings = highlightings;
 			this.indexName = indexName;
 			this.session = session;
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
-			this.provider.AfterQueryExecuted(queryStats.UpdateQueryStats);
+			this.isMapReduce = isMapReduce;
+			this.provider.AfterQueryExecuted(this.AfterQueryExecuted);
 			this.expression = expression ?? Expression.Constant(this);
 		}
 
-		
+		private void AfterQueryExecuted(QueryResult queryResult)
+		{
+			this.queryStats.UpdateQueryStats(queryResult);
+			this.highlightings.Update(queryResult);
+		}
 
 		#region IOrderedQueryable<T> Members
 
@@ -132,25 +143,21 @@ namespace Raven.Client.Linq
 			return fields + luceneQuery;
 		}
 
-		/// <summary>
-		/// Returns a <see cref="System.String"/> that represents this instance.
-		/// </summary>
-		/// <returns>
-		/// A <see cref="System.String"/> that represents this instance.
-		/// </returns>
-		public string ToAsyncString()
+		public IndexQuery GetIndexQuery(bool isAsync = true)
 		{
 			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-			var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-			string fields = "";
-			if(ravenQueryProvider.FieldsToFetch.Count > 0)
-				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-			return fields + luceneQuery;
+			if (isAsync == false)
+			{
+				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+				return luceneQuery.GetIndexQuery(false);
+			}
+			var asyncLuceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
+			return asyncLuceneQuery.GetIndexQuery(true);
 		}
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
 		}
 
 		/// <summary>
@@ -160,7 +167,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
 				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
@@ -173,7 +180,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
 				var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
@@ -222,7 +229,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
 			if (isAsync)
 			{
 				var luceneQueryAsync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);

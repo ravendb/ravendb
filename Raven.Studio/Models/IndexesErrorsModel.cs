@@ -37,6 +37,8 @@ namespace Raven.Studio.Models
 		public IndexesErrorsModel()
 		{
 			ModelUrl = "/indexes-errors";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
+
 			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => Errors);
 		}
 

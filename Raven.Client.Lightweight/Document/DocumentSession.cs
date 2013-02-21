@@ -360,12 +360,13 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <param name="indexName">Name of the index.</param>
-		/// <returns></returns>
-		public IRavenQueryable<T> Query<T>(string indexName)
+		/// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
+		public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands, null);
-			return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, indexName, null, this, DatabaseCommands, null);
+			var highlightings = new RavenQueryHighlightings();
+			var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, DatabaseCommands, null, isMapReduce);
+			return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, DatabaseCommands, null, isMapReduce);
 		}
 
 		/// <summary>
@@ -377,7 +378,7 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var indexCreator = new TIndexCreator();
-			return Query<T>(indexCreator.IndexName);
+			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
 		}
 
 		/// <summary>
@@ -501,7 +502,7 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var index = new TIndexCreator();
-			return LuceneQuery<T>(index.IndexName);
+			return LuceneQuery<T>(index.IndexName, index.IsMapReduce);
 		}
 
 		/// <summary>
@@ -510,9 +511,9 @@ namespace Raven.Client.Document
 		/// <typeparam name="T"></typeparam>
 		/// <param name="indexName">Name of the index.</param>
 		/// <returns></returns>
-		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
+		public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners);
+			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners, isMapReduce);
 		}
 
 		/// <summary>
@@ -578,15 +579,15 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
 		{
-			return Advanced.LuceneQuery<T>(indexName);
+			return Advanced.LuceneQuery<T>(indexName, isMapReduce);
 		}
 
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
-		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
+		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
 		{
 			throw new NotSupportedException();
 		}

@@ -28,7 +28,9 @@ namespace Raven.Json.Linq
 		/// <returns>A cloned RavenJToken</returns>
 		public abstract RavenJToken CloneToken();
 
-		public abstract void EnsureSnapshot();
+		public abstract bool IsSnapshot { get; }
+
+		public abstract void EnsureCannotBeChangeAndEnableSnapshotting();
 
 		public abstract RavenJToken CreateSnapshot();
 

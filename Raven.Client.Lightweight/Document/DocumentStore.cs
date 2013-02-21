@@ -12,10 +12,11 @@ using System.Security;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Client.Document.OAuth;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -43,6 +44,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		[ThreadStatic]
 		protected static Guid? currentSessionId;
+		private const int DefaultNumberOfCachedRequests = 2048;
+		private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
 
 
 #if SILVERLIGHT
@@ -59,7 +62,13 @@ namespace Raven.Client.Document
 
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
 
-		private HttpJsonRequestFactory jsonRequestFactory;
+		private HttpJsonRequestFactory jsonRequestFactory = 
+#if !SILVERLIGHT
+			  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+#else
+			  new HttpJsonRequestFactory();
+#endif
+
 
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -68,7 +77,6 @@ namespace Raven.Client.Document
 		{
 			get
 			{
-				AssertInitialized();
 				return jsonRequestFactory;
 			}
 		}
@@ -126,7 +134,6 @@ namespace Raven.Client.Document
 			ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
 #if !SILVERLIGHT
-			MaxNumberOfCachedRequests = 2048;
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
 			Conventions = new DocumentConvention();
 #else
@@ -368,11 +375,6 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
-#if !SILVERLIGHT
-			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
-#else
-			jsonRequestFactory = new HttpJsonRequestFactory();
-#endif
 			try
 			{
 				InitializeSecurity();
@@ -407,10 +409,10 @@ namespace Raven.Client.Document
 
 #if !SILVERLIGHT
 				RecoverPendingTransactions();
-		
+
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)
 				{
-					DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+					DatabaseCommands.ForSystemDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 				}
 #endif
 
@@ -433,6 +435,16 @@ namespace Raven.Client.Document
 			{
 				if (Conventions.DisableProfiling)
 					return;
+				if (args.TotalSize > 1024 * 1024 * 2)
+				{
+					profilingContext.RecordAction(sender, new RequestResultArgs
+					{
+						Url = args.Url,
+						PostedData = "total request/response size > 2MB, not tracked",
+						Result = "total request/response size > 2MB, not tracked",
+					});
+					return;
+				}
 				profilingContext.RecordAction(sender, args);
 			};
 		}
@@ -452,13 +464,13 @@ namespace Raven.Client.Document
 		{
 			if (Conventions.HandleUnauthorizedResponse != null)
 				return; // already setup by the user
-			
+
 			if (String.IsNullOrEmpty(ApiKey) == false)
 			{
 				Credentials = null;
 			}
 
-			var basicAuthenticator = new BasicAuthenticator(ApiKey, jsonRequestFactory);
+			var basicAuthenticator = new BasicAuthenticator(ApiKey, jsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
 			var securedAuthenticator = new SecuredAuthenticator(ApiKey);
 
 			jsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
@@ -473,7 +485,7 @@ namespace Raven.Client.Document
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
-					return basicAuthenticator.HandleOAuthResponse(oauthSource);
+					return basicAuthenticator.DoOAuthRequest(oauthSource);
 				}
 
 				if (ApiKey == null)
@@ -516,19 +528,19 @@ namespace Raven.Client.Document
 				}
 				oauthSource = Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequestAsync(oauthSource);
+				return securedAuthenticator.DoOAuthRequestAsync(Url,oauthSource);
 			};
 
 		}
 
 		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
 		{
-			if (Credentials == null) 
+			if (Credentials == null)
 				return;
 
 			var authHeaders = response.Headers["WWW-Authenticate"];
 			if (authHeaders == null ||
-			    (authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
+				(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
 				)
 			{
 				// we are trying to do windows auth, but we didn't get the windows auth headers
@@ -542,7 +554,7 @@ namespace Raven.Client.Document
 
 		private void AssertForbiddenCredentialSupportWindowsAuth(HttpWebResponse response)
 		{
-			if (Credentials == null) 
+			if (Credentials == null)
 				return;
 
 			var requiredAuth = response.Headers["Raven-Required-Auth"];
@@ -756,7 +768,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-			return OpenAsyncSessionInternal(options.Database,SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+			return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>
@@ -768,7 +780,17 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Max number of cached requests (default: 2048)
 		/// </summary>
-		public int MaxNumberOfCachedRequests { get; set; }
+		public int MaxNumberOfCachedRequests
+		{
+			get { return maxNumberOfCachedRequests; }
+			set
+			{
+				maxNumberOfCachedRequests = value;
+				if (jsonRequestFactory != null)
+					jsonRequestFactory.Dispose();
+				jsonRequestFactory = null;
+			}
+		}
 #endif
 
 

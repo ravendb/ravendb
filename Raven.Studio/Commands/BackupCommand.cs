@@ -24,7 +24,7 @@ namespace Raven.Studio.Commands
 
 			ApplicationModel.Current.Server.Value.DocumentStore
 				.AsyncDatabaseCommands
-				.ForDefaultDatabase()
+				.ForSystemDatabase()
 				.CreateRequest("/admin/databases/" + ApplicationModel.Database.Value.Name, "GET")
 				.ReadResponseJsonAsync()
 				.ContinueOnSuccessInTheUIThread(doc =>
@@ -35,7 +35,7 @@ namespace Raven.Studio.Commands
 					var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
 						.Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
 
-					DatabaseCommands.StartBackupAsync(location.Value, databaseDocument)
+					DatabaseCommands.StartBackupAsync(location.Value.ToString(), databaseDocument)
 						.ContinueWith(task =>
 						{
 							task.Wait(); // throws

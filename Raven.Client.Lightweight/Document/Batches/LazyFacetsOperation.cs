@@ -15,12 +15,15 @@ namespace Raven.Client.Document.Batches
 		private readonly string index;
 		private readonly string facetSetupDoc;
 		private readonly IndexQuery query;
+		private readonly int start;
+		private readonly int? pageSize;
 
-		public LazyFacetsOperation(string index, string facetSetupDoc, IndexQuery query)
-		{
+		public LazyFacetsOperation( string index, string facetSetupDoc, IndexQuery query, int start = 0, int? pageSize = null ) {
 			this.index = index;
 			this.facetSetupDoc = facetSetupDoc;
 			this.query = query;
+			this.start = start;
+			this.pageSize = pageSize;
 		}
 
 		public GetRequest CreateRequest()
@@ -28,9 +31,11 @@ namespace Raven.Client.Document.Batches
 			return new GetRequest
 			{
 				Url = "/facets/" + index,
-				Query = string.Format("facetDoc={0}&query={1}",
-									  facetSetupDoc,
-									  query.Query)
+				Query = string.Format( "facetDoc={0}&query={1}&facetStart={2}&facetPageSize={3}",
+										facetSetupDoc,
+										query.Query,
+										start,
+										pageSize )
 			};
 		}
 
@@ -102,7 +107,7 @@ namespace Raven.Client.Document.Batches
 #if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			return commands.GetFacets(index, query, facetSetupDoc);
+			return commands.GetFacets( index, query, facetSetupDoc, start, pageSize );
 		}
 
 		public void HandleEmbeddedResponse(object result)

@@ -55,11 +55,9 @@ namespace Raven.Bundles.Replication.Responders
 		protected override void AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, JsonDocument existingItem)
 		{
 			// just update the current doc with the new conflict document
-			var ravenJArray = existingItem.DataAsJson.Value<RavenJArray>("Conflicts");
-			if(ravenJArray == null)
-			{
-				existingItem.DataAsJson["Conflicts"] = ravenJArray = new RavenJArray();
-			}
+			RavenJArray ravenJArray ;
+			existingItem.DataAsJson["Conflicts"] =
+				ravenJArray = new RavenJArray(existingItem.DataAsJson.Value<RavenJArray>("Conflicts"));
 			ravenJArray.Add(RavenJToken.FromObject(newConflictId));
 			Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
 		}

@@ -71,6 +71,7 @@
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
+    <Compile Include="Authorization\Bugs\Matthew.cs" />
     <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
     <Compile Include="Authorization\Bugs\WithChangingOfUser.cs" />
     <Compile Include="Authorization\CanAskAuthQuestions.cs" />

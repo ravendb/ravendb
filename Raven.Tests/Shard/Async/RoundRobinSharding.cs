@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Shard;
 using Raven.Server;
 using Xunit;

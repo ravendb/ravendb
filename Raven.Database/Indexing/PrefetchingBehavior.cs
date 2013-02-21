@@ -174,7 +174,7 @@ namespace Raven.Database.Indexing
 				return results;
 
 			var nextDocEtag = GetNextDocEtag(GetHighestEtag(results));
-			while (true)
+			while (results.Count < (autoTuner.MaximumSizeAllowedToFetchFromStorage / 4) * 3) // we won't be merging if we have more than 3/4 of max already
 			{
 
 				if (TryGetInMemoryJsonDocuments(nextDocEtag, results))
@@ -218,7 +218,7 @@ namespace Raven.Database.Indexing
 				{
 					if (x.Task.IsCompleted)
 						return x.Task.Result.Count;
-					return 0;
+					return autoTuner.NumberOfItemsToIndexInSingleBatch / 4 * 3;
 				});
 
 				if (alreadyLoaded > autoTuner.NumberOfItemsToIndexInSingleBatch)

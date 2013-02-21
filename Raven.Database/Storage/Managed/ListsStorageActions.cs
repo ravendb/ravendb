@@ -48,14 +48,19 @@ namespace Raven.Storage.Managed
 			storage.Lists.Remove(readResult.Key);
 		}
 
-		public IEnumerable<ListItem> Read(string name, Guid start, int take)
+		public IEnumerable<ListItem> Read(string name, Guid start, Guid? end, int take)
 		{
+			var endComparer = end == null ? null : new ComparableByteArray(end.Value);
 			return storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
 			{
 				{ "name", name },
 				{ "etag", start.ToByteArray() }
 			})
-			.TakeWhile(x=> StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("name"), name))
+			.TakeWhile(x=> 
+				StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("name"), name) &&
+				(endComparer == null || endComparer.CompareTo(x.Value<byte[]>("etag")) > 0 )
+				)
+			.Take(take)
 			.Select(result =>
 			{
 				var readResult = storage.Lists.Read(result);
@@ -65,8 +70,7 @@ namespace Raven.Storage.Managed
 					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
 					Key = readResult.Key.Value<string>("key")
 				};
-			})
-			.Take(take);
+			});
 		}
 
 		public void RemoveAllBefore(string name, Guid etag)

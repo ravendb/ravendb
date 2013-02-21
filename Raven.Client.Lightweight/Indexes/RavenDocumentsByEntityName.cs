@@ -8,6 +8,10 @@ namespace Raven.Client.Indexes
 	///</summary>
 	public class RavenDocumentsByEntityName : AbstractIndexCreationTask
 	{
+		public override bool IsMapReduce
+		{
+			get { return false; }
+		}
 		/// <summary>
 		/// Return the actual index name
 		/// </summary>
@@ -35,6 +39,11 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 					{
 						{"Tag", FieldStorage.No},
 						{"LastModified", FieldStorage.No}
+					},
+				TermVectors =
+					{
+						{"Tag", FieldTermVector.No},
+						{"LastModified", FieldTermVector.No}
 					}
 			};
 		}

@@ -45,7 +45,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public void Add(JET_SESID session, JET_TABLEID table, T item)
+		public bool Add(JET_SESID session, JET_TABLEID table, T item)
 		{
 			byte[] buffer;
 			int actualBookmarkSize;
@@ -63,6 +63,18 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				IndexReaderBuffers.Buffers.ReturnBuffer(largeBuffer);
 			}
+			if (primaryKeyIndexes.Any(x =>
+			{
+				if (x.BufferLen != actualBookmarkSize)
+					return false;
+				for (int i = 0; i < actualBookmarkSize; i++)
+				{
+					if (buffer[i] != x.Buffer[i])
+						return false;
+				}
+				return true;
+			}))
+				return false;
 			primaryKeyIndexes.Add(new Key
 			{
 				Buffer = buffer,
@@ -70,6 +82,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Index = primaryKeyIndexes.Count,
 				State = item
 			});
+			return true;
 		}
 
 		public IEnumerable<Tuple<byte[], int>> GetSortedBookmarks()
@@ -134,9 +147,9 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 		}
 
-		public void Add(JET_SESID session, JET_TABLEID table)
+		public bool Add(JET_SESID session, JET_TABLEID table)
 		{
-			Add(session, table, null);
+			return Add(session, table, null);
 		}
 
 		public OptimizedIndexReader Where(Func<bool> filter)

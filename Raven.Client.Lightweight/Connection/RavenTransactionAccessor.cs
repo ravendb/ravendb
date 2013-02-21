@@ -55,6 +55,8 @@ namespace Raven.Client.Connection
 			return new DisposableAction(() => CurrentRavenTransactions.Pop());
 		}
 		
+		public static TimeSpan? DefaultTimeout { get; set; }
+
 		/// <summary>
 		/// Gets the transaction information for the current transaction
 		/// </summary>
@@ -68,7 +70,7 @@ namespace Raven.Client.Connection
 			return new TransactionInformation
 			{
 				Id = PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
-				Timeout = TransactionManager.DefaultTimeout
+				Timeout = DefaultTimeout ?? TransactionManager.DefaultTimeout
 			};
 		}
 	}

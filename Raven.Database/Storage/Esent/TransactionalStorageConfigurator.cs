@@ -41,6 +41,7 @@ namespace Raven.Storage.Esent
 			{
 				transactionalStorage.MaxVerPagesValueInBytes = maxVerPages*1024*1024;
 			}
+			var maxVerPagesResult = TranslateToSizeInVersionPages(maxVerPages, 1024*1024);
 			var instanceParameters = new InstanceParameters(jetInstance)
 			{
 				CircularLog = circularLog,
@@ -51,8 +52,8 @@ namespace Raven.Storage.Esent
 				TempDirectory = Path.Combine(logsPath, "temp"),
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
-				MaxVerPages = TranslateToSizeInVersionPages(maxVerPages, 1024 * 1024),
-				PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", 472), 1024 * 1024),
+				MaxVerPages = maxVerPagesResult,
+				PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", (int)(maxVerPagesResult * 0.85)), 1024 * 1024),
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 8192), 1024),
@@ -62,6 +63,13 @@ namespace Raven.Storage.Esent
 				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 8), 1024 * 1024),
 				AlternateDatabaseRecoveryDirectory = path
 			};
+
+			if (Environment.OSVersion.Version >= new Version(5, 2))
+			{
+				// JET_paramEnableIndexCleanup is not supported on WindowsXP
+				const int JET_paramEnableIndexCleanup = 54;
+				Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param) JET_paramEnableIndexCleanup, 1, null);
+			}
 
 			return instanceParameters;
 		}

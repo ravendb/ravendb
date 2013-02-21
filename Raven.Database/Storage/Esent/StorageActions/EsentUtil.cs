@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Data;
+using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using System.Linq;
 
@@ -12,26 +13,31 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public class EsentUtil
 	{
-		public static DataTable DumpTable(Session session, Table table)
+		public static void DumpTable(Session session, Table table, Stream stream)
 		{
-			var dt = new DataTable(table.Name);
-			var cols = Api.GetTableColumns(session, table).ToArray();
-			foreach (var col in cols)
+			using (var writer = new StreamWriter(stream))
 			{
-				dt.Columns.Add(col.Name);
-			}
-			Api.MoveBeforeFirst(session, table);
-			while (Api.TryMoveNext(session, table))
-			{
-				var dataRow = dt.NewRow();
+				var cols = Api.GetTableColumns(session, table).ToArray();
 				foreach (var col in cols)
 				{
-					dataRow[col.Name] = GetvalueFromTable(session, table, col);
+					writer.Write(col);
+					writer.Write(",");
 				}
-				dt.Rows.Add(dataRow);
+				writer.WriteLine("#");
+				Api.MoveBeforeFirst(session, table);
+				int count = 0;
+				while (Api.TryMoveNext(session, table))
+				{
+					foreach (var col in cols)
+					{
+						var val = GetvalueFromTable(session, table, col) ?? "NULL";
+						writer.Write(val);
+						writer.Write(",");
+					}
+					writer.WriteLine(++count);
+				}
+				writer.Flush();
 			}
-
-			return dt;
 		}
 
 		private static object GetvalueFromTable(Session session, Table table, ColumnInfo col)
@@ -44,12 +50,19 @@ namespace Raven.Storage.Esent.StorageActions
 					return Api.RetrieveColumnAsDateTime(session, table, col.Columnid);
 				case JET_coltyp.Binary:
 					var bytes = Api.RetrieveColumn(session, table, col.Columnid);
+					if (bytes == null)
+						return null;
 					if (bytes.Length == 16)
 						return new Guid(bytes);
 					return Convert.ToBase64String(bytes);
 				case JET_coltyp.LongText:
 				case JET_coltyp.Text:
-					return Api.RetrieveColumnAsString(session, table, col.Columnid);
+					var str = Api.RetrieveColumnAsString(session, table, col.Columnid);
+					if (str == null)
+						return null;
+					if (str.Contains("\""))
+						return "\"" + str.Replace("\"", "\"\"") + "\"";
+					return str;
 				case JET_coltyp.LongBinary:
 					return "long binary val";
 				default:

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -24,9 +25,10 @@ namespace Raven.Tests.Suggestions
 			documentStore = NewDocumentStore();
 
 			documentStore.DatabaseCommands.PutIndex("Test", new IndexDefinition
-			                                                	{
-			                                                		Map = "from doc in docs select new { doc.Name }",
-			                                                	});
+			{
+				Map = "from doc in docs select new { doc.Name }",
+				Suggestions = new Dictionary<string, SuggestionOptions> {{"Name", new SuggestionOptions()}}
+			});
 			using (var s = documentStore.OpenSession())
 			{
 				s.Store(new User { Name = "Ayende" });
@@ -48,13 +50,12 @@ namespace Raven.Tests.Suggestions
 		{
 			using (var s = documentStore.OpenSession())
 			{
-				var suggestionQueryResult = documentStore.DatabaseCommands.Suggest("Test",
-				                                                                new SuggestionQuery
-				                                                                	{
-				                                                                		Field = "Name",
-				                                                                		Term = "Oren",
-				                                                                		MaxSuggestions = 10,
-				                                                                	});
+				var suggestionQueryResult = documentStore.DatabaseCommands.Suggest("Test", new SuggestionQuery
+				{
+					Field = "Name",
+					Term = "Oren",
+					MaxSuggestions = 10,
+				});
 
 				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
 				Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);

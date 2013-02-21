@@ -194,10 +194,10 @@ namespace Raven.Client.Connection
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + Uri.EscapeDataString(key), "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-			
+
 			try
 			{
 				var responseJson = request.ReadResponseJson();
@@ -221,9 +221,9 @@ namespace Raven.Client.Connection
 					var etag = httpWebResponse.GetEtagHeader();
 
 					var concurrencyException = TryResolveConflictOrCreateConcurrencyException(key, conflictsDoc, etag);
-					if(concurrencyException == null)
+					if (concurrencyException == null)
 					{
-						if(resolvingConflictRetries)
+						if (resolvingConflictRetries)
 							throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
 
 						resolvingConflictRetries = true;
@@ -258,7 +258,7 @@ namespace Raven.Client.Connection
 		private ConflictException TryResolveConflictOrCreateConcurrencyException(string key, RavenJObject conflictsDoc, Guid etag)
 		{
 			var ravenJArray = conflictsDoc.Value<RavenJArray>("Conflicts");
-			if(ravenJArray == null)
+			if (ravenJArray == null)
 				throw new InvalidOperationException("Could not get conflict ids from conflicted document, are you trying to resolve a conflict when using metadata-only?");
 
 			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
@@ -277,7 +277,7 @@ namespace Raven.Client.Connection
 					foreach (var conflictListener in conflictListeners)
 					{
 						JsonDocument resolvedDocument;
-						if(conflictListener.TryResolveConflict(key, results, out resolvedDocument))
+						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 						{
 							Put(key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
 
@@ -286,13 +286,13 @@ namespace Raven.Client.Connection
 					}
 				}
 				finally
-		{
+				{
 					resolvingConflict = false;
 				}
 			}
 
 			return new ConflictException("Conflict detected on " + key +
-			                            ", conflict must be resolved before the document will be accessible", true)
+										", conflict must be resolved before the document will be accessible", true)
 			{
 				ConflictedVersionIds = conflictIds,
 				Etag = etag
@@ -346,7 +346,7 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-			
+
 
 			RavenJToken responseJson;
 			try
@@ -372,7 +372,7 @@ namespace Raven.Client.Connection
 			AddTransactionInformation(metadata);
 			if (etag != null)
 				metadata["ETag"] = new RavenJValue(etag.Value.ToString());
-			
+
 			if (key != null)
 				key = Uri.EscapeUriString(key);
 
@@ -490,7 +490,7 @@ namespace Raven.Client.Connection
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "PUT", metadata, credentials, convention))
 				.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
-				                             convention.FailoverBehavior, HandleReplicationStatusChanges);
+											 convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			webRequest.Write(data);
 			try
@@ -690,10 +690,10 @@ namespace Raven.Client.Connection
 
 				var result = request.ReadResponseJson();
 				var json = ((RavenJArray)result);
-						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-						return json
-							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
-							.ToArray();
+				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+				return json
+					.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+					.ToArray();
 			});
 		}
 
@@ -713,7 +713,7 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 			httpJsonRequest.ReadResponseJson();
 			return null;
 		}
@@ -725,7 +725,7 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 			var responseJson = httpJsonRequest.ReadResponseJson();
 			return ((RavenJArray)responseJson).Select(x => x.Value<string>()).ToArray();
 		}
@@ -748,8 +748,8 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-	
-			
+
+
 			RavenJToken indexDef;
 			try
 			{
@@ -780,7 +780,7 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 			try
 			{
 				httpJsonRequest.ExecuteRequest();
@@ -848,7 +848,7 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-			
+
 
 			try
 			{
@@ -868,7 +868,7 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-			
+
 			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
 
@@ -922,7 +922,7 @@ namespace Raven.Client.Connection
 			string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
 			if (metadataOnly)
 				path += "&metadata-only=true";
-			if(includeEntries)
+			if (includeEntries)
 				path += "&debug=entries";
 			if (includes != null && includes.Length > 0)
 			{
@@ -933,7 +933,7 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 
 			RavenJObject json;
 			try
@@ -954,7 +954,7 @@ namespace Raven.Client.Connection
 			}
 			var directQuery = SerializationHelper.ToQueryResult(json, request.GetEtagHeader());
 			var docResults = directQuery.Results.Concat(directQuery.Includes);
-			return RetryOperationBecauseOfConflict(docResults, directQuery, 
+			return RetryOperationBecauseOfConflict(docResults, directQuery,
 				() => DirectQuery(index, query, operationUrl, includes, metadataOnly, includeEntries));
 		}
 
@@ -975,7 +975,7 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 			request.ExecuteRequest();
 		}
 
@@ -1030,7 +1030,7 @@ namespace Raven.Client.Connection
 				request.Write(new RavenJArray(uniqueIds).ToString(Formatting.None));
 			}
 
-			
+
 			var result = (RavenJObject)request.ReadResponseJson();
 
 			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
@@ -1041,16 +1041,16 @@ namespace Raven.Client.Connection
 			};
 
 			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
-			
+
 			return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationUrl, includes, metadataOnly));
 		}
 
 		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
-			{
+		{
 			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
-			if (!requiresRetry) 
+			if (!requiresRetry)
 				return currentResult;
-				
+
 			if (resolvingConflictRetries)
 				throw new InvalidOperationException(
 					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
@@ -1076,7 +1076,7 @@ namespace Raven.Client.Connection
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
 			{
 				var concurrencyException = TryResolveConflictOrCreateConcurrencyException(metadata.Value<string>("@id"), docResult, HttpExtensions.EtagHeaderToGuid(metadata.Value<string>("@etag")));
-				if(concurrencyException == null)
+				if (concurrencyException == null)
 					return true;
 				throw concurrencyException;
 			}
@@ -1102,9 +1102,9 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			req.Write(jArray.ToString(Formatting.None));
+			req.Write(jArray.ToString(Formatting.None, Default.Converters));
 
 			RavenJArray response;
 			try
@@ -1142,7 +1142,7 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 			httpJsonRequest.ReadResponseJson();
 		}
 
@@ -1187,7 +1187,7 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 			httpJsonRequest.ReadResponseJson();
 		}
 
@@ -1233,7 +1233,7 @@ namespace Raven.Client.Connection
 				   };
 		}
 
-		public IDatabaseCommands ForDefaultDatabase()
+		public IDatabaseCommands ForSystemDatabase()
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
@@ -1284,7 +1284,7 @@ namespace Raven.Client.Connection
 					new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-		
+
 				try
 				{
 					request.ReadResponseJson();
@@ -1360,7 +1360,7 @@ namespace Raven.Client.Connection
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				
+
 				request.Write(requestData);
 				try
 				{
@@ -1413,7 +1413,7 @@ namespace Raven.Client.Connection
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				
+
 
 				var json = (RavenJObject)request.ReadResponseJson();
 
@@ -1432,7 +1432,7 @@ namespace Raven.Client.Connection
 		public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
 		{
 			var result = ExecuteGetRequest(query.GetRequestUri());
-			return ((RavenJObject) result).Deserialize<MultiLoadResult>(convention);
+			return ((RavenJObject)result).Deserialize<MultiLoadResult>(convention);
 		}
 
 		/// <summary>
@@ -1491,7 +1491,7 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			
+
 			try
 			{
 				request.ExecuteRequest();
@@ -1531,7 +1531,7 @@ namespace Raven.Client.Connection
 											  var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
 
 											  var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.
-											                                                                                                       	RequestUri, "POST", credentials, convention));
+																																					RequestUri, "POST", credentials, convention));
 
 											  var requestsForServer =
 												  multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
@@ -1588,27 +1588,30 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		/// <param name="index"></param>
-		/// <param name="query"></param>
-		/// <param name="facetSetupDoc"></param>
-		/// <returns></returns>
-		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc)
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
 		{
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&{2}",
-															  Uri.EscapeUriString(index),
-															  Uri.EscapeDataString(facetSetupDoc),
-															  query.GetMinimalQueryString());
+				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&{2}&facetStart={3}&facetPageSize={4}",
+																Uri.EscapeUriString(index),
+																Uri.EscapeDataString(facetSetupDoc),
+																query.GetMinimalQueryString(),
+																start,
+																pageSize);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				
+
 				var json = (RavenJObject)request.ReadResponseJson();
 				return json.JsonDeserialization<FacetResults>();
 			});
@@ -1727,6 +1730,13 @@ namespace Raven.Client.Connection
 					throw;
 				return null;
 			}
+		}
+
+		public IDisposable Expect100Continue()
+		{
+			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+			servicePoint.Expect100Continue = true;
+			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
 	}
 }

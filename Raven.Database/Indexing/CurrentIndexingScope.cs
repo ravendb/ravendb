@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Linq;
-using Raven.Abstractions.Extensions;
-using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
 {
@@ -29,7 +27,8 @@ namespace Raven.Database.Indexing
 
 		public dynamic Source { get; set; }
 
-		public IDictionary<string,HashSet<string>> ReferencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.InvariantCultureIgnoreCase); 
+		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.InvariantCultureIgnoreCase); 
+		private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
 
 		public dynamic LoadDocument(string key)
 		{
@@ -51,15 +50,22 @@ namespace Raven.Database.Indexing
 				return source;
 
 			HashSet<string> set;
-			if(ReferencedDocuments.TryGetValue(id, out set) == false)
-				ReferencedDocuments.Add(id, set = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
+			if(referencedDocuments.TryGetValue(id, out set) == false)
+				referencedDocuments.Add(id, set = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
 			set.Add(key);
-			return loadDocument(key);
+
+			dynamic value;
+			if (docsCache.TryGetValue(key, out value))
+				return value;
+
+			value = loadDocument(key);
+			docsCache[key] = value;
+			return value;
 		}
 
 		public void Dispose()
 		{
-			onDispose(ReferencedDocuments);
+			onDispose(referencedDocuments);
 			current = null;
 		}
 	}

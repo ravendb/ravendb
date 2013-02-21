@@ -1,61 +1,124 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+//  <copyright file="PeriodicBackupTests.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+using System;
 using System.IO;
-using System.Reflection;
-using Raven.Client.Document;
-using Raven.Server;
+using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
+using Raven.Database.Extensions;
+using Raven.Database.Smuggler;
+using Xunit;
 
 namespace Raven.Tests.Bundles.PeriodicBackups
 {
-	public class PeriodicBackupTests : IDisposable
+	public class PeriodicBackupTests : RavenTest
 	{
-		private readonly string path;
-		private readonly DocumentStore documentStore;
-		private readonly RavenDbServer ravenDbServer;
-
-		public string AwsAccessKey { get; set; }
-		public string AwsSecretKey { get; set; }
-
-		public PeriodicBackupTests()
+		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(PeriodicBackupTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			var ravenConfiguration = new Raven.Database.Config.RavenConfiguration
+			configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
+		}
+		public class User
+		{
+			public string Name { get; set; }
+		}
+
+		[Fact]
+		public void CanBackupToDirectory()
+		{
+			var backupPath = GetPath("BackupFolder");
+			using (var store = NewDocumentStore())
 			{
-				Port = 8079,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				DataDirectory = path,
-				Settings =
+				Guid? etagForBackups;
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Name = "oren" });
+					var periodicBackupSetup = new PeriodicBackupSetup
 					{
-						{"Raven/ActiveBundles", "PeriodicUpdates"}
-					}
-			};
-			ravenConfiguration.PostInit();
-			ravenDbServer = new RavenDbServer(ravenConfiguration);
-			documentStore = new DocumentStore
+						LocalFolderName = backupPath,
+						IntervalMilliseconds = 25
+					};
+					session.Store(periodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
+
+					session.SaveChanges();
+
+					etagForBackups = session.Advanced.GetEtagFor(periodicBackupSetup);
+				}
+				SpinWait.SpinUntil(() =>
+					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
+
+			}
+
+			using (var store = NewDocumentStore())
 			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
+				var smugglerOptions = new SmugglerOptions
+				{
+					BackupPath = backupPath
+				};
+				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
+				dataDumper.ImportData(smugglerOptions, true);
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal("oren", session.Load<User>(1).Name);
+				}
+			}
+			IOExtensions.DeleteDirectory(backupPath);
 		}
 
-		public void Dispose()
+		[Fact]
+		public void CanBackupToDirectory_MultipleBackups()
 		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-		}
+			var backupPath = GetPath("BackupFolder");
+			using (var store = NewDocumentStore())
+			{
+				Guid? etagForBackups;
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Name = "oren" });
+					var periodicBackupSetup = new PeriodicBackupSetup
+					{
+						LocalFolderName = backupPath,
+						IntervalMilliseconds = 25
+					};
+					session.Store(periodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
 
-		public void SetupAws(string AWSAccessKey, string AWSSecretKey)
-		{
-			ravenDbServer.Database.Configuration.Settings["Raven/AWSAccessKey"] = AwsSecretKey;
-			ravenDbServer.Database.Configuration.Settings["Raven/AWSSecretKey"] = AwsSecretKey;
-		}
+					session.SaveChanges();
 
-		[FactIfAwsIsAvailable]
-		public void testFoo()
-		{
+					etagForBackups = session.Advanced.GetEtagFor(periodicBackupSetup);
+				}
+				SpinWait.SpinUntil(() =>
+					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
 
+				etagForBackups= store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag;
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Name = "ayende" });
+					session.SaveChanges();
+				}
+				SpinWait.SpinUntil(() =>
+					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
+
+			}
+
+			using (var store = NewDocumentStore())
+			{
+				var smugglerOptions = new SmugglerOptions
+				{
+					BackupPath = backupPath
+				};
+				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
+				dataDumper.ImportData(smugglerOptions, true);
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal("oren", session.Load<User>(1).Name);
+					Assert.Equal("ayende", session.Load<User>(2).Name);
+				}
+			}
+			IOExtensions.DeleteDirectory(backupPath);
 		}
 	}
 }

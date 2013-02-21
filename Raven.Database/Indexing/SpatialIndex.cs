@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using GeoAPI;
 using Lucene.Net.Search;
+using Lucene.Net.Search.Function;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix;
 using Lucene.Net.Spatial.Prefix.Tree;
@@ -62,7 +63,7 @@ namespace Raven.Database.Indexing
 			return null;
 		}
 
-		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation,
+		public static Query MakeQuery(Query existingQuery, SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation,
 									  double distanceErrorPct = 0.025)
 		{
 			SpatialOperation spatialOperation;
@@ -90,6 +91,8 @@ namespace Raven.Database.Indexing
 			}
 			var args = new SpatialArgs(spatialOperation, shape) { DistErrPct = distanceErrorPct };
 
+			if(existingQuery is MatchAllDocsQuery)
+				return new CustomScoreQuery(spatialStrategy.MakeQuery(args), new ValueSourceQuery(spatialStrategy.MakeRecipDistanceValueSource(shape)));
 			return spatialStrategy.MakeQuery(args);
 		}
 

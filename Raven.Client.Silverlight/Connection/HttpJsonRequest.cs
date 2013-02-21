@@ -59,6 +59,7 @@ namespace Raven.Client.Silverlight.Connection
 			newWebRequest.Credentials = webRequest.Credentials;
 			result(newWebRequest);
 			webRequest = newWebRequest;
+			requestSendToServer = false;
 
 			if (postedData == null)
 			{
@@ -118,11 +119,18 @@ namespace Raven.Client.Silverlight.Connection
 			return ReadResponseStringAsync();
 		}
 
+		private bool requestSendToServer;
+
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
 		private Task<string> ReadResponseStringAsync()
 		{
+			if (requestSendToServer)
+				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
+
+			requestSendToServer = true;
+
 			return WaitForTask.ContinueWith(_ => webRequest
 													.GetResponseAsync()
 													.ConvertSecurityExceptionToServerNotFound()

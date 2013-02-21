@@ -217,8 +217,10 @@ namespace Raven.Database.Server
 					},
 					LoadedDatabases =
 						from documentDatabase in allDbs
-						let totalSizeOnDisk = documentDatabase.Database.GetTotalSizeOnDisk()
-						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
+						let indexStorageSize = documentDatabase.Database.GetIndexStorageSizeOnDisk()
+						let transactionalStorageSize = documentDatabase.Database.GetTransactionalStorageSizeOnDisk()
+						let totalDatabaseSize = indexStorageSize + transactionalStorageSize
+						let lastUsed = databaseLastRecentlyUsed.GetOrDefault( documentDatabase.Name )
 						select new
 						{
 							documentDatabase.Name,
@@ -227,8 +229,12 @@ namespace Raven.Database.Server
 								lastUsed, 
 								documentDatabase.Database.WorkContext.LastWorkTime
 							}.Max(),
-							Size = totalSizeOnDisk,
-							HumaneSize = DatabaseSize.Humane(totalSizeOnDisk),
+							TransactionalStorageSize = transactionalStorageSize,
+							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane( transactionalStorageSize ),
+							IndexStorageSize = indexStorageSize,
+							IndexStorageHumaneSize = DatabaseSize.Humane( indexStorageSize ),
+							TotalDatabaseSize = totalDatabaseSize,
+							TotalDatabaseHumaneSize = DatabaseSize.Humane( totalDatabaseSize ),
 							documentDatabase.Database.Statistics.CountOfDocuments,
 							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
 							documentDatabase.Database.WorkContext.ConcurrentRequests
@@ -421,7 +427,8 @@ namespace Raven.Database.Server
 				}
 
 				var database = databaseTask.Result;
-				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 5)
+				if (skipIfActive &&
+					(SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 10)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
@@ -1317,8 +1324,16 @@ namespace Raven.Database.Server
 			{
 				var bytes = Convert.FromBase64String(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-				var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-				databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+				try
+				{
+					var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+					databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not unprotect secured db data " + prop.Key +" setting the value to '<data could not be decrypted>'", e);
+					databaseDocument.SecuredSettings[prop.Key] = "<data could not be decrypted>";
+				}
 			}
 		}
 	}

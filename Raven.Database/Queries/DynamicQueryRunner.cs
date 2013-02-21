@@ -95,7 +95,10 @@ namespace Raven.Database.Queries
 													DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
 													DefaultOperator = query.DefaultOperator,
 													SkipTransformResults = query.SkipTransformResults,
-													SkippedResults = query.SkippedResults
+													SkippedResults = query.SkippedResults,
+													HighlighterPreTags = query.HighlighterPreTags,
+													HighlighterPostTags = query.HighlighterPostTags,
+													HighlightedFields = query.HighlightedFields
 												});
 
 				if (!touchTemporaryIndexResult.Item2 ||

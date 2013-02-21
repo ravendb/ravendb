@@ -25,5 +25,6 @@ namespace Raven.Database.Server.Abstractions
 		NameValueCollection GetHeaders();
 
 		Task WriteAsync(string data);
+		void SetCookie(string name, string val);
 	}
 }

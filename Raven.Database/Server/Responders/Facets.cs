@@ -17,7 +17,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET"}; }
+			get { return new[] { "GET" }; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -27,9 +27,11 @@ namespace Raven.Database.Server.Responders
 
 			var facetSetupDoc = context.GetFacetSetupDocFromHttpContext();
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			var facetStart = context.GetFacetStartFromHttpContext();
+			var facetPageSize = context.GetFacetPageSizeFromHttpContext();
 
 			var jsonDocument = Database.Get(facetSetupDoc, null);
-			if(jsonDocument == null)
+			if (jsonDocument == null)
 			{
 				context.SetStatusToNotFound();
 				context.Write("Could not find facet document: " + facetSetupDoc);
@@ -38,24 +40,24 @@ namespace Raven.Database.Server.Responders
 
 			var etag = GetFacetsEtag(jsonDocument, index);
 
-			if(context.MatchEtag(etag))
+			if (context.MatchEtag(etag))
 			{
 				context.SetStatusToNotModified();
 				return;
 			}
 			context.WriteETag(etag);
-			context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facetSetupDoc));
+			context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facetSetupDoc, facetStart, facetPageSize));
 		}
 
 		private Guid GetFacetsEtag(JsonDocument jsonDocument, string index)
 		{
 			Guid etag;
-			using(var md5 = MD5.Create())
+			using (var md5 = MD5.Create())
 			{
 				var etagBytes = md5.ComputeHash(Database.GetIndexEtag(index, null).ToByteArray().Concat(jsonDocument.Etag.Value.ToByteArray()).ToArray());
 				etag = new Guid(etagBytes);
 			}
 			return etag;
 		}
-	}	
+	}
 }

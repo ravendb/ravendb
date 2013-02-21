@@ -1,278 +1,233 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Tests.Indexes;
-using Raven.Tests.MailingList;
-
-namespace BulkStressTest
+﻿namespace Raven.Tryouts
 {
-	class Program
-	{
-		private const string DbName = "BulkStressTestDb";
-		static void Main()
-		{
-			for (int i = 0; i < 1000; i++)
-			{
-				Console.WriteLine(i);
-				using (var x = new MapReduceIndexOnLargeDataSet())
-				{
-					x.WillNotProduceAnyErrors();
-				}
-			}
+    #region
 
-			//const int numberOfItems = 100000000;
-			//BulkInsert(numberOfItems, IndexInfo.IndexBefore);
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
 
-			//Console.ReadLine();
-			////Uncomment to check updates
-			////	BulkInsert(numberOfItems, IndexInfo.AlreadyAdded, new BulkInsertOptions { CheckForUpdates = true });
-		}
+    using Raven.Client.Embedded;
+    using Raven.Client.Indexes;
 
-		private static void BulkInsert(int numberOfItems, IndexInfo useIndexes, BulkInsertOptions bulkInsertOptions = null)
-		{
-			Console.WriteLine("Starting Bulk insert for {0:#,#}", numberOfItems);
-		    switch (useIndexes)
-		    {
-		            case IndexInfo.DontIndex:
-		            Console.WriteLine("Not using indexes");
-                    break;
-		            case IndexInfo.IndexAfter:
-		            Console.WriteLine("Put indexes after all items are Added");
-                    break;
-                    case IndexInfo.IndexBefore:
-		            Console.WriteLine("Put indexes before all items are added");
-                    break;
-                    case IndexInfo.AlreadyAdded:
-                    Console.WriteLine("Indexes Already Added");
-                    break;
-            }
-		    
-			if (bulkInsertOptions != null && bulkInsertOptions.CheckForUpdates)
-				Console.WriteLine("Using check for updates");
-			else
-				Console.WriteLine("Not using check for updates");
+    #endregion
 
-			using (var store = new DocumentStore
-								   {
-									   Url = "http://localhost:8080",
-									   DefaultDatabase = DbName
-								   }.Initialize())
-			using (var bulkInsert = store.BulkInsert(DbName, bulkInsertOptions))
-			{
-				var stopWatch = new Stopwatch();
-
-				if (useIndexes == IndexInfo.IndexBefore)
-					AddIndexesToDatabase(store);
-
-				stopWatch.Start();
-				for (var i = 0; i < numberOfItems; i++)
-				{
-					bulkInsert.Store(new BlogPost
-										 {
-											 Id = "blogposts/" + i,
-											 Author = "Author" + i % 20,
-											 Category = "Category" + i % 3,
-											 Content = "This is the content for blog post " + i,
-											 Title = "Blog post " + i,
-											 Comments = new[]{new BlogComment
-												                  {
-													                  Commenter = string.Format("user/{0}", i % 50),
-																	  Content = "This is a comment",
-																	  Title = "Commenting on blogpost/" + i
-												                  } },
-											 Tags = new[] { string.Format("Tag{0}", i % 10), string.Format("Tag{0}", i % 5) }
-										 });
-				}
-
-				int count = 0;
-				bulkInsert.Report += s =>
-										 {
-											 if(count ++ % 10 == 0)
-											 {
-												 Console.Write("\r" + s);
-											 }
-											 if (s.StartsWith("Done ", StringComparison.InvariantCultureIgnoreCase))
-											 {
-												 //stopWatch.Stop();
-												 Console.WriteLine("Operation took: " + stopWatch.Elapsed);
-
-                                                 if(useIndexes == IndexInfo.IndexAfter)
-                                                     AddIndexesToDatabase(store);
-
-												 if (useIndexes != IndexInfo.DontIndex)
-												 {
-													 while (true)
-													 {
-														 var query1 = store.DatabaseCommands.Query("BlogPosts/PostsCountByTag", new IndexQuery(), new string[0]);
-														 var query2 = store.DatabaseCommands.Query("BlogPosts/CountByCommenter", new IndexQuery(), new string[0]);
-														 var query3 = store.DatabaseCommands.Query("SingleMapIndex", new IndexQuery(), new string[0]);
-														 var query4 = store.DatabaseCommands.Query("SingleMapIndex2", new IndexQuery(), new string[0]);
-														 var query5 = store.DatabaseCommands.Query("BlogPost/Search", new IndexQuery(), new string[0]);
-
-														 if (query1.IsStale || query2.IsStale || query3.IsStale || query4.IsStale || query5.IsStale)
-														 {
-															 Thread.Sleep(100);
-														 }
-														 else
-														 {
-															 Console.WriteLine("Indexing finished took: " + stopWatch.Elapsed);
-															 return;
-														 }
-													 }
-												 }
-											 }
-										 };
-			}
-		}
-
-		private static void AddIndexesToDatabase(IDocumentStore store)
-		{
-			IndexCreation.CreateIndexes(typeof(BlogPosts_PostsCountByTag).Assembly, store);
-		}
-	}
-
-    public enum IndexInfo
+    internal class Program
     {
-        DontIndex,
-        IndexBefore,
-        IndexAfter,
-        AlreadyAdded
+        #region Methods
+
+        private int forthCounter = 0;
+        private static string GetRandomForthTag()
+        {
+            secondCounter++;
+            if (secondCounter > 21)
+            {
+                secondCounter = 0;
+            }
+
+            return secondCounter.ToString() + "Number";
+        }
+
+        private static int secondCounter = 0;
+        private static string GetRandomSecondTag()
+        {
+            secondCounter++;
+            if (secondCounter > 20)
+            {
+                secondCounter = 0;
+            }
+            if (secondCounter > 3)
+            {
+                return "Second";
+            }
+            if (secondCounter > 9)
+            {
+                return "Third";
+            }
+            return secondCounter > 16 ? "Forth" : "First";
+        }
+
+        private static int thirdCounter = 0;
+        private static string GetRandomThirdTag()
+        {
+            thirdCounter++;
+            if (thirdCounter > 20)
+            {
+                thirdCounter = 0;
+            }
+
+            return thirdCounter > 10 ? "gandalf" : "bombor";
+        }
+
+        private static List<DummyObject.Tag> GetTags()
+        {
+            var tags = new List<DummyObject.Tag>
+                           {
+                               new DummyObject.Tag { Type = "AllTheSame", TagValue = "TheSame" },
+                               new DummyObject.Tag
+                                   {
+                                       Type = "SecondTagWithFourValues",
+                                       TagValue = GetRandomSecondTag()
+                                   },
+                               new DummyObject.Tag
+                                   {
+                                       Type = "ThirdWithTwoValues",
+                                       TagValue = GetRandomThirdTag()
+                                   },
+                               new DummyObject.Tag
+                                   {
+                                       Type = "SpeciesGroupId",
+                                       TagValue = GetRandomForthTag()
+                                   }
+                           };
+            return tags;
+        }
+
+        private static void Main(string[] args)
+        {
+            using (var documentStore = new EmbeddableDocumentStore
+            {
+                //RunInMemory = true, 
+                UseEmbeddedHttpServer = true
+            })
+            {
+                documentStore.Initialize();
+                IndexCreation.CreateIndexes(typeof(DummyIndex).Assembly, documentStore);
+
+                var id = 1;
+                for (var o = 0; o < 10; o++)
+                {
+                    using (var bulkInsertOperation = documentStore.BulkInsert())
+                    {
+                        for (var i = 0; i < 20000; i++)
+                        {
+                            var dummyObject = new DummyObject { Id = id, Tags = GetTags() };
+                            bulkInsertOperation.Store(dummyObject);
+                            id++;
+                        }
+                    }
+                }
+
+                Console.WriteLine("Wait for nonstale indexes: press any key");
+                Console.ReadKey();
+
+                var session = documentStore.OpenSession();
+
+                var sumOfAllTags =
+                    session.Query<DummyIndex.Result, DummyIndex>()
+                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                           .Take(1000)
+                           .ToList()
+                           .Sum(x => x.Count);
+                Console.WriteLine(
+                    "sum of all the tags should equal all document * 4 : " + (id - 1) + " documents, " + sumOfAllTags
+                    + " tags....");
+
+                var sumOfSecondTag =
+                    session.Query<DummyIndex.Result, DummyIndex>()
+                           .Where(x => x.Type == "SecondTagWithFourValues")
+                           .Take(1000)
+                           .ToList()
+                           .Sum(x => x.Count);
+                Console.WriteLine(
+                    "sum of secondtag should equal all document: " + (id - 1) + " documents, " + sumOfSecondTag
+                    + " SecondTagWithFourValues....");
+
+                var sumOfThirdTag =
+                    session.Query<DummyIndex.Result, DummyIndex>()
+                           .Where(x => x.Type == "ThirdWithTwoValues")
+                           .Take(1000)
+                           .ToList()
+                           .Sum(x => x.Count);
+                Console.WriteLine(
+                    "sum of thirdtag should equal all document: " + (id - 1) + " documents, " + sumOfThirdTag
+                    + " ThirdWithTwoValues....");
+
+                var sumOfForthTag =
+                    session.Query<DummyIndex.Result, DummyIndex>()
+                           .Where(x => x.Type == "SpeciesGroupId")
+                           .Take(1000)
+                           .ToList()
+                           .Sum(x => x.Count);
+                Console.WriteLine(
+                    "sum of forthtag should equal all document: " + (id - 1) + " documents, " + sumOfForthTag
+                    + " SpeciesGroupId....");
+
+                var sumOfAllTheSameTag =
+                    session.Query<DummyIndex.Result, DummyIndex>()
+                           .Where(x => x.Type == "AllTheSame")
+                           .Take(1000)
+                           .ToList()
+                           .Sum(x => x.Count);
+                Console.WriteLine(
+                    "sum of allthesametag should equal all document: " + (id - 1) + " documents, " + sumOfAllTheSameTag
+                    + " allthesametags....");
+
+                Console.ReadKey();
+            }
+        }
+
+        #endregion
     }
 
-	public class BlogPost
-	{
-		public string Id { get; set; }
-		public string Title { get; set; }
-		public string Category { get; set; }
-		public string Content { get; set; }
-		public DateTime PublishedAt { get; set; }
-		public string[] Tags { get; set; }
-		public BlogComment[] Comments { get; set; }
-		public string Author { get; set; }
-	}
+    public class DummyIndex : AbstractIndexCreationTask<DummyObject, DummyIndex.Result>
+    {
+        #region Constructors and Destructors
 
-	public class BlogComment
-	{
-		public string Title { get; set; }
-		public string Content { get; set; }
-		public string Commenter { get; set; }
-		public DateTime At { get; set; }
+        public DummyIndex()
+        {
+            this.Map =
+                dummys =>
+                from dummy in dummys
+                from tag in dummy.Tags
+                select new Result { Type = tag.Type, TagValue = tag.TagValue, Count = 1 };
 
-		public BlogComment()
-		{
-			At = DateTime.Now;
-		}
-	}
+            this.Reduce = results => from r in results
+                                     group r by new { r.Type, r.TagValue }
+                                         into g
+                                         select
+                                             new Result
+                                             {
+                                                 Type = g.Key.Type,
+                                                 TagValue = g.Key.TagValue,
+                                                 Count = g.Sum(x => x.Count)
+                                             };
+        }
 
-	public class BlogAuthor
-	{
-		public string Name { get; set; }
-		public string ImageUrl { get; set; }
-	}
+        #endregion
 
-	public class BlogPosts_PostsCountByTag : AbstractIndexCreationTask<BlogPost, BlogPosts_PostsCountByTag.ReduceResult>
-	{
-		public class ReduceResult
-		{
-			public string Tag { get; set; }
-			public int Count { get; set; }
-		}
+        public class Result
+        {
+            #region Public Properties
 
-		public BlogPosts_PostsCountByTag()
-		{
-			Map = posts => from post in posts
-						   from tag in post.Tags
-						   select new
-						   {
-							   Tag = tag,
-							   Count = 1
-						   };
+            public int Count { get; set; }
 
-			Reduce = results => from result in results
-								group result by result.Tag
-									into g
-									select new
-									{
-										Tag = g.Key,
-										Count = g.Sum(x => x.Count)
-									};
-		}
-	}
+            public string TagValue { get; set; }
 
-	public class BlogPosts_CountByCommenter : AbstractIndexCreationTask<BlogPost, BlogPosts_CountByCommenter.ReduceResult>
-	{
-		public class ReduceResult
-		{
-			public string Commenter { get; set; }
-			public int Count { get; set; }
-		}
+            public string Type { get; set; }
 
-		public BlogPosts_CountByCommenter()
-		{
-			Map = posts => from post in posts
-						   from comment in post.Comments
-						   select new
-						   {
-							   Commenter = comment.Commenter,
-							   Count = 1
-						   };
+            #endregion
+        }
+    }
 
-			Reduce = results => from result in results
-								group result by result.Commenter
-									into g
-									select new
-									{
-										Commenter = g.Key,
-										Count = g.Sum(x => x.Count)
-									};
-		}
-	}
+    public class DummyObject
+    {
+        #region Public Properties
 
-	public class SingleMapIndex : AbstractIndexCreationTask<BlogPost>
-	{
-		public SingleMapIndex()
-		{
-			Map = posts => from post in posts
-						   select new { post.Title };
-		}
-	}
+        public int Id { get; set; }
 
-	public class BlogPost_Search : AbstractIndexCreationTask<BlogPost, BlogPost_Search.ReduceResult>
-	{
-		public class ReduceResult
-		{
-			public string Query { get; set; }
-			public DateTime LastCommentDate { get; set; }
-		}
+        public List<Tag> Tags { get; set; }
 
-		public BlogPost_Search()
-		{
-			Map = blogposts => from blogpost in blogposts
-			                   select new
-				                          {
-					                          Query = new object[]
-						                                  {
-							                                  blogpost.Author,
-							                                  blogpost.Category,
-							                                  blogpost.Content,
-							                                  blogpost.Comments.Select(comment => comment.Title)
-						                                  },
-					                          LastPaymentDate = blogpost.Comments.Last().At
-				                          };
-		}
-	}
+        #endregion
 
-	public class SingleMapIndex2 : AbstractIndexCreationTask<BlogPost>
-	{
-		public SingleMapIndex2()
-		{
-			Map = posts => from post in posts
-						   select new { post.Title };
-		}
-	}
+        public class Tag
+        {
+            #region Public Properties
+
+            public string TagValue { get; set; }
+
+            public string Type { get; set; }
+
+            #endregion
+        }
+    }
 }

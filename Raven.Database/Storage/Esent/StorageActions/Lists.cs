@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
@@ -32,10 +33,15 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["name"], name, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["key"], key, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["etag"], uuidGenerator.CreateSequentialUuid(uuidType).TransformToValueForEsentSorting());
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
+				using (var columnStream = new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"]))
 				{
-					data.WriteTo(stream);
-					stream.Flush();
+					if (exists)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					{
+						data.WriteTo(stream);
+						stream.Flush();
+					}
 				}
 				update.Save();
 			}
@@ -47,7 +53,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Lists, key, Encoding.Unicode, MakeKeyGrbit.None);
 
-			if(Api.TrySeek(session, Lists, SeekGrbit.SeekEQ))
+			if (Api.TrySeek(session, Lists, SeekGrbit.SeekEQ))
 				Api.JetDelete(session, Lists);
 		}
 
@@ -70,23 +76,29 @@ namespace Raven.Storage.Esent.StorageActions
 
 		}
 
-		public IEnumerable<ListItem> Read(string name, Guid start, int take)
+		public IEnumerable<ListItem> Read(string name, Guid start, Guid? end, int take)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Lists, start.TransformToValueForEsentSorting(), MakeKeyGrbit.None);
 			if (Api.TrySeek(session, Lists, SeekGrbit.SeekGT) == false)
 				yield break;
+		
+			var endComparer = end == null ? null : new ComparableByteArray(end.Value);
 			int count = 0;
 			do
 			{
 				var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
-				if(string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+					yield break;
+
+
+				var etag = Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]).TransfromToGuidWithProperSorting();
+
+				if (endComparer != null && endComparer.CompareTo(etag) <= 0)
 					yield break;
 
 				count++;
-
-				var etag = Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]).TransfromToGuidWithProperSorting();
 				using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
 				{
 					yield return new ListItem
@@ -97,7 +109,7 @@ namespace Raven.Storage.Esent.StorageActions
 					};
 				}
 			} while (Api.TryMoveNext(session, Lists) && count < take);
-		
+
 		}
 
 		public ListItem Read(string name, string key)

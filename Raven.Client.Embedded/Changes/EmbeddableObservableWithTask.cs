@@ -19,11 +19,11 @@ namespace Raven.Client.Embedded.Changes
 			return new DisposableAction(() => registered.TryRemove(observer));
 		}
 
-		public Task Task { get; private set; }
+		public Task<IObservable<T>>  Task { get; private set; }
 
 		public EmbeddableObservableWithTask()
 		{
-			Task = new CompletedTask();
+			Task = new CompletedTask<IObservable<T>>(this);
 		}
 
 		public void Notify(object sender, T e)

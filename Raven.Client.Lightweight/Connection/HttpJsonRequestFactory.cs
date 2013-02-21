@@ -6,6 +6,7 @@ using Raven.Client.Silverlight.MissingFromSilverlight;
 #endif
 using System.Net;
 using System.Threading;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Util;
@@ -190,7 +191,7 @@ namespace Raven.Client.Connection
 				return;
 
 			var clone = data.CloneToken();
-			clone.EnsureSnapshot();
+			clone.EnsureCannotBeChangeAndEnableSnapshotting();
 			cache.Set(url, new CachedRequest
 			{
 				Data = clone,

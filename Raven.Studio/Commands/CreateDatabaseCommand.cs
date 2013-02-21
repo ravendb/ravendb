@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -10,6 +11,7 @@ using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client;
 using Raven.Client.Extensions;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Studio.Controls;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Settings;
@@ -41,7 +43,7 @@ namespace Raven.Studio.Commands
 							var bundlesSettings = new List<ChildWindow>();
 							if (newDatabase.Encryption.IsChecked == true)
 								bundlesSettings.Add(new EncryptionSettings());
-                            if (newDatabase.Quotas.IsChecked == true || newDatabase.Replication.IsChecked == true || newDatabase.Versioning.IsChecked == true || newDatabase.Authorization.IsChecked == true)
+                            if (newDatabase.Quotas.IsChecked == true || newDatabase.Versioning.IsChecked == true)
 							{
 								bundlesModel = ConfigureSettingsModel(newDatabase);
 
@@ -119,11 +121,6 @@ namespace Raven.Studio.Commands
 	                WarnDocs = 8000,
 	            });
 	        }
-	        if (newDatabase.Replication.IsChecked == true)
-	        {
-	            AddSection(bundlesModel,
-	                       new ReplicationSettingsSectionModel() {ReplicationDestinations = {new ReplicationDestination()}});
-	        }
 	        if (newDatabase.Versioning.IsChecked == true)
 	        {
 	            AddSection(bundlesModel, new VersioningSettingsSectionModel(true)
@@ -139,10 +136,6 @@ namespace Raven.Studio.Commands
 	                }
 	            });
 	        }
-            if(newDatabase.Authorization.IsChecked == true)
-            {
-                AddSection(bundlesModel, new AuthorizationSettingsSectionModel());
-            }
 	        return bundlesModel;
 	    }
 
@@ -162,7 +155,8 @@ namespace Raven.Studio.Commands
 			if (encryptionData != null)
 			{
 				settings[Constants.EncryptionKeySetting] = encryptionData.EncryptionKey.Text;
-				switch (encryptionData.EncryptionAlgorithm.SelectedValue.ToString())
+				var content = ((ComboBoxItem) encryptionData.EncryptionAlgorithm.SelectedValue).Content;
+				switch (content.ToString())
 				{
 					case "DESC":
 						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
@@ -176,6 +170,8 @@ namespace Raven.Studio.Commands
 					case "Triple DESC":
 						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
 						break;
+					default:
+						throw new ArgumentException("Could not understand encryption type: " + content);
 				}
 
 				settings[Constants.EncryptIndexes] = (encryptionData.EncryptIndexes.IsChecked ?? true).ToString();
@@ -205,27 +201,21 @@ namespace Raven.Studio.Commands
 				session.Store(replicationDocument);
 			}
 
-			var authorizationSection = settingsModel.GetSection<AuthorizationSettingsSectionModel>();
-			if (authorizationSection != null)
-				StoreAuthorizationData(authorizationSection, session);
+			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
+			if (sqlReplicationSettings != null)
+			{
+				sqlReplicationSettings.UpdateIds();
+
+				foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
+				{
+					session.Store(sqlReplicationConfig);
+				}
+			}
 
 			session.SaveChangesAsync();
 
 			if (!string.IsNullOrEmpty(encryptionKey))
 				new ShowEncryptionMessage(encryptionKey).Show();
-		}
-
-		private void StoreAuthorizationData(AuthorizationSettingsSectionModel authorizationSection, IAsyncDocumentSession session)
-		{
-			foreach (var authorizationRole in authorizationSection.AuthorizationRoles)
-			{
-				session.Store(authorizationRole);
-			}
-
-			foreach (var authorizationUser in authorizationSection.AuthorizationUsers)
-			{
-				session.Store(authorizationUser);
-			}
 		}
 
 		private void StoreVersioningData(IEnumerable<VersioningConfiguration> versioningData, IAsyncDocumentSession session)

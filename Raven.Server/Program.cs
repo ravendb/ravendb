@@ -210,6 +210,14 @@ namespace Raven.Server
 
 		}
 
+		public static void DumpToCsv(RavenConfiguration ravenConfiguration)
+		{
+			using (var db = new DocumentDatabase(ravenConfiguration))
+			{
+				db.TransactionalStorage.DumpAllStorageTables();
+			}
+		}
+
 		private static void SetupPerfCounters(string user)
 		{
 			user = user ?? WindowsIdentity.GetCurrent().Name;

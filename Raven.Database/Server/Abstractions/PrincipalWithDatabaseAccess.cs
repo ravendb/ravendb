@@ -22,7 +22,6 @@ namespace Raven.Database.Server.Abstractions
 			return Principal.IsInRole(role);
 		}
 
-		public bool? ExplicitlyConfigured { get; set; }
 		public IIdentity Identity { get; private set; }
 		public HashSet<string> AdminDatabases { get; private set; }
 		public HashSet<string> ReadOnlyDatabases { get; private set; }

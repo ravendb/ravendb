@@ -50,13 +50,11 @@ namespace Raven.Database.Storage
 			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
 			this.configuration = configuration;
-			this.extensions = extensions;// this is used later in the ctor, so it must appears first
+			this.extensions = extensions; // this is used later in the ctor, so it must appears first
 			this.path = Path.Combine(path, IndexDefDir);
 
 			if (Directory.Exists(this.path) == false && configuration.RunInMemory == false)
 				Directory.CreateDirectory(this.path);
-
-			this.extensions = extensions;
 
 			if (configuration.RunInMemory == false)
 				ReadIndexesFromDisk();
@@ -92,6 +90,7 @@ namespace Raven.Database.Storage
 					Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
 					Indexes = generator.Indexes,
 					Stores = generator.Stores,
+					TermVectors = generator.TermVectors,
 					IsCompiled = true
 				};
 				indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);

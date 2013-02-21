@@ -9,6 +9,7 @@ namespace Raven.Studio.Models
 		public IndexStatsModel()
 		{
 			ModelUrl = "/indexstats";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
 		}
 
 		private string indexName;

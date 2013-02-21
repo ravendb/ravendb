@@ -21,7 +21,7 @@
 			initialize: function () {
 				this.model.sessions.on('add', this.renderTotals, this);
 				this.model.sessions.on('add', this.addSession, this);
-				this.model.on('change:profilerVisibility', this.renderVisibility, this);
+				this.model.on('change:profilerVisible', this.renderVisibility, this);
 				$('body').on('keyup', _.bind(this.buttonClick, this));
 			},
 
@@ -40,7 +40,9 @@
 			addSession: function (session) {
 				var sessionView = new SessionView({ model: session });
 				this.$('#ravendb-session-container').append(sessionView.render().el);
-				this.adjustColumns();
+				if (this.model.get('profilerVisible')) {
+				    this.adjustColumns();
+				}
 			},
 
 			adjustColumns: function () {
@@ -61,18 +63,17 @@
 			},
 
 			renderVisibility: function () {
-				var isVisible = this.model.get('profilerVisibility') === true,
-					visibility = 'visible';
+			    var isVisible = this.model.get('profilerVisible');
+			    this.$el.toggle(isVisible);
 				if (!isVisible) {
-					visibility = 'hidden';
-					this.model.set({ activeRequest: null });
+				    this.model.set({ activeRequest: null });
+				} else {
+				    this.adjustColumns();
 				}
-				this.$el.css({ visibility: visibility });
 			},
 
 			close: function () {
-				var currentVisibility = this.model.get('profilerVisibility');
-				this.model.set({ profilerVisibility: !currentVisibility });
+			    this.model.set({ profilerVisible: false });
 				return false;
 			},
 
@@ -81,7 +82,7 @@
 					if (this.model.get('activeRequest')) {
 						this.model.set('activeRequest', null);
 					} else {
-						this.model.set({ profilerVisibility: false });
+					    this.model.set({ profilerVisible: false });
 					}
 				}
 			},

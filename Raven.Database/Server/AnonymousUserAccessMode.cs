@@ -9,6 +9,7 @@ namespace Raven.Database.Server
 	{
 		All,
 		Get,
-		None
+		None,
+		Admin
 	}
 }

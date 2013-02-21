@@ -37,6 +37,9 @@ namespace Raven.Database.Server.Security.OAuth
 			if (db == null)
 				return false;
 
+			if (db.Admin)
+				return true;
+
 			if (writeAccess && db.ReadOnly)
 				return false;
 

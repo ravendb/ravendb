@@ -326,7 +326,9 @@ namespace Raven.Database.Linq
 			CodeVerifier.AssertNoSecurityCriticalCalls(results.CompiledAssembly);
 
 			Type result = results.CompiledAssembly.GetType(name);
-
+			if (result == null)
+				throw new InvalidOperationException(
+					"Could not get compiled index type. This probably means that there is something wrong with the assembly load context.");
 			cacheEntries.TryAdd(source, new CacheEntry
 			{
 				Source = source,

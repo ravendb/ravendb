@@ -7,22 +7,16 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Reflection;
 #if !SILVERLIGHT
 using System.Transactions;
 #endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
@@ -42,7 +36,6 @@ namespace Raven.Client.Document
 		private readonly int hash = Interlocked.Increment(ref counter);
 
 		protected bool GenerateDocumentKeysOnStore = true;
-
 		/// <summary>
 		/// The session id 
 		/// </summary>
@@ -64,6 +57,13 @@ namespace Raven.Client.Document
 		/// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
 		/// </summary>
 		protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+		private Dictionary<string, object> externalState;
+
+		public IDictionary<string, object> ExternalState
+		{
+			get { return externalState ?? (externalState = new Dictionary<string, object>()); }
+		}
 
 #if !SILVERLIGHT
 		private bool hasEnlisted;
@@ -362,7 +362,6 @@ more responsive application.
 		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata)
 		{
 			document.Remove("@metadata");
-
 			object entity;
 			if (entitiesByKey.TryGetValue(key, out entity) == false)
 			{
@@ -555,6 +554,50 @@ more responsive application.
 			if (id != null)
 				knownMissingIds.Remove(id);
 			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
+		}
+
+		public Task StoreAsync(object entity)
+		{
+			string id;
+			var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
+
+			return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
+		}
+
+		public Task StoreAsync(object entity, Guid etag)
+		{
+			return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true);
+		}
+
+		public Task StoreAsync(object entity, Guid etag, string id)
+		{
+			return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true);
+		}
+
+		public Task StoreAsync(object entity, string id)
+		{
+			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
+		}
+
+		private Task StoreAsyncInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
+		{
+			if (null == entity)
+				throw new ArgumentNullException("entity");
+
+			if (id == null)
+			{
+				return GenerateDocumentKeyForStorageAsync(entity).ContinueWith(task =>
+				{
+					id = task.Result;
+					StoreInternal(entity, etag, id, forceConcurrencyCheck);
+
+					return new CompletedTask();
+				});
+			}
+
+			StoreInternal(entity, etag, id, forceConcurrencyCheck);
+
+			return new CompletedTask();
 		}
 
 		protected abstract string GenerateKey(object entity);
@@ -813,15 +856,23 @@ more responsive application.
 				{
 					Transaction.Current.EnlistDurable(
 						ResourceManagerId,
-						new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+						new RavenClientEnlistment(transactionalSession, () =>
+						{
+							RegisteredStoresInTransaction.Remove(localIdentifier);
+							if (documentStore.WasDisposed)
+								throw new ObjectDisposedException("RavenDB Session");
+						}),
 						EnlistmentOptions.None);
 				}
 				else
 				{
 					var promotableSinglePhaseNotification = new PromotableRavenClientEnlistment(transactionalSession,
-																								() =>
-																								RegisteredStoresInTransaction.
-																									Remove(localIdentifier));
+						() =>
+						{
+							RegisteredStoresInTransaction.Remove(localIdentifier);
+							if (documentStore.WasDisposed)
+								throw new ObjectDisposedException("RavenDB Session");
+						});
 					var registeredSinglePhaseNotification =
 						Transaction.Current.EnlistPromotableSinglePhase(promotableSinglePhaseNotification);
 
@@ -829,7 +880,12 @@ more responsive application.
 					{
 						Transaction.Current.EnlistDurable(
 							ResourceManagerId,
-							new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+							new RavenClientEnlistment(transactionalSession, () =>
+							{
+								RegisteredStoresInTransaction.Remove(localIdentifier);
+								if(documentStore.WasDisposed)
+									throw new ObjectDisposedException("RavenDB Session");
+							}),
 							EnlistmentOptions.None);
 					}
 				}
@@ -906,7 +962,7 @@ more responsive application.
 			entitiesByKey.Clear();
 		}
 
-		readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+		private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
 		public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
 		public EntityToJson EntityToJson { get; private set; }
 
@@ -924,7 +980,6 @@ more responsive application.
 		/// </summary>
 		public virtual void Dispose()
 		{
-
 		}
 
 		/// <summary>

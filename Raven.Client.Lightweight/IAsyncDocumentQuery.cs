@@ -36,5 +36,11 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The query result.</value>
 		Task<Tuple<QueryResult, IList<T>>> ToListAsync();
+
+
+		/// <summary>
+		/// Create the index query object for this query
+		/// </summary>
+		IndexQuery GetIndexQuery(bool isAsync);
 	}
 }
