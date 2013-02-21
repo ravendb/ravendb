@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Jint.Native;
@@ -71,15 +72,15 @@ namespace Raven.Database.Json
 			}
 			catch (NotSupportedException)
 			{
-				throw;
+				throw new ParseExeption();
 			}
 			catch (JintException)
 			{
-				throw;
+				throw new ParseExeption();
 			}
 			catch (Exception e)
 			{
-				throw new InvalidOperationException("Could not parse: " + Environment.NewLine + patch.Script, e);
+				throw new ParseExeption("Could not parse: " + Environment.NewLine + patch.Script, e);
 			}
 
 			loadDocumentStatic = loadDocument;
@@ -361,6 +362,28 @@ function ExecutePatchScript(docInner){{
 					return reader.ReadToEnd();
 				}
 			}
+		}
+	}
+
+	[Serializable]
+	public class ParseException : Exception
+	{
+		public ParseException()
+		{
+		}
+
+		public ParseException(string message) : base(message)
+		{
+		}
+
+		public ParseException(string message, Exception inner) : base(message, inner)
+		{
+		}
+
+		protected ParseException(
+			SerializationInfo info,
+			StreamingContext context) : base(info, context)
+		{
 		}
 	}
 }

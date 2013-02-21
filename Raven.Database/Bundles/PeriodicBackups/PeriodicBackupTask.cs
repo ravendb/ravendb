@@ -92,8 +92,9 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						AlertLevel = AlertLevel.Error,
 						CreatedAt = SystemTime.UtcNow,
 						Message = ex.Message,
-						Title = "Error in Periodic Backup",
-						Exception = ex
+						Title = "Could not read periodic backup config",
+						Exception = ex.ToString(),
+						UniqueKey = "Periodic Backup Config Error"
 					});
 				}
 			}
@@ -166,14 +167,16 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						}
 						catch (Exception e)
 						{
-							Database.AddAlert(new Alert
-							{
-								AlertLevel = AlertLevel.Error,
-								CreatedAt = SystemTime.UtcNow,
-								Message = e.Message,
-								Title = "Error in Periodic Backup",
-								Exception = e
-							});
+								Database.AddAlert(new Alert
+								{
+									AlertLevel = AlertLevel.Error,
+									CreatedAt = SystemTime.UtcNow,
+									Message = e.Message,
+									Title = "Error in Periodic Backup",
+									Exception = e.ToString(),
+									UniqueKey = "Periodic Backup Error"
+								});
+
 							logger.ErrorException("Error when performing periodic backup", e);
 						}
 					}
