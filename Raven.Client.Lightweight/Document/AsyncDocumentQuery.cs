@@ -889,5 +889,17 @@ namespace Raven.Client.Document
 			UsingDefaultOperator(queryOperator);
 			return this;
 		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.NoTracking()
+		{
+			NoTracking();
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.NoCaching()
+		{
+			NoCaching();
+			return this;
+		}
 	}
 }

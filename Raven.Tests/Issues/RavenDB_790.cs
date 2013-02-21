@@ -257,6 +257,56 @@ namespace Raven.Tests.Issues
 			}
 		}
 
+		[Fact]
+		public void CanDisableLuceneQueryResultsTrackingForDocumentQuery()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item());
+					session.Store(new Item());
+
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var items = session.Advanced.LuceneQuery<Item>().WaitForNonStaleResults().NoTracking().ToList();
+
+					Assert.Equal(2, items.Count);
+					Assert.Equal(0, ((InMemoryDocumentSessionOperations)session).NumberOfEntitiesInUnitOfWork);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanDisableLuceneQueryResultsCachingForDocumentQuery()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Item());
+					session.Store(new Item());
+
+					session.SaveChanges();
+				}
+
+				store.JsonRequestFactory.ResetCache();
+
+				using (var session = store.OpenSession())
+				{
+					var items = session.Advanced.LuceneQuery<Item>().WaitForNonStaleResults().NoCaching().ToList();
+
+					Assert.Equal(2, items.Count);
+				}
+
+				Assert.Equal(0, store.JsonRequestFactory.CurrentCacheSize);
+			}
+		}
+
 		private static IDocumentStore CreateDocumentStore(int port)
 		{
 			return new DocumentStore

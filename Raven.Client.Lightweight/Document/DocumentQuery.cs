@@ -290,6 +290,18 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoTracking()
+		{
+			NoTracking();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoCaching()
+		{
+			NoCaching();
+			return this;
+		}
+
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
