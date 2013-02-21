@@ -127,7 +127,13 @@ namespace Raven.Database.Bundles.SqlReplication
                 var relevantConfigs =
                     config
                         .Where(x => ByteArrayComparer.Instance.Compare(GetLastEtagFor(localReplicationStatus, x), latestEtag) <= 0) // haven't replicate the etag yet
-                        .Where(x => SystemTime.UtcNow >= statistics.GetOrDefault(x.Name).LastErrorTime) // have error or the timeout expired
+                        .Where(x =>
+                        {
+	                        var sqlReplicationStatistics = statistics.GetOrDefault(x.Name);
+	                        if (sqlReplicationStatistics == null)
+		                        return true;
+	                        return SystemTime.UtcNow >= sqlReplicationStatistics.LastErrorTime;
+                        }) // have error or the timeout expired
                         .ToList();
 
                 if (relevantConfigs.Count == 0)
