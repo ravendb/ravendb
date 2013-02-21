@@ -69,7 +69,7 @@ CREATE TABLE [dbo].[Orders]
 			{
 				var eventSlim = new ManualResetEventSlim(false);
 				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					 .First().AfterReplicationCompleted += () => eventSlim.Set();
+					 .First().AfterReplicationCompleted += eventSlim.Set;
 				
 				using (var session = store.OpenSession())
 				{

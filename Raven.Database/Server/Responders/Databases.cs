@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Responders
 			// This responder is NOT secured, and anyone can access it.
 			// Because of that, we need to provide explicit security here.
 			
-			// Anonymous Access - All / Get
+			// Anonymous Access - All / Get / Admin
 			// Show all dbs
 
 			// Anonymous Access - None
