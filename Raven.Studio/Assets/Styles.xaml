@@ -11,7 +11,8 @@
 					xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
 					xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
-                    xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d">
+                    xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+                    xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" mc:Ignorable="d">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -2386,8 +2387,7 @@
 		<Setter Property="VerticalContentAlignment" Value="Stretch"/>
 		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 		<Setter Property="Padding" Value="15,6,60,6"/>
-		<Setter Property="Width" Value="Auto"/>
-		<Setter Property="MaxWidth" Value="400"/>
+		<Setter Property="Width" Value="{Binding DataContext.Value.ItemWidth, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"/>
 		<Setter Property="MinWidth" Value="200"/>
 		<Setter Property="MinHeight" Value="60"/>
 		<Setter Property="Template">

@@ -107,6 +107,8 @@ namespace Raven.Studio.Models
             OnPropertyChanged(() => SelectedDatabase);
         }
 
+		public int ItemWidth{get { return Databases.Max(model => model.Name.Length) * 7; }}
+
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
 			var list = Databases.Select(model => model.Name).Cast<object>().ToList();
