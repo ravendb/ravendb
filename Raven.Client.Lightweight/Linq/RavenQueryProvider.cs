@@ -267,7 +267,7 @@ namespace Raven.Client.Linq
 			{
 				var renamedField = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
 				if (renamedField != null)
-					return renamedField.NewField;
+					return renamedField.NewField ?? field;
 				return field;
 			}).ToArray();
 
