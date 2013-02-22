@@ -65,13 +65,14 @@ namespace Raven.Abstractions.Data
 
 	public class ReplicationConflictNotification : EventArgs
 	{
-		public ReplicationConflictTypes Type { get; set; }
+		public ReplicationConflictTypes ItemType { get; set; }
 		public string Id { get; set; }
-		public RavenJObject[] ConflictedDocs { get; set; }
+		public ReplicationOperationTypes OperationType { get; set; }
+		public string[] Conflicts { get; set; }
 
 		public override string ToString()
 		{
-			return string.Format("{0} on {1}", Type, Id);
+			return string.Format("{0} on {1} for ", ItemType, Id);
 		}
 	}
 
@@ -81,6 +82,15 @@ namespace Raven.Abstractions.Data
 		None = 0,
 
 		DocumentReplicationConflict = 1,
-		AttachmentReplicationConflict = 2
+		AttachmentReplicationConflict = 2,
+	}
+
+	[Flags]
+	public enum ReplicationOperationTypes
+	{
+		None = 0,
+
+		Put = 1,
+		Delete = 2,
 	}
 }

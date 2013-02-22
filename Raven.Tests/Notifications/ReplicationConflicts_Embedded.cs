@@ -77,11 +77,78 @@ namespace Raven.Tests.Notifications
 					}
 
 					ReplicationConflictNotification replicationConflictNotification;
-					Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10 * 600)));
+					Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
 
 					Assert.Equal("users/1", replicationConflictNotification.Id);
-					Assert.Equal(replicationConflictNotification.Type, ReplicationConflictTypes.DocumentReplicationConflict);
+					Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.DocumentReplicationConflict);
+					Assert.Equal(2, replicationConflictNotification.Conflicts.Length);
+					Assert.Equal(ReplicationOperationTypes.Put, replicationConflictNotification.OperationType);
+				}
+			}
+		}
 
+		[Fact]
+		public void CanGetNotificationsConflictedDocumentsCausedByDelete()
+		{
+			using (GetNewServer(port: 8079))
+			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			{
+
+				using (var embeddableStore = new EmbeddableDocumentStore
+				{
+					UseEmbeddedHttpServer = true,
+					Configuration =
+					{
+						Port = 8078,
+						Settings = { { "Raven/ActiveBundles", "replication" } }
+					},
+					RunInMemory = true,
+
+				}.Initialize())
+				{
+					documentStore.DatabaseCommands.Put("users/1", null, new RavenJObject
+					{
+						{"Name", "Ayende"}
+					}, new RavenJObject());
+
+					embeddableStore.DatabaseCommands.Put("users/1", null, new RavenJObject
+					{
+						{"Name", "Rahien"}
+					}, new RavenJObject());
+
+					documentStore.DatabaseCommands.Delete("users/1", null);
+
+					var list = new BlockingCollection<ReplicationConflictNotification>();
+					var taskObservable = embeddableStore.Changes();
+					taskObservable.Task.Wait();
+					var observableWithTask = taskObservable.ForAllReplicationConflicts();
+					observableWithTask.Task.Wait();
+					observableWithTask
+						.Subscribe(list.Add);
+
+					// setup and run replication
+					using (var session = documentStore.OpenSession())
+					{
+						var replicationDestination = new ReplicationDestination
+						{
+							Url = "http://localhost:8078",
+
+						};
+
+						session.Store(new ReplicationDocument
+						{
+							Destinations = { replicationDestination }
+						}, "Raven/Replication/Destinations");
+						session.SaveChanges();
+					}
+
+					ReplicationConflictNotification replicationConflictNotification;
+					Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
+
+					Assert.Equal("users/1", replicationConflictNotification.Id);
+					Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.DocumentReplicationConflict);
+					Assert.Equal(2, replicationConflictNotification.Conflicts.Length);
+					Assert.Equal(ReplicationOperationTypes.Delete, replicationConflictNotification.OperationType);
 				}
 			}
 		}
