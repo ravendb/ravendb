@@ -7,6 +7,7 @@ using System;
 using System.ComponentModel.Composition;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -37,11 +38,16 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
 				return;
 
-			int revision = 0;
-			Database.TransactionalStorage.Batch(accessor =>
+			int revision = 1;
+
+			var existingDoc = Database.Get(key, null);
+			if (existingDoc != null)
 			{
-				revision = (int)accessor.General.GetNextIdentityValue(key + "/revisions/");
-			});
+				RavenJToken existingRevisionToken;
+				if (existingDoc.Metadata.TryGetValue(VersioningUtil.RavenDocumentRevision, out existingRevisionToken))
+					revision = existingRevisionToken.Value<int>() + 1;
+			}
+
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
@@ -52,8 +58,6 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			metadata[VersioningUtil.RavenDocumentRevisionStatus] = RavenJToken.FromObject("Current");
 			metadata[VersioningUtil.RavenDocumentRevision] = RavenJToken.FromObject(revision);
-
-
 		}
 
 		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Guid etag, TransactionInformation transactionInformation)
@@ -80,7 +84,6 @@ namespace Raven.Bundles.Versioning.Triggers
 				metadata.__ExternalState.TryGetValue("Next-Revision", out value);
 				Database.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
 							 transactionInformation);
-
 			}
 		}
 
