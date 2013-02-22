@@ -81,6 +81,14 @@ namespace Raven.Database.Server.Responders
 			{
 				connectionState.UnwatchDocumentPrefix(name);
 			}
+			else if (Match(cmd, "watch-replication-conflicts"))
+			{
+				connectionState.WatchAllReplicationConflicts();
+			}
+			else if (Match(cmd, "unwatch-replication-conflicts"))
+			{
+				connectionState.UnwatchAllReplicationConflicts();
+			}
 			else
 			{
 				context.SetStatusToBadRequest();

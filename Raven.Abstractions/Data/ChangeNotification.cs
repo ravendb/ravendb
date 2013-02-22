@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -26,10 +27,8 @@ namespace Raven.Abstractions.Data
 
 		Put = 1,
 		Delete = 2,
-		ReplicationConflict = 4,
-		AttachmentReplicationConflict = 8,
-		BulkInsertStarted = 16,
-		BulkInsertEnded = 32,
+		BulkInsertStarted = 4,
+		BulkInsertEnded = 8,
 
 		Common = Put | Delete
 	}
@@ -62,5 +61,26 @@ namespace Raven.Abstractions.Data
 		{
 			return string.Format("{0} on {1}", Type, Name);
 		}
+	}
+
+	public class ReplicationConflictNotification : EventArgs
+	{
+		public ReplicationConflictTypes Type { get; set; }
+		public string Id { get; set; }
+		public RavenJObject[] ConflictedDocs { get; set; }
+
+		public override string ToString()
+		{
+			return string.Format("{0} on {1}", Type, Id);
+		}
+	}
+
+	[Flags]
+	public enum ReplicationConflictTypes
+	{
+		None = 0,
+
+		DocumentReplicationConflict = 1,
+		AttachmentReplicationConflict = 2
 	}
 }

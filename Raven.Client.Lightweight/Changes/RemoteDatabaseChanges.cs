@@ -321,6 +321,35 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
+		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
+		{
+			var counter = counters.GetOrAdd("all-replication-conflicts", s =>
+			{
+				var indexSubscriptionTask = AfterConnection(() =>
+				{
+					watchAllIndexes = true;
+					return Send("watch-replication-conflicts", null);
+				});
+
+				return new LocalConnectionState(
+					() =>
+					{
+						watchAllIndexes = false;
+						Send("unwatch-replication-conflicts", null);
+						counters.Remove("all-replication-conflicts");
+					},
+					indexSubscriptionTask);
+			});
+			var taskedObservable = new TaskedObservable<ReplicationConflictNotification>(
+				counter,
+				notification => true);
+
+			counter.OnReplicationConflictNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+		}
+
 		public void WaitForAllPendingSubscriptions()
 		{
 			foreach (var kvp in counters)
@@ -381,6 +410,13 @@ namespace Raven.Client.Changes
 					{
 						counter.Value.Send(indexChangeNotification);
 					} 
+					break;
+				case "ReplicationConflictNotification":
+					var replicationConflictNotification = value.JsonDeserialization<ReplicationConflictNotification>();
+					foreach (var counter in counters)
+					{
+						counter.Value.Send(replicationConflictNotification);
+					}
 					break;
 				case "Initialized":
 				case "Heartbeat":

@@ -68,11 +68,12 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
+
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-			                                                                            Database.RaiseNotifications(new DocumentChangeNotification
+			                                                                            Database.RaiseNotifications(new ReplicationConflictNotification()
 			                                                                            {
 			                                                                            	Id = id,
-			                                                                            	Type = ReplicationConflict
+			                                                                            	Type = ReplicationConflict,
 			                                                                            }));
 
 			var newDocumentConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
@@ -93,7 +94,7 @@ namespace Raven.Bundles.Replication.Responders
 			CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem, existingMetadata);
 		}
 
-		protected abstract DocumentChangeTypes ReplicationConflict { get; }
+		protected abstract ReplicationConflictTypes ReplicationConflict { get; }
 
 		private string SaveConflictedItem(string id, RavenJObject metadata, TExternal incoming, Etag existingEtag)
 		{
@@ -160,10 +161,10 @@ namespace Raven.Bundles.Replication.Responders
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-																						Database.RaiseNotifications(new DocumentChangeNotification
+																						Database.RaiseNotifications(new ReplicationConflictNotification()
 																						{
 																							Id = id,
-																							Type = DocumentChangeTypes.ReplicationConflict
+																							Type = ReplicationConflictTypes.DocumentReplicationConflict
 																						}));
 			var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
 			log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);

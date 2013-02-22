@@ -13,6 +13,7 @@ namespace Raven.Client.Embedded.Changes
 		private readonly Action onDispose;
 		private readonly EmbeddableObservableWithTask<IndexChangeNotification> indexesObservable;
 		private readonly EmbeddableObservableWithTask<DocumentChangeNotification> documentsObservable;
+		private readonly EmbeddableObservableWithTask<ReplicationConflictNotification> replicationConflictsObservable;
 
 		private readonly BlockingCollection<Action> enqueuedActions = new BlockingCollection<Action>();
 		private readonly Task enqueuedTask;
@@ -23,11 +24,14 @@ namespace Raven.Client.Embedded.Changes
 			Task = new CompletedTask<IDatabaseChanges>(this);
 			indexesObservable = new EmbeddableObservableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObservableWithTask<DocumentChangeNotification>();
+			replicationConflictsObservable = new EmbeddableObservableWithTask<ReplicationConflictNotification>();
 
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += (o, notification) => 
 				enqueuedActions.Add(() => indexesObservable.Notify(o, notification));
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnDocumentChangeNotification += (o, notification) =>
 				 enqueuedActions.Add(() => documentsObservable.Notify(o, notification));
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnReplicationConflictNotification += (o, notification) =>
+				 enqueuedActions.Add(() => replicationConflictsObservable.Notify(o, notification));
 
 			enqueuedTask = System.Threading.Tasks.Task.Factory.StartNew(() =>
 			{
@@ -75,6 +79,12 @@ namespace Raven.Client.Embedded.Changes
 
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
 				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
+		}
+
+		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
+		{
+			return new FilteringObservableWithTask<ReplicationConflictNotification>(replicationConflictsObservable,
+			                                                                        notification => true);
 		}
 
 		public void WaitForAllPendingSubscriptions()
