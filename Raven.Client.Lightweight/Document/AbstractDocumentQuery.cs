@@ -84,6 +84,8 @@ namespace Raven.Client.Document
 
 		private KeyValuePair<string, string> lastEquality;
 
+        protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+
 		/// <summary>
 		///   The list of fields to project directly from the results
 		/// </summary>
@@ -182,6 +184,21 @@ namespace Raven.Client.Document
 		/// Holds the query highlightings
 		/// </summary>
 		protected RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
+
+        /// <summary>
+        /// The name of the results transformer to use after executing this query
+        /// </summary>
+	    protected string resultsTransformer;
+
+		/// <summary>
+		/// Determines if entities should be tracked and kept in memory
+		/// </summary>
+		protected bool disableEntitiesTracking;
+
+		/// <summary>
+		/// Determine if query results should be cached.
+		/// </summary>
+		protected bool disableCaching;
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -333,6 +350,9 @@ namespace Raven.Client.Document
 			highlightedFields = other.highlightedFields;
 			highlighterPreTags = other.highlighterPreTags;
 			highlighterPostTags = other.highlighterPostTags;
+		    queryInputs = other.queryInputs;
+			disableEntitiesTracking = other.disableEntitiesTracking;
+			disableCaching = other.disableCaching;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -481,7 +501,8 @@ namespace Raven.Client.Document
 									  setOperationHeaders,
 									  timeout,
 									  transformResultsFunc,
-									  includes);
+									  includes,
+									  disableEntitiesTracking);
 		}
 
 		public IndexQuery GetIndexQuery(bool isAsync)
@@ -681,6 +702,18 @@ namespace Raven.Client.Document
 		IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string[] preTags, string[] postTags)
 		{
 			this.SetHighlighterTags(preTags, postTags);
+			return this;
+		}
+
+		public IDocumentQueryCustomization NoTracking()
+		{
+			disableEntitiesTracking = true;
+			return this;
+		}
+
+		public IDocumentQueryCustomization NoCaching()
+		{
+			disableCaching = true;
 			return this;
 		}
 
@@ -1633,7 +1666,10 @@ If you really want to do in memory filtering on the data returned from the query
 					DefaultOperator = defaultOperator,
 					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 					HighlighterPreTags = highlighterPreTags.ToArray(),
-					HighlighterPostTags = highlighterPostTags.ToArray()
+					HighlighterPostTags = highlighterPostTags.ToArray(),
+                    ResultsTransformer = resultsTransformer,
+                    QueryInputs  = queryInputs,
+					DisableCaching = disableCaching
 				};
 			}
 
@@ -1651,7 +1687,10 @@ If you really want to do in memory filtering on the data returned from the query
 				DefaultOperator = defaultOperator,
 				HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 				HighlighterPreTags = highlighterPreTags.ToArray(),
-				HighlighterPostTags = highlighterPostTags.ToArray()
+				HighlighterPostTags = highlighterPostTags.ToArray(),
+                ResultsTransformer = this.resultsTransformer,
+                QueryInputs = queryInputs,
+				DisableCaching = disableCaching
 			};
 
 			if (pageSize != null)
@@ -1738,6 +1777,10 @@ If you really want to do in memory filtering on the data returned from the query
 				return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false);
 			}
 
+			if (type == typeof(double))
+			{
+				return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false);
+			}
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
 				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, 

@@ -46,7 +46,7 @@ namespace Raven.Client.Document
 		}
 
 		private IndexQuery indexQuery;
-		private IndexQuery IndexQuery
+	    private IndexQuery IndexQuery
 		{
 			get { return indexQuery ?? (indexQuery = GenerateIndexQuery(queryText.ToString())); }
 		}
@@ -129,6 +129,8 @@ namespace Raven.Client.Document
 				spatialRelation = spatialRelation,
 				databaseCommands = databaseCommands,
 				indexQuery = indexQuery,
+				disableEntitiesTracking = disableEntitiesTracking,
+				disableCaching = disableCaching
 			};
 			return documentQuery;
 		}

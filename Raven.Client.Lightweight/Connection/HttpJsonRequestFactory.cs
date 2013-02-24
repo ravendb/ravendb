@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using System.Linq;
@@ -86,8 +87,10 @@ namespace Raven.Client.Connection
 				if(duration.TotalSeconds > 0)
 					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
-				if ((SystemTime.UtcNow- cachedRequest.Time) < duration) // can serve directly from local cache
+				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow- cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
+
+				cachedRequest.ForceServerCheck = false;
 			}
 
 			setHeader("If-None-Match", cachedRequest.Headers["ETag"]);
@@ -110,7 +113,7 @@ namespace Raven.Client.Connection
 
 		public void ExpireItemsFromCache(string db)
 		{
-			cache.actualCache.Clear();
+			cache.ForceServerCheckOfCachedItemsForDatabase(db);
 			NumberOfCacheResets++;
 		}
 
@@ -127,6 +130,14 @@ namespace Raven.Client.Connection
 		public int NumberOfCachedRequests
 		{
 			get { return NumOfCachedRequests; }
+		}
+
+		/// <summary>
+		/// The number of currently held requests in the cache
+		/// </summary>
+		public int CurrentCacheSize
+		{
+			get { return cache.CurrentSize; }
 		}
 
 		/// <summary>
@@ -205,11 +216,13 @@ namespace Raven.Client.Connection
 
 			var clone = data.CloneToken();
 			clone.EnsureCannotBeChangeAndEnableSnapshotting();
+
 			cache.Set(url, new CachedRequest
 			{
 				Data = clone,
 				Time = SystemTime.UtcNow,
-				Headers = new NameValueCollection(headers)
+				Headers = new NameValueCollection(headers),
+				Database = MultiDatabase.GetDatabaseName(url)
 			});
 		}
 

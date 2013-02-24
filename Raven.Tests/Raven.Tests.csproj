@@ -514,6 +514,7 @@
     <Compile Include="Bundles\IndexedProperties\IndexedProperties.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
+    <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
@@ -521,8 +522,17 @@
     <Compile Include="Bundles\SqlReplication\CanReplicate.cs" />
     <Compile Include="Bundles\SqlReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
+    <Compile Include="Faceted\ConditionalGetHelper.cs" />
+    <Compile Include="Faceted\DynamicFacets.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
+    <Compile Include="Faceted\FacetTestBase.cs" />
     <Compile Include="Indexes\HighlightTesting.cs" />
+    <Compile Include="Indexes\Recovery\MapReduceRecoveryTestIndex.cs" />
+    <Compile Include="Indexes\Recovery\IndexMessing.cs" />
+    <Compile Include="Indexes\Recovery\MapIndexRecoveryTests.cs" />
+    <Compile Include="Indexes\Recovery\MapReduceIndexRecoveryTests.cs" />
+    <Compile Include="Indexes\Recovery\Recovery.cs" />
+    <Compile Include="Indexes\Recovery\MapRecoveryTestIndex.cs" />
     <Compile Include="Indexes\WithNullableDateTime.cs" />
     <Compile Include="InflectorTests.cs" />
     <Compile Include="Issues\BulkInsertAuth.cs" />
@@ -535,8 +545,11 @@
     <Compile Include="Issues\RavenDB845.cs" />
     <Compile Include="Issues\RavenDB903.cs" />
     <Compile Include="Issues\RavenDB921.cs" />
+    <Compile Include="Issues\RavenDB934.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
+    <Compile Include="Issues\RavenDB957.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
+    <Compile Include="Issues\RavenDB_790.cs" />
     <Compile Include="Issues\RavenDB_806.cs" />
     <Compile Include="Issues\RavenDB_851.cs" />
     <Compile Include="Issues\RavenDB_863.cs" />
@@ -680,6 +693,8 @@
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
+    <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
+    <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
@@ -823,7 +838,6 @@
     <Compile Include="Indexes\AnalyzerResolution.cs" />
     <Compile Include="Faceted\Camera.cs" />
     <Compile Include="Faceted\FacetedIndex.cs" />
-    <Compile Include="Faceted\FacetedIndexTestHelper.cs" />
     <Compile Include="Indexes\BoostingDuringIndexing.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />

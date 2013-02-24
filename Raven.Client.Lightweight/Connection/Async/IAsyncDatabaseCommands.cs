@@ -108,6 +108,11 @@ namespace Raven.Client.Connection.Async
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
 
 		/// <summary>
+		/// Puts the transfomer definition for the specified name asynchronously
+		/// </summary>
+		Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition);
+
+		/// <summary>
 		/// Deletes the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>

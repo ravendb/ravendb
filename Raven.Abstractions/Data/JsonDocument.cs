@@ -99,7 +99,10 @@ namespace Raven.Abstractions.Data
 			var metadata = (RavenJObject)Metadata.CreateSnapshot();
 
 			if (LastModified != null)
+			{
 				metadata[Constants.LastModified] = LastModified.Value;
+				metadata[Constants.RavenLastModified] = LastModified.Value.ToString(Default.DateTimeFormatsToWrite);
+			}
 			if (Etag != null)
 				metadata["@etag"] = Etag.ToString();
 			if (NonAuthoritativeInformation != null)

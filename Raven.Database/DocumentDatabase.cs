@@ -756,7 +756,10 @@ namespace Raven.Database
 				if (preTouchEtag == null || afterTouchEtag == null)
 					continue;
 
-                actions.General.MaybePulseTransaction();
+				actions.General.MaybePulseTransaction();
+
+				if (preTouchEtag == null || afterTouchEtag == null)
+					continue;
 
 				recentTouches.Set(key, new TouchedDocumentInfo
 				{
@@ -1058,6 +1061,25 @@ namespace Raven.Database
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		public string PutTransform(string name, TransformerDefinition definition)
+		{
+			if (name == null)
+				throw new ArgumentNullException("name");
+			if (definition == null) throw new ArgumentNullException("definition");
+
+			name = name.Trim();
+
+			var existingDefintition = IndexDefinitionStorage.GetTransformerDefinition(name);
+			if (existingDefintition != null && existingDefintition.Equals(definition))
+				return name; // no op for the same transformer
+
+			IndexDefinitionStorage.CreateAndPersistTransform(definition);
+			IndexDefinitionStorage.AddTransform(name, definition);
+
+			return name;
+		}
+
 		// only one index can be created at any given time
 		// the method already handle attempts to create the same index, so we don't have to 
 		// worry about this.
@@ -1154,10 +1176,22 @@ namespace Raven.Database
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
+			Func<IndexQueryResult, object> tryRecordHighlighting = queryResult =>
+			{
+				if (queryResult.Highligtings != null && queryResult.Key != null)
+					highlightings.Add(queryResult.Key, queryResult.Highligtings);
+				return null;
+			};
 			var stale = false;
 			Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
 			Etag resultEtag = Etag.Empty;
 			var nonAuthoritativeInformation = false;
+
+			if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
+			{
+				query.FieldsToFetch = new[] { Constants.AllFields };
+			}
+
 			var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			TransactionalStorage.Batch(
 				actions =>
@@ -1176,7 +1210,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					var docRetriever = new DocumentRetriever(actions, ReadTriggers, idsToLoad);
+					var docRetriever = new DocumentRetriever(actions, ReadTriggers, query.QueryInputs, idsToLoad);
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
 														  viewGenerator.ReduceDefinition == null
@@ -1184,51 +1218,18 @@ namespace Raven.Database
 															: Constants.ReduceKeyFieldName);
 					Func<IndexQueryResult, bool> shouldIncludeInResults =
 						result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
-					var collection =
-						from queryResult in
-							IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
-						select new
-						{
-							Document = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch),
-							Fragments = queryResult.Highligtings
-						}
-						into docWithFragments
-						where docWithFragments.Document != null
-						let _ = nonAuthoritativeInformation |= (docWithFragments.Document.NonAuthoritativeInformation ?? false)
-						select docWithFragments;
+					var indexQueryResults = IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers);
+					indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
 
 					var transformerErrors = new List<string>();
-					IEnumerable<RavenJObject> results;
-					if (query.SkipTransformResults == false &&
-						query.PageSize > 0 && // maybe they just want the stats?
-						viewGenerator.TransformResultsDefinition != null)
-					{
-						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.Document.ToJson())).ToArray();
-						var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
-						{
-							OnError =
-								(exception, o) =>
-								transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
-														 exception.Message))
-						};
-						results =
-							robustEnumerator.RobustEnumeration(
-								dynamicJsonObjects.Cast<object>().GetEnumerator(),
-								source => viewGenerator.TransformResultsDefinition(docRetriever, source))
-								.Select(JsonExtensions.ToJObject);
-					}
-					else
-					{
-						var resultList = new List<RavenJObject>();
-						foreach (var docWithFragments in collection)
-						{
-							resultList.Add(docWithFragments.Document.ToJson());
+					var results = GetQueryResults(query, viewGenerator, docRetriever,
+					                              from queryResult in indexQueryResults
+					                              let doc = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
+					                              where doc != null
+					                              let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
+					                              let __ = tryRecordHighlighting(queryResult)
+					                              select doc, transformerErrors);
 
-							if (docWithFragments.Fragments != null && docWithFragments.Document.Key != null)
-								highlightings.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
-						}
-						results = resultList;
-					}
 					if (headerInfo != null)
 					{
 						headerInfo(new QueryHeaderInformation
@@ -1236,20 +1237,26 @@ namespace Raven.Database
 							Index = index,
 							IsStable = stale,
 							ResultEtag = resultEtag,
-							IndexTimestamp= indexTimestamp.Item1,
+							IndexTimestamp = indexTimestamp.Item1,
 							IndexEtag = indexTimestamp.Item2,
 							TotalResults = query.TotalSize.Value
 						});
 					}
-					foreach (var result in results)
+					using (new CurrentTransformationScope(docRetriever))
 					{
-						onResult(result);
+						foreach (var result in results)
+						{
+							onResult(result);
+						}
+
+						if (transformerErrors.Count > 0)
+						{
+							throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
+						}
+
 					}
 
-					if (transformerErrors.Count > 0)
-					{
-						throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
-					}
+
 				});
 			return new QueryResultWithIncludes
 			{
@@ -1265,6 +1272,48 @@ namespace Raven.Database
 				LastQueryTime = SystemTime.UtcNow,
 				Highlightings = highlightings
 			};
+		}
+
+		private IEnumerable<RavenJObject> GetQueryResults(IndexQuery query,
+			AbstractViewGenerator viewGenerator,
+			DocumentRetriever docRetriever,
+			IEnumerable<JsonDocument> results,
+			List<string> transformerErrors)
+		{
+			if (query.PageSize <= 0) // maybe they just want the stats? 
+			{
+				return Enumerable.Empty<RavenJObject>();
+			}
+
+			IndexingFunc transformFunc = null;
+
+			// Check an explicitly declared one first
+			if (query.ResultsTransformer != null)
+			{
+				var transformGenerator = IndexDefinitionStorage.GetTransfomer(query.ResultsTransformer);
+				if (transformGenerator != null && transformGenerator.TransformResultsDefinition != null)
+					transformFunc = transformGenerator.TransformResultsDefinition;
+			}
+			else if (query.SkipTransformResults == false && viewGenerator.TransformResultsDefinition != null)
+			{
+				transformFunc = source => viewGenerator.TransformResultsDefinition(docRetriever, source);
+			}
+
+			if (transformFunc == null)
+				return results.Select(x => x.ToJson());
+
+			var dynamicJsonObjects = results.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
+			var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
+			{
+				OnError =
+					(exception, o) =>
+					transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
+														exception.Message))
+			};
+			return robustEnumerator.RobustEnumeration(
+				dynamicJsonObjects.Cast<object>().GetEnumerator(),
+				transformFunc)
+				.Select(JsonExtensions.ToJObject);
 		}
 
 		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
@@ -1287,6 +1336,13 @@ namespace Raven.Database
 				});
 			stale = isStale;
 			return loadedIds;
+		}
+
+
+		public void DeleteTransfom(string name)
+		{
+			name = IndexDefinitionStorage.FixupIndexName(name);
+			IndexDefinitionStorage.RemoveTransfomer(name);
 		}
 
 		public void DeleteIndex(string name)
@@ -1537,12 +1593,19 @@ namespace Raven.Database
 
 		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize)
 		{
+			var list = new RavenJArray();
+			GetDocumentsWithIdStartingWith(idPrefix, matches, start, pageSize, list.Add);
+			return list;
+		}
+
+		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize, Action<RavenJObject> addDoc)
+		{
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
 			idPrefix = idPrefix.Trim();
-			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
+				bool returnedDocs = false;
 				while (true)
 				{
 					int docCount = 0;
@@ -1559,26 +1622,33 @@ namespace Raven.Database
 						if (document == null)
 							continue;
 
-						list.Add(document.ToJson());
+						addDoc(document.ToJson());
+						returnedDocs = true;
 					}
-					if (list.Length != 0 || docCount == 0)
+					if (returnedDocs || docCount == 0)
 						break;
 					start += docCount;
 				}
 			});
-			return list;
 		}
 
 		public RavenJArray GetDocuments(int start, int pageSize, Etag etag)
 		{
 			var list = new RavenJArray();
+			GetDocuments(start, pageSize, etag, list.Add);
+			return list;
+		}
+
+		public void GetDocuments(int start, int pageSize, Etag etag, Action<RavenJObject> addDocument)
+		{
 			TransactionalStorage.Batch(actions =>
 			{
+				bool returnedDocs = false;
 				while (true)
 				{
-					var documents = etag == null ?
-						actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize) :
-						actions.Documents.GetDocumentsAfter(etag, pageSize);
+					var documents = etag == null
+										? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
+										: actions.Documents.GetDocumentsAfter(etag, pageSize);
 					var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 					int docCount = 0;
 					foreach (var doc in documents)
@@ -1592,14 +1662,14 @@ namespace Raven.Database
 						if (document == null)
 							continue;
 
-						list.Add(document.ToJson());
+						addDocument(document.ToJson());
+						returnedDocs = true;
 					}
-					if (list.Length != 0 || docCount == 0)
+					if (returnedDocs || docCount == 0)
 						break;
 					start += docCount;
 				}
 			});
-			return list;
 		}
 
 		public AttachmentInformation[] GetAttachments(int start, int pageSize, Etag etag, string startsWith, long maxSize)
@@ -1643,7 +1713,7 @@ namespace Raven.Database
 		{
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-				(jsonDoc,size) =>
+				(jsonDoc, size) =>
 				{
 					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
@@ -1965,19 +2035,20 @@ namespace Raven.Database
 		/// </remarks>
 		public long GetIndexStorageSizeOnDisk()
 		{
-			if( Configuration.RunInMemory )
+			if (Configuration.RunInMemory)
 				return 0;
-			var indexes = Directory.GetFiles( Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories );
-			var totalIndexSize = indexes.Sum( file =>
+			var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
+			var totalIndexSize = indexes.Sum(file =>
 			{
 				try
 				{
-					return new FileInfo( file ).Length;
-				} catch( FileNotFoundException )
+					return new FileInfo(file).Length;
+				}
+				catch (FileNotFoundException)
 				{
 					return 0;
 				}
-			} );
+			});
 
 			return totalIndexSize;
 		}
@@ -2064,14 +2135,31 @@ namespace Raven.Database
 
 		public void AddAlert(Alert alert)
 		{
-			AlertsDocument alertsDocument;
-			var alertsDoc = Get(Constants.RavenAlerts, null);
-			if (alertsDoc == null)
-				alertsDocument = new AlertsDocument();
-			else
-				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
+			lock (putSerialLock)
+			{
+				AlertsDocument alertsDocument;
+				var alertsDoc = Get(Constants.RavenAlerts, null);
+				RavenJObject metadata;
+				if (alertsDoc == null)
+				{
+					alertsDocument = new AlertsDocument();
+					metadata = new RavenJObject();
+				}
+				else
+				{
+					alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
+					metadata = alertsDoc.Metadata;
+				}
 
-			alertsDocument.Alerts.Add(alert);
+				var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
+				if (withSameUniqe != null)
+					alertsDocument.Alerts.Remove(withSameUniqe);
+
+				alertsDocument.Alerts.Add(alert);
+				var document = RavenJObject.FromObject(alertsDocument);
+				document.Remove("Id");
+				Put(Constants.RavenAlerts, null, document, metadata, null);
+			}
 		}
 
 		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
@@ -2159,6 +2247,63 @@ namespace Raven.Database
 			if (pendingTasks.TryGetValue(id, out value))
 				return value.State;
 			return null;
+		}
+
+		public RavenJArray GetTransformerNames(int start, int pageSize)
+		{
+			return new RavenJArray(
+			IndexDefinitionStorage.TransformerNames.Skip(start).Take(pageSize)
+				.Select(s => new RavenJValue(s))
+			);
+		}
+
+		public RavenJArray GetTransformers(int start, int pageSize)
+		{
+			return new RavenJArray(
+			IndexDefinitionStorage.TransformerNames.Skip(start).Take(pageSize)
+				.Select(
+					indexName => new RavenJObject
+							{
+								{"name", new RavenJValue(indexName) },
+								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetTransformerDefinition(indexName))}
+							}));
+
+		}
+
+		public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> queryInputs)
+		{
+			JsonDocument result = null;
+			TransactionalStorage.Batch(
+			actions =>
+			{
+				var docRetriever = new DocumentRetriever(actions, ReadTriggers, queryInputs);
+				using (new CurrentTransformationScope(docRetriever))
+				{
+					var document = Get(key, transactionInformation);
+					if (document == null)
+						return;
+
+					var storedTransformer = IndexDefinitionStorage.GetTransfomer(transformer);
+					if (storedTransformer == null)
+						throw new InvalidOperationException("No transfomer with the name: " + transformer);
+
+					var transformed = storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
+									 .Select(x => JsonExtensions.ToJObject(x))
+									 .ToArray();
+
+					if (transformed.Length == 0)
+						return;
+
+					result = new JsonDocument
+					{
+						Etag = document.Etag,
+						NonAuthoritativeInformation = document.NonAuthoritativeInformation,
+						LastModified = document.LastModified,
+					};
+					result.DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed) } };
+				}
+			});
+			return result;
 		}
 	}
 }

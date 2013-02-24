@@ -16,5 +16,6 @@ namespace Raven.Client.Changes
 		IObservableWithTask<DocumentChangeNotification> ForAllDocuments();
 		IObservableWithTask<IndexChangeNotification> ForAllIndexes();
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
+		void WaitForAllPendingSubscriptions();
 	}
 }

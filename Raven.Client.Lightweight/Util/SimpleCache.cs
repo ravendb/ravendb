@@ -108,12 +108,6 @@ namespace Raven.Client.Util
 			}
 		}
 
-		public void ClearAllItems()
-		{
-			lruKeys.Clear();
-			actualCache.Clear();
-		}
-
 		public T Get(string key)
 		{
 			T value;
@@ -126,6 +120,11 @@ namespace Raven.Client.Util
 				}
 			}
 			return value;
+		}
+
+		public int CurrentSize
+		{
+			get { return actualCache.Count; }
 		}
 
 		public void Dispose()

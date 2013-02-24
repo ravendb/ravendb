@@ -18,6 +18,7 @@ namespace Raven.Database.Server.Abstractions
 		int StatusCode { get; set; }
 		string StatusDescription { get; set; }
 		string ContentType { get; set; }
+		bool BufferOutput { get; set; }
 		void Redirect(string url);
 		void Close();
 		void SetPublicCacheability();

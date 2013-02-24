@@ -63,6 +63,12 @@ namespace Raven.Database.Server.Abstractions
 			set { response.StatusDescription = value; }
 		}
 
+		public bool BufferOutput
+		{
+			get { return response.BufferOutput; }
+			set { response.BufferOutput = value; }
+		}
+
 		public void Redirect(string url)
 		{
 			response.Redirect(RedirectionPrefix + url, false);

@@ -222,6 +222,12 @@ namespace Raven.Database.Indexing
 							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 
 			}
+			else if(value is double)
+			{
+				var d = (double) value;
+				yield return CreateFieldWithCaching(name, d.ToString("r", CultureInfo.InvariantCulture), storage,
+							   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
+			}
 			else if (value is decimal)
 			{
 				var d = (decimal)value;

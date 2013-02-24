@@ -22,6 +22,7 @@ using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
@@ -84,34 +85,26 @@ namespace Raven.Database.Config
 
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
-			if (MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default)
-			{
-				InitialNumberOfItemsToIndexInSingleBatch = defaultInitialNumberOfItemsToIndexInSingleBatch;
-			}
-			else
-			{
-				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItemsToIndexInSingleBatch, InitialNumberOfItemsToIndexInSingleBatch);
-			}
-
-			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
-
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
 				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
-																	MaxNumberOfItemsToIndexInSingleBatch);
-			}
-
-			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
-			if (MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default)
-			{
-				InitialNumberOfItemsToReduceInSingleBatch = defaultInitialNumberOfItemsToIndexInSingleBatch / 2;
+				                                                    MaxNumberOfItemsToIndexInSingleBatch);
 			}
 			else
 			{
-				InitialNumberOfItemsToReduceInSingleBatch = Math.Min(MaxNumberOfItemsToReduceInSingleBatch,
-																	InitialNumberOfItemsToReduceInSingleBatch);
+				InitialNumberOfItemsToIndexInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default ?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch :
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
 			}
+			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
+
+		
+
+			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
+			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch/2 :
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
 
 			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
 
@@ -125,6 +118,12 @@ namespace Raven.Database.Config
 			MaxNumberOfParallelIndexTasks = ravenSettings.MaxNumberOfParallelIndexTasks.Value;
 
 			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
+
+			MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
+
+			MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
+
+			MaxNumberOfStoredCommitPoints = ravenSettings.MaxNumberOfStoredCommitPoints.Value;
 
 			// Data settings
 			RunInMemory = ravenSettings.RunInMemory.Value;
@@ -374,7 +373,11 @@ namespace Raven.Database.Config
 		/// The initial number of items to take when indexing a batch
 		/// Default: 512 or 256 depending on CPU architecture
 		/// </summary>
-		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
+		public int InitialNumberOfItemsToIndexInSingleBatch
+		{
+			get { return initialNumberOfItemsToIndexInSingleBatch; }
+			set { initialNumberOfItemsToIndexInSingleBatch = value; }
+		}
 
 		/// <summary>
 		/// Max number of items to take for reducing in a batch
@@ -412,7 +415,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale
-		/// Default: 25 MB
+		/// Default: 64 MB
 		/// Minimum: 1 MB
 		/// </summary>
 		public int NewIndexInMemoryMaxBytes { get; set; }
@@ -619,6 +622,7 @@ namespace Raven.Database.Config
 
 		#endregion
 
+		[JsonIgnore]
 		public CompositionContainer Container
 		{
 			get { return container ?? (container = new CompositionContainer(Catalog)); }
@@ -631,12 +635,14 @@ namespace Raven.Database.Config
 
 		public bool DisableDocumentPreFetchingForIndexing { get; set; }
 
+		[JsonIgnore]
 		public AggregateCatalog Catalog { get; set; }
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
+		private int initialNumberOfItemsToIndexInSingleBatch;
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
 		/// </summary>
@@ -647,6 +653,25 @@ namespace Raven.Database.Config
 		/// for queries that cannot be directed to standard indexes
 		/// </summary>
 		public bool CreateAutoIndexesForAdHocQueriesIfNeeded { get; set; }
+
+		/// <summary>
+		/// Maximum time interval for storing commit points for map indexes when new items were added.
+		/// The commit points are used to restore index if unclean shutdown was detected.
+		/// Default: 00:05:00 
+		/// </summary>
+		public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
+
+		/// <summary>
+		/// Minumum interval between between successive indexing that will allow to store a  commit point
+		/// Default: 00:01:00
+		/// </summary>
+		public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
+
+		/// <summary>
+		/// Maximum number of kept commit points to restore map index after unclean shutdown
+		/// Default: 5
+		/// </summary>
+		public int MaxNumberOfStoredCommitPoints { get; set; }
 
 		public string IndexStoragePath
 		{

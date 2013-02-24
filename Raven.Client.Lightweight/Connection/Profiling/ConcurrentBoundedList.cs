@@ -77,5 +77,10 @@ namespace Raven.Client.Connection.Profiling
 				return;
 			} while (true);
 		}
+
+		public void Remove(T val)
+		{
+			items.Remove(val);
+		}
 	}
 }

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Faceted
 {
-	public class FacetPaging : RavenTest
+	public class FacetPaging : FacetTestBase
 	{
 
 		private readonly IList<Camera> _data;
@@ -17,7 +17,7 @@ namespace Raven.Tests.Faceted
 
 		public FacetPaging()
 		{
-			_data = FacetedIndexTestHelper.GetCameras(NumCameras);
+			_data = GetCameras(NumCameras);
 		}
 
 		[Fact]

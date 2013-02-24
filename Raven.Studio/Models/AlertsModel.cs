@@ -30,7 +30,13 @@ namespace Raven.Studio.Models
 			ShowObserved = new Observable<bool>();
 
 			AlertsToSee = Alerts;
+			RegisterToChanges();
+			GetAlertsFromServer();
 
+		}
+
+		private void RegisterToChanges()
+		{
 			ShowObserved.PropertyChanged += (sender, args) =>
 			{
 				AlertsToSee = ShowObserved.Value ? Alerts : UnobservedAlerts;
@@ -50,9 +56,7 @@ namespace Raven.Studio.Models
 
 			Alerts.CollectionChanged += (sender, args) => UpdateUnobserved();
 
-			GetAlertsFromServer();
-
-			OnPropertyChanged(() => Alerts);
+			OnPropertyChanged(() => ServerAlerts);
 		}
 
 		private void GetAlertsFromServer()
@@ -64,11 +68,17 @@ namespace Raven.Studio.Models
 				{
 					if(doc == null)
 					{
-						ServerAlerts = new ObservableCollection<Alert>();
+						ServerAlerts.Clear();
 						return;
 					}
 					var alerts = doc.DataAsJson.Deserialize<AlertsDocument>(new DocumentConvention());
-					ServerAlerts = new ObservableCollection<Alert>(alerts.Alerts);
+					ServerAlerts.Clear();
+
+					foreach (var alert in alerts.Alerts)
+					{
+						ServerAlerts.Add(alert);
+					}
+
 				});
 		}
 

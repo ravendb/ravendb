@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis;
@@ -32,6 +33,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
@@ -110,12 +112,24 @@ namespace Raven.Database.Indexing
 
 			Index indexImplementation;
 			bool resetTried = false;
+			bool recoveryTried = false;
+			string[] keysToDeleteAfterRecovery = null;
 			while (true)
 			{
+				Lucene.Net.Store.Directory luceneDirectory = null;
+
 				try
 				{
-					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
+					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
+
+					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
+					if (simpleIndex != null && keysToDeleteAfterRecovery != null)
+					{
+						// remove keys from index that were deleted after creating commit point
+						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
+					}
+
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
@@ -141,27 +155,66 @@ namespace Raven.Database.Indexing
 				{
 					if (resetTried)
 						throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
-					resetTried = true;
-					startupLog.WarnException("Could not open index " + indexName + ", forcibly resetting index", e);
-					try
-					{
-						documentDatabase.TransactionalStorage.Batch(accessor =>
-						{
-							accessor.Indexing.DeleteIndex(indexName);
-							accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
-						});
 
-						var indexDirectory = indexName;
-						var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
-						IOExtensions.DeleteDirectory(indexFullPath);
-					}
-					catch (Exception exception)
+					if (recoveryTried == false)
 					{
-						throw new InvalidOperationException("Could not reset index " + indexName, exception);
+						recoveryTried = true;
+						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
+
+						keysToDeleteAfterRecovery = TryRecoveringIndex(indexName, indexDefinition, luceneDirectory);
+					}
+					else
+					{
+						resetTried = true;
+						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, orcibly resetting index", e);
+						TryResettingIndex(indexName, indexDefinition);
 					}
 				}
 			}
 			indexes.TryAdd(indexName, indexImplementation);
+		}
+
+		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
+		{
+			try
+			{
+				documentDatabase.TransactionalStorage.Batch(accessor =>
+				{
+					accessor.Indexing.DeleteIndex(indexName);
+					accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
+				});
+
+				var indexDirectory = indexName;
+				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
+				IOExtensions.DeleteDirectory(indexFullPath);
+			}
+			catch (Exception exception)
+			{
+				throw new InvalidOperationException("Could not reset index " + indexName, exception);
+			}
+		}
+
+		private string[] TryRecoveringIndex(string indexName, IndexDefinition indexDefinition,
+											Lucene.Net.Store.Directory luceneDirectory)
+		{
+			string[] keysToDeleteAfterRecovery = null;
+			if (indexDefinition.IsMapReduce == false)
+			{
+				IndexCommitPoint commitUsedToRestore;
+
+				if (TryReusePreviousCommitPointsToRecoverIndex(luceneDirectory,
+															   indexDefinition, path,
+															   out commitUsedToRestore,
+															   out keysToDeleteAfterRecovery))
+				{
+					ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
+				}
+			}
+			else
+			{
+				RegenerateMapReduceIndex(luceneDirectory, indexDefinition.Name);
+			}
+			return keysToDeleteAfterRecovery;
 		}
 
 		private void LoadExistingSuggestionsExtentions(string indexName, Index indexImplementation)
@@ -237,7 +290,7 @@ namespace Raven.Database.Indexing
 						if (configuration.ResetIndexOnUncleanShutdown)
 							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
 
-						CheckIndexAndRecover(directory, indexDirectory);
+						CheckIndexAndTryToFix(directory, indexDirectory);
 						directory.DeleteFile("writing-to-index.lock");
 					}
 				}
@@ -245,6 +298,71 @@ namespace Raven.Database.Indexing
 
 			return directory;
 
+		}
+
+		private void RegenerateMapReduceIndex(Lucene.Net.Store.Directory directory, string indexName)
+		{
+			// remove old index data
+			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+			IOExtensions.DeleteDirectory(dirOnDisk);
+
+			// initialize by new index
+			Directory.CreateDirectory(dirOnDisk);
+			WriteIndexVersion(directory);
+			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
+
+			var start = 0;
+			const int take = 100;
+
+			documentDatabase.TransactionalStorage.Batch(actions =>
+			{
+				IList<ReduceTypePerKey> reduceKeysAndTypes;
+
+				do
+				{
+					reduceKeysAndTypes = actions.MapReduce.GetReduceKeysAndTypes(indexName, start, take).ToList();
+					start += take;
+
+					var keysToScheduleOnLevel2 =
+						reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.MultiStep).ToList();
+					var keysToScheduleOnLevel0 =
+						reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).ToList();
+
+					var itemsToScheduleOnLevel2 = keysToScheduleOnLevel2.Select(x => new ReduceKeyAndBucket(0, x.ReduceKey)).ToList();
+					var itemsToScheduleOnLevel0 = new List<ReduceKeyAndBucket>();
+
+					foreach (var reduceKey in keysToScheduleOnLevel0.Select(x => x.ReduceKey))
+					{
+						var mappedBuckets = actions.MapReduce.GetMappedBuckets(indexName, reduceKey).Distinct();
+
+						itemsToScheduleOnLevel0.AddRange(mappedBuckets.Select(x => new ReduceKeyAndBucket(x, reduceKey)));
+
+						actions.General.MaybePulseTransaction();
+					}
+
+					foreach (var itemToReduce in itemsToScheduleOnLevel2)
+					{
+						actions.MapReduce.ScheduleReductions(indexName, 2, itemToReduce);
+						actions.General.MaybePulseTransaction();
+					}
+
+					foreach (var itemToReduce in itemsToScheduleOnLevel0)
+					{
+						actions.MapReduce.ScheduleReductions(indexName, 0, itemToReduce);
+						actions.General.MaybePulseTransaction();
+					}
+
+				} while (reduceKeysAndTypes.Count > 0);
+			});
+		}
+
+		private void ResetLastIndexedEtagAccordingToRestoredCommitPoint(IndexDefinition indexDefinition,
+																		IndexCommitPoint lastCommitPoint)
+		{
+			documentDatabase.TransactionalStorage.Batch(
+				accessor =>
+				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.HighestCommitedETag,
+													lastCommitPoint.TimeStamp));
 		}
 
 		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)
@@ -271,7 +389,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static void CheckIndexAndRecover(Lucene.Net.Store.Directory directory, string indexDirectory)
+		private static void CheckIndexAndTryToFix(Lucene.Net.Store.Directory directory, string indexDirectory)
 		{
 			startupLog.Warn("Unclean shutdown detected on {0}, checking the index for errors. This may take a while.", indexDirectory);
 
@@ -300,6 +418,161 @@ namespace Raven.Database.Indexing
 			sp.Restart();
 			checkIndex.FixIndex(status);
 			startupLog.Warn("Fixed index {0} in {1}", indexDirectory, sp.Elapsed);
+		}
+
+		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
+		{
+			if (indexCommit.SegmentsInfo == null || indexCommit.SegmentsInfo.IsIndexCorrupted)
+				return;
+
+			var directoryName = indexCommit.SegmentsInfo.Generation.ToString("0000000000000000000", CultureInfo.InvariantCulture);
+			var commitPointDirectory = new IndexCommitPointDirectory(path, indexName, directoryName);
+
+			if (Directory.Exists(commitPointDirectory.AllCommitPointsFullPath) == false)
+			{
+				Directory.CreateDirectory(commitPointDirectory.AllCommitPointsFullPath);
+			}
+
+			Directory.CreateDirectory(commitPointDirectory.FullPath);
+
+			using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
+			{
+				using (var sw = new StreamWriter(commitPointFile))
+				{
+					var jsonSerializer = new JsonSerializer();
+					var textWriter = new JsonTextWriter(sw);
+
+					jsonSerializer.Serialize(textWriter, indexCommit);
+
+					sw.Flush();
+				}
+			}
+
+			var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
+
+			File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
+					  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName));
+
+			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
+
+			if (storedCommitPoints.Length > configuration.MaxNumberOfStoredCommitPoints)
+			{
+				foreach (var toDelete in storedCommitPoints.Take(storedCommitPoints.Length - configuration.MaxNumberOfStoredCommitPoints))
+				{
+					IOExtensions.DeleteDirectory(toDelete);
+				}
+			}
+		}
+
+		public void AddDeletedKeysToCommitPoints(string indexName, string[] deletedKeys)
+		{
+			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+
+			var existingCommitPoints = IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
+
+			foreach (var commitPointDirectory in existingCommitPoints.Select(commitPoint => new IndexCommitPointDirectory(path, indexName, commitPoint)))
+			{
+				using (var stream = File.Open(commitPointDirectory.DeletedKeysFile, FileMode.OpenOrCreate))
+				{
+					stream.Seek(0, SeekOrigin.End);
+					using (var writer = new StreamWriter(stream))
+					{
+						foreach (var deletedKey in deletedKeys)
+						{
+							writer.WriteLine(deletedKey);	
+						}
+					}
+				}
+			}
+		}
+
+		private static bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
+		{
+			indexCommit = null;
+			keysToDelete = null;
+
+			if (indexDefinition.IsMapReduce)
+				return false;
+
+			var indexFullPath = Path.Combine(indexStoragePath, MonoHttpUtility.UrlEncode(indexDefinition.Name));
+
+			var allCommitPointsFullPath = IndexCommitPointDirectory.GetAllCommitPointsFullPath(indexFullPath);
+
+			if (Directory.Exists(allCommitPointsFullPath) == false)
+				return false;
+
+			var filesInIndexDirectory = Directory.GetFiles(indexFullPath).Select(Path.GetFileName);
+
+			var existingCommitPoints =
+				IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
+
+			Array.Reverse(existingCommitPoints); // start from the highest generation
+
+			foreach (var commitPointDirectoryName in existingCommitPoints)
+			{
+				try
+				{
+					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexDefinition.Name,
+																				commitPointDirectoryName);
+
+					using (var commitPointFile = File.Open(commitPointDirectory.FileFullPath, FileMode.Open))
+					{
+						var jsonSerializer = new JsonSerializer();
+						var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+
+						indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+					}
+
+					var missingFile =
+						indexCommit.SegmentsInfo.ReferencedFiles.Any(
+							referencedFile => filesInIndexDirectory.Contains(referencedFile) == false);
+
+					if (missingFile)
+					{
+						IOExtensions.DeleteDirectory(commitPointDirectory.FullPath);
+						continue; // there are some missing files, try another commit point
+					}
+
+					var storedSegmentsFile = indexCommit.SegmentsInfo.SegmentsFileName;
+
+					// here there should be only one segments_N file, however remove all if there is more
+					foreach (var currentSegmentsFile in Directory.GetFiles(commitPointDirectory.IndexFullPath, "segments_*"))
+					{
+						File.Delete(currentSegmentsFile);
+					}
+
+					// copy old segments_N file
+					File.Copy(Path.Combine(commitPointDirectory.FullPath, storedSegmentsFile),
+							  Path.Combine(commitPointDirectory.IndexFullPath, storedSegmentsFile), true);
+
+					try
+					{
+						// update segments.gen file
+						using (var genOutput = directory.CreateOutput(IndexFileNames.SEGMENTS_GEN))
+						{
+							genOutput.WriteInt(SegmentInfos.FORMAT_LOCKLESS);
+							genOutput.WriteLong(indexCommit.SegmentsInfo.Generation);
+							genOutput.WriteLong(indexCommit.SegmentsInfo.Generation);
+						}
+					}
+					catch (Exception)
+					{
+						// here we can ignore, segments.gen is used only as fallback
+					}
+
+					if (File.Exists(commitPointDirectory.DeletedKeysFile))
+						keysToDelete = File.ReadLines(commitPointDirectory.DeletedKeysFile).ToArray();
+
+					return true;
+				}
+				catch (Exception ex)
+				{
+					startupLog.WarnException("Could not recover an index named '" + indexDefinition.Name +
+									   "'from segments of the following generation " + commitPointDirectoryName, ex);
+				}
+			}
+
+			return false;
 		}
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)

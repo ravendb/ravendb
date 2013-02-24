@@ -58,5 +58,13 @@ namespace Raven.Client.Shard
 			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocumentsStartingWith(docIdPrefix)).ToArray();
 			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
 		}
+
+		public void WaitForAllPendingSubscriptions()
+		{
+			foreach (var shardedDatabaseChange in shardedDatabaseChanges)
+			{
+				shardedDatabaseChange.WaitForAllPendingSubscriptions();
+			}
+		}
 	}
 }
