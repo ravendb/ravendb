@@ -246,6 +246,7 @@
     </Compile>
     <Compile Include="Controls\GoToDatabaseControl.xaml.cs">
       <DependentUpon>GoToDatabaseControl.xaml</DependentUpon>
+		</Compile>
     <Compile Include="Controls\NavTriangle.xaml.cs">
       <DependentUpon>NavTriangle.xaml</DependentUpon>
     </Compile>
