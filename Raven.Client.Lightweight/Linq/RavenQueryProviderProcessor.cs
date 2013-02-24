@@ -1131,7 +1131,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression memberExpression = ((MemberExpression) body);
-					AddToFieldsToFetch(memberExpression.ToPropertyPath('_'), memberExpression.Member.Name);
+					AddToFieldsToFetch(GetSelectPath(memberExpression), memberExpression.Member.Name);
 					if (insideSelect == false)
 					{
 						foreach (var renamedField in FieldsToRename.Where(x=>x.OriginalField == memberExpression.Member.Name).ToArray())

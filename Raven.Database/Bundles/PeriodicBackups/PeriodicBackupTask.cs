@@ -92,8 +92,9 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						AlertLevel = AlertLevel.Error,
 						CreatedAt = SystemTime.UtcNow,
 						Message = ex.Message,
-						Title = "Error in Periodic Backup",
-						Exception = ex
+						Title = "Could not read periodic backup config",
+						Exception = ex.ToString(),
+						UniqueKey = "Periodic Backup Config Error"
 					});
 				}
 			}
@@ -133,8 +134,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							var filePath = dd.ExportData(null, true);
 
 							// No-op if nothing has changed
-							if (options.LastDocsEtag == backupConfigs.LastDocsEtag &&
-								options.LastAttachmentEtag == backupConfigs.LastAttachmentsEtag)
+							if (options.LastDocsEtag == localBackupConfigs.LastDocsEtag &&
+								options.LastAttachmentEtag == localBackupConfigs.LastAttachmentsEtag)
 							{
 								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
 								return;
@@ -152,8 +153,13 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							ravenJObject.Remove("Id");
 							var putResult = Database.Put(PeriodicBackupSetup.RavenDocumentKey, null, ravenJObject,
 														 new RavenJObject(), null);
-							if (Etag.Increment(localBackupConfigs.LastDocsEtag, 1) == putResult.ETag) // the last etag is with just us
-								localBackupConfigs.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
+
+							localBackupConfigs = backupConfigs;
+							if (localBackupConfigs != null)
+							{
+								if (Etag.Increment(localBackupConfigs.LastDocsEtag, 1) == putResult.ETag) // the last etag is with just us
+									localBackupConfigs.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
+							}
 						}
 						catch (ObjectDisposedException)
 						{
@@ -161,14 +167,16 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						}
 						catch (Exception e)
 						{
-							Database.AddAlert(new Alert
-							{
-								AlertLevel = AlertLevel.Error,
-								CreatedAt = SystemTime.UtcNow,
-								Message = e.Message,
-								Title = "Error in Periodic Backup",
-								Exception = e
-							});
+								Database.AddAlert(new Alert
+								{
+									AlertLevel = AlertLevel.Error,
+									CreatedAt = SystemTime.UtcNow,
+									Message = e.Message,
+									Title = "Error in Periodic Backup",
+									Exception = e.ToString(),
+									UniqueKey = "Periodic Backup Error"
+								});
+
 							logger.ErrorException("Error when performing periodic backup", e);
 						}
 					}
