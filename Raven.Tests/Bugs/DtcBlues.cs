@@ -79,7 +79,7 @@ namespace Raven.Tests.Bugs
 
 	public class DtcBluesRemoteAndTouchingTheDisk : RemoteClientTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.RunInMemory = false;
 		}
