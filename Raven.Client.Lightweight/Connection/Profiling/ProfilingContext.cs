@@ -22,6 +22,7 @@ namespace Raven.Client.Connection.Profiling
 			if (profilingInformationHolder == null)
 				return;
 
+
 			profilingInformationHolder.ProfilingInformation.Requests =
 				new List<RequestResultArgs>(profilingInformationHolder.ProfilingInformation.Requests)
 				{

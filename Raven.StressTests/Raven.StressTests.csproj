@@ -37,6 +37,7 @@
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -65,6 +66,7 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Load\LoadBigFile.cs" />
     <Compile Include="Races\FailedIntermittently.cs" />
     <Compile Include="Storage\MultiThreaded\BatchOperation.cs" />
     <Compile Include="Storage\MultiThreaded\MultiThreaded.cs" />
@@ -87,6 +89,10 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
+      <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>
+      <Name>Raven.Client.Embedded</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
@@ -113,6 +119,7 @@
     <EmbeddedResource Include="DefaultLogging.config" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Load\LoadBigFile.dump" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

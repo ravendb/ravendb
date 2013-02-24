@@ -62,9 +62,8 @@ namespace Raven.Bundles.Replication.Responders
 			var existingConflict = existingItem.Data().ToJObject();
 
 			// just update the current attachment with the new conflict document
-			var conflictArray = existingConflict.Value<RavenJArray>("Conflicts");
-			if (conflictArray == null)
-				existingConflict["Conflicts"] = conflictArray = new RavenJArray();
+			RavenJArray conflictArray;
+			existingConflict["Conflicts"] = conflictArray = new RavenJArray(existingConflict.Value<RavenJArray>("Conflicts"));
 
 			conflictArray.Add(newConflictId);
 

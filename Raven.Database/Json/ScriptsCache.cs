@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using Jint;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 
@@ -49,24 +50,24 @@ namespace Raven.Database.Json
 			});
 		}
 
-		public Jint.JintEngine CheckoutScript(ScriptedPatchRequest request)
+		public Jint.JintEngine CheckoutScript(Func<ScriptedPatchRequest, JintEngine> createEngine,ScriptedPatchRequest request)
 		{
 			CachedResult value;
 			if (cacheDic.TryGetValue(request, out value))
 			{
 				Interlocked.Increment(ref value.Usage);
-				Jint.JintEngine context;
+				JintEngine context;
 				if (value.Queue.TryDequeue(out context))
 				{
 					return context;
 				}
 			}
-			var result = ScriptedJsonPatcher.CreateEngine(request);
+			var result = createEngine(request);
 
 			var cachedResult = new CachedResult
 			{
 				Usage = 1,
-				Queue = new ConcurrentQueue<Jint.JintEngine>(),
+				Queue = new ConcurrentQueue<JintEngine>(),
 				Timestamp = SystemTime.UtcNow
 			};
 

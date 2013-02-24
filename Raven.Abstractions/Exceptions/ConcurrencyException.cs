@@ -10,7 +10,7 @@ namespace Raven.Abstractions.Exceptions
 	/// <summary>
 	/// This exception is raised when a concurrency conflict is encountered
 	/// </summary>
-#if SILVERILGHT
+#if !SILVERLIGHT
 	[Serializable]
 #endif
 	public class ConcurrencyException : Exception

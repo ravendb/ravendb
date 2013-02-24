@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
@@ -372,6 +373,78 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		TSelf OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
+
+		/// <summary>
+		///   Adds matches highlighting for the specified field.
+		/// </summary>
+		/// <remarks>
+		///   The specified field should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="fieldName">The field name to highlight.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="fragmentsField">The field in query results item to put highlightings into.</param>
+		TSelf Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField);
+
+		/// <summary>
+		///   Adds matches highlighting for the specified field.
+		/// </summary>
+		/// <remarks>
+		///   The specified field should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="fieldName">The field name to highlight.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		TSelf Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
+
+		/// <summary>
+		///   Adds matches highlighting for the specified field.
+		/// </summary>
+		/// <remarks>
+		///   The specified field should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="propertySelector">The property to highlight.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="fragmentsPropertySelector">The property to put highlightings into.</param>
+		TSelf Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			Expression<Func<T, IEnumerable>> fragmentsPropertySelector);
+		
+		/// <summary>
+		///   Adds matches highlighting for the specified field.
+		/// </summary>
+		/// <remarks>
+		///   The specified field should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="propertySelector">The property to highlight.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		TSelf Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			out FieldHighlightings highlightings);
+
+		/// <summary>
+		///   Sets the tags to highlight matches with.
+		/// </summary>
+		/// <param name="preTag">Prefix tag.</param>
+		/// <param name="postTag">Postfix tag.</param>
+		TSelf SetHighlighterTags(string preTag, string postTag);
+
+		/// <summary>
+		///   Sets the tags to highlight matches with.
+		/// </summary>
+		/// <param name="preTags">Prefix tags.</param>
+		/// <param name="postTags">Postfix tags.</param>
+		TSelf SetHighlighterTags(string[] preTags, string[] postTags);
 
 		/// <summary>
 		///   Instructs the query to wait for non stale results as of now.

@@ -93,7 +93,7 @@ namespace Raven.Database.Indexing
 
 						using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 						{
-							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
+							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats))
 							{
 								float boost;
 								var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
@@ -212,7 +212,7 @@ namespace Raven.Database.Indexing
 
 		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, DynamicJsonObject dynamicJsonObject)
 		{
-			var newDocId = dynamicJsonObject.GetDocumentId();
+			var newDocId = dynamicJsonObject.GetRootParentOrSelf().GetDocumentId();
 			return new IndexingResult
 			{
 				Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, Field.Store.NO).ToList(),

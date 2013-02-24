@@ -47,7 +47,7 @@ namespace Raven.Database.Server.Connections
 			initTask = SendAsync(new { Type = "Initialized" });
 			Thread.MemoryBarrier();
 
-			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
+			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(10));
 
 			return initTask;
 

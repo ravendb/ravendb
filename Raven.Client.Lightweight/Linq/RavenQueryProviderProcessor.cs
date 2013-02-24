@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -67,13 +68,15 @@ namespace Raven.Client.Linq
 			Action<QueryResult> afterQueryExecuted,
 			string indexName,
 			HashSet<string> fieldsToFetch,
-			Dictionary<string, string> fieldsTRename)
+			List<RenamedField> fieldsTRename,
+			bool isMapReduce)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
 			newExpressionType = typeof (T);
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
+			this.isMapReduce = isMapReduce;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
 			linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
@@ -88,7 +91,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Rename the fields from one name to another
 		/// </summary>
-		public Dictionary<string, string> FieldsToRename { get; set; }
+		public List<RenamedField> FieldsToRename { get; set; }
 
 		/// <summary>
 		/// Visits the expression and generate the lucene query
@@ -422,7 +425,7 @@ namespace Raven.Client.Linq
 		/// <returns></returns>
 		protected virtual ExpressionInfo GetMember(Expression expression)
 		{
-			var parameterExpression = expression as ParameterExpression;
+			var parameterExpression = GetParameterExpressionIncludingConvertions(expression);
 			if (parameterExpression != null)
 			{
 				if (currentPath.EndsWith(","))
@@ -445,6 +448,19 @@ namespace Raven.Client.Linq
 			return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath);
 		}
 
+		private static ParameterExpression GetParameterExpressionIncludingConvertions(Expression expression)
+		{
+			var paramExpr = expression as ParameterExpression;
+			if (paramExpr != null)
+				return paramExpr;
+			switch (expression.NodeType )
+			{
+				case ExpressionType.Convert:
+				case ExpressionType.ConvertChecked:
+					return GetParameterExpressionIncludingConvertions(((UnaryExpression) expression).Operand);
+			}
+			return null;
+		}
 
 
 		private void VisitEquals(MethodCallExpression expression)
@@ -649,7 +665,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitMethodCall(MethodCallExpression expression, bool negated = false)
 		{
-			if (expression.Method.DeclaringType != typeof (string) && expression.Method.Name == "Equals")
+			var declaringType = expression.Method.DeclaringType;
+			Debug.Assert(declaringType != null);
+			if (declaringType != typeof (string) && expression.Method.Name == "Equals")
 			{
 				switch (expression.Arguments.Count)
 				{
@@ -664,38 +682,44 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				return;
 			}
-			if (expression.Method.DeclaringType == typeof (LinqExtensions) ||
-			    expression.Method.DeclaringType == typeof (RavenQueryableExtensions))
+			if (declaringType == typeof (LinqExtensions) ||
+			    declaringType == typeof (RavenQueryableExtensions))
 			{
 				VisitLinqExtensionsMethodCall(expression);
 				return;
 			}
-			if (expression.Method.DeclaringType == typeof (Queryable))
+			if (declaringType == typeof (Queryable))
 			{
 				VisitQueryableMethodCall(expression);
 				return;
 			}
 
-			if (expression.Method.DeclaringType == typeof (String))
+			if (declaringType == typeof (String))
 			{
 				VisitStringMethodCall(expression);
 				return;
 			}
 
-			if (expression.Method.DeclaringType == typeof (Enumerable))
+			if (declaringType == typeof (Enumerable))
 			{
 				VisitEnumerableMethodCall(expression, negated);
 				return;
 			}
+			if (declaringType.IsGenericType &&
+			    declaringType.GetGenericTypeDefinition() == typeof (List<>))
+			{
+				VisitListMethodCall(expression);
+				return;
+			}
 
-			if (expression.Method.DeclaringType == typeof (LinqExtensions) ||
-			    expression.Method.DeclaringType == typeof (RavenQueryableExtensions))
+			if (declaringType == typeof (LinqExtensions) ||
+			    declaringType == typeof (RavenQueryableExtensions))
 			{
 				VisitLinqExtensionsMethodCall(expression);
 				return;
 			}
 
-			var method = expression.Method.DeclaringType.Name + "." + expression.Method.Name;
+			var method = declaringType.Name + "." + expression.Method.Name;
 			throw new NotSupportedException(string.Format("Method not supported: {0}. Expression: {1}.", method, expression));
 		}
 
@@ -751,8 +775,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 				search = search.Arguments[0] as MethodCallExpression;
 				if (search == null ||
-				    searchExpression.Method.Name != "Search" ||
-				    searchExpression.Method.DeclaringType != typeof (LinqExtensions))
+					search.Method.Name != "Search" ||
+					search.Method.DeclaringType != typeof(LinqExtensions))
 					break;
 
 				target = search.Arguments[0];
@@ -818,6 +842,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			if (((SearchOptions) value).HasFlag(SearchOptions.Guess))
 				chainedWhere = true;
+		}
+
+		private void VisitListMethodCall(MethodCallExpression expression)
+		{
+			switch (expression.Method.Name)
+			{
+				case "Contains":
+				{
+					var memberInfo = GetMember(expression.Object);
+					var oldPath = currentPath;
+					currentPath = memberInfo.Path + ",";
+					VisitExpression(expression.Arguments[0]);
+					currentPath = oldPath;
+		
+					break;
+				}
+				default:
+					{
+						throw new NotSupportedException("Method not supported: List." + expression.Method.Name);
+					}
+			}
 		}
 
 		private void VisitEnumerableMethodCall(MethodCallExpression expression, bool negated)
@@ -1065,6 +1110,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		}
 
 		private bool insideSelect;
+		private readonly bool isMapReduce;
 
 		private void VisitSelect(Expression operand)
 		{
@@ -1088,7 +1134,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					AddToFieldsToFetch(memberExpression.ToPropertyPath('_'), memberExpression.Member.Name);
 					if (insideSelect == false)
 					{
-						FieldsToRename[memberExpression.Member.Name] = null;
+						foreach (var renamedField in FieldsToRename.Where(x=>x.OriginalField == memberExpression.Member.Name).ToArray())
+						{
+							FieldsToRename.Remove(renamedField);
+						}
+						FieldsToRename.Add(new RenamedField
+						{
+							NewField = null,
+							OriginalField = memberExpression.Member.Name
+						});
 					}
 					break;
 					//Anonymous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
@@ -1165,10 +1219,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					var idPropName = luceneQuery.DocumentConvention.FindIdentityPropertyNameFromEntityName(luceneQuery.DocumentConvention.GetTypeTagName(typeof (T)));
 					if (docField == idPropName)
 					{
-						FieldsToRename[Constants.DocumentIdFieldName] = renamedField;
+						FieldsToRename.Add(new RenamedField
+						{
+							NewField = renamedField,
+							OriginalField = Constants.DocumentIdFieldName
+						});
 					}
 				}
-				FieldsToRename[docField] = renamedField;
+				FieldsToRename.Add(new RenamedField
+				{
+					NewField = renamedField,
+					OriginalField = docField
+				});
 			}
 		}
 
@@ -1249,7 +1311,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		/// <value>The lucene query.</value>
 		public IDocumentQuery<T> GetLuceneQueryFor(Expression expression)
 		{
-			var q = queryGenerator.Query<T>(indexName);
+			var q = queryGenerator.Query<T>(indexName, isMapReduce);
 
 			luceneQuery = (IAbstractDocumentQuery<T>) q;
 
@@ -1267,7 +1329,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		/// <value>The lucene query.</value>
 		public IAsyncDocumentQuery<T> GetAsyncLuceneQueryFor(Expression expression)
 		{
-			var asyncLuceneQuery = queryGenerator.AsyncQuery<T>(indexName);
+			var asyncLuceneQuery = queryGenerator.AsyncQuery<T>(indexName, isMapReduce);
 			luceneQuery = (IAbstractDocumentQuery<T>) asyncLuceneQuery;
 			VisitExpression(expression);
 
@@ -1301,9 +1363,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			var renamedFields = FieldsToFetch.Select(field =>
 			{
-				string value;
-				if (FieldsToRename.TryGetValue(field, out value) && value != null)
-					return value;
+				var value = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
+				if (value != null)
+					return value.NewField ?? field;
 				return field;
 			}).ToArray();
 
@@ -1332,26 +1394,38 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				var result = queryResult.Results[index];
 				var safeToModify = (RavenJObject) result.CreateSnapshot();
 				bool changed = false;
+				var values = new Dictionary<string, RavenJToken>();
+				foreach (var renamedField in FieldsToRename.Select(x=>x.OriginalField).Distinct())
+				{
+					RavenJToken value;
+					if (safeToModify.TryGetValue(renamedField, out value) == false) 
+						continue;
+					values[renamedField] = value;
+					safeToModify.Remove(renamedField);
+				}
 				foreach (var rename in FieldsToRename)
 				{
 					RavenJToken val;
-					if (safeToModify.TryGetValue(rename.Key, out val) == false)
+					if (values.TryGetValue(rename.OriginalField, out val) == false)
 						continue;
 					changed = true;
 					var ravenJObject = val as RavenJObject;
-					if (rename.Value == null && ravenJObject != null)
+					if (rename.NewField == null && ravenJObject != null)
 					{
 						safeToModify = ravenJObject;
 					}
-					else if (rename.Value != null)
+					else if (rename.NewField != null)
 					{
-						safeToModify[rename.Value] = val;
-						safeToModify.Remove(rename.Key);
+						safeToModify[rename.NewField] = val;
+					}
+					else
+					{
+						safeToModify[rename.OriginalField] = val;
 					}
 				}
 				if (!changed)
 					continue;
-				safeToModify.EnsureSnapshot();
+				safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
 				queryResult.Results[index] = safeToModify;
 			}
 		}
@@ -1470,5 +1544,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		}
 
 		#endregion
+	}
+
+	public class RenamedField
+	{
+		public string OriginalField { get; set; }
+		public string NewField { get; set; }
 	}
 }

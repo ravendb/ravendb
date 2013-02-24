@@ -1,6 +1,7 @@
 ﻿extern alias database;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Client.Extensions;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
 

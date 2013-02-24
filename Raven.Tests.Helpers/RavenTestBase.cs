@@ -102,21 +102,36 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false)
+		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
+			 bool deleteDirectoryAfter = true, 
+			 bool deleteDirectoryBefore = true,
+			 bool runInMemory = true)
 		{
-			var ravenDbServer = GetNewServer();
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectoryBefore);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
-				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
+				Url = GetServerUrl(fiddler),
+				DefaultDatabase = databaseName,
 			};
 			store.AfterDispose += (sender, args) =>
 			{
 				ravenDbServer.Dispose();
-				ClearDatabaseDirectory();
+				if (deleteDirectoryAfter)
+					ClearDatabaseDirectory();
 			};
 			ModifyStore(store);
 			return store.Initialize();
+		}
+
+		private static string GetServerUrl(bool fiddler)
+		{
+			if (fiddler)
+			{
+				if (Process.GetProcessesByName("fiddler").Any())
+					return "http://localhost.fiddler:8079";
+			}
+			return "http://localhost:8079";
 		}
 
 		public static string GetDefaultStorageType(string requestedStorage = null)
@@ -132,19 +147,19 @@ namespace Raven.Tests.Helpers
 			return defaultStorageType;
 		}
 
-		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data", bool runInMemory = true)
+		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data", bool runInMemory = true, bool deleteDirectory = true)
 		{
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
 				DataDirectory = dataDirectory,
 				RunInMemory = runInMemory,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
+				AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 			};
 
 			ModifyConfiguration(ravenConfiguration);
 
-			if (ravenConfiguration.RunInMemory == false)
+			if (ravenConfiguration.RunInMemory == false && deleteDirectory)
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
@@ -207,12 +222,12 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store)
+		public static void WaitForIndexing(IDocumentStore store, string db = null)
 		{
-			while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
-			{
-				Thread.Sleep(100);
-			}
+			var databaseCommands = store.DatabaseCommands;
+			if (db != null)
+				databaseCommands = databaseCommands.ForDatabase(db);
+			SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0);
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)

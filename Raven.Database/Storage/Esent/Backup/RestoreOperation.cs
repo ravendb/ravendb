@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -18,12 +19,11 @@ namespace Raven.Storage.Esent.Backup
 
 	public class RestoreOperation
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		private readonly Action<string> output;
 		private readonly bool defrag;
 		private readonly string backupLocation;
-
-		private bool defragmentationCompleted;
-
 
 		private readonly InMemoryRavenConfiguration configuration;
 		private string databaseLocation { get { return configuration.DataDirectory.ToFullPath(); } }
@@ -41,13 +41,15 @@ namespace Raven.Storage.Esent.Backup
 		{
 			if (File.Exists(Path.Combine(backupLocation, "RavenDB.Backup")) == false)
 			{
-				output(backupLocation + " doesn't look like a valid backup");
+				output("Error: " + backupLocation + " doesn't look like a valid backup");
+				output("Error: Restore Canceled");
 				throw new InvalidOperationException(backupLocation + " doesn't look like a valid backup");
 			}
 
 			if (Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
 			{
-				output("Database already exists, cannot restore to an existing database.");
+				output("Error: Database already exists, cannot restore to an existing database.");
+				output("Error: Restore Canceled");
 				throw new IOException("Database already exists, cannot restore to an existing database.");
 			}
 
@@ -84,16 +86,18 @@ namespace Raven.Storage.Esent.Backup
 
 			bool hideTerminationException = false;
 			JET_INSTANCE instance;
-			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
+			TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
 				new TransactionalStorageConfigurator(configuration, null).ConfigureInstance(instance, databaseLocation);
-				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
+				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
 						Path.Combine(
 							new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
-				
+
+				TransactionalStorage.DisableIndexChecking(instance);
+
 				if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
 				{
 					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
@@ -101,11 +105,16 @@ namespace Raven.Storage.Esent.Backup
 
 				if (defrag)
 				{
-					DefragmentDatabase(instance, dataFilePath);
+					output("Esent Restore: Begin Database Compaction");
+					TransactionalStorage.Compact(configuration, CompactStatusCallback);
+					output("Esent Restore: Database Compaction Completed");
 				}
 			}
-			catch(Exception)
+			catch(Exception e)
 			{
+				output("Esent Restore: Failure! Could not restore database!");
+				output(e.ToString());
+				log.WarnException("Could not complete restore", e);
 				hideTerminationException = true;
 				throw;
 			}
@@ -191,67 +200,17 @@ namespace Raven.Storage.Esent.Backup
 			}
 		}
 
-		private void DefragmentDatabase(JET_INSTANCE instance, string dataFilePath)
-		{
-			JET_SESID sessionId = JET_SESID.Nil;
-			JET_DBID dbId = JET_DBID.Nil;
-
-			Api.JetInit(ref instance);
-
-			int passes = 1;
-			int seconds = 60;
-
-			defragmentationCompleted = false;
-
-			try
-			{
-				Api.JetBeginSession(instance, out sessionId, null, null);
-
-				Api.JetAttachDatabase(sessionId, dataFilePath, AttachDatabaseGrbit.None);
-				Api.JetOpenDatabase(sessionId, dataFilePath, null, out dbId, OpenDatabaseGrbit.None);
-
-				Api.JetDefragment2(sessionId, dbId, null, ref passes, ref seconds, DefragmentationStatusCallback, DefragGrbit.BatchStart);
-
-				output("Defragmentation started.");
-				Console.WriteLine("Defragmentation started.");
-
-				WaitForDefragmentationToComplete();
-
-				output("Defragmentation finished.");
-				Console.WriteLine("Defragmentation finished.");
-			}
-			finally
-			{
-				Api.JetCloseDatabase(sessionId, dbId, CloseDatabaseGrbit.None);
-				Api.JetDetachDatabase(sessionId, dataFilePath);
-				Api.JetEndSession(sessionId, EndSessionGrbit.None);
-			}
-		}
-
-		private JET_err DefragmentationStatusCallback(JET_SESID sesid, JET_DBID dbId, JET_TABLEID tableId, JET_cbtyp cbtyp, object data1, object data2, IntPtr ptr1, IntPtr ptr2)
-		{
-			defragmentationCompleted = cbtyp == JET_cbtyp.OnlineDefragCompleted;
-
-			return JET_err.Success;
-		}
-
-		private void WaitForDefragmentationToComplete()
-		{
-			while (!defragmentationCompleted)
-			{
-				output(".");
-				Console.Write(".");
-
-				Thread.Sleep(TimeSpan.FromSeconds(1));
-			}
-
-			Console.WriteLine();
-		}
-
-		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+		private JET_err RestoreStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
 		{
 			output(string.Format("Esent Restore: {0} {1} {2}", snp, snt, data));
 			Console.WriteLine("Esent Restore: {0} {1} {2}", snp, snt, data);
+			return JET_err.Success;
+		}
+
+		private JET_err CompactStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+		{
+			output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
+			Console.WriteLine("Esent Compact: {0} {1} {2}", snp, snt, data);
 			return JET_err.Success;
 		}
 

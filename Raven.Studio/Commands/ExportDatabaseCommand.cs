@@ -24,6 +24,7 @@ namespace Raven.Studio.Commands
 		private StreamWriter streamWriter;
 		private JsonTextWriter jsonWriter;
 		private TaskModel taskModel;
+	    private bool includeAttachments;
 
 		public ExportDatabaseCommand(TaskModel taskModel, Action<string> output)
 		{
@@ -33,6 +34,9 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
+            TaskCheckBox attachmentUI = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Attachments") as TaskCheckBox;
+            includeAttachments = attachmentUI != null && (bool)attachmentUI.Value;
+
 			var saveFile = new SaveFileDialog
 			{
 				DefaultExt = ".ravendump",
@@ -61,89 +65,158 @@ namespace Raven.Studio.Commands
 				Formatting = Formatting.Indented
 			};
 			taskModel.TaskStatus = TaskStatus.Started;
+
 			output(String.Format("Exporting to {0}", saveFile.SafeFileName));
-
-			output("Begin reading indexes");
-
 			jsonWriter.WriteStartObject();
-			jsonWriter.WritePropertyName("Indexes");
-			jsonWriter.WriteStartArray();
 
-			ReadIndexes(0)
-				.Catch(exception =>
-				{
-					taskModel.ReportError(exception);
-					Infrastructure.Execute.OnTheUI(() => Finish(exception));
-				});
+		    Action finalized = () => 
+            {
+                jsonWriter.WriteEndObject();
+                Infrastructure.Execute.OnTheUI(() => Finish(null));
+		    };
+
+		    Action readAttachments = () => ReadAttachments(Guid.Empty, 0, callback: finalized);
+		    Action readDocuments = () => ReadDocuments(Guid.Empty, 0, callback: includeAttachments ? readAttachments : finalized);
+
+            try
+            {
+                ReadIndexes(0, callback: readDocuments);
+            }
+            catch (Exception ex)
+            {
+                taskModel.ReportError(ex);
+				Infrastructure.Execute.OnTheUI(() => Finish(ex));
+            }
 		}
 
-		private Task ReadIndexes(int totalCount)
+		private void ReadIndexes(int totalCount, Action callback)
 		{
+            if (totalCount == 0)
+            {
+                output("Begin reading indexes");
+                jsonWriter.WritePropertyName("Indexes");
+                jsonWriter.WriteStartArray();    
+            }
+            
 			var url = ("/indexes/?start=" + totalCount + "&pageSize=" + BatchSize).NoCache();
 			var request = DatabaseCommands.CreateRequest(url, "GET");
-			return request.ReadResponseJsonAsync()
-			              .ContinueOnSuccess(documents =>
-			              {
-				              var array = ((RavenJArray) documents);
-				              if (array.Length == 0)
-				              {
-					              output(String.Format("Done with reading indexes, total: {0}", totalCount));
-					              output(String.Format("Begin reading documents"));
+		    request.ReadResponseJsonAsync()
+		           .ContinueOnSuccess(documents =>
+		           {
+		               var array = ((RavenJArray) documents);
+		               if (array.Length == 0)
+		               {
+		                   output(String.Format("Done with reading indexes, total: {0}", totalCount));
+		                   jsonWriter.WriteEndArray();
 
-					              jsonWriter.WriteEndArray();
-					              jsonWriter.WritePropertyName("Docs");
-					              jsonWriter.WriteStartArray();
+		                   callback();
+		               }
+		               else
+		               {
+		                   totalCount += array.Length;
+		                   output(String.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", array.Length,
+		                                        totalCount));
+		                   foreach (RavenJToken item in array)
+		                   {
+		                       item.WriteTo(jsonWriter);
+		                   }
 
-					              return ReadDocuments(Guid.Empty, 0);
-				              }
-				              else
-				              {
-					              totalCount += array.Length;
-					              output(String.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", array.Length,
-					                                   totalCount));
-					              foreach (RavenJToken item in array)
-					              {
-						              item.WriteTo(jsonWriter);
-					              }
-
-					              return ReadIndexes(totalCount);
-				              }
-			              })
-			              .Catch(exception => taskModel.ReportError(exception));
+		                   ReadIndexes(totalCount, callback);
+		               }
+		           });
 		}
 
-		private Task ReadDocuments(Guid lastEtag, int totalCount)
+		private void ReadDocuments(Guid lastEtag, int totalCount, Action callback)
 		{
+            if (totalCount == 0)
+            {
+                output("Begin reading documents");
+
+                jsonWriter.WritePropertyName("Docs");
+                jsonWriter.WriteStartArray();
+            }
+
 			var url = ("/docs/?pageSize=" + BatchSize + "&etag=" + lastEtag).NoCache();
 			var request = DatabaseCommands.CreateRequest(url, "GET");
-			return request.ReadResponseJsonAsync()
-			              .ContinueOnSuccess(docs =>
-			              {
-				              var array = ((RavenJArray) docs);
-				              if (array.Length == 0)
-				              {
-					              output(String.Format("Done with reading documents, total: {0}", totalCount));
-					              jsonWriter.WriteEndArray();
-					              jsonWriter.WriteEndObject();
+		    request.ReadResponseJsonAsync()
+		           .ContinueOnSuccess(docs =>
+		           {
+		               var array = ((RavenJArray) docs);
+		               if (array.Length == 0)
+		               {
+		                   output(String.Format("Done with reading documents, total: {0}", totalCount));
+                           jsonWriter.WriteEndArray();
 
-					              return Infrastructure.Execute.OnTheUI(() => Finish(null));
-				              }
-				              else
-				              {
-					              totalCount += array.Length;
-					              output(String.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Length,
-					                                   totalCount));
-					              foreach (RavenJToken item in array)
-					              {
-						              item.WriteTo(jsonWriter);
-					              }
-					              lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+		                   callback();
+		               }
+		               else
+		               {
+		                   totalCount += array.Length;
+		                   output(String.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Length,
+		                                        totalCount));
+		                   foreach (RavenJToken item in array)
+		                   {
+		                       item.WriteTo(jsonWriter);
+		                   }
+		                   lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
-					              return ReadDocuments(lastEtag, totalCount);
-				              }
-			              })
-			              .Catch(exception => taskModel.ReportError(exception));
+                           ReadDocuments(lastEtag, totalCount, callback);
+		               }
+		           });
 		}
+
+        private void ReadAttachments(Guid lastEtag, int totalCount, Action callback) {
+            if (totalCount == 0)
+            {
+                output("Begin reading attachments");
+
+                jsonWriter.WritePropertyName("Attachments");
+                jsonWriter.WriteStartArray();
+            }
+
+            var url = ("/static/?pageSize=" + BatchSize + "&etag=" + lastEtag).NoCache();
+            var request = DatabaseCommands.CreateRequest(url, "GET");
+            request.ReadResponseJsonAsync()
+                   .ContinueOnSuccess(attachments =>
+                   {
+                       var array = ((RavenJArray) attachments);
+                       if (array.Length == 0)
+                       {
+                           output(String.Format("Done with reading attachments, total: {0}", totalCount));
+                           jsonWriter.WriteEndArray();
+
+                           callback();
+                       }
+                       else
+                       {
+                           totalCount += array.Length;
+                           output(String.Format(
+                               "Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", array.Length,
+                               totalCount));
+
+                           foreach (var item in array)
+                           {
+                               output(String.Format("Downloading attachment: {0}", item.Value<string>("Key")));
+
+                               var requestData = DatabaseCommands.CreateRequest("/static/" + item.Value<string>("Key"),
+                                                                                "GET");
+                               requestData.ReadResponseBytesAsync()
+                                          .ContinueOnSuccess(attachmentData =>
+                                          {
+                                              new RavenJObject
+                                              {
+                                                  {"Data", attachmentData},
+                                                  {"Metadata", item.Value<RavenJObject>("Metadata")},
+                                                  {"Key", item.Value<string>("Key")}
+                                              }.WriteTo(jsonWriter);
+                                          });
+                           }
+                       }
+
+                       lastEtag = new Guid(array.Last().Value<string>("Etag"));
+                       ReadAttachments(lastEtag, totalCount, callback);
+                   });
+        }
 
 		private void Finish(Exception exception)
 		{

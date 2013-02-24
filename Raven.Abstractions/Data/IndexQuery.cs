@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IndexQuery.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -126,7 +126,22 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public bool DebugOptionGetIndexEntries { get; set; }
 
-		/// <summary>
+        /// <summary>
+        /// Gets or sets the options to highlight the fields
+        /// </summary>
+        public HighlightedField[] HighlightedFields { get; set; }
+
+        /// <summary>
+        /// Gets or sets the highlighter pre tags
+        /// </summary>
+	    public string[] HighlighterPreTags { get; set; }
+
+        /// <summary>
+        /// Gets or sets the highlighter post tags
+        /// </summary>
+	    public string[] HighlighterPostTags { get; set; }
+
+	    /// <summary>
 		/// Gets the index query URL.
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
@@ -172,10 +187,15 @@ namespace Raven.Abstractions.Data
 
 			AppendMinimalQueryString(path);
 
-			path
-				.Append("&start=").Append(Start)
-				.Append("&pageSize=").Append(PageSize)
-				.Append("&aggregation=").Append(AggregationOperation);
+			if (Start != 0)
+				path.Append("&start=").Append(Start);
+
+			path.Append("&pageSize=").Append(PageSize);
+			
+
+			if(AggregationOperation != AggregationOperation.None)
+				path.Append("&aggregation=").Append(AggregationOperation);
+
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			GroupBy.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
@@ -198,6 +218,11 @@ namespace Raven.Abstractions.Data
 			{
 				path.Append("&cutOffEtag=").Append(CutoffEtag.Value.ToString());
 			}
+
+		    this.HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
+            this.HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
+            this.HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
+
 			
 
 			if(DebugOptionGetIndexEntries)
@@ -236,7 +261,7 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public enum QueryOperator
+    public enum QueryOperator
 	{
 		Or,
 		And

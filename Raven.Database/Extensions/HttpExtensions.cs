@@ -212,11 +212,14 @@ namespace Raven.Database.Extensions
 							var rfc1123 = GetDateString(header.Value, "r");
 							var iso8601 = GetDateString(header.Value, "o");
 							context.Response.AddHeader(header.Key, rfc1123);
-							context.Response.AddHeader("Raven-" + header.Key, iso8601);
+							if (header.Key.StartsWith("Raven-") == false)
+							{
+								context.Response.AddHeader("Raven-" + header.Key, iso8601);
+							}
 						}
 						else
 						{
-							var value = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+							var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None));
 							context.Response.AddHeader(header.Key, value);
 						}
 						break;
@@ -247,10 +250,10 @@ namespace Raven.Database.Extensions
 			return obj.ToString();
 		}
 
-		private static string StripQuotesIfNeeded(string str)
+		private static string UnescapeStringIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
-				return str.Substring(1, str.Length - 2);
+				return Regex.Unescape(str.Substring(1, str.Length - 2));
 			return str;
 		}
 
@@ -447,6 +450,10 @@ namespace Raven.Database.Extensions
 			var etagAsString = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			if (etagAsString != null)
 			{
+				// etags are usually quoted
+				if (etagAsString.StartsWith("\"") && etagAsString.EndsWith("\""))
+					etagAsString = etagAsString.Substring(1, etagAsString.Length - 2);
+
 				Guid result;
 				if (Guid.TryParse(etagAsString, out result))
 					return result;
@@ -474,6 +481,26 @@ namespace Raven.Database.Extensions
 			double radius;
 			double.TryParse(context.Request.QueryString["radius"], NumberStyles.Any, CultureInfo.InvariantCulture, out radius);
 			return radius;
+		}
+
+		public static IEnumerable<HighlightedField> GetHighlightedFields(this IHttpContext context)
+		{
+			var highlightedFieldStrings = context.Request.QueryString.GetValues("highlight").EmptyIfNull();
+			var fields = new HashSet<string>();
+
+			foreach (var highlightedFieldString in highlightedFieldStrings)
+			{
+				HighlightedField highlightedField;
+				if (HighlightedField.TryParse(highlightedFieldString, out highlightedField))
+				{
+					if (!fields.Add(highlightedField.Field))
+						throw new BadRequestException("Duplicate highlighted field has found: " + highlightedField.Field);
+
+					yield return highlightedField;
+				} else
+					throw new BadRequestException(
+						"Could not parse hightlight query parameter as field highlight options");
+			}
 		}
 
 		public static Guid? GetEtagFromQueryString(this IHttpContext context)

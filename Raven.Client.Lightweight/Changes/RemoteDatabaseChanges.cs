@@ -34,7 +34,6 @@ namespace Raven.Client.Changes
 		private readonly ReplicationInformer replicationInformer;
 		private readonly Action onDispose;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
-		private IDisposable connection;
 
 		private static int connectionCounter;
 		private readonly string id;
@@ -50,7 +49,12 @@ namespace Raven.Client.Changes
 			this.replicationInformer = replicationInformer;
 			this.onDispose = onDispose;
 			Task = EstablishConnection()
-				.ObserveException();
+				.ObserveException()
+				.ContinueWith(task =>
+				{
+					task.AssertNotFailed();
+					return (IDatabaseChanges)this;
+				});
 		}
 
 		private Task EstablishConnection()
@@ -115,7 +119,7 @@ namespace Raven.Client.Changes
 
 		public bool Connected { get; private set; }
 		public event EventHandler ConnectionStatusChanged = delegate { }; 
-		public Task Task { get; private set; }
+		public Task<IDatabaseChanges> Task { get; private set; }
 
 		private Task AfterConnection(Func<Task> action)
 		{
@@ -152,47 +156,47 @@ namespace Raven.Client.Changes
 				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnIndexChangeNotification += taskedObservable.Send;
-			counter.OnError = taskedObservable.Error;
+			counter.OnError += taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() =>
-															{
-																try
-																{
-																	connection.Dispose();
-																}
-																catch (Exception)
-																{
-																	// nothing to do here
-																}
-															});
-			});
-
-			counter.Add(disposableTask);
+		
 			return taskedObservable;
 
 		}
 
+		private Task lastSendTask;
+
 		private Task Send(string command, string value)
 		{
-			try
+			lock (this)
 			{
-				var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
-				if (string.IsNullOrEmpty(value) == false)
-					sendUrl += "&value=" + Uri.EscapeUriString(value);
+				var sendTask = lastSendTask;
+				if (sendTask != null)
+				{
+					sendTask.ContinueWith(_ =>
+					{
+						Send(command, value);
+					});
+				}
 
-				sendUrl = sendUrl.NoCache();
+				try
+				{
+					var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
+					if (string.IsNullOrEmpty(value) == false)
+						sendUrl += "&value=" + Uri.EscapeUriString(value);
 
-				var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
-				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-				return httpJsonRequest.ExecuteRequestAsync().ObserveException();
-			}
-			catch (Exception e)
-			{
-				return new CompletedTask(e).Task.ObserveException();
+					sendUrl = sendUrl.NoCache();
+
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
+					var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
+					return lastSendTask =
+						httpJsonRequest.ExecuteRequestAsync()
+							.ObserveException()
+							.ContinueWith(task => lastSendTask = null);
+				}
+				catch (Exception e)
+				{
+					return new CompletedTask(e).Task.ObserveException();
+				}
 			}
 		}
 
@@ -220,15 +224,8 @@ namespace Raven.Client.Changes
 				notification => string.Equals(notification.Id, docId, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
-			counter.OnError = taskedObservable.Error;
+			counter.OnError += taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() => connection.Dispose());
-			});
-			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
@@ -255,15 +252,8 @@ namespace Raven.Client.Changes
 				notification => true);
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
-			counter.OnError = taskedObservable.Error;
+			counter.OnError += taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() => connection.Dispose());
-			});
-			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
@@ -291,15 +281,8 @@ namespace Raven.Client.Changes
 				notification => true);
 
 			counter.OnIndexChangeNotification += taskedObservable.Send;
-			counter.OnError = taskedObservable.Error;
+			counter.OnError += taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() => connection.Dispose());
-			});
-			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
@@ -329,13 +312,6 @@ namespace Raven.Client.Changes
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
 
-			var disposableTask = counter.Task.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-					return null;
-				return (IDisposable)new DisposableAction(() => connection.Dispose());
-			});
-			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
@@ -349,6 +325,7 @@ namespace Raven.Client.Changes
 		}
 
 		private volatile bool disposed;
+		private IDisposable connection;
 
 		public Task DisposeAsync()
 		{
@@ -356,14 +333,6 @@ namespace Raven.Client.Changes
 				return new CompletedTask();
 			disposed = true;
 			onDispose();
-			foreach (var keyValuePair in counters)
-			{
-				keyValuePair.Value.Dispose();
-			}
-			if (connection == null)
-			{
-				return new CompletedTask();
-			}
 
 			return Send("disconnect", null).
 				ContinueWith(_ =>
@@ -387,7 +356,6 @@ namespace Raven.Client.Changes
 			{
 				case "DocumentChangeNotification":
 					var documentChangeNotification = value.JsonDeserialization<DocumentChangeNotification>();
-
 					foreach (var counter in counters)
 					{
 						counter.Value.Send(documentChangeNotification);
@@ -399,7 +367,13 @@ namespace Raven.Client.Changes
 					foreach (var counter in counters)
 					{
 						counter.Value.Send(indexChangeNotification);
-					} break;
+					} 
+					break;
+				case "Initialized":
+				case "Heartbeat":
+					break;
+				default:
+					break;
 			}
 		}
 

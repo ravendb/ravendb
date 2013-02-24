@@ -27,43 +27,7 @@ namespace Raven.Client.Extensions
 
 	public static class TaskExtensions
 	{
-		public static void AssertNotFailed(this Task task)
-		{
-			if (task.IsFaulted)
-				task.Wait(); // would throw
-		}
-
-		public static Task<T> ConvertSecurityExceptionToServerNotFound<T>(this Task<T> parent)
-		{
-			return parent.ContinueWith(task =>
-										{
-											if (task.IsFaulted)
-											{
-												var exception = task.Exception.ExtractSingleInnerException();
-												if (exception is SecurityException)
-													throw new WebException("Could not contact server.\r\nGot security error because RavenDB wasn't able to contact the database to get ClientAccessPolicy.xml permission.", exception);
-											}
-											return task;
-										}).Unwrap();
-		}
-
-
-		public static Task<T> AddUrlIfFaulting<T>(this Task<T> parent, Uri uri)
-		{
-			return parent.ContinueWith(task =>
-										{
-											if (task.IsFaulted)
-											{
-												var e = task.Exception.ExtractSingleInnerException();
-												if (e != null)
-													e.Data["Url"] = uri;
-											}
-
-											return task;
-										})
-				.Unwrap();
-		}
-
+		
 		public static Task<object> WithNullResult(this Task task)
 		{
 			return task.WithResult((object)null);
@@ -150,7 +114,7 @@ namespace Raven.Client.Extensions
 			return Task.Factory.ContinueWhenAll(tasks.ToArray(), results =>
 			{
 				// The cast in the next line is required in Silverlight, because covariance isn't supported there
-				var exceptions = results.Where(t => t.IsFaulted).Select(t => (Exception)t.Exception);
+				var exceptions = results.Where(t => t.IsFaulted).Select(t => (Exception)t.Exception).ToArray();
 				if (exceptions.Any())
 					throw new AggregateException(exceptions);
 

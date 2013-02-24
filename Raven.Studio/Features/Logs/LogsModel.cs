@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Logs
 {
@@ -21,6 +22,8 @@ namespace Raven.Studio.Features.Logs
 		public LogsModel()
 		{
 			ModelUrl = "/logs";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
+
 			Logs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
 			DisplayedLogs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
 			Logs.CollectionChanged += (sender, args) => OnPropertyChanged(() => PendingLogs);

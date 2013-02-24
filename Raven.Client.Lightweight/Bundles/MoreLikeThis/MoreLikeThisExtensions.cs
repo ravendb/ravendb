@@ -40,7 +40,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
 			parameters.IndexName = index;
 
 			// /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
-			var cmd = advancedSession.DocumentStore.DatabaseCommands;
+			var cmd = ((DocumentSession) advancedSession).DatabaseCommands;
 
 			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
 			inMemoryDocumentSessionOperations.IncrementRequestCount();

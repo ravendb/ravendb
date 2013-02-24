@@ -2,8 +2,9 @@
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
 					xmlns:Models="clr-namespace:Raven.Studio.Models" xmlns:Messages="clr-namespace:Raven.Studio.Messages">
-	
-	<Converters:BooleanToIntConverter x:Key="BooleanToInt"/>
+
+	<Converters:IntParamEqualityConverter x:Key="IntParamEquality"/>
+	<Converters:VisibilityByParamInEqualityConverter x:Key="VisibilityByParamInEquality"/>
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
 	<Converters:StringToBooleanConverter x:Key="StringToBoolean"/>
@@ -22,6 +23,7 @@
 	<Converters:MagnitudeToListConverter x:Name="MagnitudeToList" />
 	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
 	<Converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
+	<Converters:FromEnumWithDescription x:Key="fromEnumWithDescription"/>
 	<Converters:FirstLineOnlyConverter x:Key="FirstLineOnly" />
 	<Converters:GetFullApiKeyConverter x:Key="GetFullApiKeyConverter"/>
 	<Converters:GetFullConnectionStringConverter x:Key="GetFullConnectionStringConverter"/>
@@ -29,13 +31,13 @@
 	<Converters:StringEmptyToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedForValue"
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />
-    <Converters:BooleanToGridLengthConverter x:Key="HiddenWhenFalseStarSizedWhenTrue"
-                                             ValueWhenFalse="0"
-                                             ValueWhenTrue="*"/>
+	<Converters:BooleanToGridLengthConverter x:Key="HiddenWhenFalseStarSizedWhenTrue"
+																					 ValueWhenFalse="0"
+																					 ValueWhenTrue="*"/>
 	<Converters:IdStringToIdWithoutHeader x:Key="IdStringToIdWithoutHeader"/>
 	<Converters:BundleNameToActiveConverter x:Key="BundleNameToActive"/>
 	<Converters:BundleNameToToolTipCoverter x:Key="BundleNameToToolTip"/>
-    <Converters:StringListToStringConverter x:Key="StringListToString"/>
+	<Converters:StringListToStringConverter x:Key="StringListToString"/>
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:TrueWhenAnalyzedConverter x:Key="TrueWhenAnalyzed"/>
 	<Converters:VisibleWhenDifferent x:Key="VisibleWhenDifferent" />
@@ -43,9 +45,11 @@
 	<Converters:DisableIfDefaultVersioning x:Key="DisableIfDefaultVersioning"/>
 	<Converters:CollectionCountToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedWhenNonEmpty"/>
 	<Converters:StringToDefaultOperatorConverter x:Key="StringToDefaultOperator"/>
-    <Converters:NegatingBoolConverter x:Key="NegatingBool"/>
-    <Converters:EnumToVisibilityConverter x:Key="VisibleWhenNotificationLevelIsError" ValuesWhenVisible="Error" Type="Messages:NotificationLevel"/>
-    <Converters:TrimmedStringConverter x:Key="TrimmedString"/>
-    <Converters:StringToSingleLineConverter x:Key="StringToSingleLine"/>
+	<Converters:NegatingBoolConverter x:Key="NegatingBool"/>
+	<Converters:EnumToVisibilityConverter x:Key="VisibleWhenNotificationLevelIsError" ValuesWhenVisible="Error" Type="Messages:NotificationLevel"/>
+	<Converters:TrimmedStringConverter x:Key="TrimmedString"/>
+	<Converters:StringToSingleLineConverter x:Key="StringToSingleLine"/>
 	<Models:DocumentSize x:Key="DocumentSize" />
+	<Converters:MillisecondsToMinutesConverter x:Key="MillisecondsToMinutes" />
+
 </ResourceDictionary>

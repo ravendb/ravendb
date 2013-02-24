@@ -10,12 +10,16 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing;
 
 namespace Raven.Tests.Suggestions
 {
 	public static class SuggestionsHelper
 	{
+		public class Person
+		{
+			public string Name { get; set; }
+		}
+
 		public static string IndexName { get { return "PersonsByName"; } }
 
 		public static List<Person> GetPersons()

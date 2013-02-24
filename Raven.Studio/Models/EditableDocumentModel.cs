@@ -63,7 +63,7 @@ namespace Raven.Studio.Models
 
 		private static void InitializeOutliningModes()
 		{
-			OutliningModes = (new List<DocumentOutliningMode>()
+			OutliningModes = (new List<DocumentOutliningMode>
 			                  {
 				                  new DocumentOutliningMode("Disabled")
 				                  { Applicator = document => document.OutliningMode = OutliningMode.None },
@@ -86,21 +86,32 @@ namespace Raven.Studio.Models
 						                  document.OutliningMode = OutliningMode.Automatic;
 						                  document.OutliningManager.EnsureCollapsed();
 					                  }
-				                  },
+				                  }
 			                  }).AsReadOnly();
 		}
 
 		public EditableDocumentModel()
 		{
 			ModelUrl = "/edit";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
 
-			dataSection = new DocumentSection() { Name = "Data", Document = new EditorDocument() { Language = JsonLanguage, TabSize = 2 } };
-			metaDataSection = new DocumentSection() { Name = "Metadata", Document = new EditorDocument() { Language = JsonLanguage, TabSize = 2 } };
-			DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection };
+			dataSection = new DocumentSection{ Name = "Data", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
+			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
+			DocumentSections = new List<DocumentSection> { dataSection, metaDataSection };
+			EnableExpiration = new Observable<bool>();
+			ExpireAt = new Observable<DateTime>();
+			ExpireAt.PropertyChanged += (sender, args) => TimeChanged = true;
 			CurrentSection = dataSection;
 
 			References = new BindableCollection<LinkModel>(model => model.Title);
 			Related = new BindableCollection<LinkModel>(model => model.Title);
+			Recent = new BindableCollection<LinkModel>(model => model.Title);
+
+			foreach (var recentDocument in ApplicationModel.Current.Server.Value.SelectedDatabase.Value.RecentDocuments)
+			{
+				Recent.Add(new LinkModel(recentDocument));
+			}
+
 			DocumentErrors = new ObservableCollection<DocumentError>();
 
 			SearchEnabled = false;
@@ -111,9 +122,9 @@ namespace Raven.Studio.Models
 
 			InitializeDocument();
 
-			ParentPathSegments = new ObservableCollection<PathSegment>()
+			ParentPathSegments = new ObservableCollection<PathSegment>
 			                     {
-				                     new PathSegment() { Name = "Documents", Url = "/documents" }
+				                     new PathSegment { Name = "Documents", Url = "/documents" }
 			                     };
 
 			currentDatabase = Database.Value.Name;
@@ -151,7 +162,7 @@ namespace Raven.Studio.Models
 
 			foreach (var parseError in parseData.Errors)
 			{
-				DocumentErrors.Add(new DocumentError() { Section = section, ParseError = parseError });
+				DocumentErrors.Add(new DocumentError { Section = section, ParseError = parseError });
 			}
 		}
 
@@ -229,6 +240,17 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		public Observable<bool> EnableExpiration { get; set; } 
+
+		private bool hasExpiration;
+		public bool HasExpiration
+		{
+			get { return hasExpiration; }
+			set { hasExpiration = value; OnPropertyChanged(() => HasExpiration); }
+		}
+
+		public bool TimeChanged { get; set; }
+		public Observable<DateTime> ExpireAt { get; set; }
 		private void StoreOutliningMode()
 		{
 			Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
@@ -238,9 +260,9 @@ namespace Raven.Studio.Models
 		{
 			if (outliningMode != null)
 			{
-				foreach (var document in DocumentSections.Select(s => s.Document))
+				foreach (var editorDocument in DocumentSections.Select(s => s.Document))
 				{
-					outliningMode.Applicator(document);
+					outliningMode.Applicator(editorDocument);
 				}
 			}
 		}
@@ -278,7 +300,7 @@ namespace Raven.Studio.Models
 				TotalItems = 0;
 				SetCurrentDocumentKey(null);
 				ParentPathSegments.Clear();
-				ParentPathSegments.Add(new PathSegment() { Name = "Documents", Url = "/documents" });
+				ParentPathSegments.Add(new PathSegment { Name = "Documents", Url = "/documents" });
 				return;
 			}
 
@@ -307,10 +329,27 @@ namespace Raven.Studio.Models
 					}
 					else
 					{
+						AssertNoPropertyBeyondSize(result.Document.DataAsJson, 500 * 1000);
+						var recentQueue = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.RecentDocuments;
+						ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+						                                               ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+						                                               "/docs/" + result.Document.Key;
+						recentQueue.Add(result.Document.Key);
 						Mode = DocumentMode.DocumentWithId;
 						result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
 						LocalId = result.Document.Key;
 						SetCurrentDocumentKey(result.Document.Key);
+						var expiration = result.Document.Metadata["Raven-Expiration-Date"];
+						if (expiration != null)
+						{
+							ExpireAt.Value = DateTime.Parse(expiration.ToString());
+							EnableExpiration.Value = true;
+							HasExpiration = true;
+						}
+						else
+						{
+							HasExpiration = false;
+						}
 					}
 
 					urlForFirst = result.UrlForFirst;
@@ -379,13 +418,41 @@ namespace Raven.Studio.Models
 			         });
 		}
 
+		public void AssertNoPropertyBeyondSize(RavenJToken token, int maxSize, string path = "")
+		{
+			if (path.StartsWith("."))
+				path = path.Substring(1);
+			switch (token.Type)
+			{
+				case JTokenType.Object:
+					foreach (var item in ((RavenJObject)token))
+					{
+						if (item.Key != null && item.Key.Length > maxSize)
+							throw new InvalidOperationException(string.Format("Document's property Name: \"{0}\" is too long to view in the studio (property length: {1:#,#}, max allowed length: {2:#,#})", path + "." + item.Key, item.Key.Length, maxSize));
+						AssertNoPropertyBeyondSize(item.Value, maxSize, path + "." + item.Key);
+					}
+					break;
+				case JTokenType.Array:
+					foreach (var item in ((RavenJArray)token))
+					{
+						AssertNoPropertyBeyondSize(item, maxSize, path + ".");
+					}
+					break;
+				case JTokenType.String:
+					var value = token.Value<string>();
+					if (value != null && value.Length > maxSize)
+						throw new InvalidOperationException(string.Format("Document's property: \"{0}\" is too long to view in the studio (property length: {1:#,#}, max allowed length: {2:#,#})", path, value.Length, maxSize));
+					break;
+			}
+		}
+
 		public bool EditingDatabase { get; set; }
 
 		private void EditDatabaseDocument(string database)
 		{
 			ApplicationModel.Current.Server.Value.DocumentStore
 			                .AsyncDatabaseCommands
-			                .ForDefaultDatabase()
+							.ForSystemDatabase()
 			                .CreateRequest("/admin/databases/" + database, "GET")
 			                .ReadResponseJsonAsync()
 			                .ContinueOnSuccessInTheUIThread(result =>
@@ -576,6 +643,7 @@ namespace Raven.Studio.Models
 
 		public BindableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
+		public BindableCollection<LinkModel> Recent { get; set; } 
 
 		private bool searchEnabled;
 		public bool SearchEnabled
@@ -722,9 +790,9 @@ namespace Raven.Studio.Models
 			References.Match(referenceModels);
 		}
 
-		private IEnumerable<string> FindPotentialReferences(ICodeDocument document)
+		private IEnumerable<string> FindPotentialReferences(ICodeDocument codeDocument)
 		{
-			var stringValueNodes = document.FindAllStringValueNodes();
+			var stringValueNodes = codeDocument.FindAllStringValueNodes();
 			return stringValueNodes.Select(n => n.Text).Distinct().Where(IsPotentialReference);
 		}
 
@@ -925,8 +993,8 @@ namespace Raven.Studio.Models
 					.OrderBy(x => x.Key)
 					.Concat(new[]
 					        {
-						        new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : null),
-						        new KeyValuePair<string, string>("Last-Modified", GetMetadataLastModifiedString()),
+						        new KeyValuePair<string, string>("ETag", Etag != null ? Etag.ToString() : null),
+						        new KeyValuePair<string, string>("Last-Modified", GetMetadataLastModifiedString())
 					        })
 					.Where(x => x.Value != null);
 			}
@@ -953,10 +1021,10 @@ namespace Raven.Studio.Models
 			return parseData != null && parseData.Errors.Any();
 		}
 
-		private Task WhenParsingComplete(IEditorDocument document)
+		private Task WhenParsingComplete(IEditorDocument editorDocument)
 		{
 			var tcs = new TaskCompletionSource<bool>();
-			if ((document.ParseData as ILLParseData).Snapshot == document.CurrentSnapshot)
+			if ((editorDocument.ParseData as ILLParseData).Snapshot == editorDocument.CurrentSnapshot)
 			{
 				tcs.SetResult(true);
 			}
@@ -966,9 +1034,9 @@ namespace Raven.Studio.Models
 				completed = (s, e) =>
 				{
 					tcs.SetResult(true);
-					document.ParseDataChanged -= completed;
+					editorDocument.ParseDataChanged -= completed;
 				};
-				document.ParseDataChanged += completed;
+				editorDocument.ParseDataChanged += completed;
 			}
 
 			return tcs.Task;
@@ -977,14 +1045,10 @@ namespace Raven.Studio.Models
 		public override bool CanLeavePage()
 		{
 			if (HasUnsavedChanges)
-			{
 				return AskUser.Confirmation("Edit Document",
 				                            "There are unsaved changes to this document. Are you sure you want to continue?");
-			}
-			else
-			{
+
 				return true;
-			}
 		}
 
 		public ICommand Save
@@ -1104,7 +1168,7 @@ namespace Raven.Studio.Models
 			{
 				if (!parentModel.IsDocumentValid())
 				{
-					this.parentModel.IsShowingErrors = true;
+					parentModel.IsShowingErrors = true;
 				}
 
 				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
@@ -1139,7 +1203,7 @@ namespace Raven.Studio.Models
 
 				var req = ApplicationModel.Current.Server.Value.DocumentStore
 				                          .AsyncDatabaseCommands
-				                          .ForDefaultDatabase()
+										  .ForSystemDatabase()
 				                          .CreateRequest("/admin/databases/" + ApplicationModel.Database.Value.Name, "PUT");
 
 				req
@@ -1171,8 +1235,17 @@ namespace Raven.Studio.Models
 						}
 						else
 						{
-							metadata[Constants.RavenEntityName] = entityName;
+							metadata[Constants.RavenEntityName] = parentModel.ExpireAt.Value;
 						}
+					}
+
+					if (parentModel.EnableExpiration.Value)
+					{
+						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+					}
+					else if (metadata.ContainsKey("Raven-Expiration-Date"))
+					{
+						metadata.Remove("Raven-Expiration-Date");
 					}
 				}
 				catch (Exception ex)

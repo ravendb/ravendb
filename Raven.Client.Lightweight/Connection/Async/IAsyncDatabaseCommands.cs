@@ -153,7 +153,7 @@ namespace Raven.Client.Connection.Async
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
 		/// with the default database
 		/// </summary>
-		IAsyncDatabaseCommands ForDefaultDatabase();
+		IAsyncDatabaseCommands ForSystemDatabase();
 
 		/// <summary>
 		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials
@@ -231,9 +231,14 @@ namespace Raven.Client.Connection.Async
 		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc);
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
 
 		/// <summary>
 		/// Gets the Logs
@@ -284,5 +289,12 @@ namespace Raven.Client.Connection.Async
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		void ForceReadFromMaster();
+
+		/// <summary>
+		/// Retrieves the document metadata for the specified document key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
+		Task<JsonDocumentMetadata> HeadAsync(string key);
 	}
 }

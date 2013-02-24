@@ -27,7 +27,7 @@ namespace Raven.Client.Document
 		{
 			this.documentStore = documentStore;
 			databaseCommands = database == null
-				                   ? documentStore.DatabaseCommands.ForDefaultDatabase()
+				                   ? documentStore.DatabaseCommands.ForSystemDatabase()
 				                   : documentStore.DatabaseCommands.ForDatabase(database);
 
 			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, databaseCommands, entity));

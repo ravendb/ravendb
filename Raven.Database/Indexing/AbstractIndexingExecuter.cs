@@ -34,6 +34,7 @@ namespace Raven.Database.Indexing
 			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
 			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			{
+				Init();
 				LogContext.DatabaseName.Value = context.DatabaseName;
 				var name = GetType().Name;
 				var workComment = "WORK BY " + name;
@@ -89,9 +90,19 @@ namespace Raven.Database.Indexing
 							autoTuner.OutOfMemoryExceptionHappened();
 						}
 					}
-					if (foundWork == false)
+					if (foundWork == false && context.RunIndexing)
 					{
-						context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
+						context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, () =>
+						{
+							try
+							{
+								FlushIndexes();
+							}
+							catch (Exception e)
+							{
+								Log.WarnException("Could not flush indexes properly", e);
+							}
+						}, name);
 					}
 					else // notify the tasks executer that it has work to do
 					{
@@ -120,10 +131,9 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		protected virtual void Dispose()
-		{
+		protected virtual void Dispose() { }
 
-		}
+		protected virtual void Init(){}
 
 		private void HandleOutOfMemoryException(Exception oome)
 		{
@@ -197,7 +207,13 @@ namespace Raven.Database.Indexing
 					}
 					if (IsIndexStale(indexesStat, actions) == false)
 						continue;
-					indexesToWorkOn.Add(GetIndexToWorkOn(indexesStat));
+					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
+					var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
+					if(index == null ||  // not there
+						index.CurrentMapIndexingTask != null)  // busy doing indexing work already, not relevant for this batch
+						continue;
+					indexToWorkOn.Index = index;
+					indexesToWorkOn.Add(indexToWorkOn);
 				}
 			});
 

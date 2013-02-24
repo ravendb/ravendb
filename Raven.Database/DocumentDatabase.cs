@@ -20,6 +20,7 @@ using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
+using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
@@ -53,6 +54,8 @@ namespace Raven.Database
 {
 	public class DocumentDatabase : IDisposable
 	{
+		private readonly InMemoryRavenConfiguration configuration;
+
 		[ImportMany]
 		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
@@ -148,6 +151,8 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+			this.configuration = configuration;
+
 			using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
 			{
 				if (configuration.IsTenantDatabase == false)
@@ -517,8 +522,22 @@ namespace Raven.Database
 		public void StopIndexingWorkers()
 		{
 			workContext.StopIndexing();
-			indexingBackgroundTask.Wait();
-			reducingBackgroundTask.Wait();
+			try
+			{
+				indexingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background indexing", e);
+			}
+			try
+			{
+				reducingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background reducing", e);
+			}
 
 			backgroundWorkersSpun = false;
 		}
@@ -565,12 +584,18 @@ namespace Raven.Database
 		public void RaiseNotifications(DocumentChangeNotification obj)
 		{
 			TransportState.Send(obj);
+			var onDocumentChange = OnDocumentChange;
+			if (onDocumentChange != null)
+				onDocumentChange(this, obj);
+
 		}
 
 		public void RaiseNotifications(IndexChangeNotification obj)
 		{
 			TransportState.Send(obj);
 		}
+
+		public event EventHandler<DocumentChangeNotification> OnDocumentChange;
 
 		public void RunIdleOperations()
 		{
@@ -657,7 +682,7 @@ namespace Raven.Database
 			workContext.DocsPerSecIncreaseBy(1);
 			key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
 			RemoveReservedProperties(document);
-			RemoveReservedProperties(metadata);
+			RemoveMetadataReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
 			lock (putSerialLock)
 			{
@@ -676,7 +701,7 @@ namespace Raven.Database
 						newEtag = addDocumentResult.Etag;
 
 						CheckReferenceBecauseOfDocumentUpdate(key, actions);
-
+						metadata[Constants.LastModified] = addDocumentResult.SavedAt;
 						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
@@ -728,6 +753,9 @@ namespace Raven.Database
 				Guid? preTouchEtag;
 				Guid? afterTouchEtag;
 				actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+
+				actions.General.MaybePulseTransaction();
+
 				if(preTouchEtag == null || afterTouchEtag == null)
 					continue;
 
@@ -829,6 +857,13 @@ namespace Raven.Database
 			{
 				throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
 			}
+		}
+
+		private static void RemoveMetadataReservedProperties(RavenJObject metadata)
+		{
+			RemoveReservedProperties(metadata);
+			metadata.Remove("Raven-Last-Modified");
+			metadata.Remove("Last-Modified");
 		}
 
 		private static void RemoveReservedProperties(RavenJObject document)
@@ -1055,13 +1090,14 @@ namespace Raven.Database
 			{
 				actions.Indexing.AddIndex(name, definition.IsMapReduce);
 				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-
 			});
 
 			// The act of adding it here make it visible to other threads
 			// we have to do it in this way so first we prepare all the elements of the 
 			// index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(name, definition);
+
+			InvokeSuggestionIndexing(name, definition);
 
 			workContext.ClearErrorsFor(name);
 
@@ -1072,6 +1108,30 @@ namespace Raven.Database
 			}));
 
 			return name;
+		}
+
+		private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
+		{
+			foreach (var suggestion in definition.Suggestions)
+			{
+				var field = suggestion.Key;
+				var suggestionOption = suggestion.Value;
+
+				if (suggestionOption.Distance == StringDistanceTypes.None)
+					continue;
+
+				var indexExtensionKey = MonoHttpUtility.UrlEncode(field + "-" + suggestionOption.Distance + "-" + suggestionOption.Accuracy);
+
+				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					workContext,
+					Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
+					configuration.RunInMemory,
+					SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
+					field,
+					suggestionOption.Accuracy);
+
+				IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
+			}
 		}
 
 		private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
@@ -1087,6 +1147,7 @@ namespace Raven.Database
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
+			var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
 			var stale = false;
 			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
@@ -1117,12 +1178,18 @@ namespace Raven.Database
 															: Constants.ReduceKeyFieldName);
 					Func<IndexQueryResult, bool> shouldIncludeInResults =
 						result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
-					var collection = from queryResult in IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
-									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
-										 into doc
-										 where doc != null
-										 let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
-										 select doc;
+					var collection =
+						from queryResult in
+							IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
+						select new
+						{
+							Document = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch),
+							Fragments = queryResult.Highligtings
+						}
+						into docWithFragments
+						where docWithFragments.Document != null
+						let _ = nonAuthoritativeInformation |= (docWithFragments.Document.NonAuthoritativeInformation ?? false)
+						select docWithFragments;
 
 					var transformerErrors = new List<string>();
 					IEnumerable<RavenJObject> results;
@@ -1130,7 +1197,7 @@ namespace Raven.Database
 						query.PageSize > 0 && // maybe they just want the stats?
 						viewGenerator.TransformResultsDefinition != null)
 					{
-						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
+						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.Document.ToJson())).ToArray();
 						var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
 						{
 							OnError =
@@ -1146,7 +1213,15 @@ namespace Raven.Database
 					}
 					else
 					{
-						results = collection.Select(x => x.ToJson());
+						var resultList = new List<RavenJObject>();
+						foreach (var docWithFragments in collection)
+						{
+							resultList.Add(docWithFragments.Document.ToJson());
+
+							if (docWithFragments.Fragments != null && docWithFragments.Document.Key != null)
+								highlightings.Add(docWithFragments.Document.Key, docWithFragments.Fragments);
+						}
+						results = resultList;
 					}
 
 					list.AddRange(results);
@@ -1168,7 +1243,8 @@ namespace Raven.Database
 				IndexEtag = indexTimestamp.Item2,
 				ResultEtag = resultEtag,
 				IdsToInclude = idsToLoad,
-				LastQueryTime = SystemTime.UtcNow
+				LastQueryTime = SystemTime.UtcNow,
+				Highlightings = highlightings
 			};
 		}
 
@@ -1228,6 +1304,7 @@ namespace Raven.Database
 						Thread.Sleep(100);
 					}
 				}
+				workContext.ClearErrorsFor(name);
 			}
 		}
 
@@ -1547,14 +1624,9 @@ namespace Raven.Database
 		{
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-				jsonDoc =>
+				(jsonDoc,size) =>
 				{
-					scriptedJsonPatcher = new ScriptedJsonPatcher(
-						loadDocument: id =>
-										{
-											var jsonDocument = Get(id, transactionInformation);
-											return jsonDocument == null ? null : jsonDocument.ToJson();
-										});
+					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
 					return scriptedJsonPatcher.Apply(jsonDoc, patch);
 				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
@@ -1565,12 +1637,12 @@ namespace Raven.Database
 
 			if (docId == null)
 				throw new ArgumentNullException("docId");
-			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc => new JsonPatcher(jsonDoc).Apply(patchDoc), debugMode);
+			return ApplyPatchInternal(docId, etag, transactionInformation, (jsonDoc, size) => new JsonPatcher(jsonDoc).Apply(patchDoc), debugMode);
 		}
 
 		private PatchResultData ApplyPatchInternal(string docId, Guid? etag,
 												TransactionInformation transactionInformation,
-												Func<RavenJObject, RavenJObject> patcher, bool debugMode)
+												Func<RavenJObject, int, RavenJObject> patcher, bool debugMode)
 		{
 			if (docId == null) throw new ArgumentNullException("docId");
 			docId = docId.Trim();
@@ -1601,7 +1673,7 @@ namespace Raven.Database
 					}
 					else
 					{
-						var jsonDoc = patcher(doc.ToJson());
+						var jsonDoc = patcher(doc.ToJson(), doc.SerializedSizeOnDisk);
 						if (debugMode)
 						{
 							result.Document = jsonDoc;
@@ -1744,7 +1816,7 @@ namespace Raven.Database
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup, databaseDocument);
 		}
 
-		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag = true)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
@@ -1866,6 +1938,46 @@ namespace Raven.Database
 		public TransportState TransportState { get; private set; }
 
 		/// <summary>
+		/// Get the total index storage size taken by the indexes on the disk.
+		/// This explicitly does NOT include in memory indexes.
+		/// </summary>
+		/// <remarks>
+		/// This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetIndexStorageSizeOnDisk()
+		{
+			if( Configuration.RunInMemory )
+				return 0;
+			var indexes = Directory.GetFiles( Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories );
+			var totalIndexSize = indexes.Sum( file =>
+			{
+				try
+				{
+					return new FileInfo( file ).Length;
+				} catch( FileNotFoundException )
+				{
+					return 0;
+				}
+			} );
+
+			return totalIndexSize;
+		}
+
+		/// <summary>
+		/// Get the total size taken by the database on the disk.
+		/// This explicitly does NOT include in memory database.
+		/// It does include any reserved space on the file system, which may significantly increase
+		/// the database size.
+		/// </summary>
+		/// <remarks>
+		/// This is a potentially a very expensive call, avoid making it if possible.
+		/// </remarks>
+		public long GetTransactionalStorageSizeOnDisk()
+		{
+			return Configuration.RunInMemory ? 0 : TransactionalStorage.GetDatabaseSizeInBytes();
+		}
+
+		/// <summary>
 		/// Get the total size taken by the database on the disk.
 		/// This explicitly does NOT include in memory indexes or in memory database.
 		/// It does include any reserved space on the file system, which may significantly increase
@@ -1878,20 +1990,7 @@ namespace Raven.Database
 		{
 			if (Configuration.RunInMemory)
 				return 0;
-			var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
-			var totalIndexSize = indexes.Sum(file =>
-			{
-				try
-				{
-					return new FileInfo(file).Length;
-				}
-				catch (FileNotFoundException)
-				{
-					return 0;
-				}
-			});
-
-			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
+			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk();
 		}
 
 		public Guid GetIndexEtag(string indexName, Guid? previousEtag)

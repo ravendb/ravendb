@@ -31,7 +31,7 @@ namespace Raven.Database.Commercial
 
 		private static readonly Dictionary<string,string> alwaysOnAttributes = new Dictionary<string, string>
 		{
-			{"periodicBackups", "false"},
+			{"periodicBackup", "false"},
 			{"encryption", "false"},
 			{"compression", "false"},
 			{"quotas","false"},

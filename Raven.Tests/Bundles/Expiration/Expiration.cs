@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -68,7 +69,7 @@ namespace Raven.Tests.Bundles.Expiration
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
-				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
+				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite));
 				session.SaveChanges();
 			}
 
@@ -77,8 +78,10 @@ namespace Raven.Tests.Bundles.Expiration
 				var company2 = session.Load<Company>(company.Id);
 				Assert.NotNull(company2);
 				var metadata = session.Advanced.GetMetadataFor(company2);
-				var expirationDate = metadata.Value<DateTime>("Raven-Expiration-Date");
-				Assert.Equal(DateTimeKind.Utc, expirationDate.Kind);
+				var expirationDate = metadata["Raven-Expiration-Date"];
+				Assert.NotNull(expirationDate);
+				DateTime dateTime = expirationDate.Value<DateTime>();
+				Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
 				Assert.Equal(expiry, expirationDate);
 			}
 		}

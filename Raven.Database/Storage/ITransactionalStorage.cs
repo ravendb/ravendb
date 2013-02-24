@@ -33,5 +33,6 @@ namespace Raven.Database.Storage
 		void Compact(InMemoryRavenConfiguration configuration);
 		Guid ChangeId();
 		void ClearCaches();
+		void DumpAllStorageTables();
 	}
 }

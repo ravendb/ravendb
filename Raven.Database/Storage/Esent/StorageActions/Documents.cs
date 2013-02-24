@@ -185,7 +185,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
-			if (TryMoveDocumentRecords(start, backward: true))
+			if (TryMoveTableRecords(Documents, start, backward: true))
 				return Enumerable.Empty<JsonDocument>();
 			var optimizer = new OptimizedIndexReader(take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
@@ -196,7 +196,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return optimizer.Select(Session, Documents, ReadCurrentDocument);
 		}
 
-		private bool TryMoveDocumentRecords(int start, bool backward)
+		private bool TryMoveTableRecords(Table table, int start, bool backward)
 		{
 			if (start <= 0)
 				return false;
@@ -204,7 +204,7 @@ namespace Raven.Storage.Esent.StorageActions
 				start *= -1;
 			try
 			{
-				Api.JetMove(session, Documents, start, MoveGrbit.None);
+				Api.JetMove(session, table, start, MoveGrbit.None);
 			}
 			catch (EsentErrorException e)
 			{
@@ -309,7 +309,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
 				return Enumerable.Empty<JsonDocument>();
 
-			if (TryMoveDocumentRecords(start, backward: false))
+			if (TryMoveTableRecords(Documents, start, backward: false))
 				return Enumerable.Empty<JsonDocument>();
 
 			var optimizer = new OptimizedIndexReader(take);
@@ -359,10 +359,14 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
+				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
 				{
-					metadata.WriteTo(stream);
-					stream.Flush();
+					columnStream.SetLength(0); // always updating here
+					using (Stream stream = new BufferedStream(columnStream))
+					{
+						metadata.WriteTo(stream);
+						stream.Flush();
+					}
 				}
 
 				update.Save();
@@ -414,21 +418,31 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
 				{
-					data.WriteTo(finalStream);
-					finalStream.Flush();
+					if (isUpdate)
+						columnStream.SetLength(0); // empty the existing value, since we are going to overwrite the entire thing
+					using (Stream stream = new BufferedStream(columnStream))
+					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+					{
+						data.WriteTo(finalStream);
+						finalStream.Flush();
+					}
 				}
 
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
 				savedAt = SystemTime.UtcNow;
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
+				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
 				{
-					metadata.WriteTo(stream);
-					stream.Flush();
+					if (isUpdate)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					{
+						metadata.WriteTo(stream);
+						stream.Flush();
+					}
 				}
 
 				update.Save();
@@ -455,7 +469,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
-				if(isUpdate)
+				if (isUpdate)
 				{
 					prep = JET_prep.Replace;
 				}
@@ -463,21 +477,31 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, Documents, prep))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
 				{
-					data.WriteTo(finalStream);
-					finalStream.Flush();
+					if (isUpdate)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+					{
+						data.WriteTo(finalStream);
+						finalStream.Flush();
+					}
 				}
 				Guid newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
 				DateTime savedAt = SystemTime.UtcNow;
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
+				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
 				{
-					metadata.WriteTo(stream);
-					stream.Flush();
+					if (isUpdate)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					{
+						metadata.WriteTo(stream);
+						stream.Flush();
+					}
 				}
 
 				update.Save();
@@ -521,20 +545,30 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
 
-				using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
-				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+				using (var columnStream = new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]))
 				{
-					data.WriteTo(finalStream);
-					finalStream.Flush();
+					if (isUpdate)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+					{
+						data.WriteTo(finalStream);
+						finalStream.Flush();
+					}
 				}
 				Api.SetColumn(session, DocumentsModifiedByTransactions,
 							  tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"],
 							  newEtag.TransformToValueForEsentSorting());
 
-				using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"])))
+				using (var columnStream = new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]))
 				{
-					metadata.WriteTo(stream);
-					stream.Flush();
+					if (isUpdate)
+						columnStream.SetLength(0);
+					using (Stream stream = new BufferedStream(columnStream))
+					{
+						metadata.WriteTo(stream);
+						stream.Flush();
+					}
 				}
 
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"], SystemTime.UtcNow.ToBinary());

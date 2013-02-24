@@ -16,6 +16,7 @@ namespace Raven.Abstractions.Data
 		public SuggestionQuery()
 		{
 			MaxSuggestions = 15;
+			Distance = StringDistanceTypes.Default;
 		}
 
 		/// <summary>
@@ -23,26 +24,31 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The term.</value>
 		public string Term { get; set; }
+
 		/// <summary>
 		/// Gets or sets the field to be used in conjunction with the index.
 		/// </summary>
 		/// <value>The field.</value>
 		public string Field { get; set; }
+
 		/// <summary>
 		/// Gets or sets the number of suggestions to return.
 		/// </summary>
 		/// <value>The number of suggestions.</value>
 		public int MaxSuggestions { get; set; }
+
 		/// <summary>
 		/// Gets or sets the string distance algorithm.
 		/// </summary>
 		/// <value>The distance.</value>
 		public StringDistanceTypes Distance { get; set; }
+
 		/// <summary>
 		/// Gets or sets the accuracy.
 		/// </summary>
 		/// <value>The accuracy.</value>
 		public float Accuracy { get; set; }
+
 		/// <summary>
 		/// Whatever to return the terms in order of popularity
 		/// </summary>

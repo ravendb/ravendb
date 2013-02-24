@@ -47,7 +47,7 @@ namespace Raven.Database.Server.Responders
 				}
 
 
-				if (context.User.IsAdministrator() == false)
+				if (context.User.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
 					approvedDatabases = server.RequestAuthorizer.GetApprovedDatabases(context);
 				}

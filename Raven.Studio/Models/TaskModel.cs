@@ -34,7 +34,7 @@ namespace Raven.Studio.Models
 				Value = true
 			};
 
-			TaskInputs = new BindableCollection<TaskInput>(x => x.Name);
+			TaskInputs = new BindableCollection<TaskUIObject>(x => x.Name);
 			TaskDatas = new BindableCollection<TaskData>(x => x.Name);
 			TaskStatus = TaskStatus.DidNotStart;
 		}
@@ -117,36 +117,48 @@ namespace Raven.Studio.Models
 		}
 
 		public BindableCollection<string> Output { get; set; }
-		public BindableCollection<TaskInput> TaskInputs { get; set; }
+		public BindableCollection<TaskUIObject> TaskInputs { get; set; }
 		public BindableCollection<TaskData> TaskDatas { get; set; }
 
 		public abstract ICommand Action { get; }
 	}
 
-	public class TaskInput : NotifyPropertyChangedBase
+    public abstract class TaskUIObject : NotifyPropertyChangedBase
+    {
+        public TaskUIObject(string name, object value)
+        {
+            Name = name;
+            Value = value;
+        }
+
+        public string name;
+        public string Name
+        {
+            get { return name; }
+            set { name = value; OnPropertyChanged(() => Name); }
+        }
+
+        private object value;
+        public object Value
+        {
+            get { return this.value; }
+            set { this.value = value; OnPropertyChanged(() => Value); }
+        }
+    }
+
+    public class TaskCheckBox : TaskUIObject
+    {
+        public TaskCheckBox(string name, bool value) : base(name, value)
+        {
+            Name = name;
+        }
+    }
+
+    public class TaskInput : TaskUIObject
 	{
-		public TaskInput(string name, string value)
+		public TaskInput(string name, string value) : base(name, value)
 		{
 			Name = name;
-			Value = value;
-		}
-
-		private string name;
-		public string Name
-		{
-			get { return name; }
-			set
-			{
-				name = value;
-				OnPropertyChanged(() => Name);
-			}
-		}
-
-		private string value;
-		public string Value
-		{
-			get { return value; }
-			set { this.value = value; OnPropertyChanged(() => Value); }
 		}
 	}
 

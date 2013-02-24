@@ -49,7 +49,8 @@ namespace Raven.Client
 		/// Query the specified index using Lucene syntax
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
-		IDocumentQuery<T> LuceneQuery<T>(string indexName);
+		/// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
+		IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false);
 
 		/// <summary>
 		/// Dynamically query RavenDB using Lucene syntax

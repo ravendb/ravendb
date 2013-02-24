@@ -546,6 +546,7 @@ namespace Raven.Client.Connection
 			get { return webRequest.ContentType; }
 			set { webRequest.ContentType = value; }
 		}
+
 		public TimeSpan Timeout
 		{
 			set
@@ -840,6 +841,12 @@ namespace Raven.Client.Connection
 				}
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
+		}
+
+		public void PrepareForLongRequest()
+		{
+			Timeout = TimeSpan.FromHours(6);
+			webRequest.AllowWriteStreamBuffering = false;
 		}
 	}
 }

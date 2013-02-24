@@ -58,5 +58,18 @@ namespace Raven.Client.Connection.Profiling
 		/// The result of this request
 		/// </summary>
 		public string Result { get; set; }
+
+		/// <summary>
+		/// Total amount of memory used by strings here
+		/// </summary>
+		public int TotalSize
+		{
+			get
+			{
+				return (Result != null ? Result.Length : 0) +
+				       (PostedData != null ? PostedData.Length : 0) +
+				       (Url != null ? Url.Length : 0);
+			}
+		}
 	}
 }

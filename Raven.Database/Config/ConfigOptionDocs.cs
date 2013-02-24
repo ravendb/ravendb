@@ -61,7 +61,7 @@ namespace Raven.Database.Config
 			{"Raven/TempIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a temporary index held in memory. When a temporary dynamic index exceeds that value, it will be using on disk indexing, rather then RAM indexing. Default: 25 MB."},
 			{"Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded", "bool", "true", "Whatever we allow creation of temporary indexes on dynamic queries"},
 			// Memory
-			{"Raven/MemoryCacheLimitMegabytes", "int", null, "The max size in MB for the internal document cache inside RavenDB server, default is half of the machine available RAM minus the size of the esent cache."},
+			{"Raven/IntegerSetting", "int", null, "The max size in MB for the internal document cache inside RavenDB server, default is half of the machine available RAM minus the size of the esent cache."},
 			{"Raven/MemoryCacheLimitPercentage","int", "0-99", "The percentage of memory that the internal document cache inside RavenDB server will use, default: auto."},
 			{"Raven/MemoryCacheLimitCheckInterval", "TimeSpan", "HH:MM:SS", "The internal for checking that the internal document cache inside RavenDB server will be cleaned."},
 			{"Raven/MemoryCacheExpiration", "int", null, "The expiration value for documents in the internal document cache. Value is in seconds. Default: 5 minutes"},

@@ -64,24 +64,25 @@ namespace Raven.Database.Server.Security.Windows
 				onRejectingRequest();
 				return false;
 			}
-			
+
 			PrincipalWithDatabaseAccess user = null;
-			if(userCreated)
+			if (userCreated)
 			{
 				user = (PrincipalWithDatabaseAccess)ctx.User;
 				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
 				CurrentOperationContext.User.Value = ctx.User;
-				
+
 				// admins always go through
-				if(user.Principal.IsAdministrator())
+				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
 					return true;
 			}
-			
+
 
 			var httpRequest = ctx.Request;
 			bool isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
 			switch (server.SystemConfiguration.AnonymousUserAccessMode)
 			{
+				case AnonymousUserAccessMode.Admin:
 				case AnonymousUserAccessMode.All:
 					return true; // if we have, doesn't matter if we have / don't have the user
 				case AnonymousUserAccessMode.Get:
@@ -127,8 +128,12 @@ namespace Raven.Database.Server.Security.Windows
 				return false;
 			}
 
-			var databaseAccessLists = GenerateDatabaseAccessLists(ctx);
-			var user = UpdateUserPrincipal(ctx, databaseAccessLists);
+			var dbUsersIaAllowedAccessTo = requiredUsers
+				.Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
+				.SelectMany(source => source.Databases)
+				.Concat(requiredGroups.Where(data => ctx.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
+				.ToList();
+			var user = UpdateUserPrincipal(ctx, dbUsersIaAllowedAccessTo);
 
 			onRejectingRequest = () =>
 			{
@@ -136,7 +141,6 @@ namespace Raven.Database.Server.Security.Windows
 
 				ProvideDebugAuthInfo(ctx, new
 				{
-					user.ExplicitlyConfigured,
 					user.Identity.Name,
 					user.AdminDatabases,
 					user.ReadOnlyDatabases,
@@ -150,7 +154,7 @@ namespace Raven.Database.Server.Security.Windows
 		private static void ProvideDebugAuthInfo(IHttpContext ctx, object msg)
 		{
 			string debugAuth = ctx.Request.QueryString["debug-auth"];
-			if(debugAuth  == null)
+			if (debugAuth == null)
 				return;
 
 			bool shouldProvideDebugAuthInformation;
@@ -160,23 +164,15 @@ namespace Raven.Database.Server.Security.Windows
 			}
 		}
 
-		private PrincipalWithDatabaseAccess UpdateUserPrincipal(IHttpContext ctx, Dictionary<string, List<DatabaseAccess>> databaseAccessLists)
+		private PrincipalWithDatabaseAccess UpdateUserPrincipal(IHttpContext ctx, List<DatabaseAccess> databaseAccessLists)
 		{
-			if (ctx.User is PrincipalWithDatabaseAccess)
-				return (PrincipalWithDatabaseAccess) ctx.User;
+			var access = ctx.User as PrincipalWithDatabaseAccess;
+			if (access != null)
+				return access;
 
-			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal) ctx.User);
-			
-			List<DatabaseAccess> list;
-			if (databaseAccessLists.TryGetValue(ctx.User.Identity.Name, out list) == false)
-			{
-				ctx.User = user;
-				user.ExplicitlyConfigured = false;
-				return user;
-			}
-			user.ExplicitlyConfigured = true;
+			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User);
 
-			foreach (var databaseAccess in list) 
+			foreach (var databaseAccess in databaseAccessLists)
 			{
 				if (databaseAccess.Admin)
 					user.AdminDatabases.Add(databaseAccess.TenantId);
@@ -190,31 +186,11 @@ namespace Raven.Database.Server.Security.Windows
 			return user;
 		}
 
-		private Dictionary<string, List<DatabaseAccess>> GenerateDatabaseAccessLists(IHttpContext ctx)
-		{
-			var databaseAccessLists = requiredUsers
-				.Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
-				.ToDictionary(source => source.Name, source => source.Databases, StringComparer.InvariantCultureIgnoreCase);
-
-			foreach (var windowsAuthData in requiredGroups.Where(data => ctx.User.IsInRole(data.Name)))
-			{
-				if (databaseAccessLists.ContainsKey(windowsAuthData.Name))
-				{
-					databaseAccessLists[windowsAuthData.Name].AddRange(windowsAuthData.Databases);
-				}
-				else
-				{
-					databaseAccessLists.Add(windowsAuthData.Name, windowsAuthData.Databases);
-				}
-			}
-
-			return databaseAccessLists;
-		}
 
 		public override List<string> GetApprovedDatabases(IHttpContext context)
 		{
 			var user = context.User as PrincipalWithDatabaseAccess;
-			if(user == null)
+			if (user == null)
 				return new List<string>();
 
 			var list = new List<string>();

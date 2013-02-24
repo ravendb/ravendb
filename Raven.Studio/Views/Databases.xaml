@@ -112,11 +112,13 @@
                         </Border>
                     </Grid>
                 </toolkit:HeaderedContentControl.Header>
+				
                 <ListBox Style="{StaticResource Databases_FluidList}"
                          ItemsSource="{Binding Databases}"
                          SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
                          ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
                          ItemTemplate="{StaticResource DatabaseItemTemplate}"
+						 ScrollViewer.VerticalScrollBarVisibility="Auto"
                          Margin="10">
 
                     <i:Interaction.Triggers>
