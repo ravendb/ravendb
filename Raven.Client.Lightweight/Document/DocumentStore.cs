@@ -494,7 +494,8 @@ namespace Raven.Client.Document
 
 					return null;
 				}
-				oauthSource = Url + "/OAuth/API-Key";
+				if (string.IsNullOrEmpty(oauthSource))
+					oauthSource = Url + "/OAuth/API-Key";
 
 				return securedAuthenticator.DoOAuthRequest(oauthSource);
 			};
