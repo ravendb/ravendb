@@ -232,10 +232,7 @@
     <Compile Include="Indexing\IndexingBatch.cs" />
     <Compile Include="Indexing\IndexedItemsInfo.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
-    <Compile Include="Indexing\IndexSegmentsInfo.cs" />
-    <Compile Include="Indexing\LowerCaseKeywordTokenizer.cs" />
-    <Compile Include="Indexing\LowerCaseWhitespaceAnalyzer.cs" />
-    <Compile Include="Indexing\LowerCaseWhitespaceTokenizer.cs" />
+    <Compile Include="Indexing\IndexSegmentsInfo.cs" /> 
     <Compile Include="Indexing\Analyzers\LowerCaseKeywordTokenizer.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceTokenizer.cs" />
