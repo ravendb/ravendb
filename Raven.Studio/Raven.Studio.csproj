@@ -228,7 +228,7 @@
     <Compile Include="Commands\CsvImportCommand.cs" />
     <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
-    <Compile Include="Commands\DeleteAllIndexesCommand.cs" />
+    <Compile Include="Commands\DeleteIndexesCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
     <Compile Include="Commands\ExportDocumentDetailsCommand.cs" />
     <Compile Include="Commands\RestoreCommand.cs" />
@@ -246,7 +246,7 @@
     </Compile>
     <Compile Include="Controls\GoToDatabaseControl.xaml.cs">
       <DependentUpon>GoToDatabaseControl.xaml</DependentUpon>
-		</Compile>
+    </Compile>
     <Compile Include="Controls\NavTriangle.xaml.cs">
       <DependentUpon>NavTriangle.xaml</DependentUpon>
     </Compile>
@@ -282,6 +282,8 @@
     <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\MillisecondsToMinutesConverter.cs" />
+    <Compile Include="Infrastructure\Converters\PriorityToFontColorConverter.cs" />
+    <Compile Include="Infrastructure\Converters\PriorityToFontStyleConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibilityByParamInEqualityConverter.cs" />
     <Compile Include="Models\ConflictsModel.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />

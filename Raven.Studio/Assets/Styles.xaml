@@ -3117,6 +3117,129 @@
 		<Setter Property="FontWeight" Value="Normal"/>
 	</Style>
 
+	<Style x:Key="Style_Link_Index_Name" TargetType="HyperlinkButton">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="BorderBrush" Value="{x:Null}"/>
+		<Setter Property="FontSize" Value="12"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="MinHeight" Value="0"/>
+		<Setter Property="MinWidth" Value="0"/>
+		<Setter Property="VerticalContentAlignment" Value="Center"/>
+		<Setter Property="HorizontalContentAlignment" Value="Left"/>
+		<Setter Property="Padding" Value="2"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="HyperlinkButton">
+					<Grid x:Name="ButtonGrid" Cursor="{TemplateBinding Cursor}">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="CommonStates">
+								<VisualState x:Name="Normal"/>
+								<VisualState x:Name="MouseOver">
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveElementBorder" Storyboard.TargetProperty="(UIElement.Visibility)">
+											<DiscreteObjectKeyFrame KeyTime="00:00:00">
+												<DiscreteObjectKeyFrame.Value>
+													<Visibility>Visible</Visibility>
+												</DiscreteObjectKeyFrame.Value>
+											</DiscreteObjectKeyFrame>
+										</ObjectAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveElementBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.95"/>
+										</DoubleAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="Content" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+										</DoubleAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Pressed">
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveElementBorder" Storyboard.TargetProperty="(UIElement.Visibility)">
+											<DiscreteObjectKeyFrame KeyTime="00:00:00">
+												<DiscreteObjectKeyFrame.Value>
+													<Visibility>Visible</Visibility>
+												</DiscreteObjectKeyFrame.Value>
+											</DiscreteObjectKeyFrame>
+										</ObjectAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveElementBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.8"/>
+										</DoubleAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="Content" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.5"/>
+										</DoubleAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="InteractiveBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Disabled">
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="DisabledOverlay" Storyboard.TargetProperty="Visibility">
+											<DiscreteObjectKeyFrame KeyTime="0">
+												<DiscreteObjectKeyFrame.Value>
+													<Visibility>Visible</Visibility>
+												</DiscreteObjectKeyFrame.Value>
+											</DiscreteObjectKeyFrame>
+										</ObjectAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="Content" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+										</DoubleAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="DisabledOverlay" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.5"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="LinkStates">
+								<VisualState x:Name="ActiveLink">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="ActiveBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+										</DoubleAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="Content" Storyboard.TargetProperty="(UIElement.Opacity)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="InactiveLink"/>
+							</VisualStateGroup>
+							<VisualStateGroup x:Name="FocusStates">
+								<VisualState x:Name="Focused">
+									<Storyboard>
+										<DoubleAnimationUsingKeyFrames Storyboard.TargetName="FocusVisualElement" Storyboard.TargetProperty="Opacity">
+											<SplineDoubleKeyFrame KeyTime="0" Value="0.35"/>
+										</DoubleAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="FocusVisualElement" Storyboard.TargetProperty="(Rectangle.RadiusX)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+										</DoubleAnimationUsingKeyFrames>
+										<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="FocusVisualElement" Storyboard.TargetProperty="(Rectangle.RadiusY)">
+											<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+										</DoubleAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+								<VisualState x:Name="Unfocused"/>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<Rectangle x:Name="FocusVisualElement" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="2" Opacity="0" Margin="-1" RadiusX="1" RadiusY="1"/>
+						<Border x:Name="ActiveBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="1" Opacity="0" Margin="{TemplateBinding Padding}"/>
+						<Border x:Name="ContentBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" Opacity="1" Margin="{TemplateBinding Padding}">
+							<TextBlock x:Name="Content" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}" Text="{TemplateBinding Content}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Behaviors:FadeTrimming.IsEnabled="True"/>
+						</Border>
+						<Border x:Name="InteractiveBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" BorderThickness="1,1,1,1" Opacity="0" CornerRadius="1,1,1,1" Margin="{TemplateBinding Padding}"/>
+						<Border x:Name="InteractiveElementBorder" Visibility="Collapsed" Margin="{TemplateBinding Padding}"  MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}">
+							<TextBlock x:Name="InteractiveElement" Foreground="{StaticResource Brush_ContrastColor}" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}" Text="{TemplateBinding Content}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Behaviors:FadeTrimming.IsEnabled="True"/>
+						</Border>
+						<TextBlock x:Name="DisabledOverlay" Text="{TemplateBinding Content}" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" Behaviors:FadeTrimming.IsEnabled="True"/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+		<Setter Property="FontWeight" Value="Normal"/>
+	</Style>
+	
 	<Style x:Key="Style_Link_Shortcut" TargetType="HyperlinkButton">
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="BorderThickness" Value="1"/>

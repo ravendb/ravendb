@@ -40,7 +40,9 @@ namespace Raven.Abstractions.Data
         Normal = 0,
 		
 		Disabled = 1,
-        Idle = 2,
+        
+		Idle = 2,
+		
 		Abandoned = 4,
 
         Forced = 256,
