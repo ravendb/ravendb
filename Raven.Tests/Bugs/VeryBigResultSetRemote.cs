@@ -7,7 +7,7 @@ namespace Raven.Tests.Bugs
 {
 	public class VeryBigResultSetRemote : RemoteClientTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/Esent/MaxVerPages"] = "512";
 			configuration.Settings["Raven/Esent/PreferredVerPages"] = "512";

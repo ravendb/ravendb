@@ -52,7 +52,7 @@ namespace Raven.Database.Config
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1);
 
 			NewIndexInMemoryMaxMb =
-				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 25, 1), 1024*1024);
+				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024*1024);
 			RunInMemory =
 				new BooleanSetting(settings["Raven/RunInMemory"], false);
 			CreateAutoIndexesForAdHocQueriesIfNeeded =
@@ -89,6 +89,14 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/TaskScheduler"], (string) null);
 			AllowLocalAccessWithoutAuthorization =
 				new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
+			MaxIndexCommitPointStoreTimeInterval =
+				new TimeSpanSetting(settings["Raven/MaxIndexCommitPointStoreTimeInterval"], TimeSpan.FromMinutes(5),
+				                    TimeSpanArgumentType.FromParse);
+			MaxNumberOfStoredCommitPoints =
+				new IntegerSetting(settings["Raven/MaxNumberOfStoredCommitPoints"], 5);
+			MinIndexingTimeIntervalToStoreCommitPoint =
+				new TimeSpanSetting(settings["Raven/MinIndexingTimeIntervalToStoreCommitPoint"], TimeSpan.FromMinutes(1),
+				                    TimeSpanArgumentType.FromParse);
             
 			TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
             
@@ -100,7 +108,7 @@ namespace Raven.Database.Config
 		}
 
 	    
-	    private string GetDefaultWebDir()
+		private string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
 		}
@@ -180,6 +188,11 @@ namespace Raven.Database.Config
 
 		public BooleanSetting AllowLocalAccessWithoutAuthorization { get; private set; }
 
+		public TimeSpanSetting MaxIndexCommitPointStoreTimeInterval { get; private set; }
+
+		public TimeSpanSetting MinIndexingTimeIntervalToStoreCommitPoint { get; private set; }
+
+		public IntegerSetting MaxNumberOfStoredCommitPoints { get; private set; }
         public TimeSpanSetting TimeToWaitBeforeRunningIdleIndexes { get; private set; }
 
 	    public TimeSpanSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }

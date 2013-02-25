@@ -111,6 +111,17 @@ namespace Raven.Client.Document
 		public int NumberOfRequests { get; private set; }
 
 		/// <summary>
+		/// Gets the number of entities held in memory to manage Unit of Work
+		/// </summary>
+		public int NumberOfEntitiesInUnitOfWork
+		{
+			get
+			{
+				return entitiesAndMetadata.Count;
+			}
+		}
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
@@ -348,7 +359,7 @@ more responsive application.
 				documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
 			}
 
-			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
+			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, noTracking: false);
 		}
 
 		/// <summary>
@@ -359,7 +370,7 @@ more responsive application.
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata)
+		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
 			document.Remove("@metadata");
 			object entity;
@@ -380,15 +391,20 @@ more responsive application.
 				throw new NonAuthoritativeInformationException("Document " + key +
 					" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
 			}
-			entitiesAndMetadata[entity] = new DocumentMetadata
+
+			if (noTracking == false)
 			{
-				OriginalValue = document,
-				Metadata = metadata,
-				OriginalMetadata = (RavenJObject)metadata.CloneToken(),
-				ETag = HttpExtensions.EtagHeaderToEtag(etag),
-				Key = key
-			};
-			entitiesByKey[key] = entity;
+				entitiesAndMetadata[entity] = new DocumentMetadata
+				{
+					OriginalValue = document,
+					Metadata = metadata,
+					OriginalMetadata = (RavenJObject) metadata.CloneToken(),
+					ETag = HttpExtensions.EtagHeaderToEtag(etag),
+					Key = key
+				};
+				entitiesByKey[key] = entity;
+			}
+			
 			return (T)entity;
 		}
 

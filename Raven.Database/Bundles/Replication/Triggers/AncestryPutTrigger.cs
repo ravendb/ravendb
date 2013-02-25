@@ -51,7 +51,7 @@ namespace Raven.Bundles.Replication.Triggers
 						});
 					}
 
-					if (history.Length > Constants.ChangeHistoryLength)
+					while (history.Length > Constants.ChangeHistoryLength)
 					{
 						history.RemoveAt(0);
 					}

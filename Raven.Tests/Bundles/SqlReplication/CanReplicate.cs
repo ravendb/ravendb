@@ -15,7 +15,7 @@ namespace Raven.Tests.Bundles.SqlReplication
 {
 	public class CanReplicate : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/ActiveBundles"] = "sqlReplication";
 		}
@@ -69,7 +69,7 @@ CREATE TABLE [dbo].[Orders]
 			{
 				var eventSlim = new ManualResetEventSlim(false);
 				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					 .First().AfterReplicationCompleted += () => eventSlim.Set();
+					 .First().AfterReplicationCompleted += eventSlim.Set;
 				
 				using (var session = store.OpenSession())
 				{

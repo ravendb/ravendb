@@ -125,7 +125,19 @@ namespace Raven.Client.Embedded
 			return database.Get(key, TransactionInformation);
 		}
 
-		/// <summary>
+	    /// <summary>
+	    /// Retrieves the document with the specified key and performs the transform operation specified on that document
+	    /// </summary>
+	    /// <param name="key">The key</param>
+	    /// <param name="transformer">The transformer to use</param>
+	    /// <param name="queryInputs">Inputs to the transformer</param>
+	    /// <returns></returns>
+	    public JsonDocument Get(string key, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+	    {
+            return database.GetWithTransformer(key, transformer, TransactionInformation, queryInputs);
+	    }
+
+	    /// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -327,6 +339,15 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Creates a transformer with the specified name, based on an transfomer definition
+		/// </summary>
+		public string PutTransformer(string name, TransformerDefinition indexDef)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database.PutTransform(name, indexDef);
+		}
+
+		/// <summary>
 		/// Puts the index for the specified name
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -423,7 +444,7 @@ namespace Raven.Client.Embedded
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
 		/// of the number of items that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> Query(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
+		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
 		{
 			if (query.PageSizeSet == false)
 				query.PageSize = int.MaxValue;
@@ -432,30 +453,61 @@ namespace Raven.Client.Embedded
 			using (var waitForHeaders = new ManualResetEventSlim(false))
 			{
 				QueryHeaderInformation localQueryHeaderInfo = null;
-				Task.Factory.StartNew(() =>
+				var task = Task.Factory.StartNew(() =>
 				{
 					database.Query(index, query, information =>
 					{
 						localQueryHeaderInfo = information;
 						waitForHeaders.Set();
 					}, items.Add);
-					items.Add(null);
 				});
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
+				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
 			}
-			return YieldUntilDone(items);
 		}
 
-		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items)
+		/// <summary>
+		/// Streams the documents by etag OR starts with the prefix and match the matches
+		/// Will return *all* results, regardless of the number of itmes that might be returned.
+		/// </summary>
+		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
 		{
+			if(fromEtag != null && startsWith != null)
+				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
+
+			var items = new BlockingCollection<RavenJObject>();
+			var task = Task.Factory.StartNew(() =>
+			{
+				if (string.IsNullOrEmpty(startsWith))
+				{
+					database.GetDocuments(start, pageSize, fromEtag,
+					                      items.Add);
+				}
+				else
+				{
+					database.GetDocumentsWithIdStartingWith(
+						startsWith,
+						matches,
+						start,
+						pageSize,
+						items.Add);
+				}
+			});
+			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+		}
+
+		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
+		{
+			task.ContinueWith(_ => items.Add(null));
 			while (true)
 			{
 				var ravenJObject = items.Take();
 				if (ravenJObject == null)
-					yield break;
+					break;
 				yield return ravenJObject;
 			}
+			task.Wait();
 		}
 
 		/// <summary>
@@ -468,14 +520,16 @@ namespace Raven.Client.Embedded
 			database.DeleteIndex(name);
 		}
 
-		/// <summary>
-		/// Gets the results for the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="includes">The includes.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
+	    /// <summary>
+	    /// Gets the results for the specified ids.
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="queryInputs"></param>
+	    /// <param name="metadataOnly">Load just the document metadata</param>
+	    /// <returns></returns>
+	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
@@ -484,7 +538,12 @@ namespace Raven.Client.Embedded
 			var multiLoadResult = new MultiLoadResult
 			                      {
 				                      Results = ids
-					                      .Select(id => database.Get(id, TransactionInformation))
+					                      .Select(id =>
+					                      {
+					                          if (string.IsNullOrEmpty(transformer))
+					                              return database.Get(id, TransactionInformation);
+                                              return database.GetWithTransformer(id, transformer, TransactionInformation,  queryInputs);
+					                      })
 					                      .ToArray()
 					                      .Select(x => x == null ? null : x.ToJson())
 					                      .ToList(),
@@ -751,6 +810,20 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.ExecuteGetTermsQuery( index, query, facetSetupDoc, start, pageSize );
 		}
+
+        /// <summary>
+        /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+        /// </summary>
+        /// <param name="index">Name of the index</param>
+        /// <param name="query">Query to build facet results</param>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
+        {
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            return database.ExecuteGetTermsQuery(index, query, facets, start, pageSize);
+        }
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag

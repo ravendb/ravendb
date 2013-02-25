@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -57,7 +58,7 @@ namespace Raven.Database.Indexing
 				return true;
 
 			if (indexingPriority.HasFlag(IndexingPriority.Abandoned))
-			{
+		{
 				var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
 
 				return (timeSinceLastIndexing > context.Configuration.TimeToWaitBeforeRunningAbandonedIndexes);
@@ -140,7 +141,7 @@ namespace Raven.Database.Indexing
 			var lastEtag = lastByEtag.Etag;
 
 			context.IndexedPerSecIncreaseBy(jsonDocs.Count);
-			var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
+			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
 
 			ExecuteAllInterleaved(result, index => HandleIndexingFor(index, lastEtag, lastModified));
 
@@ -180,16 +181,24 @@ namespace Raven.Database.Indexing
 
 				var sp = Stopwatch.StartNew();
 				var task = new System.Threading.Tasks.Task(() => action(indexToWorkOn));
-				indexToWorkOn.Index.CurrentMapIndexingTask = tasks[i] = task.ContinueWith(_ =>
+				indexToWorkOn.Index.CurrentMapIndexingTask = tasks[i] = task.ContinueWith(done =>
 				{
 					try
 					{
 						sp.Stop();
+
+						if (done.IsFaulted) // this observe the exception
+						{
+							Log.WarnException("Failed to execute indexing task", done.Exception);
+						}
+
 						indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
-						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
+						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds/Math.Max(1, indexToWorkOn.Batch.Docs.Count);
 						indexToWorkOn.Index.CurrentMapIndexingTask = null;
+
+						return done;
 					}
-					finally
+					finally 
 					{
 						indexingSemaphore.Release();
 						indexingCompletedEvent.Set();
@@ -200,8 +209,7 @@ namespace Raven.Database.Indexing
 							context.NotifyAboutWork();
 						}
 					}
-
-				});
+				}).Unwrap();
 
 				indexingSemaphore.Wait();
 
@@ -313,7 +321,7 @@ namespace Raven.Database.Indexing
 			public IndexingBatch Batch { get; set; }
 		}
 
-		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
+		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs, Etag highestETagInBatch)
 		{
 			var last = jsonDocs.Last();
 
@@ -358,7 +366,7 @@ namespace Raven.Database.Indexing
 				if (viewGenerator == null)
 					return; // probably deleted
 
-				var batch = new IndexingBatch();
+				var batch = new IndexingBatch(highestETagInBatch);
 
 				foreach (var item in filteredDocs)
 				{

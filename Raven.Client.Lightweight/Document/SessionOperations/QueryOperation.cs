@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
@@ -22,6 +23,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly HashSet<KeyValuePair<string, Type>> sortByHints;
 		private readonly Action<string, string> setOperationHeaders;
 		private readonly bool waitForNonStaleResults;
+		private readonly bool disableEntitiesTracking;
 		private readonly TimeSpan timeout;
 		private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
 		private readonly HashSet<string> includes;
@@ -46,7 +48,11 @@ namespace Raven.Client.Document.SessionOperations
 
 		private Stopwatch sp;
 
-		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery, string[] projectionFields, HashSet<KeyValuePair<string, Type>> sortByHints, bool waitForNonStaleResults, Action<string, string> setOperationHeaders, TimeSpan timeout, Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults, HashSet<string> includes)
+		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery,
+		                      string[] projectionFields, HashSet<KeyValuePair<string, Type>> sortByHints,
+		                      bool waitForNonStaleResults, Action<string, string> setOperationHeaders, TimeSpan timeout,
+		                      Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
+		                      HashSet<string> includes, bool disableEntitiesTracking)
 		{
 			this.indexQuery = indexQuery;
 			this.sortByHints = sortByHints;
@@ -58,6 +64,7 @@ namespace Raven.Client.Document.SessionOperations
 			this.projectionFields = projectionFields;
 			this.sessionOperations = sessionOperations;
 			this.indexName = indexName;
+			this.disableEntitiesTracking = disableEntitiesTracking;
 
 			AssertNotQueryById();
 			AddOperationHeaders();
@@ -107,6 +114,7 @@ namespace Raven.Client.Document.SessionOperations
 				StartTiming();
 				firstRequest = false;
 			}
+
 			if (waitForNonStaleResults == false)
 				return null;
 
@@ -130,7 +138,7 @@ namespace Raven.Client.Document.SessionOperations
 
 				sessionOperations.TrackEntity<object>(metadata.Value<string>("@id"),
 											   include,
-											   metadata);
+											   metadata, disableEntitiesTracking);
 			}
 			var list = queryResult.Results
 				.Select(Deserialize<T>)
@@ -152,7 +160,7 @@ namespace Raven.Client.Document.SessionOperations
 			{
 				return sessionOperations.TrackEntity<T>(metadata.Value<string>("@id"),
 				                                        result,
-				                                        metadata);
+				                                        metadata, disableEntitiesTracking);
 			}
 
 			if (typeof(T) == typeof(RavenJObject))

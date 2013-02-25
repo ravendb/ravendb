@@ -734,7 +734,9 @@ namespace Raven.Client.Document
 											rootTypes = {typeof(T)},
 											highlightedFields = new List<HighlightedField>(highlightedFields),
 											highlighterPreTags = highlighterPreTags,
-											highlighterPostTags = highlighterPostTags
+											highlighterPostTags = highlighterPostTags,
+											disableEntitiesTracking = disableEntitiesTracking,
+											disableCaching = disableCaching
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
@@ -885,6 +887,18 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
 		{
 			UsingDefaultOperator(queryOperator);
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.NoTracking()
+		{
+			NoTracking();
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.NoCaching()
+		{
+			NoCaching();
 			return this;
 		}
 	}

@@ -39,8 +39,10 @@ namespace Raven.Client.Linq
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
 		private int subClauseDepth;
+	    private string resultsTransformer;
+	    private readonly Dictionary<string, RavenJToken> queryInputs;
 
-		private LinqPathProvider linqPathProvider;
+	    private LinqPathProvider linqPathProvider;
 		/// <summary>
 		/// The index name
 		/// </summary>
@@ -54,23 +56,19 @@ namespace Raven.Client.Linq
 			get { return currentPath; }
 		}
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor{T}"/> class.
-		/// </summary>
-		/// <param name="queryGenerator">The document query generator.</param>
-		/// <param name="customizeQuery">The customize query.</param>
-		/// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
-		/// <param name="indexName">The name of the index the query is executed against.</param>
-		/// <param name="fieldsToFetch">The fields to fetch in this query</param>
-		/// <param name="fieldsTRename">The fields to rename for the results of this query</param>
-		public RavenQueryProviderProcessor(
-			IDocumentQueryGenerator queryGenerator,
-			Action<IDocumentQueryCustomization> customizeQuery,
-			Action<QueryResult> afterQueryExecuted,
-			string indexName,
-			HashSet<string> fieldsToFetch,
-			List<RenamedField> fieldsTRename,
-			bool isMapReduce)
+	    /// <summary>
+	    /// Initializes a new instance of the <see cref="RavenQueryProviderProcessor{T}"/> class.
+	    /// </summary>
+	    /// <param name="queryGenerator">The document query generator.</param>
+	    /// <param name="customizeQuery">The customize query.</param>
+	    /// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
+	    /// <param name="indexName">The name of the index the query is executed against.</param>
+	    /// <param name="fieldsToFetch">The fields to fetch in this query</param>
+	    /// <param name="fieldsTRename">The fields to rename for the results of this query</param>
+	    /// <param name="isMapReduce"></param>
+	    /// <param name="resultsTransformer"></param>
+	    /// <param name="queryInputs"></param>
+	    public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> queryInputs)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
@@ -80,7 +78,9 @@ namespace Raven.Client.Linq
 			this.isMapReduce = isMapReduce;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
-			linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
+		    this.resultsTransformer = resultsTransformer;
+	        this.queryInputs = queryInputs;
+	        linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
 		}
 
 		/// <summary>
@@ -1117,7 +1117,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		private bool insideSelect;
 		private readonly bool isMapReduce;
 
-		private void VisitSelect(Expression operand)
+	    private void VisitSelect(Expression operand)
 		{
 			var lambdaExpression = operand as LambdaExpression;
 			var body = lambdaExpression != null ? lambdaExpression.Body : operand;
@@ -1136,7 +1136,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression memberExpression = ((MemberExpression) body);
-					AddToFieldsToFetch(memberExpression.ToPropertyPath('_'), memberExpression.Member.Name);
+					AddToFieldsToFetch(GetSelectPath(memberExpression), memberExpression.Member.Name);
 					if (insideSelect == false)
 					{
 						foreach (var renamedField in FieldsToRename.Where(x=>x.OriginalField == memberExpression.Member.Name).ToArray())
@@ -1376,6 +1376,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			var finalQuery = ((IDocumentQuery<T>) luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
 
+		    finalQuery.SetResultTransformer(this.resultsTransformer);
+		    finalQuery.SetQueryInputs(this.queryInputs);
 
 			if (FieldsToRename.Count > 0)
 			{

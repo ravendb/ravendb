@@ -151,14 +151,6 @@ namespace Raven.Studio.Models
         public TaskCheckBox(string name, bool value) : base(name, value)
         {
             Name = name;
-            Value = value;
-        }
-
-        private bool value;
-        public new bool Value
-        {
-            get { return value; }
-            set { this.value = value; OnPropertyChanged(() => Value); }
         }
     }
 
@@ -167,14 +159,6 @@ namespace Raven.Studio.Models
 		public TaskInput(string name, string value) : base(name, value)
 		{
 			Name = name;
-			Value = value;
-		}
-
-		private string value;
-		public new string Value
-		{
-			get { return value; }
-			set { this.value = value; OnPropertyChanged(() => Value); }
 		}
 	}
 

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
@@ -74,8 +75,10 @@ namespace Raven.Database.Server.Connections
 					return initTask.ContinueWith(_ => SendAsync(data)).Unwrap();
 
 
-				return context.Response.WriteAsync("data: " + JsonConvert.SerializeObject(data, Formatting.None) + "\r\n\r\n")
-					.ContinueWith(DisconnectOnError);
+				return context.Response.WriteAsync("data: " +
+				                                   JsonConvert.SerializeObject(data, Formatting.None, new EtagJsonConverter()) +
+				                                   "\r\n\r\n")
+				              .ContinueWith(DisconnectOnError);
 			}
 			catch (Exception e)
 			{

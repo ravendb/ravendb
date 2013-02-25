@@ -626,5 +626,16 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Select the default operator to use for this query
 		/// </summary>
 		TSelf UsingDefaultOperator(QueryOperator queryOperator);
+
+		/// <summary>
+		/// Disables tracking for queried entities by Raven's Unit of Work.
+		/// Usage of this option will prevent holding query results in memory.
+		/// </summary>
+		TSelf NoTracking();
+
+		/// <summary>
+		/// Disables caching for query results.
+		/// </summary>
+		TSelf NoCaching();
 	}
 }

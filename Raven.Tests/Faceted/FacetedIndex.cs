@@ -7,8 +7,10 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Linq;
 using Xunit;
 using Raven.Abstractions.Indexing;
@@ -17,16 +19,16 @@ using Raven.Client.Document;
 
 namespace Raven.Tests.Faceted
 {
-	public class FacetedIndex : RavenTest
+    public class FacetedIndex : FacetTestBase
 	{
 		private readonly IList<Camera> _data;
 		private readonly List<Facet> _originalFacets;
 		private readonly List<Facet> _stronglyTypedFacets;
-		private const int NumCameras = 1;
+		private const int NumCameras = 1000;
 
 		public FacetedIndex()
 		{
-			_data = FacetedIndexTestHelper.GetCameras(NumCameras);
+			_data = GetCameras(NumCameras);
 
 			_originalFacets = new List<Facet>
 			          	{
@@ -60,33 +62,7 @@ namespace Raven.Tests.Faceted
 			                    }
 			            };
 
-			_stronglyTypedFacets = new List<Facet>
-			{
-				new Facet<Camera> {Name = x => x.Manufacturer},
-				new Facet<Camera>
-				{
-					Name = x => x.Cost,
-					Ranges =
-						{
-							x => x.Cost < 200m,
-							x => x.Cost > 200m && x.Cost < 400m,
-							x => x.Cost > 400m && x.Cost < 600m,
-							x => x.Cost > 600m && x.Cost < 800m,
-							x => x.Cost > 800m
-						}
-				},
-				new Facet<Camera>
-				{
-					Name = x => x.Megapixels,
-					Ranges =
-						{
-							x => x.Megapixels < 3.0m,
-							x => x.Megapixels > 3.0m && x.Megapixels < 7.0m,
-							x => x.Megapixels > 7.0m && x.Megapixels < 10.0m,
-							x => x.Megapixels > 10.0m
-			          					}
-			          			}
-			          	};
+		    _stronglyTypedFacets = GetFacets();
 		}
 
 		[Fact]
@@ -101,6 +77,41 @@ namespace Raven.Tests.Faceted
 				ExecuteTest(store, _originalFacets);
 			}
 		}
+
+        [Fact]
+        public void RemoteFacetedSearchHonorsConditionalGet()
+        {
+            using (GetNewServer())
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            }.Initialize())
+            {
+                Setup(store, _stronglyTypedFacets);
+
+				Etag firstEtag;
+
+                var queryUrl = store.Url + "/facets/CameraCost?facetDoc=facets%2FCameraFacets&query=Manufacturer%253A{0}&facetStart=0&facetPageSize=";
+
+                var url = string.Format(queryUrl, "canon");
+
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(url, null, out firstEtag));
+
+                //second request should give 304 not modified
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(url, firstEtag, out firstEtag));
+
+                //change index etag by inserting new doc
+                InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
+
+				Etag secondEtag;
+
+                //changing the index should give 200 OK
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(url, firstEtag, out secondEtag));
+
+                //next request should give 304 not modified
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(url, secondEtag, out secondEtag));
+            }
+        }
 
 		[Fact]
 		public void CanPerformFacetedSearch_Remotely_Asynchronously()
@@ -282,42 +293,21 @@ namespace Raven.Tests.Faceted
 			}
 		}
 
-		private void Setup(IDocumentStore store, List<Facet> facetsToUse)
-		{
-			using (var s = store.OpenSession())
-			{
-				var facetSetupDoc = new FacetSetup { Id = "facets/CameraFacets", Facets = facetsToUse };
-				s.Store(facetSetupDoc);
-				s.SaveChanges();
+        private void Setup(IDocumentStore store, List<Facet> facetsToUse)
+        {
+            using (var s = store.OpenSession())
+            {
+                var facetSetupDoc = new FacetSetup {Id = "facets/CameraFacets", Facets = facetsToUse};
+                s.Store(facetSetupDoc);
+                s.SaveChanges();
+            }
 
-				store.DatabaseCommands.PutIndex("CameraCost",
-												new IndexDefinition
-												{
-													Map =
-														@"from camera in docs 
-                                                        select new 
-                                                        { 
-                                                            camera.Manufacturer, 
-                                                            camera.Model, 
-                                                            camera.Cost,
-                                                            camera.DateOfListing,
-                                                            camera.Megapixels
-                                                        }"
-												});
+            CreateCameraCostIndex(store);
 
-				foreach (var camera in _data)
-				{
-					s.Store(camera);
-				}
-				s.SaveChanges();
+            InsertCameraDataAndWaitForNonStaleResults(store, _data);
+        }
 
-				s.Query<Camera>("CameraCost")
-					.Customize(x => x.WaitForNonStaleResults())
-					.ToList();
-			}
-		}
-
-		private void PrintFacetResults(FacetResults facetResults)
+        private void PrintFacetResults(FacetResults facetResults)
 		{
 			foreach (var kvp in facetResults.Results)
 			{

@@ -512,7 +512,8 @@ namespace Raven.Client.Document
 
 					return null;
 				}
-				oauthSource = Url + "/OAuth/API-Key";
+				if (string.IsNullOrEmpty(oauthSource))
+					oauthSource = Url + "/OAuth/API-Key";
 
 				return securedAuthenticator.DoOAuthRequest(oauthSource);
 			};
@@ -830,8 +831,9 @@ namespace Raven.Client.Document
 				var databaseName = session.DatabaseName;
 				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
 																		  _ => new EvictItemsFromCacheBasedOnChanges(
+																			  databaseName ?? Constants.SystemDatabase,
 																			  CreateDatabaseChanges(databaseName),
-																			  () => jsonRequestFactory.ExpireItemsFromCache(databaseName)));
+																			  jsonRequestFactory.ExpireItemsFromCache));
 			}
 
 			base.AfterSessionCreated(session);

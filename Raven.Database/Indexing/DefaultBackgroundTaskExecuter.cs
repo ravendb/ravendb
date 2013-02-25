@@ -88,7 +88,7 @@ namespace Raven.Database.Indexing
 		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
 		{
 			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
-			var size = Math.Max(source.Count / maxNumberOfParallelIndexTasks, 256);
+			var size = Math.Max(source.Count / maxNumberOfParallelIndexTasks, 1024);
 			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= size)
 			{
 				using (var e = source.GetEnumerator())
@@ -189,7 +189,11 @@ namespace Raven.Database.Indexing
 					var indexToWorkOn = index;
 
 					var task = new Task(() => action(indexToWorkOn));
-					tasks[i] = task.ContinueWith(_ => semaphoreSlim.Release());
+					tasks[i] = task.ContinueWith(done =>
+					{
+						semaphoreSlim.Release();
+						return done;
+					}).Unwrap();
 
 					semaphoreSlim.Wait();
 

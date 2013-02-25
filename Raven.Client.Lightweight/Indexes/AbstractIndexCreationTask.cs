@@ -28,10 +28,8 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !NETFX_CORE
 	[System.ComponentModel.Composition.InheritedExport]
-#endif
-	public abstract class AbstractIndexCreationTask
+	public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexesAndTransformers
 	{
 		/// <summary>
 		/// Creates the index definition.
@@ -157,6 +155,122 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
+
+
+#if !SILVERLIGHT
+
+		/// <summary>
+		/// Executes the index creation against the specified document store.
+		/// </summary>
+		public void Execute(IDocumentStore store)
+		{
+			store.ExecuteIndex(this);
+		}
+
+		/// <summary>
+		/// Executes the index creation against the specified document database using the specified conventions
+		/// </summary>
+		public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
+		{
+			Conventions = documentConvention;
+			var indexDefinition = CreateIndexDefinition();
+			// This code take advantage on the fact that RavenDB will turn an index PUT
+			// to a noop of the index already exists and the stored definition matches
+			// the new definition.
+			databaseCommands.PutIndex(IndexName, indexDefinition, true);
+
+			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
+				commands.DirectPutIndex(IndexName, url, true, indexDefinition));
+		}
+
+#endif
+
+		/// <summary>
+		/// Executes the index creation against the specified document store.
+		/// </summary>
+		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
+		{
+			Conventions = documentConvention;
+			var indexDefinition = CreateIndexDefinition();
+			// This code take advantage on the fact that RavenDB will turn an index PUT
+			// to a noop of the index already exists and the stored definition matches
+			// the new definition.
+			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
+				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
+					client.DirectPutIndexAsync(IndexName, indexDefinition, true, url)))
+				.Unwrap();
+		}
+	}
+
+	/// <summary>
+	/// Base class for creating indexes
+	/// </summary>
+	public class AbstractIndexCreationTask<TDocument> :
+		AbstractIndexCreationTask<TDocument, TDocument>
+	{
+
+	}
+
+	/// <summary>
+	/// Base class for creating indexes
+	/// </summary>
+	public class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
+	{
+		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
+		{
+			if (Reduce == null)
+				return enumerable.Take(indexQuery.PageSize);
+
+			return Conventions.ApplyReduceFunction(GetType(), typeof(TReduceResult), enumerable, () =>
+			{
+				var compile = Reduce.Compile();
+				return (objects => compile(objects.Cast<TReduceResult>()));
+			}).Take(indexQuery.PageSize);
+		}
+
+		/// <summary>
+		/// Creates the index definition.
+		/// </summary>
+		/// <returns></returns>
+		public override IndexDefinition CreateIndexDefinition()
+		{
+			if (Conventions == null)
+				Conventions = new DocumentConvention();
+
+			
+			return new IndexDefinitionBuilder<TDocument, TReduceResult>
+			{
+				Indexes = Indexes,
+				IndexesStrings = IndexesStrings,
+				SortOptions = IndexSortOptions,
+				Analyzers = Analyzers,
+				AnalyzersStrings = AnalyzersStrings,
+				Map = Map,
+				Reduce = Reduce,
+				TransformResults = TransformResults,
+				Stores = Stores,
+				StoresStrings = StoresStrings,
+				Suggestions = IndexSuggestions,
+				TermVectors = TermVectors,
+				TermVectorsStrings = TermVectorsStrings
+			}.ToIndexDefinition(Conventions);
+		}
+
+		public override bool IsMapReduce
+		{
+			get { return Reduce != null; }
+		}
+
+		/// <summary>
+		/// The map definition
+		/// </summary>
+		protected Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
+	}
+
+	public abstract class AbstractCommonApiForIndexesAndTransformers
+	{
+		private ILog Logger = LogManager.GetCurrentClassLogger();
+
 		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
@@ -164,6 +278,7 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
+
 
 		/// <summary>
 		/// Allows to use lambdas recursively
@@ -216,6 +331,14 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Loads the specifed document during the indexing process
+		/// </summary>
+		public T[] LoadDocument<T>(IEnumerable<string> keys)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
 		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IList<TResult>> func)
@@ -255,79 +378,8 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This is here as a marker only");
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
-
-		/// <summary>
-		/// Executes the index creation against the specified document store.
-		/// </summary>
-		public void Execute(IDocumentStore store)
-		{
-			store.ExecuteIndex(this);
-		}
-
-		/// <summary>
-		/// Executes the index creation against the specified document database using the specified conventions
-		/// </summary>
-		public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
-		{
-			Conventions = documentConvention;
-			var indexDefinition = CreateIndexDefinition();
-			// This code take advantage on the fact that RavenDB will turn an index PUT
-			// to a noop of the index already exists and the stored definition matches
-			// the new definition.
-			databaseCommands.PutIndex(IndexName, indexDefinition, true);
-
-			UpdateIndexInReplication(databaseCommands, documentConvention, indexDefinition);
-		}
-
-		private void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
-											  IndexDefinition indexDefinition)
-		{
-			var serverClient = databaseCommands as ServerClient;
-			if (serverClient == null)
-				return;
-			var doc = serverClient.Get("Raven/Replication/Destinations");
-			if (doc == null)
-				return;
-			var replicationDocument =
-				documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
-			if (replicationDocument == null)
-				return;
-
-			foreach (var replicationDestination in replicationDocument.Destinations)
-			{
-				if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
-					continue;
-				try
-				{
-					serverClient.DirectPutIndex(IndexName, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url, true, indexDefinition);
-				}
-				catch (Exception e)
-				{
-					Logger.WarnException("Could not put index in replication server", e);
-				}
-			}
-		}
-#endif
-
-		/// <summary>
-		/// Executes the index creation against the specified document store.
-		/// </summary>
-		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
-		{
-			Conventions = documentConvention;
-			var indexDefinition = CreateIndexDefinition();
-			// This code take advantage on the fact that RavenDB will turn an index PUT
-			// to a noop of the index already exists and the stored definition matches
-			// the new definition.
-			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, indexDefinition))
-				.Unwrap();
-		}
-
-		private ILog Logger = LogManager.GetCurrentClassLogger();
-		private Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
-												   DocumentConvention documentConvention, IndexDefinition indexDefinition)
+		internal Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
+												   DocumentConvention documentConvention, Func<AsyncServerClient, string, Task> action)
 		{
 			var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 			if (asyncServerClient == null)
@@ -345,7 +397,7 @@ namespace Raven.Client.Indexes
 				{
 					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
 						continue;
-					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url));
+					tasks.Add(action(asyncServerClient, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url));
 				}
 				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
 				{
@@ -359,68 +411,36 @@ namespace Raven.Client.Indexes
 				});
 			}).Unwrap();
 		}
-	}
 
-	/// <summary>
-	/// Base class for creating indexes
-	/// </summary>
-	public class AbstractIndexCreationTask<TDocument> :
-		AbstractIndexCreationTask<TDocument, TDocument>
-	{
-
-	}
-
-	/// <summary>
-	/// Base class for creating indexes
-	/// </summary>
-	public class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
-	{
-		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
+#if !SILVERLIGHT
+		internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
+			Action<ServerClient, string> action)
 		{
-			if (Reduce == null)
-				return enumerable.Take(indexQuery.PageSize);
+			var serverClient = databaseCommands as ServerClient;
+			if (serverClient == null)
+				return;
+			var doc = serverClient.Get("Raven/Replication/Destinations");
+			if (doc == null)
+				return;
+			var replicationDocument =
+				documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
+			if (replicationDocument == null)
+				return;
 
-			return Conventions.ApplyReduceFunction(GetType(), typeof(TReduceResult), enumerable, () =>
+			foreach (var replicationDestination in replicationDocument.Destinations)
 			{
-				var compile = Reduce.Compile();
-				return (objects => compile(objects.Cast<TReduceResult>()));
-			}).Take(indexQuery.PageSize);
+				try
+				{
+					if(replicationDestination.Disabled || replicationDestination.IgnoredClient)
+						continue;
+					action(serverClient, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url);
+				}
+				catch (Exception e)
+				{
+					Logger.WarnException("Could not put index in replication server", e);
+				}
+			}
 		}
-
-		/// <summary>
-		/// Creates the index definition.
-		/// </summary>
-		/// <returns></returns>
-		public override IndexDefinition CreateIndexDefinition()
-		{
-			if (Conventions == null)
-				Conventions = new DocumentConvention();
-
-			return new IndexDefinitionBuilder<TDocument, TReduceResult>
-			{
-				Indexes = Indexes,
-				IndexesStrings = IndexesStrings,
-				SortOptions = IndexSortOptions,
-				Analyzers = Analyzers,
-				AnalyzersStrings = AnalyzersStrings,
-				Map = Map,
-				Reduce = Reduce,
-				TransformResults = TransformResults,
-				Stores = Stores,
-				StoresStrings = StoresStrings,
-				Suggestions = IndexSuggestions,
-				TermVectors = TermVectors
-			}.ToIndexDefinition(Conventions);
-		}
-
-		public override bool IsMapReduce
-		{
-			get { return Reduce != null; }
-		}
-
-		/// <summary>
-		/// The map definition
-		/// </summary>
-		protected Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
+#endif
 	}
 }
