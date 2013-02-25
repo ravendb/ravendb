@@ -64,7 +64,12 @@ namespace Raven.Client.Indexes
 				Reduce = Reduce,
 				TransformResults = TransformResults,
 				Stores = Stores,
+				TermVectors = TermVectors,
 				Suggestions = IndexSuggestions,
+				AnalyzersStrings = AnalyzersStrings,
+				IndexesStrings = IndexesStrings,
+				StoresStrings = StoresStrings,
+				TermVectorsStrings = TermVectorsStrings
 			}.ToIndexDefinition(Conventions, validateMap: false);
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{
