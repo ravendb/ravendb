@@ -708,8 +708,10 @@
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
+    <Compile Include="Spatial\GeoJsonReaderTests.cs" />
     <Compile Include="Spatial\GeoJsonTests.cs" />
     <Compile Include="Spatial\Nick.cs" />
+    <Compile Include="Spatial\PointObjectTests.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
     <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />

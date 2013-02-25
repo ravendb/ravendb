@@ -1,92 +1,67 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using GeoAPI.Geometries;
-using NetTopologySuite.Geometries;
-using Raven.Database.Indexing.Spatial.GeoJson;
-using Raven.Json.Linq;
+﻿using System.Linq;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
+using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Spatial
 {
-    public class GeoJsonTests
-    {
-	    private readonly IGeometryFactory geometryFactory;
-	    private readonly GeoJsonReader reader;
-
-		public GeoJsonTests()
+	public class GeoJsonTests : RavenTest
+	{
+		public class SpatialDoc
 		{
-			geometryFactory = GeometryFactory.Default;
-			reader = new GeoJsonReader(geometryFactory);
+			public string Id { get; set; }
+			public object Name { get; set; }
+			public object GeoJson { get; set; }
 		}
 
-		private void AssertEqual(string json, object geometry)
+		public class GeoJsonIndex : AbstractIndexCreationTask<SpatialDoc>
 		{
-			object obj;
-			reader.TryRead(RavenJObject.Parse(json), out obj);
-			Assert.Equal(obj, geometry);
+			public GeoJsonIndex()
+			{
+				Map = docs => from doc in docs select new { doc.Name, doc.GeoJson };
+
+				Index(x => x.Name, FieldIndexing.Analyzed);
+				Store(x => x.Name, FieldStorage.Yes);
+
+				Spatial(x => x.GeoJson, x => x.Geography());
+			}
 		}
 
-        [Fact]
-        public void Point()
-        {
-			AssertEqual(
-				@"{""type"":""Point"",""coordinates"":[0,0]}",
-				geometryFactory.CreatePoint(new Coordinate(0, 0))
-			);
-        }
-
-        [Fact]
-        public void LineString()
+		[Fact]
+		public void PointTest()
 		{
-			AssertEqual(
-				@"{""type"":""LineString"",""coordinates"":[[0,0],[1,1]]}",
-				geometryFactory.CreateLineString(new[] { new Coordinate(0, 0), new Coordinate(1, 1) })
-			);
-        }
+			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			{
+				store.Initialize();
+				store.ExecuteIndex(new GeoJsonIndex());
 
-        [Fact]
-        public void Polygon()
-		{
-			AssertEqual(
-				@"{""type"":""Polygon"",""coordinates"":[[[0,0],[1,1],[2,0],[0,0]]]}",
-				geometryFactory.CreatePolygon(new[] { new Coordinate(0, 0), new Coordinate(1, 1), new Coordinate(2, 0), new Coordinate(0, 0) })
-			);
-        }
+				using (var session = store.OpenSession())
+				{
+					// @"{""type"":""Point"",""coordinates"":[45.0,45.0]}"
+					session.Store(new SpatialDoc {
+						                             Name = "dog",
+						                             GeoJson = new {
+							                                           type = "Point",
+							                                           coordinates = new[] { 45d, 45d }
+						                                           } });
+					session.SaveChanges();
+				}
 
-        [Fact]
-        public void MultiPoint()
-		{
-			AssertEqual(
-				@"{""type"":""MultiPoint"",""coordinates"":[[0,0],[1,1],[2,0],[0,0]]}",
-				geometryFactory.CreateMultiPoint(new[] { new Coordinate(0, 0), new Coordinate(1, 1), new Coordinate(2, 0), new Coordinate(0, 0) })
-			);
-        }
+				WaitForIndexing(store);
 
-        [Fact]
-        public void MultiLineString()
-		{
-			AssertEqual(
-				@"{""type"":""MultiLineString"",""coordinates"":[[[0,0],[1,1]]]}",
-				geometryFactory.CreateMultiLineString(new[] { geometryFactory.CreateLineString(new[] { new Coordinate(0, 0), new Coordinate(1, 1) }) })
-			);
-        }
+				using (var session = store.OpenSession())
+				{
+					var matches = session.Query<SpatialDoc, GeoJsonIndex>()
+					                     .Customize(x =>
+					                     {
+						                     x.WithinRadiusOf("GeoJson", 700, 40, 40);
+						                     x.WaitForNonStaleResults();
+					                     }).Any();
 
-        [Fact]
-        public void MultiPolygon()
-		{
-			AssertEqual(
-				@"{""type"":""MultiPolygon"",""coordinates"":[[[[0,0],[1,1],[2,0],[0,0]]]]}",
-				geometryFactory.CreateMultiPolygon(new[] { geometryFactory.CreatePolygon(new[] {new Coordinate(0, 0), new Coordinate(1, 1), new Coordinate(2, 0), new Coordinate(0, 0)})})
-			);
-        }
-
-        [Fact]
-        public void GeometryCollection()
-		{
-			AssertEqual(
-				@"{""type"":""GeometryCollection"",""geometries"":[{""type"":""Point"",""coordinates"":[0,0]},{""type"":""Point"",""coordinates"":[0,1]}]}",
-				geometryFactory.CreateGeometryCollection(new IGeometry[] { geometryFactory.CreatePoint(new Coordinate(0, 0)), geometryFactory.CreatePoint(new Coordinate(0, 1)) })
-			);
-        }
-    }
+					Assert.True(matches);
+				}
+			}
+		}
+	}
 }
