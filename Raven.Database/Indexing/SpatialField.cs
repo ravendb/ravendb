@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 using GeoAPI;
 using Lucene.Net.Search;
@@ -20,6 +21,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Indexing.Spatial;
 using Raven.Database.Indexing.Spatial.GeoJson;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Io;
@@ -33,6 +36,9 @@ namespace Raven.Database.Indexing
 	{
 		private static readonly NtsSpatialContext GeoContext;
 		private static readonly NtsShapeReadWriter GeoShapeReadWriter;
+
+		private static readonly Regex RegexX = new Regex("^(?:X)?(?:Longitude)?(?:Lng)?(?:Lon)?$", RegexOptions.IgnoreCase);
+		private static readonly Regex RegexY = new Regex("^(?:Y)?(?:Latitude)?(?:Lat)?$", RegexOptions.IgnoreCase);
 
 		private readonly SpatialOptions options;
 		private readonly NtsSpatialContext context;
@@ -146,6 +152,24 @@ namespace Raven.Database.Indexing
 			var jsonObject = value as IDynamicJsonObject;
 			if (jsonObject != null)
 			{
+				var x1 = jsonObject.Inner.Keys.FirstOrDefault(c => RegexX.IsMatch(c));
+				var y1 = jsonObject.Inner.Keys.FirstOrDefault(c => RegexY.IsMatch(c));
+
+				RavenJToken x2, y2;
+				if (jsonObject.Inner.TryGetValue(x1, out x2) && jsonObject.Inner.TryGetValue(y1, out y2))
+				{
+					var x3 = x2 as RavenJValue;
+					var y3 = y2 as RavenJValue;
+					if (x3 != null && y3 != null)
+					{
+						if (new [] { x3, y3 }.All(x => x.Type == JTokenType.Float || x.Type == JTokenType.Integer))
+						{
+							shape = context.MakePoint(Convert.ToDouble(x3), Convert.ToDouble(y3));
+							return true;
+						}
+					}
+				}
+
 				var geoJson = new GeoJsonShapeConverter(context);
 				return geoJson.TryConvert(jsonObject.Inner, out shape);
 			}
