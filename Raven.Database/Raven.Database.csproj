@@ -590,7 +590,7 @@
     <Compile Include="Indexing\Analyzers\LowerCaseKeywordAnalyzer.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
     <Compile Include="Indexing\RobustEnumerator.cs" />
-    <Compile Include="Indexing\SpatialIndex.cs" />
+    <Compile Include="Indexing\SpatialField.cs" />
     <Compile Include="Indexing\SimpleQueryParser.cs" />
     <Compile Include="Config\InMemoryRavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />

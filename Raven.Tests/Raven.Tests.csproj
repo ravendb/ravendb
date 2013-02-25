@@ -699,6 +699,7 @@
     <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
+    <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
     <Compile Include="Spatial\SimonBartlett.cs" />

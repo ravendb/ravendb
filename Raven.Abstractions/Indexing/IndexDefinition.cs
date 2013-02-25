@@ -28,6 +28,7 @@ namespace Raven.Abstractions.Indexing
 			Fields = new List<string>();
 			Suggestions = new Dictionary<string, SuggestionOptions>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
+			SpatialIndexes = new Dictionary<string, SpatialOptions>();
 		}
 
 		/// <summary>
@@ -125,6 +126,12 @@ namespace Raven.Abstractions.Indexing
 		public IDictionary<string, FieldTermVector> TermVectors { get; set; }
 
 		/// <summary>
+		/// Gets or sets the spatial options
+		/// </summary>
+		/// <value>The spatial options.</value>
+		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+
+		/// <summary>
 		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
@@ -144,7 +151,8 @@ namespace Raven.Abstractions.Indexing
 					DictionaryEquals(other.Analyzers, Analyzers) &&
 					DictionaryEquals(other.SortOptions, SortOptions) &&
 					DictionaryEquals(other.Suggestions, Suggestions) &&
-					DictionaryEquals(other.TermVectors, TermVectors);
+					DictionaryEquals(other.TermVectors, TermVectors) &&
+					DictionaryEquals(other.SpatialIndexes, SpatialIndexes);
 		}
 
 		private static bool DictionaryEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
@@ -227,6 +235,7 @@ namespace Raven.Abstractions.Indexing
 				result = (result * 397) ^ DictionaryHashCode(SortOptions);
 				result = (result * 397) ^ DictionaryHashCode(Suggestions);
 				result = (result * 397) ^ DictionaryHashCode(TermVectors);
+				result = (result * 397) ^ DictionaryHashCode(SpatialIndexes);
 				return result;
 			}
 		}
@@ -304,6 +313,8 @@ namespace Raven.Abstractions.Indexing
 				indexDefinition.Suggestions = new Dictionary<string, SuggestionOptions>(Suggestions);
 			if (TermVectors != null)
 				indexDefinition.TermVectors = new Dictionary<string, FieldTermVector>(TermVectors);
+			if (SpatialIndexes != null)
+				indexDefinition.SpatialIndexes = new Dictionary<string, SpatialOptions>(SpatialIndexes);
 			return indexDefinition;
 		}
 	}

@@ -727,6 +727,9 @@
     <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptions.cs">
       <Link>Imports\Indexing\SpatialOptions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptionsFactory.cs">
+      <Link>Imports\Indexing\SpatialOptionsFactory.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\SuggestionOptions.cs">
       <Link>Imports\Indexing\SuggestionOptions.cs</Link>
     </Compile>

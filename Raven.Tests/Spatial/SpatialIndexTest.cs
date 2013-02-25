@@ -11,7 +11,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 using System.Linq;
 
@@ -76,7 +75,7 @@ namespace Raven.Tests.Spatial
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
 
-			var expected = events.Count(e => Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
+			var expected = events.Count(e => Raven.Database.Indexing.SpatialField.GetGeographicalDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
 
 			Assert.Equal(expected, queryResult.Results.Count);
 			Assert.Equal(7, queryResult.Results.Count);
@@ -86,7 +85,7 @@ namespace Raven.Tests.Spatial
 			{
 				Event e = r.JsonDeserialization<Event>();
 
-				double distance = Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude);
+				double distance = Raven.Database.Indexing.SpatialField.GetGeographicalDistance(lat, lng, e.Latitude, e.Longitude);
 				Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 
 				Assert.True(distance < radiusInKm);

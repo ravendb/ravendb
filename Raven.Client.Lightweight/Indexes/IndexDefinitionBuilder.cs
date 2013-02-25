@@ -6,10 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
@@ -96,6 +93,12 @@ namespace Raven.Client.Indexes
 		/// <value>The term vectors.</value>
 		public IDictionary<string, FieldTermVector> TermVectorsStrings { get; set; }
 
+		/// <summary>
+		/// Gets or sets the spatial options
+		/// </summary>
+		/// <value>The spatial options.</value>
+		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
@@ -112,6 +115,7 @@ namespace Raven.Client.Indexes
 			AnalyzersStrings = new Dictionary<string, string>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
 			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
+			SpatialIndexes = new Dictionary<string, SpatialOptions>();
 		}
 
 		/// <summary>
@@ -136,7 +140,8 @@ namespace Raven.Client.Indexes
 				SortOptions = ConvertToStringDictionary(SortOptions),
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
-                TermVectors =  ConvertToStringDictionary(TermVectors)
+				TermVectors =  ConvertToStringDictionary(TermVectors),
+				SpatialIndexes = SpatialIndexes
 			};
 
 			foreach (var indexesString in IndexesStrings)
