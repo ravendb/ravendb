@@ -10,7 +10,7 @@ namespace Raven.Tests.Bugs
 {
 	public class TenantsName : RavenTest
 	{
-		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.RunInMemory = false;
 			ravenConfiguration.DefaultStorageTypeName = "esent";

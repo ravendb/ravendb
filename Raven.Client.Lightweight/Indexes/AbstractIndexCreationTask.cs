@@ -237,6 +237,7 @@ namespace Raven.Client.Indexes
 			if (Conventions == null)
 				Conventions = new DocumentConvention();
 
+			
 			return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
@@ -250,7 +251,8 @@ namespace Raven.Client.Indexes
 				Stores = Stores,
 				StoresStrings = StoresStrings,
 				Suggestions = IndexSuggestions,
-				TermVectors = TermVectors
+				TermVectors = TermVectors,
+				TermVectorsStrings = TermVectorsStrings
 			}.ToIndexDefinition(Conventions);
 		}
 

@@ -25,7 +25,7 @@ namespace Raven.Server
 			get { return server; }
 		}
 
-		public RavenDbServer(RavenConfiguration settings)
+		public RavenDbServer(InMemoryRavenConfiguration settings)
 		{
 			database = new DocumentDatabase(settings);
 

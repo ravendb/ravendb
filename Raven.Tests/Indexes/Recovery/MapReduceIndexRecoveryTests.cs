@@ -14,7 +14,7 @@ namespace Raven.Tests.Indexes.Recovery
 {
 	public class MapReduceIndexRecoveryTests : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.NumberOfItemsToExecuteReduceInSingleStep = 10;
 		}
@@ -29,12 +29,12 @@ namespace Raven.Tests.Indexes.Recovery
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
 			{
 				indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
-				                             MonoHttpUtility.UrlEncode(index.IndexName));
+											 MonoHttpUtility.UrlEncode(index.IndexName));
 
-				using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
 					index.Execute(store);
-					
+
 					using (var session = store.OpenSession())
 					{
 						// reduce in single step
