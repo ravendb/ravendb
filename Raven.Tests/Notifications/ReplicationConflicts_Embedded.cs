@@ -6,10 +6,6 @@
 using System;
 using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
