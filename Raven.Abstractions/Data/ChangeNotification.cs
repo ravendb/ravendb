@@ -67,12 +67,13 @@ namespace Raven.Abstractions.Data
 	{
 		public ReplicationConflictTypes ItemType { get; set; }
 		public string Id { get; set; }
+		public Etag Etag { get; set; }
 		public ReplicationOperationTypes OperationType { get; set; }
 		public string[] Conflicts { get; set; }
 
 		public override string ToString()
 		{
-			return string.Format("{0} on {1} for ", ItemType, Id);
+			return string.Format("{0} on {1} because of {2} operation", ItemType, Id, OperationType);
 		}
 	}
 

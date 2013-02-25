@@ -12,6 +12,7 @@ using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Listeners;
 using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -320,6 +321,22 @@ namespace Raven.Tests.Bundles.Replication
 						break;
 					Thread.Sleep(100);
 				}
+			}
+		}
+
+		protected class ClientSideConflictResolution : IDocumentConflictListener
+		{
+			public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
+			{
+				resolvedDocument = new JsonDocument
+				{
+					DataAsJson = new RavenJObject
+					 {
+						 {"Name", string.Join(" ", conflictedDocs.Select(x => x.DataAsJson.Value<string>("Name")).OrderBy(x=>x))}
+					 },
+					Metadata = new RavenJObject()
+				};
+				return true;
 			}
 		}
 	}

@@ -6,7 +6,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
+using Raven.Client.Exceptions;
+using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
@@ -48,6 +53,19 @@ namespace Raven.Tests.Notifications
 				Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.DocumentReplicationConflict);
 				Assert.Equal(2, replicationConflictNotification.Conflicts.Length);
 				Assert.Equal(ReplicationOperationTypes.Put, replicationConflictNotification.OperationType);
+
+				Etag conflictedEtag = null;
+
+				try
+				{
+					store2.DatabaseCommands.Get("users/1");
+				}
+				catch (ConflictException ex)
+				{
+					conflictedEtag = ex.Etag;
+				}
+
+				Assert.Equal(conflictedEtag, replicationConflictNotification.Etag);
 			}
 		}
 
@@ -222,6 +240,62 @@ namespace Raven.Tests.Notifications
 				Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.DocumentReplicationConflict);
 				Assert.Equal(3, replicationConflictNotification.Conflicts.Length); // there should be 3 ids of conflicted items
 				Assert.Equal(ReplicationOperationTypes.Delete, replicationConflictNotification.OperationType);
+			}
+		}
+
+		[Fact]
+		public void ConflictShouldBeResolvedByRegisiteredConflictListenerWhenNotificationArrives()
+		{
+			using (var store1 = CreateStore())
+			using (var store2 = CreateStore())
+			{
+				store2.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+
+				store1.DatabaseCommands.Put("users/1", null, new RavenJObject
+				{
+					{"Name", "Ayende"}
+				}, new RavenJObject());
+
+				store2.DatabaseCommands.Put("users/1", null, new RavenJObject
+				{
+					{"Name", "Rahien"}
+				}, new RavenJObject());
+
+				((DocumentStore)store2).RegisterListener(new ClientSideConflictResolution());
+
+				var list = new BlockingCollection<ReplicationConflictNotification>();
+				var taskObservable = store2.Changes();
+				taskObservable.Task.Wait();
+				var observableWithTask = taskObservable.ForAllReplicationConflicts();
+				observableWithTask.Task.Wait();
+				observableWithTask
+					.Subscribe(list.Add);
+
+				TellFirstInstanceToReplicateToSecondInstance();
+
+				ReplicationConflictNotification replicationConflictNotification;
+				Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
+
+				var conflictedDocumentDeleted = false;
+
+				for (int i = 0; i < RetriesCount; i++)
+				{
+					var document = store2.DatabaseCommands.Get(replicationConflictNotification.Conflicts[0]);
+
+					if (document == null)
+					{
+						conflictedDocumentDeleted = true;
+						break;
+					}
+
+					Thread.Sleep(200);
+				}
+
+				Assert.True(conflictedDocumentDeleted);
+
+				var jsonDocument = store2.DatabaseCommands.Get("users/1");
+
+				Assert.Equal("Ayende Rahien", jsonDocument.DataAsJson.Value<string>("Name"));
 			}
 		}
 	}

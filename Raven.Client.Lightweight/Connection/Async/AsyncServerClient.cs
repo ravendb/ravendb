@@ -1419,6 +1419,29 @@ namespace Raven.Client.Connection.Async
 
 			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
 
+			return TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, opUrl)
+				.ContinueWith(t =>
+				{
+					if (t.Result)
+					{
+						return (ConflictException) null;
+					}
+
+					return new ConflictException("Conflict detected on " + key +
+					                             ", conflict must be resolved before the document will be accessible",
+					                             true)
+					{
+						ConflictedVersionIds = conflictIds,
+						Etag = etag
+					};
+				});
+		}
+
+		internal Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string key, Etag etag, string[] conflictIds, string opUrl = null)
+		{
+			if (string.IsNullOrEmpty(opUrl))
+				opUrl = Url;
+
 			if (conflictListeners.Length > 0 && resolvingConflict == false)
 			{
 				resolvingConflict = true;
@@ -1438,18 +1461,12 @@ namespace Raven.Client.Connection.Async
 										.ContinueWith(_ =>
 										{
 											_.AssertNotFailed();
-											return (ConflictException)null;
+											return true;
 										});
-
 								}
 							}
-							return new CompletedTask<ConflictException>(new ConflictException("Conflict detected on " + key +
-																			  ", conflict must be resolved before the document will be accessible",
-																			  true)
-							{
-								ConflictedVersionIds = conflictIds,
-								Etag = etag
-							});
+
+							return new CompletedTask<bool>(false);
 						}).Unwrap();
 
 				}
@@ -1459,13 +1476,7 @@ namespace Raven.Client.Connection.Async
 				}
 			}
 
-			return new CompletedTask<ConflictException>(new ConflictException("Conflict detected on " + key +
-																			  ", conflict must be resolved before the document will be accessible",
-																			  true)
-			{
-				ConflictedVersionIds = conflictIds,
-				Etag = etag
-			});
+			return new CompletedTask<bool>(false);
 		}
 
 		private Task<T> RetryOperationBecauseOfConflict<T>(string opUrl, IEnumerable<RavenJObject> docResults, T currentResult, Func<Task<T>> nextTry)

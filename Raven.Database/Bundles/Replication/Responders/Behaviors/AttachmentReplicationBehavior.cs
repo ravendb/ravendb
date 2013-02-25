@@ -34,7 +34,7 @@ namespace Raven.Bundles.Replication.Responders
 			Database.PutStatic(id, etag, new MemoryStream(incoming), metadata);
 		}
 
-		protected override string[] CreateConflict(string id, string newDocumentConflictId, string existingDocumentConflictId, Attachment existingItem, RavenJObject existingMetadata)
+		protected override CreatedConflict CreateConflict(string id, string newDocumentConflictId, string existingDocumentConflictId, Attachment existingItem, RavenJObject existingMetadata)
 		{
 			existingItem.Metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			Actions.Attachments.AddAttachment(existingDocumentConflictId, null, existingItem.Data(), existingItem.Metadata);
@@ -48,18 +48,22 @@ namespace Raven.Bundles.Replication.Responders
 			conflictAttachment.WriteTo(memoryStream);
 			memoryStream.Position = 0;
 			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? null : existingItem.Etag;
-			Actions.Attachments.AddAttachment(id, etag,
-								memoryStream,
-								new RavenJObject
-								{
-									{Constants.RavenReplicationConflict, true},
-									{"@Http-Status-Code", 409},
-									{"@Http-Status-Description", "Conflict"}
-								});
-			return conflictsArray.Select(x => x.Value<string>()).ToArray();
+			var newEtag = Actions.Attachments.AddAttachment(id, etag,
+			                                  memoryStream,
+			                                  new RavenJObject
+			                                  {
+				                                  {Constants.RavenReplicationConflict, true},
+				                                  {"@Http-Status-Code", 409},
+				                                  {"@Http-Status-Description", "Conflict"}
+			                                  });
+			return new CreatedConflict()
+			{
+				Etag = newEtag,
+				ConflictedIds = conflictsArray.Select(x => x.Value<string>()).ToArray()
+			};
 		}
 
-		protected override string[] AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, Attachment existingItem)
+		protected override CreatedConflict AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, Attachment existingItem)
 		{
 			var existingConflict = existingItem.Data().ToJObject();
 
@@ -73,9 +77,13 @@ namespace Raven.Bundles.Replication.Responders
 			existingConflict.WriteTo(memoryStream);
 			memoryStream.Position = 0;
 
-			Actions.Attachments.AddAttachment(id, existingItem.Etag, memoryStream, existingItem.Metadata);
+			var newETag = Actions.Attachments.AddAttachment(id, existingItem.Etag, memoryStream, existingItem.Metadata);
 
-			return conflictArray.Select(x => x.Value<string>()).ToArray(); ;
+			return new CreatedConflict()
+			{
+				Etag = newETag,
+				ConflictedIds = conflictArray.Select(x => x.Value<string>()).ToArray()
+			};
 		}
 
 		protected override RavenJObject TryGetExisting(string id, out Attachment existingItem, out Etag existingEtag)
