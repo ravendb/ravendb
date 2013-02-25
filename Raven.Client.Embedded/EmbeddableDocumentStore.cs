@@ -234,7 +234,7 @@ namespace Raven.Client.Embedded
 						}
 					},null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 				}
-				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
+				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
 				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DatabaseCommands);
 			}
 			else
