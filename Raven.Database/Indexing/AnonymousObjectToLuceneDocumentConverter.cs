@@ -21,6 +21,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Indexing
 {
@@ -98,24 +99,14 @@ namespace Raven.Database.Indexing
 			var spatialField = viewGenerator.GetSpatialField(name);
 			var strategy = spatialField.GetLuceneStrategy();
 
-			var shapeString = GetShapeString(value);
-			if (shapeString == null)
-				return Enumerable.Empty<AbstractField>();
+			Shape shape;
+			if (spatialField.TryReadShape(value, out shape))
+			{
+				return strategy.CreateIndexableFields(shape)
+					.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+			}
 
-			var shape = spatialField.ReadShape(shapeString);
-			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
-		}
-
-		private string GetShapeString(object value)
-		{
-			if (value == null)
-				return null;
-
-			if (value is string && !string.IsNullOrWhiteSpace((string)value))
-				return (string)value;
-
-			return null;
+			return Enumerable.Empty<AbstractField>();
 		}
 
 		private IEnumerable<AbstractField> CreateRegularFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO)

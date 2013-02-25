@@ -107,37 +107,8 @@ namespace Raven.Database.Linq
 
 		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool analyzed = true)
 		{
-			var isSpatial = IsSpatialField(name);
-			if (isSpatial)
-				return CreateSpatialField(name, value);
-
 			return new AnonymousObjectToLuceneDocumentConverter(indexDefinition, this)
 				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
-		}
-
-		protected IEnumerable<AbstractField> CreateSpatialField(string name, object value)
-		{
-			var spatialField = GetSpatialField(name);
-			var strategy = spatialField.GetLuceneStrategy();
-
-			var shapeString = GetShapeString(value);
-			if (shapeString == null)
-				return Enumerable.Empty<AbstractField>();
-
-			var shape = spatialField.ReadShape(shapeString);
-			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
-		}
-
-		private string GetShapeString(object value)
-		{
-			if (value == null)
-				return null;
-
-			if (value is string && !string.IsNullOrWhiteSpace((string) value))
-				return (string) value;
-
-			return null;
 		}
 
 		protected dynamic LoadDocument(string key)

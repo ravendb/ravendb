@@ -17,7 +17,9 @@ using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Database.Indexing.Spatial;
+using Raven.Database.Indexing.Spatial.GeoJson;
 using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Io;
@@ -132,6 +134,32 @@ namespace Raven.Database.Indexing
 
 			var args = new SpatialArgs(SpatialOperation.IsWithin, shapeReadWriter.ReadShape(spatialQry.QueryShape));
 			return spatialStrategy.MakeFilter(args);
+		}
+
+		public bool TryReadShape(object value, out Shape shape)
+		{
+			shape = null;
+
+			if (value == null)
+				return false;
+
+			var jsonObject = value as IDynamicJsonObject;
+			if (jsonObject != null)
+			{
+				var geoJson = new GeoJsonShapeConverter(context);
+				return geoJson.TryConvert(jsonObject.Inner, out shape);
+			}
+
+			var str = value as string;
+			if (!string.IsNullOrWhiteSpace(str))
+			{
+
+				if (options.Type == SpatialFieldType.Geography)
+					str = TranslateCircleFromKmToRadians(str);
+				shape = shapeReadWriter.ReadShape(str);
+				return true;
+			}
+			return false;
 		}
 
 		public Shape ReadShape(string shapeWKT)

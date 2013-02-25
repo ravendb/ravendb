@@ -12,7 +12,7 @@ namespace Raven.Tests.Spatial
 		public class SpatialDoc
 		{
 			public string Id { get; set; }
-			public string Name { get; set; }
+			public object Name { get; set; }
 			public string WKT { get; set; }
 		}
 
@@ -39,7 +39,7 @@ namespace Raven.Tests.Spatial
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new SpatialDoc { WKT = "POINT (1950 1950)", Name = "cat" });
+					session.Store(new SpatialDoc { WKT = "POINT (1950 1950)", Name = new { sdsdsd = "sdsds", sdsdsds="sdsds"} });
 					session.Store(new SpatialDoc { WKT = "POINT (50 1950)", Name = "dog" });
 					session.Store(new SpatialDoc { WKT = "POINT (1950 50)", Name = "cat" });
 					session.Store(new SpatialDoc { WKT = "POINT (50 50)", Name = "dog" });

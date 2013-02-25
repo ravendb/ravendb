@@ -239,6 +239,10 @@
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
     <Compile Include="Indexing\PrefetchingBehavior.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
+    <Compile Include="Indexing\Spatial\GeoJson\Feature.cs" />
+    <Compile Include="Indexing\Spatial\GeoJson\FeatureCollection.cs" />
+    <Compile Include="Indexing\Spatial\GeoJson\GeoJsonReader.cs" />
+    <Compile Include="Indexing\Spatial\GeoJson\GeoJsonShapeConverter.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
     <Compile Include="Linq\AbstractTransformer.cs" />
