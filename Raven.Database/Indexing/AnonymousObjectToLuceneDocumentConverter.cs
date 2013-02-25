@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
@@ -25,14 +26,16 @@ namespace Raven.Database.Indexing
 {
 	public class AnonymousObjectToLuceneDocumentConverter
 	{
+		private readonly AbstractViewGenerator viewGenerator;
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
 		private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
 		private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
 
-		public AnonymousObjectToLuceneDocumentConverter(IndexDefinition indexDefinition)
+		public AnonymousObjectToLuceneDocumentConverter(IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 		{
 			this.indexDefinition = indexDefinition;
+			this.viewGenerator = viewGenerator;
 		}
 
 		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
@@ -79,11 +82,44 @@ namespace Raven.Database.Indexing
 			if (string.IsNullOrWhiteSpace(name))
 				throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
 
-			if (char.IsLetter(name[0]) == false &&
-				name[0] != '_')
+			if (char.IsLetter(name[0]) == false && name[0] != '_')
 			{
 				name = "_" + name;
 			}
+
+			if (viewGenerator.IsSpatialField(name))
+				return CreateSpatialFields(name, value);
+
+			return CreateRegularFields(name, value, defaultStorage, nestedArray, defaultTermVector);
+		}
+
+		protected IEnumerable<AbstractField> CreateSpatialFields(string name, object value)
+		{
+			var spatialField = viewGenerator.GetSpatialField(name);
+			var strategy = spatialField.GetLuceneStrategy();
+
+			var shapeString = GetShapeString(value);
+			if (shapeString == null)
+				return Enumerable.Empty<AbstractField>();
+
+			var shape = spatialField.ReadShape(shapeString);
+			return strategy.CreateIndexableFields(shape)
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+		}
+
+		private string GetShapeString(object value)
+		{
+			if (value == null)
+				return null;
+
+			if (value is string && !string.IsNullOrWhiteSpace((string)value))
+				return (string)value;
+
+			return null;
+		}
+
+		private IEnumerable<AbstractField> CreateRegularFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO)
+		{
 
 			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
 			var storage = indexDefinition.GetStorage(name, defaultStorage);

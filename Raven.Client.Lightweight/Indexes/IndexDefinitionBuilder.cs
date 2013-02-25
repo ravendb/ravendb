@@ -97,7 +97,13 @@ namespace Raven.Client.Indexes
 		/// Gets or sets the spatial options
 		/// </summary>
 		/// <value>The spatial options.</value>
-		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+		public IDictionary<Expression<Func<TReduceResult, object>>, SpatialOptions> SpatialIndexes { get; set; }
+
+		/// <summary>
+		/// Gets or sets the spatial options
+		/// </summary>
+		/// <value>The spatial options.</value>
+		public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
 
 
 		/// <summary>
@@ -115,7 +121,8 @@ namespace Raven.Client.Indexes
 			AnalyzersStrings = new Dictionary<string, string>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
 			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
-			SpatialIndexes = new Dictionary<string, SpatialOptions>();
+			SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
+			SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
 		}
 
 		/// <summary>
@@ -141,7 +148,7 @@ namespace Raven.Client.Indexes
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
 				TermVectors =  ConvertToStringDictionary(TermVectors),
-				SpatialIndexes = SpatialIndexes
+				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes)
 			};
 
 			foreach (var indexesString in IndexesStrings)
@@ -170,6 +177,13 @@ namespace Raven.Client.Indexes
 				if (indexDefinition.TermVectors.ContainsKey(termVectorString.Key))
 					throw new InvalidOperationException("There is a duplicate key in term vectors: " + termVectorString.Key);
 				indexDefinition.TermVectors.Add(termVectorString);
+			}
+
+			foreach (var spatialString in SpatialIndexesStrings)
+			{
+				if (indexDefinition.SpatialIndexes.ContainsKey(spatialString.Key))
+					throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
+				indexDefinition.SpatialIndexes.Add(spatialString);
 			}
 
 			if (Map != null)

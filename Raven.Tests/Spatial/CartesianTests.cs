@@ -20,12 +20,12 @@ namespace Raven.Tests.Spatial
 		{
 			public CartesianIndex()
 			{
-				Map = docs => from doc in docs select new { doc.Name, _ = SpatialGenerate("WKT", doc.WKT) };
+				Map = docs => from doc in docs select new { doc.Name, doc.WKT };
 
 				Index(x => x.Name, FieldIndexing.Analyzed);
 				Store(x => x.Name, FieldStorage.Yes);
 
-				Spatial("WKT", x => x.Cartesian(minX:0, maxX:2000, minY:0, maxY:2000, maxTreeLevel:12));
+				Spatial(x => x.WKT, x => x.Cartesian(minX:0, maxX:2000, minY:0, maxY:2000, maxTreeLevel:12));
 			}
 		}
 

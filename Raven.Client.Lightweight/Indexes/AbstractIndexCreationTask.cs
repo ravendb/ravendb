@@ -252,8 +252,9 @@ namespace Raven.Client.Indexes
 				StoresStrings = StoresStrings,
 				Suggestions = IndexSuggestions,
 				TermVectors = TermVectors,
-				TermVectorsStrings = TermVectorsStrings
-				SpatialIndexes = SpatialIndexes
+				TermVectorsStrings = TermVectorsStrings,
+				SpatialIndexes = SpatialIndexes,
+				SpatialIndexesStrings = SpatialIndexesStrings
 			}.ToIndexDefinition(Conventions);
 		}
 
