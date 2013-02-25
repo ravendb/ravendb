@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using System.Linq;
 
 namespace Raven.Tryouts
 {
@@ -7,34 +11,47 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			using(var store = new DocumentStore
+			for (int i = 0; i < 2; i++)
 			{
-				Url = "http://testrunner-pc:8080",
-				DefaultDatabase = "ReplicationA",
-				ApiKey = "Replication/5XA4ggEdJCG19GCVjihCOX",
-				Conventions =
+				using (var store = new DocumentStore
 				{
-					FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-				}
-			}.Initialize())
-			{
-				while (true)
+					Url = "http://localhost:8080",
+					DefaultDatabase = "test",
+				}.Initialize())
 				{
-					using (var session = store.OpenSession())
+					var list = new List<string>();
+					var sp = Stopwatch.StartNew();
+					int start = 0;
+					while (true)
 					{
-						session.Store(new User());
-						session.SaveChanges();
+						var result = store.DatabaseCommands.Query("PersonList", new IndexQuery
+						{
+							FieldsToFetch = new[] { Constants.DocumentIdFieldName },
+							PageSize = 1024,
+							Start = start
+						}, null);
+						if (result.Results.Count == 0)
+							break;
+						start += result.Results.Count;
+						list.AddRange(result.Results.Select(x => x.Value<string>(Constants.DocumentIdFieldName)));
+					}
+					sp.Stop();
+
+					Console.WriteLine("Read all ids {0:#,#} in {1:#,#} ms", list.Count, sp.ElapsedMilliseconds);
+
+					var rand = new Random();
+					list.Sort((s, s1) => rand.Next(-1, 1));
+					sp.Restart();
+
+					foreach (var id in list)
+					{
+						store.DatabaseCommands.Get(id);
 					}
 
-					Console.WriteLine("Wrote @ " + DateTime.Now);
-					Console.ReadLine();
+					sp.Stop();
+					Console.WriteLine("Read all docs {0:#,#} in {1:#,#} ms", list.Count, sp.ElapsedMilliseconds);
 				}
 			}
 		} 
 	}
-
-	public class User
-	{
-	}
-
 }

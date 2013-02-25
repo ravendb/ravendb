@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList
 			public string ETag { get; set; }
 			public DateTimeOffset LastModified { get; set; }
 		}
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.RunInMemory = false;
 		}

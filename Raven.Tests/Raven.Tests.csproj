@@ -636,6 +636,7 @@
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />
     <Compile Include="MailingList\Georgiosd.cs" />
+    <Compile Include="MailingList\gjerster.cs" />
     <Compile Include="MailingList\Hancock.cs" />
     <Compile Include="MailingList\Holt.cs" />
     <Compile Include="MailingList\InIssues.cs" />
