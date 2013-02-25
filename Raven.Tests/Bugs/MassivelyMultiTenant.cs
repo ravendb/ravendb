@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs
 		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
 
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.DefaultStorageTypeName = "esent";
 		}

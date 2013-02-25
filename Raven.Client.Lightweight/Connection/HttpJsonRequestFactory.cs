@@ -6,11 +6,16 @@ using System.Collections.Specialized;
 #endif
 using System.Net;
 using System.Threading;
+using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -82,8 +87,10 @@ namespace Raven.Client.Connection
 				if(duration.TotalSeconds > 0)
 					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
-				if ((DateTimeOffset.Now - cachedRequest.Time) < duration) // can serve directly from local cache
+				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow- cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
+
+				cachedRequest.ForceServerCheck = false;
 			}
 
 			setHeader("If-None-Match", cachedRequest.Headers["ETag"]);
@@ -104,7 +111,17 @@ namespace Raven.Client.Connection
 			NumOfCachedRequests = 0;
 		}
 
+		public void ExpireItemsFromCache(string db)
+		{
+			cache.ForceServerCheckOfCachedItemsForDatabase(db);
+			NumberOfCacheResets++;
+		}
 
+		/// <summary>
+		/// The number of cache evictions forced by
+		/// tracking changes if aggressive cache was enabled
+		/// </summary>
+		public int NumberOfCacheResets { get; private set; }
 
 		/// <summary>
 		/// The number of requests that we got 304 for 
@@ -113,6 +130,14 @@ namespace Raven.Client.Connection
 		public int NumberOfCachedRequests
 		{
 			get { return NumOfCachedRequests; }
+		}
+
+		/// <summary>
+		/// The number of currently held requests in the cache
+		/// </summary>
+		public int CurrentCacheSize
+		{
+			get { return cache.CurrentSize; }
 		}
 
 		/// <summary>
@@ -190,12 +215,14 @@ namespace Raven.Client.Connection
 				return;
 
 			var clone = data.CloneToken();
-			clone.EnsureSnapshot();
+			clone.EnsureCannotBeChangeAndEnableSnapshotting();
+
 			cache.Set(url, new CachedRequest
 			{
 				Data = clone,
-				Time = DateTimeOffset.Now,
-				Headers = new NameValueCollection(headers)
+				Time = SystemTime.UtcNow,
+				Headers = new NameValueCollection(headers),
+				Database = MultiDatabase.GetDatabaseName(url)
 			});
 		}
 
@@ -217,7 +244,7 @@ namespace Raven.Client.Connection
 		{
 			if (httpJsonRequest.CachedRequestDetails == null)
 				throw new InvalidOperationException("Cannot update cached response from a request that has no cached information");
-			httpJsonRequest.CachedRequestDetails.Time = DateTimeOffset.Now;
+			httpJsonRequest.CachedRequestDetails.Time = SystemTime.UtcNow;
 		}
 
 		/// <summary>

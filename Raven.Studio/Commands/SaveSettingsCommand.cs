@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Extensions;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -83,6 +85,42 @@ namespace Raven.Studio.Commands
 					.Catch();
 			}
 
+			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
+			if (sqlReplicationSettings != null)
+			{
+				if (sqlReplicationSettings.SqlReplicationConfigs.Any(config => config.Name == "Temp_Name") == false && sqlReplicationSettings.SqlReplicationConfigs.Any(config => string.IsNullOrWhiteSpace(config.Name)) == false)
+				{
+					session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+					       .ContinueOnSuccessInTheUIThread(documents =>
+					       {
+						       sqlReplicationSettings.UpdateIds();
+						       if (documents != null)
+						       {
+							       foreach (var sqlReplicationConfig in documents)
+							       {
+								       if (sqlReplicationSettings.SqlReplicationConfigs.All(config => config.Id != sqlReplicationConfig.Id))
+								       {
+									       session.Delete(sqlReplicationConfig);
+								       }
+							       }
+						       }
+
+						       foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
+						       {
+							       sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
+							       session.Store(sqlReplicationConfig);
+						       }
+
+						       session.SaveChangesAsync().Catch();
+					       })
+					       .Catch();
+				}
+				else
+				{
+					ApplicationModel.Current.AddNotification(new Notification("Sql Replicaiton settings not saved, all settings must have a name and it must be different from \"Temp_Name\"", NotificationLevel.Error));
+				}
+			}
+
             var versioningSettings = settingsModel.GetSection<VersioningSettingsSectionModel>();
             if (versioningSettings != null)
 			{
@@ -143,13 +181,34 @@ namespace Raven.Studio.Commands
 			if(periodicBackup.PeriodicBackupSetup == null)
 				return;
 
-            if (periodicBackup.IsS3Selected.Value)
-                periodicBackup.PeriodicBackupSetup.GlacierVaultName = string.Empty;
-            else
-                periodicBackup.PeriodicBackupSetup.S3BucketName = string.Empty;
+			switch (periodicBackup.SelectedOption.Value)
+			{
+				case 0:
+					periodicBackup.PeriodicBackupSetup.GlacierVaultName = null;
+					periodicBackup.PeriodicBackupSetup.S3BucketName = null;
+					break;
+				case 1:
+					periodicBackup.PeriodicBackupSetup.LocalFolderName = null;
+					periodicBackup.PeriodicBackupSetup.S3BucketName = null;
+					break;
+				case 2:
+					periodicBackup.PeriodicBackupSetup.GlacierVaultName = null;
+					periodicBackup.PeriodicBackupSetup.LocalFolderName = null;
+					break;
+			}
 
             settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
 			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
+
+			string activeBundles;
+			settingsModel.DatabaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
+
+			if (activeBundles == null || activeBundles.Contains("PeriodicBackup") == false)
+			{
+				activeBundles = "PeriodicBackup;" + activeBundles;
+			}
+
+			settingsModel.DatabaseDocument.Settings["Raven/ActiveBundles"] = activeBundles;
 
 			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 
@@ -210,7 +269,7 @@ namespace Raven.Studio.Commands
 
 			foreach (var apiKeyDefinition in apiKeysToDelete)
 			{
-				ApplicationModel.DatabaseCommands.ForDefaultDatabase().DeleteDocumentAsync(apiKeyDefinition.Id);
+				ApplicationModel.DatabaseCommands.ForSystemDatabase().DeleteDocumentAsync(apiKeyDefinition.Id);
 			}
 
 			foreach (var apiKeyDefinition in apiKeysModel.ApiKeys)

@@ -103,7 +103,7 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
@@ -171,31 +171,31 @@
                            MouseLeftButtonDown="ToggleBundles"
 						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Replication}"/>
 
-				<CheckBox x:Name="Versioning"
+				<CheckBox x:Name="SqlReplication"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="5"
                           Margin="5"
-						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Versioning}"/>
+						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=SqlReplication}"/>
 				<TextBlock Grid.Column="1"
                            Grid.Row="5"
-                           Text="Versioning Bundle"
+                           Text="Sql Replication Bundle"
                            Margin="5"
                            MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Versioning}"/>
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=SqlReplication}"/>
 
-				<CheckBox x:Name="Authorization"
+				<CheckBox x:Name="Versioning"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="6"
                           Margin="5"
-						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Authorization}"/>
+						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Versioning}"/>
 				<TextBlock Grid.Column="1"
                            Grid.Row="6"
-                           Text="Authorization Bundle"
+                           Text="Versioning Bundle"
                            Margin="5"
                            MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Authorization}"/>
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Versioning}"/>
 
 				<CheckBox x:Name="Periodic"
                           Grid.Row="7"

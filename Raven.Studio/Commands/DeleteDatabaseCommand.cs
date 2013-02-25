@@ -24,7 +24,7 @@ namespace Raven.Studio.Commands
 					{
 						var asyncDatabaseCommands = ApplicationModel.Current.Server.Value.DocumentStore
 							.AsyncDatabaseCommands
-							.ForDefaultDatabase();
+							.ForSystemDatabase();
 						var relativeUrl = "/admin/databases/" + databasesModel.SelectedDatabase.Name;
 						if (deleteDatabase.hardDelete.IsChecked == true)
 							relativeUrl += "?hard-delete=true";

@@ -15,7 +15,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079",
 				Conventions =
 				{
-					FailoverBehavior = FailoverBehavior.FailImmediately
+					FailoverBehavior = FailoverBehavior.FailImmediately,
+					ShouldAggressiveCacheTrackChanges = false
 				}
 			}.Initialize())
 			{
@@ -39,7 +40,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079",
 				Conventions =
 				{
-					FailoverBehavior = FailoverBehavior.FailImmediately
+					FailoverBehavior = FailoverBehavior.FailImmediately,
+					ShouldAggressiveCacheTrackChanges = false
 				}
 			}.Initialize())
 			{
@@ -77,7 +79,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079",
 				Conventions =
 				{
-					FailoverBehavior = FailoverBehavior.FailImmediately
+					FailoverBehavior = FailoverBehavior.FailImmediately,
+					ShouldAggressiveCacheTrackChanges = false
 				}
 			}.Initialize())
 			{
@@ -117,7 +120,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079",
 				Conventions =
 					{
-						FailoverBehavior = FailoverBehavior.FailImmediately
+						FailoverBehavior = FailoverBehavior.FailImmediately,
+						ShouldAggressiveCacheTrackChanges = false
 					}
 			}.Initialize())
 			{

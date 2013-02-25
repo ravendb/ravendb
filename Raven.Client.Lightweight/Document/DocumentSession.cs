@@ -3,20 +3,24 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document.Batches;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Util;
+using Raven.Client.WinRT.MissingFromWinRT;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -300,8 +304,54 @@ namespace Raven.Client.Document
 			return Load<T>(documentKeys);
 		}
 
-		public T[] LoadInternal<T>(string[] ids, string[] includes)
-		{
+	    private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+	    {
+	        if (ids.Length == 0)
+	            return new T[0];
+
+	        IncrementRequestCount();
+
+            if (typeof (T).IsArray)
+            {
+                // REturns array of arrays, public APIs don't surface that yet though as we only support Transform
+                // With a single Id
+                var arrayOfArrays = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
+                                            .Results
+                                            .Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
+                                            .Select(values =>
+                                            {
+                                                var array = values.Select(y => y.Deserialize(typeof(T).GetElementType(), Conventions)).ToArray();
+                                                var newArray = Array.CreateInstance(typeof (T).GetElementType(), array.Length);
+                                                Array.Copy(array, newArray, array.Length);
+                                                return newArray;
+                                            })
+                                            .Cast<T>()
+                                            .ToArray();
+                
+                return arrayOfArrays;
+            }
+            else
+            {
+                var items = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
+                                            .Results
+                                            .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
+                                            .Select(JsonExtensions.ToJObject)
+                                            .Select(x => x.Deserialize(typeof (T), Conventions))
+                                            .Cast<T>()
+                                            .ToArray();
+                
+                if (items.Length > ids.Length)
+                {
+                    throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
+                        transformer,
+                        typeof(T).Name));
+                }
+                return items;
+            }
+	    }
+
+	    public T[] LoadInternal<T>(string[] ids, string[] includes)
+	    {
 			if (ids.Length == 0)
 				return new T[0];
 
@@ -318,7 +368,7 @@ namespace Raven.Client.Document
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 
 			return multiLoadOperation.Complete<T>();
-		}
+	    }
 
 		public T[] LoadInternal<T>(string[] ids)
 		{
@@ -360,12 +410,13 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <param name="indexName">Name of the index.</param>
-		/// <returns></returns>
-		public IRavenQueryable<T> Query<T>(string indexName)
+		/// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
+		public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands, null);
-			return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, indexName, null, this, DatabaseCommands, null);
+			var highlightings = new RavenQueryHighlightings();
+			var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, DatabaseCommands, null, isMapReduce);
+			return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, DatabaseCommands, null, isMapReduce);
 		}
 
 		/// <summary>
@@ -377,7 +428,7 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var indexCreator = new TIndexCreator();
-			return Query<T>(indexCreator.IndexName);
+			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
 		}
 
 		/// <summary>
@@ -400,7 +451,7 @@ namespace Raven.Client.Document
 			value.ETag = jsonDocument.Etag;
 			value.OriginalValue = jsonDocument.DataAsJson;
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-			foreach (var property in entity.GetType().GetProperties())
+			foreach (var property in entity.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
 			{
 				if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
 					continue;
@@ -459,7 +510,22 @@ namespace Raven.Client.Document
 			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
 		}
 
-		/// <summary>
+	    public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+	    {
+	        var transformer = new TTransformer().TransfomerName;
+	        return this.LoadInternal<TResult>(new string[] {id}, transformer).FirstOrDefault();
+	    }
+
+	    public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+	    {
+            var transformer = new TTransformer().TransfomerName;
+	        var configuration = new RavenLoadConfiguration();
+	        configure(configuration);
+            return this.LoadInternal<TResult>(new string[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+	    }
+
+
+	    /// <summary>
 		/// Gets the document URL for the specified entity.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
@@ -471,6 +537,56 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("Could not figure out identifier for transient instance");
 
 			return DatabaseCommands.UrlFor(value.Key);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
+		{
+			QueryHeaderInformation _;
+			return Stream(query, out _);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector) query);
+			var indexQuery = ravenQueryInspector.GetIndexQuery(false);
+			var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			return YieldStream<T>(enumerator);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
+		{
+			QueryHeaderInformation _;
+			return Stream<T>(query, out _);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)query);
+			var indexQuery = ravenQueryInspector.GetIndexQuery(false);
+			var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			return YieldStream<T>(enumerator);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+		{
+			var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+			return YieldStream<T>(enumerator);
+		}
+
+		private IEnumerator<StreamResult<T>> YieldStream<T>(IEnumerator<RavenJObject> enumerator)
+		{
+			while (enumerator.MoveNext())
+			{
+				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
+
+				yield return new StreamResult<T>
+				{
+					Document = (T) ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+					Etag = document.Etag,
+					Key = document.Key,
+					Metdata = document.Metadata
+				};
+			}
 		}
 
 		/// <summary>
@@ -501,7 +617,7 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var index = new TIndexCreator();
-			return LuceneQuery<T>(index.IndexName);
+			return LuceneQuery<T>(index.IndexName, index.IsMapReduce);
 		}
 
 		/// <summary>
@@ -510,9 +626,9 @@ namespace Raven.Client.Document
 		/// <typeparam name="T"></typeparam>
 		/// <param name="indexName">Name of the index.</param>
 		/// <returns></returns>
-		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
+		public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners);
+			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners, isMapReduce);
 		}
 
 		/// <summary>
@@ -578,15 +694,15 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
 		{
-			return Advanced.LuceneQuery<T>(indexName);
+			return Advanced.LuceneQuery<T>(indexName, isMapReduce);
 		}
 
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
-		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
+		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
 		{
 			throw new NotSupportedException();
 		}
@@ -626,7 +742,7 @@ namespace Raven.Client.Document
 				IncrementRequestCount();
 				while (ExecuteLazyOperationsSingleStep())
 				{
-					Thread.Sleep(100);
+					ThreadSleep.Sleep(100);
 				}
 
 				foreach (var pendingLazyOperation in pendingLazyOperations)

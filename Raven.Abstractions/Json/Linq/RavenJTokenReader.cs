@@ -241,9 +241,12 @@ namespace Raven.Json.Linq
 				if (Value != null)
 				{
 					string s;
+#if !NETFX_CORE
 					if (Value is IConvertible)
 						s = ((IConvertible)Value).ToString(Culture);
-					else if (Value is IFormattable)
+					else 
+#endif
+					if (Value is IFormattable)
 						s = ((IFormattable)Value).ToString(null, Culture);
 					else
 						s = Value.ToString();
@@ -421,6 +424,10 @@ namespace Raven.Json.Linq
 				case JTokenType.Bytes:
 					return JsonToken.Bytes;
 				case JTokenType.Guid:
+					return JsonToken.String;
+				case JTokenType.TimeSpan:
+					return JsonToken.String;
+				case JTokenType.Uri:
 					return JsonToken.String;
 				default:
 					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("Type", token.Type, "Unexpected JTokenType.");

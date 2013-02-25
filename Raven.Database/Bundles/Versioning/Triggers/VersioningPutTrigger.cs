@@ -56,7 +56,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 		}
 
-		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Guid etag, TransactionInformation transactionInformation)
+		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
 		{
 			VersioningConfiguration versioningConfiguration;
 			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)

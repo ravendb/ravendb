@@ -21,22 +21,24 @@ namespace Raven.Database.Indexing
 {
 	public static class QueryBuilder
 	{
-		static readonly Regex untokenizedQuery = new Regex(@"([\w\d<>_]+?):[\s\(]*(\[\[.+?\]\])|,\s*(\[\[.+?\]\])\s*[,\)]", RegexOptions.Compiled);
-		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
-		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
+		private const string FieldRegexVal = @"([@\w\d<>_]+?):"; 
+		static readonly Regex fieldQuery = new Regex(FieldRegexVal, RegexOptions.Compiled);
+		static readonly Regex untokenizedQuery = new Regex( FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
+		static readonly Regex searchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
+		static readonly Regex dateQuery = new Regex(FieldRegexVal + @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
 		private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.OrdinalIgnoreCase)
 		{
 			{"in", (field, args) => new TermsMatchQuery(field, args)},
-			{"emptyIn", (field, args) => new TermsMatchQuery(field, Enumerable.Empty<string>())}
+			{"emptyIn", (field, args) => new TermsMatchQuery(field, args)}
 		};
 
-		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
+		public static Query BuildQuery(string query, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			return BuildQuery(query, new IndexQuery(), analyzer);
 		}
 
-		public static Query BuildQuery(string query, IndexQuery indexQuery, PerFieldAnalyzerWrapper analyzer)
+		public static Query BuildQuery(string query, IndexQuery indexQuery, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			var originalQuery = query;
 			try
@@ -52,7 +54,7 @@ namespace Raven.Database.Indexing
 				query = PreProcessSearchTerms(query);
 				query = PreProcessDateTerms(query, queryParser);
 				var generatedQuery = queryParser.Parse(query);
-				generatedQuery = HandleMethods(generatedQuery);
+				generatedQuery = HandleMethods(generatedQuery, analyzer);
 				return generatedQuery;
 			}
 			catch (ParseException pe)
@@ -64,12 +66,21 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static Query HandleMethods(Query query)
+		private static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			var termQuery = query as TermQuery;
 			if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
 			{
 				return HandleMethodsForQueryAndTerm(query, termQuery.Term);
+			}
+			var pharseQuery = query as PhraseQuery;
+			if (pharseQuery != null)
+			{
+				var terms = pharseQuery.GetTerms();
+				if (terms.All(x => x.Field.StartsWith("@")) == false ||
+				    terms.Select(x => x.Field).Distinct().Count() != 1)
+					return query;
+				return HandleMethodsForQueryAndTerm(query, terms);
 			}
 			var wildcardQuery = query as WildcardQuery;
 			if (wildcardQuery != null)
@@ -81,7 +92,7 @@ namespace Raven.Database.Indexing
 			{
 				foreach (var c in booleanQuery.Clauses)
 				{
-					c.Query = HandleMethods(c.Query);
+					c.Query = HandleMethods(c.Query, analyzer);
 				}
 				if (booleanQuery.Clauses.Count == 0)
 					return booleanQuery;
@@ -113,17 +124,10 @@ namespace Raven.Database.Indexing
 		private static Query HandleMethodsForQueryAndTerm(Query query, Term term)
 		{
 			Func<string, List<string>, Query> value;
-			var indexOfFieldStart = term.Field.IndexOf('<');
-			var indexOfFieldEnd = term.Field.LastIndexOf('>');
-			if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)
+			var field = term.Field;
+			if (TryHandlingMethodForQueryAndTerm(ref field, out value) == false) 
 				return query;
-			var method = term.Field.Substring(1, indexOfFieldStart - 1);
-			var field = term.Field.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
 
-			if (queryMethods.TryGetValue(method, out value) == false)
-			{
-				throw new InvalidOperationException("Method call " + term.Field + " is invalid.");
-			}
 			var parts = unescapedSplitter.Split(term.Text);
 			var list = new List<string>(
 					from part in parts
@@ -131,6 +135,36 @@ namespace Raven.Database.Indexing
 					select part.Replace("`,`", ",")
 			);
 			return value(field, list);
+		}
+
+		private static Query HandleMethodsForQueryAndTerm(Query query, Term[] terms)
+		{
+			Func<string, List<string>, Query> value;
+			var field = terms[0].Field;
+			if (TryHandlingMethodForQueryAndTerm(ref field, out value) == false)
+				return query;
+
+			return value(field, terms.Select(x=>x.Text).ToList());
+		}
+
+		private static bool TryHandlingMethodForQueryAndTerm(ref string field,
+			out Func<string, List<string>, Query> value)
+		{
+			value = null;
+			var indexOfFieldStart = field.IndexOf('<');
+			var indexOfFieldEnd = field.LastIndexOf('>');
+			if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)
+			{
+				return false;
+			}
+			var method = field.Substring(1, indexOfFieldStart - 1);
+			field = field.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
+
+			if (queryMethods.TryGetValue(method, out value) == false)
+			{
+				throw new InvalidOperationException("Method call " + field + " is invalid.");
+			}
+			return true;
 		}
 
 		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
@@ -209,6 +243,7 @@ namespace Raven.Database.Indexing
 				return query;
 
 			var sb = new StringBuilder(query);
+			MatchCollection fieldMatches = null;
 
 			// process in reverse order to leverage match string indexes
 			for (var i = untokenizedMatches.Count; i > 0; i--)
@@ -218,13 +253,22 @@ namespace Raven.Database.Indexing
 				// specify that term for this field should not be tokenized
 				var value = match.Groups[2].Value;
 				var term = match.Groups[2];
+				string name = match.Groups[1].Value;
 				if (string.IsNullOrEmpty(value))
 				{
 					value = match.Groups[3].Value;
 					term = match.Groups[3];
+					if(fieldMatches == null)
+						fieldMatches = fieldQuery.Matches(query);
+
+					var lastField = fieldMatches.Cast<Match>().LastOrDefault(x => x.Index <= term.Index);
+					if (lastField != null)
+					{
+						name = lastField.Groups[1].Value;
+					}
 				}
 				var rawTerm = value.Substring(2, value.Length - 4);
-				queryParser.SetUntokenized(match.Groups[1].Value, Unescape(rawTerm));
+				queryParser.SetUntokenized(name, Unescape(rawTerm));
 
 
 				// introduce " " around the term

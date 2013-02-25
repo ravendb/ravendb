@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Indexing
 {
@@ -25,6 +26,8 @@ namespace Raven.Abstractions.Indexing
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
 			Fields = new List<string>();
+			Suggestions = new Dictionary<string, SuggestionOptions>();
+			TermVectors = new Dictionary<string, FieldTermVector>();
 		}
 
 		/// <summary>
@@ -81,14 +84,6 @@ namespace Raven.Abstractions.Indexing
 		public bool IsCompiled { get; set; }
 
 		/// <summary>
-		/// Returns a boolean value indicating whether this IndexDefinition is of a temporary index
-		/// </summary>
-		public bool IsTemp
-		{
-			get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase); }
-		}
-
-		/// <summary>
 		/// Gets or sets the stores options
 		/// </summary>
 		/// <value>The stores.</value>
@@ -118,6 +113,18 @@ namespace Raven.Abstractions.Indexing
 		public IList<string> Fields { get; set; }
 
 		/// <summary>
+		/// Gets or sets the suggest options
+		/// </summary>
+		/// <value>The suggest options.</value>
+		public IDictionary<string, SuggestionOptions> Suggestions { get; set; }
+
+		/// <summary>
+		/// Gets or sets the term vectors options
+		/// </summary>
+		/// <value>The term vectors.</value>
+		public IDictionary<string, FieldTermVector> TermVectors { get; set; }
+
+		/// <summary>
 		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
@@ -129,13 +136,15 @@ namespace Raven.Abstractions.Indexing
 			if (ReferenceEquals(this, other))
 				return true;
 			return Maps.SequenceEqual(other.Maps) &&
-			       Equals(other.Name, Name) &&
-			       Equals(other.Reduce, Reduce) &&
-			       Equals(other.TransformResults, TransformResults) &&
-			       DictionaryEquals(other.Stores, Stores) &&
-			       DictionaryEquals(other.Indexes, Indexes) &&
-			       DictionaryEquals(other.Analyzers, Analyzers) &&
-			       DictionaryEquals(other.SortOptions, SortOptions);
+					Equals(other.Name, Name) &&
+					Equals(other.Reduce, Reduce) &&
+					Equals(other.TransformResults, TransformResults) &&
+					DictionaryEquals(other.Stores, Stores) &&
+					DictionaryEquals(other.Indexes, Indexes) &&
+					DictionaryEquals(other.Analyzers, Analyzers) &&
+					DictionaryEquals(other.SortOptions, SortOptions) &&
+					DictionaryEquals(other.Suggestions, Suggestions) &&
+					DictionaryEquals(other.TermVectors, TermVectors);
 		}
 
 		private static bool DictionaryEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
@@ -216,6 +225,8 @@ namespace Raven.Abstractions.Indexing
 				result = (result * 397) ^ DictionaryHashCode(Indexes);
 				result = (result * 397) ^ DictionaryHashCode(Analyzers);
 				result = (result * 397) ^ DictionaryHashCode(SortOptions);
+				result = (result * 397) ^ DictionaryHashCode(Suggestions);
+				result = (result * 397) ^ DictionaryHashCode(TermVectors);
 				return result;
 			}
 		}
@@ -225,8 +236,6 @@ namespace Raven.Abstractions.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Temp"))
-					return "Temp";
 				if (name.StartsWith("Auto"))
 					return "Auto";
 				if (IsCompiled)
@@ -237,7 +246,7 @@ namespace Raven.Abstractions.Indexing
 			}
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Remove the default values that we don't actually need
 		/// </summary>
 		public void RemoveDefaultValues()
@@ -258,6 +267,14 @@ namespace Raven.Abstractions.Indexing
 			foreach (var toRemove in Analyzers.Where(x => string.IsNullOrEmpty(x.Value)).ToArray())
 			{
 				Analyzers.Remove(toRemove);
+			}
+			foreach (var toRemove in Suggestions.Where(x => x.Value.Distance == StringDistanceTypes.None).ToArray())
+			{
+				Suggestions.Remove(toRemove);
+			}
+			foreach (var toRemove in TermVectors.Where(x => x.Value == FieldTermVector.No).ToArray())
+			{
+				TermVectors.Remove(toRemove);
 			}
 		}
 
@@ -283,7 +300,45 @@ namespace Raven.Abstractions.Indexing
 				indexDefinition.SortOptions = new Dictionary<string, SortOptions>(SortOptions);
 			if (Stores != null)
 				indexDefinition.Stores = new Dictionary<string, FieldStorage>(Stores);
+			if (Suggestions != null)
+				indexDefinition.Suggestions = new Dictionary<string, SuggestionOptions>(Suggestions);
+			if (TermVectors != null)
+				indexDefinition.TermVectors = new Dictionary<string, FieldTermVector>(TermVectors);
 			return indexDefinition;
 		}
 	}
+
+
+	public class TransformerDefinition
+	{
+		/// <summary>
+		/// Gets or sets the translator function
+		/// </summary>
+		public string TransformResults { get; set; }
+		public string Name { get; set; }
+
+		public bool Equals(TransformerDefinition other)
+		{
+			return string.Equals(TransformResults, other.TransformResults);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((TransformerDefinition) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			return (TransformResults != null ? TransformResults.GetHashCode() : 0);
+		}
+
+		public TransformerDefinition Clone()
+		{
+			return (TransformerDefinition) base.MemberwiseClone();
+		}
+	}
+
 }

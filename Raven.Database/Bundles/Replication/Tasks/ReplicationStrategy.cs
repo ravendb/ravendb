@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Database;
@@ -11,25 +12,46 @@ namespace Raven.Bundles.Replication.Tasks
 {
 	public class ReplicationStrategy
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		public bool FilterDocuments(string destinationId, string key, RavenJObject metadata)
 		{
-			if (IsSystemDocumentId(key)) 
+			if (IsSystemDocumentId(key))
+			{
+				log.Debug("Will not replicate document '{0}' to '{1}' because it is a system document", key, destinationId);
 				return false;
-			if (metadata.ContainsKey(Constants.NotForReplication) && metadata.Value<bool>(Constants.NotForReplication)) // not explicitly marked to skip
+			}
+			if (metadata.ContainsKey(Constants.NotForReplication) && metadata.Value<bool>(Constants.NotForReplication))
+				// not explicitly marked to skip
+			{
+				log.Debug("Will not replicate document '{0}' to '{1}' because it was marked as not for replication", key, destinationId); 
 				return false;
-			if (metadata[Constants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
+			}
+			if (metadata[Constants.RavenReplicationConflict] != null)
+				// don't replicate conflicted documents, that just propagate the conflict
+			{
+				log.Debug("Will not replicate document '{0}' to '{1}' because it a conflict document", key, destinationId); 
 				return false;
+			}
 
 			if (metadata.Value<string>(Constants.RavenReplicationSource) == destinationId) // prevent replicating back to source
+			{
+				log.Debug("Will not replicate document '{0}' to '{1}' because the destination server is the same server it originated from", key, destinationId); 
 				return false;
+			}
 
 			switch (ReplicationOptionsBehavior)
 			{
 				case TransitiveReplicationOptions.None:
 					var value = metadata.Value<string>(Constants.RavenReplicationSource);
 					var replicateDoc = value == null || (value == CurrentDatabaseId);
+					if (replicateDoc)
+					{
+						log.Debug("Will not replicate document '{0}' to '{1}' because it was not created on the current server, and TransitiveReplicationOptions = none", key, destinationId);
+					}
 					return replicateDoc;
 			}
+			log.Debug("Will replicate '{0}' to '{1}'", key, destinationId);
 			return true;
 
 		}

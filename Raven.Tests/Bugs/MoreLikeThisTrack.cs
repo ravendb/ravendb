@@ -42,6 +42,8 @@ namespace Raven.Tests.Bugs
 				Store(x => x.Genre, FieldStorage.Yes);
 				Store(x => x.Artist, FieldStorage.Yes);
 				Store("FreeText", FieldStorage.Yes);
+
+				TermVector("FreeText", FieldTermVector.Yes);
 			}
 		}
 

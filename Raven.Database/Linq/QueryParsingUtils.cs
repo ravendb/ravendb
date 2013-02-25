@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.CSharp;
@@ -46,6 +47,7 @@ namespace Raven.Database.Linq
 				typeof (LinqOnDynamic).Namespace,
 				typeof(Field).Namespace,
 				typeof(CultureInfo).Namespace,
+				typeof(Regex).Namespace
 			};
 
 			foreach (var extension in extensions)
@@ -285,7 +287,7 @@ namespace Raven.Database.Linq
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
 				typeof (Binder).Assembly.Location,
-				typeof (Field).Assembly.Location
+				typeof (Field).Assembly.Location,
 			};
 			foreach (var extension in extensions)
 			{
@@ -326,7 +328,9 @@ namespace Raven.Database.Linq
 			CodeVerifier.AssertNoSecurityCriticalCalls(results.CompiledAssembly);
 
 			Type result = results.CompiledAssembly.GetType(name);
-
+			if (result == null)
+				throw new InvalidOperationException(
+					"Could not get compiled index type. This probably means that there is something wrong with the assembly load context.");
 			cacheEntries.TryAdd(source, new CacheEntry
 			{
 				Source = source,

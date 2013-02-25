@@ -20,7 +20,7 @@ namespace Raven.Tests.Storage
 			{
 				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende","ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.Batch(viewer => Assert.NotEmpty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100)));
+				tx.Batch(viewer => Assert.NotEmpty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100)));
 			}
 		}
 
@@ -35,7 +35,7 @@ namespace Raven.Tests.Storage
 
 				Assert.NotEmpty(reduceKeyAndBuckets);
 
-				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100)));
+				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100)));
 			}
 		}
 
@@ -47,7 +47,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 				tx.Batch(mutator => mutator.MapReduce.DeleteMappedResultsForView("test"));
 
-				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100)));
+				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 0, 100)));
 			}
 		}
 
@@ -59,7 +59,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.Batch(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100).Count()));
 			}
 		}
 
@@ -74,7 +74,7 @@ namespace Raven.Tests.Storage
 					mutator.MapReduce.PutMappedResult("test", "users/rahien", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }));
 				});
 
-				tx.Batch(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100).Count()));
 			}
 		}
 	}

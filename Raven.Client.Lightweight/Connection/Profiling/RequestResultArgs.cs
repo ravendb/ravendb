@@ -7,7 +7,7 @@ namespace Raven.Client.Connection.Profiling
 	/// <summary>
 	/// The result of a request made to the server
 	/// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 	[Serializable]
 #endif
 	public class RequestResultArgs : EventArgs
@@ -58,5 +58,18 @@ namespace Raven.Client.Connection.Profiling
 		/// The result of this request
 		/// </summary>
 		public string Result { get; set; }
+
+		/// <summary>
+		/// Total amount of memory used by strings here
+		/// </summary>
+		public int TotalSize
+		{
+			get
+			{
+				return (Result != null ? Result.Length : 0) +
+				       (PostedData != null ? PostedData.Length : 0) +
+				       (Url != null ? Url.Length : 0);
+			}
+		}
 	}
 }

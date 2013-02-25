@@ -20,6 +20,9 @@ namespace Raven.Studio.Models
 		public IndexesModel()
 		{
 			ModelUrl = "/indexes";
+			ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
+																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
+																	   "/indexes";
 			GroupedIndexes =
 				new ObservableCollection<IndexListItem>();
 			ItemSelection = new ItemSelection<IndexItem>();

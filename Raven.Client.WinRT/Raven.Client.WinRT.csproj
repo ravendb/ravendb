@@ -159,6 +159,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\JavaScriptDateTimeConverter.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Converters\JavaScriptDateTimeConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\JsonValueConverter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Converters\JsonValueConverter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\KeyValuePairConverter.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Converters\KeyValuePairConverter.cs</Link>
     </Compile>
@@ -423,6 +426,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IReferenceResolver.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IReferenceResolver.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ITraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ITraceWriter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IValueProvider.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IValueProvider.cs</Link>
     </Compile>
@@ -494,6 +500,12 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\StreamingContext.cs">
       <Link>Imports\Imports\Newtonsoft.Json\StreamingContext.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\StringEscapeHandling.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\StringEscapeHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\TraceLevel.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\TraceLevel.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\TypeNameHandling.cs">
       <Link>Imports\Imports\Newtonsoft.Json\TypeNameHandling.cs</Link>
@@ -612,15 +624,6 @@
     <Compile Include="..\Raven.Abstractions\Connection\CountingStream.cs">
       <Link>Imports\Connection\CountingStream.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\HttpRavenRequest.cs">
-      <Link>Imports\Connection\HttpRavenRequest.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\HttpRavenRequestFactory.cs">
-      <Link>Imports\Connection\HttpRavenRequestFactory.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\HttpRequestHelper.cs">
-      <Link>Imports\Connection\HttpRequestHelper.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
       <Link>Imports\Connection\OAuthHelper.cs</Link>
     </Compile>
@@ -662,9 +665,6 @@
     </Compile>
     <Compile Include="..\raven.abstractions\data\ChangeNotification.cs">
       <Link>Imports\Data\ChangeNotification.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\ConnectionStringParser.cs">
-      <Link>Imports\Data\ConnectionStringParser.cs</Link>
     </Compile>
     <Compile Include="..\raven.abstractions\data\Constants.cs">
       <Link>Imports\Data\Constants.cs</Link>
@@ -726,6 +726,9 @@
     <Compile Include="..\raven.abstractions\data\LogItem.cs">
       <Link>Imports\Data\LogItem.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\MoreLikeThisQuery.cs">
+      <Link>Imports\Data\MoreLikeThisQuery.cs</Link>
+    </Compile>
     <Compile Include="..\raven.abstractions\data\MultiLoadResult.cs">
       <Link>Imports\Data\MultiLoadResult.cs</Link>
     </Compile>
@@ -785,9 +788,6 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\CharExtensions.cs">
       <Link>Imports\Extensions\CharExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\CryptoTransformExtensions.cs">
-      <Link>Imports\Extensions\CryptoTransformExtensions.cs</Link>
     </Compile>
     <Compile Include="..\raven.abstractions\extensions\DisposableAction.cs">
       <Link>Imports\Extensions\DisposableAction.cs</Link>
@@ -1068,9 +1068,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformer.cs">
       <Link>Imports\Connection\ReplicationInformer.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformerCache.cs">
-      <Link>Imports\Connection\ReplicationInformerCache.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\SerializationHelper.cs">
       <Link>Imports\Connection\SerializationHelper.cs</Link>
     </Compile>
@@ -1095,6 +1092,9 @@
     <Compile Include="..\raven.client.lightweight\converters\ITypeConverter.cs">
       <Link>Imports\Converters\ITypeConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
+      <Link>Imports\DocumentStoreBase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
       <Link>Imports\Document\AbstractDocumentQuery.cs</Link>
     </Compile>
@@ -1118,9 +1118,6 @@
     </Compile>
     <Compile Include="..\raven.client.lightweight\document\async\AsyncDocumentKeyGeneration.cs">
       <Link>Imports\Document\Async\AsyncDocumentKeyGeneration.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\async\AsyncDocumentSession.cs">
-      <Link>Imports\Document\Async\AsyncDocumentSession.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
@@ -1152,9 +1149,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazySuggestOperation.cs">
       <Link>Imports\Document\Batches\LazySuggestOperation.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\BulkInsertOperation.cs">
-      <Link>Imports\Document\BulkInsertOperation.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\DefaultRavenContractResolver.cs">
       <Link>Imports\Document\DefaultRavenContractResolver.cs</Link>
     </Compile>
@@ -1169,9 +1163,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
       <Link>Imports\Document\DocumentSessionListeners.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentStore.cs">
-      <Link>Imports\Document\DocumentStore.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\EntityToJson.cs">
       <Link>Imports\Document\EntityToJson.cs</Link>
@@ -1230,9 +1221,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\ReflectionUtil.cs">
       <Link>Imports\Document\ReflectionUtil.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\RemoteBulkInsertOperation.cs">
-      <Link>Imports\Document\RemoteBulkInsertOperation.cs</Link>
-    </Compile>
     <Compile Include="..\raven.client.lightweight\document\sessionoperations\LoadOperation.cs">
       <Link>Imports\Document\SessionOperations\LoadOperation.cs</Link>
     </Compile>
@@ -1241,9 +1229,6 @@
     </Compile>
     <Compile Include="..\raven.client.lightweight\document\sessionoperations\QueryOperation.cs">
       <Link>Imports\Document\SessionOperations\QueryOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\ShardedDocumentQuery.cs">
-      <Link>Imports\Document\ShardedDocumentQuery.cs</Link>
     </Compile>
     <Compile Include="..\raven.client.lightweight\exceptions\ConflictException.cs">
       <Link>Imports\Exceptions\ConflictException.cs</Link>
@@ -1335,9 +1320,6 @@
     <Compile Include="..\raven.client.lightweight\indexes\IClientSideDatabase.cs">
       <Link>Imports\Indexes\IClientSideDatabase.cs</Link>
     </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\IndexCreation.cs">
-      <Link>Imports\Indexes\IndexCreation.cs</Link>
-    </Compile>
     <Compile Include="..\raven.client.lightweight\indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
     </Compile>
@@ -1413,6 +1395,51 @@
     <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
       <Link>Imports\RavenQueryStatistics.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\AsyncShardedDocumentSession.cs">
+      <Link>Imports\Shard\AsyncShardedDocumentSession.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\AsyncShardedHiloKeyGenerator.cs">
+      <Link>Imports\Shard\AsyncShardedHiloKeyGenerator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\BaseShardedDocumentSession.cs">
+      <Link>Imports\Shard\BaseShardedDocumentSession.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\DefaultShardResolutionStrategy.cs">
+      <Link>Imports\Shard\DefaultShardResolutionStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\IShardAccessStrategy.cs">
+      <Link>Imports\Shard\IShardAccessStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\IShardResolutionStrategy.cs">
+      <Link>Imports\Shard\IShardResolutionStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ParallelShardAccessStrategy.cs">
+      <Link>Imports\Shard\ParallelShardAccessStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\SequentialShardAccessStrategy.cs">
+      <Link>Imports\Shard\SequentialShardAccessStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDatabaseChanges.cs">
+      <Link>Imports\Shard\ShardedDatabaseChanges.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentSession.cs">
+      <Link>Imports\Shard\ShardedDocumentSession.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentStore.cs">
+      <Link>Imports\Shard\ShardedDocumentStore.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedHiloKeyGenerator.cs">
+      <Link>Imports\Shard\ShardedHiloKeyGenerator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedObservableWithTask.cs">
+      <Link>Imports\Shard\ShardedObservableWithTask.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardRequestData.cs">
+      <Link>Imports\Shard\ShardRequestData.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy.cs">
+      <Link>Imports\Shard\ShardStrategy.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\StoredEntityEventArgs.cs">
       <Link>Imports\StoredEntityEventArgs.cs</Link>
     </Compile>
@@ -1440,20 +1467,40 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\CD.cs">
+      <Link>Imports\MissingFromSilverlight\CD.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\MD5.cs">
+      <Link>Imports\MissingFromSilverlight\MD5.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\NameValueCollection.cs">
       <Link>Imports\MissingFromSilverlight\NameValueCollection.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\SplitOrderedList.cs">
+      <Link>Imports\MissingFromSilverlight\SplitOrderedList.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\Stopwatch.cs">
+      <Link>Imports\MissingFromSilverlight\Stopwatch.cs</Link>
+    </Compile>
+    <Compile Include="Connection\ReplicationInformerLocalCache.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="MissingFromWinRT\AppDomain.cs" />
+    <Compile Include="MissingFromWinRT\AssemblyExtentionsMissingsFromWinRT.cs" />
     <Compile Include="MissingFromWinRT\DescriptionAttribute.cs" />
-    <Compile Include="MissingFromWinRT\IsolatedStorageFile.cs" />
+    <Compile Include="MissingFromWinRT\ListExtenMissingFromWinRT.cs" />
+    <Compile Include="MissingFromWinRT\StringExtensions.cs" />
+    <Compile Include="MissingFromWinRT\ThreadSleep.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Reference Include="Microsoft.Threading.Tasks">
+      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\win8\Microsoft.Threading.Tasks.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '11.0' ">
     <VisualStudioVersion>11.0</VisualStudioVersion>
   </PropertyGroup>

@@ -19,7 +19,17 @@ namespace Raven.Database.Indexing
 
 		public static int MapBucket(string docId)
 		{
-			var hash = AbsStableInvariantIgnoreCaseStringHash(docId);
+			int hash;
+			if (char.IsDigit(docId[docId.Length - 1]))// ends with a number, probably users/123, so we will use that
+			{
+				hash = docId.Where(char.IsDigit).Aggregate(0, (current, ch) => current*10 + (ch - '0'));
+			}
+			else
+			{
+				if (docId.Length > 3) // try to achieve a more common prefix
+					docId = docId.Substring(0, docId.Length - 2);
+				hash = AbsStableInvariantIgnoreCaseStringHash(docId);
+			}
 			return hash % (1024 * 1024);
 		}
 	}

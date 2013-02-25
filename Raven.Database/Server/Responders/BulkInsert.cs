@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using NetTopologySuite.IO;
+using System.Threading;
+using System.Web;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Util.Streams;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Server.Responders
 {
@@ -34,7 +34,10 @@ namespace Raven.Database.Server.Responders
 				// to handle the authentication
 				return; 
 			}
-
+			if (HttpContext.Current != null)
+			{
+				HttpContext.Current.Server.ScriptTimeout = 60*60*6; // six hours should do it, I think.
+			}
 			var options = new BulkInsertOptions
 			{
 				CheckForUpdates = context.GetCheckForUpdates(),
@@ -43,37 +46,64 @@ namespace Raven.Database.Server.Responders
 
 			var sp = Stopwatch.StartNew();
 
-			var documents = Database.BulkInsert(options, YieldBatches(context));
+			var status = new RavenJObject
+			{
+				{"Documents", 0},
+				{"Completed", false}
+			};
 
-			context.Log(log => log.Debug("\tBulk inserted {0:#,#;;0} documents in {1}", documents, sp.Elapsed));
+			int documents = 0;
+			var mre = new ManualResetEventSlim(false);
+
+			var currentDatbase = Database;
+			var task = Task.Factory.StartNew(() =>
+			{
+				documents = currentDatbase.BulkInsert(options, YieldBatches(context, mre));
+				status["Documents"] = documents;
+				status["Completed"] = true;
+			});
+
+			long id;
+			Database.AddTask(task, status, out id);
+
+			mre.Wait(Database.WorkContext.CancellationToken);
+
+			context.Log(log => log.Debug("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
 
 			context.WriteJson(new
 			{
-				Documents = documents
+				OperationId = id
 			});
 		}
 
-		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context)
+		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context, ManualResetEventSlim mre)
 		{
-			using (var inputStream = context.Request.GetBufferLessInputStream())
+			try
 			{
-				var binaryReader = new BinaryReader(inputStream);
-				while (true)
+				using (var inputStream = context.Request.GetBufferLessInputStream())
 				{
-					int size;
-					try
+					var binaryReader = new BinaryReader(inputStream);
+					while (true)
 					{
-						size = binaryReader.ReadInt32();
-					}
-					catch (EndOfStreamException)
-					{
-						break;
-					}
-					using (var stream = new PartialStream(inputStream, size))
-					{
-						yield return YieldDocumentsInBatch(stream);
+						int size;
+						try
+						{
+							size = binaryReader.ReadInt32();
+						}
+						catch (EndOfStreamException)
+						{
+							break;
+						}
+						using (var stream = new PartialStream(inputStream, size))
+						{
+							yield return YieldDocumentsInBatch(stream);
+						}
 					}
 				}
+			}
+			finally
+			{
+				mre.Set();
 			}
 		}
 

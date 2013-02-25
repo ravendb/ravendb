@@ -15,8 +15,6 @@ namespace Raven.Client.Connection
 		{
 #if SILVERLIGHT
 			return IsolatedStorageFile.GetUserStoreForSite();
-#elif NETFX_CORE
-			return Windows.Storage.ApplicationData.Current.LocalFolder;
 #else
 			return IsolatedStorageFile.GetMachineStoreForDomain();
 #endif

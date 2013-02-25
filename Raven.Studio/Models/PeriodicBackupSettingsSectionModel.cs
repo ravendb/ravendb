@@ -14,10 +14,10 @@ namespace Raven.Studio.Models
 		public PeriodicBackupSettingsSectionModel()
 		{
 			SectionName = "Periodic Backup";
-            IsS3Selected = new Observable<bool>();
+			SelectedOption = new Observable<int>();
 			ShowPeriodicBackup = new Observable<bool>();
 
-			var req = ApplicationModel.DatabaseCommands.ForDefaultDatabase().CreateRequest("/license/status", "GET");
+			var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/license/status".NoCache(), "GET");
 
 			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{
@@ -25,7 +25,7 @@ namespace Raven.Studio.Models
 				if (licensingStatus != null && licensingStatus.Attributes != null)
 				{
 					string active;
-					if (licensingStatus.Attributes.TryGetValue("PeriodicBackups", out active) == false)
+					if (licensingStatus.Attributes.TryGetValue("PeriodicBackup", out active) == false)
 						ShowPeriodicBackup.Value = true;
 					else
 					{
@@ -42,8 +42,7 @@ namespace Raven.Studio.Models
 		public PeriodicBackupSetup PeriodicBackupSetup { get; set; }
 		public string AwsAccessKey { get; set; }
 		public string AwsSecretKey { get; set; }
-        public Observable<bool> IsS3Selected { get; set; }
-        //TODO: add selection between S3 and Glacier
+		public Observable<int> SelectedOption { get; set; }
 		public bool HasDocument { get; set; }
 
 		public override void LoadFor(DatabaseDocument document)
@@ -63,6 +62,12 @@ namespace Raven.Studio.Models
 				if (PeriodicBackupSetup == null)
 					return;
 				HasDocument = true;
+				if (string.IsNullOrWhiteSpace(PeriodicBackupSetup.LocalFolderName) == false)
+					SelectedOption.Value = 0;
+				else if (string.IsNullOrWhiteSpace(PeriodicBackupSetup.GlacierVaultName) == false)
+					SelectedOption.Value = 1;
+				else if (string.IsNullOrWhiteSpace(PeriodicBackupSetup.S3BucketName) == false)
+					SelectedOption.Value = 2;
 				OnPropertyChanged(() => HasDocument);
 				OnPropertyChanged(() => PeriodicBackupSetup);
 			});

@@ -16,8 +16,8 @@
 			},
 
 			toggleProfiler: function () {
-				var currentVisibility = this.model.get('profilerVisibility');
-				this.model.set({ profilerVisibility: !currentVisibility });
+			    var currentVisibility = this.model.get('profilerVisible');
+				this.model.set({ profilerVisible: !currentVisibility });
 			}
 		});
 	}

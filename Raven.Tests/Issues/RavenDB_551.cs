@@ -112,7 +112,7 @@ namespace Raven.Tests.Issues
 						Id = Guid.NewGuid()
 					};
 				Assert.Throws<ConcurrencyException>(() => 
-					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), tx));
+					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -132,7 +132,7 @@ namespace Raven.Tests.Issues
 				};
 				store.DocumentDatabase.Put("items/1", null, new RavenJObject(), new RavenJObject(), tx);
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), tx));
+					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -153,7 +153,7 @@ namespace Raven.Tests.Issues
 				};
 				store.DocumentDatabase.Delete("items/1", null, tx);
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), tx));
+					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -196,7 +196,7 @@ namespace Raven.Tests.Issues
 						Id = Guid.NewGuid()
 					});
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), new TransactionInformation
+					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, new TransactionInformation
 						{
 							Id = Guid.NewGuid()
 						}));

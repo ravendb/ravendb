@@ -10,6 +10,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
@@ -67,6 +68,11 @@ namespace Raven.Database.Server.Abstractions
 			get { return response.ContentType; }
 			set { response.ContentType = value; }
 		}
+		public bool BufferOutput
+		{
+			get { return false; }
+			set { }
+		}
 
 		public void Redirect(string url)
 		{
@@ -80,7 +86,7 @@ namespace Raven.Database.Server.Abstractions
 			var exceptionAggregator = new ExceptionAggregator(log, "Failed to close response");
 			exceptionAggregator.Execute(OutputStream.Flush);
 			exceptionAggregator.Execute(OutputStream.Dispose);
-			if (StreamsToDispose!= null)
+			if (StreamsToDispose != null)
 			{
 				foreach (var stream in StreamsToDispose)
 				{
@@ -95,7 +101,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void WriteFile(string path)
 		{
-			using(var file = File.OpenRead(path))
+			using (var file = File.OpenRead(path))
 			{
 				file.CopyTo(OutputStream);
 			}
@@ -130,6 +136,16 @@ namespace Raven.Database.Server.Abstractions
 			}
 		}
 
+		public void SetCookie(string name, string val)
+		{
+			response.SetCookie(new Cookie(name, val)
+			{
+				Expires = SystemTime.UtcNow.AddHours(1),
+				HttpOnly = true,
+				Path = "/"
+			});
+		}
+
 		public void SetPublicCacheability()
 		{
 			response.Headers["Cache-Control"] = "Public";
@@ -137,7 +153,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void Dispose()
 		{
-			if(OutputStream != null)
+			if (OutputStream != null)
 				OutputStream.Dispose();
 		}
 	}

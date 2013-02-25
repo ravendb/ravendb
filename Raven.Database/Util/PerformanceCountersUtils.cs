@@ -3,6 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics;
+using System.Linq;
+using Raven.Storage.Esent;
+
 namespace Raven.Database.Util
 {
 	using System;
@@ -51,6 +55,31 @@ namespace Raven.Database.Util
 				{
 					throw new InvalidOperationException("Could not add user " + userName + " Performance Monitoring Users group", e);
 				}
+			}
+		}
+
+		public static long? SafelyGetPerformanceCounter(string categoryName, string counterName, string processName)
+		{
+			try
+			{
+				if (PerformanceCounterCategory.Exists(categoryName) == false)
+					return null;
+				var category = new PerformanceCounterCategory(categoryName);
+				var instances = category.GetInstanceNames();
+				var ravenInstance = instances.FirstOrDefault(x => x == processName);
+				if (ravenInstance == null || !category.CounterExists(counterName))
+				{
+					return null;
+				}
+				using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
+				{
+					return counter.NextSample().RawValue;
+				}
+			}
+			catch (Exception e)
+			{
+				//Don't log anything here, it's up to the calling code to decide what to do
+				return null;
 			}
 		}
 	}

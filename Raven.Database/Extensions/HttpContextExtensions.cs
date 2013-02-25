@@ -9,6 +9,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Server.Abstractions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Extensions
 {
@@ -22,15 +23,15 @@ namespace Raven.Database.Extensions
 				.Where(x=>x.StartsWith("facet.", StringComparison.OrdinalIgnoreCase))
 				.ToArray())
 			{
-				var parts = facetString.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries);
-				if(parts.Length != 3)
+				var parts = facetString.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length != 3)
 					throw new InvalidOperationException("Could not parse query parameter: " + facetString);
 
 				var fieldName = parts[1];
 
 				Facet facet;
 				if (dictionary.TryGetValue(fieldName, out facet) == false)
-					dictionary[fieldName] = facet = new Facet{Name = fieldName};
+					dictionary[fieldName] = facet = new Facet { Name = fieldName };
 
 				foreach (var value in context.Request.QueryString.GetValues(facetString) ?? Enumerable.Empty<string>())
 				{
@@ -57,6 +58,35 @@ namespace Raven.Database.Extensions
 			return context.Request.QueryString["facetDoc"] ?? "";
 		}
 
+		public static int GetFacetStartFromHttpContext(this IHttpContext context)
+		{
+			int start;
+			return int.TryParse(context.Request.QueryString["facetStart"], out start) ? start : 0;
+		}
+
+		public static int? GetFacetPageSizeFromHttpContext(this IHttpContext context)
+		{
+			int pageSize;
+			if (int.TryParse(context.Request.QueryString["facetPageSize"], out pageSize))
+				return pageSize;
+			return null;
+		}
+
+        public static Dictionary<string, RavenJToken> ExtractQueryInputs(this IHttpContext context)
+        {
+            var result = new Dictionary<string, RavenJToken>();
+            foreach (var key in context.Request.QueryString.AllKeys)
+            {
+                if (string.IsNullOrEmpty(key)) continue;
+                if (key.StartsWith("qp-"))
+                {
+                    var realkey = key.Substring(3);
+                    result[realkey] = context.Request.QueryString[key];
+                }
+            }
+            return result;
+        }
+
 		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
 		{
 			var query = new IndexQuery
@@ -71,18 +101,24 @@ namespace Raven.Database.Extensions
 				GroupBy = context.Request.QueryString.GetValues("groupBy"),
 				DefaultField = context.Request.QueryString["defaultField"],
 
-				DefaultOperator = 
+				DefaultOperator =
 					string.Equals(context.Request.QueryString["operator"], "AND", StringComparison.OrdinalIgnoreCase) ?
-						QueryOperator.And : 
+						QueryOperator.And :
 						QueryOperator.Or,
 
 				AggregationOperation = context.GetAggregationOperation(),
 				SortedFields = context.Request.QueryString.GetValues("sort")
 					.EmptyIfNull()
 					.Select(x => new SortedField(x))
-					.ToArray()
-			};
+					.ToArray(),
+				HighlightedFields = context.GetHighlightedFields().ToArray(),
+				HighlighterPreTags = context.Request.QueryString.GetValues("preTags"),
+				HighlighterPostTags = context.Request.QueryString.GetValues("postTags"),
+                ResultsTransformer = context.Request.QueryString["resultsTransformer"],
+                QueryInputs = context.ExtractQueryInputs()
+                };
 
+	
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
 			var queryShape = context.Request.QueryString["queryShape"];
 			double distanceErrorPct;
@@ -102,6 +138,6 @@ namespace Raven.Database.Extensions
 			}
 			return query;
 		}
-		
+
 	}
 }

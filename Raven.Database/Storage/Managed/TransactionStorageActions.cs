@@ -18,7 +18,6 @@ using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
-using Raven.Database.Json;
 
 namespace Raven.Storage.Managed
 {
@@ -35,7 +34,7 @@ namespace Raven.Storage.Managed
 			this.documentCodecs = documentCodecs;
 		}
 
-		public Guid AddDocumentInTransaction(string key, Guid? etag, RavenJObject data, RavenJObject metadata, TransactionInformation transactionInformation)
+		public Etag AddDocumentInTransaction(string key, Etag etag, RavenJObject data, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			var readResult = storage.Documents.Read(new RavenJObject { { "key", key } });
 			if (readResult != null) // update
@@ -81,73 +80,69 @@ namespace Raven.Storage.Managed
 			return newEtag;
 		}
 
-		private static void AssertValidEtag(string key, Table.ReadResult doc, Table.ReadResult docInTx, Guid? etag, string operation)
+		private static void AssertValidEtag(string key, Table.ReadResult doc, Table.ReadResult docInTx, Etag etag, string operation)
 		{
 			if (doc == null)
 				return;
 			var existingEtag =
 				docInTx != null
-					? new Guid(docInTx.Key.Value<byte[]>("etag"))
-					: new Guid(doc.Key.Value<byte[]>("etag"));
+					? Etag.Parse(docInTx.Key.Value<byte[]>("etag"))
+					: Etag.Parse(doc.Key.Value<byte[]>("etag"));
 
 
-			if (etag != null && etag.Value != existingEtag)
+			if (etag != null && etag != existingEtag)
 			{
 				throw new ConcurrencyException(operation + " attempted on document '" + key +
 											   "' using a non current etag")
 				{
 					ActualETag = existingEtag,
-					ExpectedETag = etag.Value
+					ExpectedETag = etag
 				};
 			}
 		}
 
-		public bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
+		public bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Etag etag)
 		{
-			var nonTxResult = storage.Documents.Read(new RavenJObject { { "key", key } });
+			var nonTxResult = storage.Documents.Read(new RavenJObject {{"key", key}});
 			if (nonTxResult == null)
 			{
-
-				if (etag != null && etag.Value != Guid.Empty)
+				if (etag != null && etag != Etag.Empty)
 				{
 					throw new ConcurrencyException("DELETE attempted on document '" + key +
-												   "' using a non current etag")
+					                               "' using a non current etag")
 					{
-						ActualETag = Guid.Empty,
-						ExpectedETag = etag.Value
+						ActualETag = null,
+						ExpectedETag = etag
 					};
 				}
 				return false;
 			}
 
-			var readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
+			var readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject {{"key", key}});
 			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
 			AssertValidEtag(key, nonTxResult, readResult, etag, "DELETE");
-
-			if (readResult != null)
-			{
-				var ravenJObject = ((RavenJObject)readResult.Key.CloneToken());
-				ravenJObject["txId"] = transactionInformation.Id.ToByteArray();
-				if (storage.Documents.UpdateKey(readResult.Key) == false)
-					throw new ConcurrencyException("DELETE attempted on document '" + key +
-												   "' that is currently being modified by another transaction");
-			}
+			
+			var ravenJObject = ((RavenJObject) nonTxResult.Key.CloneToken());
+			ravenJObject["txId"] = transactionInformation.Id.ToByteArray();
+			if (storage.Documents.UpdateKey(ravenJObject) == false)
+				throw new ConcurrencyException("DELETE attempted on document '" + key +
+				                               "' that is currently being modified by another transaction");
 
 			storage.Transactions.UpdateKey(new RavenJObject
-				{
-					{"txId", transactionInformation.Id.ToByteArray()},
-					{"timeout", SystemTime.UtcNow.Add(transactionInformation.Timeout)}
-				});
+			{
+				{"txId", transactionInformation.Id.ToByteArray()},
+				{"timeout", SystemTime.UtcNow.Add(transactionInformation.Timeout)}
+			});
 
 			var newEtag = generator.CreateSequentialUuid(UuidType.DocumentTransactions);
 			storage.DocumentsModifiedByTransactions.UpdateKey(new RavenJObject
-				{
-					{"key", key},
-					{"etag", newEtag.ToByteArray()},
-					{"modified", SystemTime.UtcNow},
-					{"deleted", true},
-					{"txId", transactionInformation.Id.ToByteArray()}
-				});
+			{
+				{"key", key},
+				{"etag", newEtag.ToByteArray()},
+				{"modified", SystemTime.UtcNow},
+				{"deleted", true},
+				{"txId", transactionInformation.Id.ToByteArray()}
+			});
 
 			return true;
 		}

@@ -13,7 +13,7 @@ namespace Raven.Tests.Indexes
 {
 	public class OldIndexRunWhileNewIndexesAreRunning : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.MaxNumberOfItemsToIndexInSingleBatch = 128;
 			configuration.InitialNumberOfItemsToIndexInSingleBatch = 128;

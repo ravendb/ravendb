@@ -19,7 +19,7 @@ namespace Raven.Bundles.Replication.Responders
 			get { return DocumentChangeTypes.AttachmentReplicationConflict; }
 		}
 
-		protected override void DeleteItem(string id, Guid etag)
+		protected override void DeleteItem(string id, Etag etag)
 		{
 			Database.DeleteStatic(id, etag);
 		}
@@ -29,7 +29,7 @@ namespace Raven.Bundles.Replication.Responders
 			Actions.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, id, metadata, UuidType.Attachments);
 		}
 
-		protected override void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, byte[] incoming)
+		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, byte[] incoming)
 		{
 			Database.PutStatic(id, etag, new MemoryStream(incoming), metadata);
 		}
@@ -46,7 +46,7 @@ namespace Raven.Bundles.Replication.Responders
 			var memoryStream = new MemoryStream();
 			conflictAttachment.WriteTo(memoryStream);
 			memoryStream.Position = 0;
-			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Guid.Empty : existingItem.Etag;
+			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? null : existingItem.Etag;
 			Actions.Attachments.AddAttachment(id, etag,
 								memoryStream,
 								new RavenJObject
@@ -62,9 +62,8 @@ namespace Raven.Bundles.Replication.Responders
 			var existingConflict = existingItem.Data().ToJObject();
 
 			// just update the current attachment with the new conflict document
-			var conflictArray = existingConflict.Value<RavenJArray>("Conflicts");
-			if (conflictArray == null)
-				existingConflict["Conflicts"] = conflictArray = new RavenJArray();
+			RavenJArray conflictArray;
+			existingConflict["Conflicts"] = conflictArray = new RavenJArray(existingConflict.Value<RavenJArray>("Conflicts"));
 
 			conflictArray.Add(newConflictId);
 
@@ -75,7 +74,7 @@ namespace Raven.Bundles.Replication.Responders
 			Actions.Attachments.AddAttachment(id, existingItem.Etag, memoryStream, existingItem.Metadata);
 		}
 
-		protected override RavenJObject TryGetExisting(string id, out Attachment existingItem, out Guid existingEtag)
+		protected override RavenJObject TryGetExisting(string id, out Attachment existingItem, out Etag existingEtag)
 		{
 			var existingAttachment = Actions.Attachments.GetAttachment(id);
 			if (existingAttachment != null)
@@ -98,7 +97,7 @@ namespace Raven.Bundles.Replication.Responders
 				};
 				return listItem.Data;
 			}
-			existingEtag = Guid.Empty;
+			existingEtag = Etag.Empty;
 			existingItem = null;
 			return null;
 

@@ -45,17 +45,12 @@ namespace Raven.Abstractions.Connection
 
 		private HttpWebRequest CreateRequest()
 		{
-			var request = (HttpWebRequest) System.Net.WebRequest.Create(url);
+			var request = (HttpWebRequest)System.Net.WebRequest.Create(url);
 			request.Method = method;
 			if (method == "POST" || method == "PUT")
 				request.Headers["Content-Encoding"] = "gzip";
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";
-
-			if (connectionStringOptions.Credentials != null)
-				request.Credentials = connectionStringOptions.Credentials;
-			else
-				request.UseDefaultCredentials = true;
 
 			configureRequest(connectionStringOptions, request);
 			return request;
@@ -65,8 +60,8 @@ namespace Raven.Abstractions.Connection
 		{
 			postedStream = streamToWrite;
 			using (var stream = WebRequest.GetRequestStream())
-			using(var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
-			using(var commpressedStream = new GZipStream(countingStream, CompressionMode.Compress))
+			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+			using (var commpressedStream = new GZipStream(countingStream, CompressionMode.Compress))
 			using (var countingStream2 = new CountingStream(commpressedStream, l => NumberOfBytesWrittenUncompressed = l))
 			{
 				streamToWrite.CopyTo(countingStream2);
@@ -128,17 +123,17 @@ namespace Raven.Abstractions.Connection
 		{
 			T result = default(T);
 			SendRequestToServer(response =>
-			                    	{
-			                    		using (var stream = response.GetResponseStreamWithHttpDecompression())
-			                    		using (var reader = new StreamReader(stream))
-			                    		{
-			                    			result = reader.JsonDeserialization<T>();
-			                    		}
-			                    	});
+									{
+										using (var stream = response.GetResponseStreamWithHttpDecompression())
+										using (var reader = new StreamReader(stream))
+										{
+											result = reader.JsonDeserialization<T>();
+										}
+									});
 			return result;
 		}
 
-		public void ExecuteRequest(Action<StreamReader> action)
+		public void ExecuteRequest(Action<TextReader> action)
 		{
 			SendRequestToServer(response =>
 			{
@@ -188,7 +183,8 @@ namespace Raven.Abstractions.Connection
 					if (response == null)
 						throw;
 
-					if (response.StatusCode != HttpStatusCode.Unauthorized)
+					if (response.StatusCode != HttpStatusCode.Unauthorized &&
+						response.StatusCode != HttpStatusCode.PreconditionFailed)
 					{
 						using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
 						{
@@ -235,7 +231,7 @@ namespace Raven.Abstractions.Connection
 			if (postedStream != null)
 			{
 				postedStream.Position = 0;
-				using (var stream = newWebRequest.GetRequestStream())	
+				using (var stream = newWebRequest.GetRequestStream())
 				using (var compressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
 					postedStream.CopyTo(compressedData);

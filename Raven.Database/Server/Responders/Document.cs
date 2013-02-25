@@ -52,18 +52,20 @@ namespace Raven.Database.Server.Responders
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
-					ProcessPatchResult(context, docId, patchResult.PatchResult, null);
+					ProcessPatchResult(context, docId, patchResult.PatchResult, null, null);
 					break;
 				case "EVAL":
 					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
 					var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
-					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context), true);
-					ProcessPatchResult(context, docId, advPatchResult.Item1.PatchResult, advPatchResult.Item2);
+					bool testOnly;
+					bool.TryParse(context.Request.QueryString["test"], out testOnly);
+					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context), testOnly);
+					ProcessPatchResult(context, docId, advPatchResult.Item1.PatchResult, advPatchResult.Item2, advPatchResult.Item1.Document);
 					break;
 			}
 		}
 
-		private void ProcessPatchResult(IHttpContext context, string docId, PatchResult patchResult, object debug)
+		private void ProcessPatchResult(IHttpContext context, string docId, PatchResult patchResult, object debug, RavenJObject document)
 		{
 				switch (patchResult)
 				{
@@ -73,6 +75,14 @@ namespace Raven.Database.Server.Responders
 					case PatchResult.Patched:
 						context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
 						context.WriteJson(new {Patched = true, Debug = debug});
+						break;
+					case PatchResult.Tested:
+						context.WriteJson(new
+						{
+							Patched = false, 
+							Debug = debug,
+							Document = document
+						});
 						break;
 					default:
 						throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");
@@ -99,7 +109,7 @@ namespace Raven.Database.Server.Responders
 						return;
 					}
 					Debug.Assert(documentMetadata.Etag != null);
-					if (context.MatchEtag(documentMetadata.Etag.Value) && documentMetadata.NonAuthoritativeInformation == false)
+					if (context.MatchEtag(documentMetadata.Etag) && documentMetadata.NonAuthoritativeInformation == false)
 					{
 						context.SetStatusToNotModified();
 						return;
@@ -125,7 +135,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 			Debug.Assert(documentMetadata.Etag != null);
-			if (context.MatchEtag(documentMetadata.Etag.Value) && documentMetadata.NonAuthoritativeInformation == false)
+			if (context.MatchEtag(documentMetadata.Etag) && documentMetadata.NonAuthoritativeInformation == false)
 			{
 				context.SetStatusToNotModified();
 				return;
@@ -137,7 +147,7 @@ namespace Raven.Database.Server.Responders
 			}
 			documentMetadata.Metadata[Constants.DocumentIdFieldName] = documentMetadata.Key;
 			documentMetadata.Metadata[Constants.LastModified] = documentMetadata.LastModified; //HACK ? to get the document's last modified value into the response headers
-			context.WriteHeaders(documentMetadata.Metadata, documentMetadata.Etag.Value);
+			context.WriteHeaders(documentMetadata.Metadata, documentMetadata.Etag);
 		}
 
 		private void GetDocumentDirectly(IHttpContext context, string docId)
@@ -155,7 +165,7 @@ namespace Raven.Database.Server.Responders
 			Debug.Assert(doc.Etag != null);
 			doc.Metadata[Constants.LastModified] = doc.LastModified;
 			doc.Metadata[Constants.DocumentIdFieldName] = Uri.EscapeUriString(doc.Key ?? string.Empty);
-			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag.Value);
+			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 		}
 
 		private void Put(IHttpContext context, string docId)

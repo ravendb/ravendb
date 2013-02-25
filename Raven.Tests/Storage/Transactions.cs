@@ -80,7 +80,7 @@ namespace Raven.Tests.Storage
 					if (data.Delete)
 					{
 						RavenJObject metadata;
-						Guid? tag;
+						Etag tag;
 						mutator.Documents.DeleteDocument(data.Key, null, out metadata, out tag);
 					}
 					else
@@ -152,7 +152,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator =>
 				         	Assert.Throws<ConcurrencyException>(
 				         		() =>
-									mutator.Transactions.AddDocumentInTransaction("Ayende", Guid.NewGuid(),
+									mutator.Transactions.AddDocumentInTransaction("Ayende", Etag.InvalidEtag,
 				         			                                           RavenJObject.FromObject(new {Name = "Rahien"}),
 				         			                                           new RavenJObject(),
 				         			                                           new TransactionInformation
@@ -232,7 +232,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator =>
 							Assert.Throws<ConcurrencyException>(
 								() =>
-									mutator.Documents.AddDocument("Ayende", Guid.NewGuid(),
+									mutator.Documents.AddDocument("Ayende", Etag.InvalidEtag,
 																			   RavenJObject.FromObject(new { Name = "Rahien" }),
 																			   new RavenJObject())));
 			}

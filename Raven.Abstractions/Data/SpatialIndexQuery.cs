@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Raven.Abstractions.Indexing;
 
@@ -34,7 +35,8 @@ namespace Raven.Abstractions.Data
 			set { spatialFieldName = value; }
 		}
 
-		/// <summary>
+
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
 		/// </summary>
 		/// <param name="query">The query.</param>
@@ -46,6 +48,9 @@ namespace Raven.Abstractions.Data
 			PageSize = query.PageSize;
 			FieldsToFetch = query.FieldsToFetch;
 			SortedFields = query.SortedFields;
+		    HighlighterPreTags = query.HighlighterPreTags;
+		    HighlighterPostTags = query.HighlighterPostTags;
+		    HighlightedFields = query.HighlightedFields;
 		}
 
 		/// <summary>

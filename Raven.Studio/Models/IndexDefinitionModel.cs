@@ -28,6 +28,8 @@ namespace Raven.Studio.Models
 		public IndexDefinitionModel()
 		{
 			ModelUrl = "/indexes/";
+			ApplicationModel.Current.Server.Value.RawUrl = null;
+
 			index = new IndexDefinition();
 			Maps = new BindableCollection<MapItem>(x => x.Text)
 			{
@@ -74,8 +76,14 @@ namespace Raven.Studio.Models
 
 			CreateOrEditField(index.Indexes, (f, i) => f.Indexing = i);
 			CreateOrEditField(index.Stores, (f, i) => f.Storage = i);
+			CreateOrEditField(index.TermVectors, (f, i) => f.TermVector = i);
 			CreateOrEditField(index.SortOptions, (f, i) => f.Sort = i);
 			CreateOrEditField(index.Analyzers, (f, i) => f.Analyzer = i);
+			CreateOrEditField(index.Suggestions, (f, i) =>
+			{
+				f.SuggestionAccuracy = i.Accuracy;
+				f.SuggestionDistance = i.Distance;
+			});
 
 			RestoreDefaults(index);
 
@@ -165,12 +173,16 @@ namespace Raven.Studio.Models
 			index.Stores.Clear();
 			index.SortOptions.Clear();
 			index.Analyzers.Clear();
+			index.Suggestions.Clear();
+			index.TermVectors.Clear();
 			foreach (var item in Fields.Where(item => item.Name != null))
 			{
 				index.Indexes[item.Name] = item.Indexing;
 				index.Stores[item.Name] = item.Storage;
 				index.SortOptions[item.Name] = item.Sort;
 				index.Analyzers[item.Name] = item.Analyzer;
+				index.TermVectors[item.Name] = item.TermVector;
+				index.Suggestions[item.Name] = new SuggestionOptions { Accuracy = item.SuggestionAccuracy, Distance = item.SuggestionDistance };
 			}
 			index.RemoveDefaultValues();
 		}
@@ -633,6 +645,21 @@ namespace Raven.Studio.Models
 				}
 			}
 
+			private FieldTermVector termVector;
+			public FieldTermVector TermVector
+			{
+				get { return termVector; }
+				set
+				{
+					if (termVector != value)
+					{
+						termVector = value;
+						OnPropertyChanged(() => TermVector);
+					}
+				}
+			}
+
+
 			private SortOptions sort;
 			public SortOptions Sort
 			{
@@ -669,9 +696,40 @@ namespace Raven.Studio.Models
 					{
 						Storage = FieldStorage.No,
 						Indexing = FieldIndexing.Default,
+						TermVector =  FieldTermVector.No,
 						Sort = SortOptions.None,
-						Analyzer = string.Empty
+						Analyzer = string.Empty,
+						SuggestionAccuracy = 0,
+						SuggestionDistance = StringDistanceTypes.None,
 					};
+				}
+			}
+
+			private float suggestionAccuracy;
+			public float SuggestionAccuracy
+			{
+				get { return suggestionAccuracy; }
+				set
+				{
+					if (suggestionAccuracy != value)
+					{
+						suggestionAccuracy = value;
+						OnPropertyChanged(() => suggestionAccuracy);
+					}
+				}
+			}
+
+			private StringDistanceTypes suggestionDistance;
+			public StringDistanceTypes SuggestionDistance
+			{
+				get { return suggestionDistance; }
+				set
+				{
+					if (suggestionDistance != value)
+					{
+						suggestionDistance = value;
+						OnPropertyChanged(() => suggestionDistance);
+					}
 				}
 			}
 		}

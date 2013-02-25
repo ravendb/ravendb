@@ -12,6 +12,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
 using Xunit;

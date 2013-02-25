@@ -55,7 +55,7 @@ namespace Raven.Abstractions.Data
 				if (string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(Secret))
 					return null;
 
-				return string.Format(@"ApiKey = {0}, Database = {1}", FullApiKey, DbName);
+				return string.Format(@"ApiKey = {0}; Database = {1}", FullApiKey, DbName);
 			}
 		}
 

@@ -15,7 +15,7 @@ namespace Raven.Studio.Infrastructure.Converters
 			if (name == null)
 				return "";
 
-			if (name == "PeriodicBackup")
+			if (string.Equals(name, "PeriodicBackup", StringComparison.InvariantCultureIgnoreCase))
 				return PeriodBackupToolTip(license);
 
 			if (license == null || license.Attributes == null)
@@ -36,7 +36,7 @@ namespace Raven.Studio.Infrastructure.Converters
 
 		private string PeriodBackupToolTip(LicensingStatus license)
 		{
-			const string enabledMsg = "Periodic Backup is enabled accoring to your license, in order to activate it go to the settings section after creating the database";
+			const string enabledMsg = "Periodic Backup is enabled according to your license, in order to activate it go to the settings section after creating the database";
 			if (license == null || license.Attributes == null)
 				return enabledMsg;
 

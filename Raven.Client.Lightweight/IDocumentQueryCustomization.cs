@@ -63,14 +63,14 @@ namespace Raven.Client
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
-		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Guid cutOffEtag);
+		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Etag cutOffEtag);
 
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout);
+		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout);
 
 		/// <summary>
 		/// EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -153,5 +153,56 @@ namespace Raven.Client
 		/// Execute the transformation function on the results of this query.
 		/// </summary>
 		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
+
+		/// <summary>
+		///   Adds matches highlighting for the specified field.
+		/// </summary>
+		/// <remarks>
+		///   The specified field should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="fieldName">The field name to highlight.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="fragmentsField">The field in query results item to put highlightings into.</param>
+		IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField);
+
+		/// <summary>
+		///   Adds matches highlighting for the specified field.
+		/// </summary>
+		/// <remarks>
+		///   The specified field should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="fieldName">The field name to highlight.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="highlightings">Field highlightings for all results.</param>
+		IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
+
+		/// <summary>
+		///   Sets the tags to highlight matches with.
+		/// </summary>
+		/// <param name="preTag">Prefix tag.</param>
+		/// <param name="postTag">Postfix tag.</param>
+		IDocumentQueryCustomization SetHighlighterTags(string preTag, string postTag);
+
+		/// <summary>
+		///   Sets the tags to highlight matches with.
+		/// </summary>
+		/// <param name="preTags">Prefix tags.</param>
+		/// <param name="postTags">Postfix tags.</param>
+		IDocumentQueryCustomization SetHighlighterTags(string[] preTags, string[] postTags);
+
+		/// <summary>
+		/// Disables tracking for queried entities by Raven's Unit of Work.
+		/// Usage of this option will prevent holding query results in memory.
+		/// </summary>
+		IDocumentQueryCustomization NoTracking();
+
+		/// <summary>
+		/// Disables caching for query results.
+		/// </summary>
+		IDocumentQueryCustomization NoCaching();
 	}
 }

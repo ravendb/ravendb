@@ -10,6 +10,7 @@ using System.Text;
 using Raven.Abstractions.Data;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
@@ -17,6 +18,7 @@ using Raven.Client.Listeners;
 using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Client.Extensions;
+using Raven.Client.WinRT.MissingFromWinRT;
 
 namespace Raven.Client.Document
 {
@@ -53,12 +55,12 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
-		public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+		public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
 			: base(session
 #if !SILVERLIGHT
 , null
 #endif
-, null, indexName, fieldsToFetch, projectionFields, queryListeners)
+, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 			this.getShardsToOperateOn = getShardsToOperateOn;
 			this.shardStrategy = shardStrategy;
@@ -92,7 +94,8 @@ namespace Raven.Client.Document
 				indexName,
 				fields,
 				projections,
-				queryListeners)
+				queryListeners,
+				isMapReduce)
 			{
 				pageSize = pageSize,
 				queryText = new StringBuilder(queryText.ToString()),
@@ -107,15 +110,24 @@ namespace Raven.Client.Document
 				aggregationOp = aggregationOp,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
+				highlightedFields = new List<HighlightedField>(highlightedFields),
+				highlighterPreTags = highlighterPreTags,
+				highlighterPostTags = highlighterPostTags,
+				disableEntitiesTracking = disableEntitiesTracking,
+				disableCaching = disableCaching
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
 		}
 
+#if !SILVERLIGHT && !NETFX_CORE
+
 		protected override void ExecuteActualQuery()
 		{
 			throw new NotSupportedException("Async queries don't support synchronous execution");
 		}
+
+#endif
 
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{
@@ -157,7 +169,8 @@ namespace Raven.Client.Document
 					if (lastResults.All(acceptable => acceptable))
 						return new CompletedTask().Task;
 
-					Thread.Sleep(100);
+
+					ThreadSleep.Sleep(100);
 
 					return loop();
 				}).Unwrap();
@@ -167,7 +180,9 @@ namespace Raven.Client.Document
 			{
 				task.AssertNotFailed();
 
+#if !NETFX_CORE
 				ShardedDocumentQuery<T>.AssertNoDuplicateIdsInResults(shardQueryOperations);
+#endif
 
 				var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
@@ -178,10 +193,12 @@ namespace Raven.Client.Document
 			});
 		}
 
+#if !NETFX_CORE
 		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
 			throw new NotSupportedException("Lazy in not supported with the async API");
 		}
+#endif
 
 		public override IDatabaseCommands DatabaseCommands
 		{

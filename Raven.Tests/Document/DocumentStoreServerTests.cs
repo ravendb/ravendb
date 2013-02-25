@@ -503,6 +503,36 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
+		public void Can_get_document_metadata_Async()
+		{
+			documentStore.AsyncDatabaseCommands
+			             .PutAsync("rhino1", null, RavenJObject.FromObject(new Company {Name = "Hibernating Rhinos"}), new RavenJObject())
+			             .Wait();
+
+			JsonDocument doc = null;
+			JsonDocumentMetadata meta = null;
+
+			documentStore.AsyncDatabaseCommands.GetAsync("rhino1")
+						 .ContinueWith(task => { doc = task.Result; })
+						 .Wait();
+			documentStore.AsyncDatabaseCommands.HeadAsync("rhino1")
+						 .ContinueWith(task => { meta = task.Result; })
+						 .Wait();
+
+			Assert.NotNull(meta);
+			Assert.Equal(doc.Key, meta.Key);
+			Assert.Equal(doc.Etag, meta.Etag);
+			Assert.Equal(doc.LastModified, meta.LastModified);
+		}
+
+		[Fact]
+		public void When_document_does_not_exist_Then_metadata_should_be_null_Async()
+		{
+			documentStore.AsyncDatabaseCommands.HeadAsync("rhino1")
+						 .ContinueWith(task => Assert.Null(task.Result));
+		}
+
+		[Fact]
 		public void Can_defer_commands_until_savechanges()
 		{
 			using (var session = documentStore.OpenSession())

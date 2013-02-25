@@ -3,9 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
+using Raven.Database.Server.Responders;
 using Raven.Json.Linq;
+using Raven.Server;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
@@ -62,7 +66,6 @@ namespace Raven.Tests.Bundles.Replication
 			}
 
 		}
-
 
 		[Fact]
 		public void Can_replicate_large_number_of_documents_between_two_instances()

@@ -80,10 +80,10 @@ namespace Raven.Storage.Esent
 
 			RecoverFromFailedCompact(database);
 
-			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
+			new TransactionalStorageConfigurator(configuration, this).LimitSystemCache();
 
 			uniquePrefix = Interlocked.Increment(ref instanceCounter) + "-" + Base62Util.Base62Random();
-			Api.JetCreateInstance(out instance, uniquePrefix + "-" + database);
+			CreateInstance(out instance, uniquePrefix + "-" + database);
 		}
 
 		public TableColumnsCache TableColumnsCache
@@ -148,7 +148,7 @@ namespace Raven.Storage.Esent
 
 		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
-			new RestoreOperation(backupLocation, databaseLocation, output, defrag).Execute();
+			new RestoreOperation(backupLocation, configuration, output, defrag).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()
@@ -171,23 +171,27 @@ namespace Raven.Storage.Esent
 			return SystemParameters.CacheSize * SystemParameters.DatabasePageSize;
 		}
 
+		private long getDatabaseTransactionVersionSizeInBytesErrorValue;
 		private bool reportedGetDatabaseTransactionCacheSizeInBytesError;
-		private string uniquePrefix;
+		private readonly string uniquePrefix;
 
 		public long GetDatabaseTransactionVersionSizeInBytes()
 		{
+			if (getDatabaseTransactionVersionSizeInBytesErrorValue != 0)
+				return getDatabaseTransactionVersionSizeInBytesErrorValue;
+
 			try
 			{
 				const string categoryName = "Database ==> Instances";
 				if (PerformanceCounterCategory.Exists(categoryName) == false)
-					return -1;
+					return getDatabaseTransactionVersionSizeInBytesErrorValue  = -1;
 				var category = new PerformanceCounterCategory(categoryName);
 				var instances = category.GetInstanceNames();
 				var ravenInstance = instances.FirstOrDefault(x => x.StartsWith(uniquePrefix));
 				const string counterName = "Version Buckets Allocated";
 				if (ravenInstance == null || !category.CounterExists(counterName))
 				{
-					return -2;
+					return getDatabaseTransactionVersionSizeInBytesErrorValue = -2;
 				}
 				using (var counter = new PerformanceCounter(categoryName, counterName, ravenInstance, readOnly: true))
 				{
@@ -202,7 +206,7 @@ namespace Raven.Storage.Esent
 					reportedGetDatabaseTransactionCacheSizeInBytesError = true;
 					log.WarnException("Failed to get Version Buckets Allocated value, this error will only be reported once.", e);
 				}
-				return -3;
+				return getDatabaseTransactionVersionSizeInBytesErrorValue = -3;
 			}
 		}
 
@@ -219,6 +223,11 @@ namespace Raven.Storage.Esent
 			// we need to protect ourself from rollbacks happening in an async manner
 			// after the database was already shut down.
 			return e.Error == JET_err.InvalidInstance;
+		}
+
+		void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
+		{
+			Compact(cfg, (sesid, snp, snt, data) => JET_err.Success);
 		}
 
 		private static void RecoverFromFailedCompact(string file)
@@ -240,7 +249,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public void Compact(InMemoryRavenConfiguration ravenConfiguration)
+		public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
 		{
 			var src = Path.Combine(ravenConfiguration.DataDirectory, "Data");
 			var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Data.Compact");
@@ -249,19 +258,21 @@ namespace Raven.Storage.Esent
 				File.Delete(compactPath);
 			RecoverFromFailedCompact(src);
 
+
 			JET_INSTANCE compactInstance;
-			Api.JetCreateInstance(out compactInstance, ravenConfiguration.DataDirectory + Guid.NewGuid());
+			CreateInstance(out compactInstance, ravenConfiguration.DataDirectory + Guid.NewGuid());
 			try
 			{
-				new TransactionalStorageConfigurator(ravenConfiguration)
+				new TransactionalStorageConfigurator(ravenConfiguration, null)
 					.ConfigureInstance(compactInstance, ravenConfiguration.DataDirectory);
+				DisableIndexChecking(compactInstance);
 				Api.JetInit(ref compactInstance);
 				using (var session = new Session(compactInstance))
 				{
 					Api.JetAttachDatabase(session, src, AttachDatabaseGrbit.None);
 					try
 					{
-						Api.JetCompact(session, src, compactPath, null, null,
+						Api.JetCompact(session, src, compactPath, statusCallback, null,
 								   CompactGrbit.None);
 					}
 					finally
@@ -279,6 +290,13 @@ namespace Raven.Storage.Esent
 			File.Move(compactPath, src);
 			File.Delete(src + ".RenameOp");
 
+		}
+
+		public static void CreateInstance(out JET_INSTANCE compactInstance, string name)
+		{
+			Api.JetCreateInstance(out compactInstance, name);
+
+			DisableIndexChecking(compactInstance);
 		}
 
 		public Guid ChangeId()
@@ -301,6 +319,23 @@ namespace Raven.Storage.Esent
 			return newId;
 		}
 
+		public void DumpAllStorageTables()
+		{
+			Batch(accessor =>
+			{
+				var session = current.Value.Inner.Session;
+				var jetDbid = current.Value.Inner.Dbid;
+				foreach (var tableName in Api.GetTableNames(session, jetDbid))
+				{
+					using (var table = new Table(session, jetDbid, tableName, OpenTableGrbit.ReadOnly))
+					using(var file = new FileStream(tableName+"-table.csv",FileMode.Create,FileAccess.ReadWrite,FileShare.None))
+					{
+						EsentUtil.DumpTable(session, table, file);
+					}
+				}
+			});
+		}
+
 		public void ClearCaches()
 		{
 			var cacheSizeMax = SystemParameters.CacheSizeMax;
@@ -317,7 +352,7 @@ namespace Raven.Storage.Esent
 				DocumentCodecs = documentCodecs;
 				generator = uuidGenerator;
 
-				InstanceParameters instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
+				InstanceParameters instanceParameters = new TransactionalStorageConfigurator(configuration, this).ConfigureInstance(instance, path);
 
 				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 					instanceParameters.Recovery = false;
@@ -349,6 +384,8 @@ namespace Raven.Storage.Esent
 		}
 
 		protected OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
+
+		public long MaxVerPagesValueInBytes { get; set; }
 
 		private void SetIdFromDb()
 		{
@@ -416,7 +453,7 @@ namespace Raven.Storage.Esent
 								recoverInstance.Init();
 								using (var recoverSession = new Session(recoverInstance))
 								{
-									new TransactionalStorageConfigurator(configuration).ConfigureInstance(recoverInstance.JetInstance, path);
+									new TransactionalStorageConfigurator(configuration, this).ConfigureInstance(recoverInstance.JetInstance, path);
 									Api.JetAttachDatabase(recoverSession, database,
 														  AttachDatabaseGrbit.DeleteCorruptIndexes);
 									Api.JetDetachDatabase(recoverSession, database);
@@ -519,11 +556,10 @@ namespace Raven.Storage.Esent
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
-				pht.FlushMapReduceUpdates();
 
 				if (pht.UsingLazyCommit)
 				{
-					txMode = CommitTransactionGrbit.WaitLastLevel0Commit;
+					txMode = CommitTransactionGrbit.None;
 				}
 				return pht.Commit(txMode);
 			}
@@ -545,6 +581,19 @@ namespace Raven.Storage.Esent
 			if (batch == null)
 				throw new InvalidOperationException("Batch was not started, you are not supposed to call this method");
 			return batch;
+		}
+
+		public static void DisableIndexChecking(JET_INSTANCE jetInstance)
+		{
+			Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, JET_param.EnableIndexChecking, 0, null);
+			if (Environment.OSVersion.Version >= new Version(5, 2))
+			{
+				// JET_paramEnableIndexCleanup is not supported on WindowsXP
+
+				const int JET_paramEnableIndexCleanup = 54;
+
+				Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param) JET_paramEnableIndexCleanup, 0, null);
+			}
 		}
 	}
 }

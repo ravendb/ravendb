@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis;
@@ -32,6 +33,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
@@ -44,7 +46,8 @@ namespace Raven.Database.Indexing
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
 		private readonly DocumentDatabase documentDatabase;
-		private const string IndexVersion = "2.0.0.1";
+		private const string IndexVersion = "2.0.0.1"; 
+		private const string MapReduceIndexVersion = "2.5.0.1";
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -88,7 +91,7 @@ namespace Raven.Database.Indexing
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
 
-				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext, 
+				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,
 					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
 			}
 			catch
@@ -110,15 +113,34 @@ namespace Raven.Database.Indexing
 
 			Index indexImplementation;
 			bool resetTried = false;
+			bool recoveryTried = false;
+			string[] keysToDeleteAfterRecovery = null;
 			while (true)
 			{
+				Lucene.Net.Store.Directory luceneDirectory = null;
+
 				try
 				{
-					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
+					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
+
+					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
+					if (simpleIndex != null && keysToDeleteAfterRecovery != null)
+					{
+						// remove keys from index that were deleted after creating commit point
+						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
+					}
+
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
+						IndexStats indexStats = accessor.Indexing.GetIndexStats(indexName);
+						if (indexStats != null)
+						{
+							indexImplementation.Priority = indexStats.Priority;
+						}
+
+
 						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
 						if (read == null)
 							return;
@@ -134,27 +156,66 @@ namespace Raven.Database.Indexing
 				{
 					if (resetTried)
 						throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
-					resetTried = true;
-					startupLog.WarnException("Could not open index " + indexName + ", forcibly resetting index", e);
-					try
-					{
-						documentDatabase.TransactionalStorage.Batch(accessor =>
-						{
-							accessor.Indexing.DeleteIndex(indexName);
-							accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
-						});
 
-						var indexDirectory = indexName;
-						var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
-						IOExtensions.DeleteDirectory(indexFullPath);
-					}
-					catch (Exception exception)
+					if (recoveryTried == false)
 					{
-						throw new InvalidOperationException("Could not reset index " + indexName, exception);
+						recoveryTried = true;
+						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
+
+						keysToDeleteAfterRecovery = TryRecoveringIndex(indexName, indexDefinition, luceneDirectory);
+					}
+					else
+					{
+						resetTried = true;
+						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, orcibly resetting index", e);
+						TryResettingIndex(indexName, indexDefinition);
 					}
 				}
 			}
 			indexes.TryAdd(indexName, indexImplementation);
+		}
+
+		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
+		{
+			try
+			{
+				documentDatabase.TransactionalStorage.Batch(accessor =>
+				{
+					accessor.Indexing.DeleteIndex(indexName);
+					accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
+				});
+
+				var indexDirectory = indexName;
+				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
+				IOExtensions.DeleteDirectory(indexFullPath);
+			}
+			catch (Exception exception)
+			{
+				throw new InvalidOperationException("Could not reset index " + indexName, exception);
+			}
+		}
+
+		private string[] TryRecoveringIndex(string indexName, IndexDefinition indexDefinition,
+											Lucene.Net.Store.Directory luceneDirectory)
+		{
+			string[] keysToDeleteAfterRecovery = null;
+			if (indexDefinition.IsMapReduce == false)
+			{
+				IndexCommitPoint commitUsedToRestore;
+
+				if (TryReusePreviousCommitPointsToRecoverIndex(luceneDirectory,
+															   indexDefinition, path,
+															   out commitUsedToRestore,
+															   out keysToDeleteAfterRecovery))
+				{
+					ResetLastIndexedEtagAccordingToRestoredCommitPoint(indexDefinition, commitUsedToRestore);
+				}
+			}
+			else
+			{
+				RegenerateMapReduceIndex(luceneDirectory, indexDefinition.Name, indexDefinition);
+			}
+			return keysToDeleteAfterRecovery;
 		}
 
 		private void LoadExistingSuggestionsExtentions(string indexName, Index indexImplementation)
@@ -178,7 +239,8 @@ namespace Raven.Database.Indexing
 								  true, out distanceType);
 					var field = decodedKey.Substring(0, lastIndexOfDistance);
 					var extension = new SuggestionQueryIndexExtension(
-						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader,
+						documentDatabase.WorkContext,
+						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader.Directory() is RAMDirectory,
 						SuggestionQueryRunner.GetStringDistance(distanceType),
 						field,
 						accuracy);
@@ -194,7 +256,7 @@ namespace Raven.Database.Indexing
 			bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (indexDefinition.IsTemp || configuration.RunInMemory)
+			if (indexDefinitionStorage.IsNewThisSession(indexDefinition) || configuration.RunInMemory)
 			{
 				directory = new RAMDirectory();
 				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
@@ -210,26 +272,26 @@ namespace Raven.Database.Indexing
 					if (createIfMissing == false)
 						throw new InvalidOperationException("Index does not exists: " + indexDirectory);
 
-					WriteIndexVersion(directory);
+					WriteIndexVersion(directory, indexDefinition);
 
 					//creating index structure if we need to
 					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
 				}
 				else
 				{
-					EnsureIndexVersionMatches(indexName, directory);
+					EnsureIndexVersionMatches(indexName, directory, indexDefinition);
 					if (directory.FileExists("write.lock"))// force lock release, because it was still open when we shut down
 					{
 						IndexWriter.Unlock(directory);
 						// for some reason, just calling unlock doesn't remove this file
 						directory.DeleteFile("write.lock");
-					} 
+					}
 					if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
 					{
 						if (configuration.ResetIndexOnUncleanShutdown)
 							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
 
-						CheckIndexAndRecover(directory, indexDirectory);
+						CheckIndexAndTryToFix(directory, indexDirectory);
 						directory.DeleteFile("writing-to-index.lock");
 					}
 				}
@@ -239,31 +301,110 @@ namespace Raven.Database.Indexing
 
 		}
 
-		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)
+		private void RegenerateMapReduceIndex(Lucene.Net.Store.Directory directory, string indexName, IndexDefinition indexDefinition)
 		{
-			using(var indexOutput = directory.CreateOutput("index.version"))
+			// remove old index data
+			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+			IOExtensions.DeleteDirectory(dirOnDisk);
+
+			// initialize by new index
+			Directory.CreateDirectory(dirOnDisk);
+			WriteIndexVersion(directory, indexDefinition);
+			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
+
+			var start = 0;
+			const int take = 100;
+
+			documentDatabase.TransactionalStorage.Batch(actions =>
 			{
-				indexOutput.WriteString(IndexVersion);
+				IList<ReduceTypePerKey> reduceKeysAndTypes;
+
+				do
+				{
+					reduceKeysAndTypes = actions.MapReduce.GetReduceKeysAndTypes(indexName, start, take).ToList();
+					start += take;
+
+					var keysToScheduleOnLevel2 =
+						reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.MultiStep).ToList();
+					var keysToScheduleOnLevel0 =
+						reduceKeysAndTypes.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).ToList();
+
+					var itemsToScheduleOnLevel2 = keysToScheduleOnLevel2.Select(x => new ReduceKeyAndBucket(0, x.ReduceKey)).ToList();
+					var itemsToScheduleOnLevel0 = new List<ReduceKeyAndBucket>();
+
+					foreach (var reduceKey in keysToScheduleOnLevel0.Select(x => x.ReduceKey))
+					{
+						var mappedBuckets = actions.MapReduce.GetMappedBuckets(indexName, reduceKey).Distinct();
+
+						itemsToScheduleOnLevel0.AddRange(mappedBuckets.Select(x => new ReduceKeyAndBucket(x, reduceKey)));
+
+						actions.General.MaybePulseTransaction();
+					}
+
+					foreach (var itemToReduce in itemsToScheduleOnLevel2)
+					{
+						actions.MapReduce.ScheduleReductions(indexName, 2, itemToReduce);
+						actions.General.MaybePulseTransaction();
+					}
+
+					foreach (var itemToReduce in itemsToScheduleOnLevel0)
+					{
+						actions.MapReduce.ScheduleReductions(indexName, 0, itemToReduce);
+						actions.General.MaybePulseTransaction();
+					}
+
+				} while (reduceKeysAndTypes.Count > 0);
+			});
+		}
+
+		private void ResetLastIndexedEtagAccordingToRestoredCommitPoint(IndexDefinition indexDefinition,
+																		IndexCommitPoint lastCommitPoint)
+		{
+			documentDatabase.TransactionalStorage.Batch(
+				accessor =>
+				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.HighestCommitedETag,
+													lastCommitPoint.TimeStamp));
+		}
+
+		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
+		{
+			var indexVersion = "index.version";
+			var version = IndexVersion;
+			if(indexDefinition.IsMapReduce)
+			{
+				indexVersion = "mapReduce.version";
+				version = MapReduceIndexVersion;
+			}
+			using (var indexOutput = directory.CreateOutput(indexVersion))
+			{
+				indexOutput.WriteString(version);
 				indexOutput.Flush();
 			}
 		}
 
-		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory)
+		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
-			if (directory.FileExists("index.version") == false)
+			var indexVersion = "index.version";
+			var versionToCheck = IndexVersion;
+			if(indexDefinition.IsMapReduce)
 			{
-				throw new InvalidOperationException("Could not find index.version " + indexName + ", resetting index");
+				indexVersion = "mapReduce.version";
+				versionToCheck = MapReduceIndexVersion;
 			}
-			using(var indexInput = directory.OpenInput("index.version"))
+			if (directory.FileExists(indexVersion) == false)
+			{
+				throw new InvalidOperationException("Could not find " + indexVersion + " " + indexName + ", resetting index");
+			}
+			using (var indexInput = directory.OpenInput(indexVersion))
 			{
 				var versionFromDisk = indexInput.ReadString();
-				if (versionFromDisk != IndexVersion)
+				if (versionFromDisk != versionToCheck)
 					throw new InvalidOperationException("Index " + indexName + " is of version " + versionFromDisk +
-														" which is not compatible with " + IndexVersion + ", resetting index");
+														" which is not compatible with " + versionToCheck + ", resetting index");
 			}
 		}
 
-		private static void CheckIndexAndRecover(Lucene.Net.Store.Directory directory, string indexDirectory)
+		private static void CheckIndexAndTryToFix(Lucene.Net.Store.Directory directory, string indexDirectory)
 		{
 			startupLog.Warn("Unclean shutdown detected on {0}, checking the index for errors. This may take a while.", indexDirectory);
 
@@ -292,6 +433,161 @@ namespace Raven.Database.Indexing
 			sp.Restart();
 			checkIndex.FixIndex(status);
 			startupLog.Warn("Fixed index {0} in {1}", indexDirectory, sp.Elapsed);
+		}
+
+		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
+		{
+			if (indexCommit.SegmentsInfo == null || indexCommit.SegmentsInfo.IsIndexCorrupted)
+				return;
+
+			var directoryName = indexCommit.SegmentsInfo.Generation.ToString("0000000000000000000", CultureInfo.InvariantCulture);
+			var commitPointDirectory = new IndexCommitPointDirectory(path, indexName, directoryName);
+
+			if (Directory.Exists(commitPointDirectory.AllCommitPointsFullPath) == false)
+			{
+				Directory.CreateDirectory(commitPointDirectory.AllCommitPointsFullPath);
+			}
+
+			Directory.CreateDirectory(commitPointDirectory.FullPath);
+
+			using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
+			{
+				using (var sw = new StreamWriter(commitPointFile))
+				{
+					var jsonSerializer = new JsonSerializer();
+					var textWriter = new JsonTextWriter(sw);
+
+					jsonSerializer.Serialize(textWriter, indexCommit);
+
+					sw.Flush();
+				}
+			}
+
+			var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
+
+			File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
+					  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName));
+
+			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
+
+			if (storedCommitPoints.Length > configuration.MaxNumberOfStoredCommitPoints)
+			{
+				foreach (var toDelete in storedCommitPoints.Take(storedCommitPoints.Length - configuration.MaxNumberOfStoredCommitPoints))
+				{
+					IOExtensions.DeleteDirectory(toDelete);
+				}
+			}
+		}
+
+		public void AddDeletedKeysToCommitPoints(string indexName, string[] deletedKeys)
+		{
+			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+
+			var existingCommitPoints = IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
+
+			foreach (var commitPointDirectory in existingCommitPoints.Select(commitPoint => new IndexCommitPointDirectory(path, indexName, commitPoint)))
+			{
+				using (var stream = File.Open(commitPointDirectory.DeletedKeysFile, FileMode.OpenOrCreate))
+				{
+					stream.Seek(0, SeekOrigin.End);
+					using (var writer = new StreamWriter(stream))
+					{
+						foreach (var deletedKey in deletedKeys)
+						{
+							writer.WriteLine(deletedKey);	
+						}
+					}
+				}
+			}
+		}
+
+		private static bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
+		{
+			indexCommit = null;
+			keysToDelete = null;
+
+			if (indexDefinition.IsMapReduce)
+				return false;
+
+			var indexFullPath = Path.Combine(indexStoragePath, MonoHttpUtility.UrlEncode(indexDefinition.Name));
+
+			var allCommitPointsFullPath = IndexCommitPointDirectory.GetAllCommitPointsFullPath(indexFullPath);
+
+			if (Directory.Exists(allCommitPointsFullPath) == false)
+				return false;
+
+			var filesInIndexDirectory = Directory.GetFiles(indexFullPath).Select(Path.GetFileName);
+
+			var existingCommitPoints =
+				IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
+
+			Array.Reverse(existingCommitPoints); // start from the highest generation
+
+			foreach (var commitPointDirectoryName in existingCommitPoints)
+			{
+				try
+				{
+					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexDefinition.Name,
+																				commitPointDirectoryName);
+
+					using (var commitPointFile = File.Open(commitPointDirectory.FileFullPath, FileMode.Open))
+					{
+						var jsonSerializer = new JsonSerializer();
+						var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+
+						indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+					}
+
+					var missingFile =
+						indexCommit.SegmentsInfo.ReferencedFiles.Any(
+							referencedFile => filesInIndexDirectory.Contains(referencedFile) == false);
+
+					if (missingFile)
+					{
+						IOExtensions.DeleteDirectory(commitPointDirectory.FullPath);
+						continue; // there are some missing files, try another commit point
+					}
+
+					var storedSegmentsFile = indexCommit.SegmentsInfo.SegmentsFileName;
+
+					// here there should be only one segments_N file, however remove all if there is more
+					foreach (var currentSegmentsFile in Directory.GetFiles(commitPointDirectory.IndexFullPath, "segments_*"))
+					{
+						File.Delete(currentSegmentsFile);
+					}
+
+					// copy old segments_N file
+					File.Copy(Path.Combine(commitPointDirectory.FullPath, storedSegmentsFile),
+							  Path.Combine(commitPointDirectory.IndexFullPath, storedSegmentsFile), true);
+
+					try
+					{
+						// update segments.gen file
+						using (var genOutput = directory.CreateOutput(IndexFileNames.SEGMENTS_GEN))
+						{
+							genOutput.WriteInt(SegmentInfos.FORMAT_LOCKLESS);
+							genOutput.WriteLong(indexCommit.SegmentsInfo.Generation);
+							genOutput.WriteLong(indexCommit.SegmentsInfo.Generation);
+						}
+					}
+					catch (Exception)
+					{
+						// here we can ignore, segments.gen is used only as fallback
+					}
+
+					if (File.Exists(commitPointDirectory.DeletedKeysFile))
+						keysToDelete = File.ReadLines(commitPointDirectory.DeletedKeysFile).ToArray();
+
+					return true;
+				}
+				catch (Exception ex)
+				{
+					startupLog.WarnException("Could not recover an index named '" + indexDefinition.Name +
+									   "'from segments of the following generation " + commitPointDirectoryName, ex);
+				}
+			}
+
+			return false;
 		}
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
@@ -416,9 +712,37 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 
+			if ((value.Priority.HasFlag(IndexingPriority.Idle) || value.Priority.HasFlag(IndexingPriority.Abandoned)) &&
+				value.Priority.HasFlag(IndexingPriority.Forced) == false)
+			{
+				documentDatabase.TransactionalStorage.Batch(accessor =>
+				{
+					value.Priority = IndexingPriority.Normal;
+					try
+					{
+						accessor.Indexing.SetIndexPriority(index, IndexingPriority.Normal);
+					}
+					catch (Exception e)
+					{
+						if (accessor.IsWriteConflict(e) == false)
+							throw;
+
+						// we explciitly ignore write conflicts here, it is okay if we got set twice (two concurrent queries, or setting while indexing).
+					}
+					documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
+					documentDatabase.RaiseNotifications(new IndexChangeNotification()
+					{
+						Name = value.name,
+						Type = IndexChangeTypes.IndexPromotedFromIdle
+					});
+				});
+			}
+
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery();
+
+
 			return indexQueryOperation.Query();
 		}
 
@@ -435,7 +759,7 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 
-			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null,AggregationOperation.None, null), indexQueryTriggers);
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, AggregationOperation.None, null), indexQueryTriggers);
 			return indexQueryOperation.IndexEntries(totalResults);
 		}
 
@@ -498,11 +822,11 @@ namespace Raven.Database.Indexing
 		}
 
 		public void Reduce(
-			string index, 
-			AbstractViewGenerator viewGenerator, 
+			string index,
+			AbstractViewGenerator viewGenerator,
 			IEnumerable<IGrouping<int, object>> mappedResults,
 			int level,
-			WorkContext context, 
+			WorkContext context,
 			IStorageActionsAccessor actions,
 			HashSet<string> reduceKeys)
 		{
@@ -560,6 +884,12 @@ namespace Raven.Database.Indexing
 				value.Flush();
 			}
 
+			SetUnusedIndexesToIdle();
+			UpdateLatestPersistedQueryTime();
+		}
+
+		private void UpdateLatestPersistedQueryTime()
+		{
 			documentDatabase.TransactionalStorage.Batch(accessor =>
 			{
 				var maxDate = latestPersistedQueryTime;
@@ -570,14 +900,144 @@ namespace Raven.Database.Indexing
 						continue;
 
 					accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
-					{
-						{"LastQueryTime", lastQueryTime}
-					}, UuidType.Indexing);
+	                {
+	                    {"LastQueryTime", lastQueryTime}
+	                }, UuidType.Indexing);
 
 					if (lastQueryTime > maxDate)
 						maxDate = lastQueryTime;
 				}
 				latestPersistedQueryTime = maxDate;
+			});
+		}
+
+		public class UnusedIndexState
+		{
+			public DateTime LastQueryTime { get; set; }
+			public Index Index { get; set; }
+			public string Name { get; set; }
+			public IndexingPriority Priority { get; set; }
+			public DateTime CreationDate { get; set; }
+		}
+
+		private void SetUnusedIndexesToIdle()
+		{
+			documentDatabase.TransactionalStorage.Batch(accessor =>
+			{
+				var autoIndexesSortedByLastQueryTime =
+					(from index in indexes
+					 let stats = accessor.Indexing.GetIndexStats(index.Key)
+					 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
+					 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
+					 orderby lastQueryTime
+					 select new UnusedIndexState
+						 {
+							 LastQueryTime = lastQueryTime,
+							 Index = index.Value,
+							 Name = index.Key,
+							 Priority = stats.Priority,
+							 CreationDate = stats.CreatedTimestamp
+						 }).ToArray();
+
+				var idleChecks = 0;
+				for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
+				{
+					var thisItem = autoIndexesSortedByLastQueryTime[i];
+
+					if (thisItem.Priority.HasFlag(IndexingPriority.Disabled) || // we don't really have much to say about those in here
+						thisItem.Priority.HasFlag(IndexingPriority.Forced))// if it is forced, we can't change it
+						continue;
+
+					var age = (SystemTime.UtcNow - thisItem.CreationDate).TotalMinutes;
+					var lastQuery = (SystemTime.UtcNow - thisItem.LastQueryTime).TotalMinutes;
+
+					if (thisItem.Priority.HasFlag(IndexingPriority.Normal))
+					{
+						var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
+						var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
+						if (age < timeToWaitForIdleMinutes)
+						{
+							HandleActiveIndex(thisItem, age, lastQuery, accessor, timeToWaitForIdleMinutes);
+						}
+						else if (++idleChecks < 2)
+						{
+							// If it's a fairly established query then we need to determine whether there is any activity currently
+							// If there is activity and this has not been queried against 'recently' it needs idling
+							if (i < autoIndexesSortedByLastQueryTime.Length - 1)
+							{
+								var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
+								if ((nextItem.LastQueryTime - thisItem.LastQueryTime).TotalMinutes > timeToWaitForIdleMinutes)
+								{
+									accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+									thisItem.Index.Priority = IndexingPriority.Idle;
+									documentDatabase.RaiseNotifications(new IndexChangeNotification()
+									{
+										Name = thisItem.Name,
+										Type = IndexChangeTypes.IndexDemotedToIdle
+									});
+								}
+							}
+						}
+
+						continue;
+					}
+
+					if (thisItem.Priority.HasFlag(IndexingPriority.Idle))
+					{
+						HandleIdleIndex(age, lastQuery, thisItem, accessor);
+						continue;
+					}
+				}
+			});
+		}
+
+
+		private void HandleIdleIndex(double age, double lastQuery, UnusedIndexState thisItem,
+											IStorageActionsAccessor accessor)
+		{
+			// relatively young index, haven't been queried for a while already
+			// can be safely removed, probably
+			if (age < 90 && lastQuery < 30)
+			{
+				accessor.Indexing.DeleteIndex(thisItem.Name);
+				return;
+			}
+
+			if (lastQuery < configuration.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.TotalMinutes)
+				return;
+
+			// old enough, and haven't been queried for a while, mark it as abandoned
+
+			accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Abandoned);
+
+			thisItem.Index.Priority = IndexingPriority.Abandoned;
+
+			documentDatabase.RaiseNotifications(new IndexChangeNotification()
+			{
+				Name = thisItem.Name,
+				Type = IndexChangeTypes.IndexDemotedToIdle
+			});
+		}
+
+		private void HandleActiveIndex(UnusedIndexState thisItem, double age, double lastQuery, IStorageActionsAccessor accessor, double timeToWaitForIdle)
+		{
+			if (age < timeToWaitForIdle)
+				return; // there isn't even a point in checking here further
+
+			if (age < (timeToWaitForIdle * 2.5) && lastQuery < (1.5 * timeToWaitForIdle))
+				return;
+
+			if (age < (timeToWaitForIdle * 6) && lastQuery < (2.5 * timeToWaitForIdle))
+				return;
+
+			accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+
+			thisItem.Index.Priority = IndexingPriority.Idle;
+
+			documentDatabase.RaiseNotifications(new IndexChangeNotification()
+			{
+				Name = thisItem.Name,
+				Type = IndexChangeTypes.IndexDemotedToIdle
 			});
 		}
 
@@ -600,6 +1060,11 @@ namespace Raven.Database.Indexing
 		public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)
 		{
 			return GetIndexByName(index).GetExtension(indexExtensionKey);
+		}
+
+		public IIndexExtension GetIndexExtensionByPrefix(string index, string indexExtensionKeyPrefix)
+		{
+			return GetIndexByName(index).GetExtensionByPrefix(indexExtensionKeyPrefix);
 		}
 
 		public void SetIndexExtension(string indexName, string indexExtensionKey, IIndexExtension suggestionQueryIndexExtension)
@@ -631,14 +1096,14 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string directory, string incrementalTag = null)
 		{
-			Parallel.ForEach(indexes.Values, index => 
+			Parallel.ForEach(indexes.Values, index =>
 				index.Backup(directory, path, incrementalTag));
 		}
 
 		public void MergeAllIndexes()
 		{
 			Parallel.ForEach(indexes.Values, index =>
-			                                 index.MergeSegments());
+											 index.MergeSegments());
 		}
 	}
 }

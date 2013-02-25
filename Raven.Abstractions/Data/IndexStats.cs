@@ -13,16 +13,18 @@ namespace Raven.Abstractions.Data
 		public int IndexingAttempts { get; set; }
 		public int IndexingSuccesses { get; set; }
 		public int IndexingErrors { get; set; }
-		public Guid LastIndexedEtag { get; set; }
+		public Etag LastIndexedEtag { get; set; }
 		public DateTime LastIndexedTimestamp { get; set; }
 		public DateTime? LastQueryTimestamp { get; set; }
 		public int TouchCount { get; set; }
-
+        public IndexingPriority Priority { get; set; }
 		public int? ReduceIndexingAttempts { get; set; }
 		public int? ReduceIndexingSuccesses { get; set; }
 		public int? ReduceIndexingErrors { get; set; }
-		public Guid? LastReducedEtag { get; set; }
+		public Etag LastReducedEtag { get; set; }
 		public DateTime? LastReducedTimestamp { get; set; }
+        public DateTime CreatedTimestamp { get; set; }
+		public DateTime LastIndexingTime { get; set; }
 
 		public IndexingPerformanceStats[] Performance { get; set; }
 
@@ -32,7 +34,19 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public class IndexingPerformanceStats
+    [Flags]
+    public enum IndexingPriority
+    {
+        Normal = 0,
+		
+		Disabled = 1,
+        Idle = 2,
+		Abandoned = 4,
+
+        Forced = 256,
+    }
+
+    public class IndexingPerformanceStats
 	{
 		public string Operation { get; set; }
 		public int OutputCount { get; set; }

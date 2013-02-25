@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Responders
 			// This responder is NOT secured, and anyone can access it.
 			// Because of that, we need to provide explicit security here.
 			
-			// Anonymous Access - All / Get
+			// Anonymous Access - All / Get / Admin
 			// Show all dbs
 
 			// Anonymous Access - None
@@ -47,13 +47,13 @@ namespace Raven.Database.Server.Responders
 				}
 
 
-				if (context.User.IsAdministrator() == false)
+				if (context.User.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
 					approvedDatabases = server.RequestAuthorizer.GetApprovedDatabases(context);
 				}
 			}
 
-			Guid lastDocEtag = Guid.Empty;
+			Etag lastDocEtag = Etag.Empty;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();

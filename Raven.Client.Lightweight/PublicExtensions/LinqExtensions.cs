@@ -51,39 +51,177 @@ namespace Raven.Client
 
 #if !SILVERLIGHT
 		/// <summary>
-		/// Query the facets results for this query using the specified facet document
+		/// Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>
-		public static FacetResults ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static FacetResults ToFacets<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var query = ravenQueryInspector.ToString();
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
-			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.DatabaseCommands.GetFacets( ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize );
 		}
+
+        /// <summary>
+        /// Query the facets results for this query using the specified list of facets with the given start and pageSize
+        /// </summary>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        public static FacetResults ToFacets<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        {
+            var facetsList = facets.ToList();
+
+            if (!facetsList.Any())
+                throw new ArgumentException("Facets must contain at least one entry", "facets");
+
+            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
+
+            return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, query, facetsList, start, pageSize);
+        }
+
+		/// <summary>
+		/// Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static FacetResults ToFacets<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			var indexQuery = query.GetIndexQuery(isAsync: false);
+			var documentQuery = ((DocumentQuery<T>) query);
+			return documentQuery.DatabaseCommands.GetFacets(documentQuery.IndexQueried, indexQuery, facetSetupDoc, start, pageSize);
+		}
+
+        /// <summary>
+        /// Query the facets results for this query using the specified list of facets with the given start and pageSize
+        /// </summary>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        public static FacetResults ToFacets<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        {
+            var facetsList = facets.ToList();
+
+            if (!facetsList.Any())
+                throw new ArgumentException("Facets must contain at least one entry", "facets");
+
+            var indexQuery = query.GetIndexQuery(isAsync: false);
+            var documentQuery = ((DocumentQuery<T>)query);
+
+            return documentQuery.DatabaseCommands.GetFacets(documentQuery.IndexQueried, indexQuery, facetsList, start, pageSize);
+        }
 #endif
 
-#if !SILVERLIGHT
-		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
+#if !SILVERLIGHT && !NETFX_CORE
+		/// <summary>
+		/// Lazily Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static Lazy<FacetResults> ToFacetsLazy<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var query = ravenQueryInspector.ToString();
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
-			var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery { Query = query });
+			var lazyOperation = new LazyFacetsOperation( ravenQueryInspector.IndexQueried, facetSetupDoc, query, start, pageSize );
 
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
 			return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
 		}
+
+        /// <summary>
+        /// Lazily Query the facets results for this query using the specified list of facets with the given start and pageSize
+        /// </summary>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        //public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        //{
+        //    var facetsList = facets.ToList();
+
+        //    if (!facetsList.Any())
+        //        throw new ArgumentException("Facets must contain at least one entry", "facets");
+
+        //    var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+        //    var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
+
+        //    var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetsList, query, start, pageSize);
+
+        //    var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+        //    return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+        //}
+
+		/// <summary>
+		/// Lazily Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static Lazy<FacetResults> ToFacetsLazy<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			var indexQuery = query.GetIndexQuery(isAsync: false);
+			var documentQuery = ((DocumentQuery<T>)query);
+
+			var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetSetupDoc, indexQuery, start, pageSize);
+
+			var documentSession = ((DocumentSession)documentQuery.Session);
+			return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+		}
+
+        /// <summary>
+        /// Lazily Query the facets results for this query using the specified list of facets with the given start and pageSize
+        /// </summary>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        //public static Lazy<FacetResults> ToFacetsLazy<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        //{
+        //    var facetsList = facets.ToList();
+
+        //    if (!facetsList.Any())
+        //        throw new ArgumentException("Facets must contain at least one entry", "facets");
+
+        //    var indexQuery = query.GetIndexQuery(isAsync: false);
+        //    var documentQuery = ((DocumentQuery<T>)query);
+
+        //    var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetsList, indexQuery, start, pageSize);
+
+        //    var documentSession = ((DocumentSession)documentQuery.Session);
+        //    return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+        //}
 #endif
 
 		/// <summary>
-		/// Query the facets results for this query using the specified facet document
+		/// Async Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>
-		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static Task<FacetResults> ToFacetsAsync<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.ToAsyncString();
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.AsyncIndexQueried, new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync( ravenQueryInspector.AsyncIndexQueried, query, facetSetupDoc, start, pageSize );
+		}
+
+		/// <summary>
+		/// Async Query the facets results for this query using the specified facet document with the given start and pageSize
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			var ravenQueryInspector = ((AsyncDocumentQuery<T>)queryable);
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
+
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize);
 		}
 
 		/// <summary>
@@ -132,7 +270,7 @@ namespace Raven.Client
 		}
 #endif
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Suggest alternative values for the queried term
@@ -246,6 +384,15 @@ namespace Raven.Client
 				.ContinueWith(task => task.Result.Item2);
 		}
 
+
+		/// <summary>
+		/// Returns whatever the query has any results asynchronously
+		/// </summary>
+		public static Task<bool> AnyAsync<T>(this IQueryable<T> source)
+		{
+			return source.CountAsync().ContinueWith(x => x.Result > 0);
+		}
+
 		/// <summary>
 		/// Returns the total count of results for a query asynchronously. 
 		/// </summary>
@@ -269,22 +416,22 @@ namespace Raven.Client
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
 		public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms,
-		                                           decimal boost = 1,
-		                                           SearchOptions options = SearchOptions.Guess,
-		                                           EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
+												   decimal boost = 1,
+												   SearchOptions options = SearchOptions.Guess,
+												   EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			Expression expression = self.Expression;
 			if (expression.Type != typeof(IRavenQueryable<T>))
-		{
+			{
 				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-		}
+			}
 			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression,
-			                                                          fieldSelector,
-			                                                          Expression.Constant(searchTerms),
-			                                                          Expression.Constant(boost),
-			                                                          Expression.Constant(options),
-			                                                          Expression.Constant(escapeQueryOptions)));
+																	  fieldSelector,
+																	  Expression.Constant(searchTerms),
+																	  Expression.Constant(boost),
+																	  Expression.Constant(options),
+																	  Expression.Constant(escapeQueryOptions)));
 			return (IRavenQueryable<T>)queryable;
 		}
 
@@ -293,13 +440,13 @@ namespace Raven.Client
 		/// </summary>
 		public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
 		{
-			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod ();
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			Expression expression = self.Expression;
-			if (expression.Type != typeof (IRavenQueryable<T>))
+			if (expression.Type != typeof(IRavenQueryable<T>))
 			{
-				expression = Expression.Convert (expression, typeof (IRavenQueryable<T>));
+				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
 			}
-			var queryable = self.Provider.CreateQuery (Expression.Call (null, currentMethod.MakeGenericMethod (typeof (T)), expression));
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
 			return (IOrderedQueryable<T>)queryable;
 		}
 #endif

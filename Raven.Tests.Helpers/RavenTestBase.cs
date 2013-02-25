@@ -102,21 +102,36 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false)
+		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
+			 bool deleteDirectoryAfter = true, 
+			 bool deleteDirectoryBefore = true,
+			 bool runInMemory = true)
 		{
-			var ravenDbServer = GetNewServer();
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectoryBefore);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
-				Url = fiddler ? "http://localhost.fiddler:8079" : "http://localhost:8079"
+				Url = GetServerUrl(fiddler),
+				DefaultDatabase = databaseName,
 			};
 			store.AfterDispose += (sender, args) =>
 			{
 				ravenDbServer.Dispose();
-				ClearDatabaseDirectory();
+				if (deleteDirectoryAfter)
+					ClearDatabaseDirectory();
 			};
 			ModifyStore(store);
 			return store.Initialize();
+		}
+
+		private static string GetServerUrl(bool fiddler)
+		{
+			if (fiddler)
+			{
+				if (Process.GetProcessesByName("fiddler").Any())
+					return "http://localhost.fiddler:8079";
+			}
+			return "http://localhost:8079";
 		}
 
 		public static string GetDefaultStorageType(string requestedStorage = null)
@@ -132,19 +147,21 @@ namespace Raven.Tests.Helpers
 			return defaultStorageType;
 		}
 
-		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data", bool runInMemory = true)
+		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data", bool runInMemory = true, bool deleteDirectory = true)
 		{
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
 				DataDirectory = dataDirectory,
 				RunInMemory = runInMemory,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
+				AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 			};
 
 			ModifyConfiguration(ravenConfiguration);
 
-			if (ravenConfiguration.RunInMemory == false)
+			ravenConfiguration.PostInit();
+
+			if (ravenConfiguration.RunInMemory == false && deleteDirectory)
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
@@ -194,7 +211,7 @@ namespace Raven.Tests.Helpers
 		{
 		}
 
-		protected virtual void ModifyConfiguration(RavenConfiguration configuration)
+		protected virtual void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 		}
 
@@ -207,44 +224,43 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store)
+		public static void WaitForIndexing(IDocumentStore store, string db = null)
 		{
-			while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
-			{
-				Thread.Sleep(100);
-			}
+			var databaseCommands = store.DatabaseCommands;
+			if (db != null)
+				databaseCommands = databaseCommands.ForDatabase(db);
+			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(10)));
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
-			while (server.Server.HasPendingRequests)
-			{
-				Thread.Sleep(25);
-			}
+			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
-			while (true)
+			var done = SpinWait.SpinUntil(() =>
 			{
 				var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 				if (jsonDocument == null)
-					break;
+					return true;
 
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				if (backupStatus.IsRunning == false)
 				{
 					if (checkError)
 					{
-						var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+						var firstOrDefault =
+							backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
 						if (firstOrDefault != null)
 							Assert.False(true, firstOrDefault.Message);
 					}
 
-					return;
+					return true;
 				}
-				Thread.Sleep(50);
-			}
+				return false;
+			}, TimeSpan.FromMinutes(15));
+			Assert.True(done);
 		}
 
 		public static void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore, bool debug = true)
@@ -272,9 +288,9 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-		protected void WaitForUserToContinueTheTest()
+		protected void WaitForUserToContinueTheTest(bool debug = true)
 		{
-			if (Debugger.IsAttached == false)
+			if (debug && Debugger.IsAttached == false)
 				return;
 
 			using (var documentStore = new DocumentStore
@@ -291,7 +307,7 @@ namespace Raven.Tests.Helpers
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
 			}
 		}
 

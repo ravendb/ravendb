@@ -20,6 +20,7 @@ namespace Raven.Json.Linq
 		/// This can be used to attach additional state for external clients
 		/// Not used by anything related to JSON
 		/// </summary>
+		[CLSCompliant(false)]
 		public Dictionary<string, object> __ExternalState
 		{
 			get { return externalState ?? (externalState = new Dictionary<string, object>()); }
@@ -48,7 +49,8 @@ namespace Raven.Json.Linq
 		{
 			get { return Properties.Keys; }
 		}
-		public bool IsSnapshot
+
+		public override bool IsSnapshot
 		{
 			get { return Properties.IsSnapshot; }
 		}
@@ -66,7 +68,7 @@ namespace Raven.Json.Linq
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJObject"/> class.
 		/// </summary>
-		public RavenJObject() :this(StringComparer.InvariantCulture)
+		public RavenJObject() :this(StringComparer.Ordinal)
 		{
 		}
 
@@ -333,7 +335,7 @@ namespace Raven.Json.Linq
 			return new RavenJObject(Properties.CreateSnapshot());
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			Properties.EnsureSnapshot();
 		}

@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using Raven.Abstractions.Util;
+using Raven.Client.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Issues

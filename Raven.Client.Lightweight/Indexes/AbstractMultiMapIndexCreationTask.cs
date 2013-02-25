@@ -5,6 +5,12 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+#if !NETFX_CORE
+using Raven.Abstractions.MissingFromBCL;
+#else
+using Raven.Client.WinRT.MissingFromWinRT;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+#endif
 using Raven.Client.Linq;
 
 namespace Raven.Client.Indexes
@@ -41,10 +47,12 @@ namespace Raven.Client.Indexes
 			var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
 			foreach (var child in children)
 			{
-				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
+				if (child.IsGenericTypeDefinition)
+					continue;
+				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child.AsType());
 				var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
 				var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
-				addMapGeneric.MakeGenericMethod(child).Invoke(this, new[] { lambdaExpression });
+				addMapGeneric.MakeGenericMethod(child.AsType()).Invoke(this, new[] { lambdaExpression });
 			}
 		}
 
@@ -61,7 +69,13 @@ namespace Raven.Client.Indexes
 				Analyzers = Analyzers,
 				Reduce = Reduce,
 				TransformResults = TransformResults,
-				Stores = Stores
+				Stores = Stores,
+				TermVectors = TermVectors,
+				Suggestions = IndexSuggestions,
+				AnalyzersStrings = AnalyzersStrings,
+				IndexesStrings = IndexesStrings,
+				StoresStrings = StoresStrings,
+				TermVectorsStrings = TermVectorsStrings
 			}.ToIndexDefinition(Conventions, validateMap: false);
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{

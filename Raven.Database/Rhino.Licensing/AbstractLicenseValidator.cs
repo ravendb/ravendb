@@ -41,7 +41,6 @@ namespace Rhino.Licensing
 			"nist1.datum.com",
 			"nist1.dc.certifiedtime.com",
 			"nist1.nyc.certifiedtime.com",
-			"nist1.sjc.certifiedtime.com"
 		};
 
 		private readonly string licenseServerUrl;
@@ -160,8 +159,8 @@ namespace Rhino.Licensing
 			if (licenseInvalidated == null)
 				throw new InvalidOperationException("License was invalidated, but there is no one subscribe to the LicenseInvalidated event");
 			licenseInvalidated(LicenseType == LicenseType.Floating
-			                   	? InvalidationType.CannotGetNewLicense
-			                   	: InvalidationType.TimeExpired);
+								? InvalidationType.CannotGetNewLicense
+								: InvalidationType.TimeExpired);
 		}
 
 		/// <summary>
@@ -417,15 +416,17 @@ namespace Rhino.Licensing
 				return;
 
 			var sntp = new SntpClient(TimeServers);
-			sntp.BeginGetDate(time =>
-			{
-				if (time > ExpirationDate)
-					RaiseLicenseInvalidated();
-			}
-			                  , () =>
-			                  {
-			                  	/* ignored */
-			                  });
+			sntp.GetDateAsync()
+				.ContinueWith(task =>
+				{
+					if (task.IsFaulted)
+					{
+						Logger.WarnException("Failed to get network time, can't tell if the OS time is accurate", task.Exception);
+						return;
+					}
+					if (task.Result > ExpirationDate)
+						RaiseLicenseInvalidated(); // will explicitly crash the system if event is not subscribed
+				});
 		}
 
 		/// <summary>
@@ -518,7 +519,7 @@ namespace Rhino.Licensing
 					Environment.MachineName,
 					Environment.UserName,
 					clientId);
-				((ICommunicationObject) licensingService).Close();
+				((ICommunicationObject)licensingService).Close();
 				success = true;
 				if (leasedLicense == null)
 				{
@@ -549,7 +550,7 @@ namespace Rhino.Licensing
 			finally
 			{
 				if (success == false)
-					((ICommunicationObject) licensingService).Abort();
+					((ICommunicationObject)licensingService).Abort();
 			}
 		}
 
@@ -580,7 +581,7 @@ namespace Rhino.Licensing
 				return false;
 			}
 
-			LicenseType = (LicenseType) Enum.Parse(typeof (LicenseType), licenseType.Value);
+			LicenseType = (LicenseType)Enum.Parse(typeof(LicenseType), licenseType.Value);
 
 			XmlNode name = doc.SelectSingleNode("/license/name/text()");
 			if (name == null)
@@ -612,7 +613,7 @@ namespace Rhino.Licensing
 			nsMgr.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
 
 			var signedXml = new SignedXml(doc);
-			var sig = (XmlElement) doc.SelectSingleNode("//sig:Signature", nsMgr);
+			var sig = (XmlElement)doc.SelectSingleNode("//sig:Signature", nsMgr);
 			if (sig == null)
 			{
 				Logger.Warn("Could not find this signature node on license:\r\n{0}", License);
@@ -629,7 +630,7 @@ namespace Rhino.Licensing
 		public void DisableFutureChecks()
 		{
 			disableFutureChecks = true;
-			if(nextLeaseTimer != null)
+			if (nextLeaseTimer != null)
 			{
 				nextLeaseTimer.Dispose();
 

@@ -63,7 +63,10 @@ namespace Raven.Database.Impl
 				Cutoff = indexQuery.Cutoff,
 				PageSize = int.MaxValue,
 				FieldsToFetch = new[] { Constants.DocumentIdFieldName },
-				SortedFields = indexQuery.SortedFields
+				SortedFields = indexQuery.SortedFields,
+				HighlighterPreTags = indexQuery.HighlighterPreTags,
+				HighlighterPostTags = indexQuery.HighlighterPostTags,
+				HighlightedFields = indexQuery.HighlightedFields
 			};
 
 			bool stale;

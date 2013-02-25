@@ -41,12 +41,12 @@ namespace Raven.Client.Connection.Profiling
 					newList.RemoveFirst();
 				}
 
-				if (Interlocked.CompareExchange(ref items, newList, current) != current) 
+				if (Interlocked.CompareExchange(ref items, newList, current) != current)
 					continue;
 
 				if (onDrop != null && linkedListNode != null)
 					onDrop(linkedListNode.Value);
-	
+
 				return;
 			} while (true);
 
@@ -55,6 +55,32 @@ namespace Raven.Client.Connection.Profiling
 		public void Clear()
 		{
 			items = new LinkedList<T>();
+		}
+
+		public void ClearHalf()
+		{
+			do
+			{
+				var current = items;
+				var newList = new LinkedList<T>(current.Skip(current.Count / 2));
+
+				if (Interlocked.CompareExchange(ref items, newList, current) != current)
+					continue;
+
+				if (onDrop != null)
+				{
+					foreach (var item in current.Take(current.Count/2))
+					{
+						onDrop(item);
+					}
+				}
+				return;
+			} while (true);
+		}
+
+		public void Remove(T val)
+		{
+			items.Remove(val);
 		}
 	}
 }

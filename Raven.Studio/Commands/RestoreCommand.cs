@@ -27,19 +27,45 @@ namespace Raven.Studio.Commands
 
 			startRestoreTask.TaskStatus = TaskStatus.Started;
 			startRestoreTask.CanExecute.Value = false;
-			DatabaseCommands.StartRestoreAsync(backupLocation.Value, databaseLocation.Value, name.Value).Catch();
-
-			UpdateStatus();
+			DatabaseCommands.ForSystemDatabase().DeleteDocumentAsync("Raven/Restore/Status")
+			                .ContinueOnSuccessInTheUIThread(() =>
+			                {
+								failCount = 0;
+				                DatabaseCommands.StartRestoreAsync(backupLocation.Value.ToString(),
+				                                                   databaseLocation.Value.ToString(), name.Value.ToString())
+												.ContinueOnSuccess(() => UpdateStatus())
+				                                .Catch(exception =>
+				                                {
+													startRestoreTask.CanExecute.Value = true;
+													startRestoreTask.TaskStatus = TaskStatus.Ended;
+				                                });
+			                });
 		}
 
+		int failCount;
 		private void UpdateStatus()
 		{
-			DatabaseCommands.ForDefaultDatabase().GetAsync("Raven/Restore/Status").ContinueOnSuccessInTheUIThread(doc =>
+			DatabaseCommands.ForSystemDatabase().GetAsync("Raven/Restore/Status").ContinueOnSuccessInTheUIThread(doc =>
 			{
+				if (doc == null)
+				{
+					if (failCount >= 5)
+					{
+						startRestoreTask.CanExecute.Value = true;
+						startRestoreTask.TaskStatus = TaskStatus.Ended;
+						startRestoreTask.ReportError("Could not find restore status document, can not know if errors have accrued or if process was completed");
+						return;
+					}
+					else
+					{
+						Time.Delay(TimeSpan.FromMilliseconds(250)).ContinueOnSuccessInTheUIThread(UpdateStatus);
+						return;
+					}
+				}
 				var status = doc.DataAsJson["restoreStatus"].Values().Select(token => token.ToString()).ToList();
 				startRestoreTask.Output.Clear();
 				startRestoreTask.Output.AddRange(status);
-				if (status.Last().Contains("Complete") == false)
+				if (status.Last().Contains("The new database was created") == false && status.Last().Contains("Restore Canceled") == false)
 					Time.Delay(TimeSpan.FromMilliseconds(250)).ContinueOnSuccessInTheUIThread(UpdateStatus);
 				else
 				{
@@ -47,7 +73,12 @@ namespace Raven.Studio.Commands
 					startRestoreTask.TaskStatus = TaskStatus.Ended;
 				}
 			})
-			.Catch(exception => startRestoreTask.ReportError(exception));
+			.Catch(exception =>
+			{
+				startRestoreTask.ReportError(exception);
+				startRestoreTask.CanExecute.Value = true;
+				startRestoreTask.TaskStatus = TaskStatus.Ended;
+			});
 		}
 	}
 }

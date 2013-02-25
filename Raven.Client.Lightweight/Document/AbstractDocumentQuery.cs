@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -26,8 +27,10 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -81,6 +84,8 @@ namespace Raven.Client.Document
 
 		private KeyValuePair<string, string> lastEquality;
 
+        protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+
 		/// <summary>
 		///   The list of fields to project directly from the results
 		/// </summary>
@@ -95,6 +100,7 @@ namespace Raven.Client.Document
 		/// The query listeners for this query
 		/// </summary>
 		protected readonly IDocumentQueryListener[] queryListeners;
+		protected readonly bool isMapReduce;
 		/// <summary>
 		/// The session for this query
 		/// </summary>
@@ -110,6 +116,20 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected string[] orderByFields = new string[0];
 
+		/// <summary>
+		///   The fields to highlight
+		/// </summary>
+		protected List<HighlightedField> highlightedFields = new List<HighlightedField>();
+
+		/// <summary>
+		///   Highlighter pre tags
+		/// </summary>
+		protected string[] highlighterPreTags = new string[0];
+
+		/// <summary>
+		///   Highlighter post tags
+		/// </summary>
+		protected string[] highlighterPostTags = new string[0];
 
 		/// <summary>
 		///   The types to sort the fields by (NULL if not specified)
@@ -161,6 +181,26 @@ namespace Raven.Client.Document
 		protected RavenQueryStatistics queryStats = new RavenQueryStatistics();
 
 		/// <summary>
+		/// Holds the query highlightings
+		/// </summary>
+		protected RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
+
+        /// <summary>
+        /// The name of the results transformer to use after executing this query
+        /// </summary>
+	    protected string resultsTransformer;
+
+		/// <summary>
+		/// Determines if entities should be tracked and kept in memory
+		/// </summary>
+		protected bool disableEntitiesTracking;
+
+		/// <summary>
+		/// Determine if query results should be cached.
+		/// </summary>
+		protected bool disableCaching;
+
+		/// <summary>
 		///   Get the name of the index being queried
 		/// </summary>
 		public string IndexQueried
@@ -210,7 +250,7 @@ namespace Raven.Client.Document
 		}
 
 		protected Action<QueryResult> afterQueryExecutedCallback;
-		protected Guid? cutoffEtag;
+		protected Etag cutoffEtag;
 
 		private TimeSpan DefaultTimeout
 		{
@@ -231,8 +271,9 @@ namespace Raven.Client.Document
 									 string indexName,
 									 string[] fieldsToFetch,
 									 string[] projectionFields,
-									 IDocumentQueryListener[] queryListeners)
-			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners)
+									 IDocumentQueryListener[] queryListeners,
+									 bool isMapReduce)
+			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
 #endif
@@ -248,7 +289,8 @@ namespace Raven.Client.Document
 									 string indexName,
 									 string [] fieldsToFetch,
 									 string[] projectionFields,
-									 IDocumentQueryListener[] queryListeners)
+									 IDocumentQueryListener[] queryListeners, 
+									 bool isMapReduce)
 		{
 #if !SILVERLIGHT
 			this.theDatabaseCommands = databaseCommands;
@@ -256,10 +298,11 @@ namespace Raven.Client.Document
 			this.projectionFields = projectionFields;
 			this.fieldsToFetch = fieldsToFetch;
 			this.queryListeners = queryListeners;
+			this.isMapReduce = isMapReduce;
 			this.indexName = indexName;
 			this.theSession = theSession;
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
-			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
+			this.AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
@@ -268,6 +311,12 @@ namespace Raven.Client.Document
 			{
 				WaitForNonStaleResultsAsOfLastWrite();
 			}
+		}
+
+		private void UpdateStatsAndHighlightings(QueryResult queryResult)
+		{
+			this.queryStats.UpdateQueryStats(queryResult);
+			this.highlightings.Update(queryResult);
 		}
 
 		/// <summary>
@@ -298,8 +347,14 @@ namespace Raven.Client.Document
 			queryStats = other.queryStats;
 			defaultOperator = other.defaultOperator;
 			defaultField = other.defaultField;
-
-			AfterQueryExecuted(queryStats.UpdateQueryStats);
+			highlightedFields = other.highlightedFields;
+			highlighterPreTags = other.highlighterPreTags;
+			highlighterPostTags = other.highlighterPostTags;
+		    queryInputs = other.queryInputs;
+			disableEntitiesTracking = other.disableEntitiesTracking;
+			disableCaching = other.disableCaching;
+			
+			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
 
 		#region TSelf Members
@@ -425,32 +480,39 @@ namespace Raven.Client.Document
 		public void WaitForNonStaleResults(TimeSpan waitTimeout)
 		{
 			theWaitForNonStaleResults = true;
-		    cutoffEtag = null;
-		    cutoff = null;
+			cutoffEtag = null;
+			cutoff = null;
 			timeout = waitTimeout;
 		}
 
 		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
-			var query = queryText.ToString();
-			var indexQuery = GenerateIndexQuery(query);
+			var indexQuery = GetIndexQuery(isAsync: false);
 
 			if(beforeQueryExecutionAction != null)
 				beforeQueryExecutionAction(indexQuery);
 
 			return new QueryOperation(theSession,
-			                          indexName,
-			                          indexQuery,
-			                          projectionFields,
-			                          sortByHints,
-			                          theWaitForNonStaleResults,
-			                          setOperationHeaders,
-			                          timeout,
-			                          transformResultsFunc,
-			                          includes);
+									  indexName,
+									  indexQuery,
+									  projectionFields,
+									  sortByHints,
+									  theWaitForNonStaleResults,
+									  setOperationHeaders,
+									  timeout,
+									  transformResultsFunc,
+									  includes,
+									  disableEntitiesTracking);
 		}
 
-#if !SILVERLIGHT
+		public IndexQuery GetIndexQuery(bool isAsync)
+		{
+			var query = queryText.ToString();
+			var indexQuery = GenerateIndexQuery(query);
+			return indexQuery;
+		}
+
+#if !SILVERLIGHT  && !NETFX_CORE
 		/// <summary>
 		///   Gets the query result
 		///   Execute the query the first time that this is called.
@@ -495,7 +557,7 @@ namespace Raven.Client.Document
 					var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
 					if (queryOperation.IsAcceptable(result) == false)
 					{
-						Thread.Sleep(100);
+						ThreadSleep.Sleep(100);
 						continue;
 					}
 					break;
@@ -513,7 +575,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -617,6 +679,49 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
+			string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
+		{
+			this.Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
+			string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+		{
+			this.Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
+		{
+			this.SetHighlighterTags(preTag, postTag);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string[] preTags, string[] postTags)
+		{
+			this.SetHighlighterTags(preTags, postTags);
+			return this;
+		}
+
+		public IDocumentQueryCustomization NoTracking()
+		{
+			disableEntitiesTracking = true;
+			return this;
+		}
+
+		public IDocumentQueryCustomization NoCaching()
+		{
+			disableCaching = true;
+			return this;
+		}
+
+		public void SetHighlighterTags(string preTag, string postTag)
+		{
+			this.SetHighlighterTags(new[] {preTag}, new[] {postTag});
+		}
+
 		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
@@ -644,7 +749,24 @@ namespace Raven.Client.Document
 			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
 		}
 
-#if !SILVERLIGHT
+		public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
+		{
+			highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
+		}
+
+		public void Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+		{
+			highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
+			fieldHighlightings = highlightings.AddField(fieldName);
+		}
+
+		public void SetHighlighterTags(string[] preTags, string[] postTags)
+		{
+			highlighterPreTags = preTags;
+			highlighterPostTags = postTags;
+		}
+
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>
@@ -882,7 +1004,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private string EnsureValidFieldName(WhereParams whereParams)
 		{
-			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
+			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath || isMapReduce)
 				return whereParams.FieldName;
 
 			foreach (var rootType in rootTypes)
@@ -940,24 +1062,35 @@ If you really want to do in memory filtering on the data returned from the query
 				.Append(">:(");
 
 			var first = true;
+			AddItemToInClause(fieldName, list, first);
+			queryText.Append(") ");
+		}
+
+		private void AddItemToInClause(string fieldName, IEnumerable<object> list, bool first)
+		{
 			foreach (var value in list)
 			{
-				if(first == false)
+				var enumerable = value as IEnumerable;
+				if (enumerable != null && value is string == false)
+				{
+					AddItemToInClause(fieldName, enumerable.Cast<object>(), first);
+					return;
+				}
+				if (first == false)
 				{
 					queryText.Append(",");
 				}
 				first = false;
 				var whereParams = new WhereParams
 				{
-					AllowWildcards = true, 
-					IsAnalyzed = true, 
-					FieldName = fieldName, 
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					FieldName = fieldName,
 					Value = value
 				};
 				EnsureValidFieldName(whereParams);
 				queryText.Append(TransformToEqualValue(whereParams).Replace(",", "`,`"));
 			}
-			queryText.Append(") ");
 		}
 
 		/// <summary>
@@ -1056,15 +1189,13 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
 		{
-			fieldName = EnsureValidFieldName(new WhereParams {FieldName = fieldName});
+			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
 
-			if(fieldName == Constants.DocumentIdFieldName)
+			if (fieldName == Constants.DocumentIdFieldName)
 				return fieldName;
 
 			var val = (start ?? end);
-			var isNumeric = val is int || val is long || val is decimal || val is double || val is float;
-
-			if (isNumeric && fieldName.EndsWith("_Range") == false)
+			if (conventions.UsesRangeType(val) && !fieldName.EndsWith("_Range"))
 				fieldName = fieldName + "_Range";
 			return fieldName;
 		}
@@ -1329,7 +1460,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag);
 			return this;
@@ -1340,7 +1471,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
 			return this;
@@ -1393,7 +1524,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
-		public void WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		public void WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, DefaultTimeout);
 		}
@@ -1401,7 +1532,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
-		public void WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		public void WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			theWaitForNonStaleResults = true;
 			timeout = waitTimeout;
@@ -1491,6 +1622,9 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private static Task TaskDelay(int dueTimeMilliseconds)
 		{
+#if NETFX_CORE
+			return Task.Delay(dueTimeMilliseconds);
+#else
 			var taskCompletionSource = new TaskCompletionSource<object>();
 			var cancellationTokenRegistration = new CancellationTokenRegistration();
 			var timer = new Timer(o =>
@@ -1501,6 +1635,7 @@ If you really want to do in memory filtering on the data returned from the query
 			});
 			timer.Change(dueTimeMilliseconds, -1);
 			return taskCompletionSource.Task;
+#endif
 		}
 
 		/// <summary>
@@ -1525,34 +1660,50 @@ If you really want to do in memory filtering on the data returned from the query
 					FieldsToFetch = fieldsToFetch,
 					SpatialFieldName = spatialFieldName,
 					QueryShape = queryShape,
-					SpatialRelation =  spatialRelation,
+					SpatialRelation = spatialRelation,
 					DistanceErrorPercentage = distanceErrorPct,
 					DefaultField = defaultField,
-					DefaultOperator = defaultOperator
+					DefaultOperator = defaultOperator,
+					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
+					HighlighterPreTags = highlighterPreTags.ToArray(),
+					HighlighterPostTags = highlighterPostTags.ToArray(),
+                    ResultsTransformer = resultsTransformer,
+                    QueryInputs  = queryInputs,
+					DisableCaching = disableCaching
 				};
 			}
 
-			return new IndexQuery
+			var indexQuery = new IndexQuery
 			{
 				GroupBy = groupByFields,
 				AggregationOperation = aggregationOp,
 				Query = query,
-				PageSize = pageSize ?? 128,
 				Start = start,
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 				FieldsToFetch = fieldsToFetch,
 				DefaultField = defaultField,
-				DefaultOperator = defaultOperator
+				DefaultOperator = defaultOperator,
+				HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
+				HighlighterPreTags = highlighterPreTags.ToArray(),
+				HighlighterPostTags = highlighterPostTags.ToArray(),
+                ResultsTransformer = this.resultsTransformer,
+                QueryInputs = queryInputs,
+				DisableCaching = disableCaching
 			};
+
+			if (pageSize != null)
+				indexQuery.PageSize = pageSize.Value;
+
+			return indexQuery;
 		}
 
-		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)", 
-#if !SILVERLIGHT
+		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
+#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled
 #else
-			RegexOptions.None
+ RegexOptions.None
 #endif
 
 			);
@@ -1607,12 +1758,11 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				return (bool)whereParams.Value ? "true" : "false";
 			}
-
 			if (type == typeof(DateTime))
 			{
 				var val = (DateTime)whereParams.Value;
 				var s = val.ToString(Default.DateTimeFormatsToWrite);
-				if(val.Kind == DateTimeKind.Utc)
+				if (val.Kind == DateTimeKind.Utc)
 					s += "Z";
 				return s;
 			}
@@ -1627,20 +1777,33 @@ If you really want to do in memory filtering on the data returned from the query
 				return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false);
 			}
 
+			if (type == typeof(double))
+			{
+				return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false);
+			}
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
 				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, 
 					whereParams.FieldTypeForIdentifier ?? typeof(T), false);
 			}
+			var strValue = whereParams.Value as string;
+			if (strValue != null)
+			{
+				strValue = RavenQuery.Escape(strValue, 
+						whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
-			if (whereParams.Value is string || whereParams.Value is ValueType)
+				return whereParams.IsAnalyzed ? strValue : String.Concat("[[", strValue, "]]");
+			}
+
+			if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Equality, out strValue))
+				return strValue;
+
+			if (whereParams.Value is ValueType)
 			{
 				var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
 												whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
-				if (whereParams.Value is string == false)
-					return escaped;
-				return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+				return escaped;
 			}
 
 			var result = GetImplicitStringConvertion(whereParams.Value.GetType());
@@ -1674,14 +1837,15 @@ If you really want to do in memory filtering on the data returned from the query
 				return null;
 
 			Func<object, string> value;
-			if(implicitStringsCache.TryGetValue(type,out value))
+			var localStringsCache = implicitStringsCache;
+			if(localStringsCache.TryGetValue(type,out value))
 				return value;
 
 			var methodInfo = type.GetMethod("op_Implicit", new[] {type});
 
 			if (methodInfo == null || methodInfo.ReturnType != typeof(string))
 			{
-				implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+				implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
 				{
 					{type, null}
 				};
@@ -1692,7 +1856,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			var func = (Func<object, string>) Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
 
-			implicitStringsCache = new Dictionary<Type, Func<object, string>>(implicitStringsCache)
+			implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
 				{
 					{type, func}
 				};
@@ -1729,13 +1893,21 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((double)(decimal)whereParams.Value);
 			if (whereParams.Value is double)
 				return NumberUtil.NumberToString((double)whereParams.Value);
+			if (whereParams.Value is TimeSpan)
+				return NumberUtil.NumberToString(((TimeSpan) whereParams.Value).Ticks);
 			if (whereParams.Value is float)
 				return NumberUtil.NumberToString((float)whereParams.Value);
-		   if(whereParams.Value is string)
+			if(whereParams.Value is string)
 				return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+
+			string strVal;
+			if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Range,
+			                                        out strVal))
+				return strVal;
+
 			if(whereParams.Value is ValueType)
 				return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-				                         false, true);
+										 false, true);
 
 			var stringWriter = new StringWriter();
 			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);

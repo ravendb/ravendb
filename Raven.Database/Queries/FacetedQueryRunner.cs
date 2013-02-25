@@ -19,14 +19,8 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public FacetResults GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc)
+		public FacetResults GetFacets(string index, IndexQuery indexQuery, List<Facet> facets, int start = 0, int? pageSize = null)
 		{
-			var facetSetup = database.Get(facetSetupDoc, null);
-			if (facetSetup == null)
-				throw new InvalidOperationException("Could not find facets document: " + facetSetupDoc);
-
-			var facets = facetSetup.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
-
 			var results = new FacetResults();
 			var defaultFacets = new Dictionary<string, Facet>();
 			var rangeFacets = new Dictionary<string, List<ParsedRange>>();
@@ -39,7 +33,7 @@ namespace Raven.Database.Queries
 						//Remember the facet, so we can run them all under one query
 						defaultFacets[facet.Name] = facet;
 						results.Results[facet.Name] = new FacetResult();
-						break;
+				        break;
 					case FacetMode.Ranges:
 						rangeFacets[facet.Name] = facet.Ranges.Select(range => ParseRange(facet.Name, range)).ToList();
 						results.Results[facet.Name] = new FacetResult
@@ -56,7 +50,8 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			new QueryForFacets(database, index, defaultFacets, rangeFacets, indexQuery, results).Execute();
+			var queryForFacets = new QueryForFacets(database, index, defaultFacets, rangeFacets, indexQuery, results, start, pageSize);
+			queryForFacets.Execute();
 
 			return results;
 		}
@@ -183,7 +178,9 @@ namespace Raven.Database.Queries
 				 Dictionary<string, Facet> facets,
 				 Dictionary<string, List<ParsedRange>> ranges,
 				 IndexQuery indexQuery,
-				 FacetResults results)
+				 FacetResults results,
+				 int start,
+				 int? pageSize)
 			{
 				Database = database;
 				Index = index;
@@ -191,6 +188,8 @@ namespace Raven.Database.Queries
 				Ranges = ranges;
 				IndexQuery = indexQuery;
 				Results = results;
+				Start = start;
+				PageSize = pageSize;
 			}
 
 			DocumentDatabase Database { get; set; }
@@ -199,6 +198,8 @@ namespace Raven.Database.Queries
 			Dictionary<string, List<ParsedRange>> Ranges { get; set; }
 			IndexQuery IndexQuery { get; set; }
 			FacetResults Results { get; set; }
+			private int Start { get; set; }
+			private int? PageSize { get; set; }
 
 			public void Execute()
 			{
@@ -252,7 +253,7 @@ namespace Raven.Database.Queries
 					var values = new List<FacetValue>();
 					List<string> allTerms;
 
-					int maxResults = Math.Min(facet.MaxResults ?? Database.Configuration.MaxPageSize, Database.Configuration.MaxPageSize);
+					int maxResults = Math.Min(PageSize ?? facet.MaxResults ?? Database.Configuration.MaxPageSize, Database.Configuration.MaxPageSize);
 					var groups = facetsByName.GetOrDefault(facet.Name);
 
 					if (groups == null)
@@ -270,13 +271,13 @@ namespace Raven.Database.Queries
 							allTerms = new List<string>(groups.OrderBy(x => x.Value).ThenBy(x => x.Key).Select(x => x.Key));
 							break;
 						case FacetTermSortMode.HitsDesc:
-							allTerms = new List<string>(groups.OrderByDescending(x => x.Value).ThenBy(x=>x.Key).Select(x => x.Key));
+							allTerms = new List<string>(groups.OrderByDescending(x => x.Value).ThenBy(x => x.Key).Select(x => x.Key));
 							break;
 						default:
 							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
 					}
 
-					foreach (var term in allTerms.TakeWhile(term => values.Count < maxResults))
+					foreach (var term in allTerms.Skip(Start).TakeWhile(term => values.Count < maxResults))
 					{
 						values.Add(new FacetValue
 						{
@@ -285,15 +286,16 @@ namespace Raven.Database.Queries
 						});
 					}
 
+					var previousHits = allTerms.Take(Start).Sum(allTerm => groups.GetOrDefault(allTerm));
 					Results.Results[facet.Name] = new FacetResult
-				{
-					Values = values,
-					RemainingTermsCount = allTerms.Count - values.Count,
-					RemainingHits = groups.Values.Sum() - values.Sum(x => x.Hits),
-				};
+					{
+						Values = values,
+						RemainingTermsCount = allTerms.Count - (Start + values.Count),
+						RemainingHits = groups.Values.Sum() - (previousHits + values.Sum(x => x.Hits)),
+					};
 
-					if (facet.InclueRemainingTerms)
-						Results.Results[facet.Name].RemainingTerms = allTerms.Skip(maxResults).ToList();
+					if (facet.IncludeRemainingTerms)
+						Results.Results[facet.Name].RemainingTerms = allTerms.Skip(Start + values.Count).ToList();
 				}
 			}
 

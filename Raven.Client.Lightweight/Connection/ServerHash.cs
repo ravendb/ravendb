@@ -1,6 +1,6 @@
 using System;
 using System.Text;
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
 using System.Security.Cryptography;

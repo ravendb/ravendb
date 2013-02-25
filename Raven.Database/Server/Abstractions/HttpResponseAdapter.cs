@@ -9,6 +9,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using Raven.Abstractions;
 using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.Abstractions
@@ -60,6 +61,12 @@ namespace Raven.Database.Server.Abstractions
 		{
 			get { return response.StatusDescription; }
 			set { response.StatusDescription = value; }
+		}
+
+		public bool BufferOutput
+		{
+			get { return response.BufferOutput; }
+			set { response.BufferOutput = value; }
 		}
 
 		public void Redirect(string url)
@@ -115,6 +122,16 @@ namespace Raven.Database.Server.Abstractions
 			{
 				return new CompletedTask(e);
 			}
+		}
+
+		public void SetCookie(string name, string val)
+		{
+			response.SetCookie(new HttpCookie(name,val)
+			{
+				HttpOnly = true,
+				Expires = SystemTime.UtcNow.AddHours(1),
+				Path = "/"
+			});
 		}
 	}
 }

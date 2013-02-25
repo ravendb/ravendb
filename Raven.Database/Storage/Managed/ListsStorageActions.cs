@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using Raven.Abstractions.Extensions;
@@ -48,28 +48,31 @@ namespace Raven.Storage.Managed
 			storage.Lists.Remove(readResult.Key);
 		}
 
-		public IEnumerable<ListItem> Read(string name, Guid start, int take)
+		public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
 		{
 			return storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
 			{
 				{ "name", name },
 				{ "etag", start.ToByteArray() }
 			})
-			.TakeWhile(x=> StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("name"), name))
+			.TakeWhile(x=> 
+				StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("name"), name) &&
+				(end == null || end.CompareTo(Etag.Parse(x.Value<byte[]>("etag"))) > 0)
+				)
+			.Take(take)
 			.Select(result =>
 			{
 				var readResult = storage.Lists.Read(result);
 				return new ListItem
 				{
 					Data = readResult.Data().ToJObject(),
-					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+					Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 					Key = readResult.Key.Value<string>("key")
 				};
-			})
-			.Take(take);
+			});
 		}
 
-		public void RemoveAllBefore(string name, Guid etag)
+		public void RemoveAllBefore(string name, Etag etag)
 		{
 			var comparable = new ComparableByteArray(etag);
 			var results = storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
@@ -101,7 +104,7 @@ namespace Raven.Storage.Managed
 			{
 				Data = readResult.Data().ToJObject(),
 				Key = readResult.Key.Value<string>("key"),
-				Etag = new Guid(readResult.Key.Value<byte[]>("etag"))
+				Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag"))
 			};
 		}
 	}

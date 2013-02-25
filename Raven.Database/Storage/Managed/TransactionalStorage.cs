@@ -127,7 +127,6 @@ namespace Raven.Storage.Managed
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
-				storageActionsAccessor.InvokePreCommit();
 				tableStorage.Commit();
 				storageActionsAccessor.InvokeOnCommit();
 			}
@@ -236,6 +235,11 @@ namespace Raven.Storage.Managed
 			});
 			Id = newId;
 			return newId;
+		}
+
+		public void DumpAllStorageTables()
+		{
+			throw new NotSupportedException("Not valid for munin");
 		}
 
 		public void ClearCaches()

@@ -1,12 +1,14 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IndexQuery.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -15,6 +17,8 @@ namespace Raven.Abstractions.Data
 	/// </summary>
 	public class IndexQuery
 	{
+		private int pageSize;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexQuery"/> class.
 		/// </summary>
@@ -22,8 +26,13 @@ namespace Raven.Abstractions.Data
 		{
 			TotalSize = new Reference<int>();
 			SkippedResults = new Reference<int>();
-			PageSize = 128;
+			pageSize = 128;
 		}
+
+		/// <summary>
+		/// Whatever the page size was explicitly set or still at its default value
+		/// </summary>
+		public bool PageSizeSet { get; private set; }
 
 		/// <summary>
 		/// Gets or sets the query.
@@ -37,6 +46,11 @@ namespace Raven.Abstractions.Data
 		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
 
+        /// <summary>
+        /// Additional query inputs
+        /// </summary>
+        public Dictionary<string, RavenJToken> QueryInputs { get; set; }
+
 		/// <summary>
 		/// Gets or sets the start of records to read.
 		/// </summary>
@@ -47,7 +61,15 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the size of the page.
 		/// </summary>
 		/// <value>The size of the page.</value>
-		public int PageSize { get; set; }
+		public int PageSize
+		{
+			get { return pageSize; }
+			set
+			{
+				pageSize = value;
+				PageSizeSet = true;
+			}
+		}
 
 		/// <summary>
 		/// The aggregation operation for this query
@@ -93,7 +115,7 @@ namespace Raven.Abstractions.Data
 		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
 		/// use the Cutoff date option, instead.
 		/// </remarks>
-		public Guid? CutoffEtag { get; set; }
+		public Etag CutoffEtag { get; set; }
 
 		/// <summary>
 		/// The default field to use when querying directly on the Lucene query
@@ -126,14 +148,39 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public bool DebugOptionGetIndexEntries { get; set; }
 
+        /// <summary>
+        /// Gets or sets the options to highlight the fields
+        /// </summary>
+        public HighlightedField[] HighlightedFields { get; set; }
+
+        /// <summary>
+        /// Gets or sets the highlighter pre tags
+        /// </summary>
+	    public string[] HighlighterPreTags { get; set; }
+
+        /// <summary>
+        /// Gets or sets the highlighter post tags
+        /// </summary>
+	    public string[] HighlighterPostTags { get; set; }
+
+        /// <summary>
+        /// Gets or sets the results transformer
+        /// </summary>
+	    public string ResultsTransformer { get; set; }
+
 		/// <summary>
+		/// Whatever we should disable caching of query results
+		/// </summary>
+		public bool DisableCaching { get; set; }
+
+	    /// <summary>
 		/// Gets the index query URL.
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
 		/// <param name="index">The index.</param>
 		/// <param name="operationName">Name of the operation.</param>
 		/// <returns></returns>
-		public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
+		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true)
 		{
 			if (operationUrl.EndsWith("/"))
 				operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
@@ -144,9 +191,7 @@ namespace Raven.Abstractions.Data
 				.Append("/")
 				.Append(index);
 
-			AppendQueryString(path);
-
-
+			AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet);
 
 			return path.ToString();
 		}
@@ -166,16 +211,22 @@ namespace Raven.Abstractions.Data
 			return sb.ToString();
 		}
 
-		public void AppendQueryString(StringBuilder path)
+		public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true)
 		{
 			path.Append("?");
 
 			AppendMinimalQueryString(path);
 
-			path
-				.Append("&start=").Append(Start)
-				.Append("&pageSize=").Append(PageSize)
-				.Append("&aggregation=").Append(AggregationOperation);
+			if (Start != 0)
+				path.Append("&start=").Append(Start);
+
+			if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
+				path.Append("&pageSize=").Append(PageSize);
+			
+
+			if(AggregationOperation != AggregationOperation.None)
+				path.Append("&aggregation=").Append(AggregationOperation);
+
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			GroupBy.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
@@ -188,6 +239,19 @@ namespace Raven.Abstractions.Data
                 path.Append("&skipTransformResults=true");
             }
 
+            if (ResultsTransformer != null)
+            {
+                path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
+            }
+
+			if (QueryInputs != null)
+			{
+				foreach (var input in QueryInputs)
+				{
+					path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
+				}
+			}
+
 			if (Cutoff != null)
 			{
 				var cutOffAsString =
@@ -196,8 +260,13 @@ namespace Raven.Abstractions.Data
 			}
 			if (CutoffEtag != null)
 			{
-				path.Append("&cutOffEtag=").Append(CutoffEtag.Value.ToString());
+				path.Append("&cutOffEtag=").Append(CutoffEtag);
 			}
+
+		    this.HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
+            this.HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
+            this.HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
+
 			
 
 			if(DebugOptionGetIndexEntries)
@@ -236,7 +305,7 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public enum QueryOperator
+    public enum QueryOperator
 	{
 		Or,
 		And

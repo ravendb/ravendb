@@ -28,7 +28,7 @@ namespace Raven.Bundles.Replication.Triggers
 				if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
 					return;
 
-				RavenJArray history = metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+				RavenJArray history = new RavenJArray(metadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
 				metadata[Constants.RavenReplicationHistory] = history;
 
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
@@ -43,7 +43,7 @@ namespace Raven.Bundles.Replication.Triggers
 					Database.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
 
 					// add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
-					var conflictHistory = deletedMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+					var conflictHistory = new RavenJArray(deletedMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
 					conflictHistory.Add(new RavenJObject
 					{
 						{Constants.RavenReplicationVersion, deletedMetadata[Constants.RavenReplicationVersion]},

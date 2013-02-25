@@ -10,11 +10,12 @@ namespace Raven.Client.Changes
 		bool Connected { get; }
 		event EventHandler ConnectionStatusChanged;
 
-		Task Task { get; }
+		Task<IDatabaseChanges> Task { get; }
 		IObservableWithTask<IndexChangeNotification> ForIndex(string indexName);
 		IObservableWithTask<DocumentChangeNotification> ForDocument(string docId);
 		IObservableWithTask<DocumentChangeNotification> ForAllDocuments();
 		IObservableWithTask<IndexChangeNotification> ForAllIndexes();
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
+		void WaitForAllPendingSubscriptions();
 	}
 }

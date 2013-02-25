@@ -43,34 +43,60 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <value>The stores.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, FieldStorage> Stores { get; set; }
+
 		/// <summary>
 		/// Gets or sets the stores options
 		/// </summary>
 		/// <value>The stores.</value>
 		public IDictionary<string, FieldStorage> StoresStrings { get; set; }
+
 		/// <summary>
 		/// Gets or sets the indexing options
 		/// </summary>
 		/// <value>The indexes.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, FieldIndexing> Indexes { get; set; }
+
 		/// <summary>
 		/// Gets or sets the indexing options
 		/// </summary>
 		/// <value>The indexes.</value>
 		public IDictionary<string, FieldIndexing> IndexesStrings { get; set; }
+
 		/// <summary>
 		/// Gets or sets the sort options.
 		/// </summary>
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
+
 		/// <summary>
 		/// Get os set the analyzers
 		/// </summary>
 		public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
+
 		/// <summary>
 		/// Get os set the analyzers
 		/// </summary>
 		public IDictionary<string, string> AnalyzersStrings { get; set; }
+
+		/// <summary>
+		/// Gets or sets the suggestion options.
+		/// </summary>
+		/// <value>The suggestion options.</value>
+		public IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> Suggestions { get; set; }
+
+		/// <summary>
+		/// Gets or sets the term vector options
+		/// </summary>
+		/// <value>The term vectors.</value>
+		public IDictionary<Expression<Func<TReduceResult, object>>, FieldTermVector> TermVectors { get; set; }
+
+		/// <summary>
+		/// Gets or sets the term vector options
+		/// </summary>
+		/// <value>The term vectors.</value>
+		public IDictionary<string, FieldTermVector> TermVectorsStrings { get; set; }
+
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
@@ -81,8 +107,11 @@ namespace Raven.Client.Indexes
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			IndexesStrings = new Dictionary<string, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
+			Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
+			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
+			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
 		}
 
 		/// <summary>
@@ -97,7 +126,7 @@ namespace Raven.Client.Indexes
 			if (Reduce != null)
 				IndexDefinitionHelper.ValidateReduce(Reduce);
 
-			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 			var indexDefinition = new IndexDefinition
 			{
 				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
@@ -105,7 +134,9 @@ namespace Raven.Client.Indexes
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),
-				Analyzers = ConvertToStringDictionary(Analyzers)
+				Analyzers = ConvertToStringDictionary(Analyzers),
+				Suggestions = ConvertToStringDictionary(Suggestions),
+                TermVectors =  ConvertToStringDictionary(TermVectors)
 			};
 
 			foreach (var indexesString in IndexesStrings)
@@ -125,8 +156,15 @@ namespace Raven.Client.Indexes
 			foreach (var analyzerString in AnalyzersStrings)
 			{
 				if (indexDefinition.Analyzers.ContainsKey(analyzerString.Key))
-					throw new InvalidOperationException("There is a duplicate key in stores: " + analyzerString.Key);
+					throw new InvalidOperationException("There is a duplicate key in analyzers: " + analyzerString.Key);
 				indexDefinition.Analyzers.Add(analyzerString);
+			}
+
+			foreach (var termVectorString in TermVectorsStrings)
+			{
+				if (indexDefinition.TermVectors.ContainsKey(termVectorString.Key))
+					throw new InvalidOperationException("There is a duplicate key in term vectors: " + termVectorString.Key);
+				indexDefinition.TermVectors.Add(termVectorString);
 			}
 
 			if (Map != null)
@@ -138,10 +176,11 @@ namespace Raven.Client.Indexes
 			return indexDefinition;
 		}
 
-		private static bool ContainsWhereEntityIs(Expression body)
+		private bool ContainsWhereEntityIs()
 		{
+		    if (Map == null) return false;
 			var whereEntityIsVisitor = new WhereEntityIsVisitor();
-			whereEntityIsVisitor.Visit(body);
+			whereEntityIsVisitor.Visit(Map.Body);
 			return whereEntityIsVisitor.HasWhereEntityIs;
 		}
 

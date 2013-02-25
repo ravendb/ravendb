@@ -63,22 +63,14 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\DH.Scrypt.dll.1.0.3\lib\sl40\DH.Scrypt.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5">
+      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\sl50\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\Microsoft.CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Threading.Tasks, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\sl5\Microsoft.Threading.Tasks.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\sl5\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Threading.Tasks.Extensions.Silverlight, Version=1.0.12.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.Async.1.0.12-beta\lib\sl5\Microsoft.Threading.Tasks.Extensions.Silverlight.dll</HintPath>
-    </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="mscorlib" />
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\sl4\NLog.dll</HintPath>
@@ -99,15 +91,7 @@
     <Reference Include="System.Reactive.PlatformServices">
       <HintPath>..\packages\Rx-PlatformServices.2.0.21114\lib\SL5\System.Reactive.PlatformServices.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime, Version=2.5.11.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.1.0.11-beta\lib\sl5\System.Runtime.dll</HintPath>
-    </Reference>
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Threading.Tasks, Version=2.5.11.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Bcl.1.0.11-beta\lib\sl5\System.Threading.Tasks.dll</HintPath>
-    </Reference>
     <Reference Include="System.Windows" />
     <Reference Include="system" />
     <Reference Include="System.Core" />
@@ -659,6 +643,9 @@
     <Compile Include="..\Raven.Abstractions\Data\EnumerableExtension.cs">
       <Link>Imports\Data\EnumerableExtension.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Etag.cs">
+      <Link>Imports\Data\Etag.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Facet.cs">
       <Link>Imports\Data\Facet.cs</Link>
     </Compile>
@@ -686,6 +673,9 @@
     <Compile Include="..\Raven.Abstractions\Data\GetResponse.cs">
       <Link>Imports\Data\GetResponse.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\HighlightedField.cs">
+      <Link>Imports\Data\HighlightedField.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
       <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
     </Compile>
@@ -703,6 +693,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ScriptedPatchRequest.cs">
       <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\UuidType.cs">
+      <Link>Imports\Data\UuidType.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Default.cs">
       <Link>Imports\Default.cs</Link>
@@ -725,8 +718,17 @@
     <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
       <Link>Imports\Extensions\ListExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
+      <Link>Imports\Extensions\Absdtractions\TaskExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\FieldTermVector.cs">
+      <Link>Imports\Indexing\FieldTermVector.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptions.cs">
       <Link>Imports\Indexing\SpatialOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\SuggestionOptions.cs">
+      <Link>Imports\Indexing\SuggestionOptions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeISO8601Converter.cs">
       <Link>Imports\Json\JsonDateTimeISO8601Converter.cs</Link>
@@ -736,9 +738,6 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDictionaryDateTimeKeysConverter.cs">
       <Link>Imports\Json\JsonDictionaryDateTimeKeysConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonFloatConverter.cs">
-      <Link>Imports\Json\JsonFloatConverter.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonNumericConverter.cs">
       <Link>Imports\Json\JsonNumericConverter.cs</Link>
@@ -826,6 +825,18 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
       <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
+      <Link>Imports\MissingFromBCL\WinRTCompetability.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\AbstractAuthenticator.cs">
+      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\BasicAuthenticator.cs">
+      <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\SecuredAuthenticator.cs">
+      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
@@ -977,15 +988,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\IAsyncLoaderWithInclude.cs">
       <Link>Imports\Document\IAsyncLoaderWithInclude.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\AbstractAuthenticator.cs">
-      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\BasicAuthenticator.cs">
-      <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\SecuredAuthenticator.cs">
-      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
       <Link>Imports\Document\OpenSessionOptions.cs</Link>
     </Compile>
@@ -1001,6 +1003,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Exceptions\ServerRequestError.cs">
       <Link>Data\ServerRequestError.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\AsyncDocumentSessionExtesions.cs">
+      <Link>Imports\Extensions\AsyncDocumentSessionExtesions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>
@@ -1015,6 +1020,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\TaskExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FieldHighlightings.cs">
+      <Link>Imports\FieldHighlightings.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
       <Link>Imports\IAsyncDocumentQuery.cs</Link>
@@ -1033,6 +1041,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractMultiMapIndexCreationTask.cs">
       <Link>Imports\Indexes\AbstractMultiMapIndexCreationTask.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractResultsTransformer.cs">
+      <Link>Imports\Indexes\AbstractResultsTransformer.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
@@ -1073,11 +1084,17 @@
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\SearchOptions.cs">
       <Link>Imports\PublicExtensions\SearchOptions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\RavenQueryHighlightings.cs">
+      <Link>Imports\RavenQueryHighlightings.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
       <Link>Imports\RavenQueryStatistics.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\CSharpClassName.cs">
+      <Link>Imports\Util\CSharpClassName.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\GlobalLastEtagHolder.cs">
       <Link>Imports\Util\GlobalLastEtagHolder.cs</Link>
@@ -1100,9 +1117,25 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
+      <Link>MissingFromSilverlight\ThreadSleep.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\LastReplicatedEtag.cs">
+      <Link>Imports\SqlReplication\LastReplicatedEtag.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationConfig.cs">
+      <Link>Imports\SqlReplication\SqlReplicationConfig.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationStatus.cs">
+      <Link>Imports\SqlReplication\SqlReplicationStatus.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Plugins\PluginsStatus.cs">
+      <Link>Imports\Plugins\PluginsStatus.cs</Link>
+    </Compile>
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
+    <Compile Include="Imports\Connection\WebRequestEventArgs.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
@@ -1140,10 +1173,12 @@
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\Dynamic.snk">
+      <Link>Imports\Imports\Newtonsoft.Json\Dynamic.snk</Link>
+    </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>Imports\RavenDB.snk</Link>
     </None>
-    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -1312,9 +1347,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\ServerClient.cs">
       <Link>Imports\Connection\ServerClient.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\WebRequestEventArgs.cs">
-      <Link>Imports\Connection\WebRequestEventArgs.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Converters\GuidConverter.cs">
       <Link>Imports\Converters\GuidConverter.cs</Link>
     </Compile>
@@ -1472,6 +1504,7 @@
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <ProjectExtensions>
@@ -1482,7 +1515,6 @@
     </VisualStudio>
   </ProjectExtensions>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="..\packages\Microsoft.Bcl.1.0.11-beta\tools\portable-net40+sl4+win8+wp71\Microsoft.Bcl.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

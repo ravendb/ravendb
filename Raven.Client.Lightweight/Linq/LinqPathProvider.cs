@@ -9,6 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Linq
 {
@@ -33,11 +34,21 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public Result GetPath(Expression expression)
 		{
+			expression = SimplifyExpression(expression);
+
 			var callExpression = expression as MethodCallExpression;
 			if (callExpression != null)
 			{
-				if(callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
+				var customMethodResult = conventions.TranslateCustomQueryExpression(this, callExpression);
+				if (customMethodResult != null)
+					return customMethodResult;
+
+				if (callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
 				{
+					if(callExpression.Arguments.Count != 1)
+						throw new ArgumentException("Invalid computation: " + callExpression +
+											". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
+			
 					var target = GetPath(callExpression.Arguments[0]);
 					return new Result
 					{
@@ -46,20 +57,28 @@ namespace Raven.Client.Linq
 						Path = target.Path + @".Count\(\)"
 					};
 				}
-				if (callExpression.Method.Name != "get_Item")
-					throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
 
-				var parent = GetPath(callExpression.Object);
-
-				return new Result
+				if (callExpression.Method.Name == "get_Item")
 				{
-					MemberType = callExpression.Method.ReturnType,
-					IsNestedPath = false,
-					Path = parent.Path + "." +
-					       GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
-				};
+					var parent = GetPath(callExpression.Object);
+
+					return new Result
+					       {
+						       MemberType = callExpression.Method.ReturnType,
+						       IsNestedPath = false,
+						       Path = parent.Path + "." +
+						              GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
+					       };
+				}
+
+				throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
 			}
+
 			var memberExpression = GetMemberExpression(expression);
+
+			var customMemberResult = conventions.TranslateCustomQueryExpression(this, memberExpression);
+			if (customMemberResult != null)
+				return customMemberResult;
 
 			// we truncate the nullable .Value because in json all values are nullable
 			if (memberExpression.Member.Name == "Value" &&
@@ -95,6 +114,24 @@ namespace Raven.Client.Linq
 			return result;
 		}
 
+		private static Expression SimplifyExpression(Expression expression)
+		{
+			while (true)
+			{
+				switch (expression.NodeType)
+				{
+					case ExpressionType.Quote:
+						expression = ((UnaryExpression) expression).Operand;
+						break;
+					case ExpressionType.Lambda:
+						expression = ((LambdaExpression) expression).Body;
+						break;
+					default:
+						return expression;
+				}
+			}
+		}
+
 		/// <summary>
 		/// Get the actual value from the expression
 		/// </summary>
@@ -107,10 +144,17 @@ namespace Raven.Client.Linq
 			object value;
 			if (GetValueFromExpressionWithoutConversion(expression, out value))
 			{
-				if (type.IsEnum && (value is IEnumerable == false) && // skip arrays, lists
-					conventions.SaveEnumsAsIntegers == false)
+				if (value is IEnumerable)
+					return value;
+
+				var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
+				if (value is Enum || nonNullableType.IsEnum)
 				{
-					return Enum.GetName(type, value);
+					if (value == null)
+						return null;
+					if (conventions.SaveEnumsAsIntegers == false)
+						return Enum.GetName(nonNullableType, value);
+					return Convert.ToInt32(value);
 				}
 				return value;
 			}

@@ -100,15 +100,14 @@ namespace Raven.Bundles.Replication.Triggers
 
 		private void HandleDocument(JsonDocument document)
 		{
-			deletedHistory.Value = document.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
-									   new RavenJArray();
-
-			deletedHistory.Value.Add(
-					new RavenJObject
-					{
-						{Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
-						{Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
-					});
+			deletedHistory.Value = new RavenJArray( document.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory))
+			{
+				new RavenJObject
+				{
+					{Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
+					{Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
+				}
+			};
 		}
 
 		private bool HasConflict(JsonDocument document)

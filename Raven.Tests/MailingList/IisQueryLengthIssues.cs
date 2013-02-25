@@ -8,10 +8,10 @@ namespace Raven.Tests.MailingList
 	public class IisQueryLengthIssues : IisExpressTestClient
 	{
 		private readonly string[] errorOptions = new[]
-		                                {
-		                                	"Verify the configuration/system.webServer/security/requestFiltering/requestLimits@maxQueryString setting in the applicationhost.config or web.config file.",
-		                                	"The length of the query string for this request exceeds the configured maxQueryStringLength value"
-		                                };
+										{
+											"configuration/system.webServer/security/requestFiltering/requestLimits@maxQueryString",
+											"maxQueryStringLength"
+										};
 
 		[IISExpressInstalledFact]
 		public void ShouldFailGracefully()

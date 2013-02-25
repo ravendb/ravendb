@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -77,7 +78,7 @@ namespace Raven.Smuggler
 			return httpRavenRequest;
 		}
 
-		protected override RavenJArray GetDocuments(Guid lastEtag)
+		protected override RavenJArray GetDocuments(Etag lastEtag)
 		{
 			int retries = retriesCount;
 			while (true)
@@ -99,7 +100,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
+		protected override Etag ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			int totalCount = 0;
 			while (true)
@@ -114,7 +115,7 @@ namespace Raven.Smuggler
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, smugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -141,7 +142,7 @@ namespace Raven.Smuggler
 						.WriteTo(jsonWriter);
 				}
 
-				lastEtag = new Guid(attachmentInfo.Last().Value<string>("Etag"));
+				lastEtag = Etag.Parse(attachmentInfo.Last().Value<string>("Etag"));
 			}
 		}
 
@@ -187,7 +188,7 @@ namespace Raven.Smuggler
 			Console.WriteLine(format, args);
 		}
 
-		protected override Guid FlushBatch(List<RavenJObject> batch)
+		protected override Etag FlushBatch(List<RavenJObject> batch)
 		{
 			var sw = Stopwatch.StartNew();
 
@@ -195,7 +196,8 @@ namespace Raven.Smuggler
 			foreach (var doc in batch)
 			{
 				var metadata = doc.Value<RavenJObject>("@metadata");
-				doc.Remove("@metadata");
+
+			    doc.Remove("@metadata");
 				commands.Add(new RavenJObject
 								{
 									{"Method", "PUT"},
@@ -240,8 +242,8 @@ namespace Raven.Smuggler
 			batch.Clear();
 
 			if (results.Length == 0)
-				return Guid.Empty;
-			return results.Last().Etag.Value;
+				return Etag.Empty;
+			return results.Last().Etag;
 		}
 
 		public bool LastRequestErrored { get; set; }

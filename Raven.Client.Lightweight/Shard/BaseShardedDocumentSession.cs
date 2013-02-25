@@ -164,7 +164,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
+        protected override void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			string modifyDocumentId = null;
 			if (id != null)
@@ -222,11 +222,13 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
+#if !NETFX_CORE
 		protected override void TryEnlistInAmbientTransaction()
 		{
 			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
 			// turns out to be pretty much the same thing
 		}
+#endif
 
 		#endregion
 
@@ -237,12 +239,13 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <param name="indexName">Name of the index.</param>
-		/// <returns></returns>
-		public IRavenQueryable<T> Query<T>(string indexName)
+		/// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
+		public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, null, null);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, this, null, null);
+			var highlightings = new RavenQueryHighlightings();
+			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null, isMapReduce);
+			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null, isMapReduce);
 		}
 
 		/// <summary>
@@ -272,28 +275,28 @@ namespace Raven.Client.Shard
 			{
 				Conventions = Conventions
 			};
-			return Query<T>(indexCreator.IndexName)
+			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce)
 				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.Query
 		/// </summary>
-		protected abstract IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName);
+		protected abstract IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce);
 
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorQuery<T>(indexName);
+			return IDocumentQueryGeneratorQuery<T>(indexName, isMapReduce);
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.AsyncQuery
 		/// </summary>
-		protected abstract IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName);
+		protected abstract IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce);
 
-		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
+		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorAsyncQuery<T>(indexName);
+			return IDocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
 		}
 
 		#endregion

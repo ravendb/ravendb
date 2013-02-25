@@ -33,7 +33,7 @@ namespace Raven.Database.Smuggler
 			ensuredDatabaseExists = true;
 		}
 
-		protected override Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
+		protected override Etag ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			var totalCount = 0;
 			while (true)
@@ -42,10 +42,10 @@ namespace Raven.Database.Smuggler
 				if (array.Length == 0)
 				{
 					var databaseStatistics = GetStats();
-					var lastEtagComparable = new ComparableByteArray(lastEtag);
-					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+					if (lastEtag == null) lastEtag = Etag.Empty;
+					if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, smugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -58,11 +58,11 @@ namespace Raven.Database.Smuggler
 				{
 					item.WriteTo(jsonWriter);
 				}
-				lastEtag = new Guid(array.Last().Value<string>("Etag"));
+				lastEtag = Etag.Parse(array.Last().Value<string>("Etag"));
 			}
 		}
 
-		protected override Guid FlushBatch(List<RavenJObject> batch)
+		protected override Etag FlushBatch(List<RavenJObject> batch)
 		{
 			var sw = Stopwatch.StartNew();
 
@@ -85,12 +85,12 @@ namespace Raven.Database.Smuggler
 
 
 			if(results.Length == 0)
-				return Guid.Empty;
+				return Etag.Empty;
 
-			return results.Last().Etag.Value;
+			return results.Last().Etag;
 		}
 
-		protected override RavenJArray GetDocuments(Guid lastEtag)
+		protected override RavenJArray GetDocuments(Etag lastEtag)
 		{
 			const int dummy = 0;
 			return _database.GetDocuments(dummy, smugglerOptions.BatchSize, lastEtag);
@@ -129,7 +129,7 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		private RavenJArray GetAttachments(int start, Guid? etag)
+		private RavenJArray GetAttachments(int start, Etag etag)
 		{
 			var array = new RavenJArray();
 			var attachmentInfos = _database.GetAttachments(start, 128, etag, null, 1024*1024*10);

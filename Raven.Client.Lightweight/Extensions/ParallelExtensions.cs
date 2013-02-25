@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,10 +39,11 @@ namespace Raven.Client.Extensions
 
 		private static Exception PreserveStackTrace(Exception exception)
 		{
+#if !NETFX_CORE
 			typeof (Exception).InvokeMember("InternalPreserveStackTrace", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null,
 			                                exception, null);
+#endif
 			return exception;
 		}
 	}
 }
-#endif

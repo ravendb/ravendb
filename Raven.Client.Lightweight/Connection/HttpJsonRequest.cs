@@ -549,6 +549,14 @@ namespace Raven.Client.Connection
 			set { webRequest.ContentType = value; }
 		}
 
+		public TimeSpan Timeout
+		{
+			set
+			{
+				webRequest.Timeout = (int)value.TotalMilliseconds;
+			}
+		}
+
 		private void WriteMetadata(RavenJObject metadata)
 		{
 			if (metadata == null || metadata.Count == 0)
@@ -808,11 +816,11 @@ namespace Raven.Client.Connection
 			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public void RawExecuteRequest()
+		public WebResponse RawExecuteRequest()
 		{
 			try
 			{
-				webRequest.GetResponse().Close();
+				return webRequest.GetResponse();
 			}
 			catch (WebException we)
 			{
@@ -825,7 +833,7 @@ namespace Raven.Client.Connection
 					.Append(httpWebResponse.StatusDescription)
 					.AppendLine();
 
-				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()))
 				{
 					string line;
 					while ((line = reader.ReadLine()) != null)
@@ -835,6 +843,12 @@ namespace Raven.Client.Connection
 				}
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
+		}
+
+		public void PrepareForLongRequest()
+		{
+			Timeout = TimeSpan.FromHours(6);
+			webRequest.AllowWriteStreamBuffering = false;
 		}
 	}
 }

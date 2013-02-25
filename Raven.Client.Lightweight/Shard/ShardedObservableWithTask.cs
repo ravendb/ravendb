@@ -14,12 +14,13 @@ namespace Raven.Client.Shard
 		public ShardedObservableWithTask(IObservableWithTask<T>[] inner)
 		{
 			this.inner = inner;
-			Task = Task.Factory.ContinueWhenAll(inner.Select(x => x.Task).ToArray(), tasks =>
+			Task = System.Threading.Tasks.Task.Factory.ContinueWhenAll(inner.Select(x => x.Task).ToArray(), tasks =>
 			{
 				foreach (var task in tasks)
 				{
 					task.AssertNotFailed();
 				}
+				return (IObservable<T>)this;
 			});
 		}
 
@@ -35,6 +36,6 @@ namespace Raven.Client.Shard
 			});
 		}
 
-		public Task Task { get; private set; }
+		public Task<IObservable<T>>  Task { get; private set; }
 	}
 }

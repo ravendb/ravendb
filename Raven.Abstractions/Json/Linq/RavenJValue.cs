@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -59,6 +60,11 @@ namespace Raven.Json.Linq
 			return new RavenJValue(Value, Type);
 		}
 
+		public override bool IsSnapshot
+		{
+			get { return isSnapshot; }
+		}
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
 		/// </summary>
@@ -94,6 +100,15 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public RavenJValue(double value)
+			: this(value, JTokenType.Float)
+		{
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
+		/// </summary>
+		/// <param name="value">The value.</param>
+		public RavenJValue(float value)
 			: this(value, JTokenType.Float)
 		{
 		}
@@ -165,8 +180,10 @@ namespace Raven.Json.Linq
 		{
 			if (value == null)
 				return JTokenType.Null;
+#if !NETFX_CORE
 			else if (value == DBNull.Value)
 				return JTokenType.Null;
+#endif
 			else if (value is string)
 				return GetStringValueType(current);
 			else if (value is long || value is int || value is short || value is sbyte
@@ -192,6 +209,8 @@ namespace Raven.Json.Linq
 				return JTokenType.Uri;
 			else if (value is TimeSpan)
 				return JTokenType.TimeSpan;
+			else if (value is Etag)
+				return JTokenType.String;
 
 			throw new ArgumentException("Could not determine JSON object type for type {0}.".FormatWith(CultureInfo.InvariantCulture, value.GetType()));
 		}
@@ -298,6 +317,11 @@ namespace Raven.Json.Linq
 					if (_value is decimal)
 					{
 						writer.WriteValue((decimal)_value);
+						return;
+					}
+					if (_value is float)
+					{
+						writer.WriteValue((float)_value);
 						return;
 					}
 					writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
@@ -630,7 +654,7 @@ namespace Raven.Json.Linq
 			return _value.ToString();
 		}
 
-		public override void EnsureSnapshot()
+		public override void EnsureCannotBeChangeAndEnableSnapshotting()
 		{
 			isSnapshot = true;
 		}

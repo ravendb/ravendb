@@ -146,6 +146,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 				Index(x => x.Text, FieldIndexing.Analyzed);
 				Index(x => x.BookId, FieldIndexing.NotAnalyzed);
+				TermVector(x=>x.Text, FieldTermVector.Yes);
 			}
 		}
 	}

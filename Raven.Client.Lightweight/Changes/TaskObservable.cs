@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Changes
 {
-	public interface IObservableWithTask<out T> : IObservable<T>
+	public interface IObservableWithTask<T> : IObservable<T>
 	{
-		Task Task { get; }
+		Task<IObservable<T>> Task { get; }
 	}
 }

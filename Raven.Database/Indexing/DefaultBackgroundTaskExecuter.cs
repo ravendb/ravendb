@@ -87,18 +87,25 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
 		{
-			const int bufferSize = 256;
 			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
-			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= bufferSize)
+			var size = Math.Max(source.Count / maxNumberOfParallelIndexTasks, 1024);
+			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= size)
 			{
 				using (var e = source.GetEnumerator())
 					action(e);
 				return;
 			}
-			var steps = source.Count/maxNumberOfParallelIndexTasks;
-			Parallel.For(0, steps,
-			             new ParallelOptions {MaxDegreeOfParallelism = maxNumberOfParallelIndexTasks},
-			             i => action(Yield(source, i*bufferSize, bufferSize)));
+			int remaining = source.Count;
+			int iteration = 0;
+			var parts = new List<IEnumerator<T>>();
+			while (remaining > 0)
+			{
+				parts.Add(Yield(source, iteration * size, size));
+				iteration++;
+				remaining -= size;
+			}
+
+			ExecuteAllInterleaved(context, parts, action);
 		}
 
 		private IEnumerator<T> Yield<T>(IList<T> source, int start, int end)
@@ -141,7 +148,7 @@ namespace Raven.Database.Indexing
 					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
 				}, (item, _, index) =>
 				{
-					using(LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
+					using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
 					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 					{
 						LogContext.DatabaseName.Value = context.DatabaseName;
@@ -164,9 +171,17 @@ namespace Raven.Database.Indexing
 		{
 			if (result.Count == 0)
 				return;
+			if (result.Count == 1)
+			{
+				action(result[0]);
+				return;
+			}
 
+			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
+			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
 			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
 			{
+				LogContext.DatabaseName.Value = context.DatabaseName ?? Constants.SystemDatabase;
 				var tasks = new Task[result.Count];
 				for (int i = 0; i < result.Count; i++)
 				{
@@ -174,7 +189,11 @@ namespace Raven.Database.Indexing
 					var indexToWorkOn = index;
 
 					var task = new Task(() => action(indexToWorkOn));
-					tasks[i] = task.ContinueWith(_ => semaphoreSlim.Release());
+					tasks[i] = task.ContinueWith(done =>
+					{
+						semaphoreSlim.Release();
+						return done;
+					}).Unwrap();
 
 					semaphoreSlim.Wait();
 

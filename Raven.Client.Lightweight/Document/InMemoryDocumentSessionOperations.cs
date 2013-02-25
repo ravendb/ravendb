@@ -7,22 +7,16 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Reflection;
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System.Transactions;
 #endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
@@ -42,7 +36,6 @@ namespace Raven.Client.Document
 		private readonly int hash = Interlocked.Increment(ref counter);
 
 		protected bool GenerateDocumentKeysOnStore = true;
-
 		/// <summary>
 		/// The session id 
 		/// </summary>
@@ -64,6 +57,13 @@ namespace Raven.Client.Document
 		/// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
 		/// </summary>
 		protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+		private Dictionary<string, object> externalState;
+
+		public IDictionary<string, object> ExternalState
+		{
+			get { return externalState ?? (externalState = new Dictionary<string, object>()); }
+		}
 
 #if !SILVERLIGHT
 		private bool hasEnlisted;
@@ -109,6 +109,17 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value></value>
 		public int NumberOfRequests { get; private set; }
+
+		/// <summary>
+		/// Gets the number of entities held in memory to manage Unit of Work
+		/// </summary>
+		public int NumberOfEntitiesInUnitOfWork
+		{
+			get
+			{
+				return entitiesAndMetadata.Count;
+			}
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
@@ -189,7 +200,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="instance">The instance.</param>
 		/// <returns></returns>
-		public Guid? GetEtagFor<T>(T instance)
+		public Etag GetEtagFor<T>(T instance)
 		{
 			return GetDocumentMetadata(instance).ETag;
 		}
@@ -222,7 +233,7 @@ namespace Raven.Client.Document
 					entitiesByKey[id] = instance;
 					entitiesAndMetadata[instance] = value = new DocumentMetadata
 					{
-						ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
+						ETag = UseOptimisticConcurrency ? Etag.Empty : null,
 						Key = id,
 						OriginalMetadata = jsonDocument.Metadata,
 						Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken(),
@@ -348,7 +359,7 @@ more responsive application.
 				documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
 			}
 
-			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
+			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, noTracking: false);
 		}
 
 		/// <summary>
@@ -359,10 +370,9 @@ more responsive application.
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata)
+		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
 			document.Remove("@metadata");
-
 			object entity;
 			if (entitiesByKey.TryGetValue(key, out entity) == false)
 			{
@@ -381,15 +391,20 @@ more responsive application.
 				throw new NonAuthoritativeInformationException("Document " + key +
 					" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
 			}
-			entitiesAndMetadata[entity] = new DocumentMetadata
+
+			if (noTracking == false)
 			{
-				OriginalValue = document,
-				Metadata = metadata,
-				OriginalMetadata = (RavenJObject)metadata.CloneToken(),
-				ETag = HttpExtensions.EtagHeaderToGuid(etag),
-				Key = key
-			};
-			entitiesByKey[key] = entity;
+				entitiesAndMetadata[entity] = new DocumentMetadata
+				{
+					OriginalValue = document,
+					Metadata = metadata,
+					OriginalMetadata = (RavenJObject) metadata.CloneToken(),
+					ETag = HttpExtensions.EtagHeaderToEtag(etag),
+					Key = key
+				};
+				entitiesByKey[key] = entity;
+			}
+			
 			return (T)entity;
 		}
 
@@ -492,7 +507,7 @@ more responsive application.
 		/// <summary>
 		/// Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
 		/// </summary>
-		public void Store(object entity, Guid etag)
+		public void Store(object entity, Etag etag)
 		{
 			StoreInternal(entity, etag, null, forceConcurrencyCheck: true);
 		}
@@ -508,12 +523,12 @@ more responsive application.
 		/// <summary>
 		/// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
 		/// </summary>
-		public void Store(object entity, Guid etag, string id)
+		public void Store(object entity, Etag etag, string id)
 		{
 			StoreInternal(entity, etag, id, forceConcurrencyCheck: true);
 		}
 
-		private void StoreInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
+        private void StoreInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
@@ -557,6 +572,50 @@ more responsive application.
 			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
+		public Task StoreAsync(object entity)
+		{
+			string id;
+			var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
+
+			return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
+		}
+
+		public Task StoreAsync(object entity, Etag etag)
+		{
+			return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true);
+		}
+
+		public Task StoreAsync(object entity, Etag etag, string id)
+		{
+			return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true);
+		}
+
+		public Task StoreAsync(object entity, string id)
+		{
+			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
+		}
+
+		private Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
+		{
+			if (null == entity)
+				throw new ArgumentNullException("entity");
+
+			if (id == null)
+			{
+				return GenerateDocumentKeyForStorageAsync(entity).ContinueWith(task =>
+				{
+					id = task.Result;
+					StoreInternal(entity, etag, id, forceConcurrencyCheck);
+
+					return new CompletedTask();
+				});
+			}
+
+			StoreInternal(entity, etag, id, forceConcurrencyCheck);
+
+			return new CompletedTask();
+		}
+
 		protected abstract string GenerateKey(object entity);
 
 		protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
@@ -592,7 +651,7 @@ more responsive application.
 
 		protected abstract Task<string> GenerateKeyAsync(object entity);
 
-		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
+        protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
@@ -657,9 +716,9 @@ more responsive application.
 
 			var json = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 
-			var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
-						   ? (documentMetadata.ETag ?? Guid.Empty)
-						   : (Guid?)null;
+		    var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
+		                   ? (documentMetadata.ETag ?? Etag.Empty)
+		                   : null;
 
 			return new PutCommandData
 			{
@@ -686,7 +745,7 @@ more responsive application.
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
 
-				batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag.ToString());
+				batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag);
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
@@ -724,7 +783,7 @@ more responsive application.
 			};
 			deferedCommands.Clear();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			if (documentStore.EnlistInDistributedTransactions)
 				TryEnlistInAmbientTransaction();
 #endif
@@ -763,7 +822,7 @@ more responsive application.
 
 			foreach (var key in keysToDelete)
 			{
-				Guid? etag = null;
+                Etag etag = null;
 				object existingEntity;
 				DocumentMetadata metadata = null;
 				if (entitiesByKey.TryGetValue(key, out existingEntity))
@@ -791,7 +850,7 @@ more responsive application.
 			deletedEntities.Clear();
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		protected virtual void TryEnlistInAmbientTransaction()
 		{
 
@@ -813,15 +872,23 @@ more responsive application.
 				{
 					Transaction.Current.EnlistDurable(
 						ResourceManagerId,
-						new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+						new RavenClientEnlistment(transactionalSession, () =>
+						{
+							RegisteredStoresInTransaction.Remove(localIdentifier);
+							if (documentStore.WasDisposed)
+								throw new ObjectDisposedException("RavenDB Session");
+						}),
 						EnlistmentOptions.None);
 				}
 				else
 				{
 					var promotableSinglePhaseNotification = new PromotableRavenClientEnlistment(transactionalSession,
-																								() =>
-																								RegisteredStoresInTransaction.
-																									Remove(localIdentifier));
+						() =>
+						{
+							RegisteredStoresInTransaction.Remove(localIdentifier);
+							if (documentStore.WasDisposed)
+								throw new ObjectDisposedException("RavenDB Session");
+						});
 					var registeredSinglePhaseNotification =
 						Transaction.Current.EnlistPromotableSinglePhase(promotableSinglePhaseNotification);
 
@@ -829,7 +896,12 @@ more responsive application.
 					{
 						Transaction.Current.EnlistDurable(
 							ResourceManagerId,
-							new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+							new RavenClientEnlistment(transactionalSession, () =>
+							{
+								RegisteredStoresInTransaction.Remove(localIdentifier);
+								if(documentStore.WasDisposed)
+									throw new ObjectDisposedException("RavenDB Session");
+							}),
 							EnlistmentOptions.None);
 					}
 				}
@@ -906,7 +978,7 @@ more responsive application.
 			entitiesByKey.Clear();
 		}
 
-		readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+		private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
 		public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
 		public EntityToJson EntityToJson { get; private set; }
 
@@ -924,7 +996,6 @@ more responsive application.
 		/// </summary>
 		public virtual void Dispose()
 		{
-
 		}
 
 		/// <summary>
@@ -972,7 +1043,7 @@ more responsive application.
 			/// Gets or sets the ETag.
 			/// </summary>
 			/// <value>The ETag.</value>
-			public Guid? ETag { get; set; }
+            public Etag ETag { get; set; }
 			/// <summary>
 			/// Gets or sets the key.
 			/// </summary>

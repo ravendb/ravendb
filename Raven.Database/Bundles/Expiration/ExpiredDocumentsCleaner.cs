@@ -65,7 +65,7 @@ namespace Raven.Bundles.Expiration
 			executing = true;
 			try
 			{
-				DateTime currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
+				DateTime currentTime = SystemTime.UtcNow;
 				string nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite);
 				logger.Debug("Trying to find expired documents to delete");
 				var query = "Expiry:[* TO " + nowAsStr + "]";

@@ -6,7 +6,6 @@ using Raven.Bundles.Authorization.Model;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Responders;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 
@@ -84,15 +83,15 @@ namespace Raven.Bundles.Authorization.Responders
 			return list;
 		}
 
-		private Guid CalculateEtag(IEnumerable<JsonDocumentMetadata> documents, string userId)
+		private Etag CalculateEtag(IEnumerable<JsonDocumentMetadata> documents, string userId)
 		{
-			Guid etag;
+			Etag etag;
 
 			using(var md5 = MD5.Create())
 			{
 				var etags =new List<byte>();
 
-				etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Guid.Empty).ToByteArray()));
+				etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Etag.Empty).ToByteArray()));
 
 				var userDoc = Database.Get(userId, null);
 				if(userDoc == null)
@@ -101,15 +100,15 @@ namespace Raven.Bundles.Authorization.Responders
 				}
 				else
 				{
-					etags.AddRange((userDoc.Etag ?? Guid.Empty).ToByteArray());
+					etags.AddRange((userDoc.Etag ?? Etag.Empty).ToByteArray());
 					var user = userDoc.DataAsJson.JsonDeserialization<AuthorizationUser>();
 					foreach (var roleMetadata in user.Roles.Select(role => Database.GetDocumentMetadata(role, null)))
 					{
-						etags.AddRange(roleMetadata == null ? Guid.Empty.ToByteArray() : (roleMetadata.Etag ?? Guid.Empty).ToByteArray());
+						etags.AddRange(roleMetadata == null ? Guid.Empty.ToByteArray() : (roleMetadata.Etag ?? Etag.Empty).ToByteArray());
 					}
 				}
 
-				etag = new Guid(md5.ComputeHash(etags.ToArray()));
+				etag =Etag.Parse(md5.ComputeHash(etags.ToArray()));
 			}
 			return etag;
 		}

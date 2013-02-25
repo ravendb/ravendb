@@ -37,7 +37,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
 	public static class TypeExtensions
   {
 #if NETFX_CORE
-    private static BindingFlags DefaultFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
+    private static BindingFlags DefaultFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic;
 
     public static MethodInfo GetGetMethod(this PropertyInfo propertyInfo)
     {

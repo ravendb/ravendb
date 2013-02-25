@@ -48,6 +48,8 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
+				WaitForUserToContinueTheTest(documentStore);
+
 				using (var session = documentStore.OpenSession())
 				{
 					// should perform index with multi reduce for "IL" too

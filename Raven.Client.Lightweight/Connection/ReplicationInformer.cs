@@ -9,7 +9,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+#if !NETFX_CORE
 using System.Net.Sockets;
+#endif
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +21,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Document;
@@ -89,7 +91,7 @@ namespace Raven.Client.Connection
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
 #else
 		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
@@ -297,27 +299,60 @@ namespace Raven.Client.Connection
 		/// Refreshes the replication information.
 		/// Expert use only.
 		/// </summary>
-		[MethodImpl(MethodImplOptions.Synchronized)]
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 		public Task RefreshReplicationInformation(AsyncServerClient commands)
 		{
-			var serverHash = ServerHash.GetServerHash(commands.Url);
-			return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
+			lock (this)
 			{
-				JsonDocument document;
-				if (getTask.Status == TaskStatus.RanToCompletion)
+				var serverHash = ServerHash.GetServerHash(commands.Url);
+				return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
 				{
-					document = getTask.Result;
+					JsonDocument document;
+					if (getTask.Status == TaskStatus.RanToCompletion)
+					{
+						document = getTask.Result;
+						failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
+					}
+					else
+					{
+						log.ErrorException("Could not contact master for new replication information", getTask.Exception);
+						document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+					}
+
+
+					if (IsInvalidDestinationsDocument(document))
+					{
+						lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
+						return;
+					}
+
+					ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
+
+					UpdateReplicationInformationFromDocument(document);
+
+					lastReplicationUpdate = SystemTime.UtcNow;
+				});
+			}
+		}
+#else
+		public void RefreshReplicationInformation(ServerClient commands)
+		{
+			lock (this)
+			{
+				var serverHash = ServerHash.GetServerHash(commands.Url);
+
+				JsonDocument document;
+				try
+				{
+					document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
 					failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
-				else
+				catch (Exception e)
 				{
-					log.ErrorException("Could not contact master for new replication information", getTask.Exception);
+					log.ErrorException("Could not contact master for new replication information", e);
 					document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 				}
-
-
-				if (IsInvalidDestinationsDocument(document))
+				if (document == null)
 				{
 					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 					return;
@@ -328,37 +363,7 @@ namespace Raven.Client.Connection
 				UpdateReplicationInformationFromDocument(document);
 
 				lastReplicationUpdate = SystemTime.UtcNow;
-			});
-		}
-
-		
-#else
-		public void RefreshReplicationInformation(ServerClient commands)
-		{
-			var serverHash = ServerHash.GetServerHash(commands.Url);
-
-			JsonDocument document;
-			try
-			{
-				document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
-				failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 			}
-			catch (Exception e)
-			{
-				log.ErrorException("Could not contact master for new replication information", e);
-				document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-			}
-			if (document == null)
-			{
-				lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
-				return;
-			}
-
-			ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
-
-			UpdateReplicationInformationFromDocument(document);
-
-			lastReplicationUpdate = SystemTime.UtcNow;
 		}
 #endif
 
@@ -377,7 +382,7 @@ namespace Raven.Client.Connection
 					};
 				return new ReplicationDestinationData
 				{
-					Url = MultiDatabase.GetRootDatabaseUrl(x.Url) + "/databases/" + x.Database + "/",
+					Url = MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
 				};
 			})
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
@@ -694,7 +699,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			{
 				switch (webException.Status)
 				{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 					case WebExceptionStatus.NameResolutionFailure:
 					case WebExceptionStatus.ReceiveFailure:
 					case WebExceptionStatus.PipelineFailure:
@@ -719,7 +724,10 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 					}
 				}
 			}
-			return e.InnerException is SocketException ||
+			return
+#if !NETFX_CORE
+				e.InnerException is SocketException ||
+#endif
 				e.InnerException is IOException;
 		}
 

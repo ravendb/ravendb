@@ -34,7 +34,7 @@ namespace Raven.Database.Extensions
 				if (ctors != null)
 					return (Analyzer)Activator.CreateInstance(analyzerType);
 
-				ctors = analyzerType.GetConstructor(new[] {typeof (Lucene.Net.Util.Version)});
+				ctors = analyzerType.GetConstructor(new[] { typeof(Lucene.Net.Util.Version) });
 				if (ctors != null)
 					return (Analyzer)Activator.CreateInstance(analyzerType, Lucene.Net.Util.Version.LUCENE_30);
 			}
@@ -56,7 +56,7 @@ namespace Raven.Database.Extensions
 			FieldIndexing value;
 			if (self.Indexes.TryGetValue(name, out value) == false)
 			{
-				if(self.Indexes.TryGetValue(Constants.AllFields, out value) == false)
+				if (self.Indexes.TryGetValue(Constants.AllFields, out value) == false)
 				{
 					string ignored;
 					if (self.Analyzers.TryGetValue(name, out ignored) ||
@@ -104,23 +104,58 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+		public static Field.TermVector GetTermVector(this IndexDefinition self, string name, Field.TermVector defaultTermVector)
+		{
+			if (self.TermVectors == null)
+				return defaultTermVector;
+
+			FieldTermVector value;
+			if (self.TermVectors.TryGetValue(name, out value) == false)
+				return defaultTermVector;
+
+			if (value != FieldTermVector.No && self.GetIndex(name, null) == Field.Index.NO)
+			{
+				throw new InvalidOperationException(string.Format("TermVectors cannot be enabled for the field {0} because Indexing is set to No", name));
+			}
+
+			switch (value)
+			{
+				case FieldTermVector.No:
+					return Field.TermVector.NO;
+				case FieldTermVector.WithOffsets:
+					return Field.TermVector.WITH_OFFSETS;
+				case FieldTermVector.WithPositions:
+					return Field.TermVector.WITH_POSITIONS;
+				case FieldTermVector.WithPositionsAndOffsets:
+					return Field.TermVector.WITH_POSITIONS_OFFSETS;
+				case FieldTermVector.Yes:
+					return Field.TermVector.YES;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
 		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition)
 		{
-			if (self.SortedFields == null || self.SortedFields.Length <= 0)
-				return null;
-
 			var spatialQuery = self as SpatialIndexQuery;
+			var sortedFields = self.SortedFields;
+			if (sortedFields == null || sortedFields.Length <= 0)
+			{
+				if (spatialQuery == null || string.IsNullOrEmpty(self.Query) == false)
+					return null;
+				sortedFields = new[] { new SortedField(Constants.DistanceFieldName), };
+			}
 
-			return new Sort(self.SortedFields
+			return new Sort(sortedFields
 							.Select(sortedField =>
 							{
 								if (sortedField.Field == Constants.TemporaryScoreValue)
 								{
 									return SortField.FIELD_SCORE;
 								}
-								if(sortedField.Field.StartsWith(Constants.RandomFieldName))
+								if (sortedField.Field.StartsWith(Constants.RandomFieldName))
 								{
-									var parts = sortedField.Field.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
+									var parts = sortedField.Field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 									if (parts.Length < 2) // truly random
 										return new RandomSortField(Guid.NewGuid().ToString());
 									return new RandomSortField(parts[1]);
@@ -134,9 +169,9 @@ namespace Raven.Database.Extensions
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
-							
+
 								return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
-							
+
 							})
 							.ToArray());
 		}
