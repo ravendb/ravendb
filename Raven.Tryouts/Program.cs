@@ -1,5 +1,5 @@
-﻿using System.IO;
-using System.Net;
+﻿using System;
+using Raven.Client.Document;
 
 namespace Raven.Tryouts
 {
@@ -7,41 +7,34 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var listener = new HttpListener
+			using(var store = new DocumentStore
 			{
-				Prefixes = { "http://+:8081/" },
-				AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication | AuthenticationSchemes.Anonymous,
-				AuthenticationSchemeSelectorDelegate = request =>
+				Url = "http://testrunner-pc:8080",
+				DefaultDatabase = "ReplicationA",
+				ApiKey = "Replication/5XA4ggEdJCG19GCVjihCOX",
+				Conventions =
 				{
-					switch (request.QueryString["auth"])
-					{
-						case "anon":
-							return AuthenticationSchemes.Anonymous;
-						case "win":
-							return AuthenticationSchemes.IntegratedWindowsAuthentication;
-						case "both":
-							return AuthenticationSchemes.IntegratedWindowsAuthentication | AuthenticationSchemes.Anonymous;
-						default:
-							return AuthenticationSchemes.None;
-					} 
+					FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
 				}
-			};
-			listener.Start();
-
-			while (true)
+			}.Initialize())
 			{
-				var ctx = listener.GetContext();
-				using (var writer = new StreamWriter(ctx.Response.OutputStream))
+				while (true)
 				{
-					if (ctx.User == null)
+					using (var session = store.OpenSession())
 					{
-						writer.WriteLine("No user");
-						continue;
+						session.Store(new User());
+						session.SaveChanges();
 					}
 
-					writer.WriteLine(ctx.User.Identity.Name);
+					Console.WriteLine("Wrote @ " + DateTime.Now);
+					Console.ReadLine();
 				}
 			}
-		}
+		} 
 	}
+
+	public class User
+	{
+	}
+
 }
