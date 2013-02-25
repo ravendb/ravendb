@@ -63,7 +63,15 @@ namespace Raven.Database.Indexing
 			var fieldQuery = GetFieldQuery(field, termStr);
 
 			var tq = fieldQuery as TermQuery;
-			return NewWildcardQuery(tq != null ? tq.Term : new Term(field, termStr));
+			var analyzedTerm = tq != null ? tq.Term.Text : termStr;
+
+			if (termStr.StartsWith("*") && analyzedTerm.StartsWith("*") == false)
+				analyzedTerm = "*" + analyzedTerm;
+
+			if (termStr.EndsWith("*") && analyzedTerm.EndsWith("*") == false)
+				analyzedTerm += "*";
+
+			return NewWildcardQuery(new Term(field, analyzedTerm));
 
 		}
 

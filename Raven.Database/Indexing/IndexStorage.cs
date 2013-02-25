@@ -46,7 +46,8 @@ namespace Raven.Database.Indexing
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
 		private readonly DocumentDatabase documentDatabase;
-		private const string IndexVersion = "2.0.0.1";
+		private const string IndexVersion = "2.0.0.1"; 
+		private const string MapReduceIndexVersion = "2.5.0.1";
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
@@ -212,7 +213,7 @@ namespace Raven.Database.Indexing
 			}
 			else
 			{
-				RegenerateMapReduceIndex(luceneDirectory, indexDefinition.Name);
+				RegenerateMapReduceIndex(luceneDirectory, indexDefinition.Name, indexDefinition);
 			}
 			return keysToDeleteAfterRecovery;
 		}
@@ -271,14 +272,14 @@ namespace Raven.Database.Indexing
 					if (createIfMissing == false)
 						throw new InvalidOperationException("Index does not exists: " + indexDirectory);
 
-					WriteIndexVersion(directory);
+					WriteIndexVersion(directory, indexDefinition);
 
 					//creating index structure if we need to
 					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
 				}
 				else
 				{
-					EnsureIndexVersionMatches(indexName, directory);
+					EnsureIndexVersionMatches(indexName, directory, indexDefinition);
 					if (directory.FileExists("write.lock"))// force lock release, because it was still open when we shut down
 					{
 						IndexWriter.Unlock(directory);
@@ -300,7 +301,7 @@ namespace Raven.Database.Indexing
 
 		}
 
-		private void RegenerateMapReduceIndex(Lucene.Net.Store.Directory directory, string indexName)
+		private void RegenerateMapReduceIndex(Lucene.Net.Store.Directory directory, string indexName, IndexDefinition indexDefinition)
 		{
 			// remove old index data
 			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
@@ -308,7 +309,7 @@ namespace Raven.Database.Indexing
 
 			// initialize by new index
 			Directory.CreateDirectory(dirOnDisk);
-			WriteIndexVersion(directory);
+			WriteIndexVersion(directory, indexDefinition);
 			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
 
 			var start = 0;
@@ -365,27 +366,41 @@ namespace Raven.Database.Indexing
 													lastCommitPoint.TimeStamp));
 		}
 
-		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)
+		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
-			using (var indexOutput = directory.CreateOutput("index.version"))
+			var indexVersion = "index.version";
+			var version = IndexVersion;
+			if(indexDefinition.IsMapReduce)
 			{
-				indexOutput.WriteString(IndexVersion);
+				indexVersion = "mapReduce.version";
+				version = MapReduceIndexVersion;
+			}
+			using (var indexOutput = directory.CreateOutput(indexVersion))
+			{
+				indexOutput.WriteString(version);
 				indexOutput.Flush();
 			}
 		}
 
-		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory)
+		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
-			if (directory.FileExists("index.version") == false)
+			var indexVersion = "index.version";
+			var versionToCheck = IndexVersion;
+			if(indexDefinition.IsMapReduce)
 			{
-				throw new InvalidOperationException("Could not find index.version " + indexName + ", resetting index");
+				indexVersion = "mapReduce.version";
+				versionToCheck = MapReduceIndexVersion;
 			}
-			using (var indexInput = directory.OpenInput("index.version"))
+			if (directory.FileExists(indexVersion) == false)
+			{
+				throw new InvalidOperationException("Could not find " + indexVersion + " " + indexName + ", resetting index");
+			}
+			using (var indexInput = directory.OpenInput(indexVersion))
 			{
 				var versionFromDisk = indexInput.ReadString();
-				if (versionFromDisk != IndexVersion)
+				if (versionFromDisk != versionToCheck)
 					throw new InvalidOperationException("Index " + indexName + " is of version " + versionFromDisk +
-														" which is not compatible with " + IndexVersion + ", resetting index");
+														" which is not compatible with " + versionToCheck + ", resetting index");
 			}
 		}
 

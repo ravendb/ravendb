@@ -18,10 +18,6 @@ For your convenience RavenDB is also available as nuget packages: RavenDB.Client
 /Client		- RavenDB lightweight client for .NET 4.0 and its dependencies.
 		*** This is the recommended client to use ***
 
-
-/Client-3.5	- RavenDB lightweight client for .NET 3.5 and its dependencies.
-
-
 /Silverlight	- A lightweight Silverlight 4.0 client for RavenDB and its dependencies..
 
 

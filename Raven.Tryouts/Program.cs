@@ -1,5 +1,9 @@
-﻿using System.IO;
-using System.Net;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using Raven.Abstractions.Data;
+using Raven.Client.Document;
+using System.Linq;
 
 namespace Raven.Tryouts
 {
@@ -7,41 +11,47 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var listener = new HttpListener
+			for (int i = 0; i < 2; i++)
 			{
-				Prefixes = { "http://+:8081/" },
-				AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication | AuthenticationSchemes.Anonymous,
-				AuthenticationSchemeSelectorDelegate = request =>
+				using (var store = new DocumentStore
 				{
-					switch (request.QueryString["auth"])
+					Url = "http://localhost:8080",
+					DefaultDatabase = "test",
+				}.Initialize())
+				{
+					var list = new List<string>();
+					var sp = Stopwatch.StartNew();
+					int start = 0;
+					while (true)
 					{
-						case "anon":
-							return AuthenticationSchemes.Anonymous;
-						case "win":
-							return AuthenticationSchemes.IntegratedWindowsAuthentication;
-						case "both":
-							return AuthenticationSchemes.IntegratedWindowsAuthentication | AuthenticationSchemes.Anonymous;
-						default:
-							return AuthenticationSchemes.None;
-					} 
-				}
-			};
-			listener.Start();
+						var result = store.DatabaseCommands.Query("PersonList", new IndexQuery
+						{
+							FieldsToFetch = new[] { Constants.DocumentIdFieldName },
+							PageSize = 1024,
+							Start = start
+						}, null);
+						if (result.Results.Count == 0)
+							break;
+						start += result.Results.Count;
+						list.AddRange(result.Results.Select(x => x.Value<string>(Constants.DocumentIdFieldName)));
+					}
+					sp.Stop();
 
-			while (true)
-			{
-				var ctx = listener.GetContext();
-				using (var writer = new StreamWriter(ctx.Response.OutputStream))
-				{
-					if (ctx.User == null)
+					Console.WriteLine("Read all ids {0:#,#} in {1:#,#} ms", list.Count, sp.ElapsedMilliseconds);
+
+					var rand = new Random();
+					list.Sort((s, s1) => rand.Next(-1, 1));
+					sp.Restart();
+
+					foreach (var id in list)
 					{
-						writer.WriteLine("No user");
-						continue;
+						store.DatabaseCommands.Get(id);
 					}
 
-					writer.WriteLine(ctx.User.Identity.Name);
+					sp.Stop();
+					Console.WriteLine("Read all docs {0:#,#} in {1:#,#} ms", list.Count, sp.ElapsedMilliseconds);
 				}
 			}
-		}
+		} 
 	}
 }

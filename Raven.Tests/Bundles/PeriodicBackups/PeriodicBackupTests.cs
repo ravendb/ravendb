@@ -16,7 +16,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 {
 	public class PeriodicBackupTests : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
 		}

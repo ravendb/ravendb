@@ -232,10 +232,10 @@
     <Compile Include="Indexing\IndexingBatch.cs" />
     <Compile Include="Indexing\IndexedItemsInfo.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
-    <Compile Include="Indexing\IndexSegmentsInfo.cs" />
-    <Compile Include="Indexing\LowerCaseKeywordTokenizer.cs" />
-    <Compile Include="Indexing\LowerCaseWhitespaceAnalyzer.cs" />
-    <Compile Include="Indexing\LowerCaseWhitespaceTokenizer.cs" />
+    <Compile Include="Indexing\IndexSegmentsInfo.cs" /> 
+    <Compile Include="Indexing\Analyzers\LowerCaseKeywordTokenizer.cs" />
+    <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceAnalyzer.cs" />
+    <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceTokenizer.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
     <Compile Include="Indexing\PrefetchingBehavior.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
@@ -587,7 +587,7 @@
     <Compile Include="Indexing\Collation\Cultures\ZuCollationAnalyzer.cs" />
     <Compile Include="Indexing\Collation\IndexableBinaryStringTools_UsingArrays.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
-    <Compile Include="Indexing\LowerCaseKeywordAnalyzer.cs" />
+    <Compile Include="Indexing\Analyzers\LowerCaseKeywordAnalyzer.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />

@@ -18,7 +18,7 @@ namespace Raven.Tests.Notifications
 {
 	public class SecurityOAuth : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 			configuration.PostInit();

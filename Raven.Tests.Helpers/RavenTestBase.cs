@@ -159,6 +159,8 @@ namespace Raven.Tests.Helpers
 
 			ModifyConfiguration(ravenConfiguration);
 
+			ravenConfiguration.PostInit();
+
 			if (ravenConfiguration.RunInMemory == false && deleteDirectory)
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
 
@@ -209,7 +211,7 @@ namespace Raven.Tests.Helpers
 		{
 		}
 
-		protected virtual void ModifyConfiguration(RavenConfiguration configuration)
+		protected virtual void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 		}
 

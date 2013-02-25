@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs.MapRedue
 			};
 		}
 
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.MaxNumberOfParallelIndexTasks = 1;
 		}
