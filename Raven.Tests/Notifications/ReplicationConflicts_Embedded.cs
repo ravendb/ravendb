@@ -9,38 +9,21 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Database.Config;
 using Raven.Json.Linq;
+using Raven.Tests.Bundles.Replication;
 using Xunit;
 
 namespace Raven.Tests.Notifications
 {
-	public class ReplicationConflicts_Embedded : RavenTest
+	public class ReplicationConflicts_Embedded : ReplicationBase
 	{
-
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
-		{
-			configuration.Settings.Add("Raven/ActiveBundles", "replication");
-			configuration.PostInit();
-		}
-
 		[Fact]
 		public void CanGetNotificationsAboutConflictedDocuments()
 		{
-			using (GetNewServer(port: 8079))
-			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var documentStore = CreateStore())
 			{
-
-				using (var embeddableStore = new EmbeddableDocumentStore
-				{
-					UseEmbeddedHttpServer = true,
-					Configuration =
-					{
-						Port = 8078,
-						Settings = { {"Raven/ActiveBundles", "replication"} }
-					},
-					RunInMemory = true,
-					
-				}.Initialize())
+				using (var embeddableStore = CreateEmbeddableStore())
 				{
 					documentStore.DatabaseCommands.Put("users/1", null, new RavenJObject
 					{
@@ -60,21 +43,7 @@ namespace Raven.Tests.Notifications
 					observableWithTask
 						.Subscribe(list.Add);
 
-					// setup and run replication
-					using (var session = documentStore.OpenSession())
-					{
-						var replicationDestination = new ReplicationDestination
-						{
-							Url = "http://localhost:8078",
-
-						};
-
-						session.Store(new ReplicationDocument
-						{
-							Destinations = { replicationDestination }
-						}, "Raven/Replication/Destinations");
-						session.SaveChanges();
-					}
+					TellFirstInstanceToReplicateToSecondInstance();
 
 					ReplicationConflictNotification replicationConflictNotification;
 					Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
@@ -90,21 +59,9 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void CanGetNotificationsConflictedDocumentsCausedByDelete()
 		{
-			using (GetNewServer(port: 8079))
-			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var documentStore = CreateStore())
 			{
-
-				using (var embeddableStore = new EmbeddableDocumentStore
-				{
-					UseEmbeddedHttpServer = true,
-					Configuration =
-					{
-						Port = 8078,
-						Settings = { { "Raven/ActiveBundles", "replication" } }
-					},
-					RunInMemory = true,
-
-				}.Initialize())
+				using (var embeddableStore = CreateEmbeddableStore())
 				{
 					documentStore.DatabaseCommands.Put("users/1", null, new RavenJObject
 					{
@@ -126,21 +83,7 @@ namespace Raven.Tests.Notifications
 					observableWithTask
 						.Subscribe(list.Add);
 
-					// setup and run replication
-					using (var session = documentStore.OpenSession())
-					{
-						var replicationDestination = new ReplicationDestination
-						{
-							Url = "http://localhost:8078",
-
-						};
-
-						session.Store(new ReplicationDocument
-						{
-							Destinations = { replicationDestination }
-						}, "Raven/Replication/Destinations");
-						session.SaveChanges();
-					}
+					TellFirstInstanceToReplicateToSecondInstance();
 
 					ReplicationConflictNotification replicationConflictNotification;
 					Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
