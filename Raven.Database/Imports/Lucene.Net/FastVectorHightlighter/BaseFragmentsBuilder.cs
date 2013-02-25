@@ -116,20 +116,24 @@ namespace Lucene.Net.Search.Vectorhighlight
 
         protected virtual String MakeFragment(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo fragInfo)
         {
-            int s = fragInfo.startOffset;
-            return MakeFragment(fragInfo, GetFragmentSource(buffer, index, values, ref s, fragInfo), s);
+	        int adjustedStartPos;
+	        var fragmentSource = GetFragmentSource(buffer, index, values, fragInfo, out adjustedStartPos);
+			return MakeFragment(fragInfo, fragmentSource, adjustedStartPos);
         }
 
 	    private String MakeFragment(WeightedFragInfo fragInfo, String src, int s)
-        {
+	    {
             StringBuilder fragment = new StringBuilder();
             int srcIndex = 0;
             foreach (SubInfo subInfo in fragInfo.subInfos)
             {
                 foreach (Toffs to in subInfo.termsOffsets)
                 {
-                    fragment.Append(src.Substring(srcIndex, to.startOffset - s - srcIndex)).Append(GetPreTag(subInfo.seqnum))
-                      .Append(src.Substring(to.startOffset - s, to.endOffset - s - (to.startOffset - s))).Append(GetPostTag(subInfo.seqnum));
+	                var headerIndex = to.startOffset - s;
+                    fragment.Append(src.Substring(srcIndex, headerIndex - srcIndex))
+						.Append(GetPreTag(subInfo.seqnum))
+						.Append(src.Substring(headerIndex, to.endOffset - to.startOffset))
+						.Append(GetPostTag(subInfo.seqnum));
                     srcIndex = to.endOffset - s;
                 }
             }
@@ -188,7 +192,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             return buffer.ToString(startOffset, eo - startOffset);
         }
 
-		private string GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, ref int startOffset, WeightedFragInfo weightedFragInfo)
+		private string GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo weightedFragInfo, out int startOffset)
 		{
 			while (buffer.Length < weightedFragInfo.endOffset && index[0] < values.Length)
 			{
@@ -211,6 +215,9 @@ namespace Lucene.Net.Search.Vectorhighlight
 						endOffset = termsOffset.endOffset;
 				}
 			}
+
+			int maxStart = startOffset;
+			int minEnd = endOffset;
 
 			var maxLength = weightedFragInfo.endOffset - weightedFragInfo.startOffset;
 			var bufferLength = buffer.Length;
@@ -244,18 +251,18 @@ namespace Lucene.Net.Search.Vectorhighlight
 			}
 
 			int retStartOffset;
-			var retVal = TrimEdges(buffer, startOffset, endOffset, out retStartOffset); // cuts part words
+			var retVal = TrimEdges(buffer, startOffset, endOffset, out retStartOffset, maxStart, minEnd); // cuts part words
 			startOffset = retStartOffset;
 			return retVal;
 		}
 
-		private string TrimEdges(StringBuilder buffer, int startOffset, int endOffset, out int retStartOffset)
+	    private string TrimEdges(StringBuilder buffer, int startOffset, int endOffset, out int retStartOffset, int maxStart, int minEnd)
 	    {
 		    var localStart = startOffset;
 		    var localEnd = endOffset;
 			if (startOffset != 0 && buffer[startOffset - 1] != ' ')
 		    {
-				while (buffer[localStart] != ' ' && localStart != endOffset)
+				while (buffer[localStart] != ' ' && localStart != endOffset && localStart < maxStart)
 			    {
 				    localStart++;
 			    }
@@ -266,7 +273,7 @@ namespace Lucene.Net.Search.Vectorhighlight
 
 			if (endOffset != buffer.Length && buffer[endOffset + 1] != ' ')
 			{
-				while (buffer[localEnd] != ' ' && localEnd != localStart)
+				while (buffer[localEnd] != ' ' && localEnd != localStart && localEnd > minEnd)
 				{
 					localEnd--;
 				}
