@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
@@ -26,77 +25,85 @@ namespace Raven.Studio.Commands
 {
 	public class CreateDatabaseCommand : Command
 	{
-		protected override async Task ExecuteAsync(object parameter)
+		public override void Execute(object parameter)
 		{
-			var newDatabase = await new NewDatabase().ShowAsync();
-			var databaseName = newDatabase.DbName.Text;
-
-			if (Path.GetInvalidPathChars().Any(databaseName.Contains))
-				throw new ArgumentException("Cannot create a database with invalid path characters: " + databaseName);
-			if (ApplicationModel.Current.Server.Value.Databases.Count(s => s == databaseName) != 0)
-				throw new ArgumentException("A database with the name " + databaseName + " already exists");
-
-			AssertValidName(databaseName);
-
-			var bundlesModel = new CreateSettingsModel();
-			var bundlesSettings = new List<ChildWindow>();
-			if (newDatabase.Encryption.IsChecked == true)
-				bundlesSettings.Add(new EncryptionSettings());
-			if (newDatabase.Quotas.IsChecked == true || newDatabase.Versioning.IsChecked == true)
-			{
-				bundlesModel = ConfigureSettingsModel(newDatabase);
-
-				var bundleView = new SettingsDialog()
+			new NewDatabase().ShowAsync()
+				.ContinueOnSuccessInTheUIThread(newDatabase =>
 				{
-					DataContext = bundlesModel
-				};
+					var databaseName = newDatabase.DbName.Text;
 
-				var bundlesSettingsWindow = new ChildWindow()
-				{
-					Title = "Setup bundles",
-					Content = bundleView,
-				};
+					if (Path.GetInvalidPathChars().Any(databaseName.Contains))
+						throw new ArgumentException("Cannot create a database with invalid path characters: " + databaseName);
+					if (ApplicationModel.Current.Server.Value.Databases.Count(s => s == databaseName) != 0)
+						throw new ArgumentException("A database with the name " + databaseName + " already exists");
 
-				bundlesSettingsWindow.KeyDown += (sender, args) =>
-				{
-					if (args.Key == Key.Escape)
-						bundlesSettingsWindow.DialogResult = false;
-				};
+					AssertValidName(databaseName);
 
-				bundlesSettings.Add(bundlesSettingsWindow);
-			}
+					var bundlesModel = new CreateSettingsModel();
+					var bundlesSettings = new List<ChildWindow>();
+					if (newDatabase.Encryption.IsChecked == true)
+						bundlesSettings.Add(new EncryptionSettings());
+					if (newDatabase.Quotas.IsChecked == true || newDatabase.Versioning.IsChecked == true)
+					{
+						bundlesModel = ConfigureSettingsModel(newDatabase);
 
-			var bundlesData = await new Wizard(bundlesSettings).StartAsync();
-			ApplicationModel.Current.AddNotification(
-				new Notification("Creating database: " + databaseName));
-			var settings = UpdateSettings(newDatabase, newDatabase, bundlesModel);
-			var securedSettings = UpdateSecuredSettings(bundlesData);
+						var bundleView = new SettingsDialog()
+						{
+							DataContext = bundlesModel
+						};
 
-			var databaseDocument = new DatabaseDocument
-			{
-				Id = newDatabase.DbName.Text,
-				Settings = settings,
-				SecuredSettings = securedSettings
-			};
+						var bundlesSettingsWindow = new ChildWindow()
+						{
+							Title = "Setup bundles",
+							Content = bundleView,
+						};
 
-			string encryptionKey = null;
-			var encryptionSettings =
-				bundlesData.FirstOrDefault(window => window is EncryptionSettings) as EncryptionSettings;
-			if (encryptionSettings != null)
-				encryptionKey = encryptionSettings.EncryptionKey.Text;
+						bundlesSettingsWindow.KeyDown += (sender, args) =>
+						{
+							if (args.Key == Key.Escape)
+								bundlesSettingsWindow.DialogResult = false;
+						};
 
-			await DatabaseCommands.CreateDatabaseAsync(databaseDocument);
-			await DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync();
+						bundlesSettings.Add(bundlesSettingsWindow);
+					}
 
-			var model = parameter as DatabasesListModel;
-			if (model != null)
-				model.ForceTimerTicked();
-			ApplicationModel.Current.AddNotification(
-				new Notification("Database " + databaseName + " created"));
+					new Wizard(bundlesSettings).StartAsync()
+						.ContinueOnSuccessInTheUIThread(bundlesData =>
+						{
+							ApplicationModel.Current.AddNotification(new Notification("Creating database: " + databaseName));
+							var settings = UpdateSettings(newDatabase, newDatabase, bundlesModel);
+							var securedSettings = UpdateSecuredSettings(bundlesData);
 
-			HandleBundleAfterCreation(bundlesModel, databaseName, encryptionKey);
+							var databaseDocument = new DatabaseDocument
+							{
+								Id = newDatabase.DbName.Text,
+								Settings = settings,
+								SecuredSettings = securedSettings
+							};
 
-			ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
+							string encryptionKey = null;
+							var encryptionSettings = bundlesData.FirstOrDefault(window => window is EncryptionSettings) as EncryptionSettings;
+							if (encryptionSettings != null)
+								encryptionKey = encryptionSettings.EncryptionKey.Text;
+
+							DatabaseCommands.CreateDatabaseAsync(databaseDocument).ContinueOnSuccess(
+								() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
+								.ContinueOnSuccessInTheUIThread(() =>
+								{
+									var model = parameter as DatabasesListModel;
+									if (model != null)
+										model.ForceTimerTicked();
+									ApplicationModel.Current.AddNotification(
+										new Notification("Database " + databaseName + " created"));
+
+									HandleBundleAfterCreation(bundlesModel, databaseName, encryptionKey);
+
+									ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
+								})
+								.Catch();
+						});
+				})
+				.Catch();
 		}
 
 		private static CreateSettingsModel ConfigureSettingsModel(NewDatabase newDatabase)
@@ -215,7 +222,7 @@ namespace Raven.Studio.Commands
 		{
 			foreach (var data in versioningData)
 			{
-				if (data.Id.StartsWith("Raven/Versioning/", StringComparison.OrdinalIgnoreCase) == false)
+				if (data.Id.StartsWith("Raven/Versioning/", StringComparison.InvariantCultureIgnoreCase) == false)
 					data.Id = "Raven/Versioning/" + data.Id;
 				session.Store(data);
 			}
