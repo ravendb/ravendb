@@ -18,13 +18,14 @@ namespace Raven.Database.Server
 
 		public static IDisposable WithDatabase(string database)
 		{
+			var old = DatabaseName.Value;
 			var db = database ?? Constants.SystemDatabase;
 			var disposable = LogManager.OpenMappedContext("database", db);
 			DatabaseName.Value = db;
 
 			return new DisposableAction(()=>
 			{
-				DatabaseName.Value = null;
+				DatabaseName.Value = old;
 				disposable.Dispose();
 			});
 		}
