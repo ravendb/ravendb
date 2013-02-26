@@ -29,7 +29,7 @@ namespace Raven.Tests.Spatial
 
 					var writeShape = NtsSpatialContext.GEO.ReadShape("LINESTRING (0 0, 1 1, 2 1)");
 					var spatialField = new SpatialField("WKT", new SpatialOptionsFactory().Geography());
-					var writeStrategy = spatialField.GetLuceneStrategy();
+					var writeStrategy = spatialField.GetStrategy();
 					foreach (var f in writeStrategy.CreateIndexableFields(writeShape))
 					{
 						doc.Add(f);
@@ -41,7 +41,7 @@ namespace Raven.Tests.Spatial
 				var shape = NtsSpatialContext.GEO.ReadShape("LINESTRING (1 0, 1 1, 1 2)");
 				SpatialArgs args = new SpatialArgs(SpatialOperation.Intersects, shape);
 				var spatialField2 = new SpatialField("WKT", new SpatialOptionsFactory().Geography());
-				var writeStrategy2 = spatialField2.GetLuceneStrategy();
+				var writeStrategy2 = spatialField2.GetStrategy();
 				var makeQuery = writeStrategy2.MakeQuery(args);
 				using(var search = new IndexSearcher(dir))
 				{

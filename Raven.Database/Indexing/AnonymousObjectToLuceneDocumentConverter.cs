@@ -97,7 +97,7 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<AbstractField> CreateSpatialFields(string name, object value)
 		{
 			var spatialField = viewGenerator.GetSpatialField(name);
-			var strategy = spatialField.GetLuceneStrategy();
+			var strategy = spatialField.GetStrategy();
 
 			Shape shape;
 			if (spatialField.TryReadShape(value, out shape))

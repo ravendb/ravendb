@@ -182,7 +182,7 @@ namespace Raven.Database.Linq
 				return Enumerable.Empty<IFieldable>();
 
 			Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
-			return spatialField.GetLuceneStrategy().CreateIndexableFields(shape)
+			return spatialField.GetStrategy().CreateIndexableFields(shape)
 				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
@@ -196,7 +196,7 @@ namespace Raven.Database.Linq
 			var options = new SpatialOptionsFactory().Geography(maxTreeLevel, spatialSearchStrategy);
 
 			var spatialField = GetSpatialField(fieldName, options);
-			var strategy = spatialField.GetLuceneStrategy();
+			var strategy = spatialField.GetStrategy();
 
 			var shape = spatialField.ReadShape(shapeWKT);
 			return strategy.CreateIndexableFields(shape)

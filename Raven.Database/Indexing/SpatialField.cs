@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Globalization;
-using System.Linq;
-using System.Text.RegularExpressions;
 using GeoAPI;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Function;
@@ -18,16 +15,11 @@ using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
 using Raven.Database.Indexing.Spatial;
-using Raven.Database.Indexing.Spatial.GeoJson;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Linq;
 using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Io;
 using Spatial4n.Core.Shapes;
-using Point = Spatial4n.Core.Shapes.Point;
 using SpatialRelation = Raven.Abstractions.Indexing.SpatialRelation;
 
 namespace Raven.Database.Indexing
@@ -37,13 +29,10 @@ namespace Raven.Database.Indexing
 		private static readonly NtsSpatialContext GeoContext;
 		private static readonly NtsShapeReadWriter GeoShapeReadWriter;
 
-		private static readonly Regex RegexX = new Regex("^(?:X|Longitude|Lng|Lon|Long)$", RegexOptions.IgnoreCase);
-		private static readonly Regex RegexY = new Regex("^(?:Y|Latitude|Lat)$", RegexOptions.IgnoreCase);
-
 		private readonly SpatialOptions options;
 		private readonly NtsSpatialContext context;
 		private readonly SpatialStrategy strategy;
-		private readonly NtsShapeReadWriter shapeReadWriter;
+		private readonly RavenShapeReadWriter shapeReadWriter;
 
 		static SpatialField()
 		{
@@ -57,10 +46,10 @@ namespace Raven.Database.Indexing
 			this.options = options;
 			context = GetContext(options);
 			strategy = CreateStrategy(fieldName, options);
-			shapeReadWriter = GetShapeReadWriter(options, context);
+			shapeReadWriter = new RavenShapeReadWriter(context, options, GetShapeReadWriter(options, context));
 		}
 
-		public SpatialStrategy GetLuceneStrategy()
+		public SpatialStrategy GetStrategy()
 		{
 			return strategy;
 		}
@@ -144,101 +133,17 @@ namespace Raven.Database.Indexing
 
 		public bool TryReadShape(object value, out Shape shape)
 		{
-			shape = null;
-
-			if (value == null)
-				return false;
-
-			var jsonObject = value as IDynamicJsonObject;
-			if (jsonObject != null)
-			{
-				var json = jsonObject.Inner;
-
-				var x1 = json.Keys.FirstOrDefault(c => RegexX.IsMatch(c));
-				var y1 = json.Keys.FirstOrDefault(c => RegexY.IsMatch(c));
-
-				RavenJToken x2, y2;
-				if (x1 != null && y1 != null && json.TryGetValue(x1, out x2) && json.TryGetValue(y1, out y2))
-				{
-					var x3 = x2 as RavenJValue;
-					var y3 = y2 as RavenJValue;
-					if (x3 != null && y3 != null)
-					{
-						if (new [] { x3, y3 }.All(x => x.Type == JTokenType.Float || x.Type == JTokenType.Integer))
-						{
-							shape = context.MakePoint(Convert.ToDouble(x3.Value), Convert.ToDouble(y3.Value));
-							return true;
-						}
-					}
-				}
-
-				var geoJson = new GeoJsonShapeConverter(context);
-				return geoJson.TryConvert(json, out shape);
-			}
-
-			var str = value as string;
-			if (!string.IsNullOrWhiteSpace(str))
-			{
-
-				if (options.Type == SpatialFieldType.Geography)
-					str = TranslateCircleFromKmToRadians(str);
-				shape = shapeReadWriter.ReadShape(str);
-				return true;
-			}
-			return false;
+			return shapeReadWriter.TryReadShape(value, out shape);
 		}
 
 		public Shape ReadShape(string shapeWKT)
 		{
-			if (options.Type == SpatialFieldType.Geography)
-				shapeWKT = TranslateCircleFromKmToRadians(shapeWKT);
-			Shape shape = shapeReadWriter.ReadShape(shapeWKT);
-			return shape;
+			return shapeReadWriter.ReadShape(shapeWKT);
 		}
 
 		public string WriteShape(Shape shape)
 		{
 			return shapeReadWriter.WriteShape(shape);
-		}
-
-		private string TranslateCircleFromKmToRadians(string shapeWKT)
-		{
-			var match = CircleShape.Match(shapeWKT);
-			if (match.Success == false)
-				return shapeWKT;
-
-			var radCapture = match.Groups[3];
-			var radius = double.Parse(radCapture.Value, CultureInfo.InvariantCulture);
-
-			radius = (radius / EarthMeanRadiusKm) * RadiansToDegrees;
-
-
-			return shapeWKT.Substring(0, radCapture.Index) + radius.ToString("F6", CultureInfo.InvariantCulture) +
-				   shapeWKT.Substring(radCapture.Index + radCapture.Length);
-
-		}
-
-		/// <summary>
-		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
-		///
-		/// [1] http://en.wikipedia.org/wiki/Earth_radius
-		/// </summary>
-		private const double EarthMeanRadiusKm = 6371.0087714;
-		private const double DegreesToRadians = Math.PI / 180;
-		private const double RadiansToDegrees = 1 / DegreesToRadians;
-
-		private static readonly Regex CircleShape =
-			new Regex(@"Circle \s* \( \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ d=([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* \)",
-					  RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-		// Shouldn't be here, a left only from SpatialIndex
-		public static double GetGeographicalDistance(double fromLat, double fromLng, double toLat, double toLng)
-		{
-			var Context = new NtsSpatialContext(true);
-			Point ptFrom = Context.MakePoint(fromLng, fromLat);
-			Point ptTo = Context.MakePoint(toLng, toLat);
-			var distance = Context.GetDistCalc().Distance(ptFrom, ptTo);
-			return (distance / RadiansToDegrees) * EarthMeanRadiusKm;
 		}
 	}
 }
