@@ -105,6 +105,10 @@ namespace Raven.Database.Config
 			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned"], TimeSpan.FromHours(72), TimeSpanArgumentType.FromParse);
 
 			TimeToWaitBeforeRunningAbandonedIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningAbandonedIndexes"], TimeSpan.FromHours(3), TimeSpanArgumentType.FromParse);
+
+			DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
+
+			ClusterName = new StringSetting(settings["Raven/ClusterName"], (string)null);		
 		}
 
 	    
@@ -181,6 +185,10 @@ namespace Raven.Database.Config
 		public BooleanSetting DisableDocumentPreFetchingForIndexing { get; private set; }
 
 		public StringSetting WebDir { get; private set; }
+
+		public BooleanSetting DisableClusterDiscovery { get; private set; }
+
+		public StringSetting ClusterName { get; private set; }
 
 		public StringSetting PluginsDirectory { get; private set; }
 
