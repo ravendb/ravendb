@@ -52,6 +52,32 @@ namespace Raven.Tests.Bundles.Replication
 		}
 
 		[Fact]
+		public void ShouldThrowConflictExceptionForGettingInfoAboutConflictedDocument()
+		{
+			using (var store1 = CreateEmbeddableStore())
+			using (var store2 = CreateEmbeddableStore())
+			{
+				store1.DatabaseCommands.Put("companies/1", null, new RavenJObject(), new RavenJObject());
+				store2.DatabaseCommands.Put("companies/1", null, new RavenJObject(), new RavenJObject());
+
+				store1.DatabaseCommands.Put("marker", null, new RavenJObject(), new RavenJObject());
+
+				TellFirstInstanceToReplicateToSecondInstance();
+
+				WaitForReplication(store2, "marker");
+
+				var conflictException = Assert.Throws<ConflictException>(() =>
+				{
+					store2.DatabaseCommands.Head("companies/1");
+				});
+
+				Assert.Equal(
+					"Conflict detected on companies/1, conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict",
+					conflictException.Message);
+			}
+		}
+
+		[Fact]
 		public void ShouldThrowConflictExceptionForQueryingConflictedDocument()
 		{
 			using (var store1 = CreateEmbeddableStore())
@@ -148,6 +174,32 @@ namespace Raven.Tests.Bundles.Replication
 
 				Assert.Equal("Conflict detected on a/1, conflict must be resolved before the attachement will be accessible",
 							 conflictException.Message);
+			}
+		}
+
+		[Fact]
+		public void ShouldThrowConflictExceptionForGettingInfoAboutConflictedAttachement()
+		{
+			using (var store1 = CreateEmbeddableStore())
+			using (var store2 = CreateEmbeddableStore())
+			{
+				store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
+				store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
+
+				store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(), new RavenJObject());
+
+				TellFirstInstanceToReplicateToSecondInstance();
+
+				WaitForAttachment(store2, "marker");
+
+				var conflictException = Assert.Throws<ConflictException>(() =>
+				{
+					store2.DatabaseCommands.HeadAttachment("a/1");
+				});
+
+				Assert.Equal(
+					"Conflict detected on a/1, conflict must be resolved before the attachment will be accessible",
+					conflictException.Message);
 			}
 		}
 	}

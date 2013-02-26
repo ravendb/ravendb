@@ -243,7 +243,7 @@ namespace Raven.Client.Embedded
 				return memoryStream;
 			};
 
-			AssertNonConflictedAttachement(attachment);
+			AssertNonConflictedAttachement(attachment, false);
 
 			return attachment;
 		}
@@ -285,6 +285,9 @@ namespace Raven.Client.Embedded
 			{
 				throw new InvalidOperationException("Cannot get attachment data from an attachment header");
 			};
+
+			AssertNonConflictedAttachement(attachment, true);
+
 			return attachment;
 		}
 
@@ -967,7 +970,11 @@ namespace Raven.Client.Embedded
 		public JsonDocumentMetadata Head(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetDocumentMetadata(key, TransactionInformation);
+			var metadata = database.GetDocumentMetadata(key, TransactionInformation);
+
+			AssertNonConflictedDocumentForHead(metadata);
+
+			return metadata;
 		}
 
 		/// <summary>
@@ -1016,7 +1023,7 @@ namespace Raven.Client.Embedded
 			}
 		}
 
-		private void AssertNonConflictedAttachement(Attachment attachment)
+		private void AssertNonConflictedAttachement(Attachment attachment, bool headRequest)
 		{
 			if (attachment == null)
 				return;
@@ -1026,14 +1033,38 @@ namespace Raven.Client.Embedded
 
 			if (attachment.Metadata.Value<int>("@Http-Status-Code") == 409)
 			{
+				if (headRequest)
+				{
+					throw new ConflictException("Conflict detected on " + attachment.Key +
+												", conflict must be resolved before the attachment will be accessible", true)
+					{
+						Etag = attachment.Etag
+					};
+				}
+
 				var conflictsDoc = RavenJObject.Load(new BsonReader(attachment.Data()));
 				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 				throw new ConflictException("Conflict detected on " + attachment.Key +
-										", conflict must be resolved before the attachement will be accessible", true)
+											", conflict must be resolved before the attachement will be accessible", true)
 				{
-					ConflictedVersionIds = conflictIds,
-					Etag = attachment.Etag
+					Etag = attachment.Etag,
+					ConflictedVersionIds = conflictIds
+				};
+			}
+		}
+
+		private void AssertNonConflictedDocumentForHead(JsonDocumentMetadata metadata)
+		{
+			if (metadata == null)
+				return;
+
+			if (metadata.Metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				throw new ConflictException("Conflict detected on " + metadata.Key +
+												", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
+				{
+					Etag = metadata.Etag
 				};
 			}
 		}
