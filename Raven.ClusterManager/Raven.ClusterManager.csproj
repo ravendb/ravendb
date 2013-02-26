@@ -49,18 +49,48 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bootstrapper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="Assets\scripts\vendor\jquery\jquery.min.map" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Assets\images\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\index.html" />
+    <Content Include="Assets\scripts\main.js" />
+    <Content Include="Assets\styles\main.css" />
+    <Content Include="Assets\scripts\vendor\angular\angular-bootstrap-prettify.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-bootstrap-prettify.min.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-bootstrap.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-bootstrap.min.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-cookies.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-cookies.min.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-loader.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-loader.min.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-mocks.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-resource.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-resource.min.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-sanitize.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-sanitize.min.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular-scenario.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular.js" />
+    <Content Include="Assets\scripts\vendor\angular\angular.min.js" />
+    <Content Include="Assets\scripts\vendor\jquery\jquery.intellisense.js" />
+    <Content Include="Assets\scripts\vendor\jquery\jquery.js" />
+    <Content Include="Assets\scripts\vendor\jquery\jquery.min.js" />
+    <Content Include="Assets\scripts\vendor\modernizr\modernizr.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
