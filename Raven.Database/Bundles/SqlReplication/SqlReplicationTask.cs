@@ -69,10 +69,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			var task = Task.Factory.StartNew(() =>
 			{
-				using (LogManager.OpenMappedContext("database", database.Name ?? Constants.SystemDatabase))
-				using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+				using (LogContext.WithDatabase(database.Name))
 				{
-					LogContext.DatabaseName.Value = database.Name ?? Constants.SystemDatabase;
 					try
 					{
 						BackgroundSqlReplication();

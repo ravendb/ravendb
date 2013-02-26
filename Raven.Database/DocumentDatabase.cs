@@ -317,10 +317,8 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			using(LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
-			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+			using (LogContext.WithDatabase(Name))
 			{
-				LogContext.DatabaseName.Value = Name;
 				foreach (var task in StartupTasks)
 				{
 					var disposable = task.Value as IDisposable;

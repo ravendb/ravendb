@@ -31,11 +31,9 @@ namespace Raven.Database.Indexing
 
 		public void Execute()
 		{
-			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
-			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+			using (LogContext.WithDatabase(context.DatabaseName))
 			{
 				Init();
-				LogContext.DatabaseName.Value = context.DatabaseName;
 				var name = GetType().Name;
 				var workComment = "WORK BY " + name;
 				while (context.RunIndexing)
