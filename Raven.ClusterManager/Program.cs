@@ -11,7 +11,7 @@ namespace Raven.ClusterManager
 			const int port = 8888;
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 
-			var host = new NancyHost(new Uri(string.Format("http://127.0.0.1:{0}/", port)));
+			var host = new NancyHost(new Uri(string.Format("http://localhost:{0}/", port)));
 			host.Start();
 
 			while (true)
