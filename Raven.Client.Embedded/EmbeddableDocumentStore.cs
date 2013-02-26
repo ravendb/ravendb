@@ -133,7 +133,7 @@ namespace Raven.Client.Embedded
 		protected override IDatabaseChanges CreateDatabaseChanges(string database)
 		{
 			IDatabaseChanges result = null;
-			result = new EmbeddableDatabaseChanges(this, () => result = null);
+			result = new EmbeddableDatabaseChanges(this, () => result = null, ((EmbeddedDatabaseCommands)  DatabaseCommands).TryResolveConflictByUsingRegisteredListeners);
 			return result;
 		}
 

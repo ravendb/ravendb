@@ -1117,6 +1117,19 @@ namespace Raven.Client.Embedded
 
 			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
 
+			if (TryResolveConflictByUsingRegisteredListeners(key, etag, conflictIds))
+				return null;
+
+			return new ConflictException("Conflict detected on " + key +
+										", conflict must be resolved before the document will be accessible", true)
+			{
+				ConflictedVersionIds = conflictIds,
+				Etag = etag
+			};
+		}
+
+		internal bool TryResolveConflictByUsingRegisteredListeners(string key, Etag etag, string[] conflictIds)
+		{
 			if (conflictListeners.Length > 0 && resolvingConflict == false)
 			{
 				resolvingConflict = true;
@@ -1133,7 +1146,7 @@ namespace Raven.Client.Embedded
 						{
 							Put(key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
 
-							return null;
+							return true;
 						}
 					}
 				}
@@ -1143,12 +1156,7 @@ namespace Raven.Client.Embedded
 				}
 			}
 
-			return new ConflictException("Conflict detected on " + key +
-										", conflict must be resolved before the document will be accessible", true)
-			{
-				ConflictedVersionIds = conflictIds,
-				Etag = etag
-			};
+			return false;
 		}
 	}
 }

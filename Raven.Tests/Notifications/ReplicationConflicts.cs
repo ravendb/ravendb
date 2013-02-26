@@ -6,12 +6,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
-using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
