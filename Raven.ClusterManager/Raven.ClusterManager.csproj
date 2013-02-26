@@ -65,6 +65,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\images\RavenDBLogo.png" />
     <Content Include="Assets\index.html" />
     <Content Include="Assets\scripts\main.js" />
     <Content Include="Assets\styles\main.css" />
