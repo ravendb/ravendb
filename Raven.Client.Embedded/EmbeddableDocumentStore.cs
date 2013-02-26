@@ -151,6 +151,9 @@ namespace Raven.Client.Embedded
 				return;
 			wasDisposed = true;
 			base.Dispose();
+
+			if(databaseChanges != null)
+				databaseChanges.Dispose();
 			if (idleTimer != null)
 				idleTimer.Dispose();
 			if (DocumentDatabase != null)
