@@ -730,9 +730,9 @@ namespace Raven.Client.Connection.Async
 			                                 }.ToString(Formatting.None));
 		}
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null)
+		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null, bool defrag = false)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentials, convention));
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore?defrag=" + defrag).NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 			return request.ExecuteWriteAsync(new RavenJObject
 			{

@@ -41,7 +41,7 @@ namespace Raven.Client.Changes
 			}
 		}
 
-		public event Action<DocumentChangeNotification> OnDocumentChangeNotification;
+		public event Action<DocumentChangeNotification> OnDocumentChangeNotification = delegate { };
 
 		public event Action<IndexChangeNotification> OnIndexChangeNotification;
 

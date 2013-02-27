@@ -25,11 +25,19 @@ namespace Raven.Studio.Models
 		private bool hasUnsavedChanges;
 		public string OriginalName { get; private set; }
 
+		public bool PriorityChanged = false;
+		public Observable<string> IndexingPriority { get; set; }
+		public IndexingPriority Priority { get; set; }
+		public List<string> Priorities { get; set; } 
+
 		public IndexDefinitionModel()
 		{
 			ModelUrl = "/indexes/";
+			Priorities = new List<string> {"Normal", "Idle", "Disabled", "Abandoned"};
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+			IndexingPriority = new Observable<string>();
 
+			IndexingPriority.PropertyChanged += (sender, args) => PriorityChanged = true;
 			index = new IndexDefinition();
 			Maps = new BindableCollection<MapItem>(x => x.Text)
 			{
@@ -64,6 +72,7 @@ namespace Raven.Studio.Models
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
+			UpdatePriprity(indexDefinition.Name);
 			index = indexDefinition;
 
 			if (index.Maps.Count == 0)
@@ -90,6 +99,29 @@ namespace Raven.Studio.Models
 			hasUnsavedChanges = false;
 
 			OnEverythingChanged();
+		}
+
+		private void UpdatePriprity(string name)
+		{
+			DatabaseCommands
+				.GetStatisticsAsync()
+				.ContinueOnSuccessInTheUIThread(databaseStatistics =>
+				{
+					var indexStats = databaseStatistics.Indexes.FirstOrDefault(stats => stats.Name == name);
+					if (indexStats == null)
+						return;
+					Priority = indexStats.Priority;
+					if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Normal))
+						IndexingPriority.Value = "Normal";
+					else if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Idle))
+						IndexingPriority.Value = "Idle";
+					else if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Disabled))
+						IndexingPriority.Value = "Disabled";
+					else if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Abandoned))
+						IndexingPriority.Value = "Abandoned";
+
+					PriorityChanged = false;
+				});
 		}
 
 		private void RestoreDefaults(IndexDefinition indexDefinition)
@@ -484,6 +516,8 @@ namespace Raven.Studio.Models
 					index.Maps.RemoveAt(mapIndexes[i]);
 				}
 
+				SavePriority(index);
+
 				ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
 				DatabaseCommands.PutIndexAsync(index.Name, index.index, true)
 					.ContinueOnSuccess(() =>
@@ -494,6 +528,35 @@ namespace Raven.Studio.Models
 											   PutIndexNameInUrl(index.Name);
 										   })
 					.Catch();
+			}
+
+			private void SavePriority(IndexDefinitionModel indexDefinitionModel)
+			{
+				if (indexDefinitionModel.PriorityChanged == false)
+					return;
+
+				var priority = Abstractions.Data.IndexingPriority.Normal;
+				switch (indexDefinitionModel.IndexingPriority.Value)
+				{
+					case "Normal":
+						priority = Abstractions.Data.IndexingPriority.Normal;
+						break;
+					case "Idle":
+						priority = Abstractions.Data.IndexingPriority.Idle | Abstractions.Data.IndexingPriority.Forced;
+						break;
+					case "Disabled":
+						priority = Abstractions.Data.IndexingPriority.Disabled | Abstractions.Data.IndexingPriority.Forced;
+						break;
+					case "Abandoned":
+						priority = Abstractions.Data.IndexingPriority.Abandoned | Abstractions.Data.IndexingPriority.Forced;
+						break;
+				}
+
+				ApplicationModel.Current.Server.Value.DocumentStore
+				                .AsyncDatabaseCommands
+				                .CreateRequest(
+					                "/indexes/set-priority/" + indexDefinitionModel.Name + "?priority=" + priority.ToString(), "POST")
+				                .ExecuteRequestAsync();
 			}
 
 			private void PutIndexNameInUrl(string name)

@@ -236,7 +236,7 @@ namespace Raven.Abstractions.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Auto"))
+				if (name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
 					return "Auto";
 				if (IsCompiled)
 					return "Compiled";

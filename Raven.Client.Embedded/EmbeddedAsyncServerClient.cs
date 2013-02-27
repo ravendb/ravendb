@@ -316,6 +316,12 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
+		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
+		{
+			// No sync equivalent on IDatabaseCommands.
+			throw new NotSupportedException();
+		}
+
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null)
 		{
 			// No sync equivalent on IDatabaseCommands.
