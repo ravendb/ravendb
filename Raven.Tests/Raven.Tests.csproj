@@ -515,7 +515,9 @@
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
+    <Compile Include="Bundles\Replication\ConflictsInEmbeddableStore.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
+    <Compile Include="Bundles\Replication\Issues\RavenDB693_Embeddable.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
     <Compile Include="Bundles\Replication\Issues\ReplicationWithReferencedIndexes.cs" />
@@ -698,6 +700,8 @@
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
+    <Compile Include="Notifications\ReplicationConflicts.cs" />
+    <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
     <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />

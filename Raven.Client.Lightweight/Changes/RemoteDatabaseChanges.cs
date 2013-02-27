@@ -35,28 +35,32 @@ namespace Raven.Client.Changes
 		private readonly DocumentConvention conventions;
 		private readonly ReplicationInformer replicationInformer;
 		private readonly Action onDispose;
+		private readonly Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.OrdinalIgnoreCase);
 		private IDisposable connection;
 
 		private static int connectionCounter;
 		private readonly string id;
 
-		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose)
+		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory,
+		                             DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose,
+		                             Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
-				 Base62Util.Base62Random();
+			     Base62Util.Base62Random();
 			this.url = url;
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.conventions = conventions;
 			this.replicationInformer = replicationInformer;
 			this.onDispose = onDispose;
+			this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
 			Task = EstablishConnection()
 				.ObserveException()
 				.ContinueWith(task =>
 				{
 					task.AssertNotFailed();
-					return (IDatabaseChanges)this;
+					return (IDatabaseChanges) this;
 				});
 		}
 
@@ -321,6 +325,35 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
+		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
+		{
+			var counter = counters.GetOrAdd("all-replication-conflicts", s =>
+			{
+				var indexSubscriptionTask = AfterConnection(() =>
+				{
+					watchAllIndexes = true;
+					return Send("watch-replication-conflicts", null);
+				});
+
+				return new LocalConnectionState(
+					() =>
+					{
+						watchAllIndexes = false;
+						Send("unwatch-replication-conflicts", null);
+						counters.Remove("all-replication-conflicts");
+					},
+					indexSubscriptionTask);
+			});
+			var taskedObservable = new TaskedObservable<ReplicationConflictNotification>(
+				counter,
+				notification => true);
+
+			counter.OnReplicationConflictNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+		}
+
 		public void WaitForAllPendingSubscriptions()
 		{
 			foreach (var kvp in counters)
@@ -381,6 +414,31 @@ namespace Raven.Client.Changes
 					{
 						counter.Value.Send(indexChangeNotification);
 					} 
+					break;
+				case "ReplicationConflictNotification":
+					var replicationConflictNotification = value.JsonDeserialization<ReplicationConflictNotification>();
+					foreach (var counter in counters)
+					{
+						counter.Value.Send(replicationConflictNotification);
+					}
+
+					if (replicationConflictNotification.ItemType == ReplicationConflictTypes.DocumentReplicationConflict)
+					{
+						tryResolveConflictByUsingRegisteredConflictListenersAsync(replicationConflictNotification.Id,
+						                                                     replicationConflictNotification.Etag,
+						                                                     replicationConflictNotification.Conflicts, null)
+							.ContinueWith(t =>
+							{
+								t.AssertNotFailed();
+
+								if (t.Result)
+								{
+									logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
+									             replicationConflictNotification.Id);
+								}
+							});
+					}
+
 					break;
 				case "Initialized":
 				case "Heartbeat":

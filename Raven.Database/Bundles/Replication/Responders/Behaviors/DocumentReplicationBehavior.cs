@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Impl;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
@@ -12,9 +13,9 @@ namespace Raven.Bundles.Replication.Responders
 	{
 		public IEnumerable<AbstractDocumentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
 
-		protected override DocumentChangeTypes ReplicationConflict
+		protected override ReplicationConflictTypes ReplicationConflict
 		{
-			get { return DocumentChangeTypes.ReplicationConflict; }
+			get { return ReplicationConflictTypes.DocumentReplicationConflict; }
 		}
 
 		protected override void DeleteItem(string id, Etag etag)
@@ -32,34 +33,47 @@ namespace Raven.Bundles.Replication.Responders
 			Database.Put(id, etag, incoming, metadata, null);
 		}
 
-		protected override void CreateConflict(string id, string newDocumentConflictId, 
+		protected override CreatedConflict CreateConflict(string id, string newDocumentConflictId, 
 			string existingDocumentConflictId, JsonDocument existingItem, RavenJObject existingMetadata)
 		{
 			existingMetadata.Add(Constants.RavenReplicationConflict, true);
 			Actions.Documents.AddDocument(existingDocumentConflictId, Etag.Empty, existingItem.DataAsJson, existingItem.Metadata);
 			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Etag.Empty : existingItem.Etag;
 			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
-			Actions.Documents.AddDocument(id, etag,
-			                              new RavenJObject
-			                              {
-			                              	{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)}
-			                              },
-			                              new RavenJObject
-			                              {
-			                              	{Constants.RavenReplicationConflict, true},
-			                              	{"@Http-Status-Code", 409},
-			                              	{"@Http-Status-Description", "Conflict"}
-			                              });
+			var conflictsArray = new RavenJArray(existingDocumentConflictId, newDocumentConflictId);
+			var addResult = Actions.Documents.AddDocument(id, etag,
+			                                              new RavenJObject
+			                                              {
+				                                              {"Conflicts", conflictsArray}
+			                                              },
+			                                              new RavenJObject
+			                                              {
+				                                              {Constants.RavenReplicationConflict, true},
+				                                              {"@Http-Status-Code", 409},
+				                                              {"@Http-Status-Description", "Conflict"}
+			                                              });
+
+			return new CreatedConflict()
+			{
+				Etag = addResult.Etag,
+				ConflictedIds = conflictsArray.Select(x => x.Value<string>()).ToArray()
+			};
 		}
 
-		protected override void AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, JsonDocument existingItem)
+		protected override CreatedConflict AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, JsonDocument existingItem)
 		{
 			// just update the current doc with the new conflict document
 			RavenJArray ravenJArray ;
 			existingItem.DataAsJson["Conflicts"] =
 				ravenJArray = new RavenJArray(existingItem.DataAsJson.Value<RavenJArray>("Conflicts"));
 			ravenJArray.Add(RavenJToken.FromObject(newConflictId));
-			Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
+			var addResult = Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
+
+			return new CreatedConflict()
+			{
+				Etag = addResult.Etag,
+				ConflictedIds = ravenJArray.Select(x => x.Value<string>()).ToArray()
+			};
 		}
 
 		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Etag existingEtag)

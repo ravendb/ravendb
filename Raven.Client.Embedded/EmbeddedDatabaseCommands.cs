@@ -13,6 +13,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Json;
+using Raven.Client.Exceptions;
+using Raven.Client.Listeners;
 using Raven.Database.Data;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -30,6 +32,7 @@ using Raven.Database.Server;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
@@ -41,7 +44,10 @@ namespace Raven.Client.Embedded
 	{
 		private readonly DocumentDatabase database;
 		private readonly DocumentConvention convention;
+		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly ProfilingInformation profilingInformation;
+		private bool resolvingConflict;
+		private bool resolvingConflictRetries;
 		private TransactionInformation TransactionInformation
 		{
 			get { return convention.EnlistInDistributedTransactions ? RavenTransactionAccessor.GetTransactionInformation() : null; }
@@ -50,11 +56,12 @@ namespace Raven.Client.Embedded
 		///<summary>
 		/// Create a new instance
 		///</summary>
-		public EmbeddedDatabaseCommands(DocumentDatabase database, DocumentConvention convention, Guid? sessionId)
+		public EmbeddedDatabaseCommands(DocumentDatabase database, DocumentConvention convention, Guid? sessionId, IDocumentConflictListener[] conflictListeners)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.database = database;
 			this.convention = convention;
+			this.conflictListeners = conflictListeners;
 			OperationsHeaders = new NameValueCollection();
 			if (database.Configuration.IsSystemDatabase() == false)
 				throw new InvalidOperationException("Database must be a system database");
@@ -122,7 +129,25 @@ namespace Raven.Client.Embedded
 		public JsonDocument Get(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.Get(key, TransactionInformation);
+			var jsonDocument = database.Get(key, TransactionInformation);
+
+			if (AssertNonConflictedDocumentAndCheckIfNeedToReload(jsonDocument))
+			{
+				if (resolvingConflictRetries)
+					throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+
+				resolvingConflictRetries = true;
+				try
+				{
+					return Get(key);
+				}
+				finally
+				{
+					resolvingConflictRetries = false;
+				}
+			}
+
+			return jsonDocument;
 		}
 
 	    /// <summary>
@@ -208,6 +233,7 @@ namespace Raven.Client.Embedded
 			Attachment attachment = database.GetStatic(key);
 			if (attachment == null)
 				return null;
+
 			Func<Stream> data = attachment.Data;
 			attachment.Data = () =>
 			{
@@ -216,6 +242,9 @@ namespace Raven.Client.Embedded
 				memoryStream.Position = 0;
 				return memoryStream;
 			};
+
+			AssertNonConflictedAttachement(attachment, false);
+
 			return attachment;
 		}
 
@@ -256,6 +285,9 @@ namespace Raven.Client.Embedded
 			{
 				throw new InvalidOperationException("Cannot get attachment data from an attachment header");
 			};
+
+			AssertNonConflictedAttachement(attachment, true);
+
 			return attachment;
 		}
 
@@ -437,7 +469,9 @@ namespace Raven.Client.Embedded
 				includeCmd.AlsoInclude(queryResult.IdsToInclude);
 			}
 
-			return queryResult;
+			var docResults = queryResult.Results.Concat(queryResult.Includes);
+			return RetryOperationBecauseOfConflict(docResults, queryResult,
+			                                       () => Query(index, query, includes, metadataOnly, indexEntriesOnly));
 		}
 
 		/// <summary>
@@ -559,7 +593,10 @@ namespace Raven.Client.Embedded
 				}
 			}
 
-			return multiLoadResult;
+			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
+
+		    return RetryOperationBecauseOfConflict(docResults, multiLoadResult,
+		                                           () => Get(ids, includes, transformer, queryInputs, metadataOnly));
 		}
 
 		/// <summary>
@@ -933,7 +970,11 @@ namespace Raven.Client.Embedded
 		public JsonDocumentMetadata Head(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetDocumentMetadata(key, TransactionInformation);
+			var metadata = database.GetDocumentMetadata(key, TransactionInformation);
+
+			AssertNonConflictedDocumentForHead(metadata);
+
+			return metadata;
 		}
 
 		/// <summary>
@@ -960,6 +1001,162 @@ namespace Raven.Client.Embedded
 		public ProfilingInformation ProfilingInformation
 		{
 			get { return profilingInformation; }
+		}
+
+		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
+		{
+			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
+			if (!requiresRetry)
+				return currentResult;
+
+			if (resolvingConflictRetries)
+				throw new InvalidOperationException(
+					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+			resolvingConflictRetries = true;
+			try
+			{
+				return nextTry();
+			}
+			finally
+			{
+				resolvingConflictRetries = false;
+			}
+		}
+
+		private void AssertNonConflictedAttachement(Attachment attachment, bool headRequest)
+		{
+			if (attachment == null)
+				return;
+
+			if (attachment.Metadata == null)
+				return;
+
+			if (attachment.Metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				if (headRequest)
+				{
+					throw new ConflictException("Conflict detected on " + attachment.Key +
+												", conflict must be resolved before the attachment will be accessible", true)
+					{
+						Etag = attachment.Etag
+					};
+				}
+
+				var conflictsDoc = RavenJObject.Load(new BsonReader(attachment.Data()));
+				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+				throw new ConflictException("Conflict detected on " + attachment.Key +
+											", conflict must be resolved before the attachement will be accessible", true)
+				{
+					Etag = attachment.Etag,
+					ConflictedVersionIds = conflictIds
+				};
+			}
+		}
+
+		private void AssertNonConflictedDocumentForHead(JsonDocumentMetadata metadata)
+		{
+			if (metadata == null)
+				return;
+
+			if (metadata.Metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				throw new ConflictException("Conflict detected on " + metadata.Key +
+												", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
+				{
+					Etag = metadata.Etag
+				};
+			}
+		}
+
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(JsonDocument jsonDocument)
+		{
+			if (jsonDocument == null)
+				return false;
+
+			if (jsonDocument.DataAsJson == null)
+				return false;
+
+			if (jsonDocument.Metadata == null)
+				return false;
+
+			if (jsonDocument.Metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				var conflictException = TryResolveConflictOrCreateConflictException(jsonDocument.Key, jsonDocument.DataAsJson,
+				                                                                    jsonDocument.Etag);
+				if (conflictException == null)
+					return true;
+				throw conflictException;
+			}
+			return false;
+		}
+
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
+		{
+			if (docResult == null)
+				return false;
+			var metadata = docResult[Constants.Metadata];
+			if (metadata == null)
+				return false;
+
+			if (metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				var concurrencyException = TryResolveConflictOrCreateConflictException(metadata.Value<string>("@id"), docResult, metadata.Value<string>("@etag"));
+				if (concurrencyException == null)
+					return true;
+				throw concurrencyException;
+			}
+			return false;
+		}
+
+		private ConflictException TryResolveConflictOrCreateConflictException(string key, RavenJObject conflictsDoc, Etag etag)
+		{
+			var ravenJArray = conflictsDoc.Value<RavenJArray>("Conflicts");
+			if (ravenJArray == null)
+				throw new InvalidOperationException("Could not get conflict ids from conflicted document, are you trying to resolve a conflict when using metadata-only?");
+
+			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
+
+			if (TryResolveConflictByUsingRegisteredListeners(key, etag, conflictIds))
+				return null;
+
+			return new ConflictException("Conflict detected on " + key +
+										", conflict must be resolved before the document will be accessible", true)
+			{
+				ConflictedVersionIds = conflictIds,
+				Etag = etag
+			};
+		}
+
+		internal bool TryResolveConflictByUsingRegisteredListeners(string key, Etag etag, string[] conflictIds)
+		{
+			if (conflictListeners.Length > 0 && resolvingConflict == false)
+			{
+				resolvingConflict = true;
+				try
+				{
+					var multiLoadResult = Get(conflictIds, null);
+
+					var results = multiLoadResult.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
+
+					foreach (var conflictListener in conflictListeners)
+					{
+						JsonDocument resolvedDocument;
+						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
+						{
+							Put(key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
+
+							return true;
+						}
+					}
+				}
+				finally
+				{
+					resolvingConflict = false;
+				}
+			}
+
+			return false;
 		}
 	}
 }

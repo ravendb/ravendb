@@ -705,7 +705,8 @@ namespace Raven.Client.Document
 				jsonRequestFactory,
 				Conventions,
 				GetReplicationInformerForDatabase(database),
-				() => databaseChanges.Remove(database));
+				() => databaseChanges.Remove(database),
+				((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
 		}
 
 		/// <summary>
