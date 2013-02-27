@@ -2305,5 +2305,10 @@ namespace Raven.Database
 			});
 			return result;
 		}
+
+		public TransformerDefinition GetTransformerDefinition(string name)
+		{
+			return IndexDefinitionStorage.GetTransformerDefinition(name);
+		}
 	}
 }

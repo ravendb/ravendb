@@ -171,6 +171,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<IndexDefinition[]>(databaseCommands.GetIndexes(start, pageSize));
 		}
 
+		public Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize)
+		{
+			return new CompletedTask<TransformerDefinition[]>(databaseCommands.GetTransformers(start, pageSize));
+		}
+
 		public Task ResetIndexAsync(string name)
 		{
 			databaseCommands.ResetIndex(name);
@@ -180,6 +185,11 @@ namespace Raven.Client.Embedded
 		public Task<IndexDefinition> GetIndexAsync(string name)
 		{
 			return new CompletedTask<IndexDefinition>(databaseCommands.GetIndex(name));
+		}
+
+		public Task<TransformerDefinition> GetTransformerAsync(string name)
+		{
+			return new CompletedTask<TransformerDefinition>(databaseCommands.GetTransformer(name));
 		}
 
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
@@ -201,6 +211,12 @@ namespace Raven.Client.Embedded
 		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			databaseCommands.DeleteByIndex(indexName, queryToDelete, allowStale);
+			return new CompletedTask();
+		}
+
+		public Task DeleteTransformerAsync(string name)
+		{
+			databaseCommands.DeleteTransformer(name);
 			return new CompletedTask();
 		}
 

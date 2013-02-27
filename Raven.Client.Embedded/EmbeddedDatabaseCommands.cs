@@ -308,6 +308,39 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Gets the transformers from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public TransformerDefinition[] GetTransformers(int start, int pageSize)
+		{
+			return database.GetTransformers(start, pageSize)
+				.Select(x =>JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject) x)["definition"].ToString(),new JsonToJsonConverter()))
+				.ToArray();
+
+		}
+
+		/// <summary>
+		/// Gets the transformer definition for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public TransformerDefinition GetTransformer(string name)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database.GetTransformerDefinition(name);
+		}
+
+		/// <summary>
+		/// Deletes the transformer.
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public void DeleteTransformer(string name)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			database.DeleteTransfom(name);
+		}
+
+		/// <summary>
 		/// Resets the specified index
 		/// </summary>
 		/// <param name="name">The name.</param>

@@ -273,6 +273,14 @@
       <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
+    <Compile Include="Features\Transformers\EditTransformerView.xaml.cs">
+      <DependentUpon>EditTransformerView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Transformers\TransformersListView.xaml.cs">
+      <DependentUpon>TransformersListView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Models\TransformerDefinitionModel.cs" />
+    <Compile Include="Models\TransformersModel.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
     <Compile Include="Impl\SplitButton\SplitHyperlinkButtonPopup.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
@@ -596,6 +604,12 @@
     </Compile>
     <Compile Include="Views\ToggleIndexing.xaml.cs">
       <DependentUpon>ToggleIndexing.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Transformer.xaml.cs">
+      <DependentUpon>Transformer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Transformers.xaml.cs">
+      <DependentUpon>Transformers.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
@@ -1040,6 +1054,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Transformers\EditTransformerView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Transformers\TransformersListView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Util\ErrorListWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1101,6 +1123,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ToggleIndexing.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Transformer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Transformers.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1352,6 +1382,11 @@
     <Resource Include="Assets\Images\restore_tiny.png" />
     <Resource Include="Assets\Images\export_details_tiny.png" />
     <Resource Include="Assets\Images\import_csv_tiny.png" />
+    <Resource Include="Assets\Images\transformers_edit_tiny.png" />
+    <Resource Include="Assets\Images\transformer_add_tiny.png" />
+    <Resource Include="Assets\Images\transformer_delete_tiny.png" />
+    <Resource Include="Assets\Images\transformer_tiny.png" />
+    <Resource Include="Assets\Images\transformer_small.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
