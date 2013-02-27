@@ -19,13 +19,27 @@ namespace Raven.Database.Indexing
 
 		public static int MapBucket(string docId)
 		{
-			var digitsHash = docId.Where(char.IsDigit).Aggregate(0, (current, ch) => current * 10 + (ch - '0'))
-					/ 1024; // will force concentration of more items under the normal case to the same bucket
+			int digitsHash = 0, nonDigitsHash = 11;
+			int nonDigitsCount = 0, digitsCount = 0;
 
-			var len = docId.Length > 3 ? docId.Length - 2 : docId.Length;// try to achieve a more common prefix
+			for (int i = docId.Length - 1; i >= 0; i--)
+			{
+				var ch = docId[i];
+				if (char.IsDigit(ch))
+				{
+					digitsHash = (ch - '0') * (int)Math.Pow(10, digitsCount) + digitsHash;
+					digitsCount++;
 
-			var nonDigitsHash = docId.Take(len)
-				.Aggregate(11, (current, ch) => (char.ToUpperInvariant(ch) & 397) ^ current);
+				}
+				else
+				{
+					nonDigitsCount++;
+					if (nonDigitsCount == 3) // we are on the third char, so we have more than 2 chars
+						nonDigitsHash = 11; // will only hash the len -2 chars, this way we have a more common prefix
+					nonDigitsHash = (ch*397) ^ nonDigitsHash;
+				}
+			}
+			digitsHash /= 1024; // will force concentration of more items under the normal case to the same bucket
 
 			return Math.Abs(digitsHash) + Math.Abs(nonDigitsHash) % (1024 * 1024);
 		}

@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;
+using Raven.Database.Indexing;
 using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
@@ -14,15 +15,8 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			for (int i = 0; i < 200; i++)
-			{
-				Console.Clear();
-				Console.WriteLine(i);
-				using(var x = new RavenDB_406())
-				{
-					x.ShouldServeFromCacheIfThereWasNoChange();
-				}
-			}
+			Console.WriteLine(IndexingUtil.MapBucket("users/123"));
+			Console.WriteLine(IndexingUtil.MapBucket("users/1252"));
 		}
 	}
 
