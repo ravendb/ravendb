@@ -28,8 +28,6 @@ namespace Raven.ClusterManager
 			};
 			store.Initialize();
 
-			store.Conventions.RegisterIdConvention<Server>((s, commands, server) => "servers/" + server.GetClusterName());
-
 			container.Register<IDocumentStore>(store);
 		}
 
