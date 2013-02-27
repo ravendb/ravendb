@@ -28,6 +28,10 @@ namespace Raven.Database.Indexing.Spatial
 
 		private static readonly Regex RegexX = new Regex("^(?:X|Longitude|Lng|Lon|Long)$", RegexOptions.IgnoreCase);
 		private static readonly Regex RegexY = new Regex("^(?:Y|Latitude|Lat)$", RegexOptions.IgnoreCase);
+		private static readonly Regex RegexGeoUriCoord = new Regex(@"([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* , \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ,? \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+))?",
+				RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase);
+		private static readonly Regex RegexGeoUriUncert = new Regex(@"u \s* = \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+))",
+						RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase);
 
 		public RavenShapeReadWriter(NtsSpatialContext context, SpatialOptions options, NtsShapeReadWriter shapeReadWriter)
 		{
@@ -80,6 +84,8 @@ namespace Raven.Database.Indexing.Spatial
 			var str = value as string;
 			if (!string.IsNullOrWhiteSpace(str))
 			{
+				if (TryParseGeoUri(str, out shape))
+					return true;
 
 				if (options.Type == SpatialFieldType.Geography)
 					str = TranslateCircleFromKmToRadians(str);
@@ -87,6 +93,51 @@ namespace Raven.Database.Indexing.Spatial
 				return true;
 			}
 			return false;
+		}
+
+		public bool TryParseGeoUri(string uriString, out Shape shape)
+		{
+			shape = default(Shape);
+			if (string.IsNullOrWhiteSpace(uriString))
+				return false;
+
+			uriString = uriString.Trim();
+
+			if (!uriString.StartsWith("geo:"))
+				return false;
+
+			var components = uriString.Substring(4, uriString.Length - 4).Split(';').Select(x => x.Trim());
+
+			double[] coordinate = null;
+			var uncertainty = double.NaN;
+
+			foreach (var component in components)
+			{
+				var coord = RegexGeoUriCoord.Match(component);
+				if (coord.Success)
+				{
+					if (coord.Groups.Count > 1)
+						coordinate = new [] {double.Parse(coord.Groups[1].Value), double.Parse(coord.Groups[2].Value)};
+					continue;
+				}
+				var u = RegexGeoUriUncert.Match(component);
+				if (u.Success)
+				{
+					uncertainty = double.Parse(u.Groups[1].Value);
+					if (options.Type == SpatialFieldType.Geography)
+						uncertainty = TranslateCircleFromKmToRadians(uncertainty);
+				}
+			}
+
+			if (coordinate == null)
+				return false;
+
+			if (!double.IsNaN(uncertainty) && uncertainty > 0)
+				shape = context.MakeCircle(coordinate[0], coordinate[1], uncertainty);
+			else
+				shape = context.MakePoint(coordinate[0], coordinate[1]);
+
+			return true;
 		}
 
 		public Shape ReadShape(string shapeWKT)
@@ -102,6 +153,11 @@ namespace Raven.Database.Indexing.Spatial
 			return shapeReadWriter.WriteShape(shape);
 		}
 
+		private double TranslateCircleFromKmToRadians(double radius)
+		{
+			return (radius / EarthMeanRadiusKm) * RadiansToDegrees;
+		}
+
 		private string TranslateCircleFromKmToRadians(string shapeWKT)
 		{
 			var match = CircleShape.Match(shapeWKT);
@@ -111,12 +167,10 @@ namespace Raven.Database.Indexing.Spatial
 			var radCapture = match.Groups[3];
 			var radius = double.Parse(radCapture.Value, CultureInfo.InvariantCulture);
 
-			radius = (radius / EarthMeanRadiusKm) * RadiansToDegrees;
-
+			radius = TranslateCircleFromKmToRadians(radius);
 
 			return shapeWKT.Substring(0, radCapture.Index) + radius.ToString("F6", CultureInfo.InvariantCulture) +
 				   shapeWKT.Substring(radCapture.Index + radCapture.Length);
-
 		}
 
 		private bool IsNumber(object obj)

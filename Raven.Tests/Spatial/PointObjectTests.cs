@@ -40,6 +40,8 @@ namespace Raven.Tests.Spatial
 					session.Store(new SpatialDoc { Point = new { lat = 45d, lon = 45d } });
 					session.Store(new SpatialDoc { Point = new { lat = 45d, lng = 45d } });
 					session.Store(new SpatialDoc { Point = new { Lat = 45d, Long = 45d } });
+					session.Store(new SpatialDoc { Point = "geo:45.0,45.0,-78.4" });
+					session.Store(new SpatialDoc { Point = "geo:45.0,45.0,-78.4;u=0.2" });
 					session.SaveChanges();
 				}
 
@@ -54,7 +56,7 @@ namespace Raven.Tests.Spatial
 						                     x.WaitForNonStaleResults();
 					                     }).Count();
 
-					Assert.Equal(6, matches);
+					Assert.Equal(8, matches);
 				}
 			}
 		}
