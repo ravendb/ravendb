@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Client.Linq;
-using Raven.Client.Indexes;
-using Raven.Database.Indexing;
-using Raven.Tests.Issues;
+using System.Linq;
 
 namespace Raven.Tryouts
 {
@@ -15,9 +12,8 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			Console.WriteLine(IndexingUtil.MapBucket("users/123"));
-			Console.WriteLine(IndexingUtil.MapBucket("users/1252"));
-		}
+			var x = Path.GetDirectoryName(@"F:\");
+			Console.WriteLine(x);
+		} 
 	}
-
 }

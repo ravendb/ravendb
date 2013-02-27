@@ -115,6 +115,11 @@ namespace Raven.Abstractions.Linq
 		public override bool TryGetMember(GetMemberBinder binder, out object result)
 		{
 			result = GetValue(binder.Name);
+			if (binder.Name == "HasValue" && result is DynamicNullObject)
+			{
+				result = false;
+				return true;
+			}
 			return true;
 		}
 

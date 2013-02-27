@@ -219,7 +219,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="operationUrl">The server's url</param>
 		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string operationUrl)
 		{
-			var requestUri = operationUrl + "/indexes/" + name;
+			var requestUri = operationUrl + "/indexes/" + Uri.EscapeUriString(name) +"?definition=yes";
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -1116,15 +1116,7 @@ namespace Raven.Client.Connection.Async
 				request.AddOperationHeaders(OperationsHeaders);
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request
-					.ExecuteWriteAsync(data)
-					.ContinueWith(write =>
-					{
-						if (write.Exception != null)
-							throw new InvalidOperationException("Unable to write to server");
-
-						return request.ExecuteRequestAsync();
-					}).Unwrap();
+				return request.ExecuteWriteAsync(data);
 			});
 		}
 
