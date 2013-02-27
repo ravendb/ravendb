@@ -133,8 +133,8 @@ namespace Raven.Bundles.Replication.Tasks
 										{
 											try
 											{
-												ReplicateTo(destination);
-												docDb.WorkContext.NotifyAboutWork();
+												if (ReplicateTo(destination))
+													docDb.WorkContext.NotifyAboutWork();
 											}
 											catch (Exception e)
 											{
