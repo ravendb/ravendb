@@ -42,6 +42,8 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.WebRequest" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -51,7 +53,7 @@
   <ItemGroup>
     <Compile Include="Bootstrapper.cs" />
     <Compile Include="Discovery\ClusterDiscoveryClient.cs" />
-    <Compile Include="Models\Database.cs" />
+    <Compile Include="Models\DatabaseRecord.cs" />
     <Compile Include="Models\Server.cs" />
     <Compile Include="Modules\DiscoveryModule.cs" />
     <Compile Include="Program.cs" />
