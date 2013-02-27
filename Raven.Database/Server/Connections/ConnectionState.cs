@@ -102,10 +102,6 @@ namespace Raven.Database.Server.Connections
 				return;
 			}
 
-			// TODO arek
-			//if (matchingReplicationConflicts.Contains(replicationConflictNotification.Id) == false)
-			//	return;
-
 			Enqueue(value);
 		}
 
