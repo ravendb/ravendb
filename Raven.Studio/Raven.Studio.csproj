@@ -209,6 +209,7 @@
     <Compile Include="Behaviors\ClosePopupAction.cs" />
     <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\ComboBoxExt.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
@@ -258,6 +259,7 @@
     <Compile Include="Controls\ResetReplication.xaml.cs">
       <DependentUpon>ResetReplication.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Bundles\SqlReplicationConfigModel.cs" />
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
     <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ConflictsView.xaml.cs">
