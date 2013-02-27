@@ -148,10 +148,8 @@ namespace Raven.Database.Indexing
 					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
 				}, (item, _, index) =>
 				{
-					using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
-					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+					using (LogContext.WithDatabase(context.DatabaseName))
 					{
-						LogContext.DatabaseName.Value = context.DatabaseName;
 						action(item, currentStart + index);
 					}
 				});
@@ -177,11 +175,9 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-			using (LogManager.OpenMappedContext("database", context.DatabaseName ?? Constants.SystemDatabase))
-			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+			using (LogContext.WithDatabase(context.DatabaseName))
 			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
 			{
-				LogContext.DatabaseName.Value = context.DatabaseName ?? Constants.SystemDatabase;
 				var tasks = new Task[result.Count];
 				for (int i = 0; i < result.Count; i++)
 				{
