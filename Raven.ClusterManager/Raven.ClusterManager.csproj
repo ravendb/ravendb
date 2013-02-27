@@ -81,6 +81,7 @@
   <ItemGroup>
     <Content Include="Assets\images\logo.png" />
     <Content Include="Assets\index.html" />
+    <Content Include="Assets\scripts\controllers\mainCtrl.js" />
     <Content Include="Assets\scripts\main.js" />
     <Content Include="Assets\styles\main.css" />
     <Content Include="Assets\scripts\vendor\angular\angular-bootstrap-prettify.js" />
